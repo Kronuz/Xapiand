@@ -939,15 +939,11 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			const auto ekey = key;
 			info.term = key;
 			std::optional<rev> stored;
-			bool placed = false;  // a new document at the id the caller gave
 			if (const auto found = core.index->find_key(ekey)) {
 				info.did = static_cast<docid>(found->first);
 				stored = static_cast<rev>(found->second);
-			} else if (args.new_did != 0 && !version_of(core, args.new_did)) {
-				info.did = args.new_did;
-				placed = true;
 			} else {
-				info.did = next_docid(core);
+				info.did = next_docid(core);  // a new document goes after the last: docids stay in append order
 			}
 			auto& native = native_of(doc);
 			if (native.replayed() && !replay_applies(native, stored)) {
@@ -965,13 +961,8 @@ Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
 			}
 			stamp_version(native, info.version);
 			auto& op = t.ops.emplace_back();
-			if (placed) {
-				op.type = prospect::operation::replace_docid;
-				op.docid = info.did;
-			} else {
-				op.type = prospect::operation::replace_key;
-				op.key = ekey;
-			}
+			op.type = prospect::operation::replace_key;
+			op.key = ekey;
 			fill(t, op.doc, native, core.index->fields());
 		}
 		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);

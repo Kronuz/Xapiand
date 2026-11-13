@@ -143,13 +143,18 @@ a `task::budget` (slice 200 µs, an estimate T4 tunes).
   task resumed after a chore, a turn, an event or a body read starts a fresh slice; only a run
   longer than the slice is demoted. `budget_probe` becomes L1's test (0 demotions; 1 with the
   stamp removed).
-- *The policy is two-level*, as `asio_scheduler` implements it: ordinary posts in FIFO order, demoted
-  handles one per drain pass between them. No attained-service counter exists or is added.
+- *The policy is least-attained service in two lanes.* A request's budget counts the slices it has spent; the
+  request is light below `REQUEST_LIGHT_SLICES` (8) and heavy from then on. Light resumptions, Asio completions
+  and timers run in the loop's FIFO order; every resumption of a heavy request (a slice, a chore, an event, a
+  timer, a body read) waits in the heavy lane, which runs one turn per FIFO pass. A request starts light, and a
+  streaming request's body chunk starts light for `REQUEST_STREAM_SLICES` (4). See
+  `docs/design/loop-scheduling.md`.
 - *Admission (R3).* Each reactor keeps two counters, each with its own cap and its own 503 (with
   `Retry-After: 1`): in-flight requests, counted from headers complete to response settled (cap
-  1,000, today's offload queue limit, `manager.cc:1059`); and `asio_scheduler::demoted()` (cap 256,
-  an estimate). Admission checks both at headers complete. reactor's `OffloadGate` (`reactor.h:99-112`)
-  stays as this gate, renamed `reactor::AdmissionGate`, since nothing is offloaded. The io_context
+  1,000, today's offload queue limit, `manager.cc:1059`); and `asio_scheduler::demoted()`, the
+  resumptions of heavy requests queued in the heavy lane (cap 256, an estimate). Admission checks both
+  at headers complete. reactor's `OffloadGate` (`reactor.h:99-112`) stays as this gate, renamed
+  `reactor::AdmissionGate`, since nothing is offloaded. The io_context
   queue is bounded by the gate: each admitted task has at most one handle queued, and idle
   connections post nothing.
 - *Reactor count (C5).* One reactor per CPU. `MAX_HTTP_SERVERS` (`opts.cc:57`, `:525`) and
@@ -187,15 +192,15 @@ the connection's executor. `SearchService` wraps each view's task in `task::as_a
 
 **D4. Index chores: the only work that leaves a reactor.** A chore is index work that may wait on a
 device or run long. `co_await chore(group, cls, fn)` posts a `WorkItem` (threadpool
-`feature/scheduler`, `work_pool.hh:85-95`) and resumes the awaiter with `asio_scheduler::post()`, the
-one thread-safe entry (`task_asio.hh:43-54`), never `post_demoted` (C10.1). Each open index owns a
+`feature/scheduler`, `work_pool.hh:85-95`) and resumes the awaiter through the reference it captured:
+`post()` for a light request, `post_heavy()` for a heavy one, both thread-safe (`loop-scheduling.md` D2). Each open index owns a
 `WorkGroup`; each RESTORE and each streamed upload owns its own group for its lifetime. Groups have
 one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind each other in a group.
 
 | Class | Chores | Why |
 |---|---|---|
 | `query` | read-your-writes refresh, open, blob read | A request waits on it; the reserve worker (`reserve = 1`, `:673`) keeps one free for them (C8.1, C8.3) |
-| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead | Throughput work; parse-ahead in its own group, so DRR splits service with the index's group (C8.1) |
+| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead, RESTORE prepare | Throughput work; parse-ahead and RESTORE prepare in the RESTORE's own group, so DRR splits service with the index's group (C8.1); a prepare chore runs about 1 ms |
 | `merge` | merges, reclaim deletes (strata's executor binds here) | Background; at most `merge_cap` workers |
 
 Aging (C8.2, threadpool L2): a merge lane that has waited longer than 100 ms (an estimate) takes the
@@ -357,7 +362,11 @@ boundary and every 4,096 ordinals of the exhaustive loop (`shards.hh:237`, L4); 
 inside those slices. Dump scans check every 64 documents. A buffered body has a cap (16 MiB, an
 estimate), which http enforces at headers complete from `Content-Length`, or as bytes arrive.
 Above it, a `stored` upload streams (D9), RESTORE streams as today, and anything else gets 413.
-Documents above 64 KiB (an estimate) and RESTORE batches are prepared in parse-ahead chores.
+Documents above 64 KiB (an estimate) are decoded in chores. A RESTORE batch is parsed in parse-ahead chores and
+its plain `index` objects are prepared (fields, terms, raw record) in `flush` chores of the RESTORE's group, each about
+1 ms, in input order with schema changes committed in input order; an object that reads the stored document (patch,
+update, merge, a script, `_schema`) is prepared on the reactor after every earlier object applied, and every apply
+stays in the shard's turn (`docs/perf/x7-loop-stalls.md`, the RESTORE chore design).
 
 **D13. The control plane is coroutines on its loop.** `control_offload` and the control reactor's
 worker are deleted (`manager.cc:156`, `:467-488`). Node setup, `load_nodes`, `new_leader` and the

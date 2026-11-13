@@ -1,8 +1,10 @@
 # async_check.py allowlist. Columns (tab separated): file, rule, anchor regex, class, count, note.
 # allow: cheap or off-reactor, with the reason. owed: the decision or step that removes it. compiled_out: the switch.
 src/database/handler.cc	file	io::(write|read)	allow	2	dump_documents(fd) and restore_documents(fd) serve the CLI --dump and --restore on the main thread (check_may_block guards it)
+src/database/handler.cc	pool	endpoints\[shard\]	allow	2	a RESTORE's placement and apply children take one shard's turn each under engine::counted; the lock_shard itself takes no turn (x7-loop-fix-c)
 src/database/handler.cc	pool	lock_shard	allow	24	a lock_shard registers a use of the entry and takes no turn: every database call of the handler is an awaited task, and the operation takes the turn (D5)
 src/database/handler.cc	wal	DatabaseWAL wal\(path\)	allow	1	the log is read in a query chore of repr_wal, never on a reactor thread
+src/database/handler.cc	sync_wait	schema\.index	allow	1	a RESTORE's prepare chore runs Schema::index on a WorkPool worker (inline on the CLI's main thread); CPU only there: scripts are barriers and seq is never 0, so no call_script or lock_shard (x7-loop-stalls)
 src/database/pool.cc	mutex	chores_mtx	allow	4	the list of live IndexChores: O(1) link and unlink; cancel_all walks it at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	mutex	pending_mtx	allow	3	the catalog timer's pending callbacks: O(1) sections that add, take or swap out an entry, none with I/O; the callbacks run outside it and only post (D58)
 src/database/pool.cc	mutex	weak\.lock\(\)	allow	1	std::weak_ptr::lock in the catalog timer's callback, not a mutex: it takes no lock (D58)
@@ -14,11 +16,13 @@ src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached ta
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
 src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
-src/database/schemas_lru.cc	mutex	.	allow	19	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11)
+src/database/schemas_lru.cc	mutex	.	allow	25	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11); the flights' loads publish into it and their probes read it, O(1) sections with no I/O, taken and released before any await
 src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	6	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking; the catalog's commit chore tries it with no pin held (D5, x-pool D7)
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)
 src/database/shard.cc	pool	ShardEndpoint::storage_commit	allow	1	the definition: the commit is chores_.run(flush, ...) (D7)
 src/database/shard.cc	pool	writable_storage->	allow	11	the blob writes, reads and rollovers run in flush chores of the entry or the upload (D9)
+src/database/shard.cc	sync_wait	entry\.do_replace	allow	2	a RESTORE's apply slice writes in a flush chore on a WorkPool worker, in the index's turn with the engine's chores inline: chore code, never a request thread (x7-loop-fix-c)
+src/database/shard.cc	sync_wait	engine_->metadata\(std::string\(ID_HIGH_METADATA\)\)	allow	1	the open chore reads the id counter on a WorkPool worker before the replay: strata's metadata() finds the key in the open view's map and never suspends, no I/O (one-id)
 src/database/shard.cc	sync_wait	.	allow	7	the open chore replays the WAL and opens the engine on a WorkPool worker, with chores inline (D4, D8): chore code, never a request thread
 src/database/shard.cc	wal	DatabaseWAL wal\(&target\)	allow	1	the open chore replays the log on a WorkPool worker (D4, D8)
 src/engine/census.cc	file	.	compiled_out	4	ENGINE_CENSUS is OFF in gate builds (D1)
@@ -34,7 +38,7 @@ src/engine/strata/shard.cc	mutex	registry_mutex	allow	1	map lookup and insert of
 src/engine/sync.cc	mutex	.	allow	1	check_may_block's own diagnostics lock, taken only when a guard trips
 src/engine/sync.h	sync_wait	.	allow	1	the bridge itself; every call is guarded by check_may_block (D14)
 src/index_pattern.cc	file	.	allow	9	the directory walk of a pattern runs in a query chore of the work pool (expand_paths), never on a reactor thread
-src/index_resolver_lru.cc	mutex	.	allow	3	the settings map: O(log n) lookups and inserts under the lock, released before a settings read and taken again after it (D11)
+src/index_resolver_lru.cc	mutex	.	allow	4	the settings map: O(log n) lookups and inserts under the lock, released before a settings read and taken again after it (D11); the flight's store and its probe are such sections too (the probe copies the shards under the lock: O(shards))
 src/length.cc	file	.	allow	6	fd serialisers used only by --dump and --restore on the CLI main thread
 src/lua/processor.cc	mutex	script_params\.lock	allow	1	weak_ptr promotion, not a mutex
 src/main.cc	file	.	allow	25	process startup, signal handlers and the CLI --dump and --restore, before or beside the loops and never on a reactor

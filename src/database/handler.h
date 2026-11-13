@@ -25,8 +25,11 @@
 
 #include "config.h"
 
+#include <atomic>                            // for std::atomic
 #include <cassert>                           // for assert
 #include <chrono>                            // for std::chrono
+#include <cstdint>                           // for std::uint64_t
+#include <functional>                        // for std::function
 #include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
 #include <string>                            // for std::string
@@ -67,18 +70,43 @@ engine::docid to_docid(std::string_view document_id);
 // Whether a document id is given: a missing or null id, an empty string or false is none; a number is one, 0 included.
 bool has_document_id(const MsgPack& document_id);
 
-// The key of a new document whose numeric id the shard numbers: a numeric key always has a value after its 'N'.
+// The key of a new document whose numeric id the shard issues: a numeric key always has a value after its 'N'.
 inline constexpr std::string_view NEW_NUMERIC_KEY = "N";
 
-// The document id a numeric key names: the id when it is a whole number from 1 to below the largest docid, else 0
-// (an id such as 0, -1, 1.5, 2^32-1 or 2^63 is placed by its key alone).
-engine::docid numeric_docid(std::string_view key);
+// Ids route to fixed buckets and buckets to shards (docs/design/one-id.md, D85).
+inline constexpr std::size_t ID_BUCKETS = 1024;
+
+// The shard metadata key of its id counter, a MessagePack integer.
+inline constexpr std::string_view ID_HIGH_METADATA = "_id_high";
+
+// The largest numeric id with a bucket: the numeric key names every integer up to it exactly (2^32 + 1's key names
+// 2^32 + 2^24), so the counter never issues an id whose key names another.
+inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 32) - 1;
+
+// The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^32 are placed by hash).
+std::uint64_t numeric_id(std::string_view key);
+
+// The key a PUT of the integer id names, in an index whose ids are integers or positive.
+std::string numeric_key(std::uint64_t id);
+
+// An id's bucket: (N - 1) % ID_BUCKETS for a numeric id N, else its key's placement hash modulo ID_BUCKETS.
+std::size_t id_bucket(std::string_view key);
+
+// The bucket-to-shard table of an index of n shards.
+std::size_t bucket_shard(std::size_t bucket, std::size_t n_shards);
+
+// The shard a new document with this key goes to.
+std::size_t id_shard(std::string_view key, std::size_t n_shards);
+
+// The automatic id shard `shard_num` of n issues after `high`: the smallest id above it in a bucket the shard owns;
+// 0 when none is left up to MAX_NUMERIC_ID.
+std::uint64_t next_auto_id(std::uint64_t high, std::size_t shard_num, std::size_t n_shards);
 
 using DocumentInfo = std::pair<engine::WriteResult, MsgPack>;
 
 
-// Where a document id across `shards` shards lives: the shard's position and the document's id in that shard,
-// which is the id one shard numbers. (hit id = (docid - 1) * shards + shard + 1.) A hit id is 64 bits wide, a
+// Where a hit across `shards` shards lives: the shard's position and the document's docid in that shard
+// (hit id = (docid - 1) * shards + shard + 1). A hit id is a docid handle, never a document's _id. A hit id is 64 bits wide, a
 // shard's docid 32: an id with no such docid, or 0, raises errc::doc_not_found.
 struct SplitHitId {
 	size_t shard;
@@ -118,6 +146,9 @@ public:
 	// The budget's token, which the index uses this handler makes pass to their turn waits (empty without one).
 	task::cancel_token turn_token() const { return budget != nullptr ? budget->token() : task::cancel_token{}; }
 
+	// Reads of a key in a shard that by-id lookups made, one per key and shard (tests count them).
+	static inline std::atomic<std::uint64_t> key_reads{0};
+
 private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
@@ -130,11 +161,13 @@ private:
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	// The docid holding the term in any shard, read from the published views or (written) as the writes left them.
+	// The docid holding the term, read in the shard its id routes to (id_shard) and, on a miss, in the others, from
+	// the published views or (written) as the writes left them.
 	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
 
-	// The active shard with the fewest documents as the writes left them, where a new numeric id goes.
-	task::task<size_t> least_used_shard();
+	// The active shard with the fewest documents as the writes left them, where a new numeric id goes, and the largest
+	// of the shards' id counters, which the new id goes above.
+	task::task<std::pair<size_t, std::uint64_t>> least_used_shard();
 
 	// Pins the indexes [begin, end) of the endpoints and searches them: one batch of a wide search.
 	task::task<engine::BatchResult> search_batch(size_t begin, size_t end, const engine::SearchRequest& request);
@@ -251,7 +284,6 @@ public:
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document(engine::docid did, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true, bool must_exist = false);
-	task::task<engine::WriteResult> replace_document(std::string_view document_id, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
 	task::task<MsgPack> get_document_info(std::string_view document_id, bool raw_data, bool human);
@@ -268,12 +300,51 @@ public:
 };
 
 
-// The bulk indexer of a RESTORE: prepares each object of a stream and applies it to its shard, in order, as
-// tasks on the reactor that serves the request (docs/design/phase7c.md D12). It owns no thread and waits for
-// none: it yields when its slice is spent, and the parse of the next batch runs beside it in a chore.
+// What a RESTORE's run met (tests assert their case occurred): the largest range applied at once, the writes of an id
+// already written in the same sub-run, the most shards applying at once, the objects that took the serial path
+// after a join (a new numeric id), and the writes deferred by a miss between placement and apply or a failed placement.
+struct DocIndexerStats {
+	std::atomic<std::size_t> largest_range{0};
+	std::atomic<std::size_t> repeated_in_subrun{0};
+	std::atomic<std::size_t> peak_children{0};
+	std::atomic<std::size_t> serial_after_join{0};
+	std::atomic<std::size_t> deferred{0};
+	std::atomic<std::size_t> children{0};   // the cap of the latest parallel run
+
+	void reset() noexcept {
+		largest_range = 0;
+		repeated_in_subrun = 0;
+		peak_children = 0;
+		serial_after_join = 0;
+		deferred = 0;
+		children = 0;
+	}
+};
+
+// Test seams (tests/test_loop_yield.cc), inert unless set: the objects a prepare chore takes instead of its
+// time slice, a step awaited on the loop with the RESTORE's handler between a range's placement and its apply,
+// one apply slice that throws before its writes, every write on the serial path (the model of a run), and the writes
+// an apply slice takes, with a step awaited on the loop between two slices (the turn released) given the term of the
+// slice's last write and whether it missed, and the shard (plus one) whose next placement read times out busy.
+struct DocIndexerSeams {
+	std::atomic<std::size_t> objects_per_prepare{0};
+	std::atomic<std::size_t> writes_per_slice{0};
+	std::function<task::task<void>(DatabaseHandler&)> after_placement;
+	std::function<task::task<void>(DatabaseHandler&, const std::string& term, bool missed)> after_slice;
+	std::atomic<bool> throw_in_slice{false};
+	std::string stale_on_term;   // a write of a term ending so fails as a stale-marking error
+	std::atomic<bool> serial{false};
+	std::atomic<std::size_t> busy_placement_shard{0};
+};
+
+
+// The bulk indexer of a RESTORE: prepares the objects of a stream in chores of the RESTORE's group and applies
+// each to its shard, in order, on the reactor that serves the request (docs/design/phase7c.md D12). It owns no
+// thread and waits for none: it yields when its slice is spent, and the parse of the next batch runs beside it.
 class DocIndexer {
 	Endpoints endpoints;
 	int flags;
+	engine::Chores& chores;
 
 	bool echo;
 	bool comments;
@@ -289,11 +360,12 @@ class DocIndexer {
 	size_t _idx = 0;
 	std::vector<MsgPack> _results;
 
-	task::task<void> index_one(MsgPack&& obj);
-
 public:
-	// `budget` is the request's time slice (null: the work runs without yielding).
-	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget = nullptr);
+	static inline DocIndexerSeams seams;
+	static inline DocIndexerStats stats;   // every RESTORE's, summed; tests reset it
+	// `chores` runs the prepares (the RESTORE's group); `budget` is the request's time slice (null: the work runs
+	// without yielding).
+	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget = nullptr);
 
 	DocIndexer(const DocIndexer&) = delete;
 	DocIndexer& operator=(const DocIndexer&) = delete;

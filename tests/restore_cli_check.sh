@@ -23,6 +23,8 @@
 # For the default shard count, --shards 1 and --shards 3: the CLI restores a CLI dump of N documents, a node serves
 # the directory (same --name and --shards), and COUNT and DUMP must answer exactly the N documents, the same DUMP as
 # a RESTORE over HTTP of that dump. Also: a CLI restore into an index created by PUT. Exit 0 when all hold.
+# The documents are CORPUS's (an ndjson file) when set; else N generated ones whose integer fields take positive
+# values first and negative ones later, one of them beyond 2^31 (where JSON's encoding is unsigned too).
 . "$(dirname "$0")/../harness/env.sh"
 BIN=$1; PORT=${PORT:-18866}; N=${N:-50}; BOUND=${BOUND:-90}; rc=0
 W=${HARNESS_TMP:-${TMPDIR:-.}}
@@ -44,6 +46,10 @@ stop() {
 call() {  # call METHOD URL OUT [CURL ARGS...]: the status code on stdout, the body in OUT
 	local m=$1 u=$2 out=$3; shift 3
 	curl -sS -m 60 -X"$m" "localhost:$PORT$u" -o "$out" -w '%{http_code}' "$@"
+}
+indexed_all() {  # indexed_all LABEL BODY: a RESTORE's answer indexed all N documents
+	local i; i=$("$PY" -I -c 'import json, sys; print(json.load(open(sys.argv[1])).get("indexed"))' "$2" 2>/dev/null)
+	[ "$i" = "$N" ] || fail "$1: RESTORE indexed '$i' of $N: $(head -c 300 "$2")"
 }
 dump() {  # dump OUT: the served DUMP of rt, as JSON
 	local s; s=$(call DUMP /rt/ "$1" -H 'Accept: application/json')
@@ -74,14 +80,20 @@ if got != want:
 EOF
 }
 
-"$PY" -I -c "
+if [ -n "${CORPUS:-}" ]; then
+	cp "$CORPUS" "$D/nd.ndjson" && N=$(grep -c . "$D/nd.ndjson") || { echo "FAIL: cannot read CORPUS $CORPUS"; exit 1; }
+else
+	"$PY" -I -c "
 import json
-for i in range($N): print(json.dumps({'_id': i + 1, 'user': 'u%d' % (i % 7), 'message': 'document %d' % i}))" > "$D/nd.ndjson"
+for i in range($N):
+    sign = 1 if i < $N // 2 else -1
+    print(json.dumps({'_id': i + 1, 'user': 'u%d' % (i % 7), 'message': 'document %d' % i, 'n': sign * (i + 1), 'w': sign * (2**31 + i)}))" > "$D/nd.ndjson"
+fi
 
 # The dump: N documents restored over HTTP, then the CLI --dump of them.
 serve source "$D/src" || exit 1
 s=$(call RESTORE /rt/ "$D/body" -H 'Content-Type: application/x-ndjson' --data-binary "@$D/nd.ndjson")
-[ "$s" = 200 ] || fail "source RESTORE answered $s"
+if [ "$s" = 200 ]; then indexed_all source "$D/body"; else fail "source RESTORE answered $s"; fi
 call POST /rt/:commit "$D/body" >/dev/null
 stop
 timeout -s KILL $BOUND "$BIN" --port $PORT --name rc -D "$D/src" --dump rt --out "$D/rt.mp" >"$D/dump.log" 2>&1 \
@@ -93,7 +105,7 @@ for S in default 1 3; do
 	# Reference: RESTORE over HTTP of the same dump, served after a restart.
 	serve "http-$S" "$D/http-$S" "${SH[@]}" || continue
 	s=$(call RESTORE /rt/ "$D/body" -H 'Content-Type: application/x-msgpack' --data-binary "@$D/rt.mp")
-	[ "$s" = 200 ] || fail "shards $S: HTTP RESTORE answered $s"
+	if [ "$s" = 200 ]; then indexed_all "shards $S, HTTP" "$D/body"; else fail "shards $S: HTTP RESTORE answered $s"; fi
 	call POST /rt/:commit "$D/body" >/dev/null
 	stop
 	serve "http-$S-again" "$D/http-$S" "${SH[@]}" || continue

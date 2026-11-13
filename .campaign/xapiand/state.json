@@ -225,9 +225,195 @@
       "closed": "answered: no Xapiand work on Kronuz/task; will review task-wheel's diff (A7)",
       "id": "msg-32",
       "text": "Owner decisions: D70 candidate (f) (single-owner wheel + 64-stripe intrusive inbox, docs/design/wheel-evidence.md on quest/detent/wheel-evidence) is the one Kronuz timer wheel; Kronuz/scheduler moves onto it; Kronuz/stash retired as a timer wheel. D71: it lives in Kronuz/task. Quest task-wheel (Kronuz/task: task.hh, task_asio.hh, test, bench, docs) starts after wheel-evidence lands; async-drivers row 1 asks you to review its diff (A7). Tell me if task.hh has Xapiand work in flight."
+    },
+    {
+      "at": "2026-11-12T04:26:41",
+      "by": "detent-lead",
+      "closed": "answered by cmux reply: (a) what manager.cc still does, (b) shared design first, then a Xapiand quest dissolving manager.cc",
+      "id": "msg-33",
+      "text": "From the Detent lead, relaying the owner (2026-11-12). Owner: manager.cc may no longer be needed; it grew to keep order among components Xapiand no longer has (cluster is archived). 'Maybe Xapiand should just get rid of manager.cc and do housekeeping differently. The way we do it in Prism, Detent, and Xapiand should look very similar.' Facts: (1) reactor::PeriodicTimer's only live user is manager.cc try_shutdown_timer (set_repeat(5.0)+again() at manager.cc:708, cb :573); cluster/raft.h was the other. We plan to retire PeriodicTimer rather than port it to the wheel, so that retry wants to become a control task like control::Periodic. (2) Today the three differ: Detent authority runs periodic work as a task looping on an awaited timer and shuts down by stop_.request(cancel_reason::shutdown); Detent agent polls drain with a 20 ms steady_timer; Prism main polls a signal flag every 100 ms; Xapiand has the manager with control::Periodic, control::Debounce, PeriodicTimer, two reactor::Signal and a self-pipe. Proposed common shape (your view wanted before anyone builds it): main installs signals once and turns them into one stop request; each service owns start()/stop(); housekeeping and debounces are tasks on the loop awaiting the loop's timer (the wheel, via task-wheel); shutdown is cancellation plus a drain wait, no polling timers. Asks: (a) what in manager.cc still earns its keep beyond that shape; (b) would you take a Xapiand quest that dissolves manager.cc into it (and drops PeriodicTimer), or should the shape be designed first as a shared piece in reactor/task? Detent will move its agent and authority, and Prism, to the same shape once agreed."
+    },
+    {
+      "at": "2026-11-12T04:30:51",
+      "by": "detent-lead",
+      "closed": "A7 answered: CHANGES (F1 blocker) via cmux reply; review file committed",
+      "id": "msg-34",
+      "text": "Detent lead: wheel-lib is ready for your A7 review (D71: Xapiand will depend on it). Diff: git -C ~/code/Kronuz/wheel-wt/detent/wheel-lib log -p main..f5406791bbb2 (Kronuz/wheel). Contract to check against Xapiand's uses: single owner arms/cancels/expires; any thread may arm_remote only an unarmed entry; 64-stripe inbox drained by the owner. A1 single row met under D75 (1.049x at 1K, 0.924x at 1M); cross P=1 rerun pending. Reply with approve or findings."
+    },
+    {
+      "at": "2026-11-12T08:16:49",
+      "by": "detent-lead",
+      "closed": "A7 fit review APPROVE at task:c0cda23, sent to Detent's lead",
+      "id": "msg-35",
+      "text": "Detent lead: task-wheel is ready for your A7 review (async-drivers row 1). Diff: git -C <task worktree> log -p main..c0cda23 (Kronuz/task, branch quest/detent/task-wheel, pushed). task now links Kronuz/wheel at wheel:bfd72bc, with no wheel code of its own; deadline<S> runs on it, and docs/mechanisms/deadlines.md states the rules. One contract change (D78): the scheduler must outlive every deadline armed on it (API.md used to promise no reference). Please confirm Xapiand's control::Periodic/Debounce and deadline uses meet that."
+    },
+    {
+      "at": "2026-11-12T08:43:51",
+      "by": "detent-lead",
+      "closed": "fit probe rerun at task:9a1bb31 passed (261112-084432-3901d3); confirmed to Detent",
+      "id": "msg-36",
+      "text": "Detent lead: task-wheel changed after your A7 APPROVE. Our review's F1: an entry armed on the raw wheel never woke the asio loop. The fix is D79, at task:9a1bb31: the scheduler's owner-thread arm(entry, at) and cancel(entry) are the only way to arm, and scheduler_ref::wheel() is removed. Your N2 (the unused entry in deadline<engine::Host>) is gone, and your N3 (API.md wording) is fixed. Nothing outside task called wheel(), but your hunt.md:108 and review files still name it. Please re-run your fit probe at 9a1bb31 and confirm A7 still holds."
+    },
+    {
+      "at": "2026-11-12T09:39:10",
+      "by": "detent-lead",
+      "closed": "fit review CHANGES B1/B2 and owner's D71 sent to Detent; agree once in the text",
+      "id": "msg-37",
+      "text": "Detent lead: the service-shape design is ready for your A3 agreement. It's at task:5f07955 on quest/detent/service-shape, file docs/design/service-shape.md (Kronuz/task). In short: stop_signals (first SIGINT/TERM requests a stop, second hurries, a third kills); serve(...) starts services in order, then stops and drains them in reverse under one bound; Periodic, Debounce and every wait are sleep_until/sleep_for on the loop's wheel through D79's arm/cancel. Its manager.cc table maps each duty, citing Xapiand:000224f5a. Your Q2: one bound from the first signal now also covers shutdown_checks' in-flight wait, and the acceptors close at once; the contributor recommends accepting. Also note D10, cancel allowed after close() during teardown. A Detent design review runs in parallel. Reply agree, or with findings."
+    },
+    {
+      "at": "2026-11-12T10:22:41",
+      "by": "detent-lead",
+      "closed": "agreed A3 at task:ed76e4f; owner D75 removes QUIT and FLUSH?clients",
+      "id": "msg-38",
+      "text": "Detent lead: the service-shape revision is at task:ed76e4f (docs/design/service-shape.md). It folds in your B1, B2, G2, G4, G5 and G7 and D80, and the journal maps each change to its finding (Detent:dde3fa36). Key points: flush() runs on every path and neither the bound nor a second signal cuts it, and the third signal waits for it; requests are cancelled 5 s before the 35 s bound; HTTP's drain runs its own teardown phases 2 and 3; periodic logs a throw and keeps ticking. One question is yours, and the owner's if it removes behavior clients see: remove the admin /_quit and /_flush?clients endpoints, or map them to signals.request_stop()? The contributor recommends removing them. Please reply with agree (A3) or findings."
+    },
+    {
+      "at": "2026-11-12T11:03:11",
+      "by": "detent-lead",
+      "closed": "acknowledged: git -C rule in campaign agent definitions (agent-campaign:c8c8727); Xapiand already passes it in prompts (memory git-dash-c-not-cd)",
+      "id": "msg-39",
+      "text": "Detent lead, FYI: Claude Code asks the owner to approve every cd-then-git command, and the last sixteen Detent agents ran 254 of them. I added one rule to both campaign agent definitions (agent-campaign:c8c8727, local only, not pushed): run git as git -C <path>, never after cd. Your agents load the same files, so they pick it up too."
+    },
+    {
+      "at": "2026-11-12T11:04:19",
+      "by": "detent-lead",
+      "closed": "A4 agree with F1-F3 sent; owner D77 answers Q2/Q3",
+      "id": "msg-40",
+      "text": "Detent lead: server-composition is ready for your A4 review: cpp-libraries:b1c27d9, docs/server-composition.md on branch quest/detent/server-composition (pushed). It has the seven-step composition with the code each step calls; http::Limits and reactor::tls::server_context (your tls_setup lifted into reactor) are proposals. It also has an options table with each app's spelling, and a side-by-side of the mains whose deviations carry their D62 status (none has a case today). Findings: Xapiand's --max-clients bounds no connection (manager.cc:950); the idle, header and inactivity timeouts exist only on TLS; the three apps pin three different http commits. Its Q1-Q5 carry recommendations: (1) header and inactivity timeouts on plain HTTP; (2) refuse a TLS key readable by group or others; (3) expose the shutdown bound as an option; (4) run the loop on the main thread; (5) default 1024 for max_clients and max_in_flight. Q2 and Q3 change what users see, so I'll take them to the owner together with any of yours. Please reply agree or with findings."
+    },
+    {
+      "at": "2026-11-12T11:58:56",
+      "by": "detent-lead",
+      "closed": "answered detent-lead: manager.cc housekeeping moves to wheel tasks in the first post-7c quest, planned after the 11-16 quota reset; commit to follow",
+      "id": "msg-41",
+      "text": "Detent's reactor-on-wheel has reactor's accept retry and LagProbe on the loop wheel (reactor:99aff1b, landing A1-A3 early). PeriodicTimer's removal (D76) waits only on Xapiand's src/manager.cc. When does your campaign move manager.cc's housekeeping to a task on the wheel? Reply with the Xapiand commit when it lands."
+    },
+    {
+      "at": "2026-11-13T02:48:45",
+      "by": "detent-lead",
+      "closed": "FYI: Xapiand does not use consensus yet; Detent fixes core.h (D92)",
+      "id": "msg-43",
+      "text": "Detent found a pre-existing consensus Core livelock: an append round trip past rpc_timeout is re-sent, superseding the in-flight append, and the late response is dropped as unmatched; under ~5 ms of CPU per executor cycle (rpc_timeout 40 ms) nothing commits in 4 s. Detent quest consensus-late-append (D92) will fix it in core.h. If Xapiand runs consensus with a tight rpc_timeout on loaded loops, you may be exposed; no action needed from you, FYI and a heads-up the Core changes."
     }
   ],
   "quests": {
+    "agg-shard-parity": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T01:45:49",
+          "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
+          "blobs": {
+            "CMakeLists.txt": "100644:0aeedd8176be43ef1c02d2e0cc790061d8340020",
+            "docs/dev/agg-shard-parity.md": "100644:214039a521f7b65ca853e96a1d4e0ae635bb9765",
+            "src/aggregations/bucket.h": "100644:ca186cd38e8f0cdb8786da475e4498990766333c",
+            "tests/test_aggregation_shards.cc": "100644:1cc19d724bc257f63f67c41b1893aa7e0b72dda5"
+          },
+          "by": "review",
+          "commit": "997e7db68999a773cb94f08916c3bdc56a9da002",
+          "criteria": "f21ce480a3278748",
+          "diffs": {
+            "CMakeLists.txt": "1880a606411a0776",
+            "docs/dev/agg-shard-parity.md": "b7ed670dec087dd2",
+            "src/aggregations/bucket.h": "0300a36526f6d78a",
+            "tests/test_aggregation_shards.cc": "d00c689df4f45cbd"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0bc8123ea458378be1d084843d81941aaf0eddec",
+          "reviewed": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "0ce54524fb4651467c697ca269c40fa3bdc74b4b",
+      "branch": "quest/xapiand/agg-shard-parity",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_aggregation_shards*",
+        "harness/agg_parity*",
+        "docs/dev/agg-shard-parity.md",
+        "CMakeLists.txt",
+        "src/aggregations/bucket.h"
+      ],
+      "history": [
+        {
+          "at": "2026-11-12T00:08:32",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command lacked -DBUILD_TESTS=ON, so ctest found no tests (job 261111-232734-59ff14's log); now x7-gate's form",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T01:58:55",
+          "commit": "01766e08840529f23bb6cb1972a2022f855abe8b",
+          "criteria": {
+            "A1": "261112-002820-f46d26",
+            "A2": "261112-002820-f46d26; fails without: 261112-002821-1d7a01, 261112-013131-08b954, 261112-013135-842794",
+            "A3": "[artifact] `docs/dev/agg-shard-parity.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "cdb757fc2a583e47b11b485234cfb3ba416d0de0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-002820-f46d26",
+              "level": "light",
+              "seconds": 276.5,
+              "state": "done",
+              "what": "agg-shard-parity check build-test at cdb757fc2a58"
+            }
+          ],
+          "final": true,
+          "from": "b08a7fde4020862e7b71df1b831f22fc18d7938a",
+          "reason": "",
+          "tested": "152f835d005e475335eeaa8bd235d5c6fe141a8b"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
+      "updated": "2026-11-12T01:59:05",
+      "worktree": ""
+    },
     "alpha10-builds": {
       "accepted": {},
       "after": [],
@@ -656,10 +842,53 @@
       "worktree": ""
     },
     "barrier-warning-strata": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-12T01:52:28",
+          "base": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "blobs": {
+            "CMakeLists.txt": "100644:b60636f163ba77ea89b66a156ee908387238a8b9",
+            "include/strata/core/counted_io.hh": "100644:bb4648d3ea97fa2a5e4cb1e0f1db9d32ee1ef43f",
+            "include/strata/core/faultfs.hh": "100644:156f9579da5141028181436a588b1df164063df9",
+            "test/background_merge_test.cc": "100644:2878321dd042fade89e81bbf70051af6d5f37290",
+            "test/cold_hooks.hh": "100644:e5fb072682af70dc0c2dc9fef1e24f7022e5d7be",
+            "test/counted_hooks.hh": "100644:97b7061de8565662ab73bffe988c2e6fb1f163d7",
+            "test/directory_test.cc": "100644:4e291380dfff856dfa5b04ec4b9ff78402c1d38c",
+            "test/faultfs_test.cc": "100644:fef21ffccd91b30d9a3ffca6bb16d2210e892d8c",
+            "test/flush_memory_test.cc": "100644:bd03de2960e3231cee5014054fa85de4fdefa630",
+            "test/format14_test.cc": "100644:c380113d5a0a52d983fbf8a610c116932fc124f8",
+            "test/index_test.cc": "100644:b829a357909248eb947226674e0b189cee58d109",
+            "test/install_errors_test.cc": "100644:d2ee37cbfce2a33790398f91c3435ffc9fdeb2f9"
+          },
+          "by": "review",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": "758c16c2ec0b2a4f",
+          "diffs": {
+            "CMakeLists.txt": "ccee07be76395d56",
+            "include/strata/core/counted_io.hh": "68443b64f7a1e62a",
+            "include/strata/core/faultfs.hh": "53c8363e0484be30",
+            "test/background_merge_test.cc": "ee5cb5d523c28e05",
+            "test/cold_hooks.hh": "f9785cd97a541345",
+            "test/counted_hooks.hh": "545610576c50e521",
+            "test/directory_test.cc": "84f1243c881ed3e1",
+            "test/faultfs_test.cc": "71cb199ed6008b63",
+            "test/flush_memory_test.cc": "9879a55c0299566c",
+            "test/format14_test.cc": "2f94148ffbc55d00",
+            "test/index_test.cc": "ae26e5088c8354a6",
+            "test/install_errors_test.cc": "5a2bdf776feacc24"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dd3d78ba6acbec94b6ca4e4b3f318fc6e7c2c747",
+          "reviewed": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "barrier-warning-completion"
       ],
+      "base": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+      "branch": "quest/xapiand/barrier-warning-strata",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -689,7 +918,9 @@
         "include/strata/core/index.hh",
         "test/**",
         "docs/mechanisms/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/strata/core/faultfs.hh",
+        "include/strata/core/counted_io.hh"
       ],
       "history": [
         {
@@ -777,18 +1008,58 @@
           ]
         }
       ],
-      "landed": [],
+      "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
+      "landed": [
+        {
+          "at": "2026-11-12T01:52:33",
+          "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "criteria": {
+            "A3": "261112-003214-3ac1cf",
+            "A4": "261112-013520-bd7c93",
+            "A5": "261112-003214-3ac1cf; fails without: 261112-011239-8f21e5",
+            "A6": "`docs/reviews/calibration.md` row 2026-10-29 (strata, already on main): \"Linux CI TSan is the authority for races on struct-copy writes; a local macOS TSan pass is not evidence for that class\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-003214-3ac1cf",
+              "level": "light",
+              "seconds": 409.0,
+              "state": "done",
+              "what": "barrier-warning-strata check build-test at d8ae10b8f1db"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "later": [
+            "261112-015233-4d4b38"
+          ],
+          "reason": "",
+          "tested": "d8ae10b8f1dbb31927fe6c01278fc7a476513864"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "landed",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-09T04:14:24"
+      "updated": "2026-11-12T01:52:35",
+      "worktree": "../strata-wt/xapiand/barrier-warning-strata"
     },
     "behavior-changes-audit": {
       "accepted": {},
@@ -1547,8 +1818,8 @@
     "cold-tier-step2": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-11T18:08:52",
-          "base": "089cd74ad47b95c0ebf9e49a12e46717beb3e67b",
+          "at": "2026-11-11T23:54:41",
+          "base": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
           "blobs": {
             "bench/catalog_tiers/CMakeLists.txt": "100644:65fabd2319e11276b2460283df7a5ed973c0c2f0",
             "bench/catalog_tiers/catalog_tiers.cc": "100644:4c9b8310db95c9a9e6795f0e892cde70513e4248",
@@ -1567,19 +1838,19 @@
             "docs/reviews/cold-tier-xpool-host.md": "100644:1cf23ea23d65d4b12c513bc971c4eeeb60ed98dd",
             "docs/status/cold-tier-step2.md": "100644:61319a575178c4aa71839527f2211dae23193cc2",
             "docs/status/cold-tier.md": "100644:98129cc5260a9b6f8aa89248342a949cc6e7fe78",
-            "include/strata/core/catalog.hh": "100644:f31ddfbec570a852719a274e15557191474743d6",
+            "include/strata/core/catalog.hh": "100644:033cf5b523d7077546a94f84204c2ec1cf315b15",
             "include/strata/core/index.hh": "100644:6d30fff1c03e392a3b9d211f78ca1553d7e01405",
             "test/apply_atomic_test.cc": "100644:616959e29dd22ff442277ec4ada92adbe74f1298",
             "test/catalog_stress_test.cc": "100644:00210ba4d153f01a3505bbe4c0e6f356f0a2fe7c",
             "test/catalog_sweep_test.cc": "100644:4937640b964a77a676d60ff2dabf858a3a52e91f",
             "test/catalog_wake_test.cc": "100644:870ca00994b72aae2ea9a80e4cc62626acbd7010",
             "test/cold_segment_test.cc": "100644:415436b677ba6be3306b11b8268ca749d62d1deb",
-            "tools/mutants/cold_tier.py": "100755:e08e5505e676d5b962104ca100935a554d65bb65",
-            "tools/mutants/cold_tier_table.py": "100644:c8f95b489ad8560dd513e6ff7d9b6566cc423f1b",
+            "tools/mutants/cold_tier.py": "100755:14e7c88369e391916c2addb03879faff361feabb",
+            "tools/mutants/cold_tier_table.py": "100644:18c4b0c0d3b7d9a2fc78cf4aaabb46db1a3c3c8f",
             "tools/mutants/rollback.py": "100755:2f87e0a879f97313545cbfc417293e40e1ad7a98"
           },
           "by": "review",
-          "commit": "32f197aa6935b03638fd1b1ee449634e1f32591a",
+          "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
           "criteria": "255e6ed03da895df",
           "diffs": {
             "bench/catalog_tiers/CMakeLists.txt": "075b9173818a677f",
@@ -1606,27 +1877,34 @@
             "test/catalog_sweep_test.cc": "5e41f64ee4a906d6",
             "test/catalog_wake_test.cc": "d72a2e8a85d282b0",
             "test/cold_segment_test.cc": "655f64925f56c162",
-            "tools/mutants/cold_tier.py": "b6ae23bc84a232b5",
-            "tools/mutants/cold_tier_table.py": "c14234a887f6167e",
+            "tools/mutants/cold_tier.py": "37c9727d064bd162",
+            "tools/mutants/cold_tier_table.py": "10d1cc76c80be382",
             "tools/mutants/rollback.py": "6c18bba1a02582dd"
           },
           "findings": {
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bench/catalog_tiers/tiers.sh t3 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers 50000 100000 2000 500",
-                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
-                  "docs": [
-                    "docs/mechanisms/catalog.md",
-                    "docs/perf/catalog-tiers.md"
-                  ],
+                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-151551-cd5253",
-                  "level": "strict",
-                  "seconds": 345.9,
+                  "job": "261111-231036-f7f5b1",
+                  "level": "light",
+                  "seconds": 138.7,
                   "state": "done",
-                  "what": "T3 at the band trigger (358d4c's command)"
+                  "what": "suite at the band trigger (062182b2) at 4c45e3dd20ba"
+                },
+                {
+                  "cmd": "bash -c 'git checkout 7b126bc1 -- include/strata/core/catalog.hh; cmake -B build-mut -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-mut -j4 --target catalog_sweep_test >build-mut.log 2>&1 || { tail -30 build-mut.log; exit 1; }; build-mut/catalog_sweep_test >out.txt 2>&1; rc=$?; cat out.txt; [ $rc -ne 0 ] && grep -q '\"'\"'catalog_sweep_test.cc:550: CHECK'\"'\"' out.txt'",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-231037-0b117d",
+                  "level": "light",
+                  "seconds": 171.3,
+                  "state": "done",
+                  "what": "mutant: one-slot trigger (7b126bc1's catalog.hh) fails soft_caps_post's band check at 4c45e3dd20ba"
                 }
               ],
               "kind": "gap",
@@ -1635,19 +1913,26 @@
             "F2": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4'",
-                  "commit": "062182b2da5a6cad6a9e1bbcd5e0a9a5d8b68206",
-                  "docs": [
-                    "docs/mechanisms/catalog.md",
-                    "docs/perf/catalog-tiers.md"
-                  ],
+                  "cmd": "bench/catalog_tiers/tiers.sh t2 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers-4c45e3dd d1s1 500 3",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261111-151520-66533e",
-                  "level": "light",
-                  "seconds": 475.8,
+                  "job": "261111-231055-97795a",
+                  "level": "strict",
+                  "seconds": 201.3,
                   "state": "done",
-                  "what": "suite at the band trigger (062182b2)"
+                  "what": "T2/T2d d1s1, 500 indexes, 3 reps at 4c45e3dd, binaries from 261111-231046-759dd0"
+                },
+                {
+                  "cmd": "bench/catalog_tiers/tiers.sh t2 /Users/kronuz/code/Kronuz/strata-wt/xapiand/cold-tier-step2/.scratch/tiers-4c45e3dd d1000s10 500 3",
+                  "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-231057-540206",
+                  "level": "strict",
+                  "seconds": 200.8,
+                  "state": "done",
+                  "what": "T2/T2d d1000s10, 500 indexes, 3 reps at 4c45e3dd, binaries from 261111-231046-759dd0"
                 }
               ],
               "kind": "gap",
@@ -1829,18 +2114,73 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/cold-tier-step2",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-11T23:54:49",
+          "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+          "criteria": {
+            "A1": "261111-231035-213f01, 261111-231036-f7f5b1; fails without: 261111-113839-ade11c, 261111-123743-7732e9, 261111-151526-29ff8a",
+            "A10": "[artifact] `docs/status/cold-tier.md` section \"K7: who builds snapshots from seg()\" (strata:5e06300b, 85dd1df6, 8f372200): prospect's and Xapiand's construction sites with the pin bumps that adopt seg() (prospect:e49453d, Xapiand:74d8236e5), and the six prospect cases a lazy open leaves to the first map",
+            "A11": "CI at strata:4c45e3dd: none until the branch is pushed (last green run 42993976189 at strata:948c0869: `ci:linux-tsan`, `ci:linux-asan-ubsan`, `ci:freebsd-x86_64`, `ci:macos-arm64`, `ci:macos-x86_64`, `ci:linux-arm64-gcc`, `ci:linux-x86_64-gcc`, `ci:linux-x86_64-clang`)",
+            "A12": "261111-231035-213f01",
+            "A13": "[artifact] `docs/design/cold-tier.md` revision 8 (strata:19ea55d9, over design/cold-tier's revision 7 merged at 6f8884bc): item 5b's host and word rows in D4, the ledger's \"Design vs code\" in D4, fence replacement, commit chore and create intent in D5, the limits",
+            "A14": "[artifact] `docs/status/cold-tier-step2.md`: Q6 ruled (`docs/design/cold-tier.md` Q6), item 6's seam ruling applied (\"Item 6's seam ruling\"), the last questions answered or left to the lead (\"Questions for the lead and the architect\", strata:7a5ca76a: question 3's by-key A/B is the lead's measurement)",
+            "A2": "261111-220736-cea164",
+            "A3": "261111-220743-7768e8, 261111-220744-401ca4, 261111-231055-97795a, 261111-231057-540206",
+            "A4": "261111-220743-7768e8, 261111-220744-401ca4, 261111-231055-97795a, 261111-231057-540206",
+            "A5": "261111-231046-759dd0, 261111-231055-97795a, 261111-231057-540206",
+            "A6": "261111-231035-213f01",
+            "A7": "261111-231037-42c8ed (queued, strata:4c45e3dd): `apply_atomic_test` with each damaged section eager and lazy, `tools/mutants/rollback.py`'s three reverts killed, then the whole suite eager; build-test 261111-231035-213f01",
+            "A8": "261111-231035-213f01",
+            "A9": "261111-220738-86ec82, 261111-220740-637543"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-231035-213f01",
+              "level": "light",
+              "seconds": 131.2,
+              "state": "done",
+              "what": "cold-tier-step2 check build-test at 4c45e3dd20ba"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "7177fcc5c8874e74eddd9cd280970e4a497e56f3",
+          "later": [
+            "261111-235450-b3fef2",
+            "261111-235450-556fb0"
+          ],
+          "reason": "",
+          "tested": "4c45e3dd20ba1be81650c82f8c4e882bc311ad0f"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "the strata lane",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The cold tier's step 2 finished and gated",
-      "updated": "2026-11-11T18:08:52",
+      "updated": "2026-11-11T23:54:51",
       "worktree": "../strata-wt/xapiand/cold-tier-step2"
     },
     "cold-tier-step2-item1": {
@@ -2415,6 +2755,139 @@
       "status": "landed",
       "title": "A concurrent PUT never leaves an id on two shards",
       "updated": "2026-11-11T12:09:39",
+      "worktree": ""
+    },
+    "dir-shared-lock": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T04:57:22",
+          "base": "dfdac5d196b7253609175260d23c71841b0840df",
+          "blobs": {
+            ".github/workflows/mutants.yml": "100644:2fa76a687243b6a8e7d4e5c331273edb94ad2679",
+            "docs/mechanisms/directory-locks.md": "100644:5a2555b792e82d15ac9f02e70f5464fa9dbc8dfc",
+            "include/completion/io.h": "100644:947291393b32d1348ca17d68f1046e7cf9f95326",
+            "include/completion/posix.h": "100644:e4c3203179480c884ae5c230706f2cca9e502547",
+            "test/owner_lock_test.cc": "100644:f95d10e50526353dbd973bdef92ae52c30824e2e",
+            "tools/mutants.py": "100644:651460783b39d613ce996d33112d3bc90784b666"
+          },
+          "by": "review",
+          "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "criteria": "4b372834d83fd146",
+          "diffs": {
+            ".github/workflows/mutants.yml": "dd76e5f1f0ea1920",
+            "docs/mechanisms/directory-locks.md": "59121e4f121d5255",
+            "include/completion/io.h": "27f57a5559e2691c",
+            "include/completion/posix.h": "4a6b79b6836fc953",
+            "test/owner_lock_test.cc": "c7988133a71db391",
+            "tools/mutants.py": "b28da3ddc9c0b0c5"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-045113-23f421",
+                  "level": "light",
+                  "seconds": 86.6,
+                  "state": "done",
+                  "what": "dir-shared-lock check build-test at 504f4099b9a5"
+                },
+                {
+                  "cmd": "python3 tools/mutants.py --only m1,m2,m3,m15",
+                  "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-045114-4fb679",
+                  "level": "light",
+                  "seconds": 327.3,
+                  "state": "done",
+                  "what": "mutants m1,m2,m3,m15 killed"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              ".github/workflows/mutants.yml",
+              "tools/mutants.py"
+            ],
+            "reason": "F1 is the review's own fix: one lock helper replaces two loops; tools/mutants.py anchors and m15 and the workflow count follow; no new mechanism"
+          },
+          "note": "",
+          "review": "44bb0e3384389105b9140db82a4c28d8bd8cff24",
+          "reviewed": "d06b0190913ec067b9e0c4f3adedeb06c2f9de1a",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "dfdac5d196b7253609175260d23c71841b0840df",
+      "branch": "quest/xapiand/dir-shared-lock",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**",
+        "tools/mutants.py",
+        ".github/workflows/mutants.yml"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T04:57:29",
+          "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "criteria": {
+            "A1": "261112-045113-23f421, 261112-045118-31d22a; fails without: 261112-044136-c2bcfc, 261112-045114-4fb679",
+            "A2": "261112-045113-23f421",
+            "A3": "`docs/mechanisms/directory-locks.md` (completion)",
+            "A4": "261112-045113-23f421"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-045113-23f421",
+              "level": "light",
+              "seconds": 86.6,
+              "state": "done",
+              "what": "dir-shared-lock check build-test at 504f4099b9a5"
+            }
+          ],
+          "final": true,
+          "from": "dfdac5d196b7253609175260d23c71841b0840df",
+          "reason": "",
+          "tested": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [
+        "completion:directory-lock"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "landed",
+      "title": "completion's IO takes a shared directory lock beside the exclusive owner lock",
+      "updated": "2026-11-12T04:57:33",
       "worktree": ""
     },
     "direct-pins": {
@@ -3038,6 +3511,68 @@
       "status": "planned",
       "title": "The document profile gate, strata's core against RocksDB",
       "updated": "2026-11-08T22:35:42"
+    },
+    "drop-dir-reader": {
+      "accepted": {},
+      "after": [],
+      "base": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+      "branch": "quest/xapiand/drop-dir-reader",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**",
+        "tools/mutants.py",
+        ".github/workflows/mutants.yml"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T08:03:26",
+          "commit": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85",
+          "criteria": {
+            "A1": "261112-075935-faac3d",
+            "A2": "261112-075935-faac3d; ci:ci / linux-x86_64-gcc, ci:ci / macos-arm64, ci:ci / freebsd-x86_64 (CI run green on every job at completion:3f82cda)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-075935-faac3d",
+              "level": "light",
+              "seconds": 55.2,
+              "state": "done",
+              "what": "drop-dir-reader check build-test at 3f82cda129a2"
+            }
+          ],
+          "final": true,
+          "from": "504f4099b9a5dc2ab9f5ee68e9b393b04712f631",
+          "reason": "",
+          "tested": "3f82cda129a2abeb7fb57baff04fe3981dcc1d85"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../completion",
+      "risk": "low",
+      "status": "landed",
+      "title": "completion drops the unused shared directory lock",
+      "updated": "2026-11-12T08:03:28",
+      "worktree": ""
     },
     "drop-replicas": {
       "accepted": {},
@@ -3716,6 +4251,68 @@
       "title": "Format 13 landing and pre-freeze work",
       "updated": "2026-11-08T15:39:16"
     },
+    "fuzz-cpu-hour": {
+      "accepted": {},
+      "after": [
+        "release-rows"
+      ],
+      "base": "61e09a60e0bf15c9d44a35b7819d08052f474071",
+      "branch": "quest/xapiand/fuzz-cpu-hour",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "fuzz/**",
+        "tools/release_rows/**",
+        "docs/perf/fuzz-*.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-13T10:23:18",
+          "commit": "bced9d026a12ff54f3c16f5e51423911359871f9",
+          "criteria": {
+            "A1": "`docs/perf/fuzz-targets.md` (prospect; per-input cost, causes and the libFuzzer cost table, whose job ids the doc names)",
+            "A2": "261113-081451-5358c3 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081455-3f4ada (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081459-02662d (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081502-e083e7 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081506-55d102 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081510-b10410 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081514-9eda0f (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081517-5a8e7e (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081521-9f4bc1 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081524-15b135 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081528-c7f8ca (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081531-084b60 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md)",
+            "A3": "261113-081451-5358c3 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081455-3f4ada (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081459-02662d (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "bced9d026a12ff54f3c16f5e51423911359871f9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-100011-413b69",
+              "level": "light",
+              "seconds": 419.1,
+              "state": "done",
+              "what": "fuzz-cpu-hour check build-test at bced9d026a12"
+            }
+          ],
+          "final": true,
+          "from": "61e09a60e0bf15c9d44a35b7819d08052f474071",
+          "reason": "",
+          "tested": "bced9d026a12ff54f3c16f5e51423911359871f9"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "landed",
+      "title": "One real CPU-hour of fuzzing per prospect decoder the release reads",
+      "updated": "2026-11-13T10:23:23",
+      "worktree": ""
+    },
     "gate-prep-followups": {
       "accepted": {},
       "after": [],
@@ -4292,6 +4889,157 @@
       "updated": "2026-11-11T00:23:06",
       "worktree": ""
     },
+    "http-cancel-race": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T04:29:39",
+          "base": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+          "blobs": {
+            "docs/perf/watch-peek.md": "100644:97c17de2ec18b692641e07f9d85c09348958ae95",
+            "http_asio.h": "100644:7e526328d193304e6ba7505628867bf79336519a",
+            "test/readahead_test.cc": "100644:7fe9316b1846e28e740de0945d24ad59d7e24d6e",
+            "test/watch_mutants.sh": "100755:9d5f33e1457bef5ca311797b11180a0548f08f1a"
+          },
+          "by": "review",
+          "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "criteria": "922f5d33a78f8838",
+          "diffs": {
+            "docs/perf/watch-peek.md": "40012329bcbedc6e",
+            "http_asio.h": "9681a6c248641e3d",
+            "test/readahead_test.cc": "489fca8f724ca3f5",
+            "test/watch_mutants.sh": "fc7eb59e4df7331b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d69ed1c8c10cfa0dc6d9d84a92b7413f0985615a",
+          "reviewed": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+      "branch": "quest/xapiand/http-cancel-race",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "test/**",
+        "docs/perf/watch-peek.md",
+        "bench/watch_ab.sh"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T04:29:44",
+          "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "criteria": {
+            "A1": "261112-035947-754791, 261112-035951-01fc5f; fails without: 261112-035948-060f09",
+            "A2": "261112-035947-754791",
+            "A3": "[artifact] `docs/perf/watch-peek.md` (Timing: A/A printed as after/control; rotation stated)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-035947-754791",
+              "level": "light",
+              "seconds": 186.9,
+              "state": "done",
+              "what": "http-cancel-race check build-test at 473bbc32a4da"
+            }
+          ],
+          "final": true,
+          "from": "c5590bc03abb8b2fdaf91dc2d009c56f97092f3d",
+          "reason": "",
+          "tested": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "high",
+      "status": "landed",
+      "title": "A cancel that lands between a readiness wake and its handler stops the read",
+      "updated": "2026-11-12T04:29:49",
+      "worktree": ""
+    },
+    "http-lane": {
+      "accepted": {},
+      "after": [
+        "task-lanes"
+      ],
+      "base": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+      "branch": "quest/xapiand/http-lane",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "task:lanes"
+      ],
+      "files": [
+        "http_asio.h",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:31:16",
+          "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+          "criteria": {
+            "A1": "261112-222327-cf718c; fails without: 261112-222330-e221cd",
+            "A2": "261112-222327-cf718c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-222327-cf718c",
+              "level": "light",
+              "seconds": 134.0,
+              "state": "done",
+              "what": "http-lane check build-test at 09b644d23f65"
+            }
+          ],
+          "final": true,
+          "from": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "reason": "",
+          "tested": "09b644d23f6518c4112812e83c2711058e99ea78"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/http",
+      "risk": "normal",
+      "status": "landed",
+      "title": "http resumes a waiter inline only for a light reference",
+      "updated": "2026-11-12T22:31:47",
+      "worktree": ""
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
@@ -4564,6 +5312,65 @@
       "status": "landed",
       "title": "Refactor format layers and plugins",
       "updated": "2026-11-08T15:39:16"
+    },
+    "lib-doc-nits": {
+      "accepted": {},
+      "after": [],
+      "base": "3a3c2054b66fd0d483ed7de8e10e5171675d7766",
+      "branch": "quest/xapiand/lib-doc-nits",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/mechanisms/barriers.md",
+        "docs/mechanisms/commit-barriers.md",
+        "include/completion/posix.h"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T03:31:07",
+          "commit": "dfdac5d196b7253609175260d23c71841b0840df",
+          "criteria": {
+            "A1": "261112-032721-0dea07",
+            "A2": "[artifact] `docs/mechanisms/barriers.md` (N1, N2, N4, N5 in posix.h comment, N6)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dfdac5d196b7253609175260d23c71841b0840df",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-032721-0dea07",
+              "level": "light",
+              "seconds": 32.8,
+              "state": "done",
+              "what": "lib-doc-nits check build-test at dfdac5d196b7"
+            }
+          ],
+          "final": true,
+          "from": "3a3c2054b66fd0d483ed7de8e10e5171675d7766",
+          "reason": "",
+          "tested": "dfdac5d196b7253609175260d23c71841b0840df"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../completion",
+      "risk": "low",
+      "status": "landed",
+      "title": "Review nits in completion's barrier docs and header",
+      "updated": "2026-11-12T03:31:09",
+      "worktree": ""
     },
     "library-issues": {
       "accepted": {},
@@ -4924,6 +5731,243 @@
       "status": "landed",
       "title": "logger never loses a refused line",
       "updated": "2026-11-08T15:41:29"
+    },
+    "loop-scheduling": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T06:57:58",
+          "base": "4c84091ea8556ec7c75122b6e67ac4b0aaf02ad9",
+          "blobs": {
+            "CMakeLists.txt": "100644:3141d698c3ff5ff4e0199155f0ae13cbeef78ae9",
+            "docs/design/loop-scheduling.md": "100644:c13bb088b2c99f891420f2f021d5f15310330ddb",
+            "docs/design/phase7c.md": "100644:a01dc58cce8bfee02bc4f491d400a87a977b7393",
+            "src/engine/host.h": "100644:b46134b601dc24a1230fe257c5b2b4ff22db5fb9",
+            "src/engine/host_asio.h": "100644:e19e0e62bc03b1ecafe10fdbd1f6f8e09cdb535c",
+            "src/server/search_views.cc": "100644:b84dc058a82af94802b9eaf20539057cf38d5342",
+            "tests/test_loop_yield.cc": "100644:90a509fdfa19a2d0388eba29d79182afa6623381"
+          },
+          "by": "review",
+          "commit": "993eaf8578ebe415f713beab52044fb37538358e",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "CMakeLists.txt": "fd865634a193008f",
+            "docs/design/loop-scheduling.md": "f15819020c15fe6a",
+            "docs/design/phase7c.md": "b2a02df557a40f0d",
+            "src/engine/host.h": "e9d531f1c2d05b2e",
+            "src/engine/host_asio.h": "0103ed39a30e7790",
+            "src/server/search_views.cc": "8232bc52a14766ca",
+            "tests/test_loop_yield.cc": "d8df4dc799a964fa"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'trap \"git -C \\\"$PWD\\\" checkout -- src/server/search_views.cc\" EXIT\npython3 - <<\"PY2\" || exit 2\np = \"src/server/search_views.cc\"\ns = open(p).read()\nk = \"\\t\\t\\t\\trequest.budget->rearm_light(REQUEST_STREAM_SLICES);\\n\"\nassert s.count(k) == 1\ns = s.replace(k, \"\", 1)\nk2 = \"\\tauto& stream = *http_req->body_stream;\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\"\nassert s.count(k2) == 1\ns = s.replace(k2, \"\\tauto& stream = *http_req->body_stream;\\n\\tif (budget) {\\n\\t\\tbudget->rearm_light(REQUEST_STREAM_SLICES);\\n\\t}\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\", 1)\nopen(p, \"w\").write(s)\nPY2\ncmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF > cfg.log 2>&1 || { tail -30 cfg.log; exit 2; }\nT=$(cmake --build build --target help | grep -o \"[A-Za-z_]*test_loop_yield\" | head -1)\ncmake --build build -j4 --target $T > bld.log 2>&1 || { grep -m5 -B2 -A8 \"error\" bld.log; tail -20 bld.log; exit 2; }\nctest --test-dir build -R loop_yield -V > mutant.log 2>&1; cat mutant.log\ngrep -qF \"test_loop_yield.cc\" mutant.log && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(first_light)\" && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(lanes_by_count)\"'",
+                  "commit": "832ab1126d161389f6a83130428e69db3c80d0cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-062526-3505e2",
+                  "level": "light",
+                  "seconds": 482.9,
+                  "state": "done",
+                  "what": "loop-scheduling mutant rearm-in-read: rearm_light moved into Request::read_chunk must fail CHECK(first_light) and CHECK(lanes_by_count) at 832ab1126d16"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "832ab1126d161389f6a83130428e69db3c80d0cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-062523-be795f",
+                  "level": "light",
+                  "seconds": 277.2,
+                  "state": "done",
+                  "what": "loop-scheduling check build-test at 832ab1126d16"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "12cbd4e26af036d5a6a787912a6ea87109c12ae6",
+          "reviewed": "1317dd6850f17433f0b76fc0afd5ce576b7313f7",
+          "verdict": "CHANGES"
+        },
+        "design": {
+          "at": "2026-11-12T20:06:28",
+          "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+          "blobs": {
+            "docs/design/loop-scheduling.md": "100644:6cd44554da738f3b89bd3db335dfe356178088e9"
+          },
+          "by": "review",
+          "commit": "d69ac733f5cdd828a0d1d3602be2169fd607bf9b",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "docs/design/loop-scheduling.md": "eebaf2045ff204e2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3d533e1a690f0044f9e73018523e6686d0d62983",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "x7-loop-fix-c"
+      ],
+      "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+      "branch": "quest/xapiand/loop-scheduling",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/loop-scheduling.md",
+        "docs/design/phase7c.md",
+        "src/server/search_views.cc",
+        "src/engine/host.h",
+        "src/engine/host_asio.h",
+        "CMakeLists.txt",
+        "tests/test_loop_yield.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-13T07:19:46",
+          "commit": "05d36bdbc97124b9013ad7535962c8b6b5b8bec4",
+          "criteria": {
+            "A1": "`docs/design/loop-scheduling.md` (the census job ids E1-E3, X1-X8 are in the note and in this journal's history; an artifact row names only the path)",
+            "A2": "261113-062526-c0ec94, 261113-062549-c1f3f1",
+            "A3": "261113-062527-db4085",
+            "A4": "261113-062523-be795f; fails without: 261112-225153-ff8ddb, 261112-225208-795ab1, 261112-225215-c76586, 261113-033318-52f956, 261113-033325-227525, 261113-033332-72bffb, 261113-033338-89cc5a, 261113-042355-ac17b8, 261113-042356-bbdfbb, 261113-042356-6f67c7, 261113-042356-b1cb7d, 261113-050320-86bca1, 261113-050320-c937a0, 261113-050325-7998cd, 261113-052239-99c10c, 261113-052239-fabe14, 261113-062526-3505e2, 261113-062526-0dbaf6, 261113-062526-d16f93, 261113-062526-0fb272, 261113-062526-e6091d"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "832ab1126d161389f6a83130428e69db3c80d0cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-062523-be795f",
+              "level": "light",
+              "seconds": 277.2,
+              "state": "done",
+              "what": "loop-scheduling check build-test at 832ab1126d16"
+            }
+          ],
+          "final": true,
+          "from": "9d081f3ee63f03b3ba88e1198f9a7b2c93a518df",
+          "reason": "",
+          "tested": "993eaf8578ebe415f713beab52044fb37538358e"
+        }
+      ],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "landed",
+      "title": "HTTP loop threads keep running under the T4/T5 mix",
+      "updated": "2026-11-13T07:19:53",
+      "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
+    },
+    "loop-share-flake": {
+      "accepted": {},
+      "after": [],
+      "base": "1b31d861d27c4435664fd165b5688853deb27a50",
+      "branch": "quest/xapiand/loop-share-flake",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_loop_yield.cc"
+      ],
+      "history": [
+        {
+          "at": "2026-11-12T10:53:22",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the default check lacks BUILD_TESTS and async_check; this is Xapiand's standard build-test (strengthens)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T12:17:02",
+          "commit": "c36e36069e520e6b6385c9e2c84571f1a06aaa9a",
+          "criteria": {
+            "A1": "261112-114436-2b0a05",
+            "A2": "261112-120316-53ad25; fails without: 261112-120322-64f547"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "f25ea81fd3a7345bbda7d69a59a6113517432ae8",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-114436-2b0a05",
+              "level": "light",
+              "seconds": 423.3,
+              "state": "done",
+              "what": "loop-share-flake check build-test at f25ea81fd3a7"
+            }
+          ],
+          "final": true,
+          "from": "5d30f9b06d32696f1e858ede72627d6de9284424",
+          "reason": "",
+          "tested": "b10d7c23bb6659c008df7e06351cea60b07d1249"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "test_loop_yield's RESTORE loop share holds on any core count",
+      "updated": "2026-11-12T12:17:10",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
@@ -9791,9 +10835,229 @@
       "title": "Bound control-worker command draining",
       "updated": "2026-11-08T13:25:10"
     },
-    "open-one-flush": {
+    "one-id": {
+      "accepted": {
+        "durability": {
+          "at": "2026-11-13T11:06:22",
+          "base": "4bd077bed0eef688e77748444944915dd82dd0c7",
+          "blobs": {
+            "docs/design/one-id.md": "100644:86147f6512eab538404c35b4d90414e729a3f8fb",
+            "docs/mechanisms/document-ids-and-versions.md": "100644:480707202d3c4e4083c7ce95fb3d4a1a1653af34",
+            "docs/src/content/docs/architecture.md": "100644:8fdd847b06f77d130701ccc179eb22cb3d7df28c",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "100644:52f26aee57ff583392840cdc324c11af9b447d13",
+            "harness/async_allowlist.tsv": "100644:508b01b500d33c799f3c8dab476a06afdeb04324",
+            "src/database/handler.cc": "100644:5b61db3352fa2b15cb0be7564e65fc1c430cc7b8",
+            "src/database/handler.h": "100644:4a42ae84a24df26db7ee688b48158496256b3023",
+            "src/database/pool.h": "100644:29208d01c647f5cecf13c125548bd699934f3fdc",
+            "src/database/schema.cc": "100644:3fc715a0c2cfbc5f127dde2ab8c9aeeb23a69f70",
+            "src/database/shard.cc": "100644:0232e282b90c0b34b0e842c3d8aaa1b35a38f027",
+            "src/database/shard.h": "100644:6e91643ca1e289226f434a5e09eeeaba490f8233",
+            "src/engine/shard.h": "100644:10c3a21d076eeab1939972215f8305bf2c3ee3e4",
+            "src/engine/strata/shard.cc": "100644:6372846bb0f1662fac4a6b7aeace0ea4a165f87f",
+            "src/server/search_views.cc": "100644:88b72bebaf912a589f2e72466c737eb0eef7a16e",
+            "tests/one_id_mutants.sh": "100755:abcc1d2683f85b1241bf9fdd487dc31fc9e3234a",
+            "tests/test_engine_strata.cc": "100644:68f820fae87338f213af0a7a7e86ac8e5381166f",
+            "tests/test_loop_yield.cc": "100644:1463aca84f10ca5ad367111c912311bb6317de57",
+            "tests/test_node.cc": "100644:5a9ab36b43d7dd0d68bc1ae91cd38250b55e7368",
+            "tests/test_pool.cc": "100644:c25d0a5ca1985ae56f25bb05a709a54ee929e841"
+          },
+          "by": "review",
+          "commit": "555445188cc42c59ed12eae391e11ac5bc796ad1",
+          "criteria": "6eda6b21b81984bc",
+          "diffs": {
+            "docs/design/one-id.md": "5e1522f6659dc013",
+            "docs/mechanisms/document-ids-and-versions.md": "f5a9228505cbedd2",
+            "docs/src/content/docs/architecture.md": "9c6b1fec815d872f",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "87750c4fded39767",
+            "harness/async_allowlist.tsv": "aa194cd07ee6d229",
+            "src/database/handler.cc": "db31440c41c061e1",
+            "src/database/handler.h": "d4d9d2cf43f60bd1",
+            "src/database/pool.h": "8b47dbe666bc3baf",
+            "src/database/schema.cc": "0230625c30c2e67b",
+            "src/database/shard.cc": "8c2231a79ecf5c3e",
+            "src/database/shard.h": "d7bac98c185b1515",
+            "src/engine/shard.h": "f8529170eeb89815",
+            "src/engine/strata/shard.cc": "55684ca5a0251711",
+            "src/server/search_views.cc": "906e105c27dbae00",
+            "tests/one_id_mutants.sh": "967e938705847e4c",
+            "tests/test_engine_strata.cc": "064da2e4c6b8c65c",
+            "tests/test_loop_yield.cc": "a7820d54f4e9f025",
+            "tests/test_node.cc": "24dbd8042cf934ce",
+            "tests/test_pool.cc": "b72545af9b5a0492"
+          },
+          "findings": {},
+          "note": "",
+          "review": "067d9c5fa178303d741eb87113e25a376a936069",
+          "reviewed": "1f5b791d21db8e7a39f78432d8a62f096a511960",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "loop-scheduling",
+        "x7-loop-fix-c"
+      ],
+      "base": "3962041365b38a2a0079336c9358de896a3c7fcc",
+      "branch": "quest/xapiand/one-id",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/database/schema.cc",
+        "src/database/pool.h",
+        "src/engine/strata/shard.cc",
+        "src/engine/strata/search.cc",
+        "src/engine/shard.h",
+        "src/server/search_views.cc",
+        "src/index_resolver_lru.*",
+        "tests/**",
+        "harness/async_allowlist.tsv",
+        "docs/design/one-id.md",
+        "docs/mechanisms/document-ids-and-versions.md",
+        "docs/src/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-13T09:55:40",
+          "lenses": [
+            [
+              "correctness",
+              "durability"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "high risk needs one review by its dominant lens; the durability review (APPROVE) carried the correctness questions (routing, A3 derivations, test strength) in its prompt",
+          "voided": [
+            "durability"
+          ],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-13T11:06:52",
+          "commit": "46edfb23e9095210fb1bdbac22835f37bb470e8a",
+          "criteria": {
+            "A1": "261113-103109-652819; fails without: 261113-083755-2de9cb, 261113-103110-b89722",
+            "A2": "261113-103109-652819; fails without: 261113-083758-e58dc8, 261113-083800-510abb, 261113-083802-c6d044, 261113-083805-101e1b, 261113-103112-482015, 261113-103114-8bb3e1, 261113-103117-f82b70, 261113-103119-c46bdd",
+            "A3": "`docs/design/one-id.md`",
+            "A4": "261113-103109-652819",
+            "A5": "261113-103135-ce00ce",
+            "A6": "261113-103109-652819; fails without: 261113-083809-734db4, 261113-103124-d6917a",
+            "A7": "261113-103109-652819; fails without: 261113-083807-92969a, 261113-103121-12d765, 261113-103126-1cc5d1, 261113-103128-415311"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "1f5b791d21db8e7a39f78432d8a62f096a511960",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-103109-652819",
+              "level": "light",
+              "seconds": 293.6,
+              "state": "done",
+              "what": "one-id check build-test at 1f5b791d21db"
+            }
+          ],
+          "final": true,
+          "from": "6cecdb4f91d98b362b5aae52de668f5f61f2fb2e",
+          "reason": "",
+          "tested": "ce0d924b2905132b28dc954ac8dfbe62e05de9f5"
+        }
+      ],
+      "lenses": [
+        "durability"
+      ],
+      "messages": [],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "landed",
+      "title": "A document's id is its only id; docids stay internal and dense",
+      "updated": "2026-11-13T11:06:58",
+      "worktree": "../Xapiand-wt/xapiand/one-id"
+    },
+    "open-mix": {
       "accepted": {},
       "after": [],
+      "base": "dc0bb0b7967a150782806b0d3fd5431534ecfc10",
+      "branch": "quest/xapiand/open-mix",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/pool.cc",
+        "harness/open_mix*",
+        "docs/perf/open-mix.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "reason": "owner 11-12: the open mix depends on the use case; decide read-only-open's shape architecturally, not by measuring",
+      "repo": ".",
+      "risk": "low",
+      "status": "dropped",
+      "title": "Measure the share of index opens that never write while open",
+      "updated": "2026-11-12T08:26:23",
+      "worktree": ""
+    },
+    "open-one-flush": {
+      "accepted": {
+        "durability": {
+          "at": "2026-11-12T03:19:49",
+          "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "blobs": {
+            "bench/open_sync/build.sh": "100755:a541b8d0b5c496cad9db23aac83a9ff6494c4560",
+            "bench/open_sync/loaded.sh": "100755:8b1498cca0baebe8de33a5921638957cb3aa8409",
+            "bench/open_sync/mutant.sh": "100755:06dc22c84cdfba6cae66b89f7e0152b8c65bc6dd",
+            "bench/open_sync/run.sh": "100755:1bf87767bb5a9bc08843d25d6b46e22212b83ed3",
+            "docs/design/manifest-log.md": "100644:70a4af6dbf8104dd386d35f401aed93f076cce6d",
+            "docs/perf/open-sync.md": "100644:7c42711421e500413e90fc375c7a3d028561a71c",
+            "include/strata/core/index.hh": "100644:d78eddbffd1b77eb61d148b6eff3372c916edcbe"
+          },
+          "by": "review",
+          "commit": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "criteria": "06bc211c287f6aa6",
+          "diffs": {
+            "bench/open_sync/build.sh": "008f4eee816fffbf",
+            "bench/open_sync/loaded.sh": "b556bffc974f07e3",
+            "bench/open_sync/mutant.sh": "f29a938d0277420f",
+            "bench/open_sync/run.sh": "bcc0146b6a9d2544",
+            "docs/design/manifest-log.md": "6d832e4600da5bcd",
+            "docs/perf/open-sync.md": "222118211f05d293",
+            "include/strata/core/index.hh": "db630379c03b90f2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "943c345da06a2286e563d305a04cec6ef8d381c7",
+          "reviewed": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+      "branch": "quest/xapiand/open-one-flush",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9807,20 +11071,54 @@
         "include/strata/core/index.hh",
         "test/index_test.cc",
         "docs/design/manifest-log.md",
-        "docs/perf/open-sync.md"
+        "docs/perf/open-sync.md",
+        "bench/open_sync/**"
       ],
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T03:19:54",
+          "commit": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "criteria": {
+            "A1": "261112-030638-90e5bc (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md); fails without: 261112-022005-2de6e1, 261112-025813-0362d3, 261112-025815-cc2c50",
+            "A2": "261112-030638-fcc49d (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md)",
+            "A3": "261112-030638-ee5b2a (passed at 69b76e9c05a0; ignores docs-only docs/perf/open-sync.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "69b76e9c05a07a7d2e64a473cf14dbe82916a36c",
+              "docs": [
+                "docs/perf/open-sync.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-030638-ee5b2a",
+              "level": "light",
+              "seconds": 145.9,
+              "state": "done",
+              "what": "open-one-flush check suite at 69b76e9c05a0"
+            }
+          ],
+          "final": true,
+          "from": "d8ae10b8f1dbb31927fe6c01278fc7a476513864",
+          "reason": "",
+          "tested": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "high",
-      "status": "planned",
+      "status": "landed",
       "title": "The index open shares one device flush between its log and directory syncs",
-      "updated": "2026-11-11T00:56:57"
+      "updated": "2026-11-12T03:19:59",
+      "worktree": ""
     },
     "perf-watch-peek": {
       "accepted": {
@@ -11737,6 +13035,62 @@
       "title": "Pool cleanup and wakeup fixes",
       "updated": "2026-11-08T13:25:08"
     },
+    "pool-sweep-wait": {
+      "accepted": {},
+      "after": [],
+      "base": "30dc945b436a642b14659628ff6a31082d21ccca",
+      "branch": "quest/xapiand/pool-sweep-wait",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_pool.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T02:09:27",
+          "commit": "c963598f132133a79ae64a77fe1e0f23e17af663",
+          "criteria": {
+            "A1": "261112-013706-bce470 (passed at a0ecee4694b6; only merges from main since), 261112-013709-c8d2f4 (passed at a0ecee4694b6; only merges from main since)",
+            "A2": "[artifact] `tests/test_pool.cc`: \"index.wait_merges()\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "3cfbf2d36d1e173f051b815dad65676fa65949af",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-013709-c8d2f4",
+              "level": "light",
+              "seconds": 228.3,
+              "state": "done",
+              "what": "pool-sweep-wait check build-test at 3cfbf2d36d1e"
+            }
+          ],
+          "final": true,
+          "from": "2da421f599fb4d8ab967b04fd24c303641c1deea",
+          "reason": "",
+          "tested": "a3fc17a5352fc04d368aad29087bffa5734ed8b4"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "The sweep-merge pool test waits on a signal, not a 10 s loop",
+      "updated": "2026-11-12T02:09:34",
+      "worktree": ""
+    },
     "postings-fuzz-memory": {
       "accepted": {
         "security": {
@@ -12018,6 +13372,71 @@
       "status": "landed",
       "title": "Instrument fetched libraries with sanitizers",
       "updated": "2026-11-08T13:25:11"
+    },
+    "prospect-completion-opens": {
+      "accepted": {},
+      "after": [
+        "barrier-warning-strata"
+      ],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/prospect-completion-opens",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/background_merge_test.cc",
+        "test/directory_test.cc",
+        "test/index_test.cc",
+        "test/format13_test.cc",
+        "test/index_mapped_test.cc",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T02:16:34",
+          "commit": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+          "criteria": {
+            "A1": "261112-015344-bac35a",
+            "A2": "[artifact] `test/index_test.cc`: gate_io/wrapper_io/flaky_io forward all four read-only opens (prospect:ea89758; flaky_io at lines 112-115); not changed here",
+            "A3": "261112-015356-09e3c0; fails without: 261112-013153-51da31, 261112-015401-c49945"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-015344-bac35a",
+              "level": "light",
+              "seconds": 453.1,
+              "state": "done",
+              "what": "prospect-completion-opens check build-test at fcd9f3e1f803"
+            }
+          ],
+          "final": true,
+          "from": "b20e7c555f37daad415cf658b32f99cc9a955464",
+          "reason": "",
+          "tested": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "landed",
+      "title": "prospect's test IOs implement completion's four read-only opens",
+      "updated": "2026-11-12T02:16:39",
+      "worktree": ""
     },
     "prospect-drop-threadpool": {
       "accepted": {},
@@ -12649,7 +14068,11 @@
     },
     "read-only-open": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "open-mix"
+      ],
+      "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+      "branch": "quest/xapiand/read-only-open",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12661,10 +14084,16 @@
       "consumes": [],
       "files": [
         "include/strata/core/index.hh",
-        "test/index_test.cc",
+        "include/strata/core/faultfs.hh",
+        "include/strata/core/counted_io.hh",
+        "CMakeLists.txt",
+        "test/**",
         "docs/design/read-only-open.md",
-        "docs/perf/open-sync.md"
+        "docs/perf/open-sync.md",
+        "bench/idle_index/idle_index.cc",
+        "bench/open_sync/**"
       ],
+      "journal": "",
       "landed": [],
       "lenses": [
         "durability"
@@ -12674,11 +14103,13 @@
         "open-one-flush"
       ],
       "provides": [],
+      "reason": "owner 11-12 D60c: no read-only mode; the open's sync moves to the first commit (quest sync-at-first-commit); shared-lock work kept on its branch",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-11T15:26:01"
+      "updated": "2026-11-12T08:26:54",
+      "worktree": ""
     },
     "reclaim-backlog": {
       "accepted": {},
@@ -13005,7 +14436,73 @@
       "updated": "2026-11-08T22:56:40"
     },
     "release-rows": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T08:45:16",
+          "base": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+          "blobs": {
+            "docs/gates/release-rows.md": "100644:7b7ed1d4cff7cb97efaff3fa84c025cf944143ea",
+            "test/aggregate_test.cc": "100644:f986fd1314270b75587f3d1bfbc2e64e9c05d661",
+            "test/segment_test.cc": "100644:6c0ce43f63930b7506865a0e8f99bb28c7c2dda7",
+            "tools/parity.cc": "100644:efc6043760035b46efa0751f4b7e17412560458f",
+            "tools/release_rows/CMakeLists.txt": "100644:67529fad6dfa716fce041f41045897635f595456",
+            "tools/release_rows/rows.sh": "100755:e3c7a243f53b4fdcab3938c707cbd31f348fcc0b",
+            "tools/release_rows/stem_parity.cc": "100644:0c5881b8199fd38f85fbe6f341eca6e4c299d878"
+          },
+          "by": "review",
+          "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
+          "criteria": "b5d229769326efa3",
+          "diffs": {
+            "docs/gates/release-rows.md": "9073dd4ba2dc6d54",
+            "test/aggregate_test.cc": "9f5b7f98150fde94",
+            "test/segment_test.cc": "1d840f83e181b7db",
+            "tools/parity.cc": "6246fb65ed1f2616",
+            "tools/release_rows/CMakeLists.txt": "6eb7566a42bb2677",
+            "tools/release_rows/rows.sh": "10d2d91a4b95fc54",
+            "tools/release_rows/stem_parity.cc": "6c0aed476afbd6a1"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-201233-507d9b",
+                  "level": "light",
+                  "seconds": 112.7,
+                  "state": "done",
+                  "what": "release-rows check build-test at 2cc69d4d1e91"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261111-201233-507d9b",
+                  "level": "light",
+                  "seconds": 112.7,
+                  "state": "done",
+                  "what": "release-rows check build-test at 2cc69d4d1e91"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "lead read main's changes since review (0aa68f4..fcd9f3e): scan-slices 256-ordinal scan check, test IO wrapper forwards, damaged-segment cases to strata lazy segments, strata pin d8ae10b8; none touches the rows' harness or verdicts; rows rerun at the release's pins (D39)",
+          "review": "8671c164333afe021f595f815d7fb5e673e844f5",
+          "reviewed": "7a3a54bbb8f0933d34bdf187f1d53dbd47f7004a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
       "branch": "quest/xapiand/release-rows",
@@ -13124,20 +14621,61 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/release-rows",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T09:01:29",
+          "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
+          "criteria": {
+            "A1": "261111-201053-f77c3a (passed at 2cc69d4d1e91; only merges from main since), 261111-201056-33db85 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A2": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since), 261111-201230-8ef3e1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201053-f77c3a (passed at 2cc69d4d1e91; only merges from main since)",
+            "A3": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A4": "[artifact] `docs/gates/release-rows.md`: \"**miss**: six names\" (equality is quest stemmer-names)",
+            "A5": "261111-201050-c7d247 (passed at 2cc69d4d1e91; only merges from main since), 261111-201230-8ef3e1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201102-4af80d (passed at 2cc69d4d1e91; only merges from main since), 261111-201105-74a86d (passed at 2cc69d4d1e91; only merges from main since), 261111-201108-63232e (passed at 2cc69d4d1e91; only merges from main since), 261111-201111-fb8de3 (passed at 2cc69d4d1e91; only merges from main since), 261111-201114-9f665c (passed at 2cc69d4d1e91; only merges from main since), 261111-201117-334338 (passed at 2cc69d4d1e91; only merges from main since), 261111-201120-b8edb5 (passed at 2cc69d4d1e91; only merges from main since), 261111-201123-48fad1 (passed at 2cc69d4d1e91; only merges from main since), 261111-201126-e1d239 (passed at 2cc69d4d1e91; only merges from main since), 261111-201129-9bc82b (passed at 2cc69d4d1e91; only merges from main since), 261111-201132-4a9573 (passed at 2cc69d4d1e91; only merges from main since), 261111-201135-50a022 (passed at 2cc69d4d1e91; only merges from main since), 261111-201138-698b31 (passed at 2cc69d4d1e91; only merges from main since), 261111-201141-365038 (passed at 2cc69d4d1e91; only merges from main since), 261111-201144-b67b2c (passed at 2cc69d4d1e91; only merges from main since), 261111-201147-634ad4 (passed at 2cc69d4d1e91; only merges from main since), 261111-201150-c36d62 (passed at 2cc69d4d1e91; only merges from main since), 261111-201153-bd3f1c (passed at 2cc69d4d1e91; only merges from main since), 261111-201156-5abf6c (passed at 2cc69d4d1e91; only merges from main since), 261111-201159-483e21 (passed at 2cc69d4d1e91; only merges from main since), 261111-201202-8c50a4 (passed at 2cc69d4d1e91; only merges from main since), 261111-201206-73d52f (passed at 2cc69d4d1e91; only merges from main since), 261111-201209-32089f (passed at 2cc69d4d1e91; only merges from main since), 261111-201213-5cf20a (passed at 2cc69d4d1e91; only merges from main since), 261111-201216-328810 (passed at 2cc69d4d1e91; only merges from main since)",
+            "A6": "261111-223819-03f694 (reviewer's probe: ASan+UBSan rows and parity at Xapiand's pins, exit 0, 912 s); CI run 43153036741 at 2cc69d4: linux-asan-ubsan, linux-tsan and all platforms green (CI re-runs at 7a3a54b, docs only)",
+            "A7": "[artifact] `docs/gates/release-rows.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261111-201233-507d9b",
+              "level": "light",
+              "seconds": 112.7,
+              "state": "done",
+              "what": "release-rows check build-test at 2cc69d4d1e91"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
+          "later": [
+            "261112-090131-00d21f"
+          ],
+          "reason": "",
+          "tested": "a938de6ce99e505da900d8eecdc355e0843d1af6"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-11T18:45:11",
-      "worktree": "../prospect-wt/xapiand/release-rows"
+      "updated": "2026-11-12T09:02:11",
+      "worktree": ""
     },
     "repo-split": {
       "accepted": {},
@@ -13206,31 +14744,87 @@
       "branch": "quest/xapiand/restore-mixed-sign-integers",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
           "level": "light",
-          "minutes": 60,
+          "minutes": 150,
           "name": "build-test"
         }
       ],
       "consumes": [],
       "files": [
-        "src/**",
+        "src/database/schema.cc",
+        "src/serialise.cc",
         "tests/restore_cli_check.sh",
         "tests/test_restore_integers.cc",
         "docs/dev/restore-integers.md"
       ],
-      "landed": [],
+      "history": [
+        {
+          "at": "2026-11-12T00:08:35",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command lacked -DBUILD_TESTS=ON, so ctest found no tests (job 261111-232734-59ff14's log); now x7-gate's form",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T09:00:26",
+          "commit": "5c0738825249ace67a0d937aba7988082b52fdbb",
+          "criteria": {
+            "A1": "261111-171323-80d18b (passed at 7d9afe612524; only merges from main since); fails without: 261111-171345-4024c7",
+            "A2": "261111-171323-80d18b (passed at 7d9afe612524; only merges from main since)",
+            "A3": "`docs/dev/restore-integers.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "8f39184c22ba504df57e8a6be7276297446ca66e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-000849-8b7aa4",
+              "level": "light",
+              "seconds": 713.8,
+              "state": "done",
+              "what": "restore-mixed-sign-integers check build-test at 8f39184c22ba"
+            }
+          ],
+          "final": true,
+          "from": "2f38408365be14459c431a36d3b0fb01603c0622",
+          "reason": "",
+          "tested": "5c0738825249ace67a0d937aba7988082b52fdbb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: docs/dev/restore-integers.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A msgpack RESTORE keeps every document of a field holding both signs",
-      "updated": "2026-11-11T16:52:23",
-      "worktree": "../Xapiand-wt/xapiand/restore-mixed-sign-integers"
+      "updated": "2026-11-12T09:00:45",
+      "worktree": ""
     },
     "retention": {
       "accepted": {},
@@ -13353,6 +14947,118 @@
       "status": "landed",
       "title": "Scheduler on WorkPool",
       "updated": "2026-11-08T15:40:29"
+    },
+    "schema-load-once": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T02:49:31",
+          "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+          "blobs": {
+            "harness/async_allowlist.tsv": "100644:af020e0a283b37b3b34816db8a7b3ce17778d3af",
+            "src/database/schemas_lru.cc": "100644:f03cdb968b7f4880c031d78d923e0ddcb90ab940",
+            "src/database/schemas_lru.h": "100644:e318d72f7fbc820b579ca287bb195544f55a106d",
+            "src/index_resolver_lru.cc": "100644:f3d454dd028a1f2f92b62b5df857473f3dc195bb",
+            "src/index_resolver_lru.h": "100644:a0f44189dda7f0eaa4fcc1df72e3a9cdb7017040",
+            "src/single_flight.h": "100644:db7dec3cf735556c431235747711faef623f0162",
+            "tests/test_node.cc": "100644:49fe0230e2d384d14076aaddd99cc3d3c94daeba"
+          },
+          "by": "review",
+          "commit": "9d17d9b3feaec71ddf17175638a0e7af4e5debab",
+          "criteria": "ac230091164f5a9d",
+          "diffs": {
+            "harness/async_allowlist.tsv": "6a1f30b2f4996f0b",
+            "src/database/schemas_lru.cc": "669a654210b167a0",
+            "src/database/schemas_lru.h": "4f66b8fda97062c0",
+            "src/index_resolver_lru.cc": "9db25263c6b90b97",
+            "src/index_resolver_lru.h": "441a86a3bf7a2f9c",
+            "src/single_flight.h": "81053b7da3ea4f4c",
+            "tests/test_node.cc": "8e5078eaf0ce827f"
+          },
+          "findings": {
+            "G1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-schema-load-once-correctness/patch.py mutant \"$PWD\" || exit 2; git diff --quiet src && exit 2; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null || exit 2; cmake --build build --target xapiand_test_node -j4 >build.out 2>&1 || { tail -30 build.out; exit 2; }; build/bin/xapiand_test_node test_a_claim_between_flight_end_and_store_is_served_by_the_publication > mutant.out 2>&1; cat mutant.out; grep -q \"FAIL ../tests/test_node.cc:[0-9]*: CHECK(loads == 2u)\" mutant.out'",
+                  "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-022116-7d1cf5",
+                  "level": "light",
+                  "seconds": 65.1,
+                  "state": "done",
+                  "what": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/ at 8225c9831bbf"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "1d75d20012ff3c22e00720ea1f0c7f7444f99ff6",
+          "reviewed": "7993e7aa2c26e4fdbac0bc180d1d7e09bbdebcf0",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+      "branch": "quest/xapiand/schema-load-once",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schemas_lru.*",
+        "src/single_flight.h",
+        "src/index_resolver_lru.*",
+        "tests/test_node.cc",
+        "harness/async_allowlist.tsv"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-13T02:49:47",
+          "commit": "60f5a34be59001f36729faa624ec83534b39848a",
+          "criteria": {
+            "A1": "261113-023141-e19d6c; fails without: 261112-223932-8ff4dc, 261112-224936-c667cc, 261112-230448-142f23, 261112-232218-983be8, 261113-022116-7d1cf5",
+            "A3": "261113-012502-21f3c1",
+            "A4": "`ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831 and 6dcc636d2; why not a local run: see Rulings)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-012502-21f3c1",
+              "level": "light",
+              "seconds": 518.7,
+              "state": "done",
+              "what": "schema-load-once check build-test at 8225c9831bbf"
+            }
+          ],
+          "final": true,
+          "from": "d6aea03fcb377ae0ee10968a64faef0b933f5b29",
+          "reason": "",
+          "tested": "9d17d9b3feaec71ddf17175638a0e7af4e5debab"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Concurrent first uses of a schema load it once, foreign links included",
+      "updated": "2026-11-13T02:49:54",
+      "worktree": ""
     },
     "seam-census": {
       "accepted": {},
@@ -14169,6 +15875,63 @@
       "title": "stash window handshake and fail-fast add",
       "updated": "2026-11-08T15:41:25"
     },
+    "stemmer-names": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/stemmer*",
+        "tests/test_stem*",
+        "docs/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-12T00:08:38",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command lacked -DBUILD_TESTS=ON, so ctest found no tests (job 261111-232734-59ff14's log); now x7-gate's form",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
+      "updated": "2026-11-12T00:08:38"
+    },
     "storage-phase7c-l6": {
       "accepted": {},
       "after": [],
@@ -14814,6 +16577,197 @@
       "updated": "2026-11-11T15:03:25",
       "worktree": ""
     },
+    "sync-at-first-commit": {
+      "accepted": {
+        "design": {
+          "at": "2026-11-12T11:12:22",
+          "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "blobs": {
+            "bench/idle_index/idle_index.cc": "100644:e1c1e3cf14a04704b78878eec3739880cd2c513a",
+            "bench/open_sync/build.sh": "100755:2f6c155e694d242eb8e56290c0911d50ef7c77ef",
+            "bench/open_sync/first_commit_mutant.sh": "100755:56cd25e494adde1c0de3aa8d8ea150eeec3dc384",
+            "bench/open_sync/loaded.sh": "100755:dcd79d3fff6edb115b3e9de4aeabb902b8d3600f",
+            "bench/open_sync/mutant.sh": "deleted",
+            "bench/open_sync/run.sh": "100755:df9d33de59297b6bfb807d6308c95ea4c5e82df0",
+            "docs/design/manifest-log.md": "100644:7ba9d3e37f890b985a87fa2075aea930271f177e",
+            "docs/design/sync-at-first-commit.md": "100644:e9021a663f28f3075be7cfa5cc7bcede04cf9d5c",
+            "docs/perf/open-sync.md": "100644:b0b2950decf3127db959775f60d085455675a4c9",
+            "include/strata/core/faultfs.hh": "100644:a2504a99da0264e3c5e1cf7e8c8aab47e513d651",
+            "include/strata/core/index.hh": "100644:d91155af71b27642ee6fd26dc0e663433045c139",
+            "test/faultfs_test.cc": "100644:593818b3ed4277084a63750e3f989d2e837d43d7",
+            "test/index_test.cc": "100644:dd90dcb97b7fe153aa660ca7bd9ce7ca2c6c43ff"
+          },
+          "by": "review",
+          "commit": "9e12098974cf5a102db91d62c7c38f9036988994",
+          "criteria": "fdc26d9c5255fe1c",
+          "diffs": {
+            "bench/idle_index/idle_index.cc": "52f893f49540e4e2",
+            "bench/open_sync/build.sh": "e81feef045e1dfa5",
+            "bench/open_sync/first_commit_mutant.sh": "ee2951a821a82d26",
+            "bench/open_sync/loaded.sh": "b60d4955dc52207e",
+            "bench/open_sync/mutant.sh": "8eaa568057897cc5",
+            "bench/open_sync/run.sh": "35b97cfec306b26d",
+            "docs/design/manifest-log.md": "aa9cf70dccb4d25b",
+            "docs/design/sync-at-first-commit.md": "0d34cd849615022f",
+            "docs/perf/open-sync.md": "e7aaa05b8a938a83",
+            "include/strata/core/faultfs.hh": "f813ca0b3b370cb9",
+            "include/strata/core/index.hh": "680914eef57f89eb",
+            "test/faultfs_test.cc": "b1e6114712fa7f79",
+            "test/index_test.cc": "6df8b10f946704e5"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "9e12098974cf5a102db91d62c7c38f9036988994",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-110230-d89b3f",
+                  "level": "light",
+                  "seconds": 502.9,
+                  "state": "done",
+                  "what": "sync-at-first-commit check build-test at 9e12098974cf"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "d281f01b379be9d5708f876350fad779395ebfcb",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        },
+        "durability": {
+          "at": "2026-11-12T12:07:22",
+          "base": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "blobs": {
+            "bench/idle_index/idle_index.cc": "100644:e1c1e3cf14a04704b78878eec3739880cd2c513a",
+            "bench/open_sync/build.sh": "100755:2f6c155e694d242eb8e56290c0911d50ef7c77ef",
+            "bench/open_sync/first_commit_mutant.sh": "100755:c63c9137b4077f2198723ce02a553c1d7b5c762b",
+            "bench/open_sync/loaded.sh": "100755:dcd79d3fff6edb115b3e9de4aeabb902b8d3600f",
+            "bench/open_sync/mutant.sh": "deleted",
+            "bench/open_sync/run.sh": "100755:df9d33de59297b6bfb807d6308c95ea4c5e82df0",
+            "docs/design/manifest-log.md": "100644:7ba9d3e37f890b985a87fa2075aea930271f177e",
+            "docs/design/sync-at-first-commit.md": "100644:af5bc13e32c4f490aa24d9135a46cb32db3915ec",
+            "docs/perf/open-sync.md": "100644:b0b2950decf3127db959775f60d085455675a4c9",
+            "include/strata/core/faultfs.hh": "100644:a2504a99da0264e3c5e1cf7e8c8aab47e513d651",
+            "include/strata/core/index.hh": "100644:fb63bfdb9d638e91e957b11009a8f1e2050d50be",
+            "test/faultfs_test.cc": "100644:593818b3ed4277084a63750e3f989d2e837d43d7",
+            "test/index_test.cc": "100644:da78d84b037a2bfd84e88f95e3078affc3d5c089"
+          },
+          "by": "review",
+          "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+          "criteria": "fdc26d9c5255fe1c",
+          "diffs": {
+            "bench/idle_index/idle_index.cc": "52f893f49540e4e2",
+            "bench/open_sync/build.sh": "e81feef045e1dfa5",
+            "bench/open_sync/first_commit_mutant.sh": "4e03c2f47c16f742",
+            "bench/open_sync/loaded.sh": "b60d4955dc52207e",
+            "bench/open_sync/mutant.sh": "8eaa568057897cc5",
+            "bench/open_sync/run.sh": "35b97cfec306b26d",
+            "docs/design/manifest-log.md": "aa9cf70dccb4d25b",
+            "docs/design/sync-at-first-commit.md": "28a55dfbde264947",
+            "docs/perf/open-sync.md": "e7aaa05b8a938a83",
+            "include/strata/core/faultfs.hh": "f813ca0b3b370cb9",
+            "include/strata/core/index.hh": "a1f2f7bf75077557",
+            "test/faultfs_test.cc": "b1e6114712fa7f79",
+            "test/index_test.cc": "2662d925d7c886fb"
+          },
+          "findings": {
+            "B1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-115011-237ee0",
+                  "level": "light",
+                  "seconds": 827.0,
+                  "state": "done",
+                  "what": "sync-at-first-commit check build-test at cb5294b8a451"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "a8cb738e6efd78852093adee8040be9a926c32b9",
+          "reviewed": "a297ba00219c658c2ad75b0bf9e2d5f256e8ad46",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+      "branch": "quest/xapiand/sync-at-first-commit",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/faultfs.hh",
+        "test/index_test.cc",
+        "test/faultfs_test.cc",
+        "docs/design/sync-at-first-commit.md",
+        "docs/design/manifest-log.md",
+        "docs/perf/open-sync.md",
+        "bench/open_sync/**",
+        "bench/idle_index/idle_index.cc"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T13:16:24",
+          "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+          "criteria": {
+            "A1": "[artifact] strata `docs/design/sync-at-first-commit.md`",
+            "A2": "261112-115011-237ee0; fails without: 261112-090346-f32817, 261112-110231-eee06e",
+            "A3": "261112-115011-237ee0; fails without: 261112-090352-1ecddc, 261112-090358-93f7af, 261112-090406-e575c5, 261112-090414-89aaae, 261112-110234-122749, 261112-110237-c67ad9, 261112-110241-adb8c7, 261112-110244-c9702e, 261112-115015-c66d2c",
+            "A4": "261112-120746-e910ec, 261112-120746-f3bcea, 261112-120746-62bb78"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cb5294b8a45110ca65536eb7b0a59c832325a458",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-115011-237ee0",
+              "level": "light",
+              "seconds": 827.0,
+              "state": "done",
+              "what": "sync-at-first-commit check build-test at cb5294b8a451"
+            }
+          ],
+          "final": true,
+          "from": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "reason": "",
+          "tested": "cb5294b8a45110ca65536eb7b0a59c832325a458"
+        }
+      ],
+      "lenses": [
+        "design",
+        "durability"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "landed",
+      "title": "An open runs no sync; the first commit syncs what it inherited",
+      "updated": "2026-11-12T13:16:29",
+      "worktree": ""
+    },
     "t11-barriers": {
       "accepted": {},
       "after": [],
@@ -14844,6 +16798,109 @@
       "status": "landed",
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
+    },
+    "task-lanes": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T22:04:19",
+          "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "blobs": {
+            "CMakeLists.txt": "100644:0f9a585eb5ccbea4253f5c5fc0e386b213bbbde3",
+            "docs/API.md": "100644:904eb12829828615b71d0ba139f5ab3a80e959b3",
+            "docs/lanes.md": "100644:cc90dcc166ac81f612f46ac67aab049c1add1943",
+            "task.hh": "100644:0ab5e093b90bfd187810c7ffbe6285352066e15d",
+            "task_asio.hh": "100644:54a36d3ff958145e493e0d85fac3a70b4cfbf649",
+            "test/lanes_mutant.py": "100644:a59932c9fd3ed3d332b9eeb52c43da970806a182",
+            "test/lanes_test.cc": "100644:204e8ff6051a33fa52ac80b3fd053c08dc6fb002",
+            "test/resume_ab.py": "100644:ce0ac3351642597f077b58d3817970d31c92e196",
+            "test/resume_bench.cc": "100644:f5f66efa285655c6a7c65831cd04b89ad3e26174"
+          },
+          "by": "review",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": "3387a79ada18cfcc",
+          "diffs": {
+            "CMakeLists.txt": "c62ce1c28148c2d3",
+            "docs/API.md": "5e3f41de439be170",
+            "docs/lanes.md": "b333cca2fcde2acd",
+            "task.hh": "c5472b41893ee790",
+            "task_asio.hh": "8b26833cfa8cfade",
+            "test/lanes_mutant.py": "bdb3b19f81835015",
+            "test/lanes_test.cc": "a1aae0a888f798dd",
+            "test/resume_ab.py": "19ea161bf733538b",
+            "test/resume_bench.cc": "f4677d09c3872bec"
+          },
+          "findings": {},
+          "note": "",
+          "review": "48a06249c7e17d07b5650ee344f639b7954b0ddb",
+          "reviewed": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+      "branch": "quest/xapiand/task-lanes",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_asio.hh",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:21:25",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": {
+            "A1": "261112-214929-dfac91; fails without: 261112-204849-91803a, 261112-204854-7e293b, 261112-204858-0e6b9d, 261112-204902-8b592b, 261112-204905-205bd3, 261112-204909-7b597e, 261112-204914-1d26c6, 261112-204918-7d0c0f, 261112-204923-7f2258, 261112-204928-6befdc, 261112-204935-9ea300, 261112-214931-341d4a, 261112-214934-bb3d65, 261112-214937-b6d183, 261112-214941-85d939, 261112-214945-9995a1, 261112-214949-5b89c5, 261112-214952-0d0642, 261112-214956-c1b908, 261112-215000-7f3020, 261112-215004-e2d24e, 261112-215008-8ab078",
+            "A2": "261112-215012-f7d1c9",
+            "A3": "261112-215014-07a8ed",
+            "A4": "[manual] Detent's lead, 11-12: Detent's integration jobs (da2074 at 90b50f0, b7fe6c at 18eb516; Detent's repository) passed, Detent main's full suite with task pinned to quest/xapiand/task-lanes, 275 of 275 tests (test_local_trusted_paths skipped as on main)",
+            "A5": "`docs/lanes.md` (task)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-214929-dfac91",
+              "level": "light",
+              "seconds": 14.3,
+              "state": "done",
+              "what": "task-lanes check build-test at 18eb51672e4f"
+            }
+          ],
+          "final": true,
+          "from": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "reason": "",
+          "tested": "18eb51672e4f306aac508bd0444f6d367eac4291"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [
+        "task:lanes"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/task",
+      "risk": "high",
+      "status": "landed",
+      "title": "An opt-in heavy lane in task's budget and asio_scheduler",
+      "updated": "2026-11-12T22:21:31",
+      "worktree": ""
     },
     "task-phase7c-l1": {
       "accepted": {},
@@ -15314,6 +17371,97 @@
       "status": "planned",
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
+    },
+    "unpin-after-kick": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T10:08:31",
+          "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "blobs": {
+            "docs/design/cold-tier.md": "100644:fa8d49596c415c664ee476a254c7262cf7920245",
+            "docs/mechanisms/catalog.md": "100644:dbcd3f33dbde98fb9e14e25cc950a082aef62767",
+            "include/strata/core/catalog.hh": "100644:6407997fe4db532e32354754a4d54e224907f061",
+            "test/catalog_teardown_test.cc": "100644:10897b45cf0204eccd5e109b96ced42f6da9d078",
+            "test/catalog_test.cc": "100644:976348c1c0251ba58b70f46eb6c2536bc7250c74"
+          },
+          "by": "review",
+          "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "criteria": "32cdb14bc54993ee",
+          "diffs": {
+            "docs/design/cold-tier.md": "dd51818e745e8aad",
+            "docs/mechanisms/catalog.md": "c391beb98dce18c9",
+            "include/strata/core/catalog.hh": "f1a13e46085381b9",
+            "test/catalog_teardown_test.cc": "8d14feb07d740a2a",
+            "test/catalog_test.cc": "4ecbc021b2aaa56f"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8d4c5173abd4dc9c1de0cb2cfc2fd6df39fb46a1",
+          "reviewed": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+      "branch": "quest/xapiand/unpin-after-kick",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/catalog.hh",
+        "test/catalog_teardown_test.cc",
+        "docs/mechanisms/catalog.md",
+        "docs/design/cold-tier.md",
+        "test/catalog_test.cc"
+      ],
+      "journal": "../Xapiand-wt/xapiand/unpin-after-kick",
+      "landed": [
+        {
+          "at": "2026-11-12T10:15:02",
+          "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+          "criteria": {
+            "A1": "261112-100846-e17523, 261112-100846-f0349c, 261112-100846-bcf929, 261112-100846-28f392; fails without: 261112-051840-b0a9ca, 261112-055258-a6bd1d, 261112-055301-475b83, 261112-055304-392b68",
+            "A2": "261112-090816-e82be7; fails without: 261112-051843-666637",
+            "A3": "261112-090816-e82be7, 261112-100846-bcf929, 261112-100846-28f392, 261112-090807-6824f4; fails without: 261112-083923-f54687"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "86fe7c476c64b86219350a999ee88467bf86269c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-090816-e82be7",
+              "level": "light",
+              "seconds": 148.8,
+              "state": "done",
+              "what": "unpin-after-kick check build-test at 86fe7c476c64"
+            }
+          ],
+          "final": true,
+          "from": "ab0e26a60a7aded5e1aedf6bbf3323ce14c7d8ad",
+          "reason": "",
+          "tested": "86fe7c476c64b86219350a999ee88467bf86269c"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "landed",
+      "title": "A catalog unpin reads nothing after it kicks the slot's close",
+      "updated": "2026-11-12T10:15:11",
+      "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
     "wbuf-inline": {
       "accepted": {
@@ -16762,17 +18910,45 @@
         "tests/corpora/**",
         "TESTING.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-12T11:15:22",
+          "commit": "da6b7855ee44711f349a57414b8360e7f8f00c1c",
+          "criteria": {
+            "A1": "261112-090138-07a64c",
+            "A2": "261112-090138-d78bde",
+            "A3": "`TESTING.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "82edb3ecc11658e3e4b58db9ec83d1bdd891394f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-090141-b1a59c",
+              "level": "light",
+              "seconds": 1412.0,
+              "state": "done",
+              "what": "x7-coverage check build-test at 82edb3ecc116"
+            }
+          ],
+          "final": true,
+          "from": "406e4adde231bbfca2e488345d241d73de376e48",
+          "reason": "",
+          "tested": "41930b2e1b43e01a3d6fd0fa047a1a228d74602b"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Coverage harness and restore corpora for T13 (x7-gate A13)",
-      "updated": "2026-11-11T14:36:04",
-      "worktree": "../Xapiand-wt/xapiand/x7-coverage"
+      "updated": "2026-11-12T11:15:33",
+      "worktree": ""
     },
     "x7-gate": {
       "accepted": {},
@@ -17259,14 +19435,134 @@
       "updated": "2026-11-10T10:31:57",
       "worktree": ""
     },
-    "x7-loop-stalls": {
-      "accepted": {},
-      "after": [],
-      "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
-      "branch": "quest/xapiand/x7-loop-stalls",
+    "x7-loop-fix-c": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T06:54:43",
+          "base": "88139a40eb84748b40bc1f05f286437a6fb42df8",
+          "blobs": {
+            "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
+            "harness/async_allowlist.tsv": "100644:6b3d58f68a88ea25dda2933ca22c822984671cc6",
+            "src/database/handler.cc": "100644:8f2c5ae9db8a24e10b9e2eeb258682a74a22455d",
+            "src/database/handler.h": "100644:80ffe1e54639ebb21f85c1e891175c86bf923c5c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "tests/test_loop_yield.cc": "100644:8525a8fd317ecff5e15336cad87b9902019ab17e"
+          },
+          "by": "review",
+          "commit": "4c84091ea8556ec7c75122b6e67ac4b0aaf02ad9",
+          "criteria": "602a9cccdeab10f8",
+          "diffs": {
+            "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "8f016afc7db396c4",
+            "src/database/handler.h": "ec39d487ae25d5a5",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "tests/test_loop_yield.cc": "34b6923d5a9b83fb"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'set -u; sed -i \"\" \"s/serial\\[k\\] = true;/failed[k] = std::current_exception();/\" src/database/handler.cc && test \"$(grep -cF \"failed[k] = std::current_exception();\" src/database/handler.cc)\" = 2 || { echo \"mutant not applied\"; exit 3; }; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null && cmake --build build --target xapiand_test_loop_yield -j4 >build.out 2>&1 || { tail -40 build.out; exit 2; }; L=$(grep -nF \"CHECK_EQ(DocIndexer::stats.deferred.load(), affected);\" tests/test_loop_yield.cc | head -1 | cut -d: -f1); test -n \"$L\" || { echo \"check not found\"; exit 4; }; (cd build && ctest -R \"^test_loop_yield\\$\" --output-on-failure) >mut.out 2>&1; grep -F FAIL mut.out | head -20; echo \"named check at line $L\"; grep -qF \"FAIL ../tests/test_loop_yield.cc:$L:\" mut.out'",
+                  "commit": "0ed7e885cdfabdd7f9e640a05d53ad1ea6c34309",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-055631-a31da6",
+                  "level": "light",
+                  "seconds": 364.4,
+                  "state": "done",
+                  "what": "x7-loop-fix-c mutant: a failed placement read fails its terms (F1) at 0ed7e885cdfa"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "35b4b67131b45ada453c62b8853d9b5441ce2eb4",
+          "reviewed": "e73a0d305ecbc7b6ff5fcfbbedace540340ffc91",
+          "verdict": "CHANGES"
+        },
+        "design": {
+          "at": "2026-11-12T10:16:12",
+          "base": "76b71b6e72fd8d58fce358ec8c99181775b75091",
+          "blobs": {
+            "docs/perf/x7-loop-stalls.md": "100644:7459ef3df2223377662b6516a5dc9afd10361dcc",
+            "harness/async_allowlist.tsv": "100644:c4d91afa8df90ca081798aa8ed84ea380b130aca",
+            "src/database/handler.cc": "100644:8f1d7a3655c75ec25e13f7e966633f2f48f4d0d5",
+            "src/database/handler.h": "100644:bdace1368b7321209c0ce797b2c6883ced032a8c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "tests/test_loop_yield.cc": "100644:8ba71a5762515e8afbc23fa9d5e2c678857e0659"
+          },
+          "by": "review",
+          "commit": "a69cd9462c5e4889ad6bee5913cbfc9051404db5",
+          "criteria": "602a9cccdeab10f8",
+          "diffs": {
+            "docs/perf/x7-loop-stalls.md": "fc3145b81beb4ab4",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "d3bd67373faa0aef",
+            "src/database/handler.h": "6fd6fd4ea580a5d2",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "tests/test_loop_yield.cc": "913a67c78c4c8fce"
+          },
+          "findings": {
+            "B1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "b4e872ed6bf32bbe91ff2f70da625e2f329184ed",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-090456-c67417",
+                  "level": "light",
+                  "seconds": 322.1,
+                  "state": "done",
+                  "what": "x7-loop-fix-c check build-test at b4e872ed6bf3"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "B2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "b4e872ed6bf32bbe91ff2f70da625e2f329184ed",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-090456-c67417",
+                  "level": "light",
+                  "seconds": 322.1,
+                  "state": "done",
+                  "what": "x7-loop-fix-c check build-test at b4e872ed6bf3"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "3679e38261475aced1427c82711eeff8870fb457",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [
+        "x7-loop-stalls"
+      ],
+      "base": "76b71b6e72fd8d58fce358ec8c99181775b75091",
+      "branch": "quest/xapiand/x7-loop-fix-c",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
           "level": "light",
           "minutes": 60,
           "name": "build-test"
@@ -17274,22 +19570,287 @@
       ],
       "consumes": [],
       "files": [
-        "docs/perf/x7-loop-stalls.md"
+        "src/server/search_views.cc",
+        "src/database/shard.cc",
+        "src/database/shard.h",
+        "src/database/pool.h",
+        "src/database/handler.cc",
+        "src/database/handler.h",
+        "src/database/data.h",
+        "src/database/data.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_reactor_requests.cc",
+        "docs/perf/x7-loop-stalls.md",
+        "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "history": [
+        {
+          "at": "2026-11-12T03:29:59",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "design",
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-13T06:55:12",
+          "commit": "08a85cca932b479f1534fa65c94c007d86a5b983",
+          "criteria": {
+            "A1": "[artifact] `docs/perf/x7-loop-stalls.md`, \"Design: fix (c), RESTORE's writes off the loop, one shard per child\" (review pending)",
+            "A2": "[artifact] `docs/perf/x7-loop-stalls.md`, \"At the fix\", fix (c)'s column and \"At fix (c)\" (job 261112-060352-3a68bf: T4 and T5 miss, recorded)",
+            "A3": "261113-062507-b2f95d",
+            "A4": "261113-055628-d24819 (passed at be90536b2282; only merges from main since); fails without: 261112-060244-26054a, 261112-060247-915bc9, 261112-060250-fff57b, 261112-060253-438fbd, 261112-060256-a08cb1, 261112-060259-0555e1, 261112-084825-447568, 261112-084828-d30d45, 261112-090511-afb297, 261112-100709-ef6a59, 261112-201040-503fe0, 261112-201042-dc40d0, 261112-201043-19e10d, 261112-201043-1d9816, 261112-201044-0da49c, 261112-201045-5f5375, 261112-202556-1a371b, 261112-202557-3315c8, 261112-204313-122916, 261112-215730-1dc11c, 261113-062507-bb2005, 261113-062508-1cf78c",
+            "A5": "261113-064313-d2e40f; fails without: 261112-231447-8579aa, 261113-055631-a31da6"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "0ed7e885cdfabdd7f9e640a05d53ad1ea6c34309",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-055628-d24819",
+              "level": "light",
+              "seconds": 365.6,
+              "state": "done",
+              "what": "x7-loop-fix-c check build-test at 0ed7e885cdfa"
+            }
+          ],
+          "final": true,
+          "from": "98530775033f248718cd94d6fbe70620065299e5",
+          "reason": "",
+          "tested": "4c84091ea8556ec7c75122b6e67ac4b0aaf02ad9"
+        }
+      ],
+      "lenses": [
+        "design",
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "landed",
+      "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
+      "updated": "2026-11-13T06:56:22",
+      "worktree": ""
+    },
+    "x7-loop-stalls": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T03:30:31",
+          "base": "88a7c4312088d75a76a2fc0fd1b33143da821651",
+          "blobs": {
+            "CMakeLists.txt": "100644:19f094236c89998828537dc521e0147facc4928c",
+            "docs/design/phase7c.md": "100644:7ae388cd980408bd90ebb878e0e85f12ec79fa04",
+            "docs/perf/x7-loop-stalls.md": "100644:3229e9f1375f2b749281ec91481221232b52e74e",
+            "harness/async_allowlist.tsv": "100644:7dedb89085ab64bce6c61d70b70d97325932567e",
+            "src/database/data.cc": "100644:b9859640731207a99e4ab94753d5687dba1f8ad7",
+            "src/database/data.h": "100644:cf2f4585233429437bf4155a7e12dae1d31cd743",
+            "src/database/handler.cc": "100644:253b9cb390cbf549577184b303653c45773e2ef0",
+            "src/database/handler.h": "100644:b2027fe40bd05ace723fbaf2f683c9494bb18a7b",
+            "src/database/shard.cc": "100644:4cd743370e46bb2fee025a7a16782df84e841fcb",
+            "src/server/search_views.cc": "100644:05b4f0d9bbfb6e7ef2d44c5aca17657fd0354c61",
+            "tests/test_loop_yield.cc": "100644:dcbecaad3f4921b841a2cec3cac7c1378140bb41"
+          },
+          "by": "review",
+          "commit": "cafd848d9c6ddd70cf03ea76e5d29de62f07dfe3",
+          "criteria": "8cc48b4703f3e349",
+          "diffs": {
+            "CMakeLists.txt": "2231df83de455318",
+            "docs/design/phase7c.md": "7c0ebeff54e60945",
+            "docs/perf/x7-loop-stalls.md": "a1bd607e30e88537",
+            "harness/async_allowlist.tsv": "1b5e87ef7674d88b",
+            "src/database/data.cc": "130429e4a10fa6fe",
+            "src/database/data.h": "b37c0c5b59ee6d93",
+            "src/database/handler.cc": "88bc82f082ae30fd",
+            "src/database/handler.h": "33708809714d93f5",
+            "src/database/shard.cc": "84aef7c878349882",
+            "src/server/search_views.cc": "c7dade8100967037",
+            "tests/test_loop_yield.cc": "c0b609a91dc54746"
+          },
+          "findings": {},
+          "note": "",
+          "review": "1e1532007b8b42eded4f1c228564703dc9176b24",
+          "reviewed": "d272f0b6881b4857e4ecca45d506029c54c1ad04",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "x7-scan-slices"
+      ],
+      "base": "de4d0ed26aa9256dcb289e7671d7c4e198b2635c",
+      "branch": "quest/xapiand/x7-loop-stalls",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/perf/x7-loop-stalls.md",
+        "src/server/search_views.cc",
+        "src/database/shard.cc",
+        "src/database/handler.cc",
+        "src/database/data.h",
+        "src/database/data.cc",
+        "tests/test_reactor_requests.cc",
+        "tests/test_loop_yield.cc",
+        "CMakeLists.txt",
+        "src/database/handler.h",
+        "docs/design/phase7c.md",
+        "harness/async_allowlist.tsv"
+      ],
+      "history": [
+        {
+          "at": "2026-11-12T00:08:41",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command lacked -DBUILD_TESTS=ON, so ctest found no tests (job 261111-232734-59ff14's log); now x7-gate's form",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T03:48:37",
+          "commit": "7a8778b836b1936f2ba396f42410da1c38b2983b",
+          "criteria": {
+            "A1": "[artifact] `docs/perf/x7-loop-stalls.md` (profiles E1a 18ce81, E2 793974; causes, ranked fixes, the chore design)",
+            "A2": "261112-033046-5fb95c",
+            "A3": "261112-033046-99e1a0",
+            "A4": "261112-025950-117b80; fails without: 261111-230628-74a222, 261111-232735-af5357, 261111-232738-c4c72b, 261111-235701-0ecdb6, 261111-235704-037ffb, 261111-235708-0e58e3, 261112-000958-55273a, 261112-002521-478825, 261112-002525-05438d, 261112-002529-0c957d, 261112-002533-5c5bae, 261112-002537-86670c, 261112-002541-b2314b"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "ebf6698c1aee62d6eeea139225ebc4d698dda30c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-025950-117b80",
+              "level": "light",
+              "seconds": 290.4,
+              "state": "done",
+              "what": "x7-loop-stalls check build-test at ebf6698c1aee"
+            }
+          ],
+          "final": true,
+          "from": "987cda4edba80b15fdad45027b7f0f0919544d07",
+          "reason": "",
+          "tested": "cafd848d9c6ddd70cf03ea76e5d29de62f07dfe3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: docs/perf/x7-loop-stalls.md is this quest's own file; x7-gate writes no file of that name",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "HTTP loops stay under the 1 ms edge under mixed load, and RESTORE regains pre-7c speed",
-      "updated": "2026-11-11T20:05:51",
-      "worktree": "../Xapiand-wt/xapiand/x7-loop-stalls"
+      "updated": "2026-11-12T03:48:47",
+      "worktree": ""
+    },
+    "x7-scan-slices": {
+      "accepted": {},
+      "after": [],
+      "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+      "branch": "quest/xapiand/x7-scan-slices",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/shards.hh",
+        "test/sliced_test.cc",
+        "docs/perf/scan-slices.md",
+        "docs/perf/README.md",
+        "docs/mechanisms/sliced-search.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T01:06:25",
+          "commit": "b20e7c555f37daad415cf658b32f99cc9a955464",
+          "criteria": {
+            "A1": "261112-003707-96568a (passed at ca65df92a186; ignores docs-only docs/mechanisms/sliced-search.md, docs/perf/README.md, docs/perf/scan-slices.md); fails without: 261111-230602-46c1c9",
+            "A2": "261112-003722-18be3b (passed at ca65df92a186; ignores docs-only docs/mechanisms/sliced-search.md, docs/perf/README.md, docs/perf/scan-slices.md)",
+            "A3": "`docs/perf/scan-slices.md` (prospect:b20e7c5)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ca65df92a186399cab3d0be982e04bf0829845af",
+              "docs": [
+                "docs/mechanisms/sliced-search.md",
+                "docs/perf/README.md",
+                "docs/perf/scan-slices.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-003707-96568a",
+              "level": "light",
+              "seconds": 196.3,
+              "state": "done",
+              "what": "x7-scan-slices check build-test at ca65df92a186"
+            }
+          ],
+          "final": true,
+          "from": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
+          "reason": "",
+          "tested": "b20e7c555f37daad415cf658b32f99cc9a955464"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "landed",
+      "title": "prospect's scan yields every 256 ordinals when per-match work runs",
+      "updated": "2026-11-12T01:06:36",
+      "worktree": ""
     },
     "x7-view-bench": {
       "accepted": {},
@@ -17529,6 +20090,95 @@
       "status": "landed",
       "title": "Strata migration design",
       "updated": "2026-11-08T13:25:34"
+    },
+    "xapiand-strata-bump": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T13:22:06",
+          "base": "60acf47cbc7cc55dc3d2f4039b95190f26aae122",
+          "blobs": {
+            "CMakeLists.txt": "100644:c05f4b75f56c8a0851464f6cd021cfe76cb7ab61",
+            "tests/test_engine_error.cc": "100644:3a0fbd5a5b574d18c932c7be8b20f93326fb4387",
+            "tests/test_engine_error_mutant.sh": "100755:944d685c2a0931c41e84da001569937fa57ad664"
+          },
+          "by": "review",
+          "commit": "83a887dccec571881a6f1088a7b8e62378e3828c",
+          "criteria": "6dd0be634a95a3f8",
+          "diffs": {
+            "CMakeLists.txt": "8fd65fc08ca54df1",
+            "tests/test_engine_error.cc": "0dada4f19bd7f74c",
+            "tests/test_engine_error_mutant.sh": "450323761fdff2ec"
+          },
+          "findings": {},
+          "note": "",
+          "review": "2e8152ebd56ea48d5820f7a34c88913583a0f583",
+          "reviewed": "956f4b6ea104bf7e75e67e000c67b9753ceec514",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "unpin-after-kick"
+      ],
+      "base": "80a3326f77068dd0df6cdfc98569a1f5a62f8c25",
+      "branch": "quest/xapiand/xapiand-strata-bump",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "src/database/**io*",
+        "src/engine/strata/**",
+        "tests/test_engine_*",
+        "harness/pins_check*"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-12T13:35:08",
+          "commit": "55741956f0b33de0d5a4f3baaa6e32e0b3592077",
+          "criteria": {
+            "A1": "261112-105156-3f234f (passed at 956f4b6ea104; only merges from main since)",
+            "A2": "261112-101724-de5872 (passed at 956f4b6ea104; only merges from main since)",
+            "A3": "261112-101724-6a3348 (passed at 956f4b6ea104; only merges from main since); fails without: 261112-042232-481834, 261112-105157-135ef5",
+            "A4": "`ci:Unit tests under ASan + UBSan`, `ci:Unit tests under TSan`, `ci:AddressSanitizer + UBSan`, `ci:ThreadSanitizer` (green at fa7eb4510, run 43298845480, and at 83a887dcc, run 43309562840)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "c3fec9b406490249ade38778ea1d4b356cc0646a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-101724-de5872",
+              "level": "light",
+              "seconds": 460.6,
+              "state": "done",
+              "what": "xapiand-strata-bump check build-test at c3fec9b40649"
+            }
+          ],
+          "final": true,
+          "from": "7ba0e592b6c9121da57141a74eb5f7acd1c6b1a3",
+          "reason": "",
+          "tested": "37f9ca1f39ccf8dabec3a7ab1ebe331d850ed031"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "landed",
+      "title": "Xapiand pins the strata its prospect pins, past the lazy-segment and barrier changes",
+      "updated": "2026-11-12T13:38:11",
+      "worktree": ""
     }
   },
   "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",

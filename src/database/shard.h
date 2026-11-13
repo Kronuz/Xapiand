@@ -25,10 +25,14 @@
 
 #include "config.h"               // for XAPIAND_DATA_STORAGE
 
+#include <chrono>                 // for std::chrono::nanoseconds
+#include <cstdint>                // for std::uint64_t
 #include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
 #include <optional>               // for std::optional
 #include <string>                 // for std::string
+#include <unordered_set>          // for std::unordered_set
+#include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
 #include "database/flags.h"       // for DB_*
@@ -51,6 +55,19 @@ class Locator;
 //   ___) | | | | (_| | | | (_| |
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
+// One write of a RESTORE's apply slice: replaced at `shard_did` while its document is still there (0: written by
+// `term`). The slice fills `info` or `error`, or sets `missed`.
+struct SliceWrite {
+	std::size_t idx = 0;   // the caller's: the object it belongs to
+	std::string term;
+	engine::docid shard_did = 0;
+	engine::Document doc;
+	engine::WriteResult info;
+	std::exception_ptr error;
+	bool missed = false;
+};
+
+
 // One use of an index: its pin and the flags the user asked with. Cheap to make and to drop.
 // Every operation that can wait is a task, so the callers decide where it runs; a write takes the
 // index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
@@ -122,7 +139,10 @@ public:
 	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
 	// live documents) as the writes left them, in the index's turn, refreshing nothing (docs/mechanisms/placement.md).
 	task::task<engine::docid> written_key(const std::string& term);
-	task::task<engine::doccount> written_count();
+	// The live documents as the writes left them, and the shard's id counter (docs/design/one-id.md), in one turn.
+	task::task<std::pair<engine::doccount, std::uint64_t>> written_load();
+	// written_key() of each term, in one turn.
+	task::task<std::vector<engine::docid>> written_keys(const std::vector<std::string>& terms);
 
 	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
 	task::task<engine::CheckResult> check();
@@ -153,6 +173,13 @@ public:
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+
+	// A RESTORE's writes to this shard (docs/perf/x7-loop-stalls.md, fix (c)): in one turn, a chore of `chores`
+	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and leaves `at` where
+	// it stopped (after a write that failed and marked the index stale: it is replaced before the next). A write
+	// whose document left since placement is missed, and so is every later write of its term (`missed_terms`, kept
+	// across slices): the caller places them afresh, in input order.
+	task::task<void> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
 
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);

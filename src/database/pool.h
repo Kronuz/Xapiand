@@ -53,6 +53,7 @@
 #include "engine/host.h"        // for Host
 #include "engine/open.h"        // for engine::default_readers_per_index
 #include "engine/shard.h"       // for engine::Shard
+#include "engine/sync.h"        // for engine::BlockingAllowed
 #include "engine/types.h"       // for engine::rev, docid
 #include "prospect/index.hh"    // for prospect::index
 #include "strata/core/catalog.hh"          // for strata::catalog
@@ -223,6 +224,11 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool modified;              // applied since the last commit
 	std::atomic<std::uint64_t> applied_;    // the writes applied so far (a position of the commits)
 	std::uint64_t committed_ = 0;           // the writes the last commit covered
+	// The id counter (docs/design/one-id.md): the largest numeric id the shard holds or issued, and whether it moved
+	// since the last commit, which persists it.
+	std::uint64_t id_high_ = 0;
+	bool id_high_moved_ = false;
+	void raise_id_high(std::uint64_t id) noexcept;
 #ifdef XAPIAND_DATA_STORAGE
 	std::unique_ptr<DataStorage> writable_storage;
 	// The next volume number nobody has: the shared writer's rollover and each streamed upload take theirs from
@@ -279,6 +285,11 @@ public:
 		return modified.load(std::memory_order_relaxed);
 	}
 
+	// The engines whose chores run inline right now, across entries: each a worker's writes (InlineEngine).
+	static int engines_inline() noexcept {
+		return engines_inline_.load(std::memory_order_relaxed);
+	}
+
 	// The engine's uuid; the data storage's volumes carry it.
 	std::string uuid() const {
 		std::lock_guard<std::mutex> lk(mtx);
@@ -300,6 +311,22 @@ private:
 	// close, at shutdown, in a replace close and in a demotion that only syncs a merge's output. With nothing
 	// applied since the last commit it writes nothing, no WAL line included (C25).
 	void commit_blocking();
+
+	// A worker's writes on the engine, under the turn or with no pin (commit_blocking, a RESTORE's apply slice):
+	// the engine's chores run inline and blocking is allowed while it lives; it restores the entry's chores on every
+	// exit, a throw included.
+	class InlineEngine {
+	public:
+		InlineEngine(ShardEndpoint& entry, const char* why);
+		~InlineEngine();
+		InlineEngine(const InlineEngine&) = delete;
+		InlineEngine& operator=(const InlineEngine&) = delete;
+
+	private:
+		ShardEndpoint& entry_;
+		engine::BlockingAllowed blocking_;
+	};
+	static inline std::atomic<int> engines_inline_{0};
 
 	// The operations of a write, which run under the index's turn (or alone, while the index is opened and
 	// its log replayed) on the engine and the chores they are given. A write is applied, counted and logged here.

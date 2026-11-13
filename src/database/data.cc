@@ -23,6 +23,8 @@
 
 #include "data.h"
 
+#include <atomic>                                 // for std::atomic
+
 #include "exception_engine.h"                     // for SerialisationError
 #include "length.h"                               // for serialise_length()
 #include "msgpack.h"                              // for MsgPack
@@ -112,6 +114,27 @@ Accept::Accept(int position, double priority, ct_type_t ct_type, int indent)
 }
 
 
+namespace {
+
+std::atomic<std::uint64_t> record_compressions{0};
+
+std::string
+compress_record(std::string_view data)
+{
+	record_compressions.fetch_add(1, std::memory_order_relaxed);
+	return compress_zstd(data);
+}
+
+}  // namespace
+
+
+std::uint64_t
+Locator::compressions() noexcept
+{
+	return record_compressions.load(std::memory_order_relaxed);
+}
+
+
 void
 Locator::data(std::string_view new_data)
 {
@@ -120,7 +143,7 @@ Locator::data(std::string_view new_data)
 		case Type::lz4_compressed_inplace:
 		case Type::zstd_compressed_inplace:
 			if (size >= 128) {
-				_raw_holder = compress_zstd(new_data);
+				_raw_holder = compress_record(new_data);
 				if (_raw_holder.size() < new_data.size()) {
 					type = Type::zstd_compressed_inplace;
 					raw = _raw_holder;
@@ -135,7 +158,7 @@ Locator::data(std::string_view new_data)
 		case Type::lz4_compressed_stored:
 		case Type::zstd_compressed_stored:
 			if (size >= 128) {
-				_raw_holder = compress_zstd(new_data);
+				_raw_holder = compress_record(new_data);
 				if (_raw_holder.size() < new_data.size()) {
 					type = Type::zstd_compressed_stored;
 					raw = _raw_holder;
@@ -159,7 +182,7 @@ Locator::data(std::string&& new_data)
 		case Type::lz4_compressed_inplace:
 		case Type::zstd_compressed_inplace:
 			if (size >= 128) {
-				_raw_holder = compress_zstd(new_data);
+				_raw_holder = compress_record(new_data);
 				if (_raw_holder.size() < new_data.size()) {
 					type = Type::zstd_compressed_inplace;
 					raw = _raw_holder;
@@ -175,7 +198,7 @@ Locator::data(std::string&& new_data)
 		case Type::lz4_compressed_stored:
 		case Type::zstd_compressed_stored:
 			if (size >= 128) {
-				_raw_holder = compress_zstd(new_data);
+				_raw_holder = compress_record(new_data);
 				if (_raw_holder.size() < new_data.size()) {
 					type = Type::zstd_compressed_stored;
 					raw = _raw_holder;
@@ -536,9 +559,13 @@ Data::get_obj() const
 
 
 void
-Data::set_obj(const MsgPack& object)
+Data::set_obj(const MsgPack& object, bool compress)
 {
-	update("", object.serialise());
+	auto& locator = pending.emplace_back("");
+	if (!compress) {
+		locator.type = Locator::Type::inplace;
+	}
+	locator.data(object.serialise());
 }
 
 

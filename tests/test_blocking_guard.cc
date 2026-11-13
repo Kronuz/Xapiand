@@ -30,6 +30,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <filesystem>
 #include <functional>
 #include <future>
 #include <memory>
@@ -82,8 +83,10 @@ void on_loop(const std::function<void()>& fn) {
 	r.run();
 }
 
-// Opens an index through the registry: a wait for the open.
+// Opens an index through the registry: a wait for the open. The index starts empty each time, so an earlier
+// build's files left in the build directory never reach the open.
 void open_through_the_registry() {
+	std::filesystem::remove_all("blocking_guard_test");
 	DatabasePool pool(control_loop(), 8);
 	{
 		Shard shard(engine::sync_wait(pool.pin(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN)), DB_WRITABLE | DB_CREATE_OR_OPEN);
@@ -91,6 +94,7 @@ void open_through_the_registry() {
 	}
 	pool.finish();
 	pool.join();
+	std::filesystem::remove_all("blocking_guard_test");
 }
 
 // An object whose destructor does database work.

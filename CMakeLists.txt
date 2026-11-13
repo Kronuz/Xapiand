@@ -454,7 +454,7 @@ endif ()
 include(FetchContent)
 
 # Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
-# resolved trees); a library that pins an older one is bumped in its own repository.
+# resolved trees). A library that pins an older one is bumped in its own repository.
 # compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
 FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
 # Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
@@ -752,8 +752,8 @@ add_definitions(-DASIO_STANDALONE)
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only. The loops' tasks run through
 # task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2); task::asio, which reactor links, uses the
-# Asio above. A chore resumes its awaiter with asio_scheduler::post(), the one thread-safe entry, never
-# post_demoted() (C10).
+# Asio above. A chore resumes its awaiter through the reference it captured: post() for a light request,
+# post_heavy() for a heavy one, both thread-safe (docs/design/loop-scheduling.md D2).
 set(TASK_ASIO ON CACHE BOOL "" FORCE)
 # Counts live task frames (task::detail::live_frames), which the teardown tests check; set for every target, since
 # it changes task's inline functions. Off by default: it adds an atomic add per frame.
@@ -761,15 +761,14 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG bdafa5f1ca96a2d34b1c5eb0bbb04e4b3ddb88c0)  # task main C3: cancellation, inline resume, roots and the four teardown phases
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-# strata: the commit with defer_io and work_pool_executor.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 5d742b2407f5048713cb39a625c017c455cb814e)  # strata main: the catalog host interface, destroy-safe pins with cancel tokens
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 850d4e8ce9a76fdf15c8e0028c6fd578a3374d34)  # prospect main
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 86fe7c476c64b86219350a999ee88467bf86269c)  # strata main: lazy segments by default, one device flush per open, unpin-after-kick
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -823,7 +822,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 51d153aa1bc33a433b0c1b4dad56671d01f89d27)  # http main: the keep-alive watch engages with one read (perf-watch-peek)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 09b644d23f6518c4112812e83c2711058e99ea78)  # http main: a heavy waiter resumes through its scheduler (http-lane)
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
@@ -1030,7 +1029,7 @@ if(LUA)
 	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
 	FetchContent_Declare(lua
-		URL "${XAPIAND_LUA_URL}"
+		URL ${XAPIAND_LUA_URL}
 		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
 		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
@@ -1892,7 +1891,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node lua metric_serialise quarantine root_routes)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
