@@ -9,11 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+A1 measured (ASan replay profile + libFuzzer exec/s at prospect:61e09a6); harness cuts in the
+worktree (fielddict base dictionaries cached, postings seeded-top-k size by input bits, replay.cc
+REPLAY_COST); `tools/release_rows/fuzz_hour.sh` (build, cost, run: CPU-time budget, persistent corpus
+~/.scratch/fuzz-corpus/T, -max_len with -len_control=0 for segment). A/B of segment base sizes and
+length limits running as scratch probes; then docs/perf/fuzz-targets.md, then submit the jobs.
 
 ## Next
 
-1. <step>
+1. Decide segment base size and -max_len from the A/B runs (scratch, .scratch/ab).
+2. Write docs/perf/fuzz-targets.md (A1), commit, push the branch.
+3. Submit: build jobs (before = base commit, after = head), cost jobs, four 3600 CPU-s runs (--for A2,A3).
 
 ## Blocked on
 
