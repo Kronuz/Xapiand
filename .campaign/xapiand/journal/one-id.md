@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-100221-805267 261113-100222-f7f871 261113-100225-8c70b8 261113-100228-7934d9 261113-100230-e78430 261113-100233-a6cac6 261113-100235-26ba16 261113-100238-d28c34 261113-100241-6aeb5e 261113-100243-c10ac6 261113-100246-77708f 261113-100249-92b6c9
+State: waiting on jobs 261113-102058-2f5fef 261113-102100-e8f48e 261113-102107-0947e7 261113-102116-75230f 261113-102118-58256e 261113-102121-93d3d7 261113-102123-91992d 261113-102126-2cd8b2 261113-102128-442a04 261113-102131-cae4b9
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,16 +13,22 @@ The durability review approved 8d61b1913 (.campaign/xapiand/reviews/one-id-durab
 on the unloaded light p99 (ba7801 and repeat 261113-093708-5f5a72: master 3.5/4.0 ms vs one-id 9.9/5.9 ms). The
 routing change below goes back to the durability reviewer as a scoped re-check.
 
-Waiting on jobs at 3c328c6e2 (branch pushed for CI):
+Waiting on jobs at 2ee069155 (branch pushed for CI; the lead runs A5 at 3c328c6e2 separately):
 
-- 261113-100221-805267 build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (--fails-without, after the build-test): A1 named-docid 261113-100222-f7f871; A2 no-persist
-  261113-100225-8c70b8, no-replay 261113-100228-7934d9, no-advance 261113-100230-e78430, no-stride 261113-100233-a6cac6;
-  A7 hash-route 261113-100235-26ba16; A6 no-advance 261113-100238-d28c34; new: A7 lookup-fan-out
-  261113-100241-6aeb5e and bulk-fan-out 261113-100243-c10ac6 (test_a_lookup_by_id_reads_one_shard).
-- A5: head build 261113-100246-77708f, then the exclusive ABBA 261113-100249-92b6c9 (same command as ba7801).
+- 261113-102058-2f5fef build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (--fails-without, after the build-test): A1 named-docid 261113-102100-e8f48e; A2 no-persist
+  261113-102107-0947e7, no-replay 261113-102116-75230f, no-advance 261113-102118-58256e, no-stride 261113-102121-93d3d7;
+  A7 hash-route 261113-102123-91992d; A6 no-advance 261113-102126-2cd8b2; A7 lookup-fan-out 261113-102128-442a04,
+  bulk-fan-out 261113-102131-cae4b9.
 
-Routing (3c328c6e2): `find_docid_term` reads only `id_shard(term)`'s shard, and a RESTORE slice's placement asks
+Routed-only (3c328c6e2) failed build-test 261113-100221-805267 at test_node.cc:1969/1973: the off-hash test seats a
+document off its routed shard. After one-id every placement routes by `id_shard` (PUT, RESTORE slices and serial,
+upload, delete of a missing id, numeric auto ids from owned buckets, keyword/UUID candidates and their minted
+fallback, the CLI restore over the whole index), so a new write never lands off-hash. But an index written under
+the earlier rules holds off-hash ids whenever n does not divide 1,024 (default 5), and direct shard writes can too.
+R8: routed first, the others on a miss (2ee069155): a hit is one read, a miss reads every shard as on master.
+
+Routing (3c328c6e2, superseded by R8): `find_docid_term` read only `id_shard(term)`'s shard, and a RESTORE slice's placement asks
 each shard only the ids routed to it (`continue`, not `break`, past a shard with none). `DatabaseHandler::key_reads`
 counts key reads per shard; the new test checks 1 per GET (found or 404) and 30 for a RESTORE of 30 new ids over 3
 shards. Caveat: `find_docid_term` is byte-identical to master's (diff), which also read every shard in order and
@@ -103,6 +109,10 @@ buckets (`bucket % n`); each shard issues automatic ids from a persisted, replay
     the cur runs drift (5.0 then 9.3 ms); stated as a possible regression for the P1 diagnosis to rule on.
 
 ## Rulings I made
+
+- R8 Lookups read the routed shard first and fan out only on a miss, not routed-only: indexes written before one-id
+  hold ids off their routed shard (old rule `hash % n`, `(N - 1) % n`), and one-id migrates nothing. Routed-only
+  lookups would need those indexes ruled out (owner/lead); the design note says so.
 
 - R7 `open_blocking` reads `_id_high` with `engine::sync_wait`: it runs in the catalog's open chore on a WorkPool
   worker before the replay (never the loop), and strata's `metadata()` finds the key in the open view's map without
