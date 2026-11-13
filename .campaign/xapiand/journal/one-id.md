@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-083755-c5e4b4 261113-083755-2de9cb 261113-083758-e58dc8 261113-083800-510abb 261113-083802-c6d044 261113-083805-101e1b 261113-083807-92969a 261113-083809-734db4 261113-083812-67e343 261113-083814-ba7801
+State: ready for review
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on jobs at 8d61b1913 (branch pushed for CI):
-
-- 261113-083755-c5e4b4 build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-083755-2de9cb;
-  A2 no-persist 261113-083758-e58dc8, no-replay 261113-083800-510abb (test_pool), no-advance 261113-083802-c6d044,
-  no-stride 261113-083805-101e1b (test_node); A7 hash-route 261113-083807-92969a; A6 no-advance 261113-083809-734db4.
-- A5: release builds master 261113-080915-1d19d5 (done), head 261113-083812-67e343, then the exclusive ABBA
-  261113-083814-ba7801 (.scratch/ab/ab.sh, arms pre/cur).
+Done at 8d61b1913 (round 4 green: build-test, seven mutants, A5, CI at 3d968d72c). A durability review runs at
+8d61b1913; no code changes meanwhile.
 
 Round 3 (2890b08db): build-test 261113-082922-3f2ebf failed only on async_check (`async_allowlist.tsv:25:
 src/database/shard.cc [sync_wait] covers 8 hit(s), the row allows 7`): `open_blocking`'s read of `_id_high`. Kept
@@ -50,8 +44,7 @@ Round 1 (622f57d08) failed: build-test 261113-074720-30a477 exit 8, probe 261113
 
 ## Next
 
-1. On green: paste `campaign brief`'s table, CI result for A4, A5 numbers into the Result (a miss stated as one).
-2. Correctness review is the lead's to launch.
+1. Fold in the review's findings by id, each fix with a test that fails without it.
 
 ## Blocked on
 
@@ -63,11 +56,33 @@ license-closure's replacement could make the key exact to 2^53, and MAX_NUMERIC_
 
 | Criterion | Evidence |
 |---|---|
+| A1 | 261113-083755-c5e4b4; fails without: 261113-083755-2de9cb |
+| A2 | 261113-083755-c5e4b4; fails without: 261113-083758-e58dc8, 261113-083800-510abb, 261113-083802-c6d044, 261113-083805-101e1b |
+| A7 | 261113-083755-c5e4b4; fails without: 261113-083807-92969a |
+| A6 | 261113-083755-c5e4b4; fails without: 261113-083809-734db4 |
 | A3 | `docs/design/one-id.md` |
+| A4 | 261113-083755-c5e4b4; CI green at 3d968d72c |
+| A5 | 261113-083814-ba7801 |
 
 ## Result
 
-<pending>
+A document's id is its only id (docs/design/one-id.md; how-it-works in docs/mechanisms/document-ids-and-versions.md,
+user docs in index-api.md and architecture.md). Strata numbers new documents in append order; ids route by 1,024
+buckets (`bucket % n`); each shard issues automatic ids from a persisted, replayed high-water counter
+(`_id_high`), above every numeric id in the index. Numeric ids with buckets are 1..2^32-1 (R4; owner P2 pending).
+
+- A1: after RESTORE 1..300 and PUTs of 11,000,001..11,000,030 and a merge, every shard holds one kind 0 segment
+  (n=1: docids 1-330; n=3: docids 1-110 per shard). The named-docid mutant (new ids at the docid they name) fails it.
+- A2, A6, A7: tests with exact values pass; each of the six mutants (no-persist, no-replay, no-advance x2,
+  no-stride, hash-route) makes its test fail.
+- A5 (ABBA, 2 pairs, master 396204136 with lanes = pre, one-id 8d61b1913 = cur, 64 heavy clients):
+  - loaded light query p99: 61.2 ms pre vs 60.3 ms cur (cur/pre 0.93-1.06, median 0.99): no change. A miss: the
+    harness bound per run is 7.7-19.7 ms, and every run is ~54-69 ms. Recorded as P1's update in PLAN.md
+    (Xapiand:81b99d0ce): light queries wait off the loop (loop lag p99 ~4 ms) behind RESTORE's write share.
+  - heavy searches: 23,085 pre vs 27,099 cur, 17% more (per pair 1.16 and 1.19).
+  - restored docs: 80,000 in every run.
+  - unloaded light query p99: 3.7 ms pre vs 7.2 ms cur (per pair 1.50 and 2.30). Not explained: two pairs, and
+    the cur runs drift (5.0 then 9.3 ms); stated as a possible regression for the P1 diagnosis to rule on.
 
 ## Rulings I made
 
