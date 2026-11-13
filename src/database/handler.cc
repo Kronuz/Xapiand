@@ -2257,6 +2257,7 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 		case 'G':
 			co_return Unserialise::MsgPack(FieldType::geo, term_id);
 		case 'N':
+			co_return Unserialise::id((co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type(), term_id);
 		case 'D':
 		case 'T': {
 			// These three types need further information, get such from the schema.

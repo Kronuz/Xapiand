@@ -989,6 +989,24 @@ Unserialise::id(std::string_view serialised_id)
 }
 
 
+MsgPack
+Unserialise::id(FieldType field_type, std::string_view serialised_id)
+{
+	const auto number = sortable::decode(serialised_id);
+	if (!number) {
+		THROW(SerialisationError, "Invalid numeric id: {}", repr(serialised_id));
+	}
+	switch (field_type) {
+		case FieldType::integer:
+			return number->to_int64().value_or(number->saturate_int64());
+		case FieldType::positive:
+			return number->to_uint64().value_or(number->saturate_uint64());
+		default:
+			return number->to_double();
+	}
+}
+
+
 std::pair<FieldType, std::string>
 Serialise::guess_serialise(const class MsgPack& field_value)
 {

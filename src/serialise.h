@@ -278,6 +278,9 @@ namespace Unserialise {
 	// The integer a numeric id's bytes (Serialise::id) name exactly, else nothing (a fraction, a negative).
 	std::optional<std::uint64_t> id(std::string_view serialised_id);
 
+	// A numeric id from its bytes, in the id field's type (integer, positive or floating).
+	class MsgPack id(FieldType field_type, std::string_view serialised_id);
+
 	// Unserialise serialised_val according to field_type and returns a MsgPack.
 	MsgPack MsgPack(FieldType field_type, std::string_view serialised_val);
 
