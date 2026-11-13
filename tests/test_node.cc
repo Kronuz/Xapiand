@@ -2459,7 +2459,11 @@ static void test_a_lookup_by_id_reads_one_shard() {
 		CHECK_EQ(reads, expected);
 	}
 	CHECK_EQ(version_of(call("GET", path + "130")), 2);
-	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 36u);
+	// A new numeric id is issued in its shard's turn: the POST looks no key up in any shard.
+	const auto before_post = DatabaseHandler::key_reads.load();
+	CHECK(success(call("POST", path + "?commit", R"({"n":"p"})")));
+	CHECK_EQ(DatabaseHandler::key_reads.load() - before_post, 0u);
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 37u);
 }
 
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket

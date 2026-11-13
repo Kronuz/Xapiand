@@ -922,7 +922,7 @@ static void test_a_stale_marking_failure_ends_its_slice() {
 
 // A placement read that fails (here shard 2's turn, busy) sends the terms it asked to the serial path after the join,
 // in input order, each object with its own turn, as one request each would: no object fails, every object is
-// stored, and the deferred objects are those of the ids neither shard 0 nor shard 1 holds (D68).
+// stored, and the deferred objects are those of the ids routed to shard 2, the ones its read asked first (D68).
 static void test_a_failed_placement_read_defers_its_terms_to_the_serial_path() {
 	create_index("placebusy", 5);
 	std::string seed;
@@ -934,7 +934,7 @@ static void test_a_failed_placement_read_defers_its_terms_to_the_serial_path() {
 	std::size_t affected = 0;
 	for (int k = 1; k <= 40; ++k) {
 		body += R"({"_id":)" + std::to_string(k) + R"(,"v":"new"})" "\n";
-		affected += (k - 1) % 5 >= 2;   // id k is on shard (k - 1) % 5: shards 2-4 are asked of shard 2
+		affected += (k - 1) % 5 == 2;   // id k is on shard (k - 1) % 5 (bucket k - 1); each shard is asked its own first
 		if (k == 20) {
 			body += R"({"_id":3,"v":"last"})" "\n";   // a second object of a deferred id, later in the stream
 			++affected;
