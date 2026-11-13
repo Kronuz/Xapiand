@@ -14630,6 +14630,8 @@
     "schema-load-once": {
       "accepted": {},
       "after": [],
+      "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+      "branch": "quest/xapiand/schema-load-once",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -14652,9 +14654,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-12T22:25:36"
+      "updated": "2026-11-12T22:25:39",
+      "worktree": "../Xapiand-wt/xapiand/schema-load-once"
     },
     "seam-census": {
       "accepted": {},
