@@ -4256,6 +4256,8 @@
       "after": [
         "release-rows"
       ],
+      "base": "61e09a60e0bf15c9d44a35b7819d08052f474071",
+      "branch": "quest/xapiand/fuzz-cpu-hour",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4270,6 +4272,7 @@
         "tools/release_rows/**",
         "docs/perf/fuzz-*.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/fuzz-cpu-hour",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 8",
@@ -4277,9 +4280,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "One real CPU-hour of fuzzing per prospect decoder the release reads",
-      "updated": "2026-11-11T23:32:50"
+      "updated": "2026-11-13T07:22:16",
+      "worktree": "../prospect-wt/xapiand/fuzz-cpu-hour"
     },
     "gate-prep-followups": {
       "accepted": {},
