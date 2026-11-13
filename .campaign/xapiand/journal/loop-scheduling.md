@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-163007-a6f351 261112-163009-f675a9 261112-163032-c04fc9
+State: waiting on jobs 261112-163009-f675a9 261112-163032-c04fc9
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -82,6 +82,16 @@ tasks pass K.
 - 261112-163007-a6f351 light: macOS build of 251a8e912.
 - 261112-163009-f675a9 exclusive (after it): X1, arms off, K 1, 4, 16, K 4 at 8 reactors (`x1_lane.sh`).
 - 261112-163032-c04fc9 light: the same build on the Linux VM.
+
+- 261112-163007-a6f351 done (binary `~/.scratch/loop-scheduling/251a8e912/xapiand`).
+- Ready after X1: `x2_ab.sh BIN K` (macOS ABBA off/lane + T12 loadtest) and `vm_lane.sh 251a8e912 K` (VM ABBA,
+  copy scratch b16339e4d's `pairs.py` to the VM first), scratch b16339e4d; K chosen from X1's slice histograms.
+- Design shape (to write once X1/X2 are in): class by attained service (budget slices spent; light below K,
+  heavy and sticky after, via a lane bit in `scheduler_ref` captured by every awaiter); heavy lane = today's
+  demoted queue, one turn per io_context pass; light lane = the FIFO; starvation bound = one heavy turn per pass,
+  and a light request holds the light lane for at most K slices; library default K = 0 keeps today's policy
+  (Detent, prospect, completion and consensus use task); inline resumes (`await_asio`, http `resume_waiter`) only
+  for a light ref; no per-loop heavy admission cap. Matches strata `docs/ARCHITECTURE.md:178-180` (LAS).
 
 ## Next
 
