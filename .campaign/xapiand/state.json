@@ -10835,6 +10835,7 @@
         "src/server/search_views.cc",
         "src/index_resolver_lru.*",
         "tests/**",
+        "harness/async_allowlist.tsv",
         "docs/design/one-id.md",
         "docs/mechanisms/document-ids-and-versions.md",
         "docs/src/**"
@@ -10850,7 +10851,7 @@
       "risk": "high",
       "status": "active",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T07:56:32",
+      "updated": "2026-11-13T08:37:12",
       "worktree": "../Xapiand-wt/xapiand/one-id"
     },
     "open-mix": {
