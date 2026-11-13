@@ -16330,6 +16330,40 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-lanes": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_asio.hh",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [
+        "task:lanes"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/task",
+      "risk": "high",
+      "status": "planned",
+      "title": "An opt-in heavy lane in task's budget and asio_scheduler",
+      "updated": "2026-11-12T20:07:22"
+    },
     "task-phase7c-l1": {
       "accepted": {},
       "after": [],
