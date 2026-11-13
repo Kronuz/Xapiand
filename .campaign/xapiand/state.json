@@ -16363,7 +16363,42 @@
       "updated": "2026-11-08T13:25:30"
     },
     "task-lanes": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T22:04:19",
+          "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "blobs": {
+            "CMakeLists.txt": "100644:0f9a585eb5ccbea4253f5c5fc0e386b213bbbde3",
+            "docs/API.md": "100644:904eb12829828615b71d0ba139f5ab3a80e959b3",
+            "docs/lanes.md": "100644:cc90dcc166ac81f612f46ac67aab049c1add1943",
+            "task.hh": "100644:0ab5e093b90bfd187810c7ffbe6285352066e15d",
+            "task_asio.hh": "100644:54a36d3ff958145e493e0d85fac3a70b4cfbf649",
+            "test/lanes_mutant.py": "100644:a59932c9fd3ed3d332b9eeb52c43da970806a182",
+            "test/lanes_test.cc": "100644:204e8ff6051a33fa52ac80b3fd053c08dc6fb002",
+            "test/resume_ab.py": "100644:ce0ac3351642597f077b58d3817970d31c92e196",
+            "test/resume_bench.cc": "100644:f5f66efa285655c6a7c65831cd04b89ad3e26174"
+          },
+          "by": "review",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": "3387a79ada18cfcc",
+          "diffs": {
+            "CMakeLists.txt": "c62ce1c28148c2d3",
+            "docs/API.md": "5e3f41de439be170",
+            "docs/lanes.md": "b333cca2fcde2acd",
+            "task.hh": "c5472b41893ee790",
+            "task_asio.hh": "8b26833cfa8cfade",
+            "test/lanes_mutant.py": "bdb3b19f81835015",
+            "test/lanes_test.cc": "a1aae0a888f798dd",
+            "test/resume_ab.py": "19ea161bf733538b",
+            "test/resume_bench.cc": "f4677d09c3872bec"
+          },
+          "findings": {},
+          "note": "",
+          "review": "48a06249c7e17d07b5650ee344f639b7954b0ddb",
+          "reviewed": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
       "branch": "quest/xapiand/task-lanes",
@@ -16397,7 +16432,7 @@
       "risk": "high",
       "status": "active",
       "title": "An opt-in heavy lane in task's budget and asio_scheduler",
-      "updated": "2026-11-12T20:08:03",
+      "updated": "2026-11-12T22:04:19",
       "worktree": "../task-wt/xapiand/task-lanes"
     },
     "task-phase7c-l1": {

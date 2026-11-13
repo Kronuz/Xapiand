@@ -9,7 +9,12 @@ Kronuz/http's `resume_waiter` (http_asio.h:578) resumes a waiter inline only for
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 A heavy waiter's read resumes through its scheduler and a light one inline: a test in http's suite that fails without the change (the build-test check, with a `--fails-without` job)
+Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
+needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
+(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
+job can show it.
+
+- A1 A heavy waiter's read resumes through its scheduler and a light one inline: a test in http's suite that fails without the change (the build-test check, with a `--fails-without` job)
 - A2 http's suite passes against the task-lanes pin: the build-test check
 
 ## Contracts

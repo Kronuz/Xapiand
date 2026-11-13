@@ -9,7 +9,12 @@ Kronuz/task gains the heavy lane of Xapiand's docs/design/loop-scheduling.md D5 
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 The lane works as D5 states, with a test each that fails without it: a light scope turns heavy at `light_slices`; heavy resumptions run after light work and timers in the same pass; `rearm_light(A)` gives a chunk A slices; `operator==` ignores the lane (review F4); `light_slices` 0 never goes sticky-heavy, with a mutant (F6); a heavy `when_all` child that finishes last does not leave the next chunk heavy, or the note's rule is changed and stated (F12); `post_demoted` from a WorkPool thread hops to the loop: the suite (build-test), with `--fails-without` jobs
+Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
+needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
+(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
+job can show it.
+
+- A1 The lane works as D5 states, with a test each that fails without it: a light scope turns heavy at `light_slices`; heavy resumptions run after light work and timers in the same pass; `rearm_light(A)` gives a chunk A slices; `operator==` ignores the lane (review F4); `light_slices` 0 never goes sticky-heavy, with a mutant (F6); a heavy `when_all` child that finishes last does not leave the next chunk heavy, or the note's rule is changed and stated (F12); `post_demoted` from a WorkPool thread hops to the loop: the suite (build-test), with `--fails-without` jobs
 - A2 `post_demoted` and the lane bit are race-free across threads: the suite under TSan, one light job
 - A3 With the lane compiled in but `light_slices` 0, a resumption costs nothing measurable against task main (Detent's condition, msg-40 reply): one exclusive paired A/B of the resume path of at most 10 minutes (D59), honest magnitude
 - A4 [manual] Detent's suite passes against this branch's sha through Detent's integration job (Detent's condition): its lead names the job id
