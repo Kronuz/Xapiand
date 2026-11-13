@@ -30,6 +30,7 @@
 #include <cctype>                           // for tolower
 #include <chrono>                           // for std::chrono::steady_clock
 #include <cmath>                            // for std::floor
+#include <cstdlib>                          // for std::getenv, std::strtoul
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
 #include <optional>                         // for std::optional
@@ -2357,7 +2358,15 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {
 		threads = manager->database_pool->work_pool().threads();
 	}
-	const std::size_t workers = threads > 1 ? threads - 1 : 1;
+	// explore/restore-cap: XAPIAND_RESTORE_CHORES caps the chores (children + width) a RESTORE runs at once.
+	static const std::size_t chores_cap = [] {
+		const char* env = std::getenv("XAPIAND_RESTORE_CHORES");
+		return env != nullptr ? static_cast<std::size_t>(std::strtoul(env, nullptr, 10)) : std::size_t{0};
+	}();
+	std::size_t workers = threads > 1 ? threads - 1 : 1;
+	if (chores_cap != 0 && workers > chores_cap) {
+		workers = chores_cap;
+	}
 	const std::size_t children = parallel ? std::min(n_shards, std::max<std::size_t>(1, workers / 2)) : 0;
 	const std::size_t width = workers > children ? workers - children : 1;
 
