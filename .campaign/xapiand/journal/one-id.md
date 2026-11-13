@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-102058-2f5fef 261113-102100-e8f48e 261113-102107-0947e7 261113-102116-75230f 261113-102118-58256e 261113-102121-93d3d7 261113-102123-91992d 261113-102126-2cd8b2 261113-102128-442a04 261113-102131-cae4b9
+State: waiting on jobs 261113-103109-652819 261113-103110-b89722 261113-103112-482015 261113-103114-8bb3e1 261113-103117-f82b70 261113-103119-c46bdd 261113-103121-12d765 261113-103124-d6917a 261113-103126-1cc5d1 261113-103128-415311 261113-103131-b6dd14 261113-103133-a069fe 261113-103135-ce00ce 261113-103138-58a7c1
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,13 +13,31 @@ The durability review approved 8d61b1913 (.campaign/xapiand/reviews/one-id-durab
 on the unloaded light p99 (ba7801 and repeat 261113-093708-5f5a72: master 3.5/4.0 ms vs one-id 9.9/5.9 ms). The
 routing change below goes back to the durability reviewer as a scoped re-check.
 
-Waiting on jobs at 2ee069155 (branch pushed for CI; the lead runs A5 at 3c328c6e2 separately):
+Waiting on jobs at 1f5b791d2 (pushed):
 
-- 261113-102058-2f5fef build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (--fails-without, after the build-test): A1 named-docid 261113-102100-e8f48e; A2 no-persist
-  261113-102107-0947e7, no-replay 261113-102116-75230f, no-advance 261113-102118-58256e, no-stride 261113-102121-93d3d7;
-  A7 hash-route 261113-102123-91992d; A6 no-advance 261113-102126-2cd8b2; A7 lookup-fan-out 261113-102128-442a04,
-  bulk-fan-out 261113-102131-cae4b9.
+- 261113-103109-652819 build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (--fails-without, after it): A1 named-docid 261113-103110-b89722; A2 no-persist 261113-103112-482015,
+  no-replay 261113-103114-8bb3e1, no-advance 261113-103117-f82b70, no-stride 261113-103119-c46bdd; A7 hash-route
+  261113-103121-12d765; A6 no-advance 261113-103124-d6917a; A7 lookup-fan-out 261113-103126-1cc5d1, bulk-fan-out
+  261113-103128-415311.
+- A5: head build 261113-103131-b6dd14, ABBA master vs head 261113-103135-ce00ce (--force).
+- Probe (one hypothesis, the `_id_high` write per commit): build of head without it 261113-103133-a069fe, ABBA head
+  (pre) vs head without it (cur) 261113-103138-58a7c1.
+
+Round at 2ee069155: build-test 261113-102058-2f5fef failed test_loop_yield.cc:952 (deferred count). The test's
+expectation was wrong for routed-first placement: shard 2's busy read now asks only ids routed to it (ids with
+(k - 1) % 5 == 2, plus the repeat of id 3), so only those defer; ids on shards 3 and 4 are found in their own
+shards' first-pass reads. Test now expects that (1f5b791d2).
+
+Regression (lead: unloaded light p99 1.6x, loaded `pair` p50 17-24 vs 10-13 ms). From the code, a POST does no
+key lookup: NEW_NUMERIC_KEY skips `written_docid_term` in `replace_document_term` and goes to `least_used_shard`
+(one turn per shard, as master's), and the shard's `replace_by_key` reads only its own key index; the lookup test
+now checks 0 key reads per POST. An issued id cannot exist off-hash: it comes from a bucket the issuing shard owns,
+above `max(id_high, floor)`, and every numeric write and replay raise `id_high`. Only pre-one-id indexes lack
+`_id_high` (they would conflict, R3, not overwrite). The harness's `pair` is a PUT of a new explicit id
+(accounts + 10M + i) then a GET, not a POST: its PUT looks up a miss in every shard on master too. What changed
+for that PUT: the docid (append, `replace_key` op, vs master's placed `replace_docid`), and the counter raise that
+makes the next commit write `_id_high`. The probe above measures the second.
 
 Routed-only (3c328c6e2) failed build-test 261113-100221-805267 at test_node.cc:1969/1973: the off-hash test seats a
 document off its routed shard. After one-id every placement routes by `id_shard` (PUT, RESTORE slices and serial,
