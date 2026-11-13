@@ -197,7 +197,7 @@ tasks pass K.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/loop-scheduling.md` (landed text); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7, X7 261112-193446-44263d, X8 261112-195132-1fe61f; builds 261112-191306-04ee82 (replaces 261112-170140-f2c47f), 261112-170143-aabac2 |
+| A1 | `docs/design/loop-scheduling.md` (the census job ids E1-E3, X1-X8 are in the note and in this journal's history; an artifact row names only the path) |
 | A2 | macOS T4/T5 ABBA, master abfd09535 vs head: 261113-050340-1aa2e4 (the earlier run at 4117329cf, 261113-033501-e28b59, is the table below; a miss); Linux VM ABBA 261113-044911-5c030d, builds 261113-044832-cdcd2c and 261113-044847-df0557 (pending). Earlier: 261112-225448-4dfa5e; VM failures 261112-225423-db70b6, 261113-033423-d0cd48, 261113-034617-473893 (lua.org resets) |
 | A3 | macOS T12 loadtest ABBA 261113-050340-64d317 (earlier: 261113-033505-0e9874 at 4117329cf, numbers below; 261112-225454-7d59c5) |
 | A4 | build-test 261113-050313-690238; fails without: k0 261113-050320-86bca1, no-exit-guard 261113-050320-c937a0, no-rearm 261113-050321-24afc5, pump-drops-lane 261113-050321-c8007c, rearm-in-read 261113-050325-7998cd; the chunk test under TSan: ci:Unit tests under TSan; a heavy request's progress bound lives in task (`heavy_progresses_under_flood`, mutant `strict-priority`, pinned task:18eb516) |
