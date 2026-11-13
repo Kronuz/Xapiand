@@ -14661,7 +14661,56 @@
       "updated": "2026-11-08T15:40:29"
     },
     "schema-load-once": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T02:33:01",
+          "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+          "blobs": {
+            "harness/async_allowlist.tsv": "100644:af020e0a283b37b3b34816db8a7b3ce17778d3af",
+            "src/database/schemas_lru.cc": "100644:f03cdb968b7f4880c031d78d923e0ddcb90ab940",
+            "src/database/schemas_lru.h": "100644:e318d72f7fbc820b579ca287bb195544f55a106d",
+            "src/index_resolver_lru.cc": "100644:f3d454dd028a1f2f92b62b5df857473f3dc195bb",
+            "src/index_resolver_lru.h": "100644:a0f44189dda7f0eaa4fcc1df72e3a9cdb7017040",
+            "src/single_flight.h": "100644:db7dec3cf735556c431235747711faef623f0162",
+            "tests/test_node.cc": "100644:49fe0230e2d384d14076aaddd99cc3d3c94daeba"
+          },
+          "by": "review",
+          "commit": "6dcc636d2e62ba5f0039823bd69366bad3e10c5a",
+          "criteria": "6ec5d57f5659fb5e",
+          "diffs": {
+            "harness/async_allowlist.tsv": "6a1f30b2f4996f0b",
+            "src/database/schemas_lru.cc": "669a654210b167a0",
+            "src/database/schemas_lru.h": "4f66b8fda97062c0",
+            "src/index_resolver_lru.cc": "9db25263c6b90b97",
+            "src/index_resolver_lru.h": "441a86a3bf7a2f9c",
+            "src/single_flight.h": "81053b7da3ea4f4c",
+            "tests/test_node.cc": "8e5078eaf0ce827f"
+          },
+          "findings": {
+            "G1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-schema-load-once-correctness/patch.py mutant \"$PWD\" || exit 2; git diff --quiet src && exit 2; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null || exit 2; cmake --build build --target xapiand_test_node -j4 >build.out 2>&1 || { tail -30 build.out; exit 2; }; build/bin/xapiand_test_node test_a_claim_between_flight_end_and_store_is_served_by_the_publication > mutant.out 2>&1; cat mutant.out; grep -q \"FAIL ../tests/test_node.cc:[0-9]*: CHECK(loads == 2u)\" mutant.out'",
+                  "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-022116-7d1cf5",
+                  "level": "light",
+                  "seconds": 65.1,
+                  "state": "done",
+                  "what": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/ at 8225c9831bbf"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "1d75d20012ff3c22e00720ea1f0c7f7444f99ff6",
+          "reviewed": "7993e7aa2c26e4fdbac0bc180d1d7e09bbdebcf0",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
       "branch": "quest/xapiand/schema-load-once",
@@ -14682,7 +14731,9 @@
         "harness/async_allowlist.tsv"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "7c",
       "needs": [],
       "provides": [],
@@ -14690,7 +14741,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-12T22:55:44",
+      "updated": "2026-11-13T02:33:01",
       "worktree": "../Xapiand-wt/xapiand/schema-load-once"
     },
     "seam-census": {
