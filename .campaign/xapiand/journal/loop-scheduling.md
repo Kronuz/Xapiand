@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs: VM master build 261113-044832-cdcd2c, VM head build 261113-044847-df0557 (lua from a patched local tree via FETCHCONTENT_SOURCE_DIR_LUA, new deps2-$C dirs), A2 VM ABBA 261113-044911-5c030d; then add its numbers to the Result and set ready for review
+State: review CHANGES folded (206c93e45); waiting on jobs: build-test 261113-050313-690238; mutants rerun k0 261113-050320-86bca1, no-exit-guard 261113-050320-c937a0, no-rearm 261113-050321-24afc5, pump-drops-lane 261113-050321-c8007c, new rearm-in-read 261113-050325-7998cd; A2 mac 261113-050340-1aa2e4, A3 261113-050340-64d317 (reruns of 045018-*, same builds); VM master build 261113-044832-cdcd2c, VM head build 261113-044847-df0557, A2 VM ABBA 261113-044911-5c030d (pinned at 1317dd685; rerun at the final head if the lead wants it)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -198,9 +198,9 @@ tasks pass K.
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/loop-scheduling.md` (landed text); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7, X7 261112-193446-44263d, X8 261112-195132-1fe61f; builds 261112-191306-04ee82 (replaces 261112-170140-f2c47f), 261112-170143-aabac2 |
-| A2 | macOS T4/T5 ABBA master abfd09535 vs head 4117329cf: 261113-033501-e28b59 (a miss, below); Linux VM ABBA 261113-044911-5c030d, builds 261113-044832-cdcd2c and 261113-044847-df0557 (pending). Earlier jobs at the previous head: 261112-225448-4dfa5e; VM failures 261112-225423-db70b6, 261113-033423-d0cd48, 261113-034617-473893 (lua.org resets) |
-| A3 | macOS T12 loadtest ABBA 261113-033505-0e9874 (earlier head: 261112-225454-7d59c5) |
-| A4 | build-test 261113-042355-86c006; fails without: k0 261113-042355-ac17b8, no-exit-guard 261113-042356-bbdfbb, no-rearm 261113-042356-6f67c7, pump-drops-lane 261113-042356-b1cb7d; the chunk test under TSan: ci:Unit tests under TSan (run 43424776459 at 1317dd685) |
+| A2 | macOS T4/T5 ABBA, master abfd09535 vs head: 261113-050340-1aa2e4 (the earlier run at 4117329cf, 261113-033501-e28b59, is the table below; a miss); Linux VM ABBA 261113-044911-5c030d, builds 261113-044832-cdcd2c and 261113-044847-df0557 (pending). Earlier: 261112-225448-4dfa5e; VM failures 261112-225423-db70b6, 261113-033423-d0cd48, 261113-034617-473893 (lua.org resets) |
+| A3 | macOS T12 loadtest ABBA 261113-050340-64d317 (earlier: 261113-033505-0e9874 at 4117329cf, numbers below; 261112-225454-7d59c5) |
+| A4 | build-test 261113-050313-690238; fails without: k0 261113-050320-86bca1, no-exit-guard 261113-050320-c937a0, no-rearm 261113-050321-24afc5, pump-drops-lane 261113-050321-c8007c, rearm-in-read 261113-050325-7998cd; the chunk test under TSan: ci:Unit tests under TSan; a heavy request's progress bound lives in task (`heavy_progresses_under_flood`, mutant `strict-priority`, pinned task:18eb516) |
 
 ## Result
 
@@ -231,6 +231,16 @@ A4: build-test and the four mutants (k0, no-exit-guard, no-rearm, pump-drops-lan
 CI's TSan failure on the chunk test (run 43419798840) was the test: a slow prepare split a chunk into rounds and a
 later round entered heavy by count; `FixedRanges ranges(5)` (bc5fea438) fixes it, CI green at 1317dd685.
 The mac A2/A3 jobs ran at 4117329cf; 4117329cf..1317dd685 changes `tests/test_loop_yield.cc` and the journal only.
+
+## Review (correctness, CHANGES, master:3777ad818)
+
+- C1: test 3's seam keeps the index child running 300 ms after it records (the reviewer's probe seam), so the index
+  child outlasts the read and a rearm inside `Request::read_chunk` leaves chunks 2-4 heavy; new mutant rearm-in-read
+  (261113-050325-7998cd) must fail `CHECK(first_light)` and `CHECK(lanes_by_count)`; the four other mutants rerun.
+- C2 and C3: `docs/design/loop-scheduling.md` states the shipped placement (`restore_database_view`, before the
+  `when_all`, and why), the exit-guard-only rule (D2 f, file list) and test 3's text and mutants.
+- C5: cited in A4's evidence (task's test). C7: the VM TSan jobs are dropped; CI TSan stands for the chunk test.
+- C4, C6: non-blocking; left to the lead.
 
 ## Rulings I made
 
