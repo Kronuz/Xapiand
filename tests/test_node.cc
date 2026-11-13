@@ -2534,6 +2534,12 @@ static void test_ids_that_shared_a_key_are_separate_documents() {
 		CHECK_EQ(Unserialise::id(std::string_view(ka).substr(1)).value_or(0), std::stoull(a));
 		CHECK_EQ(Unserialise::id(std::string_view(kb).substr(1)).value_or(0), std::stoull(b));
 	}
+	// Keys order as their numbers, byte by byte, over the ids above and their neighbours.
+	const std::vector<std::uint64_t> ascending{1, 1023, (std::uint64_t{1} << 32) - 1, 4294967296, 4294967297, 4311744512, 1099511627779,
+		1099561959424, 9007199254740991, 9007199254740992, 9007199254740993, 9223372036854775807u, 9223372036854775808u, 18446744073709551615u};
+	for (std::size_t i = 1; i < ascending.size(); ++i) {
+		CHECK_TRUE(numeric_key(ascending[i - 1]) < numeric_key(ascending[i]));
+	}
 	CHECK_EQ(document_key(Serialise::id(floating, MsgPack(1099511627776.0)), 'N'), numeric_key(std::uint64_t{1} << 40));
 	CHECK_FALSE(Unserialise::id(Serialise::id(floating, MsgPack(1.5))).has_value());
 }
