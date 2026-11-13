@@ -316,6 +316,13 @@
       "closed": "one-id landed with the mechanisms note in its set (Xapiand:46edfb23e)",
       "id": "msg-45",
       "text": "one-id also edits docs/mechanisms/document-ids-and-versions.md (outside its file set): it is the how-it-works note for ids, and it described new_did and the NumericId path that one-id removes. Please add it with src/database/pool.h (msg-44)."
+    },
+    {
+      "at": "2026-11-13T13:19:30",
+      "by": "exact-id-keys",
+      "closed": "src/query_dsl.cc added to exact-id-keys's file set",
+      "id": "msg-46",
+      "text": "exact-id-keys: the _id term search builds its term in src/query_dsl.cc (get_regular_query -> Serialise::MsgPack -> field_term in src/database/utils.cc), both outside the quest's file set. Serialise::MsgPack itself can't change for _id because range.cc uses it for the _id value slot (values stay old). Request: add src/query_dsl.cc to the file set (one branch: an _id field with a numeric type serialises via the new id codec). Default if no answer: I edit query_dsl.cc minimally and record it under Rulings."
     }
   ],
   "quests": {
