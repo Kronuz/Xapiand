@@ -24,7 +24,7 @@ Nothing
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261113-012502-21f3c1 at 8225c9831 runs the four paused-claim tests and the publication-window test; fails without: 261113-022116-7d1cf5 (publications removed: CHECK(loads == 2u) fails), 261112-232218-983be8 (probes disabled) |
-| A2 | `ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831, run 43401120786; local macOS ASan fails master's shutdown tests, 261113-022127-b46700) |
+| A2 | `ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831 and 6dcc636d2; why not a local run: see Rulings) |
 | A3 | 261113-012502-21f3c1 |
 
 ## Result
@@ -32,6 +32,8 @@ Nothing
 pending
 
 ## Rulings I made
+
+- Lead, 11-13: A2 cites CI's Linux sanitizers; local macOS ASan fails master's own shutdown tests (job 261113-022127-b46700, hunt.md).
 
 - The interleaving (A1): SingleFlight.run checks nothing between a caller's cache miss and its claim of the flight, and a
   flight's value reaches the cache only in each caller's continuation, after the flight is erased. A waiter B that missed
