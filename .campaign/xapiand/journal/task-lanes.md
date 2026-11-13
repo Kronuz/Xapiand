@@ -28,7 +28,7 @@ Kronuz/task CI at 90b50f0: run 43367833692, success on every platform (freebsd, 
 | A1 | At 90b50f0: build-test 261112-204846-725ea8. Mutants (`python3 test/lanes_mutant.py NAME`, exits 0 only when its test fails on a CHECK, 2 on a build error): light-posts-demoted 261112-204849-91803a, drain-runs-all 261112-204854-7e293b, strict-priority 261112-204858-0e6b9d, post-ignores-lane 261112-204902-8b592b, no-hop 261112-204905-205bd3, default-heavy 261112-204909-7b597e, eq-compares-lane 261112-204914-1d26c6, rearm-stays-heavy 261112-204918-7d0c0f, rearm-keeps-count 261112-204923-7f2258 (F12), heavy-late 261112-204928-6befdc, inline-heavy 261112-204935-9ea300 |
 | A2 | TSan suite 261112-204942-de21a3 (`cross_thread_hop`: 8 threads x 10,000 off-thread resumes); green at 5ae571a (261112-204230-c172ff) |
 | A3 | resume-path ABBA vs task main, exclusive, 261112-204947-85fbaf (`test/resume_ab.py`) |
-| A4 | pending: Detent's lead names the job at the sha |
+| A4 | [manual] Detent's lead, 11-12: Detent's integration job 261112-205304-da2074 passed (exit 0), Detent main's full suite with task pinned to quest/xapiand/task-lanes@90b50f0, 275 of 275 tests (test_local_trusted_paths skipped as on main) |
 | A5 | `docs/lanes.md` (task) |
 
 ## Result
