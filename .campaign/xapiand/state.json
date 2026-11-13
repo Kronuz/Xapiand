@@ -3847,6 +3847,46 @@
       "title": "Engine reads, search, and error kinds",
       "updated": "2026-11-08T13:25:14"
     },
+    "exact-id-keys": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/handler.*",
+        "src/database/schema.*",
+        "src/database/shard.*",
+        "src/database/pool.h",
+        "src/serialise.*",
+        "src/engine/strata/*.cc",
+        "tests/**",
+        "CMakeLists.txt",
+        "docs/design/exact-id-keys.md",
+        "docs/mechanisms/document-ids-and-versions.md",
+        "docs/src/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [
+        "xapiand:id-terms"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Numeric ids are exact keys up to the integer range",
+      "updated": "2026-11-13T13:15:04"
+    },
     "f14-step1": {
       "accepted": {},
       "after": [],
