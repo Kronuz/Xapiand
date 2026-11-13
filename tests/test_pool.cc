@@ -1794,7 +1794,7 @@ std::uint64_t issue(Shard& shard, const std::string& n) {
 		std::fprintf(stderr, "  issued %llu for %s\n", static_cast<unsigned long long>(numeric_id(info.term)), n.c_str());
 		return numeric_id(info.term);
 	} catch (const engine::Error& error) {
-		std::fprintf(stderr, "  issuing %s threw %s\n", n.c_str(), error.what());
+		std::fprintf(stderr, "  issuing %s threw %s\n", n.c_str(), error.reason().c_str());
 		throw;
 	}
 }
