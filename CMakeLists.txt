@@ -1029,7 +1029,7 @@ if(LUA)
 	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
 	FetchContent_Declare(lua
-		URL "${XAPIAND_LUA_URL}"
+		URL ${XAPIAND_LUA_URL}
 		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
 		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
