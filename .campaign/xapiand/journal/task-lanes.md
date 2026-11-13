@@ -1,29 +1,29 @@
 # task-lanes: journal
 
-State: waiting on jobs 261112-204125-ade849 261112-204139-c030da 261112-204142-15b07c 261112-204146-f78c5d 261112-204150-66030b 261112-204154-c0d456 261112-204158-99a813 261112-204202-d4e265 261112-204208-6e7e46 261112-204212-fa53c8 261112-204217-2d75e1 261112-204222-565acd 261112-204230-c172ff 261112-204235-528ca4
+State: waiting on jobs 261112-204846-725ea8 261112-204849-91803a 261112-204854-7e293b 261112-204858-0e6b9d 261112-204902-8b592b 261112-204905-205bd3 261112-204909-7b597e 261112-204914-1d26c6 261112-204918-7d0c0f 261112-204923-7f2258 261112-204928-6befdc 261112-204935-9ea300 261112-204942-de21a3 261112-204947-85fbaf
 Quest: .campaign/xapiand/quests/task-lanes.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at task:5ae571a (pushed; CI on quest/**). Local RelWithDebInfo build: full ctest green except lanes_test's first run (missing io.restart(), fixed in 5ae571a); lanes_test 5/5 green after.
+Jobs at task:90b50f0 (pushed; CI on quest/** running). At task:5ae571a every job passed: build-test 261112-204125-ade849, all 11 mutants killed (261112-204139-c030da ... 261112-204222-565acd), TSan 261112-204230-c172ff. CI at 5ae571a failed on linux-arm64-gcc only: `heavy_sticky_across_chore` raced (an idle loop ran the hop and the drainer before the second wake was posted). task:90b50f0 holds the loop in a handler while the test posts both wakes (20/20 local runs green). The header code is unchanged since 0484a73.
 
 ## Next
 
-1. Read the jobs; fix any mutant that survives (a stronger test) or anything TSan reports.
-2. Check CI on quest/xapiand/task-lanes.
-3. When green: State "ready for review", with the sha for Detent (A4).
+1. Read the jobs at 90b50f0 and CI run on quest/xapiand/task-lanes.
+2. A3: read `build-resume-ab/ab.json` from 261112-204947-85fbaf; record the median B/A ratio per measurement, honest magnitude.
+3. When green: State "ready for review", sha for Detent (A4).
 
 ## Blocked on
 
-Lead: the quest file's A1 bullet is on the same line as "Three to five, at outcome level:", so `campaign` does not parse A1 (`--for A1` is refused). build-test and the 11 mutants are submitted untagged; once A1 parses, they need `--for A1 [--fails-without]` reruns (same commands, below).
+Lead: the quest file's A1 bullet is on the same line as "Three to five, at outcome level:", so `campaign` does not parse A1 (`--for A1` is refused). build-test and the 11 mutants run untagged; once A1 parses, rerun them with `--for A1` (the mutants with `--fails-without`), same commands: `python3 test/lanes_mutant.py NAME`.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261112-204125-ade849. Mutants (command `python3 test/lanes_mutant.py NAME`, exits 0 only when its test fails on a CHECK, 2 on a build error): light-posts-demoted 261112-204139-c030da, drain-runs-all 261112-204142-15b07c, strict-priority 261112-204146-f78c5d, post-ignores-lane 261112-204150-66030b, no-hop 261112-204154-c0d456, default-heavy 261112-204158-99a813, eq-compares-lane 261112-204202-d4e265, rearm-stays-heavy 261112-204208-6e7e46, rearm-keeps-count 261112-204212-fa53c8 (F12), heavy-late 261112-204217-2d75e1, inline-heavy 261112-204222-565acd |
-| A2 | TSan suite 261112-204230-c172ff (`cross_thread_hop`: 8 threads x 10,000 off-thread resumes) |
-| A3 | resume-path ABBA vs task main, exclusive, 261112-204235-528ca4 (`test/resume_ab.py`) |
+| A1 | At 90b50f0: build-test 261112-204846-725ea8. Mutants (`python3 test/lanes_mutant.py NAME`, exits 0 only when its test fails on a CHECK, 2 on a build error): light-posts-demoted 261112-204849-91803a, drain-runs-all 261112-204854-7e293b, strict-priority 261112-204858-0e6b9d, post-ignores-lane 261112-204902-8b592b, no-hop 261112-204905-205bd3, default-heavy 261112-204909-7b597e, eq-compares-lane 261112-204914-1d26c6, rearm-stays-heavy 261112-204918-7d0c0f, rearm-keeps-count 261112-204923-7f2258 (F12), heavy-late 261112-204928-6befdc, inline-heavy 261112-204935-9ea300 |
+| A2 | TSan suite 261112-204942-de21a3 (`cross_thread_hop`: 8 threads x 10,000 off-thread resumes); green at 5ae571a (261112-204230-c172ff) |
+| A3 | resume-path ABBA vs task main, exclusive, 261112-204947-85fbaf (`test/resume_ab.py`) |
 | A4 | pending: Detent's lead names the job at the sha |
 | A5 | `docs/lanes.md` (task) |
 
