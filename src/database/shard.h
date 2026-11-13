@@ -26,11 +26,13 @@
 #include "config.h"               // for XAPIAND_DATA_STORAGE
 
 #include <chrono>                 // for std::chrono::nanoseconds
+#include <cstdint>                // for std::uint64_t
 #include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
 #include <optional>               // for std::optional
 #include <string>                 // for std::string
 #include <unordered_set>          // for std::unordered_set
+#include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
 #include "database/flags.h"       // for DB_*
@@ -137,7 +139,8 @@ public:
 	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
 	// live documents) as the writes left them, in the index's turn, refreshing nothing (docs/mechanisms/placement.md).
 	task::task<engine::docid> written_key(const std::string& term);
-	task::task<engine::doccount> written_count();
+	// The live documents as the writes left them, and the shard's id counter (docs/design/one-id.md), in one turn.
+	task::task<std::pair<engine::doccount, std::uint64_t>> written_load();
 	// written_key() of each term, in one turn.
 	task::task<std::vector<engine::docid>> written_keys(const std::vector<std::string>& terms);
 

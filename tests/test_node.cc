@@ -1948,7 +1948,7 @@ static void test_an_existing_id_written_again_lands_on_its_shard() {
 		auto obj = MsgPack{{"_id", id}, {"n", "first"}};
 		auto prepared = engine::sync_wait(db.prepare_document(obj, 0));
 		const auto term = std::get<0>(prepared);
-		const std::size_t hashed = key_placement_hash(term) % shards;
+		const std::size_t hashed = id_shard(term, shards);
 		const std::size_t held = (hashed + 1 + static_cast<std::size_t>(i) % (shards - 1)) % shards;   // any shard but the hash's
 		{
 			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
@@ -1987,7 +1987,7 @@ struct OffHashId {
 		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
 		endpoints = endpoints_of(index);
 		term = std::get<0>(prepare("first"));
-		hashed = key_placement_hash(term) % shards;
+		hashed = id_shard(term, shards);
 		off = hashed == 1 ? 2 : 1;   // not the hash's, and not shard 0, which a request's schema reads
 		seat(off, "first");
 		CHECK(holds(off));

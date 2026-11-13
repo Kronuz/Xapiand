@@ -35,6 +35,7 @@
 #include <optional>                         // for std::optional
 #include <unordered_map>                    // for std::unordered_map
 #include <unordered_set>                    // for std::unordered_set
+#include <tuple>                            // for std::tie
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
@@ -131,19 +132,61 @@ has_document_id(const MsgPack& document_id)
 }
 
 
-engine::docid
-numeric_docid(std::string_view key)
+std::uint64_t
+numeric_id(std::string_view key)
 {
 	if (key.size() < 2 || key[0] != 'N') {
 		return 0;
 	}
-	const auto id = sortable_unserialise(std::string(key.substr(1)));
-	// Below the largest docid: an id there would leave the shard nothing to number after it.
-	constexpr auto top = static_cast<double>(std::numeric_limits<engine::docid>::max());
-	if (!(id >= 1 && id < top) || id != std::floor(id)) {  // NaN fails the first test
+	const auto id = sortable_unserialise(key.substr(1));
+	if (!(id >= 1 && id <= static_cast<long double>(MAX_NUMERIC_ID)) || id != std::floor(id)) {  // NaN fails the first test
 		return 0;
 	}
-	return static_cast<engine::docid>(id);
+	return static_cast<std::uint64_t>(id);
+}
+
+
+std::string
+numeric_key(std::uint64_t id)
+{
+	return document_key(sortable_serialise(static_cast<long double>(id)), 'N');
+}
+
+
+std::size_t
+id_bucket(std::string_view key)
+{
+	if (const auto id = numeric_id(key); id != 0) {
+		return static_cast<std::size_t>((id - 1) % ID_BUCKETS);
+	}
+	return static_cast<std::size_t>(key_placement_hash(key) % ID_BUCKETS);
+}
+
+
+std::size_t
+bucket_shard(std::size_t bucket, std::size_t n_shards)
+{
+	return bucket % n_shards;
+}
+
+
+std::size_t
+id_shard(std::string_view key, std::size_t n_shards)
+{
+	return n_shards > 1 ? bucket_shard(id_bucket(key), n_shards) : 0;
+}
+
+
+std::uint64_t
+next_auto_id(std::uint64_t high, std::size_t shard_num, std::size_t n_shards)
+{
+	// Within ID_BUCKETS steps every bucket comes once, so a shard that owns one finds it.
+	for (std::uint64_t id = high + 1, last = high + ID_BUCKETS; id <= last && id <= MAX_NUMERIC_ID; ++id) {
+		if (bucket_shard(static_cast<std::size_t>((id - 1) % ID_BUCKETS), n_shards) == shard_num) {
+			return id;
+		}
+	}
+	return 0;
 }
 
 
@@ -610,15 +653,10 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 		THROW(ClientError, "A streamed blob has at least a byte");
 	}
 
-	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: an id
-	// that names a document id says it (numeric_docid), and any other id is placed by its hash.
+	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: the
+	// one its id's bucket names.
 	const auto term_id = co_await get_prefixed_term_id(document_id);
-	const size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		const auto did = numeric_docid(term_id);
-		shard_num = did != 0 ? (did - 1) % n_shards : key_placement_hash(term_id) % n_shards;
-	}
+	const size_t shard_num = id_shard(term_id, endpoints.size());
 
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
@@ -1879,10 +1917,7 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
-		if (did == 0u) {
-			did = numeric_docid(term);
-		}
-		shard_num = did != 0u ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
+		shard_num = did != 0u ? (did - 1) % n_shards : id_shard(term, n_shards);  // a hit id's shard, else the id's
 	}
 
 	auto& endpoint = endpoints[shard_num];
@@ -1892,10 +1927,11 @@ DatabaseHandler::delete_document_term(const std::string& term, engine::rev docum
 }
 
 
-task::task<size_t>
+task::task<std::pair<size_t, std::uint64_t>>
 DatabaseHandler::least_used_shard()
 {
 	size_t shard_num = 0;
+	std::uint64_t id_high = 0;
 	auto min_doccount = std::numeric_limits<engine::doccount>::max();
 	for (size_t n = 0; n < endpoints.size(); ++n) {
 		lock_shard lk_shard(endpoints[n], flags, turn_token());
@@ -1903,7 +1939,8 @@ DatabaseHandler::least_used_shard()
 		auto node = lk_shard->node();
 		if (node && node->is_active()) {
 			try {
-				auto doccount = co_await lk_shard->written_count();
+				const auto [doccount, high] = co_await lk_shard->written_load();
+				id_high = std::max(id_high, high);
 				if (min_doccount > doccount) {
 					min_doccount = doccount;
 					shard_num = n;
@@ -1911,7 +1948,7 @@ DatabaseHandler::least_used_shard()
 			} catch (...) {}
 		}
 	}
-	co_return shard_num;
+	co_return std::make_pair(shard_num, id_high);
 }
 
 
@@ -1924,7 +1961,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	size_t n_shards = endpoints.size();
 
-	const size_t shard_num = n_shards > 1 ? co_await least_used_shard() : 0;
+	const size_t shard_num = n_shards > 1 ? (co_await least_used_shard()).first : 0;
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
@@ -1964,9 +2001,11 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	size_t shard_num = 0;
 	if (n_shards > 1) {
+		std::uint64_t floor = 0;
 		if (term == NEW_NUMERIC_KEY) {
-			// A new numeric id goes to the least used of the active shards, which numbers it.
-			shard_num = co_await least_used_shard();
+			// A new numeric id goes to the least used of the active shards, which issues it from a bucket it owns
+			// above every shard's counter.
+			std::tie(shard_num, floor) = co_await least_used_shard();
 		} else {
 			try {
 				// A document that exists (in any shard) is replaced where it is.
@@ -1978,11 +2017,10 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
 			}
-			// A new one goes where its id says (numeric_docid), else where its key hashes.
-			const auto did = numeric_docid(term);
-			shard_num = did != 0 ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
+			// A new one goes to the shard its id's bucket names.
+			shard_num = id_shard(term, n_shards);
 		}
-		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards) + serialise_length(floor));
 	}
 
 	auto& endpoint = endpoints[shard_num];
@@ -1991,21 +2029,6 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	co_return info;
-}
-
-
-task::task<engine::WriteResult>
-DatabaseHandler::replace_document(std::string_view document_id, engine::Document&& doc, bool commit, bool wal, bool version)
-{
-	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
-
-	auto did = to_docid(document_id);
-	if (did != 0u) {
-		co_return co_await replace_document(did, std::move(doc), commit, wal, version);
-	}
-
-	const auto term_id = co_await get_prefixed_term_id(document_id);
-	co_return co_await replace_document_term(term_id, std::move(doc), commit, wal, version);
 }
 
 
@@ -2614,9 +2637,8 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			} else {
 				write.doc = std::move(std::get<1>(one.prepared));
 				if (n_shards > 1) {
-					// A new one goes where its id says (numeric_docid), else where its key hashes.
-					const auto did = numeric_docid(term);
-					shard = did != 0 ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
+					// A new one goes to the shard its id's bucket names.
+					shard = id_shard(term, n_shards);
 					write.doc.add_value(DB_SLOT_SHARDS, serialise_length(shard) + serialise_length(n_shards));
 				}
 			}

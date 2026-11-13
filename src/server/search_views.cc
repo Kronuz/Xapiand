@@ -1192,7 +1192,7 @@ write_metadata_view(Request& request)
 	assert(!key.empty());
 	key.remove_prefix(1);
 
-	if (key.empty() || key == "schema" || key == "wal" || key == "metrics") {
+	if (key.empty() || key == "schema" || key == "wal" || key == "metrics" || key == ID_HIGH_METADATA) {
 		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
 	}
 

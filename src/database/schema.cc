@@ -2786,7 +2786,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_unprefixed_term_id = mint(opts.uuid_compact);
 						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
-						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
+						auto tmp_shard_num = id_shard(tmp_term_id, n_shards);
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								unprefixed_term_id = std::move(tmp_unprefixed_term_id);
@@ -2807,7 +2807,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
-				// A new numeric id: the shard numbers it when it is written; 0 holds its place until then.
+				// A new numeric id: the shard issues it when it is written; 0 holds its place until then.
 				case FieldType::integer:
 					document_id = MsgPack(0).as_i64();
 					term_id = NEW_NUMERIC_KEY;
@@ -2851,7 +2851,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
 						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
-						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
+						auto tmp_shard_num = id_shard(tmp_term_id, n_shards);
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								document_id = std::move(tmp_document_id);
@@ -2981,7 +2981,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		}
 
 		if (term_id != NEW_NUMERIC_KEY) {
-			doc.set_key(term_id);  // a new numeric id's key is set when the shard numbers it
+			doc.set_key(term_id);  // a new numeric id's key is set when the shard issues it
 		}
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());

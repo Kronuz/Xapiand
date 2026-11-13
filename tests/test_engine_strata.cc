@@ -1210,42 +1210,34 @@ void conflicts() {
 	CHECK_EQ(engine::sync_wait(shard.find_key("Ka")), 0u);
 }
 
-// A new key with a docid to take takes it when it is free, and goes after the last when another document holds it;
-// a key that exists stays where it is. A replace by an id that holds another key's document refuses and leaves it.
+// A new key goes after the last docid, in append order, whatever docids are free below it; a key that exists stays
+// where it is. A replace by an id that holds another key's document refuses and leaves it.
 void placement() {
 	const auto path = scratch("placement");
 	auto opened = open_shard(path);
 	auto& shard = *opened.shard;
 	engine::WriteArgs plain;
-	const auto at = [](engine::docid did) {
-		engine::WriteArgs args;
-		args.new_did = did;
-		return args;
-	};
+	auto a = make("Ka", "a");
+	CHECK_EQ(engine::sync_wait(shard.replace(5, a, plain)).did, 5u);   // the log's replay writes at a docid
 	auto b = make("Kb", "b");
-	auto placed = engine::sync_wait(shard.replace_by_key("Kb", b, at(5)));
-	CHECK_EQ(placed.did, 5u);
+	const auto placed = engine::sync_wait(shard.replace_by_key("Kb", b, plain));
+	CHECK_EQ(placed.did, 6u);
 	CHECK_EQ(placed.version, 1u);
-	CHECK_EQ(engine::sync_wait(shard.find_key("Kb")), 5u);
-	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 5u);
-
-	auto c = make("Kc", "c");
-	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kc", c, at(5))).did, 6u);   // 5 is Kb's
-	CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "b");
+	CHECK_EQ(engine::sync_wait(shard.find_key("Kb")), 6u);
 	auto b2 = make("Kb", "b2");
-	const auto again = engine::sync_wait(shard.replace_by_key("Kb", b2, at(7)));
-	CHECK_EQ(again.did, 5u);
+	const auto again = engine::sync_wait(shard.replace_by_key("Kb", b2, plain));
+	CHECK_EQ(again.did, 6u);
 	CHECK_EQ(again.version, 2u);
-	auto d = make("Kd", "d");
-	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kd", d, at(3))).did, 3u);   // a free id under the last
-	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 6u);
+	auto c = make("Kc", "c");
+	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kc", c, plain)).did, 7u);   // not a free docid under the last
 	auto e = make("Ke", "e");
-	CHECK_EQ(engine::sync_wait(shard.add(e, plain)).did, 7u);
+	CHECK_EQ(engine::sync_wait(shard.add(e, plain)).did, 8u);
+	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 8u);
 
 	auto clash = make("Kz", "z");
-	CHECK(conflict_version([&] { engine::sync_wait(shard.replace(5, clash, plain)); }) == std::optional<engine::rev>(0));
-	CHECK_EQ(engine::sync_wait(shard.get(5))->data(), "b2");
-	CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 2u);
+	CHECK(conflict_version([&] { engine::sync_wait(shard.replace(6, clash, plain)); }) == std::optional<engine::rev>(0));
+	CHECK_EQ(engine::sync_wait(shard.get(6))->data(), "b2");
+	CHECK_EQ(engine::sync_wait(shard.get(6))->version(), 2u);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Kz")), 0u);
 	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 4u);
 }
@@ -1258,10 +1250,8 @@ void numbering_ends() {
 	auto& shard = *opened.shard;
 	constexpr auto top = std::numeric_limits<engine::docid>::max();
 	engine::WriteArgs plain;
-	engine::WriteArgs at_top;
-	at_top.new_did = top;
 	auto far = make("Kfar", "far");
-	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Kfar", far, at_top)).did, top);
+	CHECK_EQ(engine::sync_wait(shard.replace(top, far, plain)).did, top);
 	auto added = make("Kadded", "added");
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add(added, plain)); }) == engine::errc::database);
 	auto keyed = make("Kkeyed", "keyed");
