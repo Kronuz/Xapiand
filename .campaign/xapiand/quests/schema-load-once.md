@@ -15,7 +15,7 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 job can show it.
 
 - A1 The second loader is found and named in the journal with the interleaving that produces it, and a deterministic test (no sleeps or timing luck) forces that interleaving and counts exactly 2 loads: a test that fails without the fix (`--fails-without` job, exits 0 only when the named CHECK fails, 2 on a build error)
-- A2 test_node passes 20 repeats under ASan+UBSan: a light job looping `ctest -R test_node`
+- A4 test_node passes under ASan+UBSan: CI's sanitizer jobs at the landed code (`ci:` row naming the jobs). Replaces A2 (a local 20-repeat ASan job), which local macOS ASan cannot meet: it fails master's own shutdown tests (job 261113-022127-b46700).
 - A3 The suite passes: the build-test check
 
 ## Contracts
