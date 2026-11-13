@@ -1,6 +1,6 @@
 # schema-load-once: journal
 
-State: working
+State: waiting on jobs 261112-223932-8ff4dc 261112-223935-5dbeff 261112-223937-d8cb1b
 Quest: .campaign/xapiand/quests/schema-load-once.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fix and the two deterministic tests are written and committed (wip commits to squash/reword); waiting on the first
-build+run job 261112-223048-046aae (compile test_node, run the two "paused" tests).
+State: waiting on jobs 261112-223932-8ff4dc (mutant, A1), 261112-223935-5dbeff (ASan x20, A2), 261112-223937-d8cb1b
+(build-test, A3). The paused-claim tests passed at the fix (job 261112-223540-75e701, before the squash: 20 checks).
 
 ## Next
 
-1. Read the job; fix compile/test errors.
-2. Reword the wip commits (message with body, no attribution).
-3. Mutant job (probe disabled) `--for A1 --fails-without`; ASan job `--for A2` (20 repeats); `campaign verify schema-load-once --for A3`.
-4. Push the branch; paste the Evidence table; Result; State "ready for review".
+1. When the jobs finish: paste `campaign brief`'s Evidence table, write Result, State "ready for review".
+2. Push is done at the squashed head; CI is CI's.
 
 ## Blocked on
 
