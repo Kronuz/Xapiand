@@ -276,7 +276,9 @@ with no apply chore and no nested `engine::sync_wait` (N7).
 the placement of the whole range first. After the join, the loop asks each shard once, in its turn, which of the
 range's terms it holds (`written_key` for each, one turn per shard per range instead of one per shard per object).
 It keeps `find_docid_term`'s rules: shards in order, the first that holds a term wins, a shard's read retries and
-reopens as there, and a shard that is `not_available` fails only the objects no other shard holds (N3). A term found in a shard goes to that shard as `do_replace(did, must_exist)`; a new term goes to `numeric_docid` or
+reopens as there, and a shard that is `not_available` fails only the objects no other shard holds (N3). A pin or
+read that fails otherwise (busy after the turn's timeout, corrupt, database) fails no object: the terms it asked take
+the serial path after the join, in input order, each object with its own pin and turn wait (the correctness review's F1). A term found in a shard goes to that shard as `do_replace(did, must_exist)`; a new term goes to `numeric_docid` or
 `key_placement_hash`, as today. A term's objects in one range all reach one shard: the lookup and the hash answer the
 same for each, since nothing in the range erases (an erase is a barrier). Two cases go back to today's serial path
 after a join, applied alone: a new numeric id (`NEW_NUMERIC_KEY`), since `least_used_shard` reads the counts the
@@ -354,7 +356,10 @@ deferred objects). Each test asserts its case occurred before it checks the outc
   the shard run after the index is replaced (a seam makes one write fail so; the run has one more slice than the same
   run with no failure, the failing write alone fails, every other object is stored). A pin, turn or slice that fails
   before its next write fails that write alone and the rest retry (the thrown-slice seam: one write fails, the seed and 39 of 40
-  are stored). Mutants: the slice does not end at the stale failure; a failed slice fails the rest of the sub-run.
+  are stored). A placement read that fails (a seam makes shard 2's read busy once) sends the terms it asked to the
+  serial path: no object fails, every object is stored, and the deferred objects are the 25 of the ids on shards 2-4.
+  Mutants: the slice does not end at the stale failure; a failed slice fails the rest of the sub-run; a failed
+  placement read fails its terms.
 - The chores swap (N5): a test seam makes one apply slice throw; afterwards no engine runs its chores inline
   (`ShardEndpoint::engines_inline()`, the guard's count), and a later RESTORE's write runs. Mutant: the guard
   does not restore on the throw path.

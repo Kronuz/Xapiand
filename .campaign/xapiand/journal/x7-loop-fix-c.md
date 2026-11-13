@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-210709-853c7d (gate check), 261112-210714-0bfd95 (writes-on-loop mutant, new check name), 261112-210723-e38d98 (real-code ratios), 261112-201054-a09f03 and 261112-201055-0e58b1 (A3/A2 reruns)
+State: waiting on jobs 261112-231439-6b1fc5 (build-test), 261112-231447-8579aa (F1 mutant), 261112-231509-22acbe (TSan probe)
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,6 +15,18 @@ child". Grounded in the A3 job's RESTORE samples (261112-012857-a77bf8, arms 3/6
 Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
+
+F1 (correctness review, blocking) fixed in Xapiand:87f839a95: a term whose placement pin or read failed (anything
+but missing or not_available) takes the serial path after the join, in input order, with the misses (`deferred`).
+Test `test_a_failed_placement_read_defers_its_terms_to_the_serial_path` (seam `busy_placement_shard`: shard 2's
+placement read throws busy once; 0 failed items, all 40 ids stored with their last value, `deferred` == 25, the
+objects of ids on shards 2-4). Jobs at Xapiand:87f839a95: build-test 261112-231439-6b1fc5; mutant (today's
+`failed[k] = current_exception()`, `--for A5 --fails-without`, exit 0 only if the `deferred == affected` CHECK
+fails) 261112-231447-8579aa; reviewer's TSan probe rerun 261112-231509-22acbe. Pushed.
+1. When they pass: State "ready for review"; `campaign accept x7-loop-fix-c correctness --confirm F1=261112-231439-6b1fc5`
+   is the lead's. If the mutant fails, read its FAIL lines (exit 3/4 mean the sed or the line lookup missed).
+
+Earlier, at Xapiand:0bbf128d3 / 1b3d84980 (done):
 
 Lead, msg (gate failed): 261112-201006-81837c failed `test_blocking_guard.cc:180` with `strata::unsupported_index: a manifest file
 of another build`. Cause, not the merge and not fix (c): `open_through_the_registry` opens `Endpoint("blocking_guard_test")`
@@ -121,9 +133,20 @@ checked what), and answer each message by its id (msg-N).
 | A1 | [artifact] `docs/perf/x7-loop-stalls.md`, "Design: fix (c), RESTORE's writes off the loop, one shard per child" (review pending) |
 | A2 | [artifact] `docs/perf/x7-loop-stalls.md`, "At the fix", fix (c)'s column and "At fix (c)" (job 261112-060352-3a68bf: T4 and T5 miss, recorded) |
 | A3 | 261112-060350-41b974: RESTORE 1.001x pre-7c in `loadtest.py` (pairs 0.981-1.047), 1.019x in `profile_bulk.sh` (0.999-1.094); met at the median, inside the spread |
+| A5 | suite 261112-231439-6b1fc5 (Xapiand:87f839a95, pending); fails without: 261112-201044-0da49c (stale break), 261112-201045-5f5375 (failed slice fails the rest), 261112-231447-8579aa (F1: a failed placement read fails its terms, pending) |
 | A4 | suite 261112-060150-6f4cc5 (Xapiand:a944a38d4, exit 0); fails without: 261112-060244-26054a, 261112-060247-915bc9, 261112-060250-fff57b, 261112-060253-438fbd, 261112-060256-a08cb1, 261112-060259-0555e1 (each exit 0: its named check's FAIL line appeared) |
 
 ## Review findings
+
+Correctness review `.campaign/xapiand/reviews/x7-loop-fix-c-correctness.md` (CHANGES at Xapiand:e73a0d305):
+
+- F1 (blocking, placement fails a range's unplaced terms): fixed Xapiand:87f839a95; test above; mutant
+  261112-231447-8579aa; suite 261112-231439-6b1fc5; TSan probe 261112-231509-22acbe.
+- N1 (not blocking, not fixed): a throw from `finish_write(false, true)` after a slice's writes is charged to the
+  last or next write. The fix is a catch around it in `apply_slice`; it needs its own seam and test, so it stays
+  with the lead to triage.
+- N2: A5 now has its own Evidence row (the stale-break and failed-slice mutants and F1's).
+- N3 (nit, stat only): not changed.
 
 Design review `.campaign/xapiand/reviews/x7-loop-fix-c-design.md` (CHANGES at Xapiand:45815797d). Fixes: the design
 text in Xapiand:9c38ae630, the code and tests in Xapiand:3c3cf24c4; suite 261112-060150-6f4cc5 at Xapiand:a944a38d4.

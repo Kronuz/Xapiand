@@ -2496,7 +2496,8 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// at most `children` child tasks, each holding one turn at a time.
 	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
 		// Placement, by find_docid_term's rules: shards in order, the first that holds a term wins, a shard's read
-		// retries and reopens, and a shard that is not available fails only the terms no other shard holds.
+		// retries and reopens, and a shard that is not available fails only the terms no other shard holds. A term
+		// whose pin or read failed otherwise (busy, corrupt) takes the serial path after the join: each its own turn.
 		std::vector<std::string> terms;
 		std::unordered_map<std::string, std::size_t> term_at;
 		for (auto j = from; j < to; ++j) {
@@ -2510,6 +2511,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 		std::vector<std::pair<std::size_t, engine::docid>> found(terms.size(), {0, 0});   // shard + 1, its docid
 		std::vector<std::exception_ptr> failed(terms.size());
+		std::vector<bool> serial(terms.size(), false);
 		if (n_shards > 1) {
 			std::exception_ptr unavailable;
 			bool missing = false;   // the lookup met a missing index: the rest are placed afresh, as the serial path
@@ -2517,7 +2519,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				std::vector<std::string> ask;
 				std::vector<std::size_t> ask_at;
 				for (std::size_t k = 0; k < terms.size(); ++k) {
-					if (found[k].first == 0 && !failed[k]) {
+					if (found[k].first == 0 && !failed[k] && !serial[k]) {
 						ask.push_back(terms[k]);
 						ask_at.push_back(k);
 					}
@@ -2530,6 +2532,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 					co_await lk_shard.pin();
 					for (int t = DB_RETRIES; t >= 0; --t) {
 						try {
+							if (std::size_t busy = shard + 1; seams.busy_placement_shard.compare_exchange_strong(busy, 0)) {
+								throw engine::Error(engine::errc::busy, "Test seam: a placement read times out busy");
+							}
 							const auto dids = co_await lk_shard->written_keys(ask);
 							for (std::size_t m = 0; m < dids.size(); ++m) {
 								if (dids[m] != 0) {
@@ -2557,20 +2562,20 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) {
 						for (auto k : ask_at) {
-							failed[k] = std::current_exception();
+							serial[k] = true;
 						}
 					} else {
 						missing = true;
 					}
 				} catch (...) {
 					for (auto k : ask_at) {
-						failed[k] = std::current_exception();
+						serial[k] = true;
 					}
 				}
 			}
 			if (unavailable && !missing) {
 				for (std::size_t k = 0; k < terms.size(); ++k) {
-					if (found[k].first == 0 && !failed[k]) {
+					if (found[k].first == 0 && !serial[k]) {
 						failed[k] = unavailable;
 					}
 				}
@@ -2581,6 +2586,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		std::vector<std::vector<SliceWrite>> subruns(n_shards);
 		std::vector<std::pair<std::size_t, std::size_t>> slot(to - from, {n_shards, 0});
 		std::vector<std::exception_ptr> placement_error(to - from);
+		std::vector<bool> placement_serial(to - from, false);
 		std::vector<std::unordered_set<std::string>> seen(n_shards);
 		for (auto j = from; j < to; ++j) {
 			auto& one = run[j];
@@ -2591,6 +2597,10 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			const auto k = term_at[term];
 			if (failed[k]) {
 				placement_error[j - from] = failed[k];
+				continue;
+			}
+			if (serial[k]) {
+				placement_serial[j - from] = true;
 				continue;
 			}
 			SliceWrite write;
@@ -2678,8 +2688,8 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 		co_await task::when_all(std::move(kids));
 
-		// Results in input order; a write missed since placement, and every later write of its term, takes the
-		// serial path after them, in input order (the design review's B1).
+		// Results in input order; a write missed since placement, and every later write of its term (the design
+		// review's B1), and every write of a term whose placement failed, take the serial path after them, in input order.
 		std::vector<std::size_t> deferred;
 		for (auto j = from; j < to; ++j) {
 			auto& one = run[j];
@@ -2688,6 +2698,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				++_processed;
 				++_prepared;
 				co_await record(one, placement_error[j - from], {});
+			} else if (placement_serial[j - from]) {
+				deferred.push_back(j);
+				continue;
 			} else if (w_shard == n_shards) {
 				co_await apply(one);   // a failed prepare, or an object with nothing to write
 			} else if (auto& write = subruns[w_shard][w_pos]; write.missed) {
