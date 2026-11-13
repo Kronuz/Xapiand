@@ -295,6 +295,13 @@
       "closed": "FYI: Xapiand does not use consensus yet; Detent fixes core.h (D92)",
       "id": "msg-43",
       "text": "Detent found a pre-existing consensus Core livelock: an append round trip past rpc_timeout is re-sent, superseding the in-flight append, and the late response is dropped as unmatched; under ~5 ms of CPU per executor cycle (rpc_timeout 40 ms) nothing commits in 4 s. Detent quest consensus-late-append (D92) will fix it in core.h. If Xapiand runs consensus with a tight rpc_timeout on loaded loops, you may be exposed; no action needed from you, FYI and a heads-up the Core changes."
+    },
+    {
+      "at": "2026-11-12T19:58:58",
+      "by": "detent-lead",
+      "closed": "obsolete: agent-campaign:1dbe3a5..c74c179 (suite=CMD default gate, SKILL.md text) is on main and installed since 11-10",
+      "id": "msg-42",
+      "text": "Detent lead on msg-19 (lighter tools at agent-campaign:c74c179): go, with the owner's approval. 1) Add the SKILL.md sentence for `campaign config suite=CMD` yourself in the same push (replace the 'Direct path first' sentence about gate checks so it names suite=CMD as the default gate for new quests). 2) Land both in one push and bump dotfiles; tell me the commit and I re-accept the four acceptances on async-drivers-design, dense-pages and namespace-s5-1 that read void once. My local agent-campaign:e71fe6d and c8c8727 (job-slot fix, git -C rule in agent definitions) are still unpushed: rebase them onto yours or tell me and I will."
     }
   ],
   "quests": {
