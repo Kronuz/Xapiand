@@ -19275,11 +19275,11 @@
     "x7-loop-fix-c": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-13T00:10:08",
-          "base": "1407a2f290c997f0a882a4be2575ee3d955ee1cc",
+          "at": "2026-11-13T06:23:56",
+          "base": "a2e5fac771d1ccbbd1f5d72c01ace47d373ccf0c",
           "blobs": {
             "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
-            "harness/async_allowlist.tsv": "100644:c4d91afa8df90ca081798aa8ed84ea380b130aca",
+            "harness/async_allowlist.tsv": "100644:6b3d58f68a88ea25dda2933ca22c822984671cc6",
             "src/database/handler.cc": "100644:8f2c5ae9db8a24e10b9e2eeb258682a74a22455d",
             "src/database/handler.h": "100644:80ffe1e54639ebb21f85c1e891175c86bf923c5c",
             "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
@@ -19288,7 +19288,7 @@
             "tests/test_loop_yield.cc": "100644:8525a8fd317ecff5e15336cad87b9902019ab17e"
           },
           "by": "review",
-          "commit": "82f6f4784ca28b49e508be379ba58127d01da16b",
+          "commit": "be90536b2282e3f8dd9ecc5d964369d8104e43db",
           "criteria": "602a9cccdeab10f8",
           "diffs": {
             "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
@@ -19305,14 +19305,14 @@
               "jobs": [
                 {
                   "cmd": "sh -c 'set -u; sed -i \"\" \"s/serial\\[k\\] = true;/failed[k] = std::current_exception();/\" src/database/handler.cc && test \"$(grep -cF \"failed[k] = std::current_exception();\" src/database/handler.cc)\" = 2 || { echo \"mutant not applied\"; exit 3; }; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null && cmake --build build --target xapiand_test_loop_yield -j4 >build.out 2>&1 || { tail -40 build.out; exit 2; }; L=$(grep -nF \"CHECK_EQ(DocIndexer::stats.deferred.load(), affected);\" tests/test_loop_yield.cc | head -1 | cut -d: -f1); test -n \"$L\" || { echo \"check not found\"; exit 4; }; (cd build && ctest -R \"^test_loop_yield\\$\" --output-on-failure) >mut.out 2>&1; grep -F FAIL mut.out | head -20; echo \"named check at line $L\"; grep -qF \"FAIL ../tests/test_loop_yield.cc:$L:\" mut.out'",
-                  "commit": "87f839a95a4bc6dd74bd57d088daf90ee65852b6",
+                  "commit": "0ed7e885cdfabdd7f9e640a05d53ad1ea6c34309",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261112-231447-8579aa",
+                  "job": "261113-055631-a31da6",
                   "level": "light",
-                  "seconds": 1511.8,
+                  "seconds": 364.4,
                   "state": "done",
-                  "what": "x7-loop-fix-c mutant: a failed placement read fails its terms (F1)"
+                  "what": "x7-loop-fix-c mutant: a failed placement read fails its terms (F1) at 0ed7e885cdfa"
                 }
               ],
               "kind": "defect",
@@ -19449,7 +19449,7 @@
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-13T00:10:08",
+      "updated": "2026-11-13T06:23:56",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
