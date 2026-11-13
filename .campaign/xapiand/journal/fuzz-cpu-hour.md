@@ -24,7 +24,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | prospect `docs/perf/fuzz-targets.md` (`bced9d0`): per-input cost and causes; libFuzzer cost before/after from jobs 261113-081412-4637f9 and 261113-081415-b2fb3a |
+| A1 | `docs/perf/fuzz-targets.md` (prospect; per-input cost, causes and the libFuzzer cost table, whose job ids the doc names) |
 | A2 | 261113-081451-5358c3, 261113-081455-3f4ada, 261113-081459-02662d (segment); 261113-081502-e083e7, 261113-081506-55d102, 261113-081510-b10410 (postings); 261113-081514-9eda0f, 261113-081517-5a8e7e, 261113-081521-9f4bc1 (values); 261113-081524-15b135, 261113-081528-c7f8ca, 261113-081531-084b60 (fielddict); all passed at 43adb8957b95 (docs-only changes since) |
 | A3 | 261113-081451-5358c3, 261113-081455-3f4ada, 261113-081459-02662d: `-max_len=256 -len_control=0`; third 3's log reads `lim: 256` throughout (the release-rows runs ended at `lim: 26`) |
 
