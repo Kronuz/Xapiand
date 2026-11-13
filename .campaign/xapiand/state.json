@@ -10826,8 +10826,10 @@
         "src/engine/strata/search.cc",
         "src/engine/shard.h",
         "src/server/search_views.cc",
+        "src/index_resolver_lru.*",
         "tests/**",
-        "docs/**"
+        "docs/design/one-id.md",
+        "docs/src/**"
       ],
       "landed": [],
       "lenses": [
@@ -10840,7 +10842,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T03:31:18"
+      "updated": "2026-11-13T07:20:30"
     },
     "open-mix": {
       "accepted": {},
