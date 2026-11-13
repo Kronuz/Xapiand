@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs: gate 261113-033300-555be1; A4 mutants 261113-033318-52f956, 261113-033325-227525 (no-exit-guard), 261113-033332-72bffb, 261113-033338-89cc5a; builds mac head 261113-033417-58d0d0, mac master 261113-033446-472538, VM master 261113-034617-473893, VM head 261113-034627-9f77b5 (retries: lua.org reset the VM's first fetch); A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874, A2 VM 261113-034646-1334b1
+State: CI TSan fix pushed (bc5fea438), waiting on jobs: TSan build 261113-042310-6b8d68, TSan run x3 261113-042317-eb813e (A4), TSan repro without the fix 261113-042327-1ee206; evidence round jobs unchanged: VM builds 261113-034617-473893 261113-034627-9f77b5, A2 VM 261113-034646-1334b1. Done at 4117329cf: gate 261113-033300-555be1, mutants 261113-033318-52f956 261113-033325-227525 261113-033332-72bffb 261113-033338-89cc5a, A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874 (results not yet read; the test file changed since, so the gate and mutants need a rerun at the final head)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -201,6 +201,16 @@ tasks pass K.
 - VM builds failed (lua patch re-applied on a shared FetchContent dir); each commit now has `deps-$C` and `build-rel-$C`.
 - Master for A2/A3 is abfd09535 (includes fix-c); P1's docid-layout cause (PLAN.md Pending owner, Xapiand:a7b42914d,
   quest one-id D84) applies to any loaded light p99 miss against master.
+
+- CI TSan failure (run 43419798840, test_each_chunk_of_a_streamed_restore_starts_light, :1119 x3 and :1121): timing in
+  the test, not a rearm race. Chunks entered with 4 slices spent (8 - REQUEST_STREAM_SLICES, as designed) except a
+  later placement call entering with 12-13, lanes HHHHHHHH. DocIndexer's prepare rounds end at PREPARE_SLICE (1 ms,
+  handler.cc:2790); under TSan a 5-object chunk takes more than one round, each round places once (after_placement
+  seam), and the later round continues the chunk's budget past its light slices, so it is heavy by count (correct).
+  The test's per-chunk bound read it as an unrearmed chunk. Fix bc5fea438: `FixedRanges ranges(5)` (the existing
+  fixed-range seam, `objects_per_prepare`) makes a chunk one round on any build. Bound unchanged (it is right).
+  Not yet shown by a job: a TSan run of the fixed test and a run of the unfixed one (the repro job expects a failure,
+  timing dependent; its count is reported either way).
 
 ## Next
 
