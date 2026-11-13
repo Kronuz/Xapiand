@@ -15,37 +15,27 @@ FIFO order ... No attained-service counter exists or is added"?
 Answer, in short. A request is classed by attained service: the slices its budget has spent. It is light for its
 first 8 slices (1.6 ms of loop time while resumed). Under the T4/T5 mix 99.6% of light searches spend fewer than 8,
 while every heavy request spends at least 8 and the median heavy search 27 (X1). From its 8th slice the request is
-heavy. A streaming request is the exception (D81): RESTORE and bulk count their slices between body reads, so each
-body chunk starts light again. Every resumption of a heavy request goes to the loop's heavy lane (today's demoted
-queue), whatever woke it: a slice, a chore, an event, a timer or a body read. The heavy lane keeps today's rule,
-one turn per pass of the loop's FIFO. So a light resumption, an I/O completion or a timer waits for at most one
-heavy turn per pass, and a heavy request still gets a turn every pass. The mechanism is generic and belongs to
-Kronuz/task (D5). D6 adds one loop per physical core (owner, D80).
+heavy. A streaming request (RESTORE, bulk) is classed per body chunk: each chunk is light for its first 4 slices
+(D81, D82). Every resumption of a heavy request goes to the loop's heavy lane (today's demoted queue), whatever
+woke it: a slice, a chore, an event, a timer or a body read. The heavy lane keeps today's rule, one turn per pass
+of the loop's FIFO. So a light resumption, an I/O completion or a timer waits for at most one heavy turn per pass,
+and a heavy request still gets a turn every pass. The loop count stays at one per logical CPU (D6, parked
+placement). The mechanism is generic and belongs to Kronuz/task (D5).
 
-Measured on the prototype:
+Measured on the prototype at D82's configuration, against today's code (X8, macOS):
 
-- The lane removes the queueing it targets. A light search's p50 drops 0.45x on macOS (11.6 to 5.2 ms), and
-  heavy search throughput rises 1.14x (X2).
-- With D80's 8 loops on macOS, light p99 is 0.78x and heavy searches 0.957x against today (X4).
-- RESTORE alone is flat (T12, X2b).
-- With lifetime classing, a RESTORE under the heavy-search mix runs at about 0.7x on macOS, because it is heavy
-  for life (review F1). D81's per-chunk classing sets the trade with the chunk's light allowance. Each case
-  below is at 8 loops, against today's code at 16 (X5, X6), giving RESTORE time per 20,000 docs, then heavy
-  searches, then loaded light p99:
-  - full K (8 slices): 0.82x, 0.79x, 0.96x;
-  - 2 slices: 1.76x, 0.93x, 0.82x;
-  - 1 slice: 1.89x, 0.87x, 0.71x.
+- Loaded light p99: 0.696x.
+- Heavy searches: 1.027x.
+- RESTORE under the saturated heavy-search mix: 1.238x its time, 0.75x docs per phase. That is D82's stated cost.
+- RESTORE alone (T12) is flat (X2b).
 
-  Full K is the measured choice; 4 slices is the untested point between (D1).
+T4 and T5 still miss on both platforms:
 
-T4 and T5 still miss:
+- macOS: lag p99 3.58-4.10 ms, light p99 about 4x its bound.
+- Linux VM: light p99 1.5-1.7x its bound (X3).
 
-- macOS: lag p99 2.56-3.07 ms, 2.5-3x the edge; light p99 34-40 ms, about 4x (X4).
-- Linux VM: light p99 1.5-1.7x over its bound at D6's 8 loops (X3). It passes only at 4 loops, at 0.636x heavy
-  (X4).
-
-What is left is runnable loops off their CPUs, which no in-loop order can fix. D80 records both as misses and
-reruns x7-gate's T4/T5 with the load generator off the server's CPUs.
+What is left is runnable loops off their CPUs, which no in-loop order can fix. D82 reruns x7-gate's T4/T5 with the
+load generator off the server's CPUs.
 
 ## How a loop orders work today
 
@@ -121,25 +111,25 @@ therefore start light, and a chunk turns heavy only after K slices of its own. L
 heavy for life (64+ slices): under the heavy-search mix it round-robined with the searches, at about 0.7x
 (review F1, probe job 261112-183821-695fc9).
 
-The chunk's light allowance A sets the trade between ingest and search (X5, X6). It is measured at 8 loops,
-against today's code at 16. Time ratios are lane over off, so lower is faster.
+The chunk's light allowance A sets the trade between ingest and search (X5-X8). Ratios are against today's code
+at 16 loops, and a time ratio below 1 is faster.
 
-| A, slices light per chunk | RESTORE time p50 | Heavy searches | Loaded light p99 |
+| Configuration | RESTORE time under the mix | Heavy searches | Loaded light p99 |
 |---|---|---|---|
-| 8 = K (D81 as ruled; X5) | 0.824x (4.43 against 5.38 s) | 0.788x | 0.955x |
-| 2 (X6) | 1.757x (9.81 against 5.58 s) | 0.930x | 0.818x |
-| 1 (X6) | 1.889x (10.28 against 5.44 s) | 0.873x | 0.705x |
-| Lifetime classing (X4, review F1) | 8.4-16.8 s against 4.2-8.4 s (log2 buckets) | 0.957x | 0.78x |
+| A = 8 = K at 8 loops (X5) | 0.824x | 0.788x | 0.955x |
+| A = 4 at 8 loops (X7) | 0.846x | 0.785x | 0.685x |
+| A = 2 at 8 loops (X6) | 1.757x | 0.930x | 0.818x |
+| A = 1 at 8 loops (X6) | 1.889x | 0.873x | 0.705x |
+| A = 4 at 16 loops, D82 (X8) | 1.238x (0.75x docs per phase) | 1.027x | 0.696x |
+| Lifetime classing at 8 loops (X4, review F1) | 8.4-16.8 s against 4.2-8.4 s (log2 buckets) | 0.957x | 0.78x |
 
-A small allowance is as slow for RESTORE as lifetime classing (about 0.55x its rate). Most of a chunk's work
-lies past its first two slices, so it still waits in the heavy lane. Only the full K brings RESTORE to or above
-1.0x, and its cost is the heavy searches and light requests that now queue behind chunk work. No measured
-allowance gives both RESTORE near 1.0x and heavy near 0.957x.
+Ruling (D82): A = 4 (`REQUEST_STREAM_SLICES`, the argument of `rearm_light`), at today's loop count.
 
-Ruling: A = K, D81 as ruled. It is the only measured allowance with RESTORE at or above 1.0x (1.21x its rate).
-The heavy cost is recorded: 0.788x, against 0.957x with lifetime classing. A = 4, between 2 and 8, is the one
-untested point that could land both near 1.0x. It is the build step's first X6-shaped ABBA, and it is a constant
-(`REQUEST_STREAM_SLICES`, the argument of `rearm_light`), not a mechanism.
+- It keeps the light gain (0.696x) and full search capacity (1.027x).
+- Its cost falls only on a RESTORE that runs beside saturated search: 1.238x its time.
+- At 8 loops, X7's RESTORE time of 0.846x costs 0.785x of steady-state search capacity.
+- A = 1 or 2 is as slow for RESTORE as lifetime classing, because most of a chunk's work lies past its first two
+  slices.
 
 Alternatives, and why they lose:
 
@@ -223,7 +213,8 @@ one heavy turn.
 > *The policy is least-attained service in two lanes.* A request's budget counts the slices it has spent; the
 > request is light below `REQUEST_LIGHT_SLICES` (8) and heavy from then on. Light resumptions, Asio completions
 > and timers run in the loop's FIFO order; every resumption of a heavy request (a slice, a chore, an event, a
-> timer, a body read) waits in the heavy lane, which runs one turn per FIFO pass. A request starts light. See
+> timer, a body read) waits in the heavy lane, which runs one turn per FIFO pass. A request starts light, and a
+> streaming request's body chunk starts light for `REQUEST_STREAM_SLICES` (4). See
 > `docs/design/loop-scheduling.md`.
 
 D2's admission bullet keeps its two caps. `asio_scheduler::demoted()` now counts every resumption of a heavy
@@ -261,47 +252,20 @@ behaviour for the other users of `task::budget` and `asio_scheduler`: Detent, pr
     - `REQUEST_LIGHT_SLICES` and the request's budget (`:3167`), and the three script budgets (`:943`, `:1040`,
       `:1458`).
     - `enter_light()` at `handle`'s entry, and a scope guard on its exit.
-    - `rearm_light()` before each body read in `Request::read_chunk` (`:3012-3018`, D81).
+    - `rearm_light(REQUEST_STREAM_SLICES)`, 4, before each body read in `Request::read_chunk` (`:3012-3018`,
+      D81, D82).
   - `src/engine/host.h:82` and `src/engine/host_asio.h:52`, `:119-154`: the Host forwards a heavy post, and the
     debug-only `Counted` pump keeps each entry's lane.
   - The Kronuz/task and Kronuz/http pins in `CMakeLists.txt`.
-  - `docs/design/phase7c.md` (D2's bullet, D4 above; C5's "one reactor per CPU" becomes "per physical core",
-    D6).
-  - `src/opts.cc` (D6's core count), with a unit test under `tests/` of the topology parse. Its fixtures: two
-    threads per core, one per core, a multi-die tree, an affinity mask that splits a core, a cpuset that splits
-    the host, and unreadable topology. Its mutant returns the logical count.
+  - `docs/design/phase7c.md` (D2's bullet, D4 above).
   - `tests/test_loop_yield.cc` (A4).
 
-**D6. With the lane, one loop per physical core, not per logical CPU** (un-parked by X4, if the owner agrees: Q3).
+**D6. The loop count stays at one per logical CPU; one loop per physical core is parked (D82).** At 8 loops with
+the lane, macOS gives up 0.785-0.957x heavy searches, depending on the stream allowance (X4, X7). D82 keeps the
+search capacity and pays on concurrent RESTORE instead. The parked design is in "Thread placement" below, with the
+review's core-detection findings (F8, F9). No core detection is built.
 
-- Alone, 8 loops on the Mac's 8 cores (16 logical CPUs) cost 0.785x heavy searches (E2).
-- With the lane they cost 0.957x (X4: 0.952 and 0.961 per pair). They buy loaded light p99 0.78x and a worst-loop
-  lag p99 of 2.56-3.07 ms against 5.12.
-- On a host without SMT the count is unchanged. The no-SMT VM keeps 8 loops (X3's setup), where T5 misses by
-  1.5-1.7x; X4's 4-loop pass is not this configuration (review F2; PLAN.md D80, corrected).
-
-The reactor count defaults to the physical core count, and `--processors` still caps it. Detection is one function
-in `src/opts.cc` that sets `num_http_servers` (`:380`):
-
-- macOS: `sysctlbyname("hw.physicalcpu")`.
-- Linux: the sibling sets, `topology/core_cpus_list` (`thread_siblings_list` on older kernels), each intersected
-  with `sched_getaffinity`, counting the distinct non-empty sets. This makes no assumption about `core_id`, which
-  the kernel leaves platform-defined (multi-die x86 and arm64 PPTT layouts differ).
-- FreeBSD: `cpuset_getaffinity`'s CPU count divided by `kern.smp.threads_per_core`, so a jail's cpuset is
-  honoured. `kern.smp.cores` alone would give a 4-CPU jail on a 32-core host 32 loops.
-- On failure: today's logical count.
-
-Readers, WAL and fsync threads keep following the logical count. Unchanged from today, and not fixed here: cgroup
-`cpu.max` quotas are ignored.
-
-`--processors` keeps its meaning as a cap, so it can no longer raise the loop count above the cores. Today
-`--processors N` gives N loops, and after D6 no option gives one loop per logical CPU (review F9). Q4 asks the
-owner.
-
-Alternative, and why it loses: half the logical CPUs everywhere. On the VM, 4 loops with the lane pass T5, but at
-0.636x heavy searches (X4). That cost buys one gate row, so it is not a default.
-
-## Evidence for the lane (X2-X4)
+## Evidence for the lane (X2-X8)
 
 All three runs are exclusive jobs of at most 10 minutes. Each is an ABBA of today's policy (off) against the lane
 at K = 8 (lane), on the fixed prototype Xapiand:3c064618a: the macOS build is job 261112-170140-f2c47f, the VM
@@ -426,14 +390,25 @@ Xapiand:dd3111eca, built by job 261112-191306-04ee82). Each is X5's shape: off a
 | Light query p99 (bound 7.4-9.4 ms) | 46.7, 40.1 / 27.8, 32.7 ms (0.595, 0.815): MISS | 41.9, 39.0 / 34.0, 32.2 ms (0.810, 0.827): MISS |
 | Loop lag p99 median (max) | 3.07 (5.12) / 3.07 (3.07) ms: MISS | 3.07 (5.12) / 2.56-3.07 (2.56-3.07) ms: MISS |
 
-11. The allowance trades RESTORE against heavy search and light latency, with nothing measured in between: D1's
-    table and ruling. T4 and T5 miss at every allowance.
+11. The allowance trades RESTORE against heavy search and light latency. D1's table holds every arm.
+
+X7 (job 261112-193446-44263d, A = 4 at 8 loops) and X8 (job 261112-195132-1fe61f, A = 4 at 16 loops, D82's
+configuration) are both X5-shaped ABBAs against today's code at 16 loops, run by the lead:
+
+| Loaded phase | X7: A = 4, 8 loops | X8: A = 4, 16 loops (D82) |
+|---|---|---|
+| Light query p99 | 0.685x: MISS | 0.696x: MISS (about 4x the bound) |
+| Heavy searches | 0.785x | 1.027x |
+| RESTORE time under the mix | 0.846x | 1.238x (0.75x docs per phase) |
+| Loop lag p99 | | 3.58-4.10 ms: MISS |
+
+12. At D82's configuration the stated cost is RESTORE beside saturated search: 1.238x its time. Search capacity
+    holds (1.027x), and the light gain matches the 8-loop arm's (0.696x against 0.685x).
 
 ## Contracts
 
 - No API, format or wire change. No option: K is a constant beside `REQUEST_SLICE`.
-- D6 changes one default: the reactor count is the physical core count, not the logical CPU count, and
-  `--processors` still caps it. `GET /:info`'s `num_http_servers` shows the count in use.
+- No default changes: the loop count stays at one per logical CPU (D6), and `--processors` keeps its meaning.
 - Kronuz/task: `budget`'s third parameter defaults to today's policy. `post_demoted` becomes callable from any
   thread, a widening that keeps every existing caller correct.
 - `demoted()` and Xapiand's `scheduler_demoted_peak` metric count heavy handles queued (D4).
@@ -441,7 +416,10 @@ Xapiand:dd3111eca, built by job 261112-191306-04ee82). Each is X5's shape: off a
 ## Checks
 
 - A2 (T4, T5): X2a's job (`x2_ab.sh BIN 8 t45`: stall_load ABBA, today's policy against the lane, heavy clients
-  64, exclusive, under 10 minutes) on the landed merge, against the merge without this quest.
+  64, exclusive, under 10 minutes) on the landed merge, against the merge without this quest. T4 and T5 are
+  recorded as misses on both platforms (D82): macOS lag p99 3.58-4.10 ms against 1,024 us and light p99 about
+  4x its bound; Linux VM light p99 1.5-1.7x its bound, with T4 hidden by the VM's 2.05 ms floor. Rerun with the
+  load generator off the server's CPUs.
 - A3 (T12): X2b's job (`x2_ab.sh BIN 8 lt`: loadtest ABBA, RESTORE docs/s and query qps) against base, and T12's
   RESTORE against pre-7c by x7-gate's procedure. Heavy search throughput is reported from X2a. RESTORE under the
   mix (D81): X5's procedure (`x5_restore.sh`). stall_load records each RESTORE's client time, the census each
@@ -479,28 +457,17 @@ Xapiand:dd3111eca, built by job 261112-191306-04ee82). Each is X5's shape: off a
   so misclassing grows with oversubscription. X1's 0.4% is measured at the worst of it, and D6 lowers it.
 - **Q2 (review).** Count whole spent slices (measured, simplest) or accumulated CPU per resume (exact for many
   short turns)? Recommendation: slices. A short turn already yields within a slice.
-- **Q3 (owner), ruled D80.** Land the lane and one loop per physical core together: 0.957x heavy searches on SMT
-  hosts (X4), and the lane alone on hosts without SMT. T4 and T5 are recorded as misses on both macOS and the VM.
-  Then rerun x7-gate's T4/T5 with the load generator off the server's CPUs. Half the CPUs as loops is not taken
-  (0.636x heavy).
-- **Q4 (owner, review F9).** Under D6, `--processors` only caps the loop count. Options:
-  - (a) Keep it a cap, so no option gives one loop per logical CPU.
-  - (b) Let an explicit `--processors` set the loop count.
-  - (c) Add a loop-count option.
-
-  Recommendation: (b). It keeps today's meaning for anyone who passes the flag, adds no option, and gives an
-  explicit escape from D6's default.
-
-- **Q5, ruled (lead: (b), a per-chunk allowance).** X6 measured A = 1 and 2: RESTORE stays as slow as lifetime
-  classing. D1 takes A = K (RESTORE 1.21x its rate, heavy 0.788x), with A = 4 as the build step's first ABBA.
+- **Q3 and Q5, resolved by D82.** Build the lane at K 8 with stream chunks light for 4 slices, at today's loop
+  count. One loop per physical core is parked. T4 and T5 are misses, rerun with the load generator off the
+  server's CPUs.
+- **Q4.** Dropped with D6's parking: `--processors` keeps today's meaning.
 
 ## First steps after the review
 
 1. Library quest `task-lanes` (Kronuz/task, plus the one line in Kronuz/http): D5's library half and the
    asio_test tests, landed with the default unchanged.
-2. This quest: bump both pins, then make D5's Xapiand changes and, if Q3 keeps D6, the core count in `src/opts.cc`
-   with its unit test. Then the `test_loop_yield` tests, phase7c.md's D2 bullet and C5, and the A2 and A3 jobs on
-   the merge with x7-loop-fix-c.
+2. This quest: bump both pins, then make D5's Xapiand changes, the `test_loop_yield` tests and phase7c.md's D2
+   bullet. Then the A2 and A3 jobs on the merge with x7-loop-fix-c.
 
 ## Thread placement: the census (E1-E3)
 
@@ -546,6 +513,20 @@ E2 (job 261112-154306-4d90d5, exclusive, ABBA of 16 against 8 reactors, census o
 - T12 loadtest: RESTORE docs/s 1.018 and 0.979; query qps 1.04 and 0.969.
 
 Placement alone passes neither T4 nor T5, and it costs a fifth of heavy throughput.
+
+The parked design, one loop per physical core (D80, superseded by D82), if it is ever taken:
+
+- One function in `src/opts.cc` sets `num_http_servers` (`:380`):
+  - macOS: `sysctlbyname("hw.physicalcpu")`.
+  - Linux: the distinct sibling sets (`topology/core_cpus_list`, `thread_siblings_list` on older kernels), each
+    intersected with `sched_getaffinity`. This avoids `core_id`, which the kernel leaves platform-defined
+    (review F8).
+  - FreeBSD: `cpuset_getaffinity`'s count divided by `kern.smp.threads_per_core`, so a jail's cpuset is honoured.
+  - On failure: the logical count.
+- A unit test of the topology parse needs these fixtures: two threads per core, one per core, a multi-die tree, an
+  affinity mask that splits a core, a cpuset that splits the host, and unreadable topology.
+- `--processors` would then only cap the loop count, with no way back to one loop per logical CPU (review F9).
+- cgroup `cpu.max` quotas stay ignored.
 
 ## Reproduce
 

@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: ready for review (A1, round 2, lens design/concurrency): `docs/design/loop-scheduling.md`; X5 261112-190112-421854, X6 261112-191309-2e375a, 261112-191311-7e90a7
+State: ready for review (A1, round 3, D82 text update): `docs/design/loop-scheduling.md`
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -160,6 +160,11 @@ tasks pass K.
 - X6: A=1 RESTORE time 1.889x, heavy 0.873x, light p99 0.705x; A=2 RESTORE 1.757x, heavy 0.930x, light 0.818x;
   T4/T5 MISS. Ruling in D1: A = K (X5: RESTORE 0.824x time, heavy 0.788x); A = 4 is the build step's first ABBA.
 
+- D82 (lead, delegated): lane K 8, stream chunks light for 4 slices, today's loop count; per-core loops parked.
+  Lead's X7 261112-193446-44263d and X8 261112-195132-1fe61f folded into D1's table and the evidence. D6 is
+  parked, with F8/F9 moved to the placement section. Q3/Q4/Q5 are resolved; A2 records T4/T5 as misses on both
+  platforms; `src/opts.cc` is dropped from the files.
+
 ## Next
 
 1. The design review (lens design/concurrency) of `docs/design/loop-scheduling.md`; fold findings by id.
@@ -174,7 +179,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
+| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7, X7 261112-193446-44263d, X8 261112-195132-1fe61f; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
 
 ## Result
 
