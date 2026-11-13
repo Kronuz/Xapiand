@@ -4272,18 +4272,46 @@
         "tools/release_rows/**",
         "docs/perf/fuzz-*.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/fuzz-cpu-hour",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-13T10:23:18",
+          "commit": "bced9d026a12ff54f3c16f5e51423911359871f9",
+          "criteria": {
+            "A1": "`docs/perf/fuzz-targets.md` (prospect; per-input cost, causes and the libFuzzer cost table, whose job ids the doc names)",
+            "A2": "261113-081451-5358c3 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081455-3f4ada (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081459-02662d (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081502-e083e7 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081506-55d102 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081510-b10410 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081514-9eda0f (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081517-5a8e7e (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081521-9f4bc1 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081524-15b135 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081528-c7f8ca (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081531-084b60 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md)",
+            "A3": "261113-081451-5358c3 (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081455-3f4ada (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md), 261113-081459-02662d (passed at 43adb8957b95; ignores docs-only docs/perf/fuzz-targets.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "bced9d026a12ff54f3c16f5e51423911359871f9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-100011-413b69",
+              "level": "light",
+              "seconds": 419.1,
+              "state": "done",
+              "what": "fuzz-cpu-hour check build-test at bced9d026a12"
+            }
+          ],
+          "final": true,
+          "from": "61e09a60e0bf15c9d44a35b7819d08052f474071",
+          "reason": "",
+          "tested": "bced9d026a12ff54f3c16f5e51423911359871f9"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "One real CPU-hour of fuzzing per prospect decoder the release reads",
-      "updated": "2026-11-13T07:22:16",
-      "worktree": "../prospect-wt/xapiand/fuzz-cpu-hour"
+      "updated": "2026-11-13T10:23:23",
+      "worktree": ""
     },
     "gate-prep-followups": {
       "accepted": {},
