@@ -2431,6 +2431,32 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 	CHECK_EQ(numeric_id(document_key(Serialise::integer((std::int64_t{1} << 32) + 1), 'N')), 0u);
 }
 
+// A lookup by id reads only the shard the id routes to: a GET of an existing or a missing id reads one key in one
+// shard, and a RESTORE's placement reads each new id once, in its own shard, over 3 shards.
+static void test_a_lookup_by_id_reads_one_shard() {
+	Watchdog watchdog("a lookup by id reads one shard", 120s);
+	const std::string index = "lookup_s3";
+	const auto path = "/" + index + "/";
+	create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+	for (int id = 1; id <= 6; ++id) {
+		CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"x"})").status, 204);
+	}
+	for (const int id : {1, 2, 3, 4, 5, 6, 100}) {
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK_EQ(call("GET", path + std::to_string(id)).status, id == 100 ? 404 : 200);
+		CHECK_EQ(DatabaseHandler::key_reads.load() - before, 1u);
+	}
+	std::string body;
+	for (int id = 101; id <= 130; ++id) {
+		body += R"({"_id":)" + std::to_string(id) + R"(,"n":"r"})" "\n";
+	}
+	const auto before = DatabaseHandler::key_reads.load();
+	CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+	const auto reads = DatabaseHandler::key_reads.load() - before;
+	std::fprintf(stderr, "  a RESTORE of 30 new ids over 3 shards read %llu keys\n", static_cast<unsigned long long>(reads));
+	CHECK_EQ(reads, 30u);
+}
+
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket
 // (N - 1) % 1024 and a keyword id in the one its hash's bucket names, and every new numeric id lives in the shard
 // owning its bucket, ascending across the shards, over 1, 3 and 5 shards.
@@ -2919,6 +2945,7 @@ int main(int argc, char** argv) {
 		{"test_new_numeric_ids_spread_over_the_shards_while_buffered", test_new_numeric_ids_spread_over_the_shards_while_buffered},
 		{"test_far_ids_keep_the_docids_dense", test_far_ids_keep_the_docids_dense},
 		{"test_new_numeric_ids_keep_their_stride_across_a_reopen", test_new_numeric_ids_keep_their_stride_across_a_reopen},
+		{"test_a_lookup_by_id_reads_one_shard", test_a_lookup_by_id_reads_one_shard},
 		{"test_ids_route_by_bucket", test_ids_route_by_bucket},
 		{"test_a_dump_and_restore_keeps_every_id", test_a_dump_and_restore_keeps_every_id},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},

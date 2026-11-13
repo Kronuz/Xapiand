@@ -24,6 +24,9 @@ docid the shard assigned (`NumericId`). Under the T4/T5 mix, explicit PUTs at id
 - `id_shard(key, n)` combines the two. Every new document is placed with it: by PUT, RESTORE (slices or serial),
   a streamed upload's blob, a delete of a missing id, and the automatic UUID and keyword ids that schema.cc picks
   to land in the least used shard.
+- Lookups route the same way: since every placement uses `id_shard`, a document with a given id can only be in
+  that shard. `find_docid_term` (GET, PUT, PATCH and DELETE of an existing id, version checks) and a RESTORE
+  slice's placement read each key in its one shard, not in every shard (`DatabaseHandler::key_reads` counts them).
 
 ## The id counter
 

@@ -146,6 +146,9 @@ public:
 	// The budget's token, which the index uses this handler makes pass to their turn waits (empty without one).
 	task::cancel_token turn_token() const { return budget != nullptr ? budget->token() : task::cancel_token{}; }
 
+	// Reads of a key in a shard that by-id lookups made, one per key and shard (tests count them).
+	static inline std::atomic<std::uint64_t> key_reads{0};
+
 private:
 #ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
@@ -158,7 +161,8 @@ private:
 
 	task::task<DocumentInfo> index(engine::docid did, const MsgPack& document_id, engine::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
-	// The docid holding the term in any shard, read from the published views or (written) as the writes left them.
+	// The docid holding the term, read in the one shard its id routes to (id_shard), from the published view or
+	// (written) as the writes left it.
 	task::task<engine::docid> find_docid_term(const std::string& term, bool written);
 
 	// The active shard with the fewest documents as the writes left them, where a new numeric id goes, and the largest

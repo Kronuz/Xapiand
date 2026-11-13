@@ -23,7 +23,7 @@ new numeric id goes to the least used shard, which issues the smallest id of a b
 every other shard's (`least_used_shard` passes the largest as a floor). The counter, `_id_high` in the shard's
 metadata, is the largest numeric id the shard holds or issued; every numeric write raises it, the commit persists it
 and the WAL's replay raises it again. A write or delete of an existing id
-looks its docid up across the shards, each as its writes left it (`placement.md`), before the write's turn, but only
+looks its docid up in the one shard its id routes to, as its writes left it (`placement.md`), before the write's turn, but only
 to pick the shard: the delete erases by key in that
 shard's turn, so its `?version` is compared with the document the key names then, never with whatever holds the
 docid.

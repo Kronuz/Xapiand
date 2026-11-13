@@ -1823,10 +1823,12 @@ DatabaseHandler::find_docid_term(const std::string& term, bool written)
 
 	std::exception_ptr eptr;
 
-	size_t shard_num = 0;
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags, turn_token());
+	// Every placement routes by id_shard, so the document with this id can only be in that shard.
+	const size_t first = id_shard(term, n_shards), last = first + 1;
+	for (size_t shard_num = first; shard_num < last; ++shard_num) {
+		lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 		co_await lk_shard.pin();
+		key_reads.fetch_add(1, std::memory_order_relaxed);
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
@@ -1854,8 +1856,6 @@ DatabaseHandler::find_docid_term(const std::string& term, bool written)
 				eptr = std::current_exception(); break;
 			}
 		}
-
-		++shard_num;
 	}
 
 	if (eptr) {
@@ -2518,9 +2518,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// docs/perf/x7-loop-stalls.md): placed first, then one sub-run per shard in input order, written in chores by
 	// at most `children` child tasks, each holding one turn at a time.
 	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
-		// Placement, by find_docid_term's rules: shards in order, the first that holds a term wins, a shard's read
-		// retries and reopens, and a shard that is not available fails only the terms no other shard holds. A term
-		// whose pin or read failed otherwise (busy, corrupt) takes the serial path after the join: each its own turn.
+		// Placement, by find_docid_term's rules: each term is read in the one shard its id routes to, a shard's read
+		// retries and reopens, and a shard that is not available fails the terms not found. A term whose pin or read
+		// failed otherwise (busy, corrupt) takes the serial path after the join: each its own turn.
 		std::vector<std::string> terms;
 		std::unordered_map<std::string, std::size_t> term_at;
 		for (auto j = from; j < to; ++j) {
@@ -2542,17 +2542,18 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				std::vector<std::string> ask;
 				std::vector<std::size_t> ask_at;
 				for (std::size_t k = 0; k < terms.size(); ++k) {
-					if (found[k].first == 0 && !failed[k] && !serial[k]) {
+					if (found[k].first == 0 && !failed[k] && !serial[k] && id_shard(terms[k], n_shards) == shard) {
 						ask.push_back(terms[k]);
 						ask_at.push_back(k);
 					}
 				}
 				if (ask.empty()) {
-					break;
+					continue;
 				}
 				try {
 					lock_shard lk_shard(endpoints[shard], flags, db_handler.turn_token());
 					co_await lk_shard.pin();
+					DatabaseHandler::key_reads.fetch_add(ask.size(), std::memory_order_relaxed);
 					for (int t = DB_RETRIES; t >= 0; --t) {
 						try {
 							if (std::size_t busy = shard + 1; seams.busy_placement_shard.compare_exchange_strong(busy, 0)) {
