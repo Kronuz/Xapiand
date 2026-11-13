@@ -32,7 +32,8 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   prints p50 and p99 latency in ms and the peak number of indexes searches held open (the metric
   xapiand_search_pinned_indexes_peak). With --pool P (the server's --database-pool-size; default its own), it also
   prints the cost of one open index: the resident memory the first search added over the indexes it left open
-  (xapiand_resident_memory_bytes and xapiand_databases before and after). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
+  (xapiand_resident_memory_bytes and xapiand_databases before and after). It prints each loop's lag over the timed
+  searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
   their data under OUTDIR; both are killed on exit.
 """
 
@@ -48,6 +49,9 @@ import statistics
 import subprocess
 import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import stall_load
 
 ap = argparse.ArgumentParser()
 ap.add_argument("mode", choices=["check", "gate"])
@@ -301,7 +305,10 @@ def gate() -> None:
     path = "/w*/"  # a pattern: a list of 10,000 names is most of a URL, 100,000 would not fit
     times = []
     total = None
+    lag0: dict[str, object] = {}
     for run in range(args.runs + 1):
+        if run == 1:
+            lag0 = stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())
         t0 = time.perf_counter()
         status, raw = call("SEARCH", path, body)
         dt = (time.perf_counter() - t0) * 1000
@@ -317,6 +324,11 @@ def gate() -> None:
                 f"{per / 1024:.1f} KiB per open index (first search {dt:.0f} ms)",
                 flush=True,
             )
+    lag = stall_load.lag_delta(lag0, stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())) if lag0 else {}
+    for loop, v in sorted(lag.items(), key=lambda kv: -(kv[1]["p99_us"] or 0)):
+        print(
+            f"SR3 loop {loop}: {v['wakes']} wakes, p99 {v['p99_us']} us, p99.9 {v['p999_us']} us, max so far {v['max_us_so_far']} us"
+        )
     times.sort()
     p50 = statistics.median(times)
     p99 = times[min(len(times) - 1, int(len(times) * 0.99))]
