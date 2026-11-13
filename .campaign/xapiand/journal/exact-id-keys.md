@@ -1,6 +1,6 @@
 # exact-id-keys: journal
 
-State: working
+State: waiting on jobs 261113-133028-5a3e88 261113-133032-02c164 261113-133034-97a8fa
 Quest: .campaign/xapiand/quests/exact-id-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,37 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Implementation and tests committed; compile check job 261113-132249-f20e66 running. Next: run the node tests,
-then the A1/A2 mutants and `campaign verify --for A4`.
+Lead narrowed the quest to A1 + A4 (quick fix). Jobs at 58a14faf6: A1 test 261113-133028-5a3e88, A1 mutant
+old-codec 261113-133032-02c164 (--fails-without), suite 261113-133034-97a8fa (A4). Branch pushed for CI.
 
 ## Next
 
-1. Compile check passes (fix errors), then submit `xapiand_test_node` cases for A1/A2 and the three mutants.
-2. `campaign verify exact-id-keys --for A4`; push the branch for CI's sanitizers.
-3. Paste brief's Evidence table, write Result, State "ready for review".
+1. When the jobs finish: paste brief's Evidence table, State "ready for review" (or fix failures).
 
 ## Blocked on
 
 Nothing. msg-46 to the lead: src/query_dsl.cc is outside the file set but the `_id` term search builds its term
-there; edited minimally (default stated in the message), see Rulings.
+there; edited minimally, see R5.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | `docs/design/exact-id-keys.md` |
-| A4 | pending |
+| A1 | jobs 261113-133028-5a3e88 (test), 261113-133032-02c164 (old-codec mutant) |
+| A4 | suite 261113-133034-97a8fa; CI on quest/xapiand/exact-id-keys |
 
 ## Result
 
-<pending>
+A numeric id's key is `N` + `sortable::encode(N)` (Kronuz/sortable ac13b77, pinned in CMakeLists.txt), exact for
+every int64/uint64/double; 4294967297 and 4311744512 (and the other A1 pairs up to 2^64 - 1) are separate
+documents. Code: src/serialise.{h,cc} (`Serialise::id`, `guess_id`, `Unserialise::id`), handler.{h,cc},
+schema.cc, shard.cc, query_dsl.cc. Tests: tests/test_node.cc `test_ids_that_shared_a_key_are_separate_documents`
+(plus key round-trip and byte order), `test_new_numeric_ids_pass_two_to_the_thirty_two`; mutants in
+tests/exact_id_mutants.sh. Note: docs/design/exact-id-keys.md lists every key site.
+
+Follow-ups (dropped A2/A3, already built on this branch but not proven by jobs): the auto-id cap raise to
+2^63 - 1 (mutant `cap-2-32` exists, not run) and the design note; docs/design/one-id.md (outside the file set)
+still says 2^32 - 1.
 
 ## Rulings I made
 
