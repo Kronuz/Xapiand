@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261113-111748-e52352 261113-111801-2b8264 261113-111808-93efd0 261113-111813-3cf199 261113-111813-3013ac 261113-111814-1a49cf 261113-111814-f9dc7f 261113-111814-e12ef2 261113-111821-2f9e75 261113-111826-184241 261113-111855-8bc27e 261113-111904-2e33d9 261113-112020-7142fc 261113-112044-32612d 261113-112052-f5a8e0 261113-112059-d3b9ff
+State: waiting on jobs 261113-125938-4f5407 261113-125941-90ebdc 261113-125943-736919 261113-125946-4ec27a 261113-130015-3cce93
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -119,8 +119,8 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read the 2026-11-13 jobs (Doing) into `docs/gates/phase7c.md`: each row's value at Xapiand:0a0321691, the status
-   line, T4/T5's light p99 as a miss with PLAN.md P1 (diagnosis: explore/p1-light-wait, not here).
+1. Read t12q 4f5407, t12b 90ebdc, t10 736919, a16+SR3 4ec27a and Linux 3cce93 (ASan rows with gcc, census with
+   Linux names, T6 loaded at memory.high) into `docs/gates/phase7c.md`; update its Status line.
 2. Paste `campaign brief`'s Evidence table; State "ready for review".
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
@@ -224,6 +224,12 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Messages
 
+- Lead (P1 generator fix): cherry-picked Xapiand:1201b37b9 and Xapiand:a118c6c92 as Xapiand:21daa6fbc and
+  Xapiand:70cbc0962 (conflicts resolved onto this branch's split `Conn.send`/`response`; `split_write` writes a large
+  body apart from its head; not 97e3cfb58). T4/T5 rerun 261113-125927-90f8a3 with `--restore-prebuilt 8`: client
+  loaded light p99 32.3 ms, server-side 40.2 ms (search 37.4, pair 58.7) stated as the miss against PLAN P1; 2b8264
+  never ran (its builds job failed), so the old-generator number is c9ab68's 76.8 ms.
+
 - msg-1 (lead, phase7c.md amendment from x7-loop-fix-c): applied at Xapiand:0a0321691 now that fix (c) is on master;
   the prepare chores' class follows the code (`flush`), see R14.
 
@@ -272,6 +278,9 @@ Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/pha
   (tests in `test_gate_tools.py`). Counts, not timing: a light job.
 - R16. SR3 is read from the loop-lag histograms the node exports (`stall_load.parse_metrics`, `lag_delta`) over the
   wide-search gate's timed searches, the lag `stall.py` would sample, in the same strict job as A16.
+- R18. Linux ASan builds with gcc 13 (as CI): clang 18's UBSan stops every ASan row on lz4's `lz4.c:1069` (zero
+  offset applied to a null pointer, third-party C). Linux's census allows `Xapiand:MAIN` (reactors inherit main's
+  name there). T6 caps with `memory.high`: `memory.max` OOM-killed the node in the loaded phase (184241).
 - R17. T10, T12 rerun with T4/T5: x7-loop-fix-c rewrote RESTORE's path and loop-scheduling the loops' turns, so their
   2026-11-11 values describe code master no longer has.
 
