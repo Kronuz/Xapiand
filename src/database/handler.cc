@@ -149,7 +149,7 @@ numeric_id(std::string_view key)
 std::string
 numeric_key(std::uint64_t id)
 {
-	return document_key(sortable_serialise(static_cast<long double>(id)), 'N');
+	return document_key(Serialise::positive(id), 'N');  // the key a PUT of the integer id names
 }
 
 

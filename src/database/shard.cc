@@ -51,6 +51,7 @@
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
+#include "serialise.h"             // for Serialise::floating
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
@@ -96,34 +97,14 @@ expected_version(const engine::Document& doc)
 }
 
 
-// Completes a document the engine is about to write: embeds its issued numeric id (when it has one) and its new
-// version in the stored data, compressing the record once, and clears the shards slot.
+// Completes a document the engine is about to write: embeds its new version in the stored data, compressing the
+// record once, and clears the shards slot.
 static void
-finalise_write(engine::Document& doc, engine::WriteResult& info, std::uint64_t issued)
+finalise_write(engine::Document& doc, engine::WriteResult& info)
 {
 	bool data_modified = false;
 	Data data(doc.get_data());
 	auto data_obj = data.get_obj();
-	if (issued != 0) {
-		auto it = data_obj.find(ID_FIELD_NAME);
-		if (it != data_obj.end()) {
-			auto& value = it.value();
-			switch (value.get_type()) {
-				case MsgPack::Type::POSITIVE_INTEGER:
-					value = issued;
-					break;
-				case MsgPack::Type::NEGATIVE_INTEGER:
-					value = static_cast<int64_t>(issued);
-					break;
-				case MsgPack::Type::FLOAT:
-					value = static_cast<double>(issued);
-					break;
-				default:
-					break;
-			}
-			data_modified = true;
-		}
-	}
 	auto it = data_obj.find(VERSION_FIELD_NAME);
 	if (it != data_obj.end()) {
 		auto& value = it.value();
@@ -397,6 +378,42 @@ stored_numeric_id(const engine::Document& doc)
 		default:
 			return 0;
 	}
+}
+
+
+// Writes an issued numeric id into a new document: its stored `_id` (in its placeholder's type), its id slot and its
+// key, which is the one a PUT of that id names, so the log and the stored data carry the id too. The record stays raw
+// for finalise_write to compress once.
+static std::string
+issue_id(engine::Document& doc, std::uint64_t issued)
+{
+	Data data(doc.get_data());
+	auto obj = data.get_obj();
+	bool floating = false;
+	if (auto it = obj.find(ID_FIELD_NAME); it != obj.end()) {
+		auto& value = it.value();
+		switch (value.get_type()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				value = issued;
+				break;
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				value = static_cast<int64_t>(issued);
+				break;
+			case MsgPack::Type::FLOAT:
+				value = static_cast<double>(issued);
+				floating = true;
+				break;
+			default:
+				break;
+		}
+		data.set_obj(obj, false);
+		data.flush();
+		doc.set_data(data.serialise());
+	}
+	auto key = floating ? document_key(Serialise::floating(static_cast<long double>(issued)), 'N') : numeric_key(issued);
+	doc.set_key(key);
+	doc.add_value(DB_SLOT_ID, key.substr(1));
+	return key;
 }
 
 
@@ -743,7 +760,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 #endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, 0); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -802,7 +819,7 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 
 	engine::WriteArgs args;
 	args.must_exist = must_exist;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, 0); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -851,6 +868,24 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
+	std::string key = term;
+	std::uint64_t issued = 0;
+	if (term == NEW_NUMERIC_KEY) {
+		// A new numeric id: issued from the counter, in a bucket this shard owns of the shards the handler placed it in.
+		const auto shards = doc.get_value(DB_SLOT_SHARDS);
+		const char *p = shards.data();
+		const char *p_end = p + shards.size();
+		const size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+		const size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+		const std::uint64_t floor = p == p_end ? 0 : unserialise_length(&p, p_end);  // the other shards' counters
+		issued = next_auto_id(std::max(id_high_, floor), shard_num, n_shards);
+		if (issued == 0) {
+			throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
+		}
+		key = issue_id(doc, issued);  // before the blobs' push, whose record the log keeps
+		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
+	}
+
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
 	if (!pushed.first.empty()) {
@@ -866,32 +901,13 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
+	if (issued != 0 && !args.expected_version) {
+		args.expected_version = 0;  // a counter behind an existing id conflicts, never overwrites
+	}
 
 	engine::WriteResult info;
-	std::string key = term;
-	std::uint64_t issued = 0;
-	if (term == NEW_NUMERIC_KEY) {
-		// A new numeric id: issued from the counter, in a bucket this shard owns of the shards the handler placed it in.
-		const auto shards = doc.get_value(DB_SLOT_SHARDS);
-		const char *p = shards.data();
-		const char *p_end = p + shards.size();
-		const size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-		const size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-		const std::uint64_t floor = p == p_end ? 0 : unserialise_length(&p, p_end);  // the other shards' counters
-		issued = next_auto_id(std::max(id_high_, floor), shard_num, n_shards);
-		if (issued == 0) {
-			throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
-		}
-		key = numeric_key(issued);
-		doc.set_key(key);
-		doc.add_value(DB_SLOT_ID, key.substr(1));
-		if (!args.expected_version) {
-			args.expected_version = 0;  // a counter behind an existing id conflicts, never overwrites
-		}
-		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
-	}
 	info.term = key;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, issued); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
 		info = co_await eng.replace_by_key(key, doc, args);
 	} catch (const engine::Error& error) {

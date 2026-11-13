@@ -44,7 +44,11 @@ that explicit numeric ids advance").
   when the documents that raised it are. An open reads the key and never writes or syncs it. D60c holds: the
   first commit syncs what it inherited, and the counter goes with it.
 - Replay: the WAL replays a write by docid. The replayed document's stored `_id` raises the counter
-  (`ReplayTarget::replace_document`), so writes the last commit missed advance it again.
+  (`ReplayTarget::replace_document`), so writes the last commit missed advance it again. The issued id is
+  written into the record (`issue_id`) before the blobs' push, whose copy of the record the log keeps, so the
+  logged record names it too.
+- Key: an issued id's key is the one a PUT of that id names: the integer encoding for integer and positive id
+  fields, the float encoding when the placeholder `_id` is a float.
 - RESTORE: every restored line names its id, so it advances its shard's counter like a PUT. A dump carries
   automatic ids as explicit ids, and a fresh index restored from it issues above them.
 
@@ -58,7 +62,7 @@ ascending across the index; a write racing the pass in another shard can still l
 
 | Former use | Replacement |
 |---|---|
-| shard.cc `NumericId` and `finalise_write`: the automatic id `(shard_did - 1) * n + s + 1`, an id derived from a docid | `next_auto_id` issues the id from the shard's counter before the write. The key is set, then `replace_by_key`; `finalise_write` only embeds the issued id in the stored data |
+| shard.cc `NumericId` and `finalise_write`: the automatic id `(shard_did - 1) * n + s + 1`, an id derived from a docid | `next_auto_id` issues the id from the shard's counter before the write, and `issue_id` sets it in the stored data, the id slot and the key; then `replace_by_key`. `finalise_write` only stamps the version |
 | shard.cc `do_replace_term`: `args.new_did = (N - 1) / n + 1`, a docid derived from an id | Removed. `replace_by_key` numbers a new document after the last docid |
 | engine/shard.h `WriteArgs::new_did`, strata shard.cc `replace_by_key` placing at it | Removed, along with the `replace_docid` placement |
 | handler.cc `numeric_docid(key)` | `numeric_id(key)`, used only by `id_bucket` and the counter |

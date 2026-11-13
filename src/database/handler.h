@@ -85,7 +85,7 @@ inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 53) - 1;
 // The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^63 are placed by hash).
 std::uint64_t numeric_id(std::string_view key);
 
-// The key of a numeric id.
+// The key a PUT of the integer id names, in an index whose ids are integers or positive.
 std::string numeric_key(std::uint64_t id);
 
 // An id's bucket: (N - 1) % ID_BUCKETS for a numeric id N, else its key's placement hash modulo ID_BUCKETS.

@@ -70,6 +70,7 @@
 #include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
+#include "serialise.h"
 #include "sortable_serialise.h"
 #include "engine/chores.h"
 #include "engine/host.h"
@@ -2417,6 +2418,18 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 	CHECK_EQ(next_auto_id(1023, 2, 3), 1027u);
 	CHECK_EQ(next_auto_id(7, 0, 1), 8u);
 	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
+
+	// An issued id's key is the one a PUT of that id names, as an integer or a positive, and it names that id again.
+	for (const std::uint64_t id : {std::uint64_t{1}, std::uint64_t{1023}, (std::uint64_t{1} << 24) + 1, (std::uint64_t{1} << 32) + 1, (std::uint64_t{1} << 40) + 3, MAX_NUMERIC_ID}) {
+		const auto key = numeric_key(id);
+		CHECK_EQ(key, document_key(Serialise::integer(static_cast<std::int64_t>(id)), 'N'));
+		CHECK_EQ(numeric_id(key), id);
+		const auto as_float = numeric_id(document_key(Serialise::floating(static_cast<long double>(id)), 'N'));
+		if (numeric_id(key) != id || as_float != id) {
+			std::fprintf(stderr, "  id %llu: its key names %llu, as a float %llu\n", static_cast<unsigned long long>(id),
+				static_cast<unsigned long long>(numeric_id(key)), static_cast<unsigned long long>(as_float));
+		}
+	}
 }
 
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket
