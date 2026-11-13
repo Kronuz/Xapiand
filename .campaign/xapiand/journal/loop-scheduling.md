@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: ready for review (A1, lens design/concurrency): `docs/design/loop-scheduling.md`
+State: waiting on jobs 261112-175900-eaaa36 261112-175902-15a8eb (X4, lead's Q3 call: before the design review)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -116,6 +116,12 @@ tasks pass K.
 - X3 261112-170152-275ba3 (VM ABBA): light p99 0.579, 0.895 (25.6/19.4 -> 14.8/17.4 ms, bound 10.1): MISS 1.5-1.7x;
   heavy 0.998, 1.021; lag floor 2.05 ms hides T4. Light search slices p99 5, heavy median 16: K 8 holds.
 - Note filled: evidence section, Answer, Q3 (lane alone, then X4: lane at 8/4 loops vs today, owner's call).
+
+- Lead's call on Q3: run X4 before the review. Scratch 1316730f5 (`x2_ab.sh BIN 8 t45 --processors=8`;
+  `vm_lane.sh 3c064618a 8 --processors=4`): ABBA off at today's loop count vs lane K 8 at fewer loops.
+  261112-175900-eaaa36 exclusive (macOS, 16 vs 8 loops, heavy 64), 261112-175902-15a8eb exclusive (VM, 8 vs 4,
+  heavy 32). On return: X4 into the note's evidence, D6 (parked or not, with numbers), Q3 restated as a
+  recommendation; commit; "ready for review".
 
 ## Next
 
