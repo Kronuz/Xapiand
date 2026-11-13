@@ -5754,9 +5754,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T22:35:56",
+      "updated": "2026-11-13T04:24:15",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
