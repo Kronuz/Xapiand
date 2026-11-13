@@ -49,6 +49,11 @@ pending
   replicas) before a caller's settings are applied, a replica-count change on a not-loaded index clears the shards so they are
   placed again (settling only adds replicas). Seam: IndexResolverLRU::before_settings_claim; test
   test_a_call_paused_before_claiming_the_settings_load_loads_nothing (1 read). Passed at the new head (job 261112-224510-9fae0e).
+- Replicas test (lead's msg): test_a_new_index_gets_the_replicas_asked_below_and_above_the_default adds two nodes (so it runs
+  last), sets the default to master+1 and creates new indexes asking 0, 1, 2 replicas and the default; each shard must have
+  1, 2, 3, 2 nodes. Passed (job 261112-225104-1e0203). A second mutant removes the shards.clear() on a replica change.
+- harness/async_allowlist.tsv (lead's msg): the 6 new schemas_lru.cc and 1 new index_resolver_lru.cc mutex hits are O(1) cache
+  sections with no I/O, none across an await; counts 19->25 and 3->4, notes extended; async_check.py --strict passes.
 - msg: build-test 261112-223937-d8cb1b failed only on test_loop_yield.cc:393 (master flake, ratio 0.706 vs 0.7 at load 11); the
   old three jobs are superseded. If it flakes at the new head, the lead reruns the check.
 - Seam: SchemasLRU::before_metadata_claim / before_foreign_claim, awaited between a first use's cache miss and its claim;
