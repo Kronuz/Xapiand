@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-154306-4d90d5
+State: waiting on jobs 261112-163007-a6f351 261112-163009-f675a9 261112-163032-c04fc9
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -62,6 +62,26 @@ not applied) 5.12, 71.1; workers qos:ut (applied: priority 20) 5.12, 43.5, loops
 Draft note written (`docs/design/loop-scheduling.md`); E2 261112-154306-4d90d5 (exclusive, scratch 58d1b9493,
 `harness/experiments/e2_ab.sh`): ABBA 16 vs 8 reactors, T4/T5 then T12 loadtest, on the census build with the
 census off.
+
+Re-scope (D79, 11-12): in-loop priority. Second design contributor took over.
+
+E2 (261112-154306-4d90d5, exclusive, ABBA r16 r8 r8 r16, census off): r8/r16 per pair: loaded light p99 0.596,
+0.814 (55.0 -> 37.5 ms median); heavy searches 0.787, 0.782; lag p99 median 4.10/3.58 -> 2.56/2.05 ms (8 of 8
+and 16 of 16 loops over 1,024 us in every arm); RESTORE loadtest docs/s 1.018, 0.979; loadtest qps 1.04, 0.969.
+Per light class (r16 arm 1, loaded p50/p99 ms): get 1.5/37.4, search (`contact.state`, limit 10) 11.6/84.0,
+pair 7.2/300; unloaded search p50 2.0 ms. The light search's p50 rises 6x under load while get's barely moves:
+it spends slices and joins the demoted FIFO behind the heavy requests.
+
+Prototype (scratch d58c9721d, 251a8e912): a patched Kronuz/task copy (`harness/experiments/task-lane`, built
+through `FETCHCONTENT_SOURCE_DIR_TASK`): `budget` counts slices spent; light for `LS_LANE_K` of them (an
+exhausted light slice posts ordinary), then demoted; `scheduler_ref` carries a heavy bit, set by `drain()`'s
+scope, so every resumption captured there (chores, events, await_asio) posts to the demoted lane; `handle()`
+starts each request light and records kind, slices and server time (`LS_REQ_OUT`, `lane_report.py`).
+Checked locally: a 3-task asio_scheduler toy shows light resumes alternating with one heavy turn once the heavy
+tasks pass K.
+- 261112-163007-a6f351 light: macOS build of 251a8e912.
+- 261112-163009-f675a9 exclusive (after it): X1, arms off, K 1, 4, 16, K 4 at 8 reactors (`x1_lane.sh`).
+- 261112-163032-c04fc9 light: the same build on the Linux VM.
 
 ## Next
 
