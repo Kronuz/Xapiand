@@ -30,6 +30,8 @@ Read since: A16 strict 2567dc (2,500 indexes: p50 108 ms, p99 1,176 ms, peak pin
 A21 9495ee (allocations 0.988, bytes 1.000, handlers 0.986: no worse); A9 from x7-cancel-rows, A22 from x7-view-bench,
 A13 coverage from x7-coverage (6 of 9 areas below TESTING.md). All in `docs/gates/phase7c.md`.
 
+Done so far: e2e 261113-111813-3013ac GREEN at Xapiand:0a0321691.
+
 ### Earlier sessions
 
 Timing read and scored into `docs/gates/phase7c.md` (head/pre-7c, median of 3 pairs, range): T4 MISS (all 16 HTTP
