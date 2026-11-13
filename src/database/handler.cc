@@ -2358,16 +2358,22 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {
 		threads = manager->database_pool->work_pool().threads();
 	}
-	// explore/restore-cap: XAPIAND_RESTORE_CHORES caps the chores (children + width) a RESTORE runs at once.
-	static const std::size_t chores_cap = [] {
-		const char* env = std::getenv("XAPIAND_RESTORE_CHORES");
+	// explore/restore-cap: XAPIAND_RESTORE_CHORES caps the chores (children + width) a RESTORE runs at once;
+	// XAPIAND_RESTORE_CHILDREN caps the children alone, the prepares taking the rest.
+	const auto env_cap = [](const char* name) {
+		const char* env = std::getenv(name);
 		return env != nullptr ? static_cast<std::size_t>(std::strtoul(env, nullptr, 10)) : std::size_t{0};
-	}();
+	};
+	static const std::size_t chores_cap = env_cap("XAPIAND_RESTORE_CHORES");
+	static const std::size_t children_cap = env_cap("XAPIAND_RESTORE_CHILDREN");
 	std::size_t workers = threads > 1 ? threads - 1 : 1;
 	if (chores_cap != 0 && workers > chores_cap) {
 		workers = chores_cap;
 	}
-	const std::size_t children = parallel ? std::min(n_shards, std::max<std::size_t>(1, workers / 2)) : 0;
+	std::size_t children = parallel ? std::min(n_shards, std::max<std::size_t>(1, workers / 2)) : 0;
+	if (children_cap != 0 && children > children_cap) {
+		children = children_cap;
+	}
 	const std::size_t width = workers > children ? workers - children : 1;
 
 	std::vector<Admitted> run;   // the plain objects since the last barrier, in input order
