@@ -33,6 +33,8 @@
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
 #include <optional>                         // for std::optional
+#include <unordered_map>                    // for std::unordered_map
+#include <unordered_set>                    // for std::unordered_set
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
@@ -55,6 +57,7 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/host_asio.h"               // for engine::AsioHost, engine::counted
 #include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
 #include "engine/sync.h"                    // for engine::sync_wait
@@ -2343,14 +2346,20 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 {
 	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
 
-	// The handler the prepare chores place new ids with (read only while they run), and how many run at once: the
-	// pool's workers but its reserve, which flushes never take.
+	// The handler the prepare chores place new ids with (read only while they run). On a reactor the writes run in
+	// chores, one child per shard and at most `children` at once; the prepares take the pool's other workers but its
+	// reserve, which flushes never take. With no reactor (the CLI) every write takes the serial path.
 	DatabaseHandler placement(endpoints, flags);
-	std::size_t width = 1;
+	auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
+	const bool parallel = host != nullptr && &chores != &engine::inline_chores() && !seams.serial.load(std::memory_order_relaxed);
+	const std::size_t n_shards = endpoints.size();
+	std::size_t threads = 1;
 	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {
-		const auto threads = manager->database_pool->work_pool().threads();
-		width = threads > 1 ? threads - 1 : 1;
+		threads = manager->database_pool->work_pool().threads();
 	}
+	const std::size_t workers = threads > 1 ? threads - 1 : 1;
+	const std::size_t children = parallel ? std::min(n_shards, std::max<std::size_t>(1, workers / 2)) : 0;
+	const std::size_t width = workers > children ? workers - children : 1;
 
 	std::vector<Admitted> run;   // the plain objects since the last barrier, in input order
 
@@ -2386,8 +2395,50 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	};
 
-	// Records an object's prepare and applies its document in the shard's turn: the object's result.
-	const auto apply = [this](Admitted& one) -> task::task<void> {
+	// Records a write's outcome, `error` or `info` (its docid in the multi-db): the object's result.
+	const auto record = [this](Admitted& one, std::exception_ptr error, engine::WriteResult info) -> task::task<void> {
+		MsgPack result;
+		auto& term_id = std::get<0>(one.prepared);
+		auto& data_obj = std::get<2>(one.prepared);
+		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
+			if (error) {
+				std::rethrow_exception(error);
+			}
+			if (term_id == NEW_NUMERIC_KEY) {
+				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+			} else {
+				auto it_id = data_obj.find(ID_FIELD_NAME);
+				if (it_id == data_obj.end()) {
+					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+				} else {
+					result[ID_FIELD_NAME] = it_id.value();
+				}
+			}
+
+			if (echo) {
+				result[VERSION_FIELD_NAME] = info.version;
+
+				if (comments) {
+					result[RESPONSE_xDOCID] = info.did;
+
+					size_t n_shards = endpoints.size();
+					size_t shard_num = (info.did - 1) % n_shards;
+					result[RESPONSE_xSHARD] = shard_num + 1;
+				}
+			}
+
+			++_indexed;
+		});
+		if (index_errors.error_code != HTTP_STATUS_OK) {
+			result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
+			result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
+			result[RESPONSE_MESSAGE] = index_errors.error;
+		}
+		_results[one.idx] = std::move(result);
+	};
+
+	// Records an object's prepare and applies its document in the shard's turn (the serial path): the object's result.
+	const auto apply = [this, &record](Admitted& one) -> task::task<void> {
 		++_processed;
 		MsgPack result;
 		if (one.error) {
@@ -2410,40 +2461,17 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		auto& doc = std::get<1>(one.prepared);
 		auto& data_obj = std::get<2>(one.prepared);
 		if (!term_id.empty()) {
-			auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
-				auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
-
-				if (term_id == NEW_NUMERIC_KEY) {
-					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
-				} else {
-					auto it_id = data_obj.find(ID_FIELD_NAME);
-					if (it_id == data_obj.end()) {
-						result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
-					} else {
-						result[ID_FIELD_NAME] = it_id.value();
-					}
-				}
-
-				if (echo) {
-					result[VERSION_FIELD_NAME] = info.version;
-
-					if (comments) {
-						result[RESPONSE_xDOCID] = info.did;
-
-						size_t n_shards = endpoints.size();
-						size_t shard_num = (info.did - 1) % n_shards;
-						result[RESPONSE_xSHARD] = shard_num + 1;
-					}
-				}
-
-				++_indexed;
-			});
-			if (index_errors.error_code != HTTP_STATUS_OK) {
-				result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
-				result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
-				result[RESPONSE_MESSAGE] = index_errors.error;
+			std::exception_ptr error;
+			engine::WriteResult info;
+			try {
+				info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+			} catch (...) {
+				error = std::current_exception();
 			}
-		} else if (!data_obj.is_undefined()) {
+			co_await record(one, error, info);
+			co_return;
+		}
+		if (!data_obj.is_undefined()) {
 			result = std::move(data_obj);
 		}
 		_results[one.idx] = std::move(result);
@@ -2456,10 +2484,274 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	};
 
-	const auto apply_range = [&](std::size_t from, std::size_t to) -> task::task<void> {
+	const auto apply_serial = [&](std::size_t from, std::size_t to) -> task::task<void> {
 		for (auto i = from; i < to; ++i) {
 			co_await apply(run[i]);
 			co_await checkpoint();
+		}
+	};
+
+	// The writes of [from, to), none a new numeric id of a sharded index, in their shards' turns (fix (c),
+	// docs/perf/x7-loop-stalls.md): placed first, then one sub-run per shard in input order, written in chores by
+	// at most `children` child tasks, each holding one turn at a time.
+	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		// Placement, by find_docid_term's rules: shards in order, the first that holds a term wins, a shard's read
+		// retries and reopens, and a shard that is not available fails only the terms no other shard holds. A term
+		// whose pin or read failed otherwise (busy, corrupt) takes the serial path after the join: each its own turn.
+		std::vector<std::string> terms;
+		std::unordered_map<std::string, std::size_t> term_at;
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			if (!one.error && !std::get<0>(one.prepared).empty()) {
+				const auto& term = std::get<0>(one.prepared);
+				if (term_at.emplace(term, terms.size()).second) {
+					terms.push_back(term);
+				}
+			}
+		}
+		std::vector<std::pair<std::size_t, engine::docid>> found(terms.size(), {0, 0});   // shard + 1, its docid
+		std::vector<std::exception_ptr> failed(terms.size());
+		std::vector<bool> serial(terms.size(), false);
+		if (n_shards > 1) {
+			std::exception_ptr unavailable;
+			bool missing = false;   // the lookup met a missing index: the rest are placed afresh, as the serial path
+			for (std::size_t shard = 0; shard < n_shards && !missing; ++shard) {
+				std::vector<std::string> ask;
+				std::vector<std::size_t> ask_at;
+				for (std::size_t k = 0; k < terms.size(); ++k) {
+					if (found[k].first == 0 && !failed[k] && !serial[k]) {
+						ask.push_back(terms[k]);
+						ask_at.push_back(k);
+					}
+				}
+				if (ask.empty()) {
+					break;
+				}
+				try {
+					lock_shard lk_shard(endpoints[shard], flags, db_handler.turn_token());
+					co_await lk_shard.pin();
+					for (int t = DB_RETRIES; t >= 0; --t) {
+						try {
+							if (std::size_t busy = shard + 1; seams.busy_placement_shard.compare_exchange_strong(busy, 0)) {
+								throw engine::Error(engine::errc::busy, "Test seam: a placement read times out busy");
+							}
+							const auto dids = co_await lk_shard->written_keys(ask);
+							for (std::size_t m = 0; m < dids.size(); ++m) {
+								if (dids[m] != 0) {
+									found[ask_at[m]] = {shard + 1, dids[m]};
+								}
+							}
+							break;
+						} catch (const engine::Error& error) {
+							if (error.kind == engine::errc::not_available) {
+								unavailable = std::current_exception();
+								break;
+							}
+							lk_shard->retry_read(error, t);
+						}
+						try {
+							co_await lk_shard->reopen();
+						} catch (const engine::Error& error) {
+							if (error.kind != engine::errc::not_available) {
+								throw;
+							}
+							unavailable = std::current_exception();
+							break;
+						}
+					}
+				} catch (const engine::Error& error) {
+					if (!engine::is_missing(error.kind)) {
+						for (auto k : ask_at) {
+							serial[k] = true;
+						}
+					} else {
+						missing = true;
+					}
+				} catch (...) {
+					for (auto k : ask_at) {
+						serial[k] = true;
+					}
+				}
+			}
+			if (unavailable && !missing) {
+				for (std::size_t k = 0; k < terms.size(); ++k) {
+					if (found[k].first == 0 && !serial[k]) {
+						failed[k] = unavailable;
+					}
+				}
+			}
+		}
+
+		// One sub-run per shard, in input order; `slot[j - from]` is an object's write (shard, position), if any.
+		std::vector<std::vector<SliceWrite>> subruns(n_shards);
+		std::vector<std::pair<std::size_t, std::size_t>> slot(to - from, {n_shards, 0});
+		std::vector<std::exception_ptr> placement_error(to - from);
+		std::vector<bool> placement_serial(to - from, false);
+		std::vector<std::unordered_set<std::string>> seen(n_shards);
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			if (one.error || std::get<0>(one.prepared).empty()) {
+				continue;
+			}
+			const auto& term = std::get<0>(one.prepared);
+			const auto k = term_at[term];
+			if (failed[k]) {
+				placement_error[j - from] = failed[k];
+				continue;
+			}
+			if (serial[k]) {
+				placement_serial[j - from] = true;
+				continue;
+			}
+			SliceWrite write;
+			write.idx = j;
+			write.term = term;
+			std::size_t shard = 0;
+			if (found[k].first != 0) {
+				shard = found[k].first - 1;
+				write.shard_did = found[k].second;
+				write.doc = std::move(std::get<1>(one.prepared));
+			} else {
+				write.doc = std::move(std::get<1>(one.prepared));
+				if (n_shards > 1) {
+					// A new one goes where its id says (numeric_docid), else where its key hashes.
+					const auto did = numeric_docid(term);
+					shard = did != 0 ? (did - 1) % n_shards : key_placement_hash(term) % n_shards;
+					write.doc.add_value(DB_SLOT_SHARDS, serialise_length(shard) + serialise_length(n_shards));
+				}
+			}
+			if (!seen[shard].insert(term).second) {
+				stats.repeated_in_subrun.fetch_add(1, std::memory_order_relaxed);
+			}
+			slot[j - from] = {shard, subruns[shard].size()};
+			subruns[shard].push_back(std::move(write));
+		}
+
+		if (seams.after_placement) {
+			co_await seams.after_placement(db_handler);
+		}
+
+		std::vector<std::size_t> order;
+		for (std::size_t shard = 0; shard < n_shards; ++shard) {
+			if (!subruns[shard].empty()) {
+				order.push_back(shard);
+			}
+		}
+		std::size_t next = 0;
+		std::size_t active = 0;
+		const auto child = [&]() -> task::task<void> {
+			while (next < order.size()) {
+				const auto shard = order[next++];
+				auto& writes = subruns[shard];
+				std::unordered_set<std::string> missed;
+				std::size_t at = 0;
+				while (at < writes.size()) {
+					bool counted_in = false;
+					try {
+						lock_shard lk_shard(endpoints[shard], flags, db_handler.turn_token());
+						co_await lk_shard.pin();
+						counted_in = true;
+						++active;
+						if (active > stats.peak_children.load(std::memory_order_relaxed)) {
+							stats.peak_children.store(active, std::memory_order_relaxed);
+						}
+						co_await lk_shard->apply_slice(chores, writes, at, PREPARE_SLICE, missed);
+						if (seams.after_slice) {
+							co_await seams.after_slice(db_handler, writes[at - 1].term, writes[at - 1].missed);
+						}
+						--active;
+						counted_in = false;
+					} catch (...) {
+						if (counted_in) {
+							--active;
+						}
+						// A pin, turn or slice that fails before its next write fails that write alone; the rest retry.
+						const auto error = std::current_exception();
+						const std::size_t failed_writes = 1;
+						if (at >= writes.size()) {
+							if (!writes.back().error) {
+								writes.back().error = error;   // the slice's completion failed after its last write
+							}
+						}
+						for (const auto stop = std::min(writes.size(), at + failed_writes); at < stop; ++at) {
+							writes[at].error = error;
+						}
+					}
+				}
+			}
+		};
+		std::vector<task::task<void>> kids;
+		const auto n_kids = std::min(children, order.size());
+		kids.reserve(n_kids);
+		for (std::size_t c = 0; c < n_kids; ++c) {
+			kids.push_back(engine::counted(*host, child()));   // each child a task of its own: one turn at a time
+		}
+		co_await task::when_all(std::move(kids));
+
+		// Results in input order; a write missed since placement, and every later write of its term (the design
+		// review's B1), and every write of a term whose placement failed, take the serial path after them, in input order.
+		std::vector<std::size_t> deferred;
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			const auto [w_shard, w_pos] = slot[j - from];
+			if (placement_error[j - from]) {
+				++_processed;
+				++_prepared;
+				co_await record(one, placement_error[j - from], {});
+			} else if (placement_serial[j - from]) {
+				deferred.push_back(j);
+				continue;
+			} else if (w_shard == n_shards) {
+				co_await apply(one);   // a failed prepare, or an object with nothing to write
+			} else if (auto& write = subruns[w_shard][w_pos]; write.missed) {
+				std::get<1>(one.prepared) = std::move(write.doc);
+				deferred.push_back(j);
+				continue;
+			} else {
+				++_processed;
+				++_prepared;
+				auto info = write.info;
+				info.did = (info.did - 1) * n_shards + w_shard + 1;  // unshard number and shard docid to docid in multi-db
+				co_await record(one, write.error, info);
+			}
+			co_await checkpoint();
+		}
+		for (auto j : deferred) {
+			stats.deferred.fetch_add(1, std::memory_order_relaxed);
+			co_await apply(run[j]);
+			co_await checkpoint();
+		}
+	};
+
+	// The writes of [from, to): in parallel by shard on a reactor, split at each new numeric id of a sharded index
+	// (its shard is the least used, which the earlier writes change), which takes the serial path after a join.
+	const auto apply_range = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		if (!parallel) {
+			co_await apply_serial(from, to);
+			co_return;
+		}
+		stats.children.store(children, std::memory_order_relaxed);
+		if (to - from > stats.largest_range.load(std::memory_order_relaxed)) {
+			stats.largest_range.store(to - from, std::memory_order_relaxed);
+		}
+		const auto new_numeric = [&](std::size_t j) {
+			return n_shards > 1 && !run[j].error && std::get<0>(run[j].prepared) == NEW_NUMERIC_KEY;
+		};
+		auto i = from;
+		while (i < to) {
+			auto end = i;
+			while (end < to && !new_numeric(end)) {
+				++end;
+			}
+			if (end > i) {
+				co_await apply_shards(i, end);
+			}
+			if (end < to) {
+				stats.serial_after_join.fetch_add(1, std::memory_order_relaxed);
+				co_await apply_serial(end, end + 1);
+				++end;
+			}
+			i = end;
 		}
 	};
 
@@ -2496,6 +2788,8 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		const auto pull = [&] {
 			Schema own(round.snapshot, nullptr, round.origin);
 			const auto until = std::chrono::steady_clock::now() + PREPARE_SLICE;
+			const auto count = seams.objects_per_prepare.load(std::memory_order_relaxed);   // a test's fixed range
+			std::size_t taken = 0;
 			for (;;) {
 				const auto j = round.next.fetch_add(1, std::memory_order_relaxed);
 				if (j >= run.size() || j > round.changed.load(std::memory_order_relaxed)) {
@@ -2514,7 +2808,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 					while (j < seen && !round.changed.compare_exchange_weak(seen, j, std::memory_order_relaxed)) { }
 					return;
 				}
-				if (std::chrono::steady_clock::now() >= until) {
+				if (count != 0 ? ++taken >= count : std::chrono::steady_clock::now() >= until) {
 					return;
 				}
 			}

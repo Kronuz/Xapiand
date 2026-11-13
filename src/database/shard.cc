@@ -506,6 +506,22 @@ ShardEndpoint::open_blocking(prospect::index& index)
 }
 
 
+ShardEndpoint::InlineEngine::InlineEngine(ShardEndpoint& entry, const char* why) :
+	entry_(entry),
+	blocking_(why)
+{
+	entry_.engine_->use_chores(&engine::inline_chores());
+	engines_inline_.fetch_add(1, std::memory_order_relaxed);
+}
+
+
+ShardEndpoint::InlineEngine::~InlineEngine()
+{
+	entry_.engine_->use_chores(entry_.chores.get());
+	engines_inline_.fetch_sub(1, std::memory_order_relaxed);
+}
+
+
 // The catalog's commit chore (x-pool D7): no pin is held, so the turn is free, and the engine's chores run inline,
 // since this runs in a chore of the pool its group is on.
 void
@@ -523,19 +539,17 @@ ShardEndpoint::commit_blocking()
 	}
 	const bool locked = turn.try_lock();
 	assert(locked && "the catalog's commit chore runs with no pin, so with no turn held");
-	struct Restore {
+	struct Unlock {
 		ShardEndpoint& entry;
 		bool locked;
-		~Restore() {
-			entry.engine_->use_chores(entry.chores.get());
+		~Unlock() {
 			if (locked) {
 				entry.turn.unlock();
 			}
 		}
-	} restore{*this, locked};
-	engine_->use_chores(&engine::inline_chores());
+	} unlock{*this, locked};
+	InlineEngine inline_engine(*this, "the catalog's commit chore runs on a worker");
 	const int saved = last_flags_.load();
-	engine::BlockingAllowed blocking("the catalog's commit chore runs on a worker");
 	engine::sync_wait(do_commit(*engine_, engine::inline_chores(), saved ? saved : (DB_WRITABLE | DB_OPEN), true));
 	committed_ = applied_.load();
 }
@@ -1354,6 +1368,84 @@ Shard::written_count()
 	co_await ready();
 	auto turn = co_await endpoint().take_turn(flags, cancel);
 	co_return co_await endpoint().engine().written_count();
+}
+
+
+task::task<std::vector<engine::docid>>
+Shard::written_keys(const std::vector<std::string>& terms)
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	auto& eng = endpoint().engine();
+	std::vector<engine::docid> dids;
+	dids.reserve(terms.size());
+	for (const auto& term : terms) {
+		dids.push_back(co_await eng.written_key(term));
+	}
+	co_return dids;
+}
+
+
+task::task<void>
+Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
+{
+	L_CALL("Shard::apply_slice(<{} writes>, {})", writes.size(), at);
+
+	assert(is_writable());
+	assert(is_write_active());
+
+	{
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		auto& entry = endpoint();
+		entry.last_flags_.store(flags, std::memory_order_relaxed);
+		const int write_flags = flags;
+		co_await chores.run(engine::ChoreClass::flush, [&] {
+			ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice writes on a worker in the index's turn");
+			if (DocIndexer::seams.throw_in_slice.exchange(false)) {
+				throw engine::Error(engine::errc::internal, "Test seam: the apply slice throws");
+			}
+			auto& eng = entry.engine();
+			const auto until = std::chrono::steady_clock::now() + slice;
+			const auto first = at;
+			const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
+			while (at < writes.size()) {
+				auto& write = writes[at++];
+				if (missed_terms.count(write.term) != 0) {
+					write.missed = true;   // a later write of a term whose document left: in input order, after it
+				} else if (const auto& stale_term = DocIndexer::seams.stale_on_term; !stale_term.empty() && write.term.ends_with(stale_term)) {
+					const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
+					entry.note_failure(error);
+					write.error = std::make_exception_ptr(error);
+				} else if (write.shard_did != 0) {
+					try {
+						write.info = engine::sync_wait(entry.do_replace(eng, engine::inline_chores(), write_flags, write.shard_did, std::move(write.doc), true, false, true));
+					} catch (const engine::Error& error) {
+						if (engine::is_missing(error.kind)) {
+							write.missed = true;   // gone since placement: placed afresh by the caller (B1)
+							missed_terms.insert(write.term);
+						} else {
+							write.error = std::current_exception();
+						}
+					} catch (...) {
+						write.error = std::current_exception();
+					}
+				} else {
+					try {
+						write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write_flags, write.term, std::move(write.doc), true, false));
+					} catch (...) {
+						write.error = std::current_exception();
+					}
+				}
+				if (write.error && entry.stale_.load(std::memory_order_acquire)) {
+					break;   // the index must be replaced: the later writes reopen it, as one request each would
+				}
+				if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
+					break;
+				}
+			}
+		});
+	}
+	co_await finish_write(false, true);
 }
 
 
