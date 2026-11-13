@@ -200,6 +200,7 @@ class Node:
         self.port = int(port)
         self.proc: subprocess.Popen[bytes] | None = None
         self.workdir = ""
+        self.keep = bool(getattr(args, "keep_workdir", False))
         if args.bin:
             if port_in_use(self.host, self.port):
                 raise SystemExit(f"{self.host}:{self.port} is already in use; pick another --target")
@@ -254,7 +255,7 @@ class Node:
                     os.killpg(self.proc.pid, signal.SIGKILL)
                     self.proc.wait(timeout=10)
         self.proc = None
-        if self.workdir:
+        if self.workdir and not self.keep:
             shutil.rmtree(self.workdir, ignore_errors=True)
             self.workdir = ""
 
@@ -783,6 +784,20 @@ def census(node: Node) -> dict[str, Any] | None:
         return {"error": out.stderr.strip()[:200]}
 
 
+def seg_listing(node: Node, index: str) -> dict[str, int] | None:
+    """The segment files (seg-*.sx) of `index` on disk, path to size; None for a node we did not start."""
+    if not node.workdir:
+        return None
+    root = os.path.join(node.workdir, "data", index)
+    out: dict[str, int] = {}
+    for d, _, files in os.walk(root):
+        for fn in files:
+            if fn.startswith("seg-") and fn.endswith(".sx"):
+                with contextlib.suppress(OSError):
+                    out[os.path.relpath(os.path.join(d, fn), root)] = os.path.getsize(os.path.join(d, fn))
+    return out
+
+
 async def phase(
     ctx: Ctx,
     name: str,
@@ -795,6 +810,7 @@ async def phase(
 ) -> dict[str, Any]:
     a = ctx.args
     before = await scrape(ctx.ctl)
+    segs_start = seg_listing(ctx.node, "accounts") if a.seg_snapshots else None
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
     jobs: list[asyncio.Future[Any]] = []
@@ -857,6 +873,8 @@ async def phase(
         },
         "census": census_result,
     }
+    if a.seg_snapshots:
+        entry["segs"] = {"start": segs_start, "end": seg_listing(ctx.node, "accounts")}
     if light_task is not None:
         res = light_task.result()
         entry["light"] = res.as_dict()
@@ -1185,6 +1203,8 @@ def main() -> int:
     )
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--no-assert", action="store_true")
+    ap.add_argument("--keep-workdir", action="store_true", help="leave --workdir (the node's data) on exit")
+    ap.add_argument("--seg-snapshots", action="store_true", help="list accounts' segment files at each phase's start and end")
     ap.add_argument(
         "--dry-run",
         action="store_true",

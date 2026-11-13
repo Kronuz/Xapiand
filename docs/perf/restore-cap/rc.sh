@@ -1,7 +1,8 @@
 # rc.sh MODE BASE BIN ARM...: restore-cap arms in the given order, run from the job's checkout. ARM "off" is BASE
 # (master); "cN" is BIN with XAPIAND_RESTORE_CHORES=N (c0: uncapped); "kN" is BIN with XAPIAND_RESTORE_CHILDREN=N.
 # MODE t45: stall_load's T4/T5 mix, 64 heavy clients (loop-scheduling's A2); census: t45 with sampler.py on the
-# node; lt: T12's loadtest (A3); layout: stall_load's setup RESTORE of accounts, then layout.py on its segments.
+# node; lt: T12's loadtest (A3); layout: stall_load's setup RESTORE of accounts, then layout.py on its segments;
+# t45l: t45 keeping the node's data, then layout.py on accounts as the loaded phase left it.
 set -e
 MODE=$1; BASE=$2; BIN=$3; shift 3; O=$JOB_OUT; A=$(cd "$(dirname "$0")" && pwd)
 shasum "$BASE" "$BIN"
@@ -31,8 +32,10 @@ for arm in "$@"; do i=$((i+1))
   fi
   S=""
   if [ "$MODE" = census ]; then python3 "$A/sampler.py" "por[t] 18980 --name stall" "$O/t45-$i-$arm.ps.jsonl" 6 & S=$!; fi
-  python3 harness/stall_load.py --bin "$O/$arm.sh" --target 127.0.0.1:18980 --workdir "$O/w" --accounts-docs 20000 --phase both --rate 200 --duration 20 --heavy-clients 64 --no-assert --out "$O/t45-$i-$arm.json" 2> "$O/t45-$i-$arm.log" || echo "arm $i $arm rc $?"
+  K=""; [ "$MODE" = t45l ] && K="--keep-workdir --seg-snapshots"
+  python3 harness/stall_load.py --bin "$O/$arm.sh" --target 127.0.0.1:18980 --workdir "$O/w" --accounts-docs 20000 --phase both --rate 200 --duration 20 --heavy-clients 64 --no-assert $K --out "$O/t45-$i-$arm.json" 2> "$O/t45-$i-$arm.log" || echo "arm $i $arm rc $?"
   [ -z "$S" ] || { kill $S; wait $S || true; }
+  if [ "$MODE" = t45l ]; then echo "== layout $i $arm"; python3 "$A/layout.py" "$O/w/data/accounts" "$O/t45-$i-$arm.json" || true; rm -rf "$O/w"; fi
 done
 rm -rf "$O/w" "$O/lt.data" "$O/ly.data"
 [ "$MODE" = layout ] || python3 "$A/report.py" "$O"
