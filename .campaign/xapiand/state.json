@@ -5809,19 +5809,48 @@
         "CMakeLists.txt",
         "tests/test_loop_yield.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T07:19:46",
+          "commit": "05d36bdbc97124b9013ad7535962c8b6b5b8bec4",
+          "criteria": {
+            "A1": "`docs/design/loop-scheduling.md` (the census job ids E1-E3, X1-X8 are in the note and in this journal's history; an artifact row names only the path)",
+            "A2": "261113-062526-c0ec94, 261113-062549-c1f3f1",
+            "A3": "261113-062527-db4085",
+            "A4": "261113-062523-be795f; fails without: 261112-225153-ff8ddb, 261112-225208-795ab1, 261112-225215-c76586, 261113-033318-52f956, 261113-033325-227525, 261113-033332-72bffb, 261113-033338-89cc5a, 261113-042355-ac17b8, 261113-042356-bbdfbb, 261113-042356-6f67c7, 261113-042356-b1cb7d, 261113-050320-86bca1, 261113-050320-c937a0, 261113-050325-7998cd, 261113-052239-99c10c, 261113-052239-fabe14, 261113-062526-3505e2, 261113-062526-0dbaf6, 261113-062526-d16f93, 261113-062526-0fb272, 261113-062526-e6091d"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "832ab1126d161389f6a83130428e69db3c80d0cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-062523-be795f",
+              "level": "light",
+              "seconds": 277.2,
+              "state": "done",
+              "what": "loop-scheduling check build-test at 832ab1126d16"
+            }
+          ],
+          "final": true,
+          "from": "9d081f3ee63f03b3ba88e1198f9a7b2c93a518df",
+          "reason": "",
+          "tested": "993eaf8578ebe415f713beab52044fb37538358e"
+        }
+      ],
       "lenses": [
         "correctness",
         "design"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-13T06:57:58",
+      "updated": "2026-11-13T07:19:53",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
