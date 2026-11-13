@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: ready for review (A1, lens design/concurrency, round 2): `docs/design/loop-scheduling.md`; X5 261112-190112-421854
+State: waiting on jobs 261112-191306-04ee82 (build) 261112-191309-2e375a (X6 a=1) 261112-191311-7e90a7 (X6 a=2)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -152,6 +152,10 @@ tasks pass K.
   RESTORE client p50 0.824x (4.43 vs 5.38 s), server 3.8-4.6 vs 5.3-7.6 s; heavy searches 0.800, 0.777; light
   p99 0.849, 1.060 (MISS, bound 8.5 ms); lag p99 median 3.07 (MISS). D81 fixes F1 but overshoots: Q5 (a stream
   allowance below K per chunk, one more ABBA) put to the owner.
+
+- Lead's call on Q5: (b). X6 on scratch dd3111eca (`rearm_light(allowance)`: spent = K - allowance; env
+  `LS_LANE_STREAM=N`): build 261112-191306-04ee82, then X5-shaped ABBAs 261112-191309-2e375a (allowance 1) and
+  261112-191311-7e90a7 (allowance 2).
 
 ## Next
 
