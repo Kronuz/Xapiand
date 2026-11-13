@@ -9,13 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-State: waiting on jobs 261112-223932-8ff4dc (mutant, A1), 261112-223935-5dbeff (ASan x20, A2), 261112-223937-d8cb1b
-(build-test, A3). The paused-claim tests passed at the fix (job 261112-223540-75e701, before the squash: 20 checks).
+State: waiting on jobs (ids below). Lead's change: settings flight in scope; fixed with the same mechanism, jobs rerun at the new head.
 
 ## Next
 
 1. When the jobs finish: paste `campaign brief`'s Evidence table, write Result, State "ready for review".
-2. Push is done at the squashed head; CI is CI's.
 
 ## Blocked on
 
@@ -45,8 +43,14 @@ pending
 - Fix: a load puts its schema into the cache before its flight ends (load_metadata, load_foreign), and a leader asks a probe
   (cached_metadata, cached_foreign) whether the cache holds the schema now before it loads (SingleFlight::run's third
   argument; not counted as a load). A hit on the metadata flight re-enters the existing "found in cache" path.
-- The index settings flight (index_resolver_lru.cc, outside this quest's file set) has the same gap; the 2-argument run is
-  unchanged for it. Reported, not fixed.
+- Settings flight (lead's msg, file set widened to src/index_resolver_lru.*): same mechanism. load_and_publish reads, runs the
+  resolver's own initialize_loaded/place_shards (now shared functions), and store_settings puts the entry and its shards in the
+  cache before the flight ends; cached_settings is the probe. Because a new index's shards are now placed (with default
+  replicas) before a caller's settings are applied, a replica-count change on a not-loaded index clears the shards so they are
+  placed again (settling only adds replicas). Seam: IndexResolverLRU::before_settings_claim; test
+  test_a_call_paused_before_claiming_the_settings_load_loads_nothing (1 read). Passed at the new head (job 261112-224510-9fae0e).
+- msg: build-test 261112-223937-d8cb1b failed only on test_loop_yield.cc:393 (master flake, ratio 0.706 vs 0.7 at load 11); the
+  old three jobs are superseded. If it flakes at the new head, the lead reruns the check.
 - Seam: SchemasLRU::before_metadata_claim / before_foreign_claim, awaited between a first use's cache miss and its claim;
   empty in production (one std::function test).
 - Tests: test_a_call_paused_before_claiming_{the_foreign,the_metadata}_load_loads_nothing hold the first call at the seam
