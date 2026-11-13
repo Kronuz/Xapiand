@@ -10,19 +10,72 @@ Knob (this branch only): `XAPIAND_RESTORE_CHORES=N` caps `workers` at N, so chil
 (src/database/handler.cc, `DocIndexer::index`). Uncapped on this host: 16 pool threads, 5 shards: 5 children +
 10 prepares.
 
-Host: macOS, 16 logical CPUs. Harness: `.scratch/rc/` (rc.sh, sampler.py, report.py), from loop-scheduling's
-`.scratch/ab/`; binaries `rel-4738337a3` (master) and `rel-eef7a92e9` (this branch).
+Host: macOS, Intel i9-9980HK, 8 cores / 16 logical CPUs; 16 HTTP reactors, a 16-thread work pool. Harness:
+[restore-cap/](restore-cap/) (rc.sh, sampler.py, report.py), from loop-scheduling's `.scratch/ab/`; binaries
+`rel-4738337a3` (master) and `rel-eef7a92e9` (this branch, Xapiand:eef7a92e9). All jobs exclusive, at most 10 minutes.
 
-## Status
+## Answer
 
-Waiting on jobs (all exclusive, at most 10 minutes, at Xapiand:eef7a92e9):
+No cap does it. The cause is not RESTORE's chores taking the CPUs: the work pool is parked through the loaded
+phase in every arm, and the CPU goes to the HTTP reactors. The only cap that brings loaded light p99 near master
+(cap 2: 1.4x master instead of 2.3x) cuts RESTORE to 3,323 docs/s, 0.55x pre-7c and 0.76x master. Every cap that
+keeps RESTORE at or above pre-7c (6, 8, uncapped) leaves light p99 at 62-68 ms, 2.2-2.5x master. Recommendation:
+keep it uncapped; the chore cap is the wrong lever.
 
-| Job | What |
-|---|---|
-| 261113-001647-f26c17 | release build of this branch (done, rel-eef7a92e9) |
-| 261113-001854-f59ba1 | census: runnable threads (ps -M, 2 Hz) and per-thread-name busy fraction (sample) in T4/T5, master vs cap 15 vs cap 4 |
-| 261113-001857-72429c | RESTORE docs/s (T12 loadtest), master and caps 15/8/6/4/2, mirrored order |
-| 261113-002535-f5df4d | T4/T5 loaded light p99 and heavy searches, caps 15/8/4, mirrored |
-| 261113-002537-7e5eae | T4/T5 loaded light p99 and heavy searches, caps 15/6/2, mirrored |
+## Census (job 261113-001854-f59ba1)
 
-Next: `python3 .scratch/rc/report.py JOB_OUT` per job; confirm the cause from the census before reading the sweep.
+One T4/T5 run per arm, with `ps -M` at 2 Hz (runnable threads) and a 1 s `sample` every 6 s (what each thread
+does). The `sample` pauses distort that job's latencies (master's p99 read 460 ms), so it gives only the thread
+picture; the sweep jobs give the latencies.
+
+| Loaded phase | master | uncapped | cap 4 |
+|---|---|---|---|
+| node runnable threads, mean (p90) | 14.2 (16) | 17.8 (27) | 14.6 (20) |
+| other runnable threads on the host, mean | 19.6 | 16.7 | 15.1 |
+| node CPU, mean | 1,046% | 1,182% | 1,102% |
+| work pool (Xapiand:W, 16): busy threads | 0.8 | 1.3 | 0.7 |
+| HTTP reactors (16, unnamed): busy threads | 7.9 | 11.6 | 7.1 |
+| `strata::docids::reader::docid` top-of-stack samples per 1 s sample | 15-94 | 743-887 | 22-43 |
+
+1. The host is oversubscribed in every arm, master too: about 32-35 runnable threads on 16 logical CPUs, about
+   half of them the load generator and the rest of the host.
+2. The work pool is parked in `WorkPool::park` (`__ulock_wait2`) for 92-96% of the loaded phase in every arm.
+   RESTORE's chores use about one of its threads, not fifteen, so capping them cannot give the reactors CPU that
+   they are not losing to the pool.
+3. Uncapped, the reactors run about 3.7 threads busier than master. About 1.7 threads of that sit in
+   `docids::reader::docid` under `prospect::exhaustive_search::scan`: heavy searches on `accounts` decoding monotone
+   docid blocks (the LEB delta walk at strata docids.hh:173). That is about ten times master's share, and light
+   requests share those reactors.
+
+Hypothesis, not tested: the RESTORE that loads `accounts` (20,000 documents with explicit ids, through the same
+path and cap) leaves segments whose docids are monotone rather than contiguous when several children write shards
+at once, so every exhaustive scan pays the delta walk. That would also explain the sweep's step at cap 2, the only
+arm with one child.
+
+## Sweep
+
+RESTORE docs/s: T12 loadtest, one run per arm in mirrored order (job 261113-001857-72429c; master ran 4,095 and
+4,681 in the same job). T4/T5: 64 heavy clients, mirrored pairs (job 261113-002535-f5df4d for caps 15/8/4, job
+261113-002537-7e5eae for caps 15/6/2). The T4/T5 master reference is job 261112-225448-4dfa5e (median 27.6 ms,
+heavy 29,540): the same harness and master binary, but not this session. The census job's master run was
+distorted by `sample`, so this round has no clean same-session master run of T4/T5.
+
+| Cap (children + prepares) | RESTORE docs/s | vs pre-7c 6,076 | vs master 4,388 | Loaded light p99 ms | vs master 27.6 | Heavy searches | vs master 29,540 | Jobs |
+|---|---|---|---|---|---|---|---|---|
+| uncapped, 15 (5 + 10) | 8,316, 8,086 | 1.35x | 1.87x | 69.6, 65.7, 66.0, 59.4 | 2.4x | 21.5k, 21.6k, 21.7k, 20.8k | 0.73x | 72429c, f5df4d, 7e5eae |
+| 8 (4 + 4) | 7,059, 7,019 | 1.16x | 1.60x | 73.3, 62.2 | 2.5x | 22.0k, 22.0k | 0.75x | 72429c, f5df4d |
+| 6 (3 + 3) | 5,948, 6,335 | 1.01x | 1.40x | 61.6, 62.3 | 2.2x | 22.0k, 22.4k | 0.75x | 72429c, 7e5eae |
+| 4 (2 + 2) | 4,911, 4,806 | 0.80x | 1.11x | 52.3, 59.3 | 2.0x | 22.5k, 21.8k | 0.75x | 72429c, f5df4d |
+| 2 (1 + 1) | 3,314, 3,331 | 0.55x | 0.76x | 41.9, 37.9 | 1.4x | 30.7k, 29.6k | 1.02x | 72429c, 7e5eae |
+
+Ratios use each arm's median. Light p99 falls slowly from 15 chores to 4, about 1 ms for each chore removed, then
+drops by a third at 2, where heavy searches also return to master's level. That step and the census point at the
+number of children writing shards at once, not at total chore concurrency.
+
+## Next
+
+1. One arm with one child and wide prepares (children 1, width 14). If light p99 and heavy searches match cap 2
+   while RESTORE keeps most of its speed, the lever is the children, not the cap.
+2. Read the docids kind of `accounts`' segments after the setup RESTORE, master against uncapped. Contiguous
+   against monotone would confirm the hypothesis; the fix then belongs in how the parallel writes assign shard
+   docids or how segments merge, not in a cap.
