@@ -119,9 +119,9 @@ tasks pass K.
 
 ## Next
 
-1. Read E1 and E3; pick the candidate the census supports; E2: an exclusive ABBA of it against base
-   (T4/T5, and T12 RESTORE if it touches workers).
-2. Write the design note, commit, "ready for review".
+1. The design review (lens design/concurrency) of `docs/design/loop-scheduling.md`; fold findings by id.
+2. Q3 is the owner's: the lane alone, or X4 (lane at 8 loops on macOS, 4 on the VM) first.
+3. After review: the lead widens the file set; library quest `task-lanes` (D5) comes first.
 
 ## Blocked on
 
