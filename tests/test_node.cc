@@ -2431,7 +2431,7 @@ static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default
 	auto replicas_of = [](const std::string& path, const std::optional<int>& asked) {
 		std::optional<MsgPack> settings;
 		if (asked) {
-			settings = MsgPack({{ "_settings", MsgPack({{ "number_of_shards", 2 }, { "number_of_replicas", *asked }}) }});
+			settings = MsgPack({{ "_settings", MsgPack({{ "number_of_shards", static_cast<int>(opts.num_shards) }, { "number_of_replicas", *asked }}) }});
 		}
 		auto result = engine::sync_wait(XapiandManager::resolve_index_settings(path, false, settings ? &*settings : nullptr));
 		std::vector<size_t> sizes;
@@ -2443,9 +2443,13 @@ static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default
 	const auto by_default = replicas_of("replicas_default", std::nullopt);   // opts.num_shards shards, a master and one replica each
 	CHECK_EQ(by_default.size(), opts.num_shards);
 	CHECK(std::all_of(by_default.begin(), by_default.end(), [](size_t n) { return n == 2; }));
-	CHECK((replicas_of("replicas_below", 0) == std::vector<size_t>{1, 1}));                         // a master only
-	CHECK((replicas_of("replicas_equal", 1) == std::vector<size_t>{2, 2}));
-	CHECK((replicas_of("replicas_above", 2) == std::vector<size_t>{3, 3}));                         // a master and two replicas
+	// The shards asked are the default's, so only the replica count asks for other placement.
+	auto all_have = [&](const std::vector<size_t>& sizes, size_t n) {
+		return sizes.size() == opts.num_shards && std::all_of(sizes.begin(), sizes.end(), [n](size_t size) { return size == n; });
+	};
+	CHECK(all_have(replicas_of("replicas_below", 0), 1));   // a master only
+	CHECK(all_have(replicas_of("replicas_equal", 1), 2));
+	CHECK(all_have(replicas_of("replicas_above", 2), 3));   // a master and two replicas
 	opts.num_replicas = saved_replicas;
 }
 
