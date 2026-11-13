@@ -15,4 +15,14 @@ Host: macOS, 16 logical CPUs. Harness: `.scratch/rc/` (rc.sh, sampler.py, report
 
 ## Status
 
-Jobs queued: build 261113-001647-f26c17; census 261113-001854-f59ba1; RESTORE sweep 261113-001857-72429c.
+Waiting on jobs (all exclusive, at most 10 minutes, at Xapiand:eef7a92e9):
+
+| Job | What |
+|---|---|
+| 261113-001647-f26c17 | release build of this branch (done, rel-eef7a92e9) |
+| 261113-001854-f59ba1 | census: runnable threads (ps -M, 2 Hz) and per-thread-name busy fraction (sample) in T4/T5, master vs cap 15 vs cap 4 |
+| 261113-001857-72429c | RESTORE docs/s (T12 loadtest), master and caps 15/8/6/4/2, mirrored order |
+| 261113-002535-f5df4d | T4/T5 loaded light p99 and heavy searches, caps 15/8/4, mirrored |
+| 261113-002537-7e5eae | T4/T5 loaded light p99 and heavy searches, caps 15/6/2, mirrored |
+
+Next: `python3 .scratch/rc/report.py JOB_OUT` per job; confirm the cause from the census before reading the sweep.
