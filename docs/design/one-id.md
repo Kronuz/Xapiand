@@ -14,8 +14,10 @@ docid the shard assigned (`NumericId`). Under the T4/T5 mix, explicit PUTs at id
 ## Routing: B buckets, a table to shards
 
 - `ID_BUCKETS` (B = 1024, `src/database/handler.h`) is the one constant.
-- `id_bucket(key)`: an integer id N from 1 to 2^53 - 1 goes to bucket `(N - 1) % B`. Any other id, including 0,
-  negatives, fractions and integers too large for a double, goes to `key_placement_hash(key) % B`.
+- `id_bucket(key)`: an integer id N from 1 to 2^32 - 1 (`MAX_NUMERIC_ID`) goes to bucket `(N - 1) % B`. Any other
+  id, including 0, negatives, fractions and larger integers, goes to `key_placement_hash(key) % B`. The bound is
+  where the numeric key stops naming integers exactly: 2^32 + 1's key names 2^32 + 2^24, and 2^40 + 3's names
+  2^40 + 3 * 2^24 (job 261113-081918-7c337f), so an id issued above it could share another id's key.
 - `bucket_shard(bucket, n)` is the bucket-to-shard table. Today the table is `bucket % n`, written in one place.
   A reshard is the only thing that would write a different table, so persisting the table lands with the reshard
   quest (see "Open").
@@ -25,7 +27,7 @@ docid the shard assigned (`NumericId`). Under the T4/T5 mix, explicit PUTs at id
 
 ## The id counter
 
-Each shard keeps `id_high`: the largest integer id (1 to 2^53 - 1) it holds or has issued. A bucket's counter is
+Each shard keeps `id_high`: the largest integer id (1 to 2^32 - 1) it holds or has issued. A bucket's counter is
 derived from it: the next id in bucket b is the smallest id above `id_high` with `(id - 1) % B == b`. So bucket
 sequences keep stride B, and an automatic id is above every numeric id in its shard (D84: "a per-shard counter
 that explicit numeric ids advance").
@@ -47,6 +49,8 @@ that explicit numeric ids advance").
   (`ReplayTarget::replace_document`), so writes the last commit missed advance it again. The issued id is
   written into the record (`issue_id`) before the blobs' push, whose copy of the record the log keeps, so the
   logged record names it too.
+- Exhaustion: once a shard's counter, or the floor, reaches 2^32 - 1 and no id of its buckets is left, a POST of a
+  new numeric id fails (invalid), as an explicit id of 2^32 - 1 makes every id below it taken for the counter.
 - Key: an issued id's key is the one a PUT of that id names: the integer encoding for integer and positive id
   fields, the float encoding when the placeholder `_id` is a float.
 - RESTORE: every restored line names its id, so it advances its shard's counter like a PUT. A dump carries

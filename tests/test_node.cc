@@ -1658,7 +1658,7 @@ static void test_document_ids_are_themselves() {
 	for (const int shards : shard_counts) {
 		const auto at = "_s" + std::to_string(shards);
 		create_index("ids_int" + at, shards);
-		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967295", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967000", "4294967297", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
 		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
 		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
 		create_index("ids_kw" + at, shards);
@@ -2419,17 +2419,16 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 	CHECK_EQ(next_auto_id(7, 0, 1), 8u);
 	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
 
-	// An issued id's key is the one a PUT of that id names, as an integer or a positive, and it names that id again.
-	for (const std::uint64_t id : {std::uint64_t{1}, std::uint64_t{1023}, (std::uint64_t{1} << 24) + 1, (std::uint64_t{1} << 32) + 1, (std::uint64_t{1} << 40) + 3, MAX_NUMERIC_ID}) {
+	// An issued id's key is the one a PUT of that id names, as an integer or a positive, and it names that id again,
+	// up to MAX_NUMERIC_ID. Past it, 2^32 + 1's key names 2^32 + 2^24, so such ids are placed by hash.
+	for (const std::uint64_t id : {std::uint64_t{1}, std::uint64_t{1023}, (std::uint64_t{1} << 24) + 1, (std::uint64_t{1} << 31) + 5, MAX_NUMERIC_ID - 1, MAX_NUMERIC_ID}) {
 		const auto key = numeric_key(id);
 		CHECK_EQ(key, document_key(Serialise::integer(static_cast<std::int64_t>(id)), 'N'));
 		CHECK_EQ(numeric_id(key), id);
-		const auto as_float = numeric_id(document_key(Serialise::floating(static_cast<long double>(id)), 'N'));
-		if (numeric_id(key) != id || as_float != id) {
-			std::fprintf(stderr, "  id %llu: its key names %llu, as a float %llu\n", static_cast<unsigned long long>(id),
-				static_cast<unsigned long long>(numeric_id(key)), static_cast<unsigned long long>(as_float));
-		}
+		CHECK_EQ(numeric_id(document_key(Serialise::floating(static_cast<long double>(id)), 'N')), id);   // a float id's key
 	}
+	CHECK_EQ(numeric_id(document_key(Serialise::integer(std::int64_t{1} << 32), 'N')), 0u);
+	CHECK_EQ(numeric_id(document_key(Serialise::integer((std::int64_t{1} << 32) + 1), 'N')), 0u);
 }
 
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket

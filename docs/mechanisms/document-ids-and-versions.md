@@ -18,7 +18,7 @@ DELETE /i/k                  key                         erase_by_key(key, expec
 
 A new document takes the docid after the shard's last, whatever its id: docids are in append order and never derive
 from an id (`docs/design/one-id.md`). An id goes to one of 1,024 buckets (`id_bucket`: an integer k from 1 to
-2^53 - 1 to `(k - 1) % 1024`, any other key by its hash) and the bucket to shard `bucket % n` (`bucket_shard`). A
+2^32 - 1 to `(k - 1) % 1024`, any other key by its hash) and the bucket to shard `bucket % n` (`bucket_shard`). A
 new numeric id goes to the least used shard, which issues the smallest id of a bucket it owns above its counter and
 every other shard's (`least_used_shard` passes the largest as a floor). The counter, `_id_high` in the shard's
 metadata, is the largest numeric id the shard holds or issued; every numeric write raises it, the commit persists it
@@ -52,7 +52,7 @@ check before it lets two writers that read one version both apply.
 3. A write applied with `?version=N` lands at version N + 1; a refused one changes nothing.
 4. A delete is by key in the turn, on one shard or many: the docid found before the turn picks the shard only.
 5. A shard never numbers past the largest docid: the write is an error instead of a wrap to docid 0.
-6. Ids past 2^53 that round to one double share a key (the numeric serialisation's limit).
+6. Integer ids past 2^32 - 1 can share a key: 2^32 + 1's key is 2^32 + 2^24's (the numeric serialisation's limit).
 7. A new numeric id is above every numeric id of its shard and of the others' counters when it was issued, in a
    bucket its shard owns, and is written with expected version 0: a counter behind an existing id conflicts.
 
