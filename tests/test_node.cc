@@ -624,6 +624,40 @@ static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	CHECK_EQ(manager()->index_settings_resolver->loads() - loads_before, 1u);
 }
 
+// The same for the settings of an index: a call paused after it missed the cache and before it claims the read loads
+// nothing when it resumes, the read that ended meanwhile having put the settings in the cache.
+static void test_a_call_paused_before_claiming_the_settings_load_loads_nothing() {
+	Watchdog watchdog("paused before the settings claim");
+	constexpr int N = 6;
+	auto& resolver = *manager()->index_settings_resolver;
+	const auto loads_before = resolver.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	resolver.before_settings_claim = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	std::atomic<int> done{0};
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&] {
+			auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_paused"));
+			(void)settings;
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(resolver.loads() - loads_before, 1u);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	resolver.before_settings_claim = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(resolver.loads() - loads_before, 1u);   // the paused call read nothing
+}
+
 // Late uses are served from the cache and load nothing.
 static void test_a_cached_schema_is_not_loaded_again() {
 	Watchdog watchdog("cached schema");
@@ -2424,6 +2458,7 @@ int main(int argc, char** argv) {
 		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
 		{"test_a_call_paused_before_claiming_the_metadata_load_loads_nothing", test_a_call_paused_before_claiming_the_metadata_load_loads_nothing},
 		{"test_concurrent_first_uses_of_index_settings_load_them_once", test_concurrent_first_uses_of_index_settings_load_them_once},
+		{"test_a_call_paused_before_claiming_the_settings_load_loads_nothing", test_a_call_paused_before_claiming_the_settings_load_loads_nothing},
 		{"test_a_cached_schema_is_not_loaded_again", test_a_cached_schema_is_not_loaded_again},
 		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
