@@ -681,7 +681,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 			break;
 	}
 
-	auto serialised_term = Serialise::MsgPack(field_spc, obj);
+	// A numeric id's term is its key's bytes (Serialise::id), not its value's.
+	const bool numeric_id = field_spc.prefix() == DOCUMENT_ID_TERM_PREFIX && field_spc.get_ctype() == 'N';
+	auto serialised_term = numeric_id ? Serialise::id(field_spc, obj) : Serialise::MsgPack(field_spc, obj);
 	return get_term_query(field_spc, serialised_term, default_op, wqf, flags);
 }
 

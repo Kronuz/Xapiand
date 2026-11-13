@@ -490,10 +490,12 @@ FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-c
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception)
+# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
-# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
+# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
 	"${constexpr_phf_SOURCE_DIR}"
@@ -502,6 +504,7 @@ include_directories(
 	"${errno_names_SOURCE_DIR}"
 	"${base_x_SOURCE_DIR}"
 	"${located_exception_SOURCE_DIR}"
+	"${sortable_SOURCE_DIR}"
 )
 
 # located-exception ships exception.h + exception.cc (the base: BaseException,

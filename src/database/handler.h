@@ -79,11 +79,11 @@ inline constexpr std::size_t ID_BUCKETS = 1024;
 // The shard metadata key of its id counter, a MessagePack integer.
 inline constexpr std::string_view ID_HIGH_METADATA = "_id_high";
 
-// The largest numeric id with a bucket: the numeric key names every integer up to it exactly (2^32 + 1's key names
-// 2^32 + 2^24), so the counter never issues an id whose key names another.
-inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 32) - 1;
+// The largest numeric id with a bucket, the counter's bound: the largest integer every integer id type stores (an
+// integer field's `_id` is an int64). The numeric key names every int64 and uint64 exactly (Serialise::id).
+inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 63) - 1;
 
-// The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^32 are placed by hash).
+// The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^63 are placed by hash).
 std::uint64_t numeric_id(std::string_view key);
 
 // The key a PUT of the integer id names, in an index whose ids are integers or positive.

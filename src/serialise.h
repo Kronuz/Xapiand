@@ -28,6 +28,7 @@
 #include <string>                   // for std::string
 #include <string_view>              // for std::string_view
 #include <cstdint>                  // for std::uint64_t, std::int64_t, std::uint32_t, std::uint8_t
+#include <optional>                 // for std::optional
 #include <utility>                  // for std::pair
 #include <vector>                   // for std::vector
 
@@ -233,6 +234,16 @@ namespace Serialise {
 
 	std::pair<FieldType, std::string> guess_serialise(const class MsgPack& field_value);
 
+	// A document id's bytes after its type character (docs/design/exact-id-keys.md). A numeric id's are
+	// Kronuz/sortable's, exact for every int64, uint64 and double; any other id's are serialise()'s.
+	std::string id(const required_spc_t& spc_id, const class MsgPack& document_id);
+
+	// The bytes of the integer id N, as id() gives them for N in an integer, positive or floating id field.
+	std::string id(std::uint64_t document_id);
+
+	// guess_serialise() of an id in an index whose id type is not set yet, with id()'s bytes.
+	std::pair<FieldType, std::string> guess_id(const class MsgPack& document_id);
+
 	inline std::string serialise(std::string_view val) {
 		return std::string(val);
 	}
@@ -264,6 +275,9 @@ namespace Serialise {
 
 
 namespace Unserialise {
+	// The integer a numeric id's bytes (Serialise::id) name exactly, else nothing (a fraction, a negative).
+	std::optional<std::uint64_t> id(std::string_view serialised_id);
+
 	// Unserialise serialised_val according to field_type and returns a MsgPack.
 	MsgPack MsgPack(FieldType field_type, std::string_view serialised_val);
 

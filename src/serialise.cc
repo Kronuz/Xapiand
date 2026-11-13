@@ -44,6 +44,7 @@
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
+#include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
 #include "utype.hh"                                   // for toUType
 
@@ -926,6 +927,65 @@ Serialise::guess_type(const class MsgPack& field_value)
 		default:
 			THROW(SerialisationError, "Unexpected type {}", enum_name(field_value.get_type()));
 	}
+}
+
+
+std::string
+Serialise::id(const required_spc_t& spc_id, const class MsgPack& document_id)
+{
+	const auto type = spc_id.get_type();
+	switch (type) {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating: {
+			const auto value = Cast::cast(type, document_id.is_map() ? Cast::cast(document_id) : document_id);
+			switch (type) {
+				case FieldType::integer:
+					return sortable::encode(value.i64());
+				case FieldType::positive:
+					return sortable::encode(value.u64());
+				default:
+					return sortable::encode(value.f64());
+			}
+		}
+		default:
+			return serialise(spc_id, document_id);
+	}
+}
+
+
+std::string
+Serialise::id(std::uint64_t document_id)
+{
+	return sortable::encode(document_id);
+}
+
+
+std::pair<FieldType, std::string>
+Serialise::guess_id(const class MsgPack& document_id)
+{
+	auto guessed = guess_serialise(document_id);
+	switch (guessed.first) {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating: {
+			required_spc_t spc_id;
+			spc_id.set_type(guessed.first);
+			guessed.second = id(spc_id, document_id);
+			break;
+		}
+		default:
+			break;
+	}
+	return guessed;
+}
+
+
+std::optional<std::uint64_t>
+Unserialise::id(std::string_view serialised_id)
+{
+	const auto number = sortable::decode(serialised_id);
+	return number ? number->to_uint64() : std::nullopt;
 }
 
 

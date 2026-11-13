@@ -29,7 +29,6 @@
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
 #include <chrono>                           // for std::chrono::steady_clock
-#include <cmath>                            // for std::floor
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
 #include <optional>                         // for std::optional
@@ -138,18 +137,15 @@ numeric_id(std::string_view key)
 	if (key.size() < 2 || key[0] != 'N') {
 		return 0;
 	}
-	const auto id = sortable_unserialise(key.substr(1));
-	if (!(id >= 1 && id <= static_cast<long double>(MAX_NUMERIC_ID)) || id != std::floor(id)) {  // NaN fails the first test
-		return 0;
-	}
-	return static_cast<std::uint64_t>(id);
+	const auto id = Unserialise::id(key.substr(1));
+	return id && *id >= 1 && *id <= MAX_NUMERIC_ID ? *id : 0;
 }
 
 
 std::string
 numeric_key(std::uint64_t id)
 {
-	return document_key(Serialise::positive(id), 'N');  // the key a PUT of the integer id names
+	return document_key(Serialise::id(id), 'N');  // the key a PUT of the integer id names
 }
 
 
@@ -1631,7 +1627,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	auto id_type = spc_id.get_type();
 	if (id_type == FieldType::empty) {
 		// Search like namespace.
-		const auto type_ser = Serialise::guess_serialise(document_id);
+		const auto type_ser = Serialise::guess_id(document_id);
 		id_type = type_ser.first;
 		if (id_type == FieldType::text) {
 			id_type = FieldType::keyword;
@@ -1640,7 +1636,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 		spc_id.flags.bool_term = true;
 		unprefixed_term_id = type_ser.second;
 	} else {
-		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
+		unprefixed_term_id = Serialise::id(spc_id, Cast::cast(id_type, document_id));
 	}
 	co_return document_key(unprefixed_term_id, spc_id.get_ctype());
 }
