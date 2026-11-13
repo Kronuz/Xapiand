@@ -1789,8 +1789,14 @@ engine::Document numbered(std::uint64_t id, const std::string& n) {
 
 // Writes a new numeric id's document: the id the shard issued.
 std::uint64_t issue(Shard& shard, const std::string& n) {
-	const auto info = engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, n)));
-	return numeric_id(info.term);
+	try {
+		const auto info = engine::sync_wait(shard.replace_document_term(std::string(NEW_NUMERIC_KEY), numbered(0, n)));
+		std::fprintf(stderr, "  issued %llu for %s\n", static_cast<unsigned long long>(numeric_id(info.term)), n.c_str());
+		return numeric_id(info.term);
+	} catch (const engine::Error& error) {
+		std::fprintf(stderr, "  issuing %s threw %s\n", n.c_str(), error.what());
+		throw;
+	}
 }
 
 // The id counter (docs/design/one-id.md): a new numeric id is issued above every numeric id the shard holds or

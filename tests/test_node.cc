@@ -1626,6 +1626,9 @@ static void ids_round_trip(const std::string& path, const std::vector<std::strin
 		const auto got = call("GET", path + all[i]);
 		CHECK_EQ(got.status, 200);
 		CHECK_EQ(text_of(got, "n"), n_of(i));
+		if (text_of(got, "_id") != all[i]) {
+			std::fprintf(stderr, "  %s%s: GET gives _id %s\n", path.c_str(), all[i].c_str(), text_of(got, "_id").c_str());
+		}
 		CHECK_EQ(text_of(got, "_id"), all[i]);
 		CHECK_EQ(version_of(got), 1);   // written once: no other write landed on it
 		const auto found = call("SEARCH", path + "?volatile", R"({"_query":{"_id":)" + literal(all[i]) + "}}");
@@ -2295,11 +2298,13 @@ static std::vector<SegmentDocids> segment_docids(const Endpoint& endpoint) {
 	return segments;
 }
 
-// Merges all the segments of a shard's index into one, in docid order, and commits it.
+// Merges all the segments of a shard's index into one, in docid order, and commits it. The first commit flushes the
+// write buffer, so its documents are in a segment the merge takes.
 static void merge_all(const Endpoint& endpoint) {
 	auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE_QUIET);
 	auto turn = engine::sync_wait(pin->take_turn(WRITE_QUIET));
 	auto& index = A::index(pin.entry());
+	index.commit();
 	std::vector<std::uint64_t> ids;
 	for (const auto& segment : index.segments()) {
 		ids.push_back(segment.id);
@@ -2403,9 +2408,10 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 		CHECK_EQ(holder_of(endpoints, numeric_key(after)), 0u);
 		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 10u);
 	}
-	// The ids a shard of 3 issues next, across the wrap of the buckets: 1,023 is bucket 1,022 (shard 2), 1,024 bucket
-	// 1,023 (shard 0), 1,025 bucket 0 (shard 0) again.
-	CHECK_EQ(next_auto_id(1020, 0, 3), 1024u);
+	// The ids a shard of 3 issues next, across the wrap of the buckets: 1,021 is bucket 1,020 (shard 0), 1,022 and
+	// 1,023 buckets 1,021 and 1,022 (shards 1 and 2), 1,024 bucket 1,023 (shard 0), 1,025 bucket 0 (shard 0) again.
+	CHECK_EQ(next_auto_id(1020, 0, 3), 1021u);
+	CHECK_EQ(next_auto_id(1021, 0, 3), 1024u);
 	CHECK_EQ(next_auto_id(1024, 0, 3), 1025u);
 	CHECK_EQ(next_auto_id(1020, 2, 3), 1023u);
 	CHECK_EQ(next_auto_id(1023, 2, 3), 1027u);
