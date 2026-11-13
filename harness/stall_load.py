@@ -117,6 +117,8 @@ class Conn:
         self.host, self.port = host, port
         self.reader: asyncio.StreamReader | None = None
         self.writer: asyncio.StreamWriter | None = None
+        self.server_s = 0.0  # P1 probe: the last response's Response-Time (server begins->ends), seconds
+        self.sent_at = 0.0  # P1 probe: loop time the last request was handed to the socket
 
     async def close(self) -> None:
         if self.writer is not None:
@@ -156,12 +158,14 @@ class Conn:
 
     async def send(self, data: bytes) -> None:
         assert self.writer is not None
+        self.sent_at = asyncio.get_running_loop().time()
         self.writer.write(data)
         await self.writer.drain()
 
     async def response(self) -> tuple[int, bytes]:
         """Read one response; a `Connection: close` or an unframed body closes the connection after it."""
         assert self.reader is not None
+        self.server_s = 0.0
         status_line = await self.reader.readline()
         if not status_line:
             raise HttpError("connection closed")
@@ -182,6 +186,9 @@ class Conn:
                 chunked = True
             elif k == "connection" and "close" in v:
                 close = True
+            elif k == "response-time":
+                with contextlib.suppress(ValueError):
+                    self.server_s = float(v)
         if chunked:
             parts: list[bytes] = []
             while True:
@@ -632,6 +639,7 @@ class LightResult:
     achieved_rate: float
     window_s: float
     unfinished: int
+    probe: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         everything = [v for vs in self.classes.values() for v in vs]
@@ -653,6 +661,7 @@ class LightResult:
             "search": summarize(self.classes["search"]),
             "pair": summarize(self.classes["pair"]),
             "errors": self.counts.as_dict(),
+            "probe": self.probe,
         }
 
 
@@ -682,14 +691,27 @@ async def run_light(
     last_done = [t0]
     completed = [0]
     inflight: dict[int, tuple[float, str]] = {}
+    probe_rows: list[tuple[str, float, float, float, float]] = []  # P1: kind, sched, first send, end, server s
+    gen_lag: list[tuple[float, float]] = []  # P1: (loop time, lateness s) of a 1 ms sleep in the generator
+    probing = [True]
+
+    async def lag_probe() -> None:
+        while probing[0]:
+            t = loop.time()
+            await asyncio.sleep(0.001)
+            gen_lag.append((t, loop.time() - t - 0.001))
+
+    probe_task = loop.create_task(lag_probe())
 
     async def unit(i: int, sched: float, kind: int, doc_id: int, state: str) -> None:
         inflight[i] = (sched, ("get", "search", "pair")[kind])
         conn = await pool.get()
         try:
+            server = 0.0
             if kind == 0:
                 what = "get"
                 status, body = await conn.request("GET", f"/accounts/{doc_id}")
+                server = conn.server_s
             elif kind == 1:
                 what = "search"
                 status, body = await conn.request(
@@ -697,13 +719,21 @@ async def run_light(
                     "/accounts/",
                     json.dumps({"_query": {"contact.state": state}, "_limit": 10}).encode(),
                 )
+                server = conn.server_s
             else:
                 what = "pair"
                 pid = pair_base + i
                 status, body = await conn.request("PUT", f"/accounts/{pid}", body_row)
+                server = conn.server_s
+                first_send = conn.sent_at
                 if status < 300:
                     status, body = await conn.request("GET", f"/accounts/{pid}")
+                    server += conn.server_s
             end = loop.time()
+            if kind != 2:
+                first_send = conn.sent_at
+            if sched - t0 >= warmup:
+                probe_rows.append((what, sched, first_send, end, server))
             counts.add(status, what, body)
             if sched - t0 >= warmup:
                 classes[what].append(int((end - sched) * 1e6))
@@ -739,6 +769,8 @@ async def run_light(
         if sched - t0 >= warmup:
             classes[what].append(int((cutoff - sched) * 1e6))
     unfinished = len(inflight)
+    probing[0] = False
+    await probe_task
     window = max(1e-9, last_done[0] - t0)
     for _ in range(pool.qsize()):
         await pool.get_nowait().close()
@@ -746,7 +778,52 @@ async def run_light(
     # Achieved is the rate the generator really sent at: units issued over the span it took to issue them. A
     # generator that falls behind its schedule misses the target; a slow server shows in the latencies instead.
     achieved = max(0, total - 1) / issue_span if total > 1 else rate
-    return LightResult(classes, counts, total, completed[0], rate, achieved, window, unfinished)
+    res = LightResult(classes, counts, total, completed[0], rate, achieved, window, unfinished)
+    res.probe = probe_split(probe_rows, gen_lag, t0)
+    return res
+
+
+def probe_split(
+    rows: list[tuple[str, float, float, float, float]], gen_lag: list[tuple[float, float]], t0: float
+) -> dict[str, Any]:
+    """P1: per light class, client latency split into generator wait (sched->send), server (Response-Time) and the
+    rest (sockets, the server loop before parse and after `ends`, the generator reading the response)."""
+    out: dict[str, Any] = {}
+    stalls = [(t, d) for t, d in gen_lag if d > 0.005]
+    for kind in ("get", "search", "pair", "all"):
+        rs = [r for r in rows if kind == "all" or r[0] == kind]
+        if not rs:
+            continue
+        lat = [int((e - s) * 1e6) for _, s, _, e, _ in rs]
+        cut = pct(lat, 99) or 0
+        tail = [r for r, x in zip(rs, lat) if x >= cut]
+
+        def parts(sel: list[tuple[str, float, float, float, float]]) -> dict[str, Any]:
+            gw = [int((sd - s) * 1e6) for _, s, sd, _, _ in sel]
+            sv = [int(sv * 1e6) for *_, sv in sel]
+            rest = [int((e - sd - sv) * 1e6) for _, _, sd, e, sv in sel]
+            return {"gen_wait": summarize(gw), "server": summarize(sv), "rest": summarize(rest)}
+
+        # A tail request overlaps a generator stall when a >5 ms stall began inside its [sched - 50 ms, end].
+        hit = sum(1 for _, s, _, e, _ in tail if any(s - 0.05 <= t <= e for t, _ in stalls))
+        out[kind] = {
+            "n": len(rs),
+            "client": summarize(lat),
+            "parts": parts(rs),
+            "tail_n": len(tail),
+            "tail_parts": parts(tail),
+            "tail_with_gen_stall": hit,
+        }
+    out["t0"] = t0
+    lags = [int(d * 1e6) for _, d in gen_lag]
+    out["generator_lag"] = {
+        **summarize(lags),
+        "stalls_over_5ms": len(stalls),
+        "stalls_over_20ms": sum(1 for _, d in stalls if d > 0.02),
+        "stalled_s": round(sum(d for _, d in stalls), 3),
+        "stall_times_s": [[round(t - t0, 2), round(d * 1e3, 1)] for t, d in stalls if d > 0.02][:60],
+    }
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
@@ -761,9 +838,11 @@ class HeavyResult:
     counts: Counts
     by_kind: dict[str, int]
     latencies: dict[str, list[int]]
+    restore_log: list[tuple[float, float, float, float]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
+            "restore_log": self.restore_log,
             "searches": self.searches,
             "restored_docs": self.restored_docs,
             "restore_requests": self.restore_requests,
@@ -789,6 +868,7 @@ async def run_heavy(
     by_kind: dict[str, int] = {}
     lat: dict[str, list[int]] = {}
     restored = [0, 0]
+    restore_log: list[tuple[float, float, float, float]] = []  # P1: (start, body build s, round trip s, server s)
 
     async def search_client(n: int) -> None:
         conn = Conn(host, port)
@@ -812,11 +892,12 @@ async def run_heavy(
         next_id = restore_first_id
         while loop.time() < end_at:
             try:
-                status, body = await conn.request(
-                    "RESTORE",
-                    f"/{restore_index}/",
-                    restore_body(rows, next_id, CHUNK_DOCS),
-                    NDJSON_CT,
+                tb = loop.time()
+                chunk = restore_body(rows, next_id, CHUNK_DOCS)
+                tr = loop.time()
+                status, body = await conn.request("RESTORE", f"/{restore_index}/", chunk, NDJSON_CT)
+                restore_log.append(
+                    (round(tb, 3), round(tr - tb, 4), round(loop.time() - tr, 3), round(conn.server_s, 3))
                 )
                 counts.add(status, "restore", body)
                 if status < 300:
@@ -831,7 +912,9 @@ async def run_heavy(
     jobs = [search_client(n) for n in range(max(1, clients - 1))]
     jobs.append(restore_client())
     await asyncio.gather(*jobs)
-    return HeavyResult(sum(by_kind.values()), restored[0], restored[1], counts, by_kind, lat)
+    res = HeavyResult(sum(by_kind.values()), restored[0], restored[1], counts, by_kind, lat)
+    res.restore_log = restore_log
+    return res
 
 
 # ---------------------------------------------------------------------------------------------
