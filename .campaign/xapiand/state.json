@@ -19275,8 +19275,8 @@
     "x7-loop-fix-c": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-13T06:23:56",
-          "base": "a2e5fac771d1ccbbd1f5d72c01ace47d373ccf0c",
+          "at": "2026-11-13T06:54:43",
+          "base": "88139a40eb84748b40bc1f05f286437a6fb42df8",
           "blobs": {
             "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
             "harness/async_allowlist.tsv": "100644:6b3d58f68a88ea25dda2933ca22c822984671cc6",
@@ -19288,7 +19288,7 @@
             "tests/test_loop_yield.cc": "100644:8525a8fd317ecff5e15336cad87b9902019ab17e"
           },
           "by": "review",
-          "commit": "be90536b2282e3f8dd9ecc5d964369d8104e43db",
+          "commit": "4c84091ea8556ec7c75122b6e67ac4b0aaf02ad9",
           "criteria": "602a9cccdeab10f8",
           "diffs": {
             "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
@@ -19449,7 +19449,7 @@
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-13T06:23:56",
+      "updated": "2026-11-13T06:54:43",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
