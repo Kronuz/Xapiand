@@ -113,6 +113,8 @@ class HttpError(Exception):
 
 
 class Conn:
+    split_write = False  # P1 H1: write a large body apart from the head (no 20 MB concatenation on the loop)
+
     def __init__(self, host: str, port: int) -> None:
         self.host, self.port = host, port
         self.reader: asyncio.StreamReader | None = None
@@ -143,7 +145,11 @@ class Conn:
 
     async def _request(self, method: str, path: str, body: bytes, content_type: str) -> tuple[int, bytes]:
         await self.connect()
-        await self.send(self.head(method, path, len(body), content_type) + body)
+        head = self.head(method, path, len(body), content_type)
+        if Conn.split_write and len(body) > 65536:  # no 20 MB concatenation on the loop
+            await self.send(head, body)
+        else:
+            await self.send(head + body)
         return await self.response()
 
     async def connect(self) -> None:
@@ -156,10 +162,12 @@ class Conn:
             head += f"Content-Type: {content_type}\r\n"
         return head.encode() + b"\r\n"
 
-    async def send(self, data: bytes) -> None:
+    async def send(self, data: bytes, more: bytes = b"") -> None:
         assert self.writer is not None
         self.sent_at = asyncio.get_running_loop().time()
         self.writer.write(data)
+        if more:
+            self.writer.write(more)
         await self.writer.drain()
 
     async def response(self) -> tuple[int, bytes]:
@@ -860,6 +868,7 @@ async def run_heavy(
     duration: float,
     restore_index: str,
     restore_first_id: int,
+    prebuilt: dict[int, bytes] | None = None,
 ) -> HeavyResult:
     """Closed-loop heavy clients; one is the RESTORE stream."""
     loop = asyncio.get_running_loop()
@@ -893,7 +902,11 @@ async def run_heavy(
         while loop.time() < end_at:
             try:
                 tb = loop.time()
-                chunk = restore_body(rows, next_id, CHUNK_DOCS)
+                chunk = (
+                    prebuilt.pop(next_id)
+                    if prebuilt and next_id in prebuilt
+                    else restore_body(rows, next_id, CHUNK_DOCS)
+                )
                 tr = loop.time()
                 status, body = await conn.request("RESTORE", f"/{restore_index}/", chunk, NDJSON_CT)
                 restore_log.append(
@@ -1109,6 +1122,17 @@ async def phase(
 ) -> dict[str, Any]:
     """One phase: light at `light_rate` (0: none), heavy clients if `heavy`, a held overload of kind `held`."""
     a = ctx.args
+    # P1 H1: the RESTORE bodies built before the clock starts, so the generator's loop never builds one mid-phase.
+    prebuilt = (
+        {
+            ctx.restore_first_id + k * CHUNK_DOCS: restore_body(
+                ctx.rows, ctx.restore_first_id + k * CHUNK_DOCS, CHUNK_DOCS
+            )
+            for k in range(a.restore_prebuilt)
+        }
+        if heavy and a.restore_prebuilt > 0
+        else None
+    )
     before = await scrape(ctx.ctl)
     cpu_before = ctx.node.cpu_s()
     faults_before = thread_major_faults(ctx.node.pid)
@@ -1152,6 +1176,7 @@ async def phase(
                 duration + 0.3,
                 ctx.restore_index,
                 ctx.restore_first_id,
+                prebuilt=prebuilt,
             )
         )
         jobs.append(heavy_task)
@@ -1483,6 +1508,12 @@ def main() -> int:
     )
     ap.add_argument("--duration", type=float, default=30.0)
     ap.add_argument("--light-conns", type=int, default=64)
+    ap.add_argument(
+        "--restore-prebuilt",
+        type=int,
+        default=0,
+        help="P1 H1: build this many RESTORE bodies before each heavy phase and write large bodies apart from their head",
+    )
     ap.add_argument("--heavy-clients", type=int, default=0, help="default: 4x the reactor count")
     ap.add_argument(
         "--restore-into",
@@ -1540,6 +1571,7 @@ def main() -> int:
             resource.setrlimit(
                 resource.RLIMIT_NOFILE, (want if hard == resource.RLIM_INFINITY else min(want, hard), hard)
             )
+    Conn.split_write = args.restore_prebuilt > 0
     return asyncio.run(amain(args))
 
 
