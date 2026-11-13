@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-175900-eaaa36 261112-175902-15a8eb (X4, lead's Q3 call: before the design review)
+State: ready for review (A1, lens design/concurrency): `docs/design/loop-scheduling.md`, X4 included
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -123,6 +123,14 @@ tasks pass K.
   heavy 32). On return: X4 into the note's evidence, D6 (parked or not, with numbers), Q3 restated as a
   recommendation; commit; "ready for review".
 
+- X4 macOS 261112-175900-eaaa36 (16 off vs 8 + lane): light p99 0.709, 0.844 (48.2 -> 36.9 ms; bound 8.1-9.0):
+  MISS 4x; lag p99 median 3.07 -> 2.56-3.07, max 5.12 -> 2.56-3.07: MISS 2.5-3x; heavy 0.952, 0.961.
+- X4 VM 261112-175902-15a8eb (8 off vs 4 + lane): light p99 0.574, 0.434 (17.0/20.9 -> 9.8/9.0 ms; bound 10.8-11.3):
+  T5 PASS; heavy 0.646, 0.626; T4 hidden by the 2.05 ms floor.
+- D6 ruled: one loop per physical core with the lane (0.957x heavy on SMT, none without); half the CPUs rejected
+  (0.636x). Q3 restated as the owner's recommendation; T4/T5 on macOS recorded as misses, next step a gate run
+  with the generator off the server's CPUs.
+
 ## Next
 
 1. The design review (lens design/concurrency) of `docs/design/loop-scheduling.md`; fold findings by id.
@@ -137,7 +145,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
+| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
 
 ## Result
 

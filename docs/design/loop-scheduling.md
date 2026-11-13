@@ -6,7 +6,7 @@
 
 Question. With fix (c) in place, x7-gate's T4 (every HTTP loop's p99 lag within 1,024 us) and T5 (loaded light
 p99 within 2x unloaded p99 + 1 ms) still miss: lag p99 3.07-6.14 ms, light p99 48.3/52.8 ms
-(`docs/perf/x7-loop-stalls.md` on x7-loop-fix-c, "At fix (c)"). The thread census ("Parked: thread placement",
+(`docs/perf/x7-loop-stalls.md` on x7-loop-fix-c, "At fix (c)"). The thread census ("Thread placement",
 below) shows that no thread count or priority passes them, because a light request or a lag tick waits behind
 heavy turns on its own loop. Which policy inside the loop puts light work first? How does a request become heavy
 without a knob? What bounds a heavy request's wait? What replaces `docs/design/phase7c.md` D2's "ordinary posts in
@@ -30,8 +30,17 @@ Loaded light p99 is 0.74x on Linux, but T4 and T5 still miss:
 - Linux: light p99 is 1.5-1.7x over its bound.
 
 What is left on macOS is the tail of requests that spend no slice at all: GET p99 35-92 ms, with a server-side p99
-up to 32 ms. It comes from the OS descheduling runnable loops, which no in-loop order can fix. Q3 proposes the one
-experiment that decides how to close it: the lane combined with the parked one loop per physical core.
+up to 32 ms. It comes from the OS descheduling runnable loops, which no in-loop order can fix.
+
+X4 adds fewer loops to the lane. On macOS, the lane at 8 loops against today's code at 16 gives:
+
+- light p99 0.78x (48.2 to 36.9 ms);
+- worst-loop lag p99 down from 5.12 to 2.56-3.07 ms;
+- heavy searches 0.957x. The lane offsets most of the 0.785x that 8 loops cost alone (E2).
+
+T4 and T5 still miss on macOS, by 2.5-3x and 4x. On the Linux VM, 4 loops with the lane pass T5 (light p99 9.0-9.8
+ms against a bound of about 11.2 ms), but heavy searches drop to 0.636x. D6 takes one loop per physical core with
+the lane: 0.957x heavy on SMT hosts and no change on others. Q3 asks the owner about the rest.
 
 ## How a loop orders work today
 
@@ -193,14 +202,35 @@ behaviour for the other users of `task::budget` and `asio_scheduler`: Detent, pr
   - `src/engine/host.h:82` and `src/engine/host_asio.h:52`, `:119-154`: the Host forwards a heavy post, and the
     debug-only `Counted` pump keeps each entry's lane.
   - The Kronuz/task and Kronuz/http pins in `CMakeLists.txt`.
-  - `docs/design/phase7c.md` (D2's bullet, D4 above).
+  - `docs/design/phase7c.md` (D2's bullet, D4 above; C5's "one reactor per CPU" becomes "per physical core",
+    D6).
+  - `src/opts.cc` (D6's core count), with a unit test under `tests/` of the topology parse: two threads per core,
+    one per core, an affinity mask that splits a core, and unreadable topology. Its mutant returns the logical
+    count.
   - `tests/test_loop_yield.cc` (A4).
 
-**D6. The loop count stays at one per logical CPU.** One loop per physical core is parked (owner, D79): E2
-measured 0.785x heavy searches for a lag p99 that still misses. The section below keeps its evidence. Q3 asks
-whether to combine it with the lane, since T4 and T5 still miss with the lane alone (X2, X3).
+**D6. With the lane, one loop per physical core, not per logical CPU** (un-parked by X4, if the owner agrees: Q3).
 
-## Evidence for the lane (X2, X3)
+- Alone, 8 loops on the Mac's 8 cores (16 logical CPUs) cost 0.785x heavy searches (E2).
+- With the lane they cost 0.957x (X4: 0.952 and 0.961 per pair). They buy loaded light p99 0.78x and a worst-loop
+  lag p99 of 2.56-3.07 ms against 5.12.
+- On a host without SMT the count is unchanged.
+
+The reactor count defaults to the physical core count, and `--processors` still caps it. Detection is one function
+in `src/opts.cc` that sets `num_http_servers` (`:380`):
+
+- macOS: `sysctlbyname("hw.physicalcpu")`.
+- Linux: the distinct `(physical_package_id, core_id)` pairs under `/sys/devices/system/cpu/cpu*/topology/`, over
+  the CPUs in `sched_getaffinity`.
+- FreeBSD: `kern.smp.cores`.
+- On failure: today's logical count.
+
+Readers, WAL and fsync threads keep following the logical count.
+
+Alternative, and why it loses: half the logical CPUs everywhere. On the VM, 4 loops with the lane pass T5, but at
+0.636x heavy searches (X4). That cost buys one gate row, so it is not a default.
+
+## Evidence for the lane (X2-X4)
 
 All three runs are exclusive jobs of at most 10 minutes. Each is an ABBA of today's policy (off) against the lane
 at K = 8 (lane), on the fixed prototype Xapiand:3c064618a: the macOS build is job 261112-170140-f2c47f, the VM
@@ -249,14 +279,49 @@ What the numbers say:
    runnable time. The client is also one Python process on the same host, and its own delay counts in T5.
 3. T4 misses on macOS by the same cause. The lag p99 median stays at 4.1 ms, and only the worst loop improves
    (7.2 to 4.1-5.1 ms). On the VM, the 2.05 ms idle floor hides T4.
-4. What closes them is fewer runnable loops than CPUs, combined with the lane. E1's 8-loop arm cut the loops'
-   ready share from 32% to 12% and the lag p99 to 2.56 ms, at 0.79x heavy throughput (E2). That arm still had
-   light searches queueing behind heavy turns, which the lane removes, and the lane's 1.14x heavy gain may pay back
-   part of that cost. Not measured: Q3.
+4. Fewer runnable loops than CPUs, combined with the lane, is what X4 measures next.
+
+X4, the lane at K = 8 with fewer loops, as an ABBA against today's code at today's loop count. There is one
+exclusive job of at most 10 minutes per platform, on the same binaries as X2 and X3.
+
+macOS, 16 loops off against 8 loops with the lane, 64 heavy clients (job 261112-175900-eaaa36):
+
+| Loaded phase | Off, 16 loops (arms 1, 4) | Lane, 8 loops (arms 2, 3) | Lane/off per pair |
+|---|---|---|---|
+| Light query p99 (T5 bound 8.1-9.0 ms) | 55.7, 40.7 ms | 39.5, 34.4 ms | 0.709, 0.844: MISS by 4.1-4.4x |
+| Light search p50 / p99, client | 11.0 / 72.1, 10.8 / 44.4 ms | 3.6 / 41.2, 3.5 / 37.5 ms | p50 0.33x |
+| GET by id p99, client | 41.0, 23.2 ms | 36.9, 24.4 ms | flat |
+| Loop lag p99 median (max), T4 edge 1,024 us | 3.07 (5.12), 3.07 (5.12) ms | 3.07 (3.07), 2.56 (2.56) ms | MISS by 2.5-3x; worst loop 0.5-0.6x |
+| Lag p99.9 median | 6.14, 7.17 ms | 4.61, 4.10 ms | about 0.65x |
+| Heavy searches | 23,255, 23,407 | 22,132, 22,502 | 0.952, 0.961 |
+
+Linux VM, 8 loops off against 4 loops with the lane, 32 heavy clients (job 261112-175902-15a8eb):
+
+| Loaded phase | Off, 8 loops (arms 1, 4) | Lane, 4 loops (arms 2, 3) | Lane/off per pair |
+|---|---|---|---|
+| Light query p99 (T5 bound 10.8-11.3 ms) | 17.0, 20.9 ms | 9.8, 9.0 ms | 0.574, 0.434: PASS |
+| GET by id p99, client | 11.1, 13.4 ms | 5.3, 6.3 ms | about 0.5x |
+| Loop lag p99 median (max) | 4.10 (10.24), 5.63 (10.24) ms | 4.10 (4.10), 4.10 (5.12) ms | idle floor 2.05 ms hides T4 |
+| Heavy searches | 26,959, 26,985 | 17,426, 16,901 | 0.646, 0.626 |
+
+What X4 says:
+
+5. On macOS, the lane's heavy gain offsets most of fewer loops' cost: 0.957x heavy with the lane at 8 loops,
+   against 0.785x for 8 loops alone. Light p99 improves 0.78x and the worst loop's lag about 2x, but T4 and T5
+   still miss: lag p99 2.56-3.07 ms against 1,024 us, light p99 34-40 ms against about 8.5 ms. The GET tail
+   (0 slices) stays at 23-41 ms, so loops are still off their CPUs, and 8 loops plus the workers plus the client
+   still share 16 logical CPUs.
+6. On the VM, half the CPUs as loops passes T5 with the lane, and the light tail halves, GET included. The cost is
+   0.636x heavy throughput, because that host has no SMT siblings to give the loops.
+7. What would close T4 and T5 on macOS is not in the loop. The candidates are a gate whose load generator does not
+   share the server's 16 logical CPUs (today one Python process on the same host measures T5), or fewer loops
+   than cores, at the VM's 0.64x-scale heavy cost. Neither has been measured on macOS here: Q3.
 
 ## Contracts
 
 - No API, format or wire change. No option: K is a constant beside `REQUEST_SLICE`.
+- D6 changes one default: the reactor count is the physical core count, not the logical CPU count, and
+  `--processors` still caps it. `GET /:info`'s `num_http_servers` shows the count in use.
 - Kronuz/task: `budget`'s third parameter defaults to today's policy. `post_demoted` becomes callable from any
   thread, a widening that keeps every existing caller correct.
 - `demoted()` and Xapiand's `scheduler_demoted_peak` metric count heavy handles queued (D4).
@@ -293,30 +358,32 @@ What the numbers say:
   it, not the host's speed relative to the loop count.
 - **Q2 (review).** Count whole spent slices (measured, simplest) or accumulated CPU per resume (exact for many
   short turns)? Recommendation: slices. A short turn already yields within a slice.
-- **Q3 (owner).** With the lane, T4 and T5 still miss: on macOS by 4x (lag) and 7-11x (light p99), on Linux by
-  1.5-1.7x (light p99). The remainder is runnable loops off their CPUs, which is the parked D6 question again.
-  Options:
-  - (a) Land the lane alone. It is a measured win (light search p50 0.45x, heavy 1.14x, RESTORE flat). Record
-    T4 and T5 as misses.
-  - (b) First run one exclusive job of at most 10 minutes, X4: an ABBA of today's code (16 loops, lane off)
-    against the lane at 8 loops on macOS, and 4 loops on the VM. Take D6's one loop per physical core only if
-    X4 passes T5 or T4 at no worse than 0.9x heavy throughput.
-  - (c) Accept T4 and T5 as unreachable on a 16-thread host that runs its own load generator, and change the
-    gate.
+- **Q3 (owner): un-park fewer loops, and at what heavy cost?** Recommendation:
+  1. Land the lane (D1-D5) and one loop per physical core (D6) together. On SMT hosts this costs 0.957x heavy
+     searches against today (X4; the lane alone is 1.14x, X2). It buys light-search p50 0.33x, loaded light p99
+     0.78x and the worst loop's lag about 2x lower. On hosts without SMT it is the lane alone: flat heavy, light
+     p99 0.74x (X3).
+  2. Do not take half the CPUs as loops. It passes T5 on the VM, but at 0.636x heavy throughput.
+  3. Record T4 and T5 on macOS as misses: lag p99 2.56-3.07 ms against 1,024 us, light p99 34-40 ms against
+     about 8.5 ms. Their remainder is loops off their CPUs, shared with the workers and with the gate's own load
+     generator. Before any further mechanism, rerun x7-gate's T4/T5 with the generator off the server's CPUs (on
+     the VM against the host, or pinned to its own cores), so the gate measures the server.
 
-  Recommendation: (a), then (b). The lane is needed under either loop count. X4 is the single experiment that
-  says whether placement is worth its cost now that the lane recovers heavy throughput.
+  Options the owner may prefer instead:
+  - (a) The lane alone, with loops kept at one per logical CPU: heavy 1.14x, macOS light p99 unchanged.
+  - (b) Change the gate's T4/T5 bounds for a host that runs its own client.
 
 ## First steps after the review
 
 1. Library quest `task-lanes` (Kronuz/task, plus the one line in Kronuz/http): D5's library half and the
    asio_test tests, landed with the default unchanged.
-2. This quest: bump both pins, then make D5's Xapiand changes, the `test_loop_yield` tests, phase7c.md's D2
-   bullet, then the A2 and A3 jobs on the merge with x7-loop-fix-c.
+2. This quest: bump both pins, then make D5's Xapiand changes and, if Q3 keeps D6, the core count in `src/opts.cc`
+   with its unit test. Then the `test_loop_yield` tests, phase7c.md's D2 bullet and C5, and the A2 and A3 jobs on
+   the merge with x7-loop-fix-c.
 
-## Parked: thread placement (the census, E1-E3)
+## Thread placement: the census (E1-E3)
 
-Kept as the option D6 parks. Method: an experiment build (scratch Xapiand:c4f11fd14 on macOS, Xapiand:560b48426
+The evidence behind D6. Method: an experiment build (scratch Xapiand:c4f11fd14 on macOS, Xapiand:560b48426
 on Linux) adds a sampler thread. Every 2-6 ms it reads each thread's run state, CPU time and priority, plus the
 load generator's. Asio's handler tracking marks a loop as "in a handler", and Linux adds `schedstat`. "Ready" is
 the time a thread is runnable but off a CPU. The load is x7-gate's `harness/stall_load.py` (20,000 `accounts`,
@@ -366,5 +433,6 @@ Scratch branch `scratch/loop-scheduling` (worktree `.scratch/merge`, never pushe
 - Lane prototype: Xapiand:3c064618a, a patched Kronuz/task in `harness/experiments/task-lane`, built with
   `-DFETCHCONTENT_SOURCE_DIR_TASK=` and `-DLS_CENSUS_HEADER=`; `LS_LANE_K` sets K, unset is today's policy.
 - Per-request stats: `LS_REQ_OUT`, read by `harness/experiments/lane_report.py`.
-- Experiments: `x1_lane.sh` (X1), `x2_ab.sh` (X2a, X2b), `vm_lane.sh` (X3).
+- Experiments: `x1_lane.sh` (X1), `x2_ab.sh` (X2a, X2b, and X4 with `--processors=8`), `vm_lane.sh` (X3, and X4
+  with `--processors=4`), at scratch Xapiand:1316730f5.
 - Census: `ls_report.py`, `vm_census.sh`, `e2_ab.sh`.
