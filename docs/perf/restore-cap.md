@@ -103,5 +103,8 @@ RESTORE docs/s, T12 loadtest, mirrored (job 261113-025246-e60e91):
 | uncapped (5 children + 10) | 8,280, 8,312 | 8,296 | 1.37x | 1.81x |
 | one child + 14 prepares | 5,803, 5,667 | 5,735 | 0.94x | 1.25x |
 
-Waiting on job 261113-025249-be0efa: T4/T5 master, one child and uncapped in mirrored order, the same-round master
-baseline for light p99.
+Waiting on job 261113-030545-b38c8b (it replaces the cancelled 261113-025249-be0efa): T4/T5 master, one child and
+uncapped in mirrored order, the same-round master baseline for light p99. Each run keeps its data
+(`stall_load.py --keep-workdir --seg-snapshots`, added on this branch), and `layout.py` reads `accounts` as the
+loaded phase left it: per shard, segments, kinds, blocks and docs per kind, and segments merged away or new during
+the phase.
