@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: waiting on jobs 261113-082922-3f2ebf 261113-082930-72d60f 261113-082932-b0d7dd 261113-082935-ecda23 261113-082937-a0d792 261113-082940-a6258e 261113-082942-7818c1 261113-082945-4f215a 261113-082947-f7da32 261113-082953-82e3f3
+State: waiting on jobs 261113-083755-c5e4b4 261113-083755-2de9cb 261113-083758-e58dc8 261113-083800-510abb 261113-083802-c6d044 261113-083805-101e1b 261113-083807-92969a 261113-083809-734db4 261113-083812-67e343 261113-083814-ba7801
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on jobs at 2890b08db (branch pushed for CI):
+Waiting on jobs at 8d61b1913 (branch pushed for CI):
 
-- 261113-082922-3f2ebf build-test, tagged A1, A2, A4, A6, A7.
-- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-082930-72d60f;
-  A2 no-persist 261113-082932-b0d7dd, no-replay 261113-082935-ecda23 (test_pool), no-advance 261113-082937-a0d792,
-  no-stride 261113-082940-a6258e (test_node); A7 hash-route 261113-082942-7818c1; A6 no-advance 261113-082945-4f215a.
-- A5: release builds master 261113-080915-1d19d5 (done), head 261113-082947-f7da32, then the exclusive ABBA
-  261113-082953-82e3f3 (.scratch/ab/ab.sh, arms pre/cur).
+- 261113-083755-c5e4b4 build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the build-test): A1 named-docid 261113-083755-2de9cb;
+  A2 no-persist 261113-083758-e58dc8, no-replay 261113-083800-510abb (test_pool), no-advance 261113-083802-c6d044,
+  no-stride 261113-083805-101e1b (test_node); A7 hash-route 261113-083807-92969a; A6 no-advance 261113-083809-734db4.
+- A5: release builds master 261113-080915-1d19d5 (done), head 261113-083812-67e343, then the exclusive ABBA
+  261113-083814-ba7801 (.scratch/ab/ab.sh, arms pre/cur).
+
+Round 3 (2890b08db): build-test 261113-082922-3f2ebf failed only on async_check (`async_allowlist.tsv:25:
+src/database/shard.cc [sync_wait] covers 8 hit(s), the row allows 7`): `open_blocking`'s read of `_id_high`. Kept
+(R7) with its own row; `harness/async_check.sh --strict` passes on the worktree (static scan, exit 0).
 
 Round 2 (d174690aa): build-test 261113-081918-7c337f failed only on the id key. Probe lines, test_node.cc:2426:
 `id 4294967297: its key names 4311744512, as a float 4311744512` and `id 1099511627779: its key names
@@ -67,6 +71,10 @@ license-closure's replacement could make the key exact to 2^53, and MAX_NUMERIC_
 
 ## Rulings I made
 
+- R7 `open_blocking` reads `_id_high` with `engine::sync_wait`: it runs in the catalog's open chore on a WorkPool
+  worker before the replay (never the loop), and strata's `metadata()` finds the key in the open view's map without
+  suspending or I/O. Own allowlist row (harness/async_allowlist.tsv:25) rather than a raised count on the general one.
+
 - R1 The id counter is one high-water mark per shard (`_id_high` metadata), not 1024 stored counters: every bucket's
   counter is derived from it, which is what keeps automatic ids above every numeric id present (contract) while D85's
   per-bucket stride holds. Equivalent under reshard (move a bucket: raise the target's mark).
@@ -76,7 +84,7 @@ license-closure's replacement could make the key exact to 2^53, and MAX_NUMERIC_
   never overwrites.
 - R4 Numeric ids with buckets are integers 1..2^32-1, the range the numeric key names exactly (2^32 + 1's key names
   2^32 + 2^24, job 261113-081918-7c337f); others hash. Was 1..2^32-2 (docid range). A counter at 2^32 - 1 issues
-  nothing: a POST then fails (invalid), documented in index-api.md. Owner may want a different policy (lead).
+  nothing: a POST then fails (invalid), documented in index-api.md. Owner decision P2 (PLAN.md) pending; the lead keeps this bound as default (a).
 - R5 `DatabaseHandler::replace_document(string_view)` (`&N` creating at a caller's docid) removed: no callers.
 - R6 WAL replay raises the counter from the replayed document's stored `_id` (engine::Document has no key getter, and
   src/engine/document.h is outside the file set).
