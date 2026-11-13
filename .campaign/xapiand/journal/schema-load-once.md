@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-State: waiting on jobs 261112-224936-c667cc (A1 mutant), 261112-224941-6dba3b (A2 ASan x20), 261112-224945-2e1a69 (A3 build-test). Lead's change: settings flight in scope; fixed with the same mechanism, jobs rerun at the new head.
+Waiting on the jobs in the State line; when they finish, paste the Evidence table, write the Result, set State to ready for review.
 
 ## Next
 
