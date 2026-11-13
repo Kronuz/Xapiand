@@ -4943,6 +4943,8 @@
       "after": [
         "task-lanes"
       ],
+      "base": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+      "branch": "quest/xapiand/http-lane",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4959,6 +4961,7 @@
         "test/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/http-lane",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 7c",
@@ -4966,9 +4969,10 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/http",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "http resumes a waiter inline only for a light reference",
-      "updated": "2026-11-12T20:07:23"
+      "updated": "2026-11-12T22:22:09",
+      "worktree": "../http-wt/xapiand/http-lane"
     },
     "http-phase7c-l3": {
       "accepted": {},
