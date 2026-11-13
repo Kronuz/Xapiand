@@ -5631,7 +5631,26 @@
       "updated": "2026-11-08T15:41:29"
     },
     "loop-scheduling": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-12T20:06:28",
+          "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+          "blobs": {
+            "docs/design/loop-scheduling.md": "100644:6cd44554da738f3b89bd3db335dfe356178088e9"
+          },
+          "by": "review",
+          "commit": "d69ac733f5cdd828a0d1d3602be2169fd607bf9b",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "docs/design/loop-scheduling.md": "eebaf2045ff204e2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3d533e1a690f0044f9e73018523e6686d0d62983",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "x7-loop-fix-c"
       ],
@@ -5651,7 +5670,8 @@
       ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "correctness",
+        "design"
       ],
       "milestone": "Phase 7c",
       "needs": [],
@@ -5660,7 +5680,7 @@
       "risk": "high",
       "status": "review",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T18:22:45",
+      "updated": "2026-11-12T20:06:28",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
