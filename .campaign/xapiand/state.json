@@ -5729,7 +5729,13 @@
       ],
       "consumes": [],
       "files": [
-        "docs/design/loop-scheduling.md"
+        "docs/design/loop-scheduling.md",
+        "docs/design/phase7c.md",
+        "src/server/search_views.cc",
+        "src/engine/host.h",
+        "src/engine/host_asio.h",
+        "CMakeLists.txt",
+        "tests/test_loop_yield.cc"
       ],
       "landed": [],
       "lenses": [
@@ -5743,7 +5749,7 @@
       "risk": "high",
       "status": "review",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T20:06:28",
+      "updated": "2026-11-12T22:32:49",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
