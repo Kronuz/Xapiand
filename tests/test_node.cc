@@ -1651,14 +1651,14 @@ static std::string number(const std::string& id) { return id; }
 static std::string quoted(const std::string& id) { return "\"" + id + "\""; }
 
 // A document id 0 is the document 0, not a new id. Negative, the largest, and those beside them are stored as
-// themselves too, and a keyword id "0" or "00" is its own. An id above the docids, such as 2^32 - 1, still leaves
-// new ids to issue after it.
+// themselves too, and a keyword id "0" or "00" is its own. An id above the docids, such as 2^62, still leaves new
+// ids to issue after it.
 static void test_document_ids_are_themselves() {
 	Watchdog watchdog("document ids are themselves", 240s);
 	for (const int shards : shard_counts) {
 		const auto at = "_s" + std::to_string(shards);
 		create_index("ids_int" + at, shards);
-		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967000", "4294967297", "9223372036854775807"}, number, true);   // -1 first: the ids are integers
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967000", "4294967297", "4611686018427387904"}, number, true);   // -1 first: the ids are integers
 		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
 		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
 		create_index("ids_kw" + at, shards);
@@ -2418,17 +2418,6 @@ static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
 	CHECK_EQ(next_auto_id(1023, 2, 3), 1027u);
 	CHECK_EQ(next_auto_id(7, 0, 1), 8u);
 	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
-
-	// An issued id's key is the one a PUT of that id names, as an integer or a positive, and it names that id again,
-	// up to MAX_NUMERIC_ID. Past it, 2^32 + 1's key names 2^32 + 2^24, so such ids are placed by hash.
-	for (const std::uint64_t id : {std::uint64_t{1}, std::uint64_t{1023}, (std::uint64_t{1} << 24) + 1, (std::uint64_t{1} << 31) + 5, MAX_NUMERIC_ID - 1, MAX_NUMERIC_ID}) {
-		const auto key = numeric_key(id);
-		CHECK_EQ(key, document_key(Serialise::integer(static_cast<std::int64_t>(id)), 'N'));
-		CHECK_EQ(numeric_id(key), id);
-		CHECK_EQ(numeric_id(document_key(Serialise::floating(static_cast<long double>(id)), 'N')), id);   // a float id's key
-	}
-	CHECK_EQ(numeric_id(document_key(Serialise::integer(std::int64_t{1} << 32), 'N')), 0u);
-	CHECK_EQ(numeric_id(document_key(Serialise::integer((std::int64_t{1} << 32) + 1), 'N')), 0u);
 }
 
 // A lookup by id reads the shard the id routes to first: over 3 shards a GET of an existing id reads one key in one
@@ -2464,6 +2453,160 @@ static void test_a_lookup_by_id_reads_one_shard() {
 	CHECK(success(call("POST", path + "?commit", R"({"n":"p"})")));
 	CHECK_EQ(DatabaseHandler::key_reads.load() - before_post, 0u);
 	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 37u);
+}
+
+// ---- exact id keys (docs/design/exact-id-keys.md): a numeric id's key is its number, exactly ----
+
+// Each id answers with its own document by GET and by a term search on `_id`, and the index holds `count`.
+static void ids_are_their_own(const std::string& path, const std::vector<std::string>& ids, std::size_t count) {
+	for (const auto& id : ids) {
+		const auto got = call("GET", path + id);
+		CHECK_EQ(got.status, 200);
+		CHECK_EQ(text_of(got, "n"), id);
+		CHECK_EQ(text_of(got, "_id"), id);
+		const auto found = call("SEARCH", path + "?volatile", R"({"_query":{"_id":)" + id + "}}");
+		CHECK_EQ(found.status, 200);
+		CHECK(hits_of(found) == std::vector<std::string>{id});
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), count);
+}
+
+// Pairs of ids whose keys were one under the codec that kept 2^32 integers exact (2^32 + 1's key named 2^32 + 2^24)
+// stay separate documents through PUT, GET, a term search on `_id`, DELETE and RESTORE, across reopens, over 1 and
+// 3 shards, in an index whose ids are integers and in one whose ids are positive.
+static void test_ids_that_shared_a_key_are_separate_documents() {
+	Watchdog watchdog("ids that shared a key are separate documents", 240s);
+	const std::vector<std::pair<std::string, std::string>> integers{
+		{"4294967297", "4311744512"},               // 2^32 + 1 and 2^32 + 2^24
+		{"1099511627779", "1099561959424"},         // 2^40 + 3 and 2^40 + 3 * 2^24
+		{"9007199254740991", "9007199254740993"},   // 2^53 - 1 and 2^53 + 1
+	};
+	auto positives = integers;
+	positives.emplace_back("9223372036854775808", "18446744073709551615");   // 2^63 and 2^64 - 1
+	for (const int shards : {1, 3}) {
+		for (const bool positive : {false, true}) {
+			const auto index = std::string(positive ? "exact_pos" : "exact_int") + "_s" + std::to_string(shards);
+			const auto path = "/" + index + "/";
+			create_index(index, shards, positive ? R"({"_type":"object","_id":{"_type":"positive"}})" : "");
+			const auto& pairs = positive ? positives : integers;
+			std::vector<std::string> ids;
+			for (const auto& [a, b] : pairs) {
+				ids.push_back(a);
+				ids.push_back(b);
+			}
+			for (const auto& id : ids) {
+				CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":")" + id + R"("})").status, 204);
+			}
+			for (const auto& id : ids) {
+				CHECK_EQ(version_of(call("GET", path + id)), 1);   // written once: no other PUT landed on it
+			}
+			ids_are_their_own(path, ids, ids.size());
+			reopen_index(index);
+			ids_are_their_own(path, ids, ids.size());
+
+			// Deleting one of each pair leaves the other; a RESTORE brings it back as itself.
+			std::string body;
+			for (const auto& [a, b] : pairs) {
+				CHECK_EQ(call("DELETE", path + a + "?commit").status, 204);
+				CHECK_EQ(call("GET", path + a).status, 404);
+				CHECK_EQ(text_of(call("GET", path + b), "n"), b);
+				body += R"({"_id":)" + a + R"(,"n":")" + a + R"("})" "\n";
+			}
+			CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), pairs.size());
+			CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+			ids_are_their_own(path, ids, ids.size());
+			reopen_index(index);
+			ids_are_their_own(path, ids, ids.size());
+			for (const auto& [a, b] : pairs) {
+				CHECK_EQ(version_of(call("GET", path + b)), 1);   // neither the DELETE nor the RESTORE touched it
+			}
+		}
+	}
+
+	// The keys themselves: one per integer, an integer's and an equal float's are one, and each reads back as itself.
+	required_spc_t floating;
+	floating.set_type(FieldType::floating);
+	for (const auto& [a, b] : positives) {
+		const auto ka = numeric_key(std::stoull(a));
+		const auto kb = numeric_key(std::stoull(b));
+		CHECK_NE(ka, kb);
+		CHECK_TRUE(ka.size() <= 11 && kb.size() <= 11);   // 'N' and at most sortable::max_size bytes
+		CHECK_EQ(Unserialise::id(std::string_view(ka).substr(1)).value_or(0), std::stoull(a));
+		CHECK_EQ(Unserialise::id(std::string_view(kb).substr(1)).value_or(0), std::stoull(b));
+	}
+	CHECK_EQ(document_key(Serialise::id(floating, MsgPack(1099511627776.0)), 'N'), numeric_key(std::uint64_t{1} << 40));
+	CHECK_FALSE(Unserialise::id(Serialise::id(floating, MsgPack(1.5))).has_value());
+}
+
+// Automatic ids pass 2^32: a counter at 2^32 - 1 issues 2^32 and on, each in the shard owning its bucket (D85), across
+// a reopen. The counter's bound is MAX_NUMERIC_ID = 2^63 - 1, the largest id an integer `_id` holds: an id there
+// leaves none to issue, while one above it (2^63, positive ids) is placed by hash and leaves the counter alone.
+static void test_new_numeric_ids_pass_two_to_the_thirty_two() {
+	Watchdog watchdog("new numeric ids pass 2^32", 240s);
+	constexpr std::uint64_t two32 = std::uint64_t{1} << 32;
+	CHECK_EQ(MAX_NUMERIC_ID, (std::uint64_t{1} << 63) - 1);
+	{
+		const std::string index = "past32_s1";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(two32 - 1) + "?commit", R"({"n":"high"})").status, 204);
+		CHECK_EQ(post(path, "a"), two32);
+		CHECK_EQ(post(path, "b"), two32 + 1);
+		reopen_index(index);
+		CHECK_EQ(post(path, "c"), two32 + 2);
+		for (const auto& [id, n] : std::map<std::uint64_t, std::string>{{two32 - 1, "high"}, {two32, "a"}, {two32 + 1, "b"}, {two32 + 2, "c"}}) {
+			const auto got = call("GET", path + std::to_string(id));
+			CHECK_EQ(text_of(got, "n"), n);
+			CHECK_EQ(version_of(got), 1);
+		}
+	}
+	{
+		const std::string index = "past32_s3";
+		const auto path = "/" + index + "/";
+		create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(two32 - 1) + "?commit", R"({"n":"high"})").status, 204);   // bucket 1022, shard 2
+		const auto endpoints = endpoints_of(index);
+		std::uint64_t last = two32 - 1;
+		for (int i = 0; i < 6; ++i) {
+			const auto id = post(path, "new");
+			CHECK(id > last);
+			last = id;
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), bucket_shard((id - 1) % ID_BUCKETS, 3));
+		}
+		reopen_index(index);
+		const auto after = post(path, "after");
+		CHECK(after > last);
+		CHECK_EQ(holder_of(endpoints, numeric_key(after)), bucket_shard((after - 1) % ID_BUCKETS, 3));
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 8u);
+	}
+	{
+		const std::string index = "past32_cap";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(MAX_NUMERIC_ID - 1) + "?commit", R"({"n":"x"})").status, 204);
+		CHECK_EQ(call("PUT", path + "9223372036854775808?commit", R"({"n":"y"})").status, 204);   // 2^63: by hash
+		CHECK_EQ(post(path, "last"), MAX_NUMERIC_ID);
+		CHECK_FALSE(success(call("POST", path + "?commit", R"({"n":"none"})")));
+		CHECK_EQ(text_of(call("GET", path + std::to_string(MAX_NUMERIC_ID)), "n"), "last");
+		CHECK_EQ(text_of(call("GET", path + "9223372036854775808"), "n"), "y");
+	}
+
+	// Each shard of 3 issues the next id of its own buckets after 2^32 - 1 (bucket 1,022): 2^32 is bucket 1,023
+	// (shard 0), 2^32 + 1 bucket 0 (shard 0), 2^32 + 2 bucket 1 (shard 1), 2^32 + 3 bucket 2 (shard 2).
+	CHECK_EQ(next_auto_id(two32 - 1, 0, 3), two32);
+	CHECK_EQ(next_auto_id(two32, 0, 3), two32 + 1);
+	CHECK_EQ(next_auto_id(two32 - 1, 1, 3), two32 + 2);
+	CHECK_EQ(next_auto_id(two32 - 1, 2, 3), two32 + 3);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID - 1, 0, 1), MAX_NUMERIC_ID);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
+
+	// An id's key names it again up to MAX_NUMERIC_ID; past it, or not an integer from 1, it routes by hash.
+	for (const std::uint64_t id : {std::uint64_t{1}, two32 - 1, two32, two32 + 1, (std::uint64_t{1} << 53) + 1, MAX_NUMERIC_ID}) {
+		CHECK_EQ(numeric_id(numeric_key(id)), id);
+		CHECK_EQ(id_bucket(numeric_key(id)), static_cast<std::size_t>((id - 1) % ID_BUCKETS));
+	}
+	CHECK_EQ(numeric_id(numeric_key(MAX_NUMERIC_ID + 1)), 0u);
+	CHECK_EQ(numeric_id(numeric_key(0)), 0u);
 }
 
 // Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket
@@ -2955,6 +3098,8 @@ int main(int argc, char** argv) {
 		{"test_far_ids_keep_the_docids_dense", test_far_ids_keep_the_docids_dense},
 		{"test_new_numeric_ids_keep_their_stride_across_a_reopen", test_new_numeric_ids_keep_their_stride_across_a_reopen},
 		{"test_a_lookup_by_id_reads_one_shard", test_a_lookup_by_id_reads_one_shard},
+		{"test_ids_that_shared_a_key_are_separate_documents", test_ids_that_shared_a_key_are_separate_documents},
+		{"test_new_numeric_ids_pass_two_to_the_thirty_two", test_new_numeric_ids_pass_two_to_the_thirty_two},
 		{"test_ids_route_by_bucket", test_ids_route_by_bucket},
 		{"test_a_dump_and_restore_keeps_every_id", test_a_dump_and_restore_keeps_every_id},
 		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},

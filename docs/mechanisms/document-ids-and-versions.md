@@ -3,7 +3,7 @@
 ## What
 
 A document's id is its key: the id's type character and its serialised value (`document_key`, `src/database/utils.cc`),
-`N` and a sortable double for a number. Every write of a document with an id finds it by that key
+`N` and the number's exact Kronuz/sortable bytes for a number (`Serialise::id`, `docs/design/exact-id-keys.md`). Every write of a document with an id finds it by that key
 (`engine::Shard::replace_by_key`); the docid is the engine's. A write's `?version=N` is a precondition on the
 document's version, checked by the engine in the index's turn, where the write applies.
 
@@ -18,7 +18,7 @@ DELETE /i/k                  key                         erase_by_key(key, expec
 
 A new document takes the docid after the shard's last, whatever its id: docids are in append order and never derive
 from an id (`docs/design/one-id.md`). An id goes to one of 1,024 buckets (`id_bucket`: an integer k from 1 to
-2^32 - 1 to `(k - 1) % 1024`, any other key by its hash) and the bucket to shard `bucket % n` (`bucket_shard`). A
+2^63 - 1 to `(k - 1) % 1024`, any other key by its hash) and the bucket to shard `bucket % n` (`bucket_shard`). A
 new numeric id goes to the least used shard, which issues the smallest id of a bucket it owns above its counter and
 every other shard's (`least_used_shard` passes the largest as a floor). The counter, `_id_high` in the shard's
 metadata, is the largest numeric id the shard holds or issued; every numeric write raises it, the commit persists it
@@ -52,13 +52,15 @@ check before it lets two writers that read one version both apply.
 3. A write applied with `?version=N` lands at version N + 1; a refused one changes nothing.
 4. A delete is by key in the turn, on one shard or many: the docid found before the turn picks the shard only.
 5. A shard never numbers past the largest docid: the write is an error instead of a wrap to docid 0.
-6. Integer ids past 2^32 - 1 can share a key: 2^32 + 1's key is 2^32 + 2^24's (the numeric serialisation's limit).
+6. Every numeric id has its own key: two keys are one only for equal numbers (5, 5u and 5.0), for every int64,
+   uint64 and double.
 7. A new numeric id is above every numeric id of its shard and of the others' counters when it was issued, in a
    bucket its shard owns, and is written with expected version 0: a counter behind an existing id conflicts.
 
 ## Code
 
-`src/database/schema.cc` (`Schema::index`), `src/database/handler.{h,cc}` (`has_document_id`, `numeric_id`, `id_bucket`, `next_auto_id`,
+`src/database/schema.cc` (`Schema::index`), `src/serialise.cc` (`Serialise::id`, `Unserialise::id`),
+`src/database/handler.{h,cc}` (`has_document_id`, `numeric_id`, `id_bucket`, `next_auto_id`,
 `NEW_NUMERIC_KEY`, the writes and deletes), `src/database/shard.cc` (`do_replace_term`, `do_delete*`),
 `src/engine/strata/shard.cc` (`check_version`, `replace`, `replace_by_key`, `erase*`), `src/engine/error.h`
 (`version_conflict`), `src/server/search_views.cc` (`on_error`). Tests: `tests/test_engine_strata.cc`

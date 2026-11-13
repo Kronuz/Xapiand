@@ -176,6 +176,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **Every integer ID is its own document.** Integer IDs past 2^32 could share a key: a `PUT` of 4294967297
+  and one of 4311744512 left one document. A numeric ID's key is now its exact number, for every 64-bit
+  integer and every float, and new integer IDs run up to 2^63 - 1 (2^53 for float IDs) instead of 2^32 - 1.
+  The ID keys change on disk: an index written before needs a dump and a `RESTORE`.
 - **`--restore` into a new, empty data directory writes the index's settings.** The CLI restore resolved
   the index read-only, so `.xapiand/indexes` lacked its shard records and a node serving the directory answered
   `500` ("Inconsistency in number of replicas") or counted 0 documents. It now resolves the index as `RESTORE`
