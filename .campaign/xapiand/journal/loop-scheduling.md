@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: waiting on jobs 261112-225137-5ea513 (build-test, A4), mutants 261112-225153-ff8ddb 261112-225201-431c6a 261112-225208-795ab1 261112-225215-c76586 (A4), builds 261112-225400-b9cfa8 261112-225408-af4e79 261112-225423-db70b6 261112-225432-317f22, A2 261112-225448-4dfa5e 261112-225500-74c0c4, A3 261112-225454-7d59c5
+State: evidence round at 4117329cf (master abfd09535 merged, pushed); waiting on jobs: gate 261113-033300-555be1; A4 mutants k0 261113-033318-52f956, no-exit-guard 261113-033325-227525 (command now logs configure/build errors), no-rearm 261113-033332-72bffb, pump-drops-lane 261113-033338-89cc5a; builds mac head 261113-033417-58d0d0, mac master 261113-033446-472538, VM master 261113-033423-d0cd48, VM head 261113-033429-d42286 (own deps dir and build dir per commit); A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874, A2 VM 261113-033509-c7219c
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -192,6 +192,15 @@ tasks pass K.
   Lead's X7 261112-193446-44263d and X8 261112-195132-1fe61f folded into D1's table and the evidence. D6 is
   parked, with F8/F9 moved to the placement section. Q3/Q4/Q5 are resolved; A2 records T4/T5 as misses on both
   platforms; `src/opts.cc` is dropped from the files.
+
+## Evidence round (resumed contributor)
+
+- Merged master (abfd09535) into the head, pushed 4117329cf. Earlier jobs ran 93b4d125c and are superseded by the ids in State.
+- 261112-225201-431c6a (no-exit-guard) exited 2 with an empty log: its configure output went to /dev/null. The rerun's
+  command writes configure and build errors to the log (same mutation).
+- VM builds failed (lua patch re-applied on a shared FetchContent dir); each commit now has `deps-$C` and `build-rel-$C`.
+- Master for A2/A3 is abfd09535 (includes fix-c); P1's docid-layout cause (PLAN.md Pending owner, Xapiand:a7b42914d,
+  quest one-id D84) applies to any loaded light p99 miss against master.
 
 ## Next
 
