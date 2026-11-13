@@ -589,8 +589,8 @@ FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.gi
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
-	STORAGE_IO_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_io.h"
-	STORAGE_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_trace.h"
+	STORAGE_IO_HEADER="xapiand_storage_io.h"
+	STORAGE_TRACE_HEADER="xapiand_storage_trace.h"
 )
 
 # server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
@@ -609,8 +609,8 @@ FetchContent_Declare(io GIT_REPOSITORY https://github.com/Kronuz/io.git GIT_TAG 
 FetchContent_MakeAvailable(io)
 include_directories("${io_SOURCE_DIR}")
 add_compile_definitions(
-	IO_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_trace.h"
-	IO_RANDOM_ERRORS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_random_errors.h"
+	IO_TRACE_HEADER="xapiand_io_trace.h"
+	IO_RANDOM_ERRORS_HEADER="xapiand_io_random_errors.h"
 )
 
 # fs: the filesystem helpers (Kronuz/fs), extracted from Xapiand. Same shape as io: only
@@ -621,7 +621,7 @@ add_compile_definitions(
 FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG c002235cf3734d58e33abeb6b8b8b809928f3bae)
 FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
-add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
+add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 
 # system: process/system resource introspection (Kronuz/system), extracted from Xapiand.
 # Same shape as io/fs: only the headers go on the include path; system.cc + memory_stats.cc
@@ -631,7 +631,7 @@ add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_tr
 FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 20ffc71647228fb042da9fdd002dd1b8388a8b06)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
-add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
+add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
 
 # cuuid: condensed UUID value + binary wire codec (Kronuz/cuuid), extracted from
 # Xapiand. Same shape as io/fs/system: only the headers go on the include path;
@@ -642,9 +642,9 @@ FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GI
 FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
-	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
-	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_engine.h"
-	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
+	CUUID_TRACE_HEADER="xapiand_cuuid_trace.h"
+	CUUID_EXCEPTION_HEADER="exception_engine.h"
+	CUUID_NODE_HEADER="xapiand_cuuid_node.h"
 )
 
 # msgpack: bundled msgpack-c fork + MsgPack COW value + xchange adaptors +
@@ -659,7 +659,7 @@ FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashe
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
-add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(MSGPACK_EXCEPTION_HEADER="xapiand_exception.h")
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -947,7 +947,7 @@ foreach(dep stash uinteger_t radix_router)
 	endif ()
 	include_directories("${${dep}_SOURCE_DIR}")
 endforeach ()
-add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
 # zstd: the storage library's codec-in-header dispatch references the Zstandard
 # backend (compressor_zstd.{h,cc}), so zstd must be available now even though
