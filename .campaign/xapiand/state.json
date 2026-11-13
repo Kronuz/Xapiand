@@ -10849,9 +10849,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T08:37:12",
+      "updated": "2026-11-13T09:37:01",
       "worktree": "../Xapiand-wt/xapiand/one-id"
     },
     "open-mix": {
