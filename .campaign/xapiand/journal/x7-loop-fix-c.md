@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-090456-c67417 261112-090511-afb297 261112-090524-b3bce6 (B1 mutant 261112-084825-447568 already passed at Xapiand:fcbde4661's code; rerun it if the suite asks)
+State: waiting on jobs 261112-201017-d47dfe (restore-test ratios), 261112-201006-81837c (gate check), the mutant reruns and A2/A3 reruns below
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,10 +16,26 @@ Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
 
-1. Read the suite 261112-090456-c67417 (Xapiand:b4e872ed6) and the two N4 mutants 261112-090511-afb297 (stale break) and
-   261112-090524-b3bce6 (failed slice fails the rest). B1's mutant 261112-084825-447568 passed (its test is unchanged).
-2. Then `campaign accept x7-loop-fix-c design --confirm B1=<suite> B2=<suite> ...`, write the Result, State "ready for
-   review", launch the correctness reviewer.
+Merged master at Xapiand:0bbf128d3 (pushed; CI runs). The one conflict, tests/test_loop_yield.cc, is resolved with
+master's relative form (loop CPU against an on-loop `update` baseline in the same test), keeping this fix's claims
+(5 shards, `DocIndexer::stats` children peak, writes in chores): `test_a_restore_prepares_and_writes_its_objects_off_its_loop`,
+bound 0.7 for now (master's). Jobs at Xapiand:0bbf128d3:
+- gate check `campaign verify`: 261112-201006-81837c.
+- ratio measurement, the test five times (light; load was ~30, so read ratios as relative): 261112-201017-d47dfe.
+- reruns of the A4 mutants: 261112-201040-503fe0 (reverse sub-run), 261112-201041-4a66d3 (writes on the loop),
+  261112-202556-1a371b (children one at a time; first run interrupted), 261112-201042-dc40d0 (no join before a new
+  numeric id), 261112-202557-3315c8 (a missed write fails; first run interrupted), 261112-201043-19e10d (guard keeps
+  inline chores), 261112-201043-1d9816 (B1), 261112-201044-0da49c (N4 stale break; same job as the old
+  084828/090511), 261112-201045-5f5375 (N4 failed slice fails the rest; the old 090524 is the same job).
+- A2/A3 reruns (timing build 261112-201054-12c0c3 first): A3 261112-201054-a09f03, A2 261112-201055-0e58b1.
+
+1. When 261112-201017-d47dfe finishes: read the five `loop CPU:` lines. If the worst chores/on-loop ratio leaves room,
+   tighten the bound in the test (comment the measured range), commit, push.
+2. Submit the restore-test mutant at that head, `--fails-without --for A4`: copy of master's loop-share-flake mutant
+   (261112-120322-64f547): insert `if (true) { co_return false; }` after the `fetch` lambda's opening line in
+   src/database/handler.cc, build test_loop_yield (exit 2 on a build error), run ctest -V, exit 0 only if
+   `grep -q "test_loop_yield.cc:[0-9]*: CHECK(chores_ms < on_loop_ms"`.
+3. Rerun any mutant whose commit predates the bound change; record ids; the quest stays held (D67), not ready for review.
 
 Done this session:
 - Suite 261112-084823-54c2d4 failed `with_slices == without_slices + 1` (6 and 6) and mutant 080c00 survived: the tests were
