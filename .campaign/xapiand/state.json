@@ -3903,6 +3903,20 @@
         "docs/mechanisms/document-ids-and-versions.md",
         "docs/src/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-13T13:29:24",
+          "reason": "owner 11-13: land the id codec as a quick fix (~100 lines, formats open until release); proof is a failing-without test, suite and CI",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -3913,10 +3927,10 @@
         "xapiand:id-terms"
       ],
       "repo": ".",
-      "risk": "high",
+      "risk": "normal",
       "status": "active",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:23:48",
+      "updated": "2026-11-13T13:29:24",
       "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
     },
     "f14-step1": {
