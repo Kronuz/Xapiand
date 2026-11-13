@@ -16418,11 +16418,41 @@
         "docs/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-lanes",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:21:25",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": {
+            "A1": "261112-214929-dfac91; fails without: 261112-204849-91803a, 261112-204854-7e293b, 261112-204858-0e6b9d, 261112-204902-8b592b, 261112-204905-205bd3, 261112-204909-7b597e, 261112-204914-1d26c6, 261112-204918-7d0c0f, 261112-204923-7f2258, 261112-204928-6befdc, 261112-204935-9ea300, 261112-214931-341d4a, 261112-214934-bb3d65, 261112-214937-b6d183, 261112-214941-85d939, 261112-214945-9995a1, 261112-214949-5b89c5, 261112-214952-0d0642, 261112-214956-c1b908, 261112-215000-7f3020, 261112-215004-e2d24e, 261112-215008-8ab078",
+            "A2": "261112-215012-f7d1c9",
+            "A3": "261112-215014-07a8ed",
+            "A4": "[manual] Detent's lead, 11-12: Detent's integration jobs (da2074 at 90b50f0, b7fe6c at 18eb516; Detent's repository) passed, Detent main's full suite with task pinned to quest/xapiand/task-lanes, 275 of 275 tests (test_local_trusted_paths skipped as on main)",
+            "A5": "`docs/lanes.md` (task)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-214929-dfac91",
+              "level": "light",
+              "seconds": 14.3,
+              "state": "done",
+              "what": "task-lanes check build-test at 18eb51672e4f"
+            }
+          ],
+          "final": true,
+          "from": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "reason": "",
+          "tested": "18eb51672e4f306aac508bd0444f6d367eac4291"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [
@@ -16430,10 +16460,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/task",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "An opt-in heavy lane in task's budget and asio_scheduler",
-      "updated": "2026-11-12T22:04:19",
-      "worktree": "../task-wt/xapiand/task-lanes"
+      "updated": "2026-11-12T22:21:31",
+      "worktree": ""
     },
     "task-phase7c-l1": {
       "accepted": {},
