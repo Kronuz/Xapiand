@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-204313-122916 (restore-test mutant), 261112-201006-81837c (gate check), the mutant reruns and A2/A3 reruns below
+State: waiting on jobs 261112-210709-853c7d (gate check), 261112-210714-0bfd95 (writes-on-loop mutant, new check name), 261112-210723-e38d98 (real-code ratios), 261112-201054-a09f03 and 261112-201055-0e58b1 (A3/A2 reruns)
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,6 +15,19 @@ child". Grounded in the A3 job's RESTORE samples (261112-012857-a77bf8, arms 3/6
 Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
+
+Lead, msg (gate failed): 261112-201006-81837c failed `test_blocking_guard.cc:180` with `strata::unsupported_index: a manifest file
+of another build`. Cause, not the merge and not fix (c): `open_through_the_registry` opens `Endpoint("blocking_guard_test")`
+in the ctest cwd and the test never removes it; this quest's slot build dir (`slots/xapiand-x7-loop-fix-c/build`) kept the
+directory from an earlier run (05:01), written before master's strata bump. Master's CI builds fresh, so it is green. I
+removed that stale directory from the slot and reran the gate check, 261112-210709-853c7d. The fix that lasts is in
+tests/test_blocking_guard.cc (remove its dir before and after), outside this quest's file set: the lead's. Three other slots
+hold the same stale dir (xapiand-x7-gate, xapiand-cli-restore-records, x7-cov, x7-rows).
+Restore-test mutant 261112-204313-122916 passed (exit 0: it fails `CHECK(chores_ms < on_loop_ms * 0.7)` at line 464). Rerun of
+the 4a66d3 mutant (writes on the loop) failed with exit 4: it named the old `loop_ms < process_ms * 0.2` check. The mutant is
+resubmitted against the new check, 261112-210714-0bfd95; if the 0.7 bound does not let it fail (a prepares-only ratio is
+0.4-0.55), the bound must tighten to the real code's measured ratio (261112-210723-e38d98), then the restore mutants rerun.
+Reruns now done at 0bbf128d3: 503fe0, dc40d0, 19e10d, 1d9816, 0da49c, 5f5375, 1a371b (replaces c7376f), 3315c8 (replaces 654ed0).
 
 Lead, msg: ratio job 261112-201017-d47dfe timed out (exit 124); the bound stays master's 0.7. Restore-test mutant submitted at
 Xapiand:0f6edb588, `--for A4 --fails-without --minutes 60`: 261112-204313-122916. Steps 1 and 2 below are done as above.
