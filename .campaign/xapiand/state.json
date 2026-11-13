@@ -4938,6 +4938,38 @@
       "updated": "2026-11-12T04:29:49",
       "worktree": ""
     },
+    "http-lane": {
+      "accepted": {},
+      "after": [
+        "task-lanes"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "task:lanes"
+      ],
+      "files": [
+        "http_asio.h",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/http",
+      "risk": "normal",
+      "status": "planned",
+      "title": "http resumes a waiter inline only for a light reference",
+      "updated": "2026-11-12T20:07:23"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
