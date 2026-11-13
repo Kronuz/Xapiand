@@ -4961,18 +4961,45 @@
         "test/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-lane",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:31:16",
+          "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+          "criteria": {
+            "A1": "261112-222327-cf718c; fails without: 261112-222330-e221cd",
+            "A2": "261112-222327-cf718c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-222327-cf718c",
+              "level": "light",
+              "seconds": 134.0,
+              "state": "done",
+              "what": "http-lane check build-test at 09b644d23f65"
+            }
+          ],
+          "final": true,
+          "from": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "reason": "",
+          "tested": "09b644d23f6518c4112812e83c2711058e99ea78"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/http",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "http resumes a waiter inline only for a light reference",
-      "updated": "2026-11-12T22:22:09",
-      "worktree": "../http-wt/xapiand/http-lane"
+      "updated": "2026-11-12T22:31:47",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
