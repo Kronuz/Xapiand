@@ -1,6 +1,6 @@
 # schema-load-once: journal
 
-State: waiting on jobs 261112-232215-0291bf (A1 mutant, replicas), 261112-232218-983be8 (A1 mutant, probes), 261112-232220-71809c (A2 ASan x20), 261112-232222-f3a86e (A3 build-test)
+State: ready for review (lead, 11-13: review G1 closed by the publication-window test at 8225c9831; A2 via CI sanitizers)
 Quest: .campaign/xapiand/quests/schema-load-once.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,9 +23,9 @@ Nothing
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
+| A1 | build-test 261113-012502-21f3c1 at 8225c9831 runs the four paused-claim tests and the publication-window test; fails without: 261113-022116-7d1cf5 (publications removed: CHECK(loads == 2u) fails), 261112-232218-983be8 (probes disabled) |
+| A2 | `ci:43401120786` at 8225c9831: "Unit tests under ASan + UBSan" and "AddressSanitizer + UBSan" green (local macOS ASan fails master's shutdown tests, 261113-022127-b46700) |
+| A3 | 261113-012502-21f3c1 |
 
 ## Result
 
