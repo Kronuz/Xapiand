@@ -106,6 +106,9 @@ tasks pass K.
   ABBA), X3 261112-170152-275ba3 exclusive (VM T4/T5 ABBA K 8). E2-shaped jobs fit in 10 minutes; X1's overrun
   was the hang.
 
+- Note rewritten (07488172c): D1-D6, bounds, D2 replacement text, Kronuz/task quest `task-lanes`, checks, Q1-Q3,
+  census and E2 kept as the parked option. X2/X3 sections and Q3 are TBD until the jobs finish.
+
 ## Next
 
 1. Read E1 and E3; pick the candidate the census supports; E2: an exclusive ABBA of it against base
