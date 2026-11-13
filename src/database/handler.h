@@ -25,8 +25,10 @@
 
 #include "config.h"
 
+#include <atomic>                            // for std::atomic
 #include <cassert>                           // for assert
 #include <chrono>                            // for std::chrono
+#include <functional>                        // for std::function
 #include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
 #include <string>                            // for std::string
@@ -268,6 +270,43 @@ public:
 };
 
 
+// What a RESTORE's run met (tests assert their case occurred): the largest range applied at once, the writes of an id
+// already written in the same sub-run, the most shards applying at once, the objects that took the serial path
+// after a join (a new numeric id), and the writes deferred by a miss between placement and apply.
+struct DocIndexerStats {
+	std::atomic<std::size_t> largest_range{0};
+	std::atomic<std::size_t> repeated_in_subrun{0};
+	std::atomic<std::size_t> peak_children{0};
+	std::atomic<std::size_t> serial_after_join{0};
+	std::atomic<std::size_t> deferred{0};
+	std::atomic<std::size_t> children{0};   // the cap of the latest parallel run
+
+	void reset() noexcept {
+		largest_range = 0;
+		repeated_in_subrun = 0;
+		peak_children = 0;
+		serial_after_join = 0;
+		deferred = 0;
+		children = 0;
+	}
+};
+
+// Test seams (tests/test_loop_yield.cc), inert unless set: the objects a prepare chore takes instead of its
+// time slice, a step awaited on the loop with the RESTORE's handler between a range's placement and its apply,
+// one apply slice that throws before its writes, every write on the serial path (the model of a run), and the writes
+// an apply slice takes, with a step awaited on the loop between two slices (the turn released) given the term of the
+// slice's last write and whether it missed.
+struct DocIndexerSeams {
+	std::atomic<std::size_t> objects_per_prepare{0};
+	std::atomic<std::size_t> writes_per_slice{0};
+	std::function<task::task<void>(DatabaseHandler&)> after_placement;
+	std::function<task::task<void>(DatabaseHandler&, const std::string& term, bool missed)> after_slice;
+	std::atomic<bool> throw_in_slice{false};
+	std::string stale_on_term;   // a write of a term ending so fails as a stale-marking error
+	std::atomic<bool> serial{false};
+};
+
+
 // The bulk indexer of a RESTORE: prepares the objects of a stream in chores of the RESTORE's group and applies
 // each to its shard, in order, on the reactor that serves the request (docs/design/phase7c.md D12). It owns no
 // thread and waits for none: it yields when its slice is spent, and the parse of the next batch runs beside it.
@@ -291,6 +330,8 @@ class DocIndexer {
 	std::vector<MsgPack> _results;
 
 public:
+	static inline DocIndexerSeams seams;
+	static inline DocIndexerStats stats;   // every RESTORE's, summed; tests reset it
 	// `chores` runs the prepares (the RESTORE's group); `budget` is the request's time slice (null: the work runs
 	// without yielding).
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget = nullptr);
