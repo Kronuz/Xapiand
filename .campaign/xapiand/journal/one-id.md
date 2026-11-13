@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: ready for review
+State: waiting on jobs 261113-100221-805267 261113-100222-f7f871 261113-100225-8c70b8 261113-100228-7934d9 261113-100230-e78430 261113-100233-a6cac6 261113-100235-26ba16 261113-100238-d28c34 261113-100241-6aeb5e 261113-100243-c10ac6 261113-100246-77708f 261113-100249-92b6c9
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Done at 8d61b1913 (round 4 green: build-test, seven mutants, A5, CI at 3d968d72c). A durability review runs at
-8d61b1913; no code changes meanwhile.
+The durability review approved 8d61b1913 (.campaign/xapiand/reviews/one-id-durability.md). The lead held the landing
+on the unloaded light p99 (ba7801 and repeat 261113-093708-5f5a72: master 3.5/4.0 ms vs one-id 9.9/5.9 ms). The
+routing change below goes back to the durability reviewer as a scoped re-check.
+
+Waiting on jobs at 3c328c6e2 (branch pushed for CI):
+
+- 261113-100221-805267 build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (--fails-without, after the build-test): A1 named-docid 261113-100222-f7f871; A2 no-persist
+  261113-100225-8c70b8, no-replay 261113-100228-7934d9, no-advance 261113-100230-e78430, no-stride 261113-100233-a6cac6;
+  A7 hash-route 261113-100235-26ba16; A6 no-advance 261113-100238-d28c34; new: A7 lookup-fan-out
+  261113-100241-6aeb5e and bulk-fan-out 261113-100243-c10ac6 (test_a_lookup_by_id_reads_one_shard).
+- A5: head build 261113-100246-77708f, then the exclusive ABBA 261113-100249-92b6c9 (same command as ba7801).
+
+Routing (3c328c6e2): `find_docid_term` reads only `id_shard(term)`'s shard, and a RESTORE slice's placement asks
+each shard only the ids routed to it (`continue`, not `break`, past a shard with none). `DatabaseHandler::key_reads`
+counts key reads per shard; the new test checks 1 per GET (found or 404) and 30 for a RESTORE of 30 new ids over 3
+shards. Caveat: `find_docid_term` is byte-identical to master's (diff), which also read every shard in order and
+stopped at the first hit, so this may not be the regression's cause. Another lead from ba7801: loaded `pair` p50
+went from 12.5/14.0 ms (pre) to 22.4/20.5 ms (cur); a candidate is the `_id_high` set_metadata in every commit
+whose counter moved. Not measured.
 
 Round 3 (2890b08db): build-test 261113-082922-3f2ebf failed only on async_check (`async_allowlist.tsv:25:
 src/database/shard.cc [sync_wait] covers 8 hit(s), the row allows 7`): `open_blocking`'s read of `_id_high`. Kept
