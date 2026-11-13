@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: ready for review (A1, lens design/concurrency): `docs/design/loop-scheduling.md`, X4 included
+State: waiting on jobs 261112-190109-e3c447 (build) 261112-190112-421854 (X5)
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -130,6 +130,23 @@ tasks pass K.
 - D6 ruled: one loop per physical core with the lane (0.957x heavy on SMT, none without); half the CPUs rejected
   (0.636x). Q3 restated as the owner's recommendation; T4/T5 on macOS recorded as misses, next step a gate run
   with the generator off the server's CPUs.
+
+- Design review CHANGES (`.campaign/xapiand/reviews/loop-scheduling-design.md`), owner D80 (corrected), D81.
+  Findings folded into the note:
+  - F1 (blocker): D81 per-chunk classing (D1, D5, A3, A4), prototyped on scratch 7b14863d5. `rearm_light()` runs
+    before each `read_chunk` body read, behind `LS_LANE_STREAM`. stall_load records each RESTORE's client time,
+    the census its server time (`restore_ns`). X5 is F1's confirming probe: build 261112-190109-e3c447, then
+    261112-190112-421854 exclusive (ABBA off at 16 loops vs the D81 lane at 8 loops).
+  - F2: D6 and Answer state that the VM's T5 misses at 8 loops.
+  - F3: K stated as loop time while resumed, plus the misclass cost.
+  - F4: D2 (g).
+  - F5: lane bit packed into `vt_`.
+  - F6: test 5 mutant and the io_ null assertion.
+  - F7: D3.
+  - F8: Linux sibling sets with the affinity mask, FreeBSD cpuset, new fixtures.
+  - F9: Q4.
+  - F10: D4 threshold, per-handle fairness.
+  - F11: exit scope guard.
 
 ## Next
 
