@@ -1,9 +1,37 @@
 # loop-scheduling: journal
 
-State: ready for review (A1, round 3, D82 text update): `docs/design/loop-scheduling.md`
+State: waiting on jobs 261112-225137-5ea513 (build-test, A4), mutants 261112-225153-ff8ddb 261112-225201-431c6a 261112-225208-795ab1 261112-225215-c76586 (A4), builds 261112-225400-b9cfa8 261112-225408-af4e79 261112-225423-db70b6 261112-225432-317f22, A2 261112-225448-4dfa5e 261112-225500-74c0c4, A3 261112-225454-7d59c5
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
+
+## Build (implementation, D82)
+
+Branch merges master and quest/xapiand/x7-loop-fix-c (D67), then Xapiand:93b4d125c:
+- Pins: task 18eb516 (task-lanes), http 09b644d (http-lane). task now fetches Kronuz/wheel itself.
+- `search_views.cc`: `REQUEST_LIGHT_SLICES` 8 on the request and the three script budgets;
+  `rearm_light(REQUEST_STREAM_SLICES)` (4) in `restore_database_view` before `when_all` (ruling F12); `LightOnExit`
+  guard in `handle`; admission comments name the heavy lane.
+- `host.h`: `Host::post_heavy` (falls back to `post_demoted`); `host_asio.h`: `AsioHost` forwards it; `Counted`
+  queues each resume with its lane (light, demoted, heavy) and resumes it there; `counted()`'s two hops keep the lane.
+- `phase7c.md`: D2's policy bullet is D4's text; admission and D4's chore line name the heavy lane.
+- Tests (`test_loop_yield.cc`, after_placement seam spending the request's slices on the loop):
+  `test_a_light_request_runs_ahead_of_heavy_turns` (4 heavy RESTOREs spin in the heavy lane; the light one waits
+  at most 1 heavy turn between its turns; lane == spent >= 8 on every heavy resume),
+  `test_a_request_after_a_heavy_one_starts_light` (keep-alive, heavy then light, also after a throw),
+  `test_each_chunk_of_a_streamed_restore_starts_light` (4 pieces, each chunk's first slice light, heavy at the
+  rearmed count).
+- Syntax-checked locally (`.scratch/syn/syn.sh`, clang -fsyntax-only, NDEBUG and asserts) before the jobs.
+- Mutants (`--fails-without --for A4`, after the gate build): k0 261112-225153-ff8ddb (REQUEST_LIGHT_SLICES 0, must
+  fail the waited check), no-exit-guard 261112-225201-431c6a, no-rearm 261112-225208-795ab1, pump-drops-lane
+  261112-225215-c76586 (Counted resumes light).
+- Measurement (before = master 4738337a3, after = head 93b4d125c; scripts `.scratch/ab/ab.sh`, `vm_ab.sh`):
+  macOS builds 261112-225400-b9cfa8 (master, slot xapiand-ls-base) and 261112-225408-af4e79 (head); VM builds
+  261112-225423-db70b6 and 261112-225432-317f22; A2 macOS 261112-225448-4dfa5e (stall_load ABBA, 64 heavy), A2 VM
+  261112-225500-74c0c4 (32 heavy), A3 261112-225454-7d59c5 (loadtest ABBA; T12 against pre-7c's recorded 6,076
+  docs/s, `docs/perf/phase7c-baseline.md:88`).
+
+## Design (A1, landed text)
 
 A1, the design (assignment design): measure the cause, then write `docs/design/loop-scheduling.md`.
 
@@ -167,9 +195,9 @@ tasks pass K.
 
 ## Next
 
-1. The design review (lens design/concurrency) of `docs/design/loop-scheduling.md`; fold findings by id.
-2. Q3 is the owner's: the lane alone, or X4 (lane at 8 loops on macOS, 4 on the VM) first.
-3. After review: the lead widens the file set; library quest `task-lanes` (D5) comes first.
+1. On the gate job: fix any test failure; then each mutant must exit 0.
+2. A2/A3 numbers into Result and the design note's evidence; Evidence table from `campaign brief`.
+3. Merge master again before landing (master moved to 4738337a3 after the fix-c merge).
 
 ## Blocked on
 
@@ -186,6 +214,14 @@ Nothing.
 <pending>
 
 ## Rulings I made
+
+- Build: the light mark is the exit guard alone, not also a mark at `handle`'s entry (D2 f names both). A connection
+  starts light and every exit marks it light, so the entry mark never changes anything; with it, no test can see
+  the guard (the no-exit-guard mutant would survive).
+- Build: `counted()`'s debug hops keep the current lane (they posted light), so the suite's asserts-on build orders
+  work as release does and the tests see the lanes.
+- Build: Xapiand test 1 checks the order directly (heavy turns between a light request's turns, from a seam) instead
+  of "a single-term search completes before four 100-hit searches", which passes under today's policy too.
 
 - K = 8 slices from X1's off-arm histogram (light p99 7, heavy min 8), not from a K sweep; X3 confirms the gap on
   Linux. The sweep's arms were dropped after the hang, per D59's 10-minute cap.
