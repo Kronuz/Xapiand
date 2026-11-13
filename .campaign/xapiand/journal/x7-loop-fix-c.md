@@ -1,6 +1,6 @@
 # x7-loop-fix-c: journal
 
-State: waiting on jobs 261112-201017-d47dfe (restore-test ratios), 261112-201006-81837c (gate check), the mutant reruns and A2/A3 reruns below
+State: waiting on jobs 261112-204313-122916 (restore-test mutant), 261112-201006-81837c (gate check), the mutant reruns and A2/A3 reruns below
 Quest: .campaign/xapiand/quests/x7-loop-fix-c.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,6 +15,9 @@ child". Grounded in the A3 job's RESTORE samples (261112-012857-a77bf8, arms 3/6
 Sample parser for the shares: `.scratch/shares.py` (untracked).
 
 ## Next
+
+Lead, msg: ratio job 261112-201017-d47dfe timed out (exit 124); the bound stays master's 0.7. Restore-test mutant submitted at
+Xapiand:0f6edb588, `--for A4 --fails-without --minutes 60`: 261112-204313-122916. Steps 1 and 2 below are done as above.
 
 Merged master at Xapiand:0bbf128d3 (pushed; CI runs). The one conflict, tests/test_loop_yield.cc, is resolved with
 master's relative form (loop CPU against an on-loop `update` baseline in the same test), keeping this fix's claims
