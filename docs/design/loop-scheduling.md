@@ -29,9 +29,14 @@ Measured on the prototype:
 - With D80's 8 loops on macOS, light p99 is 0.78x and heavy searches 0.957x against today (X4).
 - RESTORE alone is flat (T12, X2b).
 - With lifetime classing, a RESTORE under the heavy-search mix runs at about 0.7x on macOS, because it is heavy
-  for life (review F1). D81's per-chunk classing overshoots (X5, against today's code): RESTORE ingests 1.25x
-  (RESTORE time 0.824x), but heavy searches fall to 0.788x and loaded light p99 is back at today's (0.955x).
-  Q5 asks the owner how much of the loop a stream's chunks may take.
+  for life (review F1). D81's per-chunk classing sets the trade with the chunk's light allowance. Each case
+  below is at 8 loops, against today's code at 16 (X5, X6), giving RESTORE time per 20,000 docs, then heavy
+  searches, then loaded light p99:
+  - full K (8 slices): 0.82x, 0.79x, 0.96x;
+  - 2 slices: 1.76x, 0.93x, 0.82x;
+  - 1 slice: 1.89x, 0.87x, 0.71x.
+
+  Full K is the measured choice; 4 slices is the untested point between (D1).
 
 T4 and T5 still miss:
 
@@ -114,7 +119,27 @@ spends between body reads. Before each read, `Request::read_chunk` calls `budget
 the spent count and marks the scope light. The read's completion and the chunk's prepare, apply and chores
 therefore start light, and a chunk turns heavy only after K slices of its own. Lifetime classing made a RESTORE
 heavy for life (64+ slices): under the heavy-search mix it round-robined with the searches, at about 0.7x
-(review F1, probe job 261112-183821-695fc9). The cost of per-chunk classing is X5's question.
+(review F1, probe job 261112-183821-695fc9).
+
+The chunk's light allowance A sets the trade between ingest and search (X5, X6). It is measured at 8 loops,
+against today's code at 16. Time ratios are lane over off, so lower is faster.
+
+| A, slices light per chunk | RESTORE time p50 | Heavy searches | Loaded light p99 |
+|---|---|---|---|
+| 8 = K (D81 as ruled; X5) | 0.824x (4.43 against 5.38 s) | 0.788x | 0.955x |
+| 2 (X6) | 1.757x (9.81 against 5.58 s) | 0.930x | 0.818x |
+| 1 (X6) | 1.889x (10.28 against 5.44 s) | 0.873x | 0.705x |
+| Lifetime classing (X4, review F1) | 8.4-16.8 s against 4.2-8.4 s (log2 buckets) | 0.957x | 0.78x |
+
+A small allowance is as slow for RESTORE as lifetime classing (about 0.55x its rate). Most of a chunk's work
+lies past its first two slices, so it still waits in the heavy lane. Only the full K brings RESTORE to or above
+1.0x, and its cost is the heavy searches and light requests that now queue behind chunk work. No measured
+allowance gives both RESTORE near 1.0x and heavy near 0.957x.
+
+Ruling: A = K, D81 as ruled. It is the only measured allowance with RESTORE at or above 1.0x (1.21x its rate).
+The heavy cost is recorded: 0.788x, against 0.957x with lifetime classing. A = 4, between 2 and 8, is the one
+untested point that could land both near 1.0x. It is the build step's first X6-shaped ABBA, and it is a constant
+(`REQUEST_STREAM_SLICES`, the argument of `rearm_light`), not a mechanism.
 
 Alternatives, and why they lose:
 
@@ -389,6 +414,21 @@ What X5 says:
 10. Between the two lies a stream's allowance per chunk. A chunk light for fewer than K slices, say 1-2, would put
     its first turns ahead of the searches and the rest in the heavy lane. That needs one more ABBA: Q5.
 
+X6, the per-chunk allowance (jobs 261112-191309-2e375a for A = 1 and 261112-191311-7e90a7 for A = 2; prototype
+Xapiand:dd3111eca, built by job 261112-191306-04ee82). Each is X5's shape: off at 16 loops against the D81 lane at
+8 loops.
+
+| Loaded phase | A = 1: off / lane (pairs) | A = 2: off / lane (pairs) |
+|---|---|---|
+| RESTORE client time p50 | 5.60, 5.29 / 10.45, 10.10 s (1.867, 1.911) | 5.58, 5.58 / 9.72, 9.89 s (1.741, 1.772) |
+| RESTOREs of 20,000 completed | 4, 4 / 2, 2 | 4, 4 / 3, 3 |
+| Heavy searches | 23,721, 23,957 / 19,579, 22,069 (0.825, 0.921) | 23,992, 23,810 / 22,774, 21,686 (0.949, 0.911) |
+| Light query p99 (bound 7.4-9.4 ms) | 46.7, 40.1 / 27.8, 32.7 ms (0.595, 0.815): MISS | 41.9, 39.0 / 34.0, 32.2 ms (0.810, 0.827): MISS |
+| Loop lag p99 median (max) | 3.07 (5.12) / 3.07 (3.07) ms: MISS | 3.07 (5.12) / 2.56-3.07 (2.56-3.07) ms: MISS |
+
+11. The allowance trades RESTORE against heavy search and light latency, with nothing measured in between: D1's
+    table and ruling. T4 and T5 miss at every allowance.
+
 ## Contracts
 
 - No API, format or wire change. No option: K is a constant beside `REQUEST_SLICE`.
@@ -451,15 +491,8 @@ What X5 says:
   Recommendation: (b). It keeps today's meaning for anyone who passes the flag, adds no option, and gives an
   explicit escape from D6's default.
 
-- **Q5 (owner, after D81 and X5).** How much of a loop may a stream's chunks take? Options:
-  - (a) D81 as ruled, light for K slices per chunk: RESTORE 1.25x, heavy 0.788x, light p99 0.955x.
-  - (b) A stream allowance below K per chunk (`REQUEST_STREAM_SLICES`, 1-2), measured by one more X5-shaped ABBA
-    before the build.
-  - (c) Lifetime classing: RESTORE 0.7x, heavy 0.957x, light p99 0.78x.
-
-  Recommendation: (b), with the ABBA run in this quest's build step. It is a constant, not a mechanism: D1's
-  `rearm_light` stays, with the allowance as its argument. Taking (a) and recording the heavy and light cost is
-  the fallback.
+- **Q5, ruled (lead: (b), a per-chunk allowance).** X6 measured A = 1 and 2: RESTORE stays as slow as lifetime
+  classing. D1 takes A = K (RESTORE 1.21x its rate, heavy 0.788x), with A = 4 as the build step's first ABBA.
 
 ## First steps after the review
 
