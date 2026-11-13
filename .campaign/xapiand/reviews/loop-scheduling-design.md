@@ -114,3 +114,46 @@ Answers to the lead's questions:
 - RESTORE under the mix on the VM: the log2 buckets cannot tell its arms apart, so F1 rests on
   macOS (8 of 8 arms consistent).
 - I did not review x7-loop-fix-c or the census method (E1-E3), which D79 and D80 already ruled on.
+
+## Re-check
+
+Commit: Xapiand:d69ac733f
+Verdict: APPROVE
+Date: 2026-11-12
+
+A re-check of the CHANGES at Xapiand:37d80c1d5, against the note's diff (`docs/design/loop-scheduling.md`, line numbers
+at d69ac733f) and the owner's rulings D81 and D82. F1 is closed: the note states the RESTORE-under-load cost with its
+jobs, and A3 checks it. Every other prior finding is closed or parked. One new non-blocking gap (F12) is about where
+D81's reset sits relative to RESTORE's overlapped read and apply; the A4 tests catch it.
+
+Numbers spot-checked against `~/.scratch/campaign/jobs/<id>/a1/log`, all matching the note:
+
+- X8 (261112-195132-1fe61f): light p99 pairs 0.598/0.795, median 0.696; heavy searches 1.013/1.040, median 1.027;
+  restored docs 60,000 against 80,000 (0.75x); RESTORE client p50 pairs 1.147/1.328, median 1.238. Note :25-30, :123, :402.
+- X5 (261112-190112-421854): RESTOREs 5 against 4; client p50 0.824 in both pairs; heavy 0.800/0.777; light p99 0.849/1.060.
+  Note :362-367.
+- X6 (261112-191309-2e375a, A = 1): RESTORE 1.867/1.911, heavy 0.825/0.921. X6 (261112-191311-7e90a7, A = 2): RESTORE
+  1.741/1.772, heavy 0.949/0.911, light p99 0.810/0.827. Note :385-390.
+- X7 (261112-193446-44263d): light 0.685, heavy 0.785, RESTORE 0.846. Note :398-402.
+- The per-RESTORE `slices` row of X8's lane arms (n 2, mean 5.0-5.5, max 6) shows the count restarts per chunk: a lifetime
+  count would read 64+, as the off arms do.
+
+| ID | Status | Where | Check |
+|---|---|---|---|
+| F1 | closed | note :25-30, :107-133, :147-148, :311, :371-379, :405-406; A3 :423-426 | The note no longer says "RESTORE stays flat" except for T12 alone (:30, :311). It states the cost, 1.238x time and 0.75x docs per phase (:29, :129), the options with their numbers (the A table :117-124), and why D82 chose A = 4 (:126-132). A3 now runs RESTORE under the mix by X5's procedure and reports a lane/off ratio. See F14 for the bound A3 lacks. |
+| F2 | closed | note :32-35, :418-422, :460-461; PLAN.md D80 row | T4 and T5 are recorded as misses: macOS lag p99 3.58-4.10 ms and light p99 about 4x; Linux VM light p99 1.5-1.7x, with T4 hidden by the 2.05 ms floor stated, not claimed. PLAN.md's D80 row already carries the corrected VM clause, and D82 repeats "T4/T5 miss at every setting". |
+| F3 | closed | note :95-105, :457-459 | "1.6 ms of loop time while resumed", the descheduling effect, the 0.4% figure, and the sticky-heavy cost p x (slice + unit) are all stated. |
+| F4 | closed | note :170-179 (D2 g), :236 | Equality ignores the lane; checkpoint is `spent >= light_slices` or a heavy scope; the one-slice leak across identities and the 2K - 2 script bound are stated. A4 test 6 (:442-443) has its mutant. |
+| F5 | closed | note :237-239 | The lane is packed into `vt_`'s low bit, so `scheduler_ref` stays 16 bytes. |
+| F6 | closed | note :439-441, :245-246 | Mutant: `light_slices` 0 enters the heavy lane. The off-thread `post_demoted` on a non-`io_context` executor is an assertion, which is live only in Debug. Fine for a case no user has; test it in a Debug build. |
+| F7 | closed | note :194-199 | D3 says un-checkpointed sections (response serialisation) bound a turn as today and names the stall quests as the owner. |
+| F8 | deferred | note :263-266, :517-529 | Parked with D82: no core detection is built. The parked design keeps the sibling-set, cpuset and fixture fixes. |
+| F9 | deferred | note :411, :463, :528 | `--processors` keeps its meaning under D82; the parked text keeps the cap-only caveat. |
+| F10 | closed | note :201-202, :220-223 | The 503 threshold change and per-handle fairness are stated. |
+| F11 | closed | note :167-169, :254, :447-449 | The exit marking is a scope guard that covers a throw; Xapiand test 2 has the mutant "no exit guard". |
+| F12 | no (new) | note :107-113, :255, :444-445, :450-452; `src/server/search_views.cc:1682-1700`, prototype `task.hh` `rearm_light`/`when_all` | **Gap: D81's reset sits in the read, which RESTORE overlaps with the previous chunk's apply.** RESTORE runs `when_all(indexer->index(batch), next_batch(next))` (`search_views.cc:1693-1697`), and the indexer shares `request.budget` (:1682). `next_batch` calls `read_chunk`, so `rearm_light` runs inside the second child, after the first child (`index`) has already started and captured its refs. `when_all` starts its children inline in the parent's scope and resumes the parent by symmetric transfer from whichever child finishes last, with no lane reset (prototype `task.hh` `when_all_awaiter`, `final_awaiter`). So when the apply child finishes last (the loaded case: apply slower than the read) after turning heavy, the parent continues in a heavy scope, and the next chunk's `index` starts and suspends heavy before the read's `rearm_light` runs. That chunk is then heavy for its life, and the lane carries over chunk to chunk. The note's "each chunk starts light" holds when chunks finish within A slices. That is what the data shows (X8's final `slices` 5-6), and A = 1 and 2 falling to lifetime speed (X6) fits the other regime. This is from reading the prototype; I did not run it. The measured 1.238x already includes this behaviour, so the numbers stand. The risk is a chunk past A slices (larger chunks, a slower disk, a descheduled loop: slices are wall time) falling back to the F1 cliff. | A4 additions, no design change: (1) Kronuz/task test 8: a child that turned heavy finishes last in `when_all`; the parent's next children start from the light lane after a `rearm_light` made by a sibling. Mutant: no `rearm_light`. (2) Xapiand test 3 (:450-452) must stream chunks that each spend more than 4 slices, through the real `when_all` path, and assert the second chunk's first turn runs from the light lane. If that test fails, move the `rearm_light` call to the parent, before the `when_all`, or reset the scope in `when_all`'s transfer. |
+| F13 | no (new) | note :109, :232, :444 against :126, :255 | Nit: D81's text, D5's `budget::rearm_light()` line and A4 test 7 say "zero the count". D82 and the prototype take an allowance: `spent = K - A` (`rearm_light(4)`). Write the signature once in D5, and say a count of 0 is the full K. Stale pointers: :354 and :379 refer to Q3 and Q5, which :460 marks resolved. |
+| F14 | no (new) | note :423-426 | Nit: A3 reports the RESTORE-under-load ratio but gives no bound. Write the accepted figure (about 1.24x time, 0.75x docs per phase, D82) so a worse landed result, such as the F12 ratchet, shows up as a miss. Also, X8 has no Linux VM arm, so the VM's loaded light p99 at A = 4 is unmeasured; A2 should run it. |
+
+Not run in the re-check: no build, no TSan, and no new measurement. F12 is a reading of the prototype's `task.hh` and
+`search_views.cc` at the quest branch, not an observation.
