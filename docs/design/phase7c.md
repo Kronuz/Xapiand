@@ -143,13 +143,18 @@ a `task::budget` (slice 200 µs, an estimate T4 tunes).
   task resumed after a chore, a turn, an event or a body read starts a fresh slice; only a run
   longer than the slice is demoted. `budget_probe` becomes L1's test (0 demotions; 1 with the
   stamp removed).
-- *The policy is two-level*, as `asio_scheduler` implements it: ordinary posts in FIFO order, demoted
-  handles one per drain pass between them. No attained-service counter exists or is added.
+- *The policy is least-attained service in two lanes.* A request's budget counts the slices it has spent; the
+  request is light below `REQUEST_LIGHT_SLICES` (8) and heavy from then on. Light resumptions, Asio completions
+  and timers run in the loop's FIFO order; every resumption of a heavy request (a slice, a chore, an event, a
+  timer, a body read) waits in the heavy lane, which runs one turn per FIFO pass. A request starts light, and a
+  streaming request's body chunk starts light for `REQUEST_STREAM_SLICES` (4). See
+  `docs/design/loop-scheduling.md`.
 - *Admission (R3).* Each reactor keeps two counters, each with its own cap and its own 503 (with
   `Retry-After: 1`): in-flight requests, counted from headers complete to response settled (cap
-  1,000, today's offload queue limit, `manager.cc:1059`); and `asio_scheduler::demoted()` (cap 256,
-  an estimate). Admission checks both at headers complete. reactor's `OffloadGate` (`reactor.h:99-112`)
-  stays as this gate, renamed `reactor::AdmissionGate`, since nothing is offloaded. The io_context
+  1,000, today's offload queue limit, `manager.cc:1059`); and `asio_scheduler::demoted()`, the
+  resumptions of heavy requests queued in the heavy lane (cap 256, an estimate). Admission checks both
+  at headers complete. reactor's `OffloadGate` (`reactor.h:99-112`) stays as this gate, renamed
+  `reactor::AdmissionGate`, since nothing is offloaded. The io_context
   queue is bounded by the gate: each admitted task has at most one handle queued, and idle
   connections post nothing.
 - *Reactor count (C5).* One reactor per CPU. `MAX_HTTP_SERVERS` (`opts.cc:57`, `:525`) and
@@ -187,8 +192,8 @@ the connection's executor. `SearchService` wraps each view's task in `task::as_a
 
 **D4. Index chores: the only work that leaves a reactor.** A chore is index work that may wait on a
 device or run long. `co_await chore(group, cls, fn)` posts a `WorkItem` (threadpool
-`feature/scheduler`, `work_pool.hh:85-95`) and resumes the awaiter with `asio_scheduler::post()`, the
-one thread-safe entry (`task_asio.hh:43-54`), never `post_demoted` (C10.1). Each open index owns a
+`feature/scheduler`, `work_pool.hh:85-95`) and resumes the awaiter through the reference it captured:
+`post()` for a light request, `post_heavy()` for a heavy one, both thread-safe (`loop-scheduling.md` D2). Each open index owns a
 `WorkGroup`; each RESTORE and each streamed upload owns its own group for its lifetime. Groups have
 one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind each other in a group.
 

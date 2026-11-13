@@ -22,17 +22,19 @@
 
 // What a request costs its HTTP loop (docs/perf/x7-loop-stalls.md): a search that returns thousands of hits keeps
 // its loop's 1 ms probe answered while it reads them, a restored record is compressed once, in its write, and a
-// RESTORE prepares its objects in chores, in the order a sequential restore sees them. The node runs in this process
-// with one HTTP loop.
+// RESTORE prepares its objects in chores, in the order a sequential restore sees them, and a light request runs ahead
+// of heavy turns (docs/design/loop-scheduling.md). The node runs in this process with one HTTP loop.
 
 #include "test_harness.h"
 
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <time.h>
@@ -351,6 +353,206 @@ public:
 		DocIndexer::seams.serial = false;
 		DocIndexer::seams.busy_placement_shard = 0;
 	}
+};
+
+// The lanes a request's slices run in, seen from DocIndexer's after_placement seam on the loop: the seam spends slices
+// of the request's budget and reads task::current().heavy() after each (docs/design/loop-scheduling.md D1, D2).
+namespace lanes {
+
+constexpr unsigned light_slices = 8;     // REQUEST_LIGHT_SLICES
+constexpr unsigned stream_slices = 4;    // REQUEST_STREAM_SLICES
+
+// Runs on the loop until the budget's slice is spent, then yields: one spent slice.
+task::task<void> spend(task::budget& b) {
+	while (!b.exhausted()) { }
+	co_await b.checkpoint();
+}
+
+// The seam's job, set by each test before its requests.
+enum class Mode { none, heavy_then_light, spend_heavy, spend_heavy_and_throw, record_entry, record_chunks };
+std::atomic<Mode> mode{Mode::none};
+
+// heavy_then_light: the RESTOREs that enter first spin slices until `stop`; once `light_armed`, the next one spends
+// three slices and records how many heavy turns ran while each waited.
+std::atomic<bool> stop{false};
+std::atomic<bool> light_armed{false};
+std::atomic<bool> light_taken{false};
+std::atomic<int> heavy_ready{0};          // heavy RESTOREs past light_slices spent slices
+std::atomic<long> heavy_turns{0};
+std::atomic<int> lane_mismatches{0};      // a resume whose lane is not spent() >= light_slices
+std::atomic<long> light_waited_most{-1};  // the most heavy turns between two turns of the light request
+std::atomic<bool> light_went_heavy{false};
+
+// record_entry: the lane the seam was entered in. record_chunks: per call, the spent count at entry and the lane
+// after each of its spent slices.
+std::atomic<int> entered_heavy{-1};
+std::mutex chunks_mtx;
+std::vector<std::pair<unsigned, std::vector<bool>>> chunks;
+
+task::task<void> seam(DatabaseHandler& db) {
+	auto& b = *db.budget;
+	switch (mode.load()) {
+		case Mode::heavy_then_light: {
+			if (light_armed.load() && !light_taken.exchange(true)) {
+				for (int i = 0; i < 3; ++i) {
+					while (!b.exhausted()) { }
+					const auto before = heavy_turns.load();
+					co_await b.checkpoint();
+					const auto waited = heavy_turns.load() - before;
+					if (waited > light_waited_most.load()) {
+						light_waited_most = waited;
+					}
+					light_went_heavy = light_went_heavy.load() || task::current().heavy();
+				}
+				stop = true;
+				co_return;
+			}
+			bool ready = false;
+			while (!stop.load()) {
+				co_await spend(b);
+				++heavy_turns;
+				if (task::current().heavy() != (b.spent() >= light_slices)) {
+					++lane_mismatches;
+				}
+				if (!ready && b.spent() >= light_slices) {
+					ready = true;
+					++heavy_ready;
+				}
+			}
+			co_return;
+		}
+		case Mode::spend_heavy:
+		case Mode::spend_heavy_and_throw:
+			for (unsigned i = 0; i <= light_slices; ++i) {
+				co_await spend(b);
+			}
+			if (mode.load() == Mode::spend_heavy_and_throw) {
+				THROW(ClientError, "The seam fails this request");
+			}
+			co_return;
+		case Mode::record_entry:
+			entered_heavy = task::current().heavy() ? 1 : 0;
+			co_return;
+		case Mode::record_chunks: {
+			std::pair<unsigned, std::vector<bool>> chunk{b.spent(), {}};
+			for (unsigned i = 0; i < light_slices; ++i) {
+				co_await spend(b);
+				chunk.second.push_back(task::current().heavy());
+			}
+			{
+				std::lock_guard<std::mutex> lk(chunks_mtx);
+				chunks.push_back(std::move(chunk));
+			}
+			// Keeps the index child running past the next chunk's read, so the join goes on in its (heavy) lane
+			// unless the rearm precedes the children.
+			for (const auto until = std::chrono::steady_clock::now() + 300ms; std::chrono::steady_clock::now() < until;) {
+				co_await spend(b);
+			}
+			co_return;
+		}
+		case Mode::none:
+			co_return;
+	}
+}
+
+// Sets the seam for a test and clears it after.
+class Seam {
+public:
+	explicit Seam(Mode m) {
+		stop = false;
+		light_armed = false;
+		light_taken = false;
+		heavy_ready = 0;
+		heavy_turns = 0;
+		lane_mismatches = 0;
+		light_waited_most = -1;
+		light_went_heavy = false;
+		entered_heavy = -1;
+		chunks.clear();
+		mode = m;
+		DocIndexer::seams.after_placement = seam;
+	}
+	~Seam() {
+		DocIndexer::seams.after_placement = nullptr;
+		mode = Mode::none;
+	}
+};
+
+}  // namespace lanes
+
+// Requests on one keep-alive connection, each response read to its Content-Length.
+class KeepAlive {
+public:
+	KeepAlive() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+		sockaddr_in addr{};
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(static_cast<uint16_t>(node_port));
+		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+		if (fd_ >= 0 && ::connect(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+			::close(fd_);
+			fd_ = -1;
+		}
+		timeval timeout{60, 0};
+		if (fd_ >= 0) {
+			::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+		}
+	}
+	~KeepAlive() {
+		if (fd_ >= 0) {
+			::close(fd_);
+		}
+	}
+	KeepAlive(const KeepAlive&) = delete;
+	KeepAlive& operator=(const KeepAlive&) = delete;
+
+	// The response's status, or 0 when the connection gave none.
+	int call(const std::string& method, const std::string& path, const std::string& body, const std::string& content_type = "application/json") {
+		if (fd_ < 0) {
+			return 0;
+		}
+		const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nContent-Type: " + content_type + "\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+		for (std::size_t sent = 0; sent < request.size();) {
+			const auto n = ::send(fd_, request.data() + sent, request.size() - sent, 0);
+			if (n <= 0) {
+				return 0;
+			}
+			sent += static_cast<std::size_t>(n);
+		}
+		std::size_t end;
+		while ((end = buffer_.find("\r\n\r\n")) == std::string::npos) {
+			if (!fill()) {
+				return 0;
+			}
+		}
+		std::string head = buffer_.substr(0, end);
+		for (auto& c : head) {
+			c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+		}
+		const auto at = head.find("\r\ncontent-length:");
+		const std::size_t length = at == std::string::npos ? 0 : std::strtoull(head.c_str() + at + 17, nullptr, 10);
+		while (buffer_.size() < end + 4 + length) {
+			if (!fill()) {
+				return 0;
+			}
+		}
+		const int status = head.rfind("http/1.1 ", 0) == 0 && head.size() > 12 ? std::atoi(head.c_str() + 9) : 0;
+		buffer_.erase(0, end + 4 + length);
+		return status;
+	}
+
+private:
+	bool fill() {
+		char buf[65536];
+		const auto n = ::recv(fd_, buf, sizeof(buf), 0);
+		if (n <= 0) {
+			return false;
+		}
+		buffer_.append(buf, static_cast<std::size_t>(n));
+		return true;
+	}
+
+	int fd_;
+	std::string buffer_;
 };
 
 }  // namespace
@@ -839,6 +1041,100 @@ static void test_schema_changes_commit_in_input_order() {
 }
 
 
+// A light request runs ahead of heavy turns (docs/design/loop-scheduling.md D1, D2): four RESTOREs past 8 spent slices
+// are heavy and spin their slices in the heavy lane; a fifth, light, spends three slices, and at most one heavy turn
+// runs between two of its turns. With every spent slice demoted (today's policy) it waits behind all four.
+static void test_a_light_request_runs_ahead_of_heavy_turns() {
+	constexpr int heavy = 4;
+	for (int i = 0; i <= heavy; ++i) {
+		CHECK_EQ(http_call("RESTORE", "/lane" + std::to_string(i) + "/?commit", R"([{"_id":"w","n":1}])") / 100, 2);   // the schema exists after it
+	}
+	lanes::Seam seam(lanes::Mode::heavy_then_light);
+	std::vector<std::thread> heavies;
+	std::atomic<int> heavy_ok{0};
+	for (int i = 1; i <= heavy; ++i) {
+		heavies.emplace_back([i, &heavy_ok] {
+			if (http_call("RESTORE", "/lane" + std::to_string(i) + "/", R"([{"_id":"h","n":2}])") / 100 == 2) {
+				++heavy_ok;
+			}
+		});
+	}
+	const bool ready = eventually([] { return lanes::heavy_ready.load() == heavy; }, 30s);
+	CHECK_TRUE(ready);
+	lanes::light_armed = true;
+	const auto light = http_call("RESTORE", "/lane0/", R"([{"_id":"l","n":3}])");
+	lanes::stop = true;
+	for (auto& t : heavies) {
+		t.join();
+	}
+	std::fprintf(stderr, "  %ld heavy turns; the light request waited at most %ld of them between its turns\n",
+		lanes::heavy_turns.load(), lanes::light_waited_most.load());
+	CHECK_EQ(light / 100, 2);
+	CHECK_EQ(heavy_ok.load(), heavy);
+	CHECK_GE(lanes::light_waited_most.load(), 0L);   // it spent its slices
+	CHECK_LE(lanes::light_waited_most.load(), 1L);   // one heavy turn per pass of the loop
+	CHECK_FALSE(lanes::light_went_heavy.load());
+	CHECK_EQ(lanes::lane_mismatches.load(), 0);     // heavy exactly from the 8th spent slice, debug pumps included
+}
+
+
+// A request after a heavy one on the same connection starts light, also when the heavy one throws: the connection goes
+// on in the light lane after each request (D2 f), so the next request's read and work are not heavy turns.
+static void test_a_request_after_a_heavy_one_starts_light() {
+	CHECK_EQ(http_call("RESTORE", "/lanenext/?commit", R"([{"_id":"w","n":1}])") / 100, 2);   // the schema exists after it
+	for (const auto first : {lanes::Mode::spend_heavy, lanes::Mode::spend_heavy_and_throw}) {
+		lanes::Seam seam(first);
+		KeepAlive connection;
+		const auto status = connection.call("RESTORE", "/lanenext/", R"([{"_id":"a","n":2}])");
+		CHECK_EQ(status / 100, first == lanes::Mode::spend_heavy ? 2 : 4);
+		lanes::mode = lanes::Mode::record_entry;
+		CHECK_EQ(connection.call("RESTORE", "/lanenext/", R"([{"_id":"b","n":3}])") / 100, 2);
+		std::fprintf(stderr, "  after a heavy request%s, the next one entered %s\n", first == lanes::Mode::spend_heavy ? "" : " that threw",
+			lanes::entered_heavy.load() == 1 ? "heavy" : lanes::entered_heavy.load() == 0 ? "light" : "nothing");
+		CHECK_EQ(lanes::entered_heavy.load(), 0);
+	}
+}
+
+
+// Each body chunk of a streamed RESTORE starts light (D81) for REQUEST_STREAM_SLICES of its own slices (D82): the
+// rearm runs before the chunk's children start. Without it the RESTORE stays heavy from its 8th slice on, so every
+// later chunk's first slice is a heavy turn.
+// The index child outlasts the read, so the join leaves the parent heavy: a rearm inside the read, not before the
+// children, leaves every later chunk heavy.
+static void test_each_chunk_of_a_streamed_restore_starts_light() {
+	CHECK_EQ(http_call("RESTORE", "/lanestream/?commit", R"([{"_id":"w","n":1}])") / 100, 2);   // the schema exists after it
+	std::vector<std::string> pieces;
+	for (int p = 0; p < 4; ++p) {
+		std::string piece;
+		for (int i = 0; i < 5; ++i) {
+			piece += R"({"_id":"s)" + std::to_string(p * 5 + i) + R"(","n":)" + std::to_string(i) + "}\n";
+		}
+		pieces.push_back(piece);
+	}
+	// One round per chunk on any build: a slow prepare (TSan) splits a chunk into rounds, and a later round's
+	// placement continues the chunk's budget, heavy by count.
+	FixedRanges ranges(5);
+	lanes::Seam seam(lanes::Mode::record_chunks);
+	CHECK_EQ(http_call_pieces("RESTORE", "/lanestream/?commit", pieces, "application/x-ndjson", 150ms) / 100, 2);
+	std::lock_guard<std::mutex> lk(lanes::chunks_mtx);
+	CHECK_GE(lanes::chunks.size(), std::size_t{2});
+	bool first_light = true;
+	bool lanes_by_count = true;
+	for (const auto& [spent, heavy] : lanes::chunks) {
+		std::string seen;
+		for (std::size_t j = 0; j < heavy.size(); ++j) {
+			seen += heavy[j] ? 'H' : 'l';
+			lanes_by_count = lanes_by_count && heavy[j] == (spent + j + 1 >= lanes::light_slices);
+		}
+		std::fprintf(stderr, "  a chunk entered with %u slices spent; lanes of its slices %s\n", spent, seen.c_str());
+		first_light = first_light && !heavy.empty() && !heavy[0];
+		CHECK_LE(spent, lanes::light_slices - lanes::stream_slices);
+	}
+	CHECK_TRUE(first_light);       // every chunk's first spent slice runs light
+	CHECK_TRUE(lanes_by_count);    // and turns heavy at the rearmed count
+}
+
+
 int main() {
 	RunningNode node;
 	if (!node.ready()) {
@@ -857,6 +1153,9 @@ int main() {
 	test_a_failed_placement_read_defers_its_terms_to_the_serial_path();
 	test_an_update_sees_the_earlier_objects_of_its_stream();
 	test_schema_changes_commit_in_input_order();
+	test_a_light_request_runs_ahead_of_heavy_turns();
+	test_a_request_after_a_heavy_one_starts_light();
+	test_each_chunk_of_a_streamed_restore_starts_light();
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;

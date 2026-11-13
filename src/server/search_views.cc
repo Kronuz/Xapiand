@@ -505,6 +505,11 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 // The longest a request runs before it yields its reactor (an estimate; docs/design/phase7c.md D2).
 static constexpr std::chrono::microseconds REQUEST_SLICE{200};
 
+// The slices a request spends light, ahead of the heavy lane, before it turns heavy (least attained service,
+// docs/design/loop-scheduling.md D1), and the slices each body chunk of a streamed RESTORE gets light again (D82).
+static constexpr unsigned REQUEST_LIGHT_SLICES = 8;
+static constexpr unsigned REQUEST_STREAM_SLICES = 4;
+
 // The URL "kinds" Xapiand's grammar classifies into: a small, fixed set of route
 // keys the declarative table is registered under. They are internal routing tokens
 // (never user-facing paths), so they are zero-copy constants and cost no allocation
@@ -940,7 +945,7 @@ write_document_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
-	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
 	bool stored = is_stored_type(request.ct_type);
 	auto ct_type = request.ct_type.empty() ? mime_type(selector) : request.ct_type;
@@ -1037,7 +1042,7 @@ update_document_view(Request& request)
 	std::string operation;
 	DocumentInfo indexed;
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
-	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
@@ -1455,7 +1460,7 @@ write_database_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
-	task::budget script_budget(REQUEST_SLICE);   // a script yields its reactor between slices; an admitted write is not cancelled
+	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
 
 	if (decoded_body.is_map()) {
@@ -1690,9 +1695,11 @@ restore_database_view(Request& request)
 				if (!indexer) {
 					co_await open_indexer(batch.front());
 				}
-				// The next chunk is read and parsed while this batch is prepared and applied.
+				// The next chunk is read and parsed while this batch is prepared and applied. Both start light: the
+				// rearm is here, before the children start, since the join goes on in its last child's lane.
 				std::vector<MsgPack> next;
 				bool next_more = false;
+				request.budget->rearm_light(REQUEST_STREAM_SLICES);
 				co_await task::when_all(indexer->index(batch), [&]() -> task::task<void> {
 					next_more = co_await request.next_batch(next);
 				}());
@@ -3091,16 +3098,16 @@ method_from_string(std::string_view m)
 }
 
 
-// The most demoted handles a reactor lets queue before it refuses new requests (docs/design/phase7c.md D2).
+// The most handles a reactor lets queue in its heavy lane before it refuses new requests (docs/design/phase7c.md D2).
 static constexpr std::size_t DEMOTED_ADMISSION_CAP = 256;
 
 
 std::unique_ptr<http::RequestExtension>
 SearchService::create_extension(const http::Request& /*hreq*/)
 {
-	// The second admission count (the first is the reactor's in-flight gate): requests that spent
-	// their slice and wait demoted. Over its cap the loop is saturated, so the request is refused
-	// before its body is read.
+	// The second admission count (the first is the reactor's in-flight gate): resumptions of heavy
+	// requests that wait in the heavy lane. Over its cap the loop is saturated, so the request is
+	// refused before its body is read.
 	if (auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current())) {
 		const auto demoted = host->scheduler().demoted();
 		auto& metrics = Metrics::metrics();
@@ -3157,6 +3164,11 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 {
 	Request& request = hreq.ext<Request>();   // the extension create_extension() built
 	ENGINE_CENSUS_REQUEST(census_request, hreq.method, hreq.target);
+	// A request starts light: on every exit, a throw included, the connection goes on light, so its next read and
+	// request leave the heavy lane this one may have entered (docs/design/loop-scheduling.md D2 f).
+	struct LightOnExit {
+		~LightOnExit() { task::enter_light(); }
+	} light_on_exit;
 	request.http_req = &hreq;                 // the source of truth for every HTTP fact
 	request.response_writer = &response;       // the response path emits through the library writer
 
@@ -3164,7 +3176,7 @@ SearchService::handle(http::Request& hreq, http::ResponseWriter& response)
 	// a write that was admitted completes and its response is attempted. The request's token is
 	// http's (Request::cancel_token()); a read that waits for a streamed body ends with it too.
 	const task::cancel_token token = hreq.cancel_token();
-	request.budget.emplace(REQUEST_SLICE, token);
+	request.budget.emplace(REQUEST_SLICE, token, REQUEST_LIGHT_SLICES);
 
 	// HTTP facts from the library request (keep-alive/close, version).
 	request.http_major = hreq.http_major;
