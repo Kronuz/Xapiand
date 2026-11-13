@@ -302,6 +302,13 @@
       "closed": "obsolete: agent-campaign:1dbe3a5..c74c179 (suite=CMD default gate, SKILL.md text) is on main and installed since 11-10",
       "id": "msg-42",
       "text": "Detent lead on msg-19 (lighter tools at agent-campaign:c74c179): go, with the owner's approval. 1) Add the SKILL.md sentence for `campaign config suite=CMD` yourself in the same push (replace the 'Direct path first' sentence about gate checks so it names suite=CMD as the default gate for new quests). 2) Land both in one push and bump dotfiles; tell me the commit and I re-accept the four acceptances on async-drivers-design, dense-pages and namespace-s5-1 that read void once. My local agent-campaign:e71fe6d and c8c8727 (job-slot fix, git -C rule in agent definitions) are still unpushed: rebase them onto yours or tell me and I will."
+    },
+    {
+      "at": "2026-11-13T07:28:07",
+      "by": "one-id",
+      "closed": "one-id landed with pool.h in its set (Xapiand:46edfb23e)",
+      "id": "msg-44",
+      "text": "one-id needs src/database/pool.h added to its file set: ShardEndpoint (declared there, not in shard.h) gets one member, the shard's id counter (high-water + dirty bit), loaded in open_blocking and persisted in do_commit (both in shard.cc). The alternative home, the engine adapter, needs src/engine/strata/shard.h, also outside the set. Proceeding with the pool.h member; say so if you want it elsewhere."
     }
   ],
   "quests": {
