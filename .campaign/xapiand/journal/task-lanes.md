@@ -9,13 +9,17 @@ Jobs at task:90b50f0 (pushed; CI on quest/** running). At task:5ae571a every job
 
 ## Next
 
-1. Read the jobs at 90b50f0 and CI run on quest/xapiand/task-lanes.
+1. Read the jobs at 90b50f0 (CI there is green).
 2. A3: read `build-resume-ab/ab.json` from 261112-204947-85fbaf; record the median B/A ratio per measurement, honest magnitude.
 3. When green: State "ready for review", sha for Detent (A4).
 
 ## Blocked on
 
-Lead: the quest file's A1 bullet is on the same line as "Three to five, at outcome level:", so `campaign` does not parse A1 (`--for A1` is refused). build-test and the 11 mutants run untagged; once A1 parses, rerun them with `--for A1` (the mutants with `--fails-without`), same commands: `python3 test/lanes_mutant.py NAME`.
+Nothing. (The lead fixed the quest file's criteria header; resubmitting with `--for A1 [--fails-without]` reused the identical 90b50f0 jobs and tagged them, so nothing was cancelled.)
+
+## CI
+
+Kronuz/task CI at 90b50f0: run 43367833692, success on every platform (freebsd, linux gcc/clang x86_64 and arm64, asan-ubsan, tsan, macos arm64/x86_64). At 5ae571a, run 43367102633 failed on linux-arm64-gcc only (the test race fixed in 90b50f0).
 
 ## Evidence
 
