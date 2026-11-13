@@ -23,6 +23,7 @@ and 2).
 - A7 Fast: encode and decode cost per value at or below the old codec on `sizes.py`'s real-value set, and indexing, sort and range throughput on the real corpus at or above master's, outside the A/A band only if faster (owner D87: it must not become a bottleneck): `exclusive` jobs at named commits
 - A8 T9 no GPL: `git grep -n sortable_serialise -- src contrib` prints nothing, both GPL files and the Python module removed, the check added to `harness/seam_check.sh`; ARCHITECTURE and the license note updated (design T9; license-audit A3): the `no-gpl` check
 - A9 T10 platforms: T1, T2's CI part, T3 and the unit tests pass on every CI platform and sanitizer job (design T10): CI
+- A12 American spelling: `Serialise`/`Unserialise`, `serialise*` files and every other `serialis*` name become `serializ*` in the same landing (owner, D88): `git grep -il serialis -- src tests docs contrib harness CMakeLists.txt` prints nothing, as a job
 - A10 [artifact] How it works: `docs/mechanisms/value-encoding.md`
 - A11 [artifact] Changelog `[Unreleased]`: exact numeric order for ids and values: `docs/src/content/docs/changelog.md`
 
