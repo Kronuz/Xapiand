@@ -29,6 +29,7 @@ Changes the on-disk meaning of a shard's docids and adds the bucket-to-shard tab
 ## Decisions
 
 - Owner D84 (2026-11-13): one id.
+- Lead: the bucket-to-shard table is implicit (bucket % n) until the reshard quest persists one; one-id writes no table.
 - D85 (lead default, owner pending): stride over a fixed B = 1024 buckets, not n, so adding or removing shards later moves buckets without renumbering ids.
 
 ## May land early
