@@ -133,7 +133,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | [artifact] `docs/perf/x7-loop-stalls.md`, "Design: fix (c), RESTORE's writes off the loop, one shard per child" (review pending) |
 | A2 | [artifact] `docs/perf/x7-loop-stalls.md`, "At the fix", fix (c)'s column and "At fix (c)" (job 261112-060352-3a68bf: T4 and T5 miss, recorded) |
 | A3 | 261112-060350-41b974: RESTORE 1.001x pre-7c in `loadtest.py` (pairs 0.981-1.047), 1.019x in `profile_bulk.sh` (0.999-1.094); met at the median, inside the spread |
-| A5 | suite 261112-231439-6b1fc5 (Xapiand:87f839a95, pending); fails without: 261112-201044-0da49c (stale break), 261112-201045-5f5375 (failed slice fails the rest), 261112-231447-8579aa (F1: a failed placement read fails its terms, pending) |
+| A5 | suite 261113-055628-d24819 (at 0ed7e885c); fails without: 261113-062046-822bec (stale break), 261113-062047-0149cf (failed slice fails the rest), 261113-055631-a31da6 (F1: a failed placement read fails its terms) |
 | A4 | suite 261112-060150-6f4cc5 (Xapiand:a944a38d4, exit 0); fails without: 261112-060244-26054a, 261112-060247-915bc9, 261112-060250-fff57b, 261112-060253-438fbd, 261112-060256-a08cb1, 261112-060259-0555e1 (each exit 0: its named check's FAIL line appeared) |
 
 ## Review findings
