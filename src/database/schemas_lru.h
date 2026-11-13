@@ -23,8 +23,10 @@
 
 #pragma once
 
+#include <functional>            // for std::function
 #include <memory>                // for std::shared_ptr
 #include <mutex>                 // for std::mutex
+#include <optional>              // for std::optional
 #include <string_view>           // for std::string_view
 
 #include "database/schema.h"
@@ -49,10 +51,27 @@ class SchemasLRU {
 	mutable std::mutex versions_mtx;
 	lru::aging_lru<std::string, engine::rev> versions;
 
+	// What a metadata flight yields: the stored schema document, or that the cache holds the schema now.
+	struct MetadataRead {
+		std::string ser;
+		bool cached = false;
+	};
+
 	// One metadata read, and one foreign-schema read, per schema at a time: concurrent first uses of a
-	// schema await the one load (D11).
-	SingleFlight<std::string, std::string> metadata_loads;
+	// schema await the one load (D11). Each load puts its schema in the cache before its flight ends.
+	SingleFlight<std::string, MetadataRead> metadata_loads;
 	SingleFlight<std::string, std::pair<engine::rev, MsgPack>> foreign_loads;
+
+	task::task<MetadataRead> load_metadata(
+		const std::string& local_schema_path, const Endpoints& endpoints, int read_flags,
+		std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget,
+		const std::string& foreign_uri, std::string_view endpoints_path, const std::shared_ptr<const MsgPack>& new_schema);
+	std::optional<MetadataRead> cached_metadata(const std::string& local_schema_path);
+
+	task::task<std::pair<engine::rev, MsgPack>> load_foreign(
+		const std::string& foreign_uri, std::string_view foreign_id, const Endpoint& foreign_endpoint, int read_flags,
+		std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget);
+	std::optional<std::pair<engine::rev, MsgPack>> cached_foreign(const std::string& foreign_uri);
 
 	task::task<std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>>
 	_update(
@@ -63,6 +82,11 @@ class SchemasLRU {
 		task::budget* budget);   // the caller's: its token ends the schema reads' turn waits
 
 public:
+	// Test seams, awaited when a first use missed the cache and is about to claim the load.
+	std::function<task::task<void>()> before_metadata_claim;
+	std::function<task::task<void>()> before_foreign_claim;
+	std::function<task::task<void>()> after_metadata_flight;
+
 	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);
 
 	task::task<std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>> get(DatabaseHandler* db_handler, const MsgPack* obj);

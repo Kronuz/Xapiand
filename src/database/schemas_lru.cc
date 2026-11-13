@@ -194,6 +194,112 @@ read_metadata(Endpoints endpoints, int read_flags, std::shared_ptr<std::unordere
 }
 
 
+// The schema stored metadata stands for: its document, or when there is none, a link to the foreign schema.
+static std::shared_ptr<const MsgPack>
+schema_of_metadata([[maybe_unused]] const char* prefix, const std::string& schema_ser, const std::string& foreign_uri, std::string_view endpoints_path, [[maybe_unused]] const std::string& local_schema_path, const std::shared_ptr<const MsgPack>& new_schema)
+{
+	std::shared_ptr<const MsgPack> schema_ptr;
+	if (schema_ser.empty()) {
+		if (!foreign_uri.empty()) {
+			schema_ptr = std::make_shared<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_FOREIGN, foreign_uri },
+			}));
+			schema_ptr->lock();
+			L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+		} else if (endpoints_path != ".xapiand/nodes") {
+			// Implement foreign schemas in the reserved indexes database by default:
+			schema_ptr = std::make_shared<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_FOREIGN, strings::format(".xapiand/indexes/{}", strings::replace(endpoints_path, "/", "%2F")) },
+			}));
+			schema_ptr->lock();
+			L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+		} else if (new_schema) {
+			schema_ptr = new_schema;
+			L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create from new schema (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+		} else {
+			schema_ptr = Schema::get_initial_schema();
+			L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new initial schema (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+		}
+	} else {
+		schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+		schema_ptr->lock();
+		schema_ptr->set_flags(1);
+		L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+	}
+	return schema_ptr;
+}
+
+
+// Reads the metadata of a first use and puts its schema in the cache, as the call that needs it would, before the flight ends.
+task::task<SchemasLRU::MetadataRead>
+SchemasLRU::load_metadata(const std::string& local_schema_path, const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget, const std::string& foreign_uri, std::string_view endpoints_path, const std::shared_ptr<const MsgPack>& new_schema)
+{
+	MetadataRead read;
+	read.ser = co_await read_metadata(endpoints, read_flags, std::move(context), budget);
+	auto schema_ptr = schema_of_metadata("", read.ser, foreign_uri, endpoints_path, local_schema_path, new_schema);
+	std::lock_guard<std::mutex> lk(schemas_mtx);
+	auto& schema = schemas[local_schema_path];
+	if (!schema) {
+		schema = std::move(schema_ptr);
+	}
+	co_return read;
+}
+
+
+std::optional<SchemasLRU::MetadataRead>
+SchemasLRU::cached_metadata(const std::string& local_schema_path)
+{
+	std::lock_guard<std::mutex> lk(schemas_mtx);
+	if (schemas[local_schema_path]) {
+		MetadataRead read;
+		read.cached = true;
+		return read;
+	}
+	return std::nullopt;
+}
+
+
+// Reads a foreign schema and puts it in the cache before the flight ends.
+task::task<std::pair<engine::rev, MsgPack>>
+SchemasLRU::load_foreign(const std::string& foreign_uri, std::string_view foreign_id, const Endpoint& foreign_endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context, task::budget* budget)
+{
+	auto shared = co_await load_shared(foreign_id, foreign_endpoint, read_flags, std::move(context), budget);
+	auto schema_ptr = std::make_shared<const MsgPack>(shared.second);
+	schema_ptr->lock();
+	schema_ptr->set_flags(shared.first);
+	std::lock_guard<std::mutex> lk(schemas_mtx);
+	auto& schema = schemas[foreign_uri];
+	if (!schema) {
+		schema = std::move(schema_ptr);
+	}
+	co_return shared;
+}
+
+
+std::optional<std::pair<engine::rev, MsgPack>>
+SchemasLRU::cached_foreign(const std::string& foreign_uri)
+{
+	std::shared_ptr<const MsgPack> schema_ptr;
+	{
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		schema_ptr = schemas[foreign_uri];
+	}
+	if (!schema_ptr) {
+		return std::nullopt;
+	}
+	{
+		std::lock_guard<std::mutex> lk(versions_mtx);
+		auto version_it = versions.find(foreign_uri);
+		if (version_it != versions.end() && version_it->second > schema_ptr->get_flags()) {
+			return std::nullopt;   // flagged outdated
+		}
+	}
+	return std::make_pair(schema_ptr->get_flags(), *schema_ptr);
+}
+
+
 SchemasLRU::SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age) :
 	schemas(max_size, max_age),
 	versions(opts.schema_versions_size, max_age)
@@ -250,6 +356,41 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 	const bool outermost = !context || context->empty();
 	const bool first_use = outermost && !local_schema_ptr;
 
+	// A schema that isn't in the cache, or is outdated, is read from its metadata
+	std::string schema_ser;
+	if (!local_schema_ptr || local_outdated) {
+		if (local_outdated) {
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] is outdated, try reloading from metadata", prefix, repr(local_schema_path));
+		} else {
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
+		}
+		if (first_use) {
+			if (before_metadata_claim) {
+				co_await before_metadata_claim();
+			}
+			auto read = co_await metadata_loads.run(
+				strings::format("{}:{}", local_schema_path, read_flags),
+				[&] { return load_metadata(local_schema_path, endpoints, read_flags, context, budget, foreign_uri, endpoints_path, new_schema); },
+				[&] { return cached_metadata(local_schema_path); });
+			if (after_metadata_flight) {
+				co_await after_metadata_flight();
+			}
+			if (read.cached) {
+				// A load that ended before this call claimed one put the schema in the cache.
+				{
+					std::lock_guard<std::mutex> lk(schemas_mtx);
+					local_schema_ptr = schemas[local_schema_path];
+				}
+				if (!local_schema_ptr) {
+					read.ser = co_await read_metadata(endpoints, read_flags, context, budget);   // evicted since
+				}
+			}
+			schema_ser = std::move(read.ser);
+		} else {
+			schema_ser = co_await read_metadata(endpoints, read_flags, context, budget);
+		}
+	}
+
 	// Whatever was passed by the user doesn't specify a foreign schema,
 	// or there it wasn't passed anything.
 	if (local_schema_ptr && !local_outdated) {
@@ -288,47 +429,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			schema_ptr = local_schema_ptr;
 		}
 	} else {
-		// Schema needs to be read
-		if (local_outdated) {
-			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] is outdated, try reloading from metadata", prefix, repr(local_schema_path));
-		} else {
-			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
-		}
-		std::string schema_ser;
-		if (first_use) {
-			schema_ser = co_await metadata_loads.run(strings::format("{}:{}", local_schema_path, read_flags), [&] { return read_metadata(endpoints, read_flags, context, budget); });
-		} else {
-			schema_ser = co_await read_metadata(endpoints, read_flags, context, budget);
-		}
-		if (schema_ser.empty()) {
-			if (!foreign_uri.empty()) {
-				schema_ptr = std::make_shared<MsgPack>(MsgPack({
-					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_FOREIGN, foreign_uri },
-				}));
-				schema_ptr->lock();
-				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-			} else if (endpoints_path != ".xapiand/nodes") {
-				// Implement foreign schemas in the reserved indexes database by default:
-				schema_ptr = std::make_shared<MsgPack>(MsgPack({
-					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_FOREIGN, strings::format(".xapiand/indexes/{}", strings::replace(endpoints_path, "/", "%2F")) },
-				}));
-				schema_ptr->lock();
-				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-			} else if (new_schema) {
-				schema_ptr = new_schema;
-				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create from new schema (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-			} else {
-				schema_ptr = Schema::get_initial_schema();
-				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new initial schema (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-			}
-		} else {
-			schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
-			schema_ptr->lock();
-			schema_ptr->set_flags(1);
-			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-		}
+		// The schema just read
+		schema_ptr = schema_of_metadata(prefix, schema_ser, foreign_uri, endpoints_path, local_schema_path, new_schema);
 		assert(schema_ptr);
 		std::lock_guard<std::mutex> lk(schemas_mtx);
 		auto& schema = schemas[local_schema_path];
@@ -506,12 +608,17 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 				try {
 					const Endpoint foreign_endpoint(foreign_path);   // load_shared keeps a reference to it while it runs
-					auto load = [&] { return load_shared(foreign_id, foreign_endpoint, read_flags, context, budget); };
 					std::pair<engine::rev, MsgPack> shared;
 					if (outermost && !foreign_schema_ptr) {
-						shared = co_await foreign_loads.run(strings::format("{}:{}", foreign_uri, read_flags), load);
+						if (before_foreign_claim) {
+							co_await before_foreign_claim();
+						}
+						shared = co_await foreign_loads.run(
+							strings::format("{}:{}", foreign_uri, read_flags),
+							[&] { return load_foreign(foreign_uri, foreign_id, foreign_endpoint, read_flags, context, budget); },
+							[&] { return cached_foreign(foreign_uri); });
 					} else {
-						shared = co_await load();
+						shared = co_await load_shared(foreign_id, foreign_endpoint, read_flags, context, budget);
 					}
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();

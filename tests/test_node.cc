@@ -542,6 +542,57 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	}
 }
 
+// A first use that missed the cache and is paused before it claims the load, while the other calls load the schema and
+// finish, loads nothing when it resumes: the load it missed has put the schema in the cache. `gated` is the seam that
+// holds the first call to reach it.
+static void a_call_paused_before_its_claim_loads_nothing(const char* name, const char* index, bool metadata) {
+	Watchdog watchdog(name);
+	constexpr int N = 6;
+	const auto endpoints = endpoints_of(index);
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	auto seam = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = seam;
+	std::atomic<int> done{0};
+	std::vector<std::shared_ptr<const MsgPack>> got(N);
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&, i] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			auto result = engine::sync_wait(schemas.get(&handler, nullptr));
+			got[i] = std::get<0>(result);
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(schemas.loads() - loads_before, 2u);              // the metadata read and the foreign schema: once each
+	CHECK_EQ(done.load(), N - 1);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(schemas.loads() - loads_before, 2u);   // and the paused call loaded neither
+	for (int i = 1; i < N; ++i) {
+		CHECK(got[i] == got[0]);
+	}
+}
+
+static void test_a_call_paused_before_claiming_the_foreign_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the foreign claim", "schema_paused_foreign", false);
+}
+
+static void test_a_call_paused_before_claiming_the_metadata_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the metadata claim", "schema_paused_metadata", true);
+}
+
 // The same for the settings of an index: the resolver reads them once.
 static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	Watchdog watchdog("one settings load");
@@ -571,6 +622,40 @@ static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	}
 	CHECK_EQ(done.load(), N);
 	CHECK_EQ(manager()->index_settings_resolver->loads() - loads_before, 1u);
+}
+
+// The same for the settings of an index: a call paused after it missed the cache and before it claims the read loads
+// nothing when it resumes, the read that ended meanwhile having put the settings in the cache.
+static void test_a_call_paused_before_claiming_the_settings_load_loads_nothing() {
+	Watchdog watchdog("paused before the settings claim");
+	constexpr int N = 6;
+	auto& resolver = *manager()->index_settings_resolver;
+	const auto loads_before = resolver.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	resolver.before_settings_claim = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	std::atomic<int> done{0};
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&] {
+			auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_paused"));
+			(void)settings;
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(resolver.loads() - loads_before, 1u);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	resolver.before_settings_claim = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(resolver.loads() - loads_before, 1u);   // the paused call read nothing
 }
 
 // Late uses are served from the cache and load nothing.
@@ -2328,6 +2413,99 @@ static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
 }
 
 
+// A new index created with number_of_replicas below and above the default gets exactly the replicas asked: its shards
+// are placed with the default count first and placed again when the settings ask for another. The node knows two more
+// nodes for it; this runs last, as they stay known.
+static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default() {
+	Watchdog watchdog("replicas of a new index");
+	for (const char* name : {"replicas_extra_1", "replicas_extra_2"}) {
+		Node node;
+		node.name(name);
+		node.host("127.0.0.1");
+		node.http_port = 1;
+		Node::touch_node(node, true);
+	}
+	CHECK_EQ(Node::total_nodes(), 3u);
+	const auto saved_replicas = opts.num_replicas;
+	opts.num_replicas = 1;   // the default: a master and one replica
+	auto replicas_of = [](const std::string& path, const std::optional<int>& asked) {
+		std::optional<MsgPack> settings;
+		if (asked) {
+			settings = MsgPack({{ "_settings", MsgPack({{ "number_of_shards", static_cast<int>(opts.num_shards) }, { "number_of_replicas", *asked }}) }});
+		}
+		auto result = engine::sync_wait(XapiandManager::resolve_index_settings(path, false, settings ? &*settings : nullptr));
+		std::vector<size_t> sizes;
+		for (const auto& shard : result.shards) {
+			sizes.push_back(shard.nodes.size());
+		}
+		return sizes;
+	};
+	const auto by_default = replicas_of("replicas_default", std::nullopt);   // opts.num_shards shards, a master and one replica each
+	CHECK_EQ(by_default.size(), opts.num_shards);
+	CHECK(std::all_of(by_default.begin(), by_default.end(), [](size_t n) { return n == 2; }));
+	// The shards asked are the default's, so only the replica count asks for other placement.
+	auto all_have = [&](const std::vector<size_t>& sizes, size_t n) {
+		return sizes.size() == opts.num_shards && std::all_of(sizes.begin(), sizes.end(), [n](size_t size) { return size == n; });
+	};
+	CHECK(all_have(replicas_of("replicas_below", 0), 1));   // a master only
+	CHECK(all_have(replicas_of("replicas_equal", 1), 2));
+	CHECK(all_have(replicas_of("replicas_above", 2), 3));   // a master and two replicas
+	opts.num_replicas = saved_replicas;
+}
+
+
+// A first use that missed the cache claims the metadata load after the flight ended and before the
+// leader's caller stored the schema; only the flight's publication can serve it.
+static void test_a_claim_between_flight_end_and_store_is_served_by_the_publication() {
+	Watchdog watchdog("publish before the flight ends");
+	const auto endpoints = endpoints_of("schema_publish_before_end");
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> claims{0};
+	std::atomic<int> afters{0};
+	std::atomic<bool> b_paused{false};
+	std::atomic<bool> a_after{false};
+	std::atomic<bool> b_done{false};
+	task::event gate_b;
+	task::event gate_a;
+	schemas.before_metadata_claim = [&]() -> task::task<void> {
+		if (claims++ == 0) {
+			b_paused = true;
+			co_await gate_b;
+		}
+	};
+	schemas.after_metadata_flight = [&]() -> task::task<void> {
+		if (afters++ == 0) {
+			a_after = true;
+			co_await gate_a;
+		}
+	};
+	std::shared_ptr<const MsgPack> got_a;
+	std::shared_ptr<const MsgPack> got_b;
+	std::thread b([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_b = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+		b_done = true;
+	});
+	CHECK(eventually([&] { return b_paused.load(); }, 20s));
+	std::thread a([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_a = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+	});
+	CHECK(eventually([&] { return a_after.load(); }, 20s));   // a's flight has ended; a has not stored
+	gate_b.set();
+	CHECK(eventually([&] { return b_done.load(); }, 20s));
+	gate_a.set();
+	a.join();
+	b.join();
+	schemas.before_metadata_claim = nullptr;
+	schemas.after_metadata_flight = nullptr;
+	const auto loads = schemas.loads() - loads_before;
+	CHECK_EQ(loads, 2u);
+	CHECK(got_a == got_b);
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -2369,8 +2547,12 @@ int main(int argc, char** argv) {
 		void (*fn)();
 	};
 	const Case cases[] = {
+		{"test_a_claim_between_flight_end_and_store_is_served_by_the_publication", test_a_claim_between_flight_end_and_store_is_served_by_the_publication},
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
+		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
+		{"test_a_call_paused_before_claiming_the_metadata_load_loads_nothing", test_a_call_paused_before_claiming_the_metadata_load_loads_nothing},
 		{"test_concurrent_first_uses_of_index_settings_load_them_once", test_concurrent_first_uses_of_index_settings_load_them_once},
+		{"test_a_call_paused_before_claiming_the_settings_load_loads_nothing", test_a_call_paused_before_claiming_the_settings_load_loads_nothing},
 		{"test_a_cached_schema_is_not_loaded_again", test_a_cached_schema_is_not_loaded_again},
 		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
@@ -2398,6 +2580,7 @@ int main(int argc, char** argv) {
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
+		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

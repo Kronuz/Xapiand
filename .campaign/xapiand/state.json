@@ -288,6 +288,13 @@
       "closed": "answered detent-lead: manager.cc housekeeping moves to wheel tasks in the first post-7c quest, planned after the 11-16 quota reset; commit to follow",
       "id": "msg-41",
       "text": "Detent's reactor-on-wheel has reactor's accept retry and LagProbe on the loop wheel (reactor:99aff1b, landing A1-A3 early). PeriodicTimer's removal (D76) waits only on Xapiand's src/manager.cc. When does your campaign move manager.cc's housekeeping to a task on the wheel? Reply with the Xapiand commit when it lands."
+    },
+    {
+      "at": "2026-11-13T02:48:45",
+      "by": "detent-lead",
+      "closed": "FYI: Xapiand does not use consensus yet; Detent fixes core.h (D92)",
+      "id": "msg-43",
+      "text": "Detent found a pre-existing consensus Core livelock: an append round trip past rpc_timeout is re-sent, superseding the in-flight append, and the late response is dropped as unmatched; under ~5 ms of CPU per executor cycle (rpc_timeout 40 ms) nothing commits in 4 s. Detent quest consensus-late-append (D92) will fix it in core.h. If Xapiand runs consensus with a tight rpc_timeout on loaded loops, you may be exposed; no action needed from you, FYI and a heads-up the Core changes."
     }
   ],
   "quests": {
@@ -4943,6 +4950,8 @@
       "after": [
         "task-lanes"
       ],
+      "base": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+      "branch": "quest/xapiand/http-lane",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4959,16 +4968,45 @@
         "test/**",
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:31:16",
+          "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+          "criteria": {
+            "A1": "261112-222327-cf718c; fails without: 261112-222330-e221cd",
+            "A2": "261112-222327-cf718c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-222327-cf718c",
+              "level": "light",
+              "seconds": 134.0,
+              "state": "done",
+              "what": "http-lane check build-test at 09b644d23f65"
+            }
+          ],
+          "final": true,
+          "from": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "reason": "",
+          "tested": "09b644d23f6518c4112812e83c2711058e99ea78"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/http",
       "risk": "normal",
-      "status": "planned",
+      "status": "landed",
       "title": "http resumes a waiter inline only for a light reference",
-      "updated": "2026-11-12T20:07:23"
+      "updated": "2026-11-12T22:31:47",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
@@ -5664,6 +5702,85 @@
     },
     "loop-scheduling": {
       "accepted": {
+        "correctness": {
+          "at": "2026-11-13T05:55:21",
+          "base": "3777ad818136578a64c2f8d1c93cdad65621c4b0",
+          "blobs": {
+            "CMakeLists.txt": "100644:77eb22a373af61835444541398a61b02111c2604",
+            "docs/design/loop-scheduling.md": "100644:c13bb088b2c99f891420f2f021d5f15310330ddb",
+            "docs/design/phase7c.md": "100644:a01dc58cce8bfee02bc4f491d400a87a977b7393",
+            "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
+            "harness/async_allowlist.tsv": "100644:6b3d58f68a88ea25dda2933ca22c822984671cc6",
+            "src/database/handler.cc": "100644:8f2c5ae9db8a24e10b9e2eeb258682a74a22455d",
+            "src/database/handler.h": "100644:80ffe1e54639ebb21f85c1e891175c86bf923c5c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "src/engine/host.h": "100644:b46134b601dc24a1230fe257c5b2b4ff22db5fb9",
+            "src/engine/host_asio.h": "100644:e19e0e62bc03b1ecafe10fdbd1f6f8e09cdb535c",
+            "src/server/search_views.cc": "100644:b84dc058a82af94802b9eaf20539057cf38d5342",
+            "tests/test_loop_yield.cc": "100644:90a509fdfa19a2d0388eba29d79182afa6623381"
+          },
+          "by": "review",
+          "commit": "1e59b305795c1c9eae22966dc8be9e97eab19b60",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "CMakeLists.txt": "fd865634a193008f",
+            "docs/design/loop-scheduling.md": "f15819020c15fe6a",
+            "docs/design/phase7c.md": "b2a02df557a40f0d",
+            "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "8f016afc7db396c4",
+            "src/database/handler.h": "ec39d487ae25d5a5",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "src/engine/host.h": "e9d531f1c2d05b2e",
+            "src/engine/host_asio.h": "0103ed39a30e7790",
+            "src/server/search_views.cc": "8232bc52a14766ca",
+            "tests/test_loop_yield.cc": "9a5d9ffececd0db4"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'trap \"git -C \\\"$PWD\\\" checkout -- src/server/search_views.cc\" EXIT\npython3 - <<\"PY2\" || exit 2\np = \"src/server/search_views.cc\"\ns = open(p).read()\nk = \"\\t\\t\\t\\trequest.budget->rearm_light(REQUEST_STREAM_SLICES);\\n\"\nassert s.count(k) == 1\ns = s.replace(k, \"\", 1)\nk2 = \"\\tauto& stream = *http_req->body_stream;\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\"\nassert s.count(k2) == 1\ns = s.replace(k2, \"\\tauto& stream = *http_req->body_stream;\\n\\tif (budget) {\\n\\t\\tbudget->rearm_light(REQUEST_STREAM_SLICES);\\n\\t}\\n\\tconst asio::error_code ec = co_await stream.read(chunk, http_req->cancel_token());\", 1)\nopen(p, \"w\").write(s)\nPY2\ncmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF > cfg.log 2>&1 || { tail -30 cfg.log; exit 2; }\nT=$(cmake --build build --target help | grep -o \"[A-Za-z_]*test_loop_yield\" | head -1)\ncmake --build build -j4 --target $T > bld.log 2>&1 || { grep -m5 -B2 -A8 \"error\" bld.log; tail -20 bld.log; exit 2; }\nctest --test-dir build -R loop_yield -V > mutant.log 2>&1; cat mutant.log\ngrep -qF \"test_loop_yield.cc\" mutant.log && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(first_light)\" && grep -F \"FAIL\" mutant.log | grep -qF \"CHECK(lanes_by_count)\"'",
+                  "commit": "206c93e45e1206f9d970bf26bed23fe3d4bbef98",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-050325-7998cd",
+                  "level": "light",
+                  "seconds": 708.9,
+                  "state": "done",
+                  "what": "loop-scheduling mutant rearm-in-read: rearm_light moved into Request::read_chunk must fail CHECK(first_light) and CHECK(lanes_by_count)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+                  "commit": "206c93e45e1206f9d970bf26bed23fe3d4bbef98",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-050313-690238",
+                  "level": "light",
+                  "seconds": 306.5,
+                  "state": "done",
+                  "what": "loop-scheduling check build-test at 206c93e45e12"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "12cbd4e26af036d5a6a787912a6ea87109c12ae6",
+          "reviewed": "1317dd6850f17433f0b76fc0afd5ce576b7313f7",
+          "verdict": "CHANGES"
+        },
         "design": {
           "at": "2026-11-12T20:06:28",
           "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
@@ -5698,7 +5815,13 @@
       ],
       "consumes": [],
       "files": [
-        "docs/design/loop-scheduling.md"
+        "docs/design/loop-scheduling.md",
+        "docs/design/phase7c.md",
+        "src/server/search_views.cc",
+        "src/engine/host.h",
+        "src/engine/host_asio.h",
+        "CMakeLists.txt",
+        "tests/test_loop_yield.cc"
       ],
       "landed": [],
       "lenses": [
@@ -5712,7 +5835,7 @@
       "risk": "high",
       "status": "review",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T20:06:28",
+      "updated": "2026-11-13T05:55:21",
       "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
@@ -10665,6 +10788,45 @@
       "title": "Bound control-worker command draining",
       "updated": "2026-11-08T13:25:10"
     },
+    "one-id": {
+      "accepted": {},
+      "after": [
+        "loop-scheduling",
+        "x7-loop-fix-c"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/database/schema.cc",
+        "src/engine/strata/shard.cc",
+        "src/engine/strata/search.cc",
+        "src/engine/shard.h",
+        "src/server/search_views.cc",
+        "tests/**",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "A document's id is its only id; docids stay internal and dense",
+      "updated": "2026-11-13T03:31:18"
+    },
     "open-mix": {
       "accepted": {},
       "after": [],
@@ -14623,6 +14785,118 @@
       "title": "Scheduler on WorkPool",
       "updated": "2026-11-08T15:40:29"
     },
+    "schema-load-once": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T02:49:31",
+          "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+          "blobs": {
+            "harness/async_allowlist.tsv": "100644:af020e0a283b37b3b34816db8a7b3ce17778d3af",
+            "src/database/schemas_lru.cc": "100644:f03cdb968b7f4880c031d78d923e0ddcb90ab940",
+            "src/database/schemas_lru.h": "100644:e318d72f7fbc820b579ca287bb195544f55a106d",
+            "src/index_resolver_lru.cc": "100644:f3d454dd028a1f2f92b62b5df857473f3dc195bb",
+            "src/index_resolver_lru.h": "100644:a0f44189dda7f0eaa4fcc1df72e3a9cdb7017040",
+            "src/single_flight.h": "100644:db7dec3cf735556c431235747711faef623f0162",
+            "tests/test_node.cc": "100644:49fe0230e2d384d14076aaddd99cc3d3c94daeba"
+          },
+          "by": "review",
+          "commit": "9d17d9b3feaec71ddf17175638a0e7af4e5debab",
+          "criteria": "ac230091164f5a9d",
+          "diffs": {
+            "harness/async_allowlist.tsv": "6a1f30b2f4996f0b",
+            "src/database/schemas_lru.cc": "669a654210b167a0",
+            "src/database/schemas_lru.h": "4f66b8fda97062c0",
+            "src/index_resolver_lru.cc": "9db25263c6b90b97",
+            "src/index_resolver_lru.h": "441a86a3bf7a2f9c",
+            "src/single_flight.h": "81053b7da3ea4f4c",
+            "tests/test_node.cc": "8e5078eaf0ce827f"
+          },
+          "findings": {
+            "G1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-schema-load-once-correctness/patch.py mutant \"$PWD\" || exit 2; git diff --quiet src && exit 2; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null || exit 2; cmake --build build --target xapiand_test_node -j4 >build.out 2>&1 || { tail -30 build.out; exit 2; }; build/bin/xapiand_test_node test_a_claim_between_flight_end_and_store_is_served_by_the_publication > mutant.out 2>&1; cat mutant.out; grep -q \"FAIL ../tests/test_node.cc:[0-9]*: CHECK(loads == 2u)\" mutant.out'",
+                  "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-022116-7d1cf5",
+                  "level": "light",
+                  "seconds": 65.1,
+                  "state": "done",
+                  "what": "bash -c 'python3 /Users/kronuz/code/Kronuz/Xapiand/.scratch/ at 8225c9831bbf"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "1d75d20012ff3c22e00720ea1f0c7f7444f99ff6",
+          "reviewed": "7993e7aa2c26e4fdbac0bc180d1d7e09bbdebcf0",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+      "branch": "quest/xapiand/schema-load-once",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schemas_lru.*",
+        "src/single_flight.h",
+        "src/index_resolver_lru.*",
+        "tests/test_node.cc",
+        "harness/async_allowlist.tsv"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-13T02:49:47",
+          "commit": "60f5a34be59001f36729faa624ec83534b39848a",
+          "criteria": {
+            "A1": "261113-023141-e19d6c; fails without: 261112-223932-8ff4dc, 261112-224936-c667cc, 261112-230448-142f23, 261112-232218-983be8, 261113-022116-7d1cf5",
+            "A3": "261113-012502-21f3c1",
+            "A4": "`ci:Unit tests under ASan + UBSan`, `ci:AddressSanitizer + UBSan` (green at 8225c9831 and 6dcc636d2; why not a local run: see Rulings)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "8225c9831bbf4e7ce5d654b6d979ace5a1b45f93",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-012502-21f3c1",
+              "level": "light",
+              "seconds": 518.7,
+              "state": "done",
+              "what": "schema-load-once check build-test at 8225c9831bbf"
+            }
+          ],
+          "final": true,
+          "from": "d6aea03fcb377ae0ee10968a64faef0b933f5b29",
+          "reason": "",
+          "tested": "9d17d9b3feaec71ddf17175638a0e7af4e5debab"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Concurrent first uses of a schema load it once, foreign links included",
+      "updated": "2026-11-13T02:49:54",
+      "worktree": ""
+    },
     "seam-census": {
       "accepted": {},
       "after": [],
@@ -16418,11 +16692,41 @@
         "docs/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-lanes",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:21:25",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": {
+            "A1": "261112-214929-dfac91; fails without: 261112-204849-91803a, 261112-204854-7e293b, 261112-204858-0e6b9d, 261112-204902-8b592b, 261112-204905-205bd3, 261112-204909-7b597e, 261112-204914-1d26c6, 261112-204918-7d0c0f, 261112-204923-7f2258, 261112-204928-6befdc, 261112-204935-9ea300, 261112-214931-341d4a, 261112-214934-bb3d65, 261112-214937-b6d183, 261112-214941-85d939, 261112-214945-9995a1, 261112-214949-5b89c5, 261112-214952-0d0642, 261112-214956-c1b908, 261112-215000-7f3020, 261112-215004-e2d24e, 261112-215008-8ab078",
+            "A2": "261112-215012-f7d1c9",
+            "A3": "261112-215014-07a8ed",
+            "A4": "[manual] Detent's lead, 11-12: Detent's integration jobs (da2074 at 90b50f0, b7fe6c at 18eb516; Detent's repository) passed, Detent main's full suite with task pinned to quest/xapiand/task-lanes, 275 of 275 tests (test_local_trusted_paths skipped as on main)",
+            "A5": "`docs/lanes.md` (task)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-214929-dfac91",
+              "level": "light",
+              "seconds": 14.3,
+              "state": "done",
+              "what": "task-lanes check build-test at 18eb51672e4f"
+            }
+          ],
+          "final": true,
+          "from": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "reason": "",
+          "tested": "18eb51672e4f306aac508bd0444f6d367eac4291"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [
@@ -16430,10 +16734,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/task",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "An opt-in heavy lane in task's budget and asio_scheduler",
-      "updated": "2026-11-12T22:04:19",
-      "worktree": "../task-wt/xapiand/task-lanes"
+      "updated": "2026-11-12T22:21:31",
+      "worktree": ""
     },
     "task-phase7c-l1": {
       "accepted": {},
@@ -18970,6 +19274,56 @@
     },
     "x7-loop-fix-c": {
       "accepted": {
+        "correctness": {
+          "at": "2026-11-13T00:10:08",
+          "base": "1407a2f290c997f0a882a4be2575ee3d955ee1cc",
+          "blobs": {
+            "docs/perf/x7-loop-stalls.md": "100644:b44265160321dc0ea5e5f193c42ac9e45f7e3e7b",
+            "harness/async_allowlist.tsv": "100644:c4d91afa8df90ca081798aa8ed84ea380b130aca",
+            "src/database/handler.cc": "100644:8f2c5ae9db8a24e10b9e2eeb258682a74a22455d",
+            "src/database/handler.h": "100644:80ffe1e54639ebb21f85c1e891175c86bf923c5c",
+            "src/database/pool.h": "100644:d4e5fd6a6166277db192df43d04a772a54dec5c6",
+            "src/database/shard.cc": "100644:a3b860cb9e91b25723471eae8569e69716abd0d2",
+            "src/database/shard.h": "100644:3aa33fe7123cd5637c3a76ae601f2ca4f40d2749",
+            "tests/test_loop_yield.cc": "100644:8525a8fd317ecff5e15336cad87b9902019ab17e"
+          },
+          "by": "review",
+          "commit": "82f6f4784ca28b49e508be379ba58127d01da16b",
+          "criteria": "602a9cccdeab10f8",
+          "diffs": {
+            "docs/perf/x7-loop-stalls.md": "388d1c8c73041573",
+            "harness/async_allowlist.tsv": "4c913c72a946a94d",
+            "src/database/handler.cc": "8f016afc7db396c4",
+            "src/database/handler.h": "ec39d487ae25d5a5",
+            "src/database/pool.h": "88a10ee0d67eb6d3",
+            "src/database/shard.cc": "d3ca28e329931422",
+            "src/database/shard.h": "be35c25d42302bf9",
+            "tests/test_loop_yield.cc": "34b6923d5a9b83fb"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'set -u; sed -i \"\" \"s/serial\\[k\\] = true;/failed[k] = std::current_exception();/\" src/database/handler.cc && test \"$(grep -cF \"failed[k] = std::current_exception();\" src/database/handler.cc)\" = 2 || { echo \"mutant not applied\"; exit 3; }; cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null && cmake --build build --target xapiand_test_loop_yield -j4 >build.out 2>&1 || { tail -40 build.out; exit 2; }; L=$(grep -nF \"CHECK_EQ(DocIndexer::stats.deferred.load(), affected);\" tests/test_loop_yield.cc | head -1 | cut -d: -f1); test -n \"$L\" || { echo \"check not found\"; exit 4; }; (cd build && ctest -R \"^test_loop_yield\\$\" --output-on-failure) >mut.out 2>&1; grep -F FAIL mut.out | head -20; echo \"named check at line $L\"; grep -qF \"FAIL ../tests/test_loop_yield.cc:$L:\" mut.out'",
+                  "commit": "87f839a95a4bc6dd74bd57d088daf90ee65852b6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261112-231447-8579aa",
+                  "level": "light",
+                  "seconds": 1511.8,
+                  "state": "done",
+                  "what": "x7-loop-fix-c mutant: a failed placement read fails its terms (F1)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "35b4b67131b45ada453c62b8853d9b5441ce2eb4",
+          "reviewed": "e73a0d305ecbc7b6ff5fcfbbedace540340ffc91",
+          "verdict": "CHANGES"
+        },
         "design": {
           "at": "2026-11-12T10:16:12",
           "base": "76b71b6e72fd8d58fce358ec8c99181775b75091",
@@ -19095,7 +19449,7 @@
       "risk": "high",
       "status": "active",
       "title": "Loops stay under 1 ms under the T4/T5 mix and RESTORE meets pre-7c (fix (c))",
-      "updated": "2026-11-12T10:16:12",
+      "updated": "2026-11-13T00:10:08",
       "worktree": "../Xapiand-wt/xapiand/x7-loop-fix-c"
     },
     "x7-loop-stalls": {
