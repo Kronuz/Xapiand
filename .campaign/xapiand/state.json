@@ -309,6 +309,13 @@
       "closed": "one-id landed with pool.h in its set (Xapiand:46edfb23e)",
       "id": "msg-44",
       "text": "one-id needs src/database/pool.h added to its file set: ShardEndpoint (declared there, not in shard.h) gets one member, the shard's id counter (high-water + dirty bit), loaded in open_blocking and persisted in do_commit (both in shard.cc). The alternative home, the engine adapter, needs src/engine/strata/shard.h, also outside the set. Proceeding with the pool.h member; say so if you want it elsewhere."
+    },
+    {
+      "at": "2026-11-13T07:41:21",
+      "by": "one-id",
+      "closed": "one-id landed with the mechanisms note in its set (Xapiand:46edfb23e)",
+      "id": "msg-45",
+      "text": "one-id also edits docs/mechanisms/document-ids-and-versions.md (outside its file set): it is the how-it-works note for ids, and it described new_did and the NumericId path that one-id removes. Please add it with src/database/pool.h (msg-44)."
     }
   ],
   "quests": {
