@@ -14678,7 +14678,8 @@
         "src/database/schemas_lru.*",
         "src/single_flight.h",
         "src/index_resolver_lru.*",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [],
@@ -14689,7 +14690,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Concurrent first uses of a schema load it once, foreign links included",
-      "updated": "2026-11-12T22:43:02",
+      "updated": "2026-11-12T22:55:44",
       "worktree": "../Xapiand-wt/xapiand/schema-load-once"
     },
     "seam-census": {
