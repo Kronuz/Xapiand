@@ -1,30 +1,29 @@
 # task-lanes: journal
 
-State: working
+State: waiting on jobs 261112-204125-ade849 261112-204139-c030da 261112-204142-15b07c 261112-204146-f78c5d 261112-204150-66030b 261112-204154-c0d456 261112-204158-99a813 261112-204202-d4e265 261112-204208-6e7e46 261112-204212-fa53c8 261112-204217-2d75e1 261112-204222-565acd 261112-204230-c172ff 261112-204235-528ca4
 Quest: .campaign/xapiand/quests/task-lanes.md (the lead's; never edit it)
 
 ## Doing
 
-Building task:0484a73 locally (first compile), then the jobs.
+Jobs at task:5ae571a (pushed; CI on quest/**). Local RelWithDebInfo build: full ctest green except lanes_test's first run (missing io.restart(), fixed in 5ae571a); lanes_test 5/5 green after.
 
 ## Next
 
-1. Local build and lanes_test green; fix what fails.
-2. Jobs: build-test (A1), 11 `--fails-without` mutants (A1), TSan light (A2), resume A/B exclusive vs main (A3).
-3. Push quest/xapiand/task-lanes; CI on quest/**.
-4. "ready for review" with job ids and the sha for Detent (A4).
+1. Read the jobs; fix any mutant that survives (a stronger test) or anything TSan reports.
+2. Check CI on quest/xapiand/task-lanes.
+3. When green: State "ready for review", with the sha for Detent (A4).
 
 ## Blocked on
 
-Nothing.
+Lead: the quest file's A1 bullet is on the same line as "Three to five, at outcome level:", so `campaign` does not parse A1 (`--for A1` is refused). build-test and the 11 mutants are submitted untagged; once A1 parses, they need `--for A1 [--fails-without]` reruns (same commands, below).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
+| A1 | build-test 261112-204125-ade849. Mutants (command `python3 test/lanes_mutant.py NAME`, exits 0 only when its test fails on a CHECK, 2 on a build error): light-posts-demoted 261112-204139-c030da, drain-runs-all 261112-204142-15b07c, strict-priority 261112-204146-f78c5d, post-ignores-lane 261112-204150-66030b, no-hop 261112-204154-c0d456, default-heavy 261112-204158-99a813, eq-compares-lane 261112-204202-d4e265, rearm-stays-heavy 261112-204208-6e7e46, rearm-keeps-count 261112-204212-fa53c8 (F12), heavy-late 261112-204217-2d75e1, inline-heavy 261112-204222-565acd |
+| A2 | TSan suite 261112-204230-c172ff (`cross_thread_hop`: 8 threads x 10,000 off-thread resumes) |
+| A3 | resume-path ABBA vs task main, exclusive, 261112-204235-528ca4 (`test/resume_ab.py`) |
 | A4 | pending: Detent's lead names the job at the sha |
 | A5 | `docs/lanes.md` (task) |
 
