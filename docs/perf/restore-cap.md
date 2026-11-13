@@ -103,8 +103,51 @@ RESTORE docs/s, T12 loadtest, mirrored (job 261113-025246-e60e91):
 | uncapped (5 children + 10) | 8,280, 8,312 | 8,296 | 1.37x | 1.81x |
 | one child + 14 prepares | 5,803, 5,667 | 5,735 | 0.94x | 1.25x |
 
-Waiting on job 261113-030545-b38c8b (it replaces the cancelled 261113-025249-be0efa): T4/T5 master, one child and
-uncapped in mirrored order, the same-round master baseline for light p99. Each run keeps its data
-(`stall_load.py --keep-workdir --seg-snapshots`, added on this branch), and `layout.py` reads `accounts` as the
-loaded phase left it: per shard, segments, kinds, blocks and docs per kind, and segments merged away or new during
-the phase.
+## After the loaded phase (job 261113-030545-b38c8b)
+
+T4/T5 in mirrored order, master, one child and uncapped. Each run keeps its data (`stall_load.py --keep-workdir
+--seg-snapshots`, added on this branch), and `layout.py` reads `accounts` as the loaded phase left it.
+
+| Arm | Loaded light p99 ms | Heavy searches | `accounts` after the phase (all 5 shards) |
+|---|---|---|---|
+| master | 34.3, 27.1 | 29,018, 28,659 | 20,015 docs contiguous; 400 monotone in 5 segments, span/docs 9.7 |
+| one child + 14 prepares | 26.5, 44.3 | 24,470, 24,449 | 23 contiguous; 20,435 monotone in 10 segments, 165 blocks, span/docs 539.5 |
+| uncapped | 44.5, 56.4 | 22,395, 22,218 | 16-24 contiguous; 20,435-20,437 monotone in 10-11 segments, span/docs 539.5 |
+
+The difference comes from merges, not docid assignment:
+
+1. The light pairs PUT ids from 11,000,001 up (`pair_base = accounts + 10,000,000 + seed * 1,000,000`). Each takes
+   the shard docid its id names, `args.new_did = (did - 1) / n_shards + 1` (src/database/shard.cc:852-853,
+   `ShardEndpoint::do_replace_term`), so about 2.2M in every shard. That line is the same on master, and fix (c)'s
+   `apply_slice` goes through the same `do_replace_term`. Master's pair segments show it: 70-95 docs at
+   span/docs 8-11, the pairs' own id gaps.
+2. The setup RESTORE leaves two base segments per shard (4,000 contiguous docs, docids 1-4,000) in every arm. The
+   split differs. On master it is skewed: shard 1 holds seg-1 at 1.27 MB and seg-2 at 3.44 MB. On the heads it is
+   balanced: 1.69/3.03 MB for one child, 2.56/2.16 MB uncapped.
+3. On the heads, the merge policy joins the balanced pair during the unloaded phase. That merge also takes the
+   small pair segments already flushed, so seg-10 holds 4.5 MB: docids 1-4,000 and a tail near 2.2M. The whole base
+   becomes monotone, about 540x its count in span. On master the skewed base pair is never merged; the pair
+   segments merge only among themselves, and the base stays contiguous. Master was lucky, not immune: once enough
+   pair data builds up, a merge with the base would make it monotone too.
+
+Every heavy exhaustive scan over `accounts` therefore pays the monotone delta walk on all 20,000 base docs on the
+heads, and on 400 tail docs on master. That matches the census's 10x `docid` share. One child and uncapped share
+the layout, which is why the cap does not change it. One child's better heavy throughput (24.5k against 22.3k)
+comes from the CPU the uncapped writes leave free.
+
+Where a fix belongs:
+
+1. Not in handler.cc's docid assignment, and not in shard.cc:852 as a standalone change. Appending these writes at
+   the shard's next docid would keep the base dense (expected: one contiguous segment of about 4,080 docs per
+   shard). But the named docid is load-bearing: a `NEW_NUMERIC_KEY` document derives its id from the docid the
+   shard assigns (`NumericId`, shard.cc:845-847). An explicit id that did not hold its docid would let a later
+   auto id equal it, and a later PUT of that id would replace the wrong document.
+2. In strata's merge selection (preferred, the smallest change that removes the cause). Do not merge segments
+   whose docid ranges are far apart, for example by refusing a merge whose span/docs exceeds a bound such as 4.
+   Expected layout: what master shows by luck, the base contiguous (span/docs 1.0) and the sparse tails merged
+   among themselves (span/docs about 10, monotone, a few hundred docs).
+3. In strata's docids format or reader, which explore/monotone-scan is measuring. A run-aware kind, contiguous runs
+   plus exceptions, would keep a base-plus-tail segment O(1) on the run. It is not repeated here.
+
+Light p99 this round: master median 30.7 ms, one child 35.4 ms (1.15x, but its two runs straddle master's), and
+uncapped 50.4 ms (1.64x).
