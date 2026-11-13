@@ -2413,6 +2413,43 @@ static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
 }
 
 
+// A new index created with number_of_replicas below and above the default gets exactly the replicas asked: its shards
+// are placed with the default count first and placed again when the settings ask for another. The node knows two more
+// nodes for it; this runs last, as they stay known.
+static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default() {
+	Watchdog watchdog("replicas of a new index");
+	for (const char* name : {"replicas_extra_1", "replicas_extra_2"}) {
+		Node node;
+		node.name(name);
+		node.host("127.0.0.1");
+		node.http_port = 1;
+		Node::touch_node(node, true);
+	}
+	CHECK_EQ(Node::total_nodes(), 3u);
+	const auto saved_replicas = opts.num_replicas;
+	opts.num_replicas = 1;   // the default: a master and one replica
+	auto replicas_of = [](const std::string& path, const std::optional<int>& asked) {
+		std::optional<MsgPack> settings;
+		if (asked) {
+			settings = MsgPack({{ "_settings", MsgPack({{ "number_of_shards", 2 }, { "number_of_replicas", *asked }}) }});
+		}
+		auto result = engine::sync_wait(XapiandManager::resolve_index_settings(path, false, settings ? &*settings : nullptr));
+		std::vector<size_t> sizes;
+		for (const auto& shard : result.shards) {
+			sizes.push_back(shard.nodes.size());
+		}
+		return sizes;
+	};
+	const auto by_default = replicas_of("replicas_default", std::nullopt);   // opts.num_shards shards, a master and one replica each
+	CHECK_EQ(by_default.size(), opts.num_shards);
+	CHECK(std::all_of(by_default.begin(), by_default.end(), [](size_t n) { return n == 2; }));
+	CHECK((replicas_of("replicas_below", 0) == std::vector<size_t>{1, 1}));                         // a master only
+	CHECK((replicas_of("replicas_equal", 1) == std::vector<size_t>{2, 2}));
+	CHECK((replicas_of("replicas_above", 2) == std::vector<size_t>{3, 3}));                         // a master and two replicas
+	opts.num_replicas = saved_replicas;
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -2486,6 +2523,7 @@ int main(int argc, char** argv) {
 		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
+		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {
