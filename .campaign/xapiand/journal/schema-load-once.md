@@ -1,6 +1,6 @@
 # schema-load-once: journal
 
-State: waiting on jobs 261112-223932-8ff4dc 261112-223935-5dbeff 261112-223937-d8cb1b
+State: waiting on jobs 261112-224936-c667cc, 261112-224941-6dba3b, 261112-224945-2e1a69
 Quest: .campaign/xapiand/quests/schema-load-once.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-State: waiting on jobs (ids below). Lead's change: settings flight in scope; fixed with the same mechanism, jobs rerun at the new head.
+State: waiting on jobs 261112-224936-c667cc (A1 mutant), 261112-224941-6dba3b (A2 ASan x20), 261112-224945-2e1a69 (A3 build-test). Lead's change: settings flight in scope; fixed with the same mechanism, jobs rerun at the new head.
 
 ## Next
 
