@@ -1,6 +1,6 @@
 # loop-scheduling: journal
 
-State: CI TSan fix pushed (bc5fea438), waiting on jobs: TSan build 261113-042310-6b8d68, TSan run x3 261113-042317-eb813e (A4), TSan repro without the fix 261113-042327-1ee206; evidence round jobs unchanged: VM builds 261113-034617-473893 261113-034627-9f77b5, A2 VM 261113-034646-1334b1. Done at 4117329cf: gate 261113-033300-555be1, mutants 261113-033318-52f956 261113-033325-227525 261113-033332-72bffb 261113-033338-89cc5a, A2 mac 261113-033501-e28b59, A3 261113-033505-0e9874 (results not yet read; the test file changed since, so the gate and mutants need a rerun at the final head)
+State: waiting on jobs: VM master build 261113-044832-cdcd2c, VM head build 261113-044847-df0557 (lua from a patched local tree via FETCHCONTENT_SOURCE_DIR_LUA, new deps2-$C dirs), A2 VM ABBA 261113-044911-5c030d; then add its numbers to the Result and set ready for review
 Quest: .campaign/xapiand/quests/loop-scheduling.md (the lead's; never edit it)
 
 ## Doing
@@ -193,44 +193,44 @@ tasks pass K.
   parked, with F8/F9 moved to the placement section. Q3/Q4/Q5 are resolved; A2 records T4/T5 as misses on both
   platforms; `src/opts.cc` is dropped from the files.
 
-## Evidence round (resumed contributor)
-
-- Merged master (abfd09535) into the head, pushed 4117329cf. Earlier jobs ran 93b4d125c and are superseded by the ids in State.
-- 261112-225201-431c6a (no-exit-guard) exited 2 with an empty log: its configure output went to /dev/null. The rerun's
-  command writes configure and build errors to the log (same mutation).
-- VM builds failed (lua patch re-applied on a shared FetchContent dir); each commit now has `deps-$C` and `build-rel-$C`.
-- Master for A2/A3 is abfd09535 (includes fix-c); P1's docid-layout cause (PLAN.md Pending owner, Xapiand:a7b42914d,
-  quest one-id D84) applies to any loaded light p99 miss against master.
-
-- CI TSan failure (run 43419798840, test_each_chunk_of_a_streamed_restore_starts_light, :1119 x3 and :1121): timing in
-  the test, not a rearm race. Chunks entered with 4 slices spent (8 - REQUEST_STREAM_SLICES, as designed) except a
-  later placement call entering with 12-13, lanes HHHHHHHH. DocIndexer's prepare rounds end at PREPARE_SLICE (1 ms,
-  handler.cc:2790); under TSan a 5-object chunk takes more than one round, each round places once (after_placement
-  seam), and the later round continues the chunk's budget past its light slices, so it is heavy by count (correct).
-  The test's per-chunk bound read it as an unrearmed chunk. Fix bc5fea438: `FixedRanges ranges(5)` (the existing
-  fixed-range seam, `objects_per_prepare`) makes a chunk one round on any build. Bound unchanged (it is right).
-  Not yet shown by a job: a TSan run of the fixed test and a run of the unfixed one (the repro job expects a failure,
-  timing dependent; its count is reported either way).
-
-## Next
-
-1. On the gate job: fix any test failure; then each mutant must exit 0.
-2. A2/A3 numbers into Result and the design note's evidence; Evidence table from `campaign brief`.
-3. Merge master again before landing (master moved to 4738337a3 after the fix-c merge).
-
-## Blocked on
-
-Nothing.
-
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/loop-scheduling.md` (this commit); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7, X7 261112-193446-44263d, X8 261112-195132-1fe61f; builds 261112-170140-f2c47f, 261112-170143-aabac2 |
+| A1 | `docs/design/loop-scheduling.md` (landed text); jobs E1 261112-145754-4dcc08, E3 261112-141805-74aaf9, E2 261112-154306-4d90d5, X1 261112-163009-f675a9 (off arm only; job cut at deadline), X2a 261112-170146-163a2c, X2b 261112-170149-32915c, X3 261112-170152-275ba3, X4 261112-175900-eaaa36 and 261112-175902-15a8eb, X5 261112-190112-421854, X6 261112-191309-2e375a and 261112-191311-7e90a7, X7 261112-193446-44263d, X8 261112-195132-1fe61f; builds 261112-191306-04ee82 (replaces 261112-170140-f2c47f), 261112-170143-aabac2 |
+| A2 | macOS T4/T5 ABBA master abfd09535 vs head 4117329cf: 261113-033501-e28b59 (a miss, below); Linux VM ABBA 261113-044911-5c030d, builds 261113-044832-cdcd2c and 261113-044847-df0557 (pending). Earlier jobs at the previous head: 261112-225448-4dfa5e; VM failures 261112-225423-db70b6, 261113-033423-d0cd48, 261113-034617-473893 (lua.org resets) |
+| A3 | macOS T12 loadtest ABBA 261113-033505-0e9874 (earlier head: 261112-225454-7d59c5) |
+| A4 | build-test 261113-042355-86c006; fails without: k0 261113-042355-ac17b8, no-exit-guard 261113-042356-bbdfbb, no-rearm 261113-042356-6f67c7, pump-drops-lane 261113-042356-b1cb7d; the chunk test under TSan: ci:Unit tests under TSan (run 43424776459 at 1317dd685) |
 
 ## Result
 
-<pending>
+The lane is in: a request starts light, turns heavy from its 8th spent slice (REQUEST_LIGHT_SLICES), each streamed chunk
+of a RESTORE starts light for 4 slices (REQUEST_STREAM_SLICES), a request's exit puts the connection back in the light
+lane, and heavy turns run in `post_heavy` behind light ones. Files: `src/server/search_views.cc`, `src/engine/host.h`,
+`src/engine/host_asio.h`, `docs/design/phase7c.md` (D2's FIFO contract replaced), `tests/test_loop_yield.cc`.
+
+A2, macOS (master abfd09535 off vs head lane, ABBA, 64 heavy clients, `261113-033501-e28b59`): a miss.
+- Loaded light query p99: master 21.6 and 25.4 ms (median 23.5), lane 51.1 and 49.1 ms (median 50.1), 2.15x worse
+  (pairs 2.37x, 1.93x); the bound was 7.1-8.7 ms in each arm, so T5 misses on both sides.
+- Loop lag p99: master median 2.05-3.07 ms, lane 3.58-4.61 ms; 16 of 16 loops over the 1,024 us edge in every arm,
+  so T4 misses on both.
+- Heavy searches: 30,173 off, 23,047 lane (0.765x); RESTOREd docs in the phase 20,000 off, 70,000 lane (3.5x).
+- Unloaded light p99: 3.36 ms off, 3.54 ms lane (1.055x).
+- Cause of the p99 gap against master: the lead's P1 diagnosis (PLAN.md Pending owner, Xapiand:a7b42914d), not this
+  quest. Xapiand derives docids from numeric ids (shard.cc:852), so the docid layout after the merges decides the
+  loaded light p99. The lane lets the RESTOREs finish 3.5x more documents in the phase, which makes more merges
+  of that layout. Quest one-id (D84) fixes it after this lands; T4/T5 are rerun then.
+- A2, Linux VM: pending (jobs in State).
+
+A3, macOS T12 loadtest ABBA (`261113-033505-0e9874`): RESTORE 8,663 and 8,614 docs/s with the lane, 4,449 and 4,601
+off (1.91x); pre-7c's recorded 6,076 docs/s (`docs/perf/phase7c-baseline.md:88`) is passed 1.42x. Heavy-search
+throughput against base: the query phase 4,328 qps vs 4,159 (1.04x), p99 8.25 vs 8.52 ms; the T4/T5 mix above shows
+heavy searches at 0.765x while RESTOREs run 3.5x more.
+
+A4: build-test and the four mutants (k0, no-exit-guard, no-rearm, pump-drops-lane) pass and are killed at 1317dd685.
+CI's TSan failure on the chunk test (run 43419798840) was the test: a slow prepare split a chunk into rounds and a
+later round entered heavy by count; `FixedRanges ranges(5)` (bc5fea438) fixes it, CI green at 1317dd685.
+The mac A2/A3 jobs ran at 4117329cf; 4117329cf..1317dd685 changes `tests/test_loop_yield.cc` and the journal only.
 
 ## Rulings I made
 
