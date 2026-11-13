@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261111-200215-2567dc 261111-200219-6bf1ed 261111-200223-9495ee 261111-200411-02ffb3 261111-200411-e6bdb2 261111-200412-8fd049 261111-200412-f2f281
+State: waiting on jobs 261113-111748-e52352 261113-111801-2b8264 261113-111808-93efd0 261113-111813-3cf199 261113-111813-3013ac 261113-111814-1a49cf 261113-111814-f9dc7f 261113-111814-e12ef2 261113-111821-2f9e75 261113-111826-184241 261113-111855-8bc27e 261113-111904-2e33d9 261113-112020-7142fc 261113-112044-32612d 261113-112052-f5a8e0 261113-112059-d3b9ff
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,29 @@ status` reads State, the first step under Next, and the Evidence table. State is
 waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 2026-11-13 (master 22d096502 merged: x7-loop-fix-c, loop-scheduling, schema-load-once, one-id). Code under test:
+Xapiand:0a0321691 (master Xapiand:6ede7a0ce's `src` + harness), Xapiand:b5499421b for a16 (SR3 lag in
+`wide_search_check.py`). Every functional and timing row reruns there:
+
+| Job | Level | Criteria | What |
+|---|---|---|---|
+| 261113-111748-e52352 | light | builds | timing builds (rerun of 19268b) |
+| 261113-111801-2b8264 | exclusive | A4 A5 | T4/T5 ABBA (c9ab68's command), after e52352 |
+| 261113-112044-32612d, 261113-112052-f5a8e0 | exclusive | A12 A24 | T12 loadtest, profile_bulk (fix (c) changed RESTORE) |
+| 261113-112059-d3b9ff | strict | A10 | T10 flood, T4 with loops |
+| 261113-112020-7142fc | strict | A16 | 2,500 indexes + SR3 per-loop lag |
+| 261113-111808-93efd0 | light | A1 A2 A3 A7 A8 A10 A13 A19 | rows (rerun of b4549d) |
+| 261113-111813-3cf199 ... e12ef2 | light | checks | `campaign verify`: build-test, e2e, t7-tsan, recovery, removed |
+| 261113-111821-2f9e75 | light | A13 | restore corpora replay (macOS) |
+| 261113-111826-184241 | light | A6 A15 A13 | Linux VM: Release + ASan builds, all rows, T6 2xram and in RAM, corpora |
+| 261113-111855-8bc27e, 261113-111904-2e33d9 | light, exclusive | A21 | Linux s0/s1 builds, ABBA CPU and p99 |
+
+Read since: A16 strict 2567dc (2,500 indexes: p50 108 ms, p99 1,176 ms, peak pinned 100, 42.1 KiB per open index);
+A21 9495ee (allocations 0.988, bytes 1.000, handlers 0.986: no worse); A9 from x7-cancel-rows, A22 from x7-view-bench,
+A13 coverage from x7-coverage (6 of 9 areas below TESTING.md). All in `docs/gates/phase7c.md`.
+
+### Earlier sessions
 
 Timing read and scored into `docs/gates/phase7c.md` (head/pre-7c, median of 3 pairs, range): T4 MISS (all 16 HTTP
 loops over 1,024 us loaded, worst p99 24.6-28.7 ms, p99.9 49-57 ms; pre-7c's under it); T5 MISS on 2x unloaded + 1 ms
@@ -94,9 +117,9 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read 261111-165347-d979c7's "KiB per open index" into T13 and A13; (build-test 261111-162221-c4aa56 passed: A17, A20).
-2. Then only the lead's timing rows (A4 A5 A10's timing A11 A12 A16 A21 A24), the Linux and FreeBSD runs (A6 A15),
-   x7-coverage (A13's coverage and corpora), x7-cancel-rows (A9), x7-view-bench (A22) and the reviews remain.
+1. Read the 2026-11-13 jobs (Doing) into `docs/gates/phase7c.md`: each row's value at Xapiand:0a0321691, the status
+   line, T4/T5's light p99 as a miss with PLAN.md P1 (diagnosis: explore/p1-light-wait, not here).
+2. Paste `campaign brief`'s Evidence table; State "ready for review".
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -160,6 +183,13 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Blocked on
 
+8. **C5 FreeBSD (A15), for the lead.** No machine runs the rows: `freebsd.yml` builds and attaches a release package
+   for a tag (it writes the release) and runs no rows; strata's FreeBSD VM has 4 CPUs, 4 GiB, 4.2 GB disk free (88%
+   used, mostly `/root/preflight`), no bash and no ninja. Options: (a) regrow that VM (disk, memory), `pkg install
+   bash ninja`, and run `gate7c_rows.sh` on a Release build (no ASan); (b) a FreeBSD CI workflow on quest branches that
+   builds and runs the Release rows (`.github/`, outside this file set); (c) rule FreeBSD a stated miss for 7c and
+   carry it to Phase 8. Recommendation: (b), since CI is where the other platforms prove; the report states the miss.
+
 7. **T4, T5, T10's flood, T12's RESTORE miss (the lead's: the gate's outcome).** With no offload pool every HTTP loop
    stalls 25-29 ms at p99 under the mixed load (pre-7c: under 1 ms), and RESTORE runs at 0.29x pre-7c while using
    0.81x its CPU per document (wall lost to serialization, not work). Options: (a) a profiling quest on the loaded
@@ -189,6 +219,11 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
    A24's T12 jobs are the lead's timing runs.
 5. **A6, A15**: the local Linux VM (D53); FreeBSD: `freebsd.yml` builds release tags only.
 6. **A13**: "restore corpora replayed" names no corpus I can find; the lead names it.
+
+## Messages
+
+- msg-1 (lead, phase7c.md amendment from x7-loop-fix-c): applied at Xapiand:0a0321691 now that fix (c) is on master;
+  the prepare chores' class follows the code (`flush`), see R14.
 
 ## Evidence
 
@@ -224,6 +259,19 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 Not yet. Launch 1: `harness/gate7c_rows.sh` (Xapiand:e7e8e03c5), `docs/gates/phase7c.md` skeleton.
 
 ## Rulings I made
+
+- R14 (msg-1). Applied the x7-loop-fix-c amendment to `docs/design/phase7c.md` (Xapiand:0a0321691): D4's flush row
+  gains the RESTORE writes, D12's RESTORE sentence is fix (c)'s description. One correction against the code: the
+  prepares run in `flush` chores (`src/database/handler.cc` `DocIndexer::index`, `chores.run(engine::ChoreClass::flush,
+  pull)`), not `query` chores as the amendment's text said; D1's barriers and schema changes in input order kept.
+- R15. T6's "2x RAM" is a cgroup cap, not a 30 GB index: the VM has 16 GiB and D59 bounds a job. `stall_load.py
+  --index-size 2xram` runs the node in its own `systemd-run --user --scope` and, after loading, sets `memory.max` to its
+  anonymous bytes plus half the index on disk; each phase reports each thread's major faults from `/proc/PID/task`
+  (tests in `test_gate_tools.py`). Counts, not timing: a light job.
+- R16. SR3 is read from the loop-lag histograms the node exports (`stall_load.parse_metrics`, `lag_delta`) over the
+  wide-search gate's timed searches, the lag `stall.py` would sample, in the same strict job as A16.
+- R17. T10, T12 rerun with T4/T5: x7-loop-fix-c rewrote RESTORE's path and loop-scheduling the loops' turns, so their
+  2026-11-11 values describe code master no longer has.
 
 - R1. The checks were verified at Xapiand:a26d6b856 (`campaign verify --commit`), master's code, not at the head:
   the head adds `harness/gate7c_rows.sh`, which would rerun build-test and e2e too (six jobs past the lead's four).
