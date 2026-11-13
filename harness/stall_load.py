@@ -108,6 +108,8 @@ class HttpError(Exception):
 
 
 class Conn:
+    split_write = False  # P1 H1: write a large body apart from the head (no 20 MB concatenation on the loop)
+
     def __init__(self, host: str, port: int) -> None:
         self.host, self.port = host, port
         self.reader: asyncio.StreamReader | None = None
@@ -143,7 +145,11 @@ class Conn:
         if body:
             head += f"Content-Type: {content_type}\r\n"
         self.sent_at = asyncio.get_running_loop().time()
-        self.writer.write(head.encode() + b"\r\n" + body)
+        if Conn.split_write and len(body) > 65536:
+            self.writer.write(head.encode() + b"\r\n")
+            self.writer.write(body)
+        else:
+            self.writer.write(head.encode() + b"\r\n" + body)
         await self.writer.drain()
         self.server_s = 0.0
         status_line = await self.reader.readline()
@@ -346,7 +352,9 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
         lab = dict(re.findall(r'(\w+)="([^"]*)"', labels))
         if name == "xapiand_p1_us_bucket":
             le = lab["le"]
-            p1.setdefault(f"{lab['stage']}/{lab['cls']}", []).append((math.inf if le == "+Inf" else float(le), int(float(value))))
+            p1.setdefault(f"{lab['stage']}/{lab['cls']}", []).append(
+                (math.inf if le == "+Inf" else float(le), int(float(value)))
+            )
             continue
         if name.startswith("xapiand_p1_"):
             continue
@@ -390,7 +398,14 @@ def p1_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
                     return edge
             return math.inf
 
-        out[key] = {"n": total, "p50": q(0.5), "p90": q(0.9), "p99": q(0.99), "p999": q(0.999), "hist": [c for _, c in cnt]}
+        out[key] = {
+            "n": total,
+            "p50": q(0.5),
+            "p90": q(0.9),
+            "p99": q(0.99),
+            "p999": q(0.999),
+            "hist": [c for _, c in cnt],
+        }
     return out
 
 
@@ -692,7 +707,9 @@ async def run_light(
     return res
 
 
-def probe_split(rows: list[tuple[str, float, float, float, float]], gen_lag: list[tuple[float, float]], t0: float) -> dict[str, Any]:
+def probe_split(
+    rows: list[tuple[str, float, float, float, float]], gen_lag: list[tuple[float, float]], t0: float
+) -> dict[str, Any]:
     """P1: per light class, client latency split into generator wait (sched->send), server (Response-Time) and the
     rest (sockets, the server loop before parse and after `ends`, the generator reading the response)."""
     out: dict[str, Any] = {}
@@ -713,10 +730,23 @@ def probe_split(rows: list[tuple[str, float, float, float, float]], gen_lag: lis
 
         # A tail request overlaps a generator stall when a >5 ms stall began inside its [sched - 50 ms, end].
         hit = sum(1 for _, s, _, e, _ in tail if any(s - 0.05 <= t <= e for t, _ in stalls))
-        out[kind] = {"n": len(rs), "client": summarize(lat), "parts": parts(rs), "tail_n": len(tail), "tail_parts": parts(tail), "tail_with_gen_stall": hit}
+        out[kind] = {
+            "n": len(rs),
+            "client": summarize(lat),
+            "parts": parts(rs),
+            "tail_n": len(tail),
+            "tail_parts": parts(tail),
+            "tail_with_gen_stall": hit,
+        }
     out["t0"] = t0
     lags = [int(d * 1e6) for _, d in gen_lag]
-    out["generator_lag"] = {**summarize(lags), "stalls_over_5ms": len(stalls), "stalls_over_20ms": sum(1 for _, d in stalls if d > 0.02), "stalled_s": round(sum(d for _, d in stalls), 3), "stall_times_s": [[round(t - t0, 2), round(d * 1e3, 1)] for t, d in stalls if d > 0.02][:60]}
+    out["generator_lag"] = {
+        **summarize(lags),
+        "stalls_over_5ms": len(stalls),
+        "stalls_over_20ms": sum(1 for _, d in stalls if d > 0.02),
+        "stalled_s": round(sum(d for _, d in stalls), 3),
+        "stall_times_s": [[round(t - t0, 2), round(d * 1e3, 1)] for t, d in stalls if d > 0.02][:60],
+    }
     return out
 
 
@@ -755,6 +785,7 @@ async def run_heavy(
     restore_index: str,
     restore_first_id: int,
     open_rate: float = 0.0,
+    prebuilt: dict[int, bytes] | None = None,
 ) -> HeavyResult:
     """Closed-loop heavy clients (one is the RESTORE stream); open_rate > 0 sends the searches open loop instead."""
     loop = asyncio.get_running_loop()
@@ -788,10 +819,16 @@ async def run_heavy(
         while loop.time() < end_at:
             try:
                 tb = loop.time()
-                body = restore_body(rows, next_id, CHUNK_DOCS)
+                body = (
+                    prebuilt.pop(next_id)
+                    if prebuilt and next_id in prebuilt
+                    else restore_body(rows, next_id, CHUNK_DOCS)
+                )
                 tr = loop.time()
                 status, _ = await conn.request("RESTORE", f"/{restore_index}/", body, NDJSON_CT)
-                restore_log.append((round(tb, 3), round(tr - tb, 4), round(loop.time() - tr, 3), round(conn.server_s, 3)))
+                restore_log.append(
+                    (round(tb, 3), round(tr - tb, 4), round(loop.time() - tr, 3), round(conn.server_s, 3))
+                )
                 counts.add(status, "restore")
                 if status < 300:
                     restored[0] += CHUNK_DOCS
@@ -894,6 +931,17 @@ async def phase(
     heavy_rate: float = 0.0,
 ) -> dict[str, Any]:
     a = ctx.args
+    # P1 H1: the RESTORE bodies built before the clock starts, so the generator's loop never builds one mid-phase.
+    prebuilt = (
+        {
+            ctx.restore_first_id + k * CHUNK_DOCS: restore_body(
+                ctx.rows, ctx.restore_first_id + k * CHUNK_DOCS, CHUNK_DOCS
+            )
+            for k in range(a.restore_prebuilt)
+        }
+        if heavy and a.restore_prebuilt > 0
+        else None
+    )
     before = await scrape(ctx.ctl)
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
@@ -925,6 +973,7 @@ async def phase(
                 ctx.restore_index,
                 ctx.restore_first_id,
                 heavy_rate,
+                prebuilt,
             )
         )
         jobs.append(heavy_task)
@@ -1256,6 +1305,12 @@ def main() -> int:
     )
     ap.add_argument("--duration", type=float, default=30.0)
     ap.add_argument("--light-conns", type=int, default=64)
+    ap.add_argument(
+        "--restore-prebuilt",
+        type=int,
+        default=0,
+        help="P1 H1: build this many RESTORE bodies before each heavy phase and write large bodies apart from their head",
+    )
     ap.add_argument("--heavy-clients", type=int, default=0, help="default: 4x the reactor count")
     ap.add_argument(
         "--restore-into",
@@ -1296,6 +1351,7 @@ def main() -> int:
         ap.error("--overload takes light or heavy")
     if not args.bin and not args.target:
         ap.error("give --bin or --target")
+    Conn.split_write = args.restore_prebuilt > 0
     return asyncio.run(amain(args))
 
 
