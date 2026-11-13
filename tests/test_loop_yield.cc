@@ -439,8 +439,15 @@ task::task<void> seam(DatabaseHandler& db) {
 				co_await spend(b);
 				chunk.second.push_back(task::current().heavy());
 			}
-			std::lock_guard<std::mutex> lk(chunks_mtx);
-			chunks.push_back(std::move(chunk));
+			{
+				std::lock_guard<std::mutex> lk(chunks_mtx);
+				chunks.push_back(std::move(chunk));
+			}
+			// Keeps the index child running past the next chunk's read, so the join goes on in its (heavy) lane
+			// unless the rearm precedes the children.
+			for (const auto until = std::chrono::steady_clock::now() + 300ms; std::chrono::steady_clock::now() < until;) {
+				co_await spend(b);
+			}
 			co_return;
 		}
 		case Mode::none:
@@ -1092,6 +1099,8 @@ static void test_a_request_after_a_heavy_one_starts_light() {
 // Each body chunk of a streamed RESTORE starts light (D81) for REQUEST_STREAM_SLICES of its own slices (D82): the
 // rearm runs before the chunk's children start. Without it the RESTORE stays heavy from its 8th slice on, so every
 // later chunk's first slice is a heavy turn.
+// The index child outlasts the read, so the join leaves the parent heavy: a rearm inside the read, not before the
+// children, leaves every later chunk heavy.
 static void test_each_chunk_of_a_streamed_restore_starts_light() {
 	CHECK_EQ(http_call("RESTORE", "/lanestream/?commit", R"([{"_id":"w","n":1}])") / 100, 2);   // the schema exists after it
 	std::vector<std::string> pieces;

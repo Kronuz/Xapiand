@@ -105,9 +105,11 @@ A misclassed light request stays heavy. Each of its remaining turns waits behind
 p x (slice + unit), a few ms at the measured p of about 4, and up to about 90 ms per turn at the 256 cap.
 
 *Streaming requests (D81).* A request that reads its body in chunks (RESTORE, bulk) is classed by the slices it
-spends between body reads. Before each read, `Request::read_chunk` calls `budget::rearm_light()`, which zeroes
-the spent count and marks the scope light. The read's completion and the chunk's prepare, apply and chores
-therefore start light, and a chunk turns heavy only after K slices of its own. Lifetime classing made a RESTORE
+spends between body reads. In `restore_database_view`, before the `when_all` of a batch's index and the read of the
+next chunk, the request calls `budget::rearm_light()`, which zeroes the spent count and marks the scope light.
+The rearm precedes the children, since the join goes on in its last child's lane: a rearm inside the read would
+leave every later chunk heavy whenever the index child finishes last. The read's completion and the chunk's
+prepare, apply and chores therefore start light, and a chunk turns heavy only after K slices of its own. Lifetime classing made a RESTORE
 heavy for life (64+ slices): under the heavy-search mix it round-robined with the searches, at about 0.7x
 (review F1, probe job 261112-183821-695fc9).
 
@@ -164,8 +166,8 @@ every Asio completion, the lag probe's timer and the drainer. The heavy lane is 
   on the loop. A chore's completion runs on a `WorkPool` thread. X1's lane arms hung in the accounts load because
   the prototype pushed onto the loop-only queue from there. Scratch Xapiand:15ef779e6 fixes it, and X2 runs with
   the fix.
-- (f) A request starts light, and the connection carries on light after it. `SearchService::handle` marks its
-  scope light on entry, and a scope guard marks it light on every exit, a throw included. Otherwise the
+- (f) A request starts light, and the connection carries on light after it. A request's budget starts light, and
+  `SearchService::handle`'s scope guard marks the scope light on every exit, a throw included. Otherwise the
   connection's next read, captured in a heavy scope, would start the next request in the heavy lane.
 - (g) The lane's exact semantics:
   - `scheduler_ref::operator==` ignores the lane. Otherwise `final_awaiter`'s same-scheduler transfer
@@ -251,9 +253,10 @@ behaviour for the other users of `task::budget` and `asio_scheduler`: Detent, pr
   - `src/server/search_views.cc`:
     - `REQUEST_LIGHT_SLICES` and the request's budget (`:3167`), and the three script budgets (`:943`, `:1040`,
       `:1458`).
-    - `enter_light()` at `handle`'s entry, and a scope guard on its exit.
-    - `rearm_light(REQUEST_STREAM_SLICES)`, 4, before each body read in `Request::read_chunk` (`:3012-3018`,
-      D81, D82).
+    - A scope guard that calls `enter_light()` on `handle`'s every exit (a throw included); a request starts
+      light, so the entry needs no mark.
+    - `rearm_light(REQUEST_STREAM_SLICES)`, 4, in `restore_database_view` before the `when_all` of a batch's
+      index and the next chunk's read (D81, D82).
   - `src/engine/host.h:82` and `src/engine/host_asio.h:52`, `:119-154`: the Host forwards a heavy post, and the
     debug-only `Counted` pump keeps each entry's lane.
   - The Kronuz/task and Kronuz/http pins in `CMakeLists.txt`.
@@ -447,8 +450,9 @@ configuration) are both X5-shaped ABBAs against today's code at 16 loops, run by
   1. A single-term search issued while four 100-hit searches run completes before them. Mutant: K = 0.
   2. A light request after a heavy one on the same connection starts light, also when the heavy one throws.
      Mutant: no exit guard.
-  3. A streamed RESTORE beside four 100-hit searches: each body chunk's first turn runs from the light lane
-     (`demoted()` does not count it). Mutant: no `rearm_light` in `read_chunk`.
+  3. A streamed RESTORE: each body chunk's first slice runs light and the chunk turns heavy at the rearmed count,
+     with the index child finishing after the read (the join then leaves the parent heavy). Mutants: no
+     `rearm_light`; `rearm_light` moved into `Request::read_chunk`.
 
 ## Open questions
 
