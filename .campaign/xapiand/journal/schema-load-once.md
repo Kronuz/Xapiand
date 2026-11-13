@@ -1,6 +1,6 @@
 # schema-load-once: journal
 
-State: waiting on jobs 261112-224936-c667cc, 261112-224941-6dba3b, 261112-224945-2e1a69
+State: waiting on jobs 261112-230448-142f23 (A1 mutant, probes), 261112-230457-e0bc7a (A1 mutant, replicas), 261112-230506-de89fc (A2 ASan x20), 261112-230514-a9df65 (A3 build-test)
 Quest: .campaign/xapiand/quests/schema-load-once.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
