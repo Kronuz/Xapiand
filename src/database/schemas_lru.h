@@ -85,6 +85,7 @@ public:
 	// Test seams, awaited when a first use missed the cache and is about to claim the load.
 	std::function<task::task<void>()> before_metadata_claim;
 	std::function<task::task<void>()> before_foreign_claim;
+	std::function<task::task<void>()> after_metadata_flight;
 
 	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);
 

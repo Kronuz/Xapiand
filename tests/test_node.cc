@@ -2454,6 +2454,58 @@ static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default
 }
 
 
+// A first use that missed the cache claims the metadata load after the flight ended and before the
+// leader's caller stored the schema; only the flight's publication can serve it.
+static void test_a_claim_between_flight_end_and_store_is_served_by_the_publication() {
+	Watchdog watchdog("publish before the flight ends");
+	const auto endpoints = endpoints_of("schema_publish_before_end");
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> claims{0};
+	std::atomic<int> afters{0};
+	std::atomic<bool> b_paused{false};
+	std::atomic<bool> a_after{false};
+	std::atomic<bool> b_done{false};
+	task::event gate_b;
+	task::event gate_a;
+	schemas.before_metadata_claim = [&]() -> task::task<void> {
+		if (claims++ == 0) {
+			b_paused = true;
+			co_await gate_b;
+		}
+	};
+	schemas.after_metadata_flight = [&]() -> task::task<void> {
+		if (afters++ == 0) {
+			a_after = true;
+			co_await gate_a;
+		}
+	};
+	std::shared_ptr<const MsgPack> got_a;
+	std::shared_ptr<const MsgPack> got_b;
+	std::thread b([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_b = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+		b_done = true;
+	});
+	CHECK(eventually([&] { return b_paused.load(); }, 20s));
+	std::thread a([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_a = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+	});
+	CHECK(eventually([&] { return a_after.load(); }, 20s));   // a's flight has ended; a has not stored
+	gate_b.set();
+	CHECK(eventually([&] { return b_done.load(); }, 20s));
+	gate_a.set();
+	a.join();
+	b.join();
+	schemas.before_metadata_claim = nullptr;
+	schemas.after_metadata_flight = nullptr;
+	const auto loads = schemas.loads() - loads_before;
+	CHECK_EQ(loads, 2u);
+	CHECK(got_a == got_b);
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -2495,6 +2547,7 @@ int main(int argc, char** argv) {
 		void (*fn)();
 	};
 	const Case cases[] = {
+		{"test_a_claim_between_flight_end_and_store_is_served_by_the_publication", test_a_claim_between_flight_end_and_store_is_served_by_the_publication},
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
 		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
 		{"test_a_call_paused_before_claiming_the_metadata_load_loads_nothing", test_a_call_paused_before_claiming_the_metadata_load_loads_nothing},

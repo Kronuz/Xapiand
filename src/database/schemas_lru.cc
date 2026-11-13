@@ -372,6 +372,9 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				strings::format("{}:{}", local_schema_path, read_flags),
 				[&] { return load_metadata(local_schema_path, endpoints, read_flags, context, budget, foreign_uri, endpoints_path, new_schema); },
 				[&] { return cached_metadata(local_schema_path); });
+			if (after_metadata_flight) {
+				co_await after_metadata_flight();
+			}
 			if (read.cached) {
 				// A load that ended before this call claimed one put the schema in the cache.
 				{
