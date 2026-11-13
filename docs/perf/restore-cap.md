@@ -80,6 +80,28 @@ number of children writing shards at once, not at total chore concurrency.
    against monotone would confirm the hypothesis; the fix then belongs in how the parallel writes assign shard
    docids or how segments merge, not in a cap.
 
-Queued at Xapiand:15572ff5f (`XAPIAND_RESTORE_CHILDREN` caps the children alone; arm `k1` is one child and 14
-prepares): build 261113-025233-b5f5ae; docids layout 261113-025243-f6caf4; RESTORE docs/s 261113-025246-e60e91;
-T4/T5 with a same-round master arm 261113-025249-be0efa.
+## Follow-up: docids layout and one child
+
+At Xapiand:15572ff5f, `XAPIAND_RESTORE_CHILDREN` caps the children alone; arm `k1` is one child and 14 prepares
+(build 261113-025233-b5f5ae, `rel-15572ff5f`).
+
+Docids layout (job 261113-025243-f6caf4, [restore-cap/layout.py](restore-cap/layout.py) reading each segment's
+footer, table of contents and docids kind byte): after stall_load's setup RESTORE of `accounts` (20,000 documents,
+`?commit`, 8 s settle), every arm leaves the same layout: master, uncapped, cap 2 and one child, twice each, all
+5 shards hold 2 contiguous segments and 4,000 documents, span/docs 1.00. Nothing is monotone. The hypothesis is
+refuted: the setup RESTORE does not leave `accounts` monotone under any cap. The monotone segments the census
+caught (`docid` busy in heavy scans) must form during the loaded phase, when the light pairs PUT documents with ids
+from 10,000,001 up into `accounts` and merges join them with the contiguous base; master pays that walk too, at a
+tenth of the uncapped share. Why uncapped pays more is not pinned down: stall_load deletes its workdir on exit, so
+this round has no post-phase layout.
+
+RESTORE docs/s, T12 loadtest, mirrored (job 261113-025246-e60e91):
+
+| Arm | Runs | Median | vs pre-7c 6,076 | vs master |
+|---|---|---|---|---|
+| master | 4,548, 4,612 | 4,580 | 0.75x | 1.00x |
+| uncapped (5 children + 10) | 8,280, 8,312 | 8,296 | 1.37x | 1.81x |
+| one child + 14 prepares | 5,803, 5,667 | 5,735 | 0.94x | 1.25x |
+
+Waiting on job 261113-025249-be0efa: T4/T5 master, one child and uncapped in mirrored order, the same-round master
+baseline for light p99.
