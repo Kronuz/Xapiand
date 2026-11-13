@@ -16365,6 +16365,8 @@
     "task-lanes": {
       "accepted": {},
       "after": [],
+      "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+      "branch": "quest/xapiand/task-lanes",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -16381,6 +16383,7 @@
         "docs/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-lanes",
       "landed": [],
       "lenses": [
         "correctness"
@@ -16392,9 +16395,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "An opt-in heavy lane in task's budget and asio_scheduler",
-      "updated": "2026-11-12T20:07:22"
+      "updated": "2026-11-12T20:08:03",
+      "worktree": "../task-wt/xapiand/task-lanes"
     },
     "task-phase7c-l1": {
       "accepted": {},
