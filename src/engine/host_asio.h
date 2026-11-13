@@ -23,8 +23,8 @@
 #pragma once
 
 // A Host over a reactor's loop: a reactor's tasks (a request, a timer's commit, an idle close) run here. The
-// host wraps the loop's one task::asio_scheduler, which the reactor owns: it runs fresh work ahead of demoted
-// work and counts the demoted handles for admission (docs/design/phase7c.md D2). The reactor's owner tears the
+// host wraps the loop's one task::asio_scheduler, which the reactor owns: it runs light work ahead of the heavy lane
+// and counts the heavy lane's handles for admission (docs/design/loop-scheduling.md D2). The reactor's owner tears the
 // scheduler down in task's phases (HttpAsioService, or the manager for the control loop).
 
 #include <coroutine>               // for std::coroutine_handle
@@ -50,6 +50,7 @@ public:
 
 	void post(std::coroutine_handle<> h) override { scheduler_.post(h); }
 	void post_demoted(std::coroutine_handle<> h) override { scheduler_.post_demoted(h); }
+	void post_heavy(std::coroutine_handle<> h) override { scheduler_.post_heavy(h); }
 	void post_call(void (*fn)(void*), void* arg) override { scheduler_.post_call(fn, arg); }
 	bool runs_here() const noexcept override { return scheduler_.runs_here(); }
 	task::root_list* roots() noexcept override { return scheduler_.roots(); }
@@ -106,8 +107,8 @@ private:
 // A debug build's scheduler for one request's work: it forwards to the loop's, and makes the request's counters the
 // running ones around every resume it runs, so the rules on what a task holds are checked (check_no_view_held, Turn).
 // Its resumes queue here and one pump coroutine, owned by this scheduler, runs them from the loop's queues (the
-// demoted one for a demoted resume, so the loop's admission count still sees it). Nothing is allocated per resume,
-// and a pump the closed loop drops is destroyed with this scheduler.
+// demoted one when none is light, so the loop's admission count still sees them), each in the lane it was posted in.
+// Nothing is allocated per resume, and a pump the closed loop drops is destroyed with this scheduler.
 class Counted {
 public:
 	explicit Counted(AsioHost& host) : host_(host), pump_(run(this).handle) { }
@@ -115,8 +116,9 @@ public:
 	Counted& operator=(const Counted&) = delete;
 	~Counted() { pump_.destroy(); }
 
-	void post(std::coroutine_handle<> h) { queue(h, false); }
-	void post_demoted(std::coroutine_handle<> h) { queue(h, true); }
+	void post(std::coroutine_handle<> h) { queue(h, Lane::light); }
+	void post_demoted(std::coroutine_handle<> h) { queue(h, Lane::demoted); }
+	void post_heavy(std::coroutine_handle<> h) { queue(h, Lane::heavy); }
 	void post_call(void (*fn)(void*), void* arg) { host_.scheduler().post_call(fn, arg); }
 	// False: an Asio completion is posted here instead of resumed inline, so every resume sets the counters.
 	bool runs_here() const noexcept { return false; }
@@ -137,22 +139,29 @@ private:
 		std::coroutine_handle<promise_type> handle;
 	};
 
+	// Where a resume was posted: the loop's FIFO, demoted (resumed light), or the heavy lane (resumed heavy).
+	enum class Lane { light, demoted, heavy };
+
 	struct Ready {
 		std::coroutine_handle<> h;
-		bool demoted;
+		Lane lane;
 	};
 
-	void queue(std::coroutine_handle<> h, bool demoted) {
+	void queue(std::coroutine_handle<> h, Lane lane) {
 		bool idle;
 		{
 			std::lock_guard<std::mutex> lk(mtx_);
-			ready_.push_back({h, demoted});
+			ready_.push_back({h, lane});
 			idle = !pumping_;
 			pumping_ = true;
 		}
 		if (idle) {
-			demoted ? host_.scheduler().post_demoted(pump_) : host_.scheduler().post(pump_);
+			post_pump(lane == Lane::light);
 		}
+	}
+
+	void post_pump(bool light) {
+		light ? host_.scheduler().post(pump_) : host_.scheduler().post_demoted(pump_);
 	}
 
 	// Each pass runs the resumes queued before it began; what they queue goes back to the loop with the pump.
@@ -167,24 +176,24 @@ private:
 				TaskCounters* const previous = AsioHost::running_;
 				AsioHost::running_ = &self->counters;
 				{
-					task::running_on scope(task::scheduler_ref::of(*self));
+					task::running_on scope(task::scheduler_ref::of(*self).with_heavy(ready.lane == Lane::heavy));
 					ready.h.resume();
 				}
 				AsioHost::running_ = previous;
 			}
 			bool again;
-			bool demoted = true;
+			bool light = false;
 			{
 				std::lock_guard<std::mutex> lk(self->mtx_);
 				again = !self->ready_.empty();
 				for (const auto& ready : self->ready_) {
-					demoted = demoted && ready.demoted;
+					light = light || ready.lane == Lane::light;
 				}
 				self->pumping_ = again;
 			}
 			if (again) {
 				// Posted before this pass suspends: the loop runs it only after this handler returns.
-				demoted ? self->host_.scheduler().post_demoted(self->pump_) : self->host_.scheduler().post(self->pump_);
+				self->post_pump(light);
 			}
 			co_await std::suspend_always{};
 		}
@@ -200,7 +209,8 @@ private:
 
 
 // Runs a request's work on the loop. Release builds return it to be awaited in place. A debug build moves it to a
-// Counted scheduler of its own and back to the loop before it returns, so the request's counters follow its resumes.
+// Counted scheduler of its own and back to the loop before it returns, so the request's counters follow its resumes;
+// both moves keep the current lane, as awaiting in place does.
 template <typename T>
 task::task<T> counted([[maybe_unused]] AsioHost& host, task::task<T> work) {
 #ifdef NDEBUG
@@ -208,7 +218,7 @@ task::task<T> counted([[maybe_unused]] AsioHost& host, task::task<T> work) {
 #else
 	return [](AsioHost& host, task::task<T> work) -> task::task<T> {
 		Counted run(host);
-		co_await task::schedule_on{task::scheduler_ref::of(run)};
+		co_await task::schedule_on{task::scheduler_ref::of(run).with_heavy(task::current().heavy())};
 		std::exception_ptr error;
 		std::optional<std::conditional_t<std::is_void_v<T>, bool, T>> value;
 		try {
@@ -220,7 +230,7 @@ task::task<T> counted([[maybe_unused]] AsioHost& host, task::task<T> work) {
 		} catch (...) {
 			error = std::current_exception();
 		}
-		co_await task::schedule_on{task::scheduler_ref::of(host)};  // back on the loop before `run` goes
+		co_await task::schedule_on{task::scheduler_ref::of(host).with_heavy(task::current().heavy())};  // back on the loop before `run` goes
 		if (error) {
 			std::rethrow_exception(error);
 		}

@@ -80,6 +80,9 @@ public:
 	// Thread-safe. The coroutine resumes on this host's thread.
 	virtual void post(std::coroutine_handle<> h) = 0;
 	virtual void post_demoted(std::coroutine_handle<> h) { post(h); }
+	// Queues h in the heavy lane, to resume in a heavy scope (docs/design/loop-scheduling.md D2); a host without lanes
+	// demotes it.
+	virtual void post_heavy(std::coroutine_handle<> h) { post_demoted(h); }
 
 	// task's optional scheduler members, which scheduler_ref::of(*this) finds on Host and so a host forwards
 	// (task's cancellation D7): fn(arg) runs on the host's thread (a cross-thread cancel's emit), dropped once
