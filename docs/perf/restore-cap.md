@@ -79,3 +79,7 @@ number of children writing shards at once, not at total chore concurrency.
 2. Read the docids kind of `accounts`' segments after the setup RESTORE, master against uncapped. Contiguous
    against monotone would confirm the hypothesis; the fix then belongs in how the parallel writes assign shard
    docids or how segments merge, not in a cap.
+
+Queued at Xapiand:15572ff5f (`XAPIAND_RESTORE_CHILDREN` caps the children alone; arm `k1` is one child and 14
+prepares): build 261113-025233-b5f5ae; docids layout 261113-025243-f6caf4; RESTORE docs/s 261113-025246-e60e91;
+T4/T5 with a same-round master arm 261113-025249-be0efa.
