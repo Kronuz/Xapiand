@@ -4938,6 +4938,69 @@
       "updated": "2026-11-12T04:29:49",
       "worktree": ""
     },
+    "http-lane": {
+      "accepted": {},
+      "after": [
+        "task-lanes"
+      ],
+      "base": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+      "branch": "quest/xapiand/http-lane",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "task:lanes"
+      ],
+      "files": [
+        "http_asio.h",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:31:16",
+          "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+          "criteria": {
+            "A1": "261112-222327-cf718c; fails without: 261112-222330-e221cd",
+            "A2": "261112-222327-cf718c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "09b644d23f6518c4112812e83c2711058e99ea78",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-222327-cf718c",
+              "level": "light",
+              "seconds": 134.0,
+              "state": "done",
+              "what": "http-lane check build-test at 09b644d23f65"
+            }
+          ],
+          "final": true,
+          "from": "473bbc32a4da7f9484c80b7fe7fe5fb16a8f27c0",
+          "reason": "",
+          "tested": "09b644d23f6518c4112812e83c2711058e99ea78"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/http",
+      "risk": "normal",
+      "status": "landed",
+      "title": "http resumes a waiter inline only for a light reference",
+      "updated": "2026-11-12T22:31:47",
+      "worktree": ""
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
@@ -5631,10 +5694,31 @@
       "updated": "2026-11-08T15:41:29"
     },
     "loop-scheduling": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-12T20:06:28",
+          "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+          "blobs": {
+            "docs/design/loop-scheduling.md": "100644:6cd44554da738f3b89bd3db335dfe356178088e9"
+          },
+          "by": "review",
+          "commit": "d69ac733f5cdd828a0d1d3602be2169fd607bf9b",
+          "criteria": "8b51c97f2a355f33",
+          "diffs": {
+            "docs/design/loop-scheduling.md": "eebaf2045ff204e2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3d533e1a690f0044f9e73018523e6686d0d62983",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "x7-loop-fix-c"
       ],
+      "base": "1bdeb0fe8ef5c7ba755606215ac47b4e85120d63",
+      "branch": "quest/xapiand/loop-scheduling",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
@@ -5645,20 +5729,28 @@
       ],
       "consumes": [],
       "files": [
-        "docs/design/loop-scheduling.md"
+        "docs/design/loop-scheduling.md",
+        "docs/design/phase7c.md",
+        "src/server/search_views.cc",
+        "src/engine/host.h",
+        "src/engine/host_asio.h",
+        "CMakeLists.txt",
+        "tests/test_loop_yield.cc"
       ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "correctness",
+        "design"
       ],
       "milestone": "Phase 7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "HTTP loop threads keep running under the T4/T5 mix",
-      "updated": "2026-11-12T13:46:26"
+      "updated": "2026-11-12T22:35:56",
+      "worktree": "../Xapiand-wt/xapiand/loop-scheduling"
     },
     "loop-share-flake": {
       "accepted": {},
@@ -14568,6 +14660,38 @@
       "title": "Scheduler on WorkPool",
       "updated": "2026-11-08T15:40:29"
     },
+    "schema-load-once": {
+      "accepted": {},
+      "after": [],
+      "base": "0e5e3d3b4c5e427ed3d33f1d4eaae97b8023fee2",
+      "branch": "quest/xapiand/schema-load-once",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schemas_lru.*",
+        "src/single_flight.h",
+        "src/index_resolver_lru.h",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "7c",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "Concurrent first uses of a schema load it once, foreign links included",
+      "updated": "2026-11-12T22:25:39",
+      "worktree": "../Xapiand-wt/xapiand/schema-load-once"
+    },
     "seam-census": {
       "accepted": {},
       "after": [],
@@ -16306,6 +16430,109 @@
       "status": "landed",
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
+    },
+    "task-lanes": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-12T22:04:19",
+          "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "blobs": {
+            "CMakeLists.txt": "100644:0f9a585eb5ccbea4253f5c5fc0e386b213bbbde3",
+            "docs/API.md": "100644:904eb12829828615b71d0ba139f5ab3a80e959b3",
+            "docs/lanes.md": "100644:cc90dcc166ac81f612f46ac67aab049c1add1943",
+            "task.hh": "100644:0ab5e093b90bfd187810c7ffbe6285352066e15d",
+            "task_asio.hh": "100644:54a36d3ff958145e493e0d85fac3a70b4cfbf649",
+            "test/lanes_mutant.py": "100644:a59932c9fd3ed3d332b9eeb52c43da970806a182",
+            "test/lanes_test.cc": "100644:204e8ff6051a33fa52ac80b3fd053c08dc6fb002",
+            "test/resume_ab.py": "100644:ce0ac3351642597f077b58d3817970d31c92e196",
+            "test/resume_bench.cc": "100644:f5f66efa285655c6a7c65831cd04b89ad3e26174"
+          },
+          "by": "review",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": "3387a79ada18cfcc",
+          "diffs": {
+            "CMakeLists.txt": "c62ce1c28148c2d3",
+            "docs/API.md": "5e3f41de439be170",
+            "docs/lanes.md": "b333cca2fcde2acd",
+            "task.hh": "c5472b41893ee790",
+            "task_asio.hh": "8b26833cfa8cfade",
+            "test/lanes_mutant.py": "bdb3b19f81835015",
+            "test/lanes_test.cc": "a1aae0a888f798dd",
+            "test/resume_ab.py": "19ea161bf733538b",
+            "test/resume_bench.cc": "f4677d09c3872bec"
+          },
+          "findings": {},
+          "note": "",
+          "review": "48a06249c7e17d07b5650ee344f639b7954b0ddb",
+          "reviewed": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+      "branch": "quest/xapiand/task-lanes",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_asio.hh",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-12T22:21:25",
+          "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+          "criteria": {
+            "A1": "261112-214929-dfac91; fails without: 261112-204849-91803a, 261112-204854-7e293b, 261112-204858-0e6b9d, 261112-204902-8b592b, 261112-204905-205bd3, 261112-204909-7b597e, 261112-204914-1d26c6, 261112-204918-7d0c0f, 261112-204923-7f2258, 261112-204928-6befdc, 261112-204935-9ea300, 261112-214931-341d4a, 261112-214934-bb3d65, 261112-214937-b6d183, 261112-214941-85d939, 261112-214945-9995a1, 261112-214949-5b89c5, 261112-214952-0d0642, 261112-214956-c1b908, 261112-215000-7f3020, 261112-215004-e2d24e, 261112-215008-8ab078",
+            "A2": "261112-215012-f7d1c9",
+            "A3": "261112-215014-07a8ed",
+            "A4": "[manual] Detent's lead, 11-12: Detent's integration jobs (da2074 at 90b50f0, b7fe6c at 18eb516; Detent's repository) passed, Detent main's full suite with task pinned to quest/xapiand/task-lanes, 275 of 275 tests (test_local_trusted_paths skipped as on main)",
+            "A5": "`docs/lanes.md` (task)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18eb51672e4f306aac508bd0444f6d367eac4291",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261112-214929-dfac91",
+              "level": "light",
+              "seconds": 14.3,
+              "state": "done",
+              "what": "task-lanes check build-test at 18eb51672e4f"
+            }
+          ],
+          "final": true,
+          "from": "0e71a38e2ea6742fcc70b2bf791ca068ad1be2dc",
+          "reason": "",
+          "tested": "18eb51672e4f306aac508bd0444f6d367eac4291"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7c",
+      "needs": [],
+      "provides": [
+        "task:lanes"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/task",
+      "risk": "high",
+      "status": "landed",
+      "title": "An opt-in heavy lane in task's budget and asio_scheduler",
+      "updated": "2026-11-12T22:21:31",
+      "worktree": ""
     },
     "task-phase7c-l1": {
       "accepted": {},

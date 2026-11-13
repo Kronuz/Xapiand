@@ -5,7 +5,7 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-With x7-loop-fix-c's fix (c) in place, Xapiand's HTTP loop threads are not descheduled mid-handler under the T4/T5 mixed load, so x7-gate's T4 (p99 loop lag within the 1,024 us edge on every loop) and T5 (loaded light p99 within its bounds) pass, and RESTORE (T12) stays at pre-7c. Today fix (c) leaves T5 light p99 at 48.3/52.8 ms (D67), and E4 (job 261112-042106-305a1a, docs/perf/x7-loop-stalls.md) shows loop threads at 0.85 cpu/wall and long handlers at 0.45: the loops are runnable but not running. Candidate causes the design must measure, not assume: more runnable threads than CPUs (loops, workers, strata/prospect executors, WAL), loop threads not favoured over workers (macOS QoS, Linux nice or SCHED policy), and long turns (fix 3). The fix applies on Linux and macOS alike (cross-platform).
+With x7-loop-fix-c's fix (c) in place, a light request or a loop's lag tick on an HTTP loop no longer waits behind a heavy request's turns on the same loop, so x7-gate's T4 (p99 loop lag within the 1,024 us edge on every loop) and T5 (loaded light p99 within its bounds) pass, and RESTORE (T12) stays at pre-7c. D79: the census (docs/design/loop-scheduling.md, E1/E3) shows thread placement cannot get there; the mechanism is inside the loop: light resumptions and timers ahead of heavy turns, or admission of at most N heavy requests per loop, or both, chosen by measurement. It changes phase7c.md D2's contract (every resumption in the ordinary FIFO; no attained-service counter), and the design says what replaces it and how a request is classed light or heavy without a user-visible knob unless the numbers need one. Linux and macOS alike.
 
 ## Acceptance criteria
 
@@ -14,10 +14,10 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 [artifact] A design note names the measured cause (thread census under the T4/T5 mix: runnable threads per CPU, per-class cpu/wall, on Linux and macOS), the chosen mechanism and the files it changes, and is settled by one concurrency design review before code: `docs/design/loop-scheduling.md`
-- A2 T4 and T5 pass with fix (c) and this quest together: exclusive jobs of at most 10 minutes each (D59) on a merge of both branches, before and after, honest magnitude
-- A3 T12's RESTORE stays at or above pre-7c with both: one exclusive job of at most 10 minutes
-- A4 The build-test check passes, with a test for each new scheduling rule that fails without it: jobs
+- A1 [artifact] A design note keeps the census (E1/E3, and E2's per-core ABBA as the parked option), names the in-loop mechanism, the classing of light and heavy, the replacement for phase7c.md D2's FIFO contract, starvation bounds for heavy requests, and the files it changes, settled by one concurrency design review before code: `docs/design/loop-scheduling.md`
+- A2 T4 and T5 with fix (c) and this quest together are measured on macOS and the Linux VM and recorded, a miss stated as a miss (D80): exclusive jobs of at most 10 minutes each (D59) on a merge of both branches, before and after, honest magnitude
+- A3 T12's RESTORE stays at or above pre-7c, and heavy-search throughput is reported against base: one exclusive job of at most 10 minutes
+- A4 The build-test check passes, with a test for each ordering or admission rule that fails without it (a light resumption overtakes heavy turns; a heavy request still progresses within its bound): jobs
 
 ## Contracts
 
@@ -28,6 +28,8 @@ Consumes x7-loop-fix-c's fix (c) (lands right before this quest, D67). No API, f
 - Owner, 11-12: launch the design now rather than after the quota reset.
 - Lead, 11-12: the file set is the design note until the design review settles the mechanism; the lead then widens it to the files the design names. Measurement jobs run on a scratch merge of this branch and quest/xapiand/x7-loop-fix-c.
 - Lead: x7-loop-fix-c and this quest land back to back (D67).
+- Owner, 11-12 (D80): land the lane with one loop per physical core; macOS T4/T5 recorded as misses; x7-gate's T4/T5 rerun with the load generator off the server's CPUs.
+- Owner, 11-12 (D79): in-loop priority now; one loop per physical core parked until E2 (261112-154306-4d90d5) shows its 0.81x heavy-search cost is worth it.
 
 ## May land early
 
