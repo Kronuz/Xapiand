@@ -9,32 +9,47 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Fix and the two deterministic tests are written and committed (wip commits to squash/reword); waiting on the first
+build+run job 261112-223048-046aae (compile test_node, run the two "paused" tests).
 
 ## Next
 
-1. <step>
+1. Read the job; fix compile/test errors.
+2. Reword the wip commits (message with body, no attribution).
+3. Mutant job (probe disabled) `--for A1 --fails-without`; ASan job `--for A2` (20 repeats); `campaign verify schema-load-once --for A3`.
+4. Push the branch; paste the Evidence table; Result; State "ready for review".
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pending |
+| A2 | pending |
+| A3 | pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+pending
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The interleaving (A1): SingleFlight.run checks nothing between a caller's cache miss and its claim of the flight, and a
+  flight's value reaches the cache only in each caller's continuation, after the flight is erased. A waiter B that missed
+  the cache (of the foreign schema `.xapiand/indexes/<index>`, the default link of an index without metadata) but is
+  descheduled before `foreign_loads.run` finds no flight once leader A's load ended: B becomes a second leader and reads the
+  foreign schema again (3 loads, not 2). The same gap exists for the metadata flight (cache miss, flight ends, new flight).
+  In test_node:535 the held turn makes all 6 calls join the metadata flight, so only the foreign flight showed it, under
+  ASan's slower scheduling.
+- Fix: a load puts its schema into the cache before its flight ends (load_metadata, load_foreign), and a leader asks a probe
+  (cached_metadata, cached_foreign) whether the cache holds the schema now before it loads (SingleFlight::run's third
+  argument; not counted as a load). A hit on the metadata flight re-enters the existing "found in cache" path.
+- The index settings flight (index_resolver_lru.cc, outside this quest's file set) has the same gap; the 2-argument run is
+  unchanged for it. Reported, not fixed.
+- Seam: SchemasLRU::before_metadata_claim / before_foreign_claim, awaited between a first use's cache miss and its claim;
+  empty in production (one std::function test).
+- Tests: test_a_call_paused_before_claiming_{the_foreign,the_metadata}_load_loads_nothing hold the first call at the seam
+  on a task::event, let the other 5 finish (2 loads), release it, and count 2 loads still.

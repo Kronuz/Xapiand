@@ -542,6 +542,57 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	}
 }
 
+// A first use that missed the cache and is paused before it claims the load, while the other calls load the schema and
+// finish, loads nothing when it resumes: the load it missed has put the schema in the cache. `gated` is the seam that
+// holds the first call to reach it.
+static void a_call_paused_before_its_claim_loads_nothing(const char* name, const char* index, bool metadata) {
+	Watchdog watchdog(name);
+	constexpr int N = 6;
+	const auto endpoints = endpoints_of(index);
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	auto seam = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = seam;
+	std::atomic<int> done{0};
+	std::vector<std::shared_ptr<const MsgPack>> got(N);
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&, i] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			auto result = engine::sync_wait(schemas.get(&handler, nullptr));
+			got[i] = std::get<0>(result);
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(schemas.loads() - loads_before, 2u);              // the metadata read and the foreign schema: once each
+	CHECK_EQ(done.load(), N - 1);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(schemas.loads() - loads_before, 2u);   // and the paused call loaded neither
+	for (int i = 1; i < N; ++i) {
+		CHECK(got[i] == got[0]);
+	}
+}
+
+static void test_a_call_paused_before_claiming_the_foreign_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the foreign claim", "schema_paused_foreign", false);
+}
+
+static void test_a_call_paused_before_claiming_the_metadata_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the metadata claim", "schema_paused_metadata", true);
+}
+
 // The same for the settings of an index: the resolver reads them once.
 static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	Watchdog watchdog("one settings load");
@@ -2370,6 +2421,8 @@ int main(int argc, char** argv) {
 	};
 	const Case cases[] = {
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
+		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
+		{"test_a_call_paused_before_claiming_the_metadata_load_loads_nothing", test_a_call_paused_before_claiming_the_metadata_load_loads_nothing},
 		{"test_concurrent_first_uses_of_index_settings_load_them_once", test_concurrent_first_uses_of_index_settings_load_them_once},
 		{"test_a_cached_schema_is_not_loaded_again", test_a_cached_schema_is_not_loaded_again},
 		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
