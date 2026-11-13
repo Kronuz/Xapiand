@@ -5,27 +5,21 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Kronuz/http's `resume_waiter` (http_asio.h:578) resumes a waiter inline only for a light `scheduler_ref`; a heavy one is posted through its scheduler, so a heavy request's reads join the heavy lane (loop-scheduling D5). No change for callers that never set a lane.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+Three to five, at outcome level: `- A1 A heavy waiter's read resumes through its scheduler and a light one inline: a test in http's suite that fails without the change (the build-test check, with a `--fails-without` job)
+- A2 http's suite passes against the task-lanes pin: the build-test check
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes `task:lanes` (after task-lanes). No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-12: one line plus its test, per loop-scheduling D5.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
