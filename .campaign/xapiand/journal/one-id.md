@@ -1,6 +1,6 @@
 # one-id: journal
 
-State: working
+State: waiting on jobs 261113-074628-298443 261113-074720-30a477 261113-074651-a42351 261113-074654-a175a2 261113-074657-794e8b 261113-074700-cc13f7 261113-074703-8f82e0 261113-074707-55907d 261113-074710-bc8074 261113-074808-b39d85 261113-074731-77e865 261113-074811-d08bbf
 Quest: .campaign/xapiand/quests/one-id.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Tests for A1, A2, A6, A7 (tests/test_node.cc, tests/test_pool.cc) and the mutant script; then the build-test job.
+Waiting on jobs at 622f57d08 (tests and mutants committed; user docs and the ids mechanism note updated):
+
+- 261113-074628-298443 probe: the new tests and engine placement tests (not evidence).
+- 261113-074720-30a477 build-test, tagged A1, A2, A4, A6, A7.
+- Mutants (`tests/one_id_mutants.sh`, --fails-without, after the probe): A1 named-docid 261113-074651-a42351;
+  A2 no-persist 261113-074654-a175a2, no-replay 261113-074657-794e8b (test_pool), no-advance 261113-074700-cc13f7,
+  no-stride 261113-074703-8f82e0 (test_node); A7 hash-route 261113-074707-55907d; A6 no-advance 261113-074710-bc8074.
+- A5: release builds master 261113-074808-b39d85, head 261113-074731-77e865 (into .scratch/rel-<sha>), then the
+  exclusive ABBA 261113-074811-d08bbf (.scratch/ab/ab.sh, the loop-scheduling A2 harness with arms pre/cur).
 
 ## Next
 
-1. Write the tests and tests/one_id_mutants.sh; submit build-test (A4) and the per-criterion jobs with mutants.
-2. A5: one exclusive job, master vs head, harness/stall_load.py T4/T5 (docs/perf/x7-loop-stalls.md).
-3. User docs: docs/src index-api.md and architecture.md routing paragraphs.
+1. Read the probe; fix any test; when green, paste `campaign brief`'s table, push the branch for CI (A4 sanitizers).
+2. A5 numbers into the Result (light p99 loaded, heavy searches, cur/pre per pair; a miss stated as a miss).
+3. Correctness review is the lead's to launch.
 
 ## Blocked on
 
