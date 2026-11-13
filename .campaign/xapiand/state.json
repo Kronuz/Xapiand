@@ -10944,18 +10944,50 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T11:06:52",
+          "commit": "46edfb23e9095210fb1bdbac22835f37bb470e8a",
+          "criteria": {
+            "A1": "261113-103109-652819; fails without: 261113-083755-2de9cb, 261113-103110-b89722",
+            "A2": "261113-103109-652819; fails without: 261113-083758-e58dc8, 261113-083800-510abb, 261113-083802-c6d044, 261113-083805-101e1b, 261113-103112-482015, 261113-103114-8bb3e1, 261113-103117-f82b70, 261113-103119-c46bdd",
+            "A3": "`docs/design/one-id.md`",
+            "A4": "261113-103109-652819",
+            "A5": "261113-103135-ce00ce",
+            "A6": "261113-103109-652819; fails without: 261113-083809-734db4, 261113-103124-d6917a",
+            "A7": "261113-103109-652819; fails without: 261113-083807-92969a, 261113-103121-12d765, 261113-103126-1cc5d1, 261113-103128-415311"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict",
+              "commit": "1f5b791d21db8e7a39f78432d8a62f096a511960",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-103109-652819",
+              "level": "light",
+              "seconds": 293.6,
+              "state": "done",
+              "what": "one-id check build-test at 1f5b791d21db"
+            }
+          ],
+          "final": true,
+          "from": "6cecdb4f91d98b362b5aae52de668f5f61f2fb2e",
+          "reason": "",
+          "tested": "ce0d924b2905132b28dc954ac8dfbe62e05de9f5"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "7c",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T11:06:22",
+      "updated": "2026-11-13T11:06:58",
       "worktree": "../Xapiand-wt/xapiand/one-id"
     },
     "open-mix": {
