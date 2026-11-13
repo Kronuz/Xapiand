@@ -239,6 +239,9 @@ class Node:
             ]
             if args.processors > 0:
                 cmd += ["--processors", str(args.processors)]
+            if args.index_size:
+                # Its own cgroup (systemd-run --scope execs in place, so the pid is the node's): T6 caps its memory.
+                cmd = ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--", *cmd]
             self.proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, env=env, start_new_session=True)
             atexit.register(self.stop)
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -314,6 +317,67 @@ def process_cpu_s(pid: int) -> float | None:
     for part in out.strip().split(":"):
         secs = secs * 60 + float(part)
     return secs
+
+
+def thread_major_faults(pid: int | None) -> dict[int, tuple[str, int]] | None:
+    """Each thread's (name, major faults) from /proc/PID/task; None off Linux."""
+    if pid is None or not os.path.isdir(f"/proc/{pid}/task"):
+        return None
+    out: dict[int, tuple[str, int]] = {}
+    for tid in os.listdir(f"/proc/{pid}/task"):
+        with contextlib.suppress(OSError):
+            with open(f"/proc/{pid}/task/{tid}/stat") as f:
+                text = f.read()
+            name = text[text.index("(") + 1 : text.rindex(")")]
+            out[int(tid)] = (name, int(text.rsplit(")", 1)[1].split()[9]))
+    return out
+
+
+def faults_delta(
+    before: dict[int, tuple[str, int]] | None, after: dict[int, tuple[str, int]] | None, queries: int
+) -> dict[str, Any] | None:
+    """Major faults per thread name over a phase, and per 1,000 queries (T6)."""
+    if before is None or after is None:
+        return None
+    by_name: dict[str, int] = {}
+    for tid, (name, n) in after.items():
+        by_name[name] = by_name.get(name, 0) + n - before.get(tid, (name, 0))[1]
+    total = sum(by_name.values())
+    return {
+        "by_thread": dict(sorted(by_name.items())),
+        "total": total,
+        "queries": queries,
+        "per_1000_queries": round(total * 1000 / queries, 3) if queries else None,
+    }
+
+
+def cap_memory(node: Node, factor: float) -> dict[str, Any]:
+    """T6's "index at FACTOR x RAM": the node's cgroup gets its anonymous memory plus 1/FACTOR of the index in page cache."""
+    pid = node.pid
+    if pid is None or not os.path.isdir("/proc"):
+        raise SystemExit("--index-size needs a node this script started, on Linux")
+    with open(f"/proc/{pid}/cgroup") as f:
+        cg = "/sys/fs/cgroup" + f.read().strip().split("::", 1)[1]
+    index_bytes = sum(
+        os.path.getsize(os.path.join(d, n)) for d, _, ns in os.walk(os.path.join(node.workdir, "data")) for n in ns
+    )
+
+    def stat() -> dict[str, int]:
+        with open(os.path.join(cg, "memory.stat")) as f:
+            return {k: int(v) for k, v in (line.split() for line in f)}
+
+    anon = stat()["anon"]
+    limit = anon + int(index_bytes / factor)
+    with open(os.path.join(cg, "memory.max"), "w") as f:
+        f.write(str(limit))
+    after = stat()
+    return {
+        "cgroup": cg,
+        "index_bytes": index_bytes,
+        "anon_bytes": anon,
+        "memory_max": limit,
+        "file_bytes_after_cap": after["file"],
+    }
 
 
 # ---------------------------------------------------------------------------------------------
@@ -964,6 +1028,7 @@ async def phase(
     a = ctx.args
     before = await scrape(ctx.ctl)
     cpu_before = ctx.node.cpu_s()
+    faults_before = thread_major_faults(ctx.node.pid)
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
     jobs: list[asyncio.Future[Any]] = []
@@ -1013,6 +1078,7 @@ async def phase(
         census_result = await asyncio.get_running_loop().run_in_executor(None, census, ctx.node)
     await asyncio.gather(*jobs)
     cpu_after = ctx.node.cpu_s()
+    faults_after = thread_major_faults(ctx.node.pid)
     after = await scrape(ctx.ctl)
     entry: dict[str, Any] = {
         "name": name,
@@ -1090,6 +1156,11 @@ async def phase(
         log(
             f"{name}: heavy {h['searches']} searches, {h['restored_docs']} restored docs, errors {h['errors']['http_503']} 503, {h['errors']['http_other']} other"
         )
+    queries = (entry.get("light") or {}).get("completed", 0) + (entry.get("heavy") or {}).get("searches", 0)
+    entry["major_faults"] = faults_delta(faults_before, faults_after, queries)
+    if entry["major_faults"]:
+        mf = entry["major_faults"]
+        log(f"{name}: major faults {mf['total']} over {queries} queries ({mf['per_1000_queries']} per 1,000)")
     if entry["lag"]:
         worst = max((v["p99_us"] or 0, k) for k, v in entry["lag"].items())
         log(f"{name}: worst loop p99 lag {worst[0]} us ({worst[1]})")
@@ -1172,6 +1243,10 @@ async def amain(args: argparse.Namespace) -> int:
         f"{reactors} reactors; accounts {args.accounts_docs} documents loaded in {load_s:.1f} s; rate {args.rate}/s for {args.duration} s"
     )
     extra: dict[str, Any] = {}
+    if args.index_size:
+        factor = float(args.index_size.lower().removesuffix("xram"))
+        extra["index_size"] = {"requested": args.index_size, **cap_memory(node, factor)}
+        log(f"index at {args.index_size}: {json.dumps(extra['index_size'])}")
 
     if args.suite:
         # One load of `accounts` for the whole gate sequence: saturate, T5 (unloaded, loaded, same-index), T8.
@@ -1203,11 +1278,6 @@ async def amain(args: argparse.Namespace) -> int:
         extra["lua_loop"] = {
             "requested": args.lua_loop,
             "status": "not run here: harness/lua_bounds.py --loops N runs the bounds and the slice check (T10)",
-        }
-    if args.index_size:
-        extra["index_size"] = {
-            "requested": args.index_size,
-            "status": "not run: gated at Phase 6 on the Linux VM",
         }
 
     out: dict[str, Any] = {
@@ -1352,7 +1422,11 @@ def main() -> int:
     )
     ap.add_argument("--processors", type=int, default=0, help="the node's reactor count (--processors; 0: its default)")
     ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (run by harness/lua_bounds.py)")
-    ap.add_argument("--index-size", default="", help="e.g. 2xram (gated at Phase 6)")
+    ap.add_argument(
+        "--index-size",
+        default="",
+        help="2xram: on Linux, cap the node's cgroup so the index is 2x the page cache it may hold (T6)",
+    )
     ap.add_argument(
         "--census",
         action="store_true",

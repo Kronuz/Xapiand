@@ -380,5 +380,25 @@ class HeldOverload(unittest.TestCase):
         self.assertEqual(res.as_dict()["errors"]["http_503"], 0)
 
 
+class MajorFaults(unittest.TestCase):
+    def test_faults_are_summed_per_thread_name_over_a_phase(self) -> None:
+        before = {1: ("xapiand", 5), 2: ("xapiand", 1), 3: ("Xapiand:W", 0)}
+        after = {1: ("xapiand", 9), 2: ("xapiand", 3), 3: ("Xapiand:W", 2), 4: ("Xapiand:FS", 7)}
+        d = stall_load.faults_delta(before, after, 2000)
+        assert d is not None
+        self.assertEqual(d["by_thread"], {"Xapiand:FS": 7, "Xapiand:W": 2, "xapiand": 6})
+        self.assertEqual(d["total"], 15)
+        self.assertEqual(d["per_1000_queries"], 7.5)
+
+    def test_this_process_reads_its_own_threads_on_linux(self) -> None:
+        got = stall_load.thread_major_faults(os.getpid())
+        if sys.platform.startswith("linux"):
+            assert got is not None
+            self.assertIn(os.getpid(), got)
+        else:
+            self.assertIsNone(got)
+        self.assertIsNone(stall_load.faults_delta(None, got, 10))
+
+
 if __name__ == "__main__":
     unittest.main()
