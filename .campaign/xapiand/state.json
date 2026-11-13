@@ -10828,6 +10828,7 @@
         "src/database/shard.*",
         "src/database/handler.*",
         "src/database/schema.cc",
+        "src/database/pool.h",
         "src/engine/strata/shard.cc",
         "src/engine/strata/search.cc",
         "src/engine/shard.h",
@@ -10835,6 +10836,7 @@
         "src/index_resolver_lru.*",
         "tests/**",
         "docs/design/one-id.md",
+        "docs/mechanisms/document-ids-and-versions.md",
         "docs/src/**"
       ],
       "landed": [],
@@ -10848,7 +10850,7 @@
       "risk": "high",
       "status": "active",
       "title": "A document's id is its only id; docids stay internal and dense",
-      "updated": "2026-11-13T07:20:32",
+      "updated": "2026-11-13T07:56:32",
       "worktree": "../Xapiand-wt/xapiand/one-id"
     },
     "open-mix": {
