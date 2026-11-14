@@ -19905,10 +19905,152 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T20:52:19",
+          "commit": "dc1939b3fd21664145aba2b2486f4cd083ddf9b8",
+          "criteria": {
+            "A1": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A10": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164933-460810 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A11": "261113-202441-854ba3",
+            "A12": "261113-164929-53a2d2 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164931-09250a (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A13": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164953-250830 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-191724-166dd3 (passed at c43ebf6c2158; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A14": "`docs/gates/phase7c.md` (every row scored, misses stated, the build behind each number)",
+            "A15": "D90: MISS carried to platform-rows; Linux VM 16b520, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (227.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run",
+            "A16": "261113-191709-809e9e (passed at c43ebf6c2158; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164938-d63930 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164951-e5baa9 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A17": "PASS: build-test 261113-165003-4bde4b; rows 261113-164955-f95555 (`t1_strict_owed`)",
+            "A18": "`docs/design/phase7c.md` (D16)",
+            "A19": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A2": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A20": "PASS: build-test 261113-165003-4bde4b",
+            "A21": "261113-202444-612843, 261113-202448-cfa150, 261113-202450-16c39c",
+            "A22": "`docs/perf/shard-view.md`: PASS (measured in x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8",
+            "A23": "D53 (T4 reads the control loop only while busy)",
+            "A24": "261113-164929-53a2d2 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164931-09250a (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A3": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A4": "261113-164926-89b9ef (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A5": "261113-164926-89b9ef (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A6": "D90: reported (gated at Phase 6), Linux VM 16b520, 2x RAM unloaded 330.5 per 1,000, loaded 110,093 per 1,000 (99.1% on reactors, light p99 23.2 s); in RAM 0. Phase 6's target is 1 per 1,000",
+            "A7": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A8": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A9": "PASS with a part not shown: build-test 261113-165003-4bde4b (x7-cancel-rows tests; their mutants ran in the landed quest x7-cancel-rows); \"within one slice\" not shown: freed 2.1-3.1 ms after the close"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-4bde4b",
+              "level": "light",
+              "seconds": 223.9,
+              "state": "done",
+              "what": "x7-gate check build-test at d53d85c224c0"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-fb9907",
+              "level": "light",
+              "seconds": 182.5,
+              "state": "done",
+              "what": "x7-gate check e2e at d53d85c224c0"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:ThreadSanitizer",
+              "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+              "state": "done"
+            },
+            {
+              "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-2b6d6d",
+              "level": "light",
+              "seconds": 1463.0,
+              "state": "done",
+              "what": "x7-gate check t7-tsan at d53d85c224c0"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165004-4bafe6",
+              "level": "light",
+              "seconds": 417.5,
+              "state": "done",
+              "what": "x7-gate check recovery at d53d85c224c0"
+            },
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165004-905bcf",
+              "level": "light",
+              "seconds": 61.4,
+              "state": "done",
+              "what": "x7-gate check removed at d53d85c224c0"
+            }
+          ],
+          "final": true,
+          "from": "cb42383a4f25febde813c76202620e133b94c503",
+          "later": [
+            "261113-205220-18006b",
+            "261113-205220-7cf458"
+          ],
+          "reason": "",
+          "tested": "9173797f2c89c6e57c13780e2f43721b0625d4c6"
+        }
+      ],
       "lenses": [
         "correctness",
         "security"
+      ],
+      "messages": [
+        {
+          "answered": "dc1939b3fd21",
+          "at": "2026-11-12T05:22:20",
+          "by": "xapiand-lead",
+          "id": "msg-1",
+          "text": "Lead: phase7c.md amendment from x7-loop-fix-c (land it with x7-gate's doc edits; text in /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/x7-loop-fix-c/.campaign/xapiand/journal/x7-loop-fix-c.md, section 'For x7-gate'): D4's flush row gains RESTORE writes in a shard's turn with engine chores inline; D12's RESTORE sentence becomes the fix (c) description (query chores prepare, flush chores write per shard under at most W children, new numeric ids and post-placement misses serial after the join, in input order). Apply when fix (c) lands; until then it describes unlanded code."
+        }
       ],
       "milestone": "Phase 7c",
       "needs": [
@@ -19918,10 +20060,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-13T20:26:58",
-      "worktree": "../Xapiand-wt/xapiand/x7-gate"
+      "updated": "2026-11-13T20:52:26",
+      "worktree": ""
     },
     "x7-http-repin": {
       "accepted": {},
