@@ -20,6 +20,18 @@ there is no measured FreeBSD E2E result yet.
 
 ## Results
 
-No FreeBSD build has run locally. The workflow requires a branch push to
-start its VM. CI results and any portability failures are pending; no test
-is claimed to pass yet.
+YAML syntax passes Ruby's YAML parser:
+
+```sh
+ruby -e 'require "yaml"; YAML.load_file(ARGV[0])' .github/workflows/freebsd.yml
+gh run list --repo Kronuz/Xapiand --branch codex/freebsd-ci \
+  --json databaseId,status,conclusion,url
+```
+
+The branch is pushed at Xapiand:ebe543e8b, but the latter command returns
+an empty list as of November 14, 2026, 01:00 UTC. The GitHub API confirms
+Actions are enabled and all actions allowed; the remote branch contains
+the expected workflow. No run URL exists yet, and the reason for the
+missing push run is unknown. No FreeBSD compiler or test failure is
+observed because no FreeBSD build has run. CI and portability validation
+remain incomplete; no test is claimed to pass.
