@@ -10,7 +10,7 @@ file sets of the active quests (x7-gate, exact-id-keys, and sortable-encoding on
   every timing under `quiet strict` (or `quiet exclusive` for numbers that decide), at most 10
   minutes per run. Run `quiet check` first. Detent's agents and the xapiand campaign share the host.
 - Never touch: `src/database/*`, `src/serialise.*`, `src/query_dsl.cc`, `src/engine/strata/*`,
-  `docs/gates/*`, `.campaign/**` (except your report rows named below), Kronuz/sortable's byte
+  `docs/gates/*`, `.campaign/**` (except this file's Status table), Kronuz/sortable's byte
   format (`vectors.txt`, `reject.txt` and anything that changes them).
 - Never open GPL sources: `src/sortable_serialise.{cc,h}`,
   `contrib/python/xapiand-py/xapiand/utils/sortable.py`, or Xapian.
@@ -132,6 +132,12 @@ branch, never to `main`, no campaign-state edits. Evidence: commands and numbers
   timers. Allocator stats plus RSS, release build, `quiet exclusive`.
 - Report `http/docs/perf/idle-cost-baseline.md`: commands, raw numbers, top owners, and 2-3
   candidate cuts with estimated bytes saved.
+- Host limit (lead, 11-13 19:10): the first 100K runs left ~30,000 loopback sockets in
+  FIN_WAIT_1/CLOSING to ports 18920-18926 and exhausted macOS's 16,384 ephemeral ports, which broke
+  other campaigns' jobs (EADDRNOTAVAIL) and GitHub access. Spread clients over source addresses
+  (127.0.0.2, 127.0.0.3, ... bound before connect), close server and client sides cleanly, check
+  `netstat -an -p tcp | grep -c FIN_WAIT_1` is back near zero after each run, or run the 100K
+  arms in the Linux VM.
 - Add only a bench under `bench/`; never touch a product header (`*.h`). Feeds Detent quest
   http-idle-cost (A1).
 
@@ -154,3 +160,14 @@ branch, never to `main`, no campaign-state edits. Evidence: commands and numbers
   `include/`, `tests/` or `.campaign/`.
 
 Not for Codex now (Detent's call): namespace-followups, consensus-late-append.
+
+## Status (Codex fills one row per task as it finishes or stops)
+
+Commit this file on Xapiand `master` after each row (a `.campaign/`-only commit runs no CI). If
+pushing is blocked, say so in the row and leave the branch local.
+
+| Task | State (done, partial, blocked) | Repo and branch | Commit | Report path | Result in one line |
+|---|---|---|---|---|---|
+| C9 | done | Detent `codex/s6-v1-removal-survey` | Detent:9ba4c7d2 | `Detent/docs/design/s6-v1-removal-survey.md` | Read-only inventory, D8/D88 costs, format effects and commit order; pushed. |
+| C6 | done | Xapiand `codex/py-sortable` | Xapiand:32e6ab315 | `Xapiand/contrib/python/xapiand-py/docs/sortable-codec.md` | 113491 vectors, 39 rejects, 1M C++ comparisons pass; strict types/lint clean; throughput measured; pushed. |
+| C8 | partial | Detent `codex/ci-flakes-triage` | Detent:9f6121a1 | `Detent/docs/dev/ci-flakes-triage.md` | Snapshot timeout reproduced and helper flaw forced; DNS port theft forced; four flakes pass 10/10 repeats with causes unresolved; pushed. |

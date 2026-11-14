@@ -4116,8 +4116,35 @@
       "updated": "2026-11-08T15:39:28"
     },
     "flush-within-budget": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T19:39:03",
+          "base": "397c02d578cc495813426757d5022e14d88d506a",
+          "blobs": {
+            "docs/perf/flush-spill.md": "100644:849d364814c699106f4064df2fd379dd972c0708",
+            "include/strata/core/index.hh": "100644:c4a8a9d8e38b0c4a9af8a68a617f619c71c3a3ac",
+            "include/strata/core/section_io.hh": "100644:b6634d18f4da2656c6710828453b4c8ac5cc28e9",
+            "test/index_test.cc": "100644:f4b9aa32d6bb73b08242d5246f1db362619de69c"
+          },
+          "by": "review",
+          "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "criteria": "58f22ad5ff3c98b5",
+          "diffs": {
+            "docs/perf/flush-spill.md": "d3a7a8b66eac15a6",
+            "include/strata/core/index.hh": "e4c04d189ceaca2d",
+            "include/strata/core/section_io.hh": "4b7def4dfe278403",
+            "test/index_test.cc": "ab0e5b08f20fc1dd"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dc10c0f578c6aa839fd28a01c3db255886da5b36",
+          "reviewed": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
+      "base": "397c02d578cc495813426757d5022e14d88d506a",
+      "branch": "quest/xapiand/flush-within-budget",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4133,18 +4160,49 @@
         "test/index_test.cc",
         "docs/perf/**"
       ],
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-13T19:39:16",
+          "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "criteria": {
+            "A1": "261113-182303-c8b3af",
+            "A2": "261113-182306-1d133e",
+            "A3": "261113-182306-1d133e",
+            "A4": "261113-182306-1d133e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-182306-1d133e",
+              "level": "light",
+              "seconds": 435.2,
+              "state": "done",
+              "what": "flush-within-budget check suite at ecd11e7421e1"
+            }
+          ],
+          "final": true,
+          "from": "397c02d578cc495813426757d5022e14d88d506a",
+          "reason": "",
+          "tested": "ecd11e7421e1dab0eb3104584eedcbbb418891b0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "landed",
       "title": "Indexing stays within its memory budget through the flush",
-      "updated": "2026-11-11T05:09:59"
+      "updated": "2026-11-13T19:39:20",
+      "worktree": ""
     },
     "flushmem": {
       "accepted": {},
