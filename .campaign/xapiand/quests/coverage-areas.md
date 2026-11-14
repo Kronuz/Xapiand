@@ -5,16 +5,13 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The six areas below x7-gate's T13 coverage target reach it, and the reader registry's bytes are measured (D90).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Line coverage per area at or above T13's target in each of the six areas: a coverage job before and after
+- A2 The reader registry's bytes per open index measured: a job
+- A3 The suite passes and CI is green
 
 ## Contracts
 

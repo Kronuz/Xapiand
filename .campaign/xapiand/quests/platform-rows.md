@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Phase 7c's functional rows run in CI on FreeBSD and arm64, so C5 is a measurement, not a stated miss (D90). Codex task C3 (FreeBSD CI) feeds it.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 FreeBSD: a CI job builds and runs the suite and gate7c_rows.sh's functional rows: green runs linked in docs/dev/freebsd.md
+- A2 arm64: the same on GitHub's arm64 runners: green runs linked in docs/dev/platforms.md
+- A3 Failures found are fixed or each is a named quest
 
 ## Contracts
 

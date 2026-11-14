@@ -5,16 +5,15 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Light requests keep Phase 7c's bounds while heavy work saturates the node: a share of the worker pool and shard turns for light work (D86's P1). Fixes x7-gate's T4 (worst loop p99 6,144 us vs 1,024), T5 (loaded light p99 33.0 ms vs 8.91) and T10 (flood p99 48.0 ms vs ~20) (D90).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] Where the loaded light wait goes (worker pool, shard turns, loop) and the share chosen: `docs/design/light-share.md`
+- A2 T4 and T5 at their 7c bounds: x7-gate's T4/T5 job (`--for`), strict, before and after
+- A3 T10's flood p99 at its bound: x7-gate's T10 job, strict, before and after
+- A4 Heavy throughput (T12 RESTORE and QPS) within the A/A band of before
+- A5 The suite passes and CI is green at the landed code
 
 ## Contracts
 
