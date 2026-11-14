@@ -20032,8 +20032,8 @@
           "final": true,
           "from": "cb42383a4f25febde813c76202620e133b94c503",
           "later": [
-            "261113-205220-18006b",
-            "261113-205220-7cf458"
+            "261113-211658-c912de",
+            "261113-211658-da1502"
           ],
           "reason": "",
           "tested": "9173797f2c89c6e57c13780e2f43721b0625d4c6"
@@ -20062,7 +20062,7 @@
       "risk": "high",
       "status": "landed",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-13T20:52:26",
+      "updated": "2026-11-13T21:16:59",
       "worktree": ""
     },
     "x7-http-repin": {
