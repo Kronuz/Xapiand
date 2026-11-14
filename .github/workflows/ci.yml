@@ -5,7 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [master, xapiand, 'fix/**', 'quest/**']
+    branches: [master, xapiand, 'fix/**', 'quest/**', 'quick/**']
+    # campaign records alone don't run CI, so they never cancel a code run
+    paths-ignore: ['.campaign/**']
   pull_request:
   workflow_dispatch:
 
