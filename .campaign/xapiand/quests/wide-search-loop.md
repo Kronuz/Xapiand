@@ -5,16 +5,14 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A search across thousands of indexes yields the HTTP loop like any heavy request, and concurrent wide searches are bounded: light requests keep their p99 beside them. From x7-gate SR3 (49-100 ms stalls at 2,500 indexes, 393 ms at 10,000) and security S2 (64 clients: light p99 86.9 ms, max 1.95 s; explicit name lists bypass the walk gate).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] The stall attributed (per-name resolution, per-index work) and the bound chosen: `docs/design/wide-search-loop.md`
+- A2 SR3: every HTTP loop's max lag over the timed searches at 2,500 and 10,000 indexes within T4's slice: strict jobs before and after
+- A3 S2: `wide_starve.py` (security review probe) at 64 clients: light GET p99 within T5's bound: a strict job before and after
+- A4 The suite passes and CI is green at the landed code
 
 ## Contracts
 

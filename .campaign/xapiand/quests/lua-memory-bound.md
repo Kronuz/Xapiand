@@ -5,16 +5,14 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A node's Lua memory has a bound below host RAM whatever scripts clients PUT: a call's garbage does not stay in cached states, or the cache is sized in bytes. From x7-gate security S1 (X4-N2): 57 MiB per distinct script, ~100 GiB ceiling at the default 100 states per thread; blocks a release to untrusted clients.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 `lua_mem_seq.py` (security review probe) levels off at the defaults: RSS stays under a stated bound over 200 distinct scripts: a job before and after
+- A2 One script-cache default: `opts.h` and the CLI agree, and the default is sized from the measured bound: a test
+- A3 T10's Lua rows still pass (flood and per-call caps): the rows job
+- A4 The suite passes and CI is green at the landed code
 
 ## Contracts
 
