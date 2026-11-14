@@ -312,23 +312,23 @@ A14, A17-A24), 2 PASS with a part not shown (A8, A9), 6 MISS (A4, A5, A10, A13, 
 | A3 | PASS: recovery 261113-165004-4bafe6; rows 261113-164955-f95555, Linux 261113-165001-16b520 (`t3_crash`, `t3_crash_asan`) |
 | A4 | MISS: 261113-164926-89b9ef (build-cur stamp 8833ba980 at d53d85c22), loaded, 16 of 16 HTTP loops over the edge, worst p99 6,144 us against 1,024 us (p99.9 16,384 us); pre-7c's loops under it; same index 7,168 us |
 | A5 | MISS on the first half: 261113-164926-89b9ef, client-side loaded light p99 33.0 ms against 2x unloaded + 1 ms = 8.91 ms (server-side 38.1 ms); met on the second, head/pre 0.093 (0.087-0.099); same index 66.7 ms |
-| A6 | PASS (reported; gated at Phase 6): Linux 261113-165001-16b520, 2x RAM unloaded 330.5 per 1,000, loaded 110,093 per 1,000 (99.1% on reactors, light p99 23.2 s); in RAM 0. Phase 6's target is 1 per 1,000 |
+| A6 | D90: reported (gated at Phase 6), Linux VM 16b520, 2x RAM unloaded 330.5 per 1,000, loaded 110,093 per 1,000 (99.1% on reactors, light p99 23.2 s); in RAM 0. Phase 6's target is 1 per 1,000 |
 | A7 | PASS: t7-tsan 261113-165003-2b6d6d; rows 261113-164955-f95555, Linux 261113-165001-16b520 (`t7_asan`) |
 | A8 | PASS with parts not shown: rows 261113-164955-f95555 (`t8_overload_*`: enforced rounds, peaks 1,000 / 0 and 46, 0 other errors), build-test 261113-165003-4bde4b (`test_readers_cap`); RSS within 10% of T4's (2 against 16 reactors) and 503s within one slice: not shown |
-| A9 | PASS with a part not shown: build-test 261113-165003-4bde4b (x7-cancel-rows tests); mutants 261110-164634-b7eb0b, 261110-164637-c92fef (fixed-commit, x7-cancel-rows); "within one slice" not shown: freed 2.1-3.1 ms after the close |
+| A9 | PASS with a part not shown: build-test 261113-165003-4bde4b (x7-cancel-rows tests; their mutants ran in the landed quest x7-cancel-rows); "within one slice" not shown: freed 2.1-3.1 ms after the close |
 | A10 | MISS: rows 261113-164955-f95555 every case passes (and Linux ASan); t10 261113-164933-460810 flood p99 48.04 ms against about 20 ms, T4 with 4 looping scripts worst p99 5,120 us; Linux Release flood 227.0 ms (261113-165001-16b520, light: unproven) |
 | A11 | PASS at Xapiand:27d45f101's `src` (19268b's binary, job at Xapiand:49ebb4481): 261111-171043-7a746f, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone; not rerun on master's code |
 | A12 | PASS: 261113-164929-53a2d2 RESTORE 1.089 (1.088-1.140), QPS 2.815 (2.345-3.085); 261113-164931-09250a RESTORE 1.120 (1.058-1.173); 16 logical CPUs |
 | A13 | MISS: sanitizers pass (rows 261113-164955-f95555, t7-tsan 261113-165003-2b6d6d, Linux 261113-165001-16b520); corpora pass (261113-191724-166dd3, 261113-165001-16b520); 37.4 KiB per open index at 10,001 (261113-164953-250830); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
 | A14 | `docs/gates/phase7c.md` (every row scored, misses stated, the build behind each number) |
-| A15 | MISS: Linux 261113-165001-16b520, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (227.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
+| A15 | D90: MISS carried to platform-rows; Linux VM 16b520, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (227.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
 | A16 | MISS on SR3: measured, 10,000 indexes p50 4,106 ms, p99 10,887 ms, peak pinned 100 (261113-164951-e5baa9); 2,500 p50 1,364 ms, p99 2,252 ms (261113-191709-809e9e; same code as cb2a87's 884 ms); pool 5,000 132 ms (261113-164938-d63930). SR3 not closed: HTTP loops stall 49-100 ms over the timed searches (809e9e), up to 393 ms at 10,000 |
 | A17 | PASS: build-test 261113-165003-4bde4b; rows 261113-164955-f95555 (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
 | A19 | PASS: removed 261113-165004-905bcf; rows 261113-164955-f95555 (`x6_shutdown`) |
 | A20 | PASS: build-test 261113-165003-4bde4b |
 | A21 | PASS: macOS 261111-171055-51a31b (CPU 0.958, p99 0.962), Linux 261113-111904-2e33d9 (CPU 1.008, p99 1.001), allocations 0.988 and handlers 0.986 261111-200223-9495ee: within D62 (fixed-commit A/Bs) |
-| A22 | PASS (measured): 261111-175937-76ae57 (x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8 |
+| A22 | `docs/perf/shard-view.md`: PASS (measured in x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8 |
 | A23 | D53 (T4 reads the control loop only while busy) |
 | A24 | PASS: pins http:51d153a, prospect 850d4e8; T12's jobs 261113-164929-53a2d2, 261113-164931-09250a |
 
