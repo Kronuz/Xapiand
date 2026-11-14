@@ -4145,9 +4145,9 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Indexing stays within its memory budget through the flush",
-      "updated": "2026-11-13T17:03:38",
+      "updated": "2026-11-13T19:17:50",
       "worktree": "../strata-wt/xapiand/flush-within-budget"
     },
     "flushmem": {
