@@ -19344,6 +19344,79 @@
           "review": "71a7aa98678c554edeb2cb4ff92e21c8c87aa6d6",
           "reviewed": "4909eae7ec26d6c037a0729e6e01460d384a8261",
           "verdict": "CHANGES"
+        },
+        "security": {
+          "at": "2026-11-13T20:10:44",
+          "base": "7251f1f7b109a4e64ae8f977d3186ce01d4184fb",
+          "blobs": {
+            "docs/design/phase7c.md": "100644:7c76cae40d3b19c6d5914ab1963a0cb8e4923a93",
+            "docs/gates/phase7c.md": "100644:1736836728ef980513bd87f9385ef0d1543548a0",
+            "harness/README.md": "100644:04e9cf659efc7bf47c25baafb89488e91a3d058b",
+            "harness/gate7c_rows.sh": "100755:2dd731b4bbd9fea80084ac93fd82673064fb6909",
+            "harness/lua_bounds.py": "100644:9e9101eb285760f0af42f1aca0643f943f23a4af",
+            "harness/stall_load.py": "100755:391dc10cd1422d5688fcdcb927edf0f6de35fff9",
+            "harness/test_gate_tools.py": "100755:8527ddebfdcc83377c5325f667973a8e1e236ddf",
+            "harness/wide_search_check.py": "100755:a97248d9f792daa7b869c1716419d2a7f9f5a42f"
+          },
+          "by": "review",
+          "commit": "059b44cee68b6d5316754657fc434c1959d89f64",
+          "criteria": "f9dcb97acc9f58b6",
+          "diffs": {
+            "docs/design/phase7c.md": "7017e0b4206ec762",
+            "docs/gates/phase7c.md": "709e38be184e3b56",
+            "harness/README.md": "13921d73e39d4b69",
+            "harness/gate7c_rows.sh": "f25c78ada3954771",
+            "harness/lua_bounds.py": "1419671961f165da",
+            "harness/stall_load.py": "d7e35fd68ba36afd",
+            "harness/test_gate_tools.py": "bbc334521da5d452",
+            "harness/wide_search_check.py": "da36af3ba2125b1d"
+          },
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x7-gate-security/lua_mem_seq.sh",
+                  "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+                  "docs": [
+                    "docs/gates/phase7c.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-200618-9d59ed",
+                  "level": "light",
+                  "seconds": 40.2,
+                  "state": "done",
+                  "what": "x7-gate security review: Lua memory held after sequential distinct scripts"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "S2": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x7-gate-security/wide.sh",
+                  "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+                  "docs": [
+                    "docs/gates/phase7c.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-195248-848197",
+                  "level": "strict",
+                  "seconds": 175.9,
+                  "state": "done",
+                  "what": "x7-gate security review: wide-search starvation, 2,000 indexes, 16/64 clients"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "4c51845290d7aea0f2003d23b1ccc5079475cef5",
+          "reviewed": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+          "verdict": "CHANGES"
         }
       },
       "after": [],
@@ -19757,7 +19830,7 @@
       "risk": "high",
       "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-13T19:49:57",
+      "updated": "2026-11-13T20:10:44",
       "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "x7-http-repin": {
