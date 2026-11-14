@@ -73,8 +73,10 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
   load: exhaustive aggregations, wildcard and phrase searches, and a RESTORE stream into
   `restore-target`. Latency runs from each request's scheduled send time; the achieved rate is
   asserted within 5% of the target. `--phase unloaded|loaded`, `--restore-into accounts` (Q6's
-  cost), `--saturate`, `--overload light|heavy N`, `--dry-run`. JSON out: light p50/p99/p99.9,
-  per-loop lag deltas from `:metrics`, 503 and error counts, segments and merge backlog, RSS.
+  cost), `--saturate`, `--overload light|heavy F`, `--dry-run`. JSON out: light p50/p99/p99.9,
+  per-loop lag deltas from `:metrics`, 503 and error counts (503s by reason), segments and merge
+  backlog, RSS. `--overload` holds F x the in-flight cap in requests (heads sent, bodies withheld), so
+  the excess is refused on any host; each round records how many were in flight and refused.
 - **`thread_census.sh PID`** -- threads by name prefix (T1); `--allow` fails on any other prefix.
 - **`async_check.sh`** -- every blocking primitive on a reactor-reachable path in one of four
   classes (D14, T1). `--strict` fails on an unclassified hit; `harness/async_allowlist.tsv` holds
@@ -95,5 +97,8 @@ Built in step S1 (`docs/design/phase7c.md`, section 5); the pre-7c numbers are i
 - **`engine_crash_check.sh`** needs the `strata_check` tool: `cmake --build build --target strata_check`
   (found next to the binary, or `CHECK_TOOL=`).
 - **`baseline_7c.sh`, `baseline_report.py`** -- the pre-7c rows (T4, T5, T8, T11, T12) in one hold, and their tables.
+- **`gate7c_rows.sh REL ASAN OUT`** -- the 7c gate's functional rows (T1 census and `--strict --owed`, T2 on ASan, T3
+  `--reactors 2`, T7 on ASan, T8's overloads, T10, X6's shutdown) on a Release and an ASan binary, each row to its end;
+  `OUT/rows.tsv` holds each row's exit code. It runs no timing row.
 - **`test_gate_tools.py`** -- unit tests for `async_check` and `stall_load` (no node; `python3 -I harness/test_gate_tools.py`).
 - **`ruff.toml`, `pyrefly.toml`** -- the lint and strict type configuration for these scripts.

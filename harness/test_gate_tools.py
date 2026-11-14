@@ -32,6 +32,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 from typing import override
@@ -263,9 +264,11 @@ class StallLoad(unittest.TestCase):
         self.assertEqual(delta["p99_us"], 1024.0)
         self.assertTrue(delta["p99_within_1ms"])
         self.assertEqual(delta["max_us_so_far"], 4000.0)
+        self.assertEqual(delta["max_us_window"], 1024.0)  # the 5,120 us wakes came before the window
         whole = stall_load.lag_delta({"lag": {}, "gauges": {}}, after)["http0"]
         self.assertEqual(whole["p99_us"], 5120.0)
         self.assertEqual(whole["p50_us"], 1024.0)
+        self.assertEqual(whole["max_us_window"], 5120.0)
         self.assertTrue(whole["p99_within_1ms"] is False)
 
     def test_percentiles(self) -> None:
@@ -274,6 +277,129 @@ class StallLoad(unittest.TestCase):
         self.assertEqual(stall_load.pct(values, 99), 990.0)
         self.assertEqual(stall_load.pct(values, 99.9), 999.0)
         self.assertIsNone(stall_load.pct([], 50))
+
+    def test_a_refusal_reads_its_cause(self) -> None:
+        engine = b'{"status":503,"type":"Service Unavailable","message":"Service Unavailable: The index is busy"}'
+        self.assertEqual(stall_load.refusal_reason(engine), "Service Unavailable: The index is busy")
+        self.assertEqual(stall_load.refusal_reason(b'{"message":["a","b"]}'), "a; b")
+        self.assertEqual(stall_load.refusal_reason(b"The server is busy\n"), "The server is busy")
+        self.assertEqual(stall_load.refusal_reason(b"[1]"), "[1]")
+
+    def test_a_process_cpu_time_reads_in_seconds(self) -> None:
+        spent = time.process_time()
+        while time.process_time() - spent < 0.3:
+            pass
+        cpu = stall_load.process_cpu_s(os.getpid())
+        assert cpu is not None
+        self.assertGreaterEqual(cpu, 0.25)
+        self.assertLess(cpu, time.process_time() + 1.0)
+
+
+class CappedServer:
+    """An HTTP/1.1 server with the reactor gate's admission: a request is admitted at headers-complete and held
+    until its response; over `cap` (None: no cap) it is refused with a 503 and `Connection: close`."""
+
+    def __init__(self, cap: int | None, service_s: float = 0.0) -> None:
+        self.cap, self.service_s = cap, service_s
+        self.inflight = self.peak = 0
+        self.server: asyncio.AbstractServer | None = None
+        self.port = 0
+
+    async def start(self) -> None:
+        self.server = await asyncio.start_server(self.handle, "127.0.0.1", 0, backlog=512)
+        self.port = self.server.sockets[0].getsockname()[1]
+
+    async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        try:
+            while True:
+                head = await reader.readuntil(b"\r\n\r\n")
+                if self.cap is not None and self.inflight >= self.cap:
+                    writer.write(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 20\r\nRetry-After: 1\r\n")
+                    writer.write(b"Connection: close\r\n\r\nService Unavailable\n")
+                    await writer.drain()
+                    return
+                self.inflight += 1
+                self.peak = max(self.peak, self.inflight)
+                try:
+                    length = 0
+                    for line in head.split(b"\r\n"):
+                        if line.lower().startswith(b"content-length:"):
+                            length = int(line.split(b":")[1])
+                    if length:
+                        await reader.readexactly(length)
+                    await asyncio.sleep(self.service_s)
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
+                    await writer.drain()
+                finally:
+                    self.inflight -= 1
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+        finally:
+            writer.close()
+
+    async def stop(self) -> None:
+        assert self.server is not None
+        self.server.close()
+        await self.server.wait_closed()
+
+
+HELD_REQUESTS = [("search", "SEARCH", "/accounts/", b'{"_query":{"contact.state":"X"}}')]
+
+
+class HeldOverload(unittest.TestCase):
+    def held(self, cap: int | None, held: int, service_s: float = 0.0) -> tuple[stall_load.HeldResult, int]:
+        async def go() -> tuple[stall_load.HeldResult, int]:
+            fake = CappedServer(cap, service_s)
+            await fake.start()
+            try:
+                res = await stall_load.run_held(
+                    "127.0.0.1", fake.port, HELD_REQUESTS, held, cap or 40, 0.5, barrier_timeout=1.0
+                )
+                return res, fake.peak
+            finally:
+                await fake.stop()
+
+        return asyncio.run(go())
+
+    def test_a_server_that_answers_at_once_still_has_its_cap_exceeded(self) -> None:
+        # An open-loop stream at any rate this server keeps up with leaves about one request in flight; held heads
+        # put `held` in flight whatever the speed, so the cap admits 40 and refuses 20 in every round.
+        res, peak = self.held(40, 60)
+        d = res.as_dict()
+        self.assertTrue(res.enforced)
+        self.assertEqual(peak, 40)
+        for r in res.rounds:
+            self.assertEqual(r["refused_at_barrier"], 20)
+            self.assertEqual(r["in_flight_at_barrier"], 40)
+        self.assertEqual(d["errors"]["http_503_by_reason"], {"Service Unavailable": 20 * len(res.rounds)})
+        self.assertEqual(d["answered"]["n"], 40 * len(res.rounds))
+        self.assertEqual(d["errors"]["exceptions"], 0)
+
+    def test_a_server_without_a_cap_is_not_enforced(self) -> None:
+        res, peak = self.held(None, 60)
+        self.assertFalse(res.enforced)
+        self.assertEqual(peak, 60)
+        self.assertEqual(res.as_dict()["errors"]["http_503"], 0)
+
+
+class MajorFaults(unittest.TestCase):
+    def test_faults_are_summed_per_thread_name_over_a_phase(self) -> None:
+        before = {1: ("xapiand", 5), 2: ("xapiand", 1), 3: ("Xapiand:W", 0)}
+        after = {1: ("xapiand", 9), 2: ("xapiand", 3), 3: ("Xapiand:W", 2), 4: ("Xapiand:FS", 7)}
+        d = stall_load.faults_delta(before, after, 2000)
+        assert d is not None
+        self.assertEqual(d["by_thread"], {"Xapiand:FS": 7, "Xapiand:W": 2, "xapiand": 6})
+        self.assertEqual(d["total"], 15)
+        self.assertEqual(d["per_1000_queries"], 7.5)
+
+    def test_this_process_reads_its_own_threads_on_linux(self) -> None:
+        got = stall_load.thread_major_faults(os.getpid())
+        if sys.platform.startswith("linux"):
+            assert got is not None
+            self.assertIn(os.getpid(), got)
+        else:
+            self.assertIsNone(got)
+        self.assertIsNone(stall_load.faults_delta(None, got, 10))
 
 
 if __name__ == "__main__":
