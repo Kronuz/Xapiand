@@ -15,8 +15,20 @@ independent dependency source directories cloned from the pinned sources
 in the completed master build. Each arm uses a separate initially empty
 cache with eviction disabled, compression on, and file cloning off.
 
-Each full build makes 224 compilation calls. The second-checkout results
-are:
+The application dependency graph contains 202 translation units: 135
+explicit object inputs and 67 object members in its linked static archives.
+The default `all` build also compiles 22 library objects outside that graph.
+The compilation-only statistics reconcile both denominators:
+
+| Build scope | Before: direct / preprocessed | After: direct / preprocessed |
+|---|---:|---:|
+| Application dependency graph | 171 / 31 of 202 | 202 / 0 of 202 |
+| Default all target | 193 / 31 of 224 | 224 / 0 of 224 |
+
+Thirty baseline fallbacks belong to direct application object inputs; the
+remaining fallback is `threadpool`'s `thread.cc` in its linked archive.
+All 22 extra library objects are direct hits in both second checkouts.
+The full default-target results are:
 
 | Code | Direct hits | Preprocessed hits | Misses |
 |---|---:|---:|---:|
@@ -30,7 +42,10 @@ also records 224/224 direct hits: the observed A/A hit-count spread is zero.
 No elapsed-time,
 CPU-time, power, or dollar saving is claimed.
 The compilation database has 229 entries; five targets are excluded from
-the default build. The earlier task's 202-TU denominator is not reused.
+the default build. Read `full-build/CMakeFiles/xapiand.dir/link.txt` to
+reproduce the 135 direct inputs, then sum `.o` members from `ar -t` for its
+ten static archives to reproduce 67. This counts dependency compilation
+units, not functions retained by the linker.
 
 The two baseline headers differ only in `FIXTURES_PATH`. The direct-mode
 input streams from the representative `package.cc`, `length.cc`, and
@@ -130,15 +145,36 @@ Repeat with `tsan` or `tests` and separate build/cache directories. The
 test configuration uses Apple Clang, RelWithDebInfo, `BUILD_TESTS=ON`,
 and `ASSERTS=ON`.
 
-| Complete configuration | Compressed cache, KiB | Uncompressed content, MiB |
-|---|---:|---:|
-| Release | 21,328 | 71.1 |
-| ASan + UBSan | 159,644 | 500.9 |
-| Test targets | 166,624 | 521.6 |
+| Complete configuration | Logical compressed cache, KiB | Uncompressed content, MiB | Filesystem allocation, KiB |
+|---|---:|---:|---:|
+| Release | 21,328 | 71.1 | 28,232 |
+| ASan + UBSan | 159,644 | 500.9 | 166,340 |
+| TSan | 116,464 | 371.7 | 123,164 |
+| Test targets | 166,624 | 521.6 | 173,384 |
 
-TSan is paused before compilation to let the pending isolated measurements
-run. Its complete footprint and the final size recommendation remain to
-be collected. The three completed profiles perform no cache cleanups.
+All four profiles complete their build and record zero cache cleanups.
+The compressed sizes total about 453.2 MiB; original content totals about
+1,465.3 MiB (1.43 GiB). Filesystem allocation includes small-file and
+manifest overhead and must not be added to the logical size. The TSan
+binary links the SDK `/usr/lib/libc++.1.dylib`; its cache build log is
+`working-tsan-complete.log`.
+
+## Size recommendation
+
+For a dedicated Xapiand cache, budget **5 GiB** for these four
+configurations and about three complete revision working sets with file
+cloning enabled. This is a capacity estimate from the measured 1.43 GiB
+original-content sum, not a measured three-revision workload. With file
+cloning disabled and compression enabled, one measured four-profile set
+needs about 453 MiB.
+
+Keep the existing shared **15 GB** cap for now. These Xapiand profiles
+alone do not justify increasing it; other repositories, compiler versions,
+and retained revisions have not been inventoried here. The cumulative
+5,312-cleanup figure does not establish current Xapiand residency pressure.
+No global ccache setting or cache contents are changed. The direct-mode
+fix saves preprocessing work; the measurements do not claim a reduction
+in cached object bytes.
 
 Local raw evidence is under `$ROOT/ccache-evidence/`: `full-before.log`,
 `full-before/`, `full-after-clean.log`, `full-after-clean/`, and
