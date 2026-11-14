@@ -19157,7 +19157,129 @@
       "worktree": ""
     },
     "x7-gate": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T19:49:57",
+          "base": "7251f1f7b109a4e64ae8f977d3186ce01d4184fb",
+          "blobs": {
+            "docs/design/phase7c.md": "100644:7c76cae40d3b19c6d5914ab1963a0cb8e4923a93",
+            "docs/gates/phase7c.md": "100644:ecfec4a4ff8dc7fe3ce8da89cab46d61e6468f53",
+            "harness/README.md": "100644:04e9cf659efc7bf47c25baafb89488e91a3d058b",
+            "harness/gate7c_rows.sh": "100755:2dd731b4bbd9fea80084ac93fd82673064fb6909",
+            "harness/lua_bounds.py": "100644:9e9101eb285760f0af42f1aca0643f943f23a4af",
+            "harness/stall_load.py": "100755:391dc10cd1422d5688fcdcb927edf0f6de35fff9",
+            "harness/test_gate_tools.py": "100755:8527ddebfdcc83377c5325f667973a8e1e236ddf",
+            "harness/wide_search_check.py": "100755:a97248d9f792daa7b869c1716419d2a7f9f5a42f"
+          },
+          "by": "review",
+          "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+          "criteria": "f9dcb97acc9f58b6",
+          "diffs": {
+            "docs/design/phase7c.md": "7017e0b4206ec762",
+            "docs/gates/phase7c.md": "7dbf7add4080e605",
+            "harness/README.md": "13921d73e39d4b69",
+            "harness/gate7c_rows.sh": "f25c78ada3954771",
+            "harness/lua_bounds.py": "1419671961f165da",
+            "harness/stall_load.py": "d7e35fd68ba36afd",
+            "harness/test_gate_tools.py": "bbc334521da5d452",
+            "harness/wide_search_check.py": "da36af3ba2125b1d"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-rel -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=OFF -DLTO=OFF && cmake --build build-rel -j4 --target xapiand strata_check && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && cmake --build build-asan -j4 --target strata_check || exit 2; (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) >\"$JOB_OUT/ctest-asan.log\" 2>&1; c=$?; tail -5 \"$JOB_OUT/ctest-asan.log\"; harness/gate7c_rows.sh \"$PWD/build-rel/bin/xapiand\" \"$PWD/build-asan/bin/xapiand\" \"$JOB_OUT/rows\"; r=$?; echo \"ctest-asan rc=$c rows rc=$r\"; [ \"$c\" = 0 ] && [ \"$r\" = 0 ]'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164955-f95555",
+                  "level": "light",
+                  "seconds": 2880.4,
+                  "state": "done",
+                  "what": "x7-gate functional rows at the merged head (strata 397c02d5): Release + ASan/UBSan builds, ASan ctest, every gate7c_rows.sh row"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cat > \"$JOB_OUT/pairs.py\" <<'\"'\"'PYEOF'\"'\"'\n# pairs.py DIR GLOB KEY...: files NAME-<i>-<arm>.json in ABBA order; per key each arm'\"'\"'s values, cur/pre per adjacent pair.\nimport glob, json, os, re, statistics as st, sys\nd, pat, keys = sys.argv[1], sys.argv[2], sys.argv[3:]\nrows = sorted((int(m[1]), m[2], json.load(open(f))) for f in glob.glob(os.path.join(d, pat)) if (m := re.search(r\"-(\\d+)-(\\w+)\\.json$\", f)))\ndef get(o, k):\n    for p in k.split(\".\"):\n        o = o[int(p)] if isinstance(o, list) else o.get(p) if isinstance(o, dict) else None\n    return o\narms = sorted({a for _, a, _ in rows})\nfor k in keys:\n    seq = [(a, get(o, k)) for _, a, o in rows]\n    per = {a: [v for b, v in seq if b == a and v is not None] for a in arms}\n    print(k, {a: per[a] for a in arms}, {a: st.median(per[a]) for a in arms if per[a]})\n    if len(arms) == 2:\n        base, new = (\"pre\", \"cur\") if \"pre\" in arms else (arms[0], arms[1])\n        rs = []\n        for i in range(0, len(seq) - 1, 2):\n            x = dict(seq[i : i + 2])\n            if x.get(base) and x.get(new) is not None:\n                rs.append(x[new] / x[base])\n        if rs:\n            print(f\"  {new}/{base} per pair {[round(r, 3) for r in rs]}: median {st.median(rs):.3f}, range {min(rs):.3f}-{max(rs):.3f}\")\nPYEOF\nwrap() { printf '\"'\"'#!/bin/sh\\nXAPIAND_ENGINE=strata exec \"%s\" --solo \"$@\"\\n'\"'\"' \"$PWD/$1/bin/xapiand\" > \"$JOB_OUT/$2\"; chmod +x \"$JOB_OUT/$2\"; }\nstamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\nCUR=\"$PWD/build-cur/bin/xapiand\"; wrap build-pre pre.sh; wrap build-pre-hop pre-hop.sh\necho \"commit $(git rev-parse --short HEAD), $(sysctl -n hw.ncpu) CPUs, $(sysctl -n machdep.cpu.brand_string)\"\n# T4 and T5: ABBA arms at 20,000 accounts, light open loop at 200/s, 20 s phases, heavy 4 x reactors; then T5'\"'\"'s same-index run on cur.\ni=0; for arm in pre cur cur pre; do i=$((i+1)); b=\"$CUR\"; [ $arm = pre ] && b=\"$JOB_OUT/pre.sh\"\n  python3 harness/stall_load.py --bin \"$b\" --target 127.0.0.1:18980 --workdir \"$JOB_OUT/w\" --accounts-docs 20000 --phase both --rate 200 --duration 20 --no-assert --restore-prebuilt 8 --out \"$JOB_OUT/t45-$i-$arm.json\" 2> \"$JOB_OUT/t45-$i-$arm.log\"; echo \"arm $i $arm rc $?\"; grep -h \"light query\\|worst loop\\|CPU\\|client p50\" \"$JOB_OUT/t45-$i-$arm.log\"; done\npython3 harness/stall_load.py --bin \"$CUR\" --target 127.0.0.1:18980 --workdir \"$JOB_OUT/w\" --accounts-docs 20000 --phase loaded --restore-into accounts --rate 200 --duration 20 --no-assert --restore-prebuilt 8 --out \"$JOB_OUT/same-index-cur.json\" 2> \"$JOB_OUT/same-index-cur.log\"; echo \"same-index rc $?\"; grep -h \"light query\\|worst loop\" \"$JOB_OUT/same-index-cur.log\"\nrm -rf \"$JOB_OUT/w\"\npython3 \"$JOB_OUT/pairs.py\" \"$JOB_OUT\" '\"'\"'t45-*.json'\"'\"' phases.0.light.query.p99_us phases.1.light.query.p99_us phases.0.cpu_us_per_light phases.1.light.probe.all.parts.server.p99_us phases.1.light.probe.search.parts.server.p99_us phases.1.light.probe.pair.parts.server.p99_us phases.1.light.probe.all.parts.gen_wait.p99_us'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164926-89b9ef",
+                  "level": "exclusive",
+                  "seconds": 277.5,
+                  "state": "done",
+                  "what": "x7-gate T4+T5 at the merged head, build-cur built in-job (F2): pre-7c vs head ABBA, --restore-prebuilt 8, same-index run"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F3": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cat > \"$JOB_OUT/pairs.py\" <<'\"'\"'PYEOF'\"'\"'\n# pairs.py DIR GLOB KEY...: files NAME-<i>-<arm>.json in ABBA order; per key each arm'\"'\"'s values, cur/pre per adjacent pair.\nimport glob, json, os, re, statistics as st, sys\nd, pat, keys = sys.argv[1], sys.argv[2], sys.argv[3:]\nrows = sorted((int(m[1]), m[2], json.load(open(f))) for f in glob.glob(os.path.join(d, pat)) if (m := re.search(r\"-(\\d+)-(\\w+)\\.json$\", f)))\ndef get(o, k):\n    for p in k.split(\".\"):\n        o = o[int(p)] if isinstance(o, list) else o.get(p) if isinstance(o, dict) else None\n    return o\narms = sorted({a for _, a, _ in rows})\nfor k in keys:\n    seq = [(a, get(o, k)) for _, a, o in rows]\n    per = {a: [v for b, v in seq if b == a and v is not None] for a in arms}\n    print(k, {a: per[a] for a in arms}, {a: st.median(per[a]) for a in arms if per[a]})\n    if len(arms) == 2:\n        base, new = (\"pre\", \"cur\") if \"pre\" in arms else (arms[0], arms[1])\n        rs = []\n        for i in range(0, len(seq) - 1, 2):\n            x = dict(seq[i : i + 2])\n            if x.get(base) and x.get(new) is not None:\n                rs.append(x[new] / x[base])\n        if rs:\n            print(f\"  {new}/{base} per pair {[round(r, 3) for r in rs]}: median {st.median(rs):.3f}, range {min(rs):.3f}-{max(rs):.3f}\")\nPYEOF\nwrap() { printf '\"'\"'#!/bin/sh\\nXAPIAND_ENGINE=strata exec \"%s\" --solo \"$@\"\\n'\"'\"' \"$PWD/$1/bin/xapiand\" > \"$JOB_OUT/$2\"; chmod +x \"$JOB_OUT/$2\"; }\nstamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\nCUR=\"$PWD/build-cur/bin/xapiand\"; wrap build-pre pre.sh; wrap build-pre-hop pre-hop.sh\necho \"commit $(git rev-parse --short HEAD), $(sysctl -n hw.ncpu) CPUs, $(sysctl -n machdep.cpu.brand_string)\"\n# A16 at a scale one 10-minute strict job holds: 2,500 indexes, 10 searches after the opening one (10,000 took 1,233 s to create in 261111-165347-d979c7).\npython3 harness/wide_search_check.py gate \"$CUR\" \"$JOB_OUT/wide\" 18970 --indexes 2500 --runs 10; r=$?; rm -rf \"$JOB_OUT/wide/data\"; exit $r'",
+                  "commit": "c43ebf6c2158a32611a209af3e40833291928a39",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-191709-809e9e",
+                  "level": "strict",
+                  "seconds": 150.0,
+                  "state": "done",
+                  "what": "x7-gate A16 at the merged head, 2,500 indexes, default pool, build-cur built in-job (F2); SR3 window max at c43ebf6c2158"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F4": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'stamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\n# T13 per-open-index cost (d979c7'\"'\"'s measure: --pool 10000, 3 searches) on the 10,000 indexes the light job created; memory, not timing.\npython3 harness/wide_search_check.py gate build-cur/bin/xapiand \"$PWD/build-wide10k\" 18970 --indexes 10000 --runs 3 --pool 10000 --reuse; r=$?; rm -rf \"$PWD/build-wide10k\"; exit $r'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164953-250830",
+                  "level": "light",
+                  "seconds": 20.4,
+                  "state": "done",
+                  "what": "x7-gate T13 per-open-index cost at the merged head: --pool 10000, 3 searches, on A16's 10,000 indexes (d979c7's measure)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "71a7aa98678c554edeb2cb4ff92e21c8c87aa6d6",
+          "reviewed": "4909eae7ec26d6c037a0729e6e01460d384a8261",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "ddaca9d01e0a66d3ca54ec98b2ed730ef848aef4",
       "branch": "quest/xapiand/x7-gate",
@@ -19569,7 +19691,7 @@
       "risk": "high",
       "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-11T14:35:51",
+      "updated": "2026-11-13T19:49:57",
       "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "x7-http-repin": {
