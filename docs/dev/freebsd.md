@@ -37,5 +37,14 @@ needed. The package job is correctly skipped for the branch push.
 [Test logs](https://github.com/Kronuz/Xapiand/actions/runs/43537931113/artifacts/14090829562)
 are retained by the workflow.
 
-The docs E2E extension awaits a new CI run; the initial green run does not
-exercise that layer.
+[CI run 43567699960](https://github.com/Kronuz/Xapiand/actions/runs/43567699960)
+passes at Xapiand:19d57fc8f with Release, all 39 CTest cases, and the docs
+E2E layer. The package job remains skipped on a branch push.
+
+The first E2E attempt at Xapiand:59df4fa46
+([failed run](https://github.com/Kronuz/Xapiand/actions/runs/43550774288))
+exits before node readiness. The VM runs commands as root, and the server's
+privilege guard (`src/main.cc`, `demote`) requires a user switch for root
+startup. The workflow runs the harness as `nobody` with an owned scratch
+directory. No product portability fixes are needed and no failing tests
+remain in the completed run.
