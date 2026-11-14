@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: ready for review
+State: waiting on jobs 261113-164916-d5bb9d 261113-164926-89b9ef 261113-164929-53a2d2 261113-164931-09250a 261113-164933-460810 261113-164936-336058 261113-164938-d63930 261113-164941-738ff2 261113-164951-e5baa9 261113-164953-250830 261113-164955-f95555 261113-164958-204ccb 261113-165001-16b520 261113-165003-4bde4b 261113-165003-fb9907 261113-165003-2b6d6d 261113-165004-4bafe6 261113-165004-905bcf
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,30 @@ status` reads State, the first step under Next, and the Evidence table. State is
 waiting on jobs <ids>, ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 2026-11-13, review fix round (correctness review CHANGES, F1-F4). Master Xapiand:db349389f merged
+(Xapiand:0fd94ad9a: strata pin 397c02d5, sync-at-first-commit); harness Xapiand:d53d85c22 (`lag_delta` window max
+for SR3, `wide_search_check.py --create-only/--reuse`). Every job below runs at Xapiand:d53d85c22:
+
+| Job | Level | Criteria | What |
+|---|---|---|---|
+| 261113-164916-d5bb9d | light | builds | build-cur in slot x7-timing, stamped (F2) |
+| 261113-164926-89b9ef | exclusive | A4 A5 | T4/T5 ABBA (90f8a3's command), after d5bb9d |
+| 261113-164929-53a2d2, 261113-164931-09250a | exclusive | A12 A24 | T12 loadtest, profile_bulk |
+| 261113-164933-460810 | strict | A10 | T10 flood, T4 with loops |
+| 261113-164936-336058, 261113-164938-d63930 | strict | A16 | 2,500 indexes, default pool and pool 5,000 |
+| 261113-164941-738ff2 | light | (A16) | creates 10,000 indexes in the slot's `build-wide10k` |
+| 261113-164951-e5baa9 | strict | A16 | 10 searches over those 10,000, after 738ff2 |
+| 261113-164953-250830 | light | A13 | T13 per-open-index cost, pool 10,000, 3 searches, on that data, after e5baa9 |
+| 261113-164955-f95555 | light | A1 A2 A3 A7 A8 A10 A13 A19 | rows (93efd0's command) |
+| 261113-164958-204ccb | light | A13 | restore corpora, after f95555 (rebuilds build-rel first) |
+| 261113-165001-16b520 | light | A6 A15 | Linux VM (3cce93's command, pinned Lua: N6), after the exclusive jobs |
+| 261113-165003-4bde4b, fb9907, 2b6d6d, 261113-165004-4bafe6, 905bcf | light | checks | build-test, e2e, t7-tsan, recovery, removed |
+
+Report restated (F3, F4, N2, N3, N6): `docs/gates/phase7c.md` names the build behind every number, A16's cause
+(strata bump Xapiand:55741956f, fixed by Xapiand:b6a25cf18's pin, owner D89), T11 and T13's per-open-index cost at
+Xapiand:27d45f101's `src`, T5's miss led by the client-side 32.3 ms, the Linux run's patched Lua. Rescore T3, T4, T5,
+T7, T10, T12, T13, A16 and SR3 from the reruns.
 
 Session 2026-11-13 (master 22d096502 merged: x7-loop-fix-c, loop-scheduling, schema-load-once, one-id). Code under test:
 Xapiand:0a0321691 (master Xapiand:6ede7a0ce's `src` + harness), Xapiand:b5499421b for a16 (SR3 lag in
@@ -132,9 +156,13 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Lead: correctness and security reviews of the report; the landing verify reruns the evidence jobs at the final
-   head (`campaign brief` lists them; master's CMakeLists.txt change is not merged here, it would make every job
-   other code again). Owner rules on the misses (Evidence table).
+1. Read the reruns (Doing) into `docs/gates/phase7c.md` and the Evidence table: rescore T3, T4, T5, T7, T10, T12,
+   T13's per-open-index cost, A16 (2,500, pool 5,000, 10,000) and SR3 (closed if every loop's window max is at most
+   the edge); drop the "until the reruns" wording. Then `campaign accept x7-gate correctness --confirm F1=... F2=...`.
+2. Follow-ups from the review, not done here: N1 (timing jobs pass under `--no-assert`, so `campaign status` shows
+   A4, A5, A10, A16 met: read the report), N4 folded, N5 (Linux census: check `Xapiand:MAIN` = reactors + 1),
+   N7 (T5 pre-7c arm 1 generator wait 95.7 ms), N8 (D16's Stop 3 polls 1-10 ms, not 500 ms; Stops 4 and 5 wait
+   outside the deadline), F5 (T2's rows build asserts off; CI's stale comment: another quest's).
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -268,12 +296,12 @@ A5, A10, A13, A15), 1 not shown (A16).
 | A8 | PASS with parts not shown: rows 261113-111808-93efd0 (`t8_overload_*`: enforced rounds, peaks 1,000 / 0 and 49, 0 other errors), build-test 261113-111813-3cf199 (`test_readers_cap`); RSS within 10% of T4's (2 against 16 reactors) and 503s within one slice: not shown |
 | A9 | PASS with a part not shown: build-test 261113-111813-3cf199 (x7-cancel-rows tests; mutants 261110-164634-b7eb0b, 261110-164637-c92fef); "within one slice" not shown: freed 2.1-3.1 ms after the close |
 | A10 | MISS: rows 261113-111808-93efd0 every case passes (and Linux ASan); t10 261113-125943-736919 flood p99 45.61 ms against about 20 ms, T4 with 4 looping scripts worst p99 6,144 us; Linux Release flood 118.0 ms (261113-130015-3cce93, light: unproven) |
-| A11 | PASS at Xapiand:49ebb4481: 261111-171043-7a746f, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone; not rerun on master's code |
+| A11 | PASS at Xapiand:27d45f101's `src` (19268b's binary, job at Xapiand:49ebb4481): 261111-171043-7a746f, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone; not rerun on master's code |
 | A12 | PASS: 261113-125938-4f5407 RESTORE 1.121 (1.030-1.141), QPS 2.642 (2.638-3.105); 261113-125941-90ebdc RESTORE 1.052 (1.046-1.222); 16 logical CPUs |
-| A13 | MISS: sanitizers pass (rows 261113-111808-93efd0, t7-tsan 261113-111814-1a49cf, Linux 261113-130015-3cce93); corpora pass (261113-111821-2f9e75, 261113-130015-3cce93); 35.1 KiB per open index at 10,001 (261111-165347-d979c7); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
+| A13 | MISS: sanitizers pass (rows 261113-111808-93efd0, t7-tsan 261113-111814-1a49cf, Linux 261113-130015-3cce93); corpora pass (261113-111821-2f9e75, 261113-130015-3cce93); 35.1 KiB per open index at 10,001 (261111-165347-d979c7, 27d45f101's `src`; rerun 261113-164953-250830); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
 | A14 | `docs/gates/phase7c.md` (every row scored, misses stated) |
 | A15 | MISS: Linux 261113-130015-3cce93, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (118.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
-| A16 | Not shown: 261113-125946-4ec27a at 2,500 indexes, p50 23,136 ms, p99 29,177 ms, peak pinned 100 (214x slower than 2567dc's 108 ms at Xapiand:77d649648); 10,000 only at older code (261111-165347-d979c7, p50 686 ms); SR3 not closed (p99.9 at the 1,280 us bucket, max 99.0 ms unattributed) |
+| A16 | Not shown: 261113-125946-4ec27a (strata 86fe7c47) at 2,500 indexes, p50 23,136 ms, caused by the strata bump Xapiand:55741956f, fixed by Xapiand:b6a25cf18 (bisect: 884 ms at the default pool, 132 ms at 5,000); reruns 261113-164936-336058, 261113-164938-d63930, 10,000 in 261113-164951-e5baa9; SR3 not closed until its max is read over the timed searches |
 | A17 | PASS: build-test 261113-111813-3cf199; rows 261113-111808-93efd0 (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
 | A19 | PASS: removed 261113-111814-e12ef2; rows 261113-111808-93efd0 (`x6_shutdown`) |
@@ -285,11 +313,22 @@ A5, A10, A13, A15), 1 not shown (A16).
 
 ## Result
 
-`docs/gates/phase7c.md`: every row scored at master Xapiand:6ede7a0ce's `src`, misses stated. Harness:
+`docs/gates/phase7c.md`: every row scored with the build behind its number (master Xapiand:6ede7a0ce's `src`, T11 and
+T13's per-open-index cost Xapiand:27d45f101's), misses stated; reruns at Xapiand:d53d85c22 pending. Harness:
 `harness/gate7c_rows.sh`, `stall_load.py` (T6 `--index-size 2xram`, T8 held overloads, P1 split), `wide_search_check.py`
 (SR3), `lua_bounds.py`, tests in `test_gate_tools.py`.
 
 ## Rulings I made
+
+- R20 (F2). A timing job builds what it times: each command runs `cmake --build build-cur` in the job (a no-op after the
+  light builds job it waits on) and prints a source stamp (`git ls-tree` of CMakeLists.txt, cmake, config headers,
+  contrib, src, hashed) beside strata's checkout. The pre-7c arms keep 19268b's build of the fixed commit 142b2ca77
+  (rebuilding it fails on the ref path, e52352); the log prints its source directory.
+- R21. A16 at 10,000 splits create (light, 90 min) from search (strict, 10 min) on one data directory in the slot
+  (`build-wide10k`, ignored); T13's per-open-index cost is d979c7's measure (`--pool 10000 --runs 3`) on the same data
+  instead of creating 10,000 more, then deletes it.
+- R22 (N6). The Linux job builds Lua from the pin (`-DFETCHCONTENT_SOURCE_DIR_LUA=` clears the VM's patched copy);
+  lua.org refuses the VM, the PUC-Rio mirror (88139a40e) serves it (curl 200 from the VM).
 
 - R14 (msg-1). Applied the x7-loop-fix-c amendment to `docs/design/phase7c.md` (Xapiand:0a0321691): D4's flush row
   gains the RESTORE writes, D12's RESTORE sentence is fix (c)'s description. One correction against the code: the
