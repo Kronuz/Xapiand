@@ -1,6 +1,6 @@
 # x7-gate: journal
 
-State: waiting on jobs 261113-164916-d5bb9d 261113-164926-89b9ef 261113-164929-53a2d2 261113-164931-09250a 261113-164933-460810 261113-164936-336058 261113-164938-d63930 261113-164941-738ff2 261113-164951-e5baa9 261113-164953-250830 261113-164955-f95555 261113-164958-204ccb 261113-165001-16b520 261113-165003-4bde4b 261113-165003-fb9907 261113-165003-2b6d6d 261113-165004-4bafe6 261113-165004-905bcf
+State: fixes ready: confirm F1-F4, then the security review
 Quest: .campaign/xapiand/quests/x7-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,10 +28,23 @@ for SR3, `wide_search_check.py --create-only/--reuse`). Every job below runs at 
 | 261113-165001-16b520 | light | A6 A15 | Linux VM (3cce93's command, pinned Lua: N6), after the exclusive jobs |
 | 261113-165003-4bde4b, fb9907, 2b6d6d, 261113-165004-4bafe6, 905bcf | light | checks | build-test, e2e, t7-tsan, recovery, removed |
 
-Report restated (F3, F4, N2, N3, N6): `docs/gates/phase7c.md` names the build behind every number, A16's cause
-(strata bump Xapiand:55741956f, fixed by Xapiand:b6a25cf18's pin, owner D89), T11 and T13's per-open-index cost at
-Xapiand:27d45f101's `src`, T5's miss led by the client-side 32.3 ms, the Linux run's patched Lua. Rescore T3, T4, T5,
-T7, T10, T12, T13, A16 and SR3 from the reruns.
+Reruns 261113-191709-809e9e (A16 default pool, for 336058) and 261113-191724-166dd3 (corpora in its own build dir,
+for 204ccb) at Xapiand:c43ebf6c2 (docs-only after d53d85c22). Master merged again (Xapiand:7f978b2bd: `docs/perf`
+only, the A16 bisect note).
+
+Read 2026-11-13, all into `docs/gates/phase7c.md` (every timing log prints build-cur's stamp 8833ba980, strata
+397c02d5, built in d5bb9d at d53d85c22; 809e9e at c43ebf6c2 prints the same stamp):
+- Green: build-test 4bde4b, e2e fb9907, recovery 4bafe6, t7-tsan 2b6d6d, removed 905bcf, rows f95555 (14 of 14, ctest
+  ASan 39 of 39), corpora 166dd3, T13 250830, A16 d63930, e5baa9, 809e9e, timing 89b9ef, 53a2d2, 09250a, 460810.
+- T4 MISS: 16 of 16 HTTP loops over the edge in both head arms, worst p99 6,144 us. T5 MISS first half: client loaded
+  p99 33.0 ms against 8.91 ms; head/pre 0.093. T10 flood 48.04 ms (MISS); T4 beside scripts 5,120 us. T12 PASS:
+  RESTORE 1.089, QPS 2.815, bulk 1.120. T13 37.4 KiB per open index at 10,001.
+- A16: 10,000 p50 4,106 ms, p99 10,887 ms (e5baa9); 2,500 p50 1,364 ms (809e9e) against cb2a87's 884 ms at the same
+  code (empty src/build diff 0d97b2da7..d53d85c22, same flags): not code; load is inferred, unmeasured. Pool 5,000
+  132 ms (= bisect). SR3 not closed: timed-search window max 49-57 ms (http0), 98-100 ms (http1).
+- Linux 16b520: only `t10_lua` fails (flood p99 227.0 ms, light VM: unproven, R19); T6 330.5 and 110,093 per 1,000.
+- Host failures, not code: 336058 (`Errno 49`, loopback ports exhausted by Codex C7), 204ccb (`___asan_*` undefined:
+  the `x7-rows` slot's `.deps` held ASan builds, R10).
 
 Session 2026-11-13 (master 22d096502 merged: x7-loop-fix-c, loop-scheduling, schema-load-once, one-id). Code under test:
 Xapiand:0a0321691 (master Xapiand:6ede7a0ce's `src` + harness), Xapiand:b5499421b for a16 (SR3 lag in
@@ -156,13 +169,22 @@ cause at 40 chars, so it is unnamed: fixed (R8), rerun in the rows job below.
 
 ## Next
 
-1. Read the reruns (Doing) into `docs/gates/phase7c.md` and the Evidence table: rescore T3, T4, T5, T7, T10, T12,
-   T13's per-open-index cost, A16 (2,500, pool 5,000, 10,000) and SR3 (closed if every loop's window max is at most
-   the edge); drop the "until the reruns" wording. Then `campaign accept x7-gate correctness --confirm F1=... F2=...`.
+1. Lead: `campaign accept x7-gate correctness --confirm` with the jobs under "Review fixes", then the security review.
 2. Follow-ups from the review, not done here: N1 (timing jobs pass under `--no-assert`, so `campaign status` shows
    A4, A5, A10, A16 met: read the report), N4 folded, N5 (Linux census: check `Xapiand:MAIN` = reactors + 1),
    N7 (T5 pre-7c arm 1 generator wait 95.7 ms), N8 (D16's Stop 3 polls 1-10 ms, not 500 ms; Stops 4 and 5 wait
    outside the deadline), F5 (T2's rows build asserts off; CI's stale comment: another quest's).
+
+## Review fixes
+
+Correctness review (`reviews/x7-gate-correctness.md`, CHANGES at Xapiand:4909eae7e). Each fix's confirming job:
+
+| Finding | Fix | Confirming job(s) |
+|---|---|---|
+| F1 | Master merged (Xapiand:0fd94ad9a, strata 397c02d5; again Xapiand:7f978b2bd, docs only); every row rerun at Xapiand:d53d85c22 and rescored | **F1=261113-164955-f95555** (rows, 14 of 14, ctest ASan 39 of 39); recovery 261113-165004-4bafe6, t7-tsan 261113-165003-2b6d6d, build-test 261113-165003-4bde4b, Linux 261113-165001-16b520 (only `t10_lua`'s flood timing fails), timing 261113-164926-89b9ef, 261113-164929-53a2d2, 261113-164931-09250a, 261113-164933-460810 |
+| F2 | Timing jobs build `build-cur` in the job and refuse a stamp that differs from their checkout (R20) | **F2=261113-164926-89b9ef** (log: "build-cur built in this job at d53d85c22: source stamp 8833ba980"); the same line in 53a2d2, 09250a, 460810, d63930, e5baa9, and 809e9e at c43ebf6c2 (docs-only later: same stamp) |
+| F3 | A16 restated with its cause (strata bump Xapiand:55741956f, pin Xapiand:b6a25cf18) and the build behind each number; strict default-pool run at the merged head; pool 5,000; 10,000 created light, timed strict; SR3 read over the timed searches | **F3=261113-191709-809e9e** (2,500, default pool, SR3 window max); 261113-164938-d63930 (pool 5,000), 261113-164951-e5baa9 (10,000) |
+| F4 | T13's per-open-index cost rerun at the merged head (d979c7's measure on e5baa9's data); T11 labelled at Xapiand:27d45f101's `src` | **F4=261113-164953-250830** (37.4 KiB per open index at 10,001) |
 
 ## Inventory (launch 1, master Xapiand:ddaca9d01)
 
@@ -233,17 +255,16 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
    builds and runs the Release rows (`.github/`, outside this file set); (c) rule FreeBSD a stated miss for 7c and
    carry it to Phase 8. Recommendation: (b), since CI is where the other platforms prove; the report states the miss.
 
-9. **A16: a wide search is 214x slower on master's code (the lead's).** 2,500 indexes, strict: p50 23,136 ms at
-   Xapiand:6dcc770ff (4ec27a) against 108 ms at Xapiand:77d649648 (2567dc), with 200 indexes open after the first
-   search instead of 1,382. Between them `src` changes `schemas_lru`, `index_resolver_lru`, `single_flight.h`,
-   `database/handler.cc`, `database/shard.cc` (schema-load-once, one-id, x7-loop-fix-c, loop-scheduling). Options:
-   (a) a hunt row bisecting those landings with `wide_search_check.py gate --indexes 2500 --runs 3`; (b) carry it.
-   Recommendation: (a), before Phase 8 builds on wide searches.
+9. **SR3 (A16), for the lead.** A wide search stalls an HTTP loop over the timed searches: 49-57 ms (http0) and
+   98-100 ms (http1) at 2,500 indexes (261113-191709-809e9e), 115-131 ms p99.9 at pool 5,000 where nothing reopens
+   (261113-164938-d63930), up to 393 ms at 10,000 (261113-164951-e5baa9). Options: (a) a `src` quest that attributes
+   the stall (the per-name loop of `resolve_index_endpoints`, or the per-index work) and yields there, rerunning this
+   gate row; (b) carry SR3 open into Phase 8 as a stated miss. Recommendation: (a), since millions of indexes per host
+   make wide searches the common case. (Was: the 214x A16 regression, resolved by the bisect and Xapiand:b6a25cf18.)
 
-7. **T4, T5, T10's flood (the lead's: the gate's outcome; owner D86 took P1).** Loaded, every HTTP loop's p99 is
-   6,144 us (2026-11-11: 24-28 ms) against 1,024 us; server-side loaded light p99 40.2 ms against 9.14 ms; the flood
-   45.6 ms against about 20 ms. T12's RESTORE miss is gone (1.121 of pre-7c after fix (c)). The report states the
-   misses as they are.
+7. **T4, T5, T10's flood (the lead's: the gate's outcome; owner D86 took P1).** At Xapiand:d53d85c22, loaded, every
+   HTTP loop's p99 is 6,144 us against 1,024 us; client-side loaded light p99 33.0 ms against 8.91 ms; the flood
+   48.0 ms against about 20 ms. T12 passes (RESTORE 1.089, QPS 2.815). The report states the misses as they are.
 
 0. A6, A15 and A21's Linux half wait on the Linux VM (Detent is timing on it, lead 11-11). FreeBSD: no functional
    CI job. A9: x7-cancel-rows. A13 coverage, corpora: x7-coverage. A22: x7-view-bench. R4 is ruled (lead, quest
@@ -281,42 +302,42 @@ per run, `harness/profile_light.sh --compare PRE.json POST.json` for T11, and th
 
 ## Evidence
 
-Verdicts: 16 PASS (A1-A3, A6 reported, A7, A11, A12, A14, A17-A24), 2 PASS with a part not shown (A8, A9), 5 MISS (A4,
-A5, A10, A13, A15), 1 not shown (A16).
+Verdicts at Xapiand:d53d85c22 (master db349389f's `src`, strata 397c02d5): 16 PASS (A1-A3, A6 reported, A7, A11, A12,
+A14, A17-A24), 2 PASS with a part not shown (A8, A9), 6 MISS (A4, A5, A10, A13, A15, A16 on SR3).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | PASS: rows 261113-111808-93efd0 (`t1_strict_owed`, `t1_census` 51 threads, section 2 only); Linux 261113-130015-3cce93 (`t1_census` 27 threads, section 2 only) |
-| A2 | PASS: rows 261113-111808-93efd0 and Linux 261113-130015-3cce93 (`t2_e2e_asan`, `t2_stored_asan`); e2e 261113-111813-3013ac |
-| A3 | PASS: recovery 261113-111814-f9dc7f; rows 261113-111808-93efd0, Linux 261113-130015-3cce93 (`t3_crash`, `t3_crash_asan`) |
-| A4 | MISS: 261113-125927-90f8a3, every HTTP loop over the edge loaded, worst p99 6,144 us against 1,024 us (p99.9 12,288-24,576 us); pre-7c's loops under it |
-| A5 | MISS on the first half: 261113-125927-90f8a3, server-side loaded light p99 40.2 ms against 2x unloaded + 1 ms = 9.14 ms (client 32.3 ms; PLAN P1); met on the second, head/pre 0.070; same index 78.3 ms |
-| A6 | PASS (reported; gated at Phase 6): Linux 261113-130015-3cce93, 2x RAM unloaded 292 per 1,000, loaded 76,250 per 1,000 (99.7% on reactors, light p99 21.1 s); in RAM 0. Phase 6's target is 1 per 1,000 |
-| A7 | PASS: t7-tsan 261113-111814-1a49cf; rows 261113-111808-93efd0, Linux 261113-130015-3cce93 (`t7_asan`) |
-| A8 | PASS with parts not shown: rows 261113-111808-93efd0 (`t8_overload_*`: enforced rounds, peaks 1,000 / 0 and 49, 0 other errors), build-test 261113-111813-3cf199 (`test_readers_cap`); RSS within 10% of T4's (2 against 16 reactors) and 503s within one slice: not shown |
-| A9 | PASS with a part not shown: build-test 261113-111813-3cf199 (x7-cancel-rows tests; mutants 261110-164634-b7eb0b, 261110-164637-c92fef); "within one slice" not shown: freed 2.1-3.1 ms after the close |
-| A10 | MISS: rows 261113-111808-93efd0 every case passes (and Linux ASan); t10 261113-125943-736919 flood p99 45.61 ms against about 20 ms, T4 with 4 looping scripts worst p99 6,144 us; Linux Release flood 118.0 ms (261113-130015-3cce93, light: unproven) |
+| A1 | PASS: rows 261113-164955-f95555 (`t1_strict_owed`, `t1_census` 51 threads, section 2 only); Linux 261113-165001-16b520 (`t1_census` 27 threads, section 2 only) |
+| A2 | PASS: rows 261113-164955-f95555 (761 of 761 assertions) and Linux 261113-165001-16b520 (`t2_e2e_asan`, `t2_stored_asan`); e2e 261113-165003-fb9907 |
+| A3 | PASS: recovery 261113-165004-4bafe6; rows 261113-164955-f95555, Linux 261113-165001-16b520 (`t3_crash`, `t3_crash_asan`) |
+| A4 | MISS: 261113-164926-89b9ef (build-cur stamp 8833ba980 at d53d85c22), loaded, 16 of 16 HTTP loops over the edge, worst p99 6,144 us against 1,024 us (p99.9 16,384 us); pre-7c's loops under it; same index 7,168 us |
+| A5 | MISS on the first half: 261113-164926-89b9ef, client-side loaded light p99 33.0 ms against 2x unloaded + 1 ms = 8.91 ms (server-side 38.1 ms); met on the second, head/pre 0.093 (0.087-0.099); same index 66.7 ms |
+| A6 | PASS (reported; gated at Phase 6): Linux 261113-165001-16b520, 2x RAM unloaded 330.5 per 1,000, loaded 110,093 per 1,000 (99.1% on reactors, light p99 23.2 s); in RAM 0. Phase 6's target is 1 per 1,000 |
+| A7 | PASS: t7-tsan 261113-165003-2b6d6d; rows 261113-164955-f95555, Linux 261113-165001-16b520 (`t7_asan`) |
+| A8 | PASS with parts not shown: rows 261113-164955-f95555 (`t8_overload_*`: enforced rounds, peaks 1,000 / 0 and 46, 0 other errors), build-test 261113-165003-4bde4b (`test_readers_cap`); RSS within 10% of T4's (2 against 16 reactors) and 503s within one slice: not shown |
+| A9 | PASS with a part not shown: build-test 261113-165003-4bde4b (x7-cancel-rows tests); mutants 261110-164634-b7eb0b, 261110-164637-c92fef (fixed-commit, x7-cancel-rows); "within one slice" not shown: freed 2.1-3.1 ms after the close |
+| A10 | MISS: rows 261113-164955-f95555 every case passes (and Linux ASan); t10 261113-164933-460810 flood p99 48.04 ms against about 20 ms, T4 with 4 looping scripts worst p99 5,120 us; Linux Release flood 227.0 ms (261113-165001-16b520, light: unproven) |
 | A11 | PASS at Xapiand:27d45f101's `src` (19268b's binary, job at Xapiand:49ebb4481): 261111-171043-7a746f, dispatch CPU 0.073 (0.073-0.098) of the hop's, its wall gone; not rerun on master's code |
-| A12 | PASS: 261113-125938-4f5407 RESTORE 1.121 (1.030-1.141), QPS 2.642 (2.638-3.105); 261113-125941-90ebdc RESTORE 1.052 (1.046-1.222); 16 logical CPUs |
-| A13 | MISS: sanitizers pass (rows 261113-111808-93efd0, t7-tsan 261113-111814-1a49cf, Linux 261113-130015-3cce93); corpora pass (261113-111821-2f9e75, 261113-130015-3cce93); 35.1 KiB per open index at 10,001 (261111-165347-d979c7, 27d45f101's `src`; rerun 261113-164953-250830); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
-| A14 | `docs/gates/phase7c.md` (every row scored, misses stated) |
-| A15 | MISS: Linux 261113-130015-3cce93, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (118.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
-| A16 | Not shown: 261113-125946-4ec27a (strata 86fe7c47) at 2,500 indexes, p50 23,136 ms, caused by the strata bump Xapiand:55741956f, fixed by Xapiand:b6a25cf18 (bisect: 884 ms at the default pool, 132 ms at 5,000); reruns 261113-164936-336058, 261113-164938-d63930, 10,000 in 261113-164951-e5baa9; SR3 not closed until its max is read over the timed searches |
-| A17 | PASS: build-test 261113-111813-3cf199; rows 261113-111808-93efd0 (`t1_strict_owed`) |
+| A12 | PASS: 261113-164929-53a2d2 RESTORE 1.089 (1.088-1.140), QPS 2.815 (2.345-3.085); 261113-164931-09250a RESTORE 1.120 (1.058-1.173); 16 logical CPUs |
+| A13 | MISS: sanitizers pass (rows 261113-164955-f95555, t7-tsan 261113-165003-2b6d6d, Linux 261113-165001-16b520); corpora pass (261113-191724-166dd3, 261113-165001-16b520); 37.4 KiB per open index at 10,001 (261113-164953-250830); coverage 6 of 9 areas below TESTING.md (261111-144409-ecb5b2); reader registry's bytes not measured |
+| A14 | `docs/gates/phase7c.md` (every row scored, misses stated, the build behind each number) |
+| A15 | MISS: Linux 261113-165001-16b520, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (227.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run |
+| A16 | MISS on SR3: measured, 10,000 indexes p50 4,106 ms, p99 10,887 ms, peak pinned 100 (261113-164951-e5baa9); 2,500 p50 1,364 ms, p99 2,252 ms (261113-191709-809e9e; same code as cb2a87's 884 ms); pool 5,000 132 ms (261113-164938-d63930). SR3 not closed: HTTP loops stall 49-100 ms over the timed searches (809e9e), up to 393 ms at 10,000 |
+| A17 | PASS: build-test 261113-165003-4bde4b; rows 261113-164955-f95555 (`t1_strict_owed`) |
 | A18 | `docs/design/phase7c.md` (D16) |
-| A19 | PASS: removed 261113-111814-e12ef2; rows 261113-111808-93efd0 (`x6_shutdown`) |
-| A20 | PASS: build-test 261113-111813-3cf199 |
-| A21 | PASS: macOS 261111-171055-51a31b (CPU 0.958, p99 0.962), Linux 261113-111904-2e33d9 (CPU 1.008, p99 1.001), allocations 0.988 and handlers 0.986 261111-200223-9495ee: within D62 |
+| A19 | PASS: removed 261113-165004-905bcf; rows 261113-164955-f95555 (`x6_shutdown`) |
+| A20 | PASS: build-test 261113-165003-4bde4b |
+| A21 | PASS: macOS 261111-171055-51a31b (CPU 0.958, p99 0.962), Linux 261113-111904-2e33d9 (CPU 1.008, p99 1.001), allocations 0.988 and handlers 0.986 261111-200223-9495ee: within D62 (fixed-commit A/Bs) |
 | A22 | PASS (measured): 261111-175937-76ae57 (x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8 |
 | A23 | D53 (T4 reads the control loop only while busy) |
-| A24 | PASS: pins http:51d153a, prospect 850d4e8; T12's jobs 261113-125938-4f5407, 261113-125941-90ebdc |
+| A24 | PASS: pins http:51d153a, prospect 850d4e8; T12's jobs 261113-164929-53a2d2, 261113-164931-09250a |
 
 ## Result
 
-`docs/gates/phase7c.md`: every row scored with the build behind its number (master Xapiand:6ede7a0ce's `src`, T11 and
-T13's per-open-index cost Xapiand:27d45f101's), misses stated; reruns at Xapiand:d53d85c22 pending. Harness:
+`docs/gates/phase7c.md`: every row scored at Xapiand:d53d85c22 (master db349389f's `src`, strata 397c02d5) with the
+build behind each number; T11, coverage, A21 and X3-4 name their older fixed commits. Misses stated. Harness:
 `harness/gate7c_rows.sh`, `stall_load.py` (T6 `--index-size 2xram`, T8 held overloads, P1 split), `wide_search_check.py`
-(SR3), `lua_bounds.py`, tests in `test_gate_tools.py`.
+(SR3 window max, `--create-only`/`--reuse`), `lua_bounds.py`, tests in `test_gate_tools.py`.
 
 ## Rulings I made
 
