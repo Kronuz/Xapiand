@@ -1,22 +1,26 @@
 # flush-within-budget: journal
 
-State: waiting on jobs 261113-171054-2e840c 261113-171217-033927 261113-171233-02281e
+State: waiting on jobs 261113-182303-c8b3af 261113-182306-1d133e
 Quest: .campaign/xapiand/quests/flush-within-budget.md (the lead's; never edit it)
 
 ## Doing
 
-Steps 1-3 done at strata:92408e2e (pushed, CI runs on quest/**). Jobs queued:
-suite 261113-171054-2e840c (A2, A3, A4); A1 baseline at main 261113-171217-033927;
-A1 at head 261113-171233-02281e (after the baseline: both use the gate VM; it fails when
-peak RSS > 1.1x of 1,039 MiB; `$JOB_OUT/a1.txt` has peak RSS and segment count).
+strata:ecd11e74 (pushed): the trigger reserve on top of io_spill. A1 at 92408e2e (io_spill
+alone): 1,374,992 KiB peak RSS, 1.29x, 2 segments (job 261113-171233-02281e), vs main
+1,616,232 KiB, 1.52x, 2 segments (261113-171217-033927); suite 261113-182306-1d133e (92408e2e: 261113-171054-2e840c green) green.
+Measured from that run's mem.log: flush starts at buffer charge 1,040 MiB / RSS 1,071 MiB,
+RSS peaks 1,343 MiB: working set 272 MiB = 26% of the buffer (budget charge +209 MiB, 20%).
+`buffer_limit()` = min(buffer_share, capacity / 1.26) under a budget (`flush_working_pct`).
+Queued: A1 at ecd11e74 261113-182303-c8b3af (prospect pin 1a122b80, branch fwb-a1-head);
+suite 261113-182306-1d133e.
 
 ## Next
 
-1. Read the three jobs (`campaign job show`, `a1.txt`). If A1's head is still over 1.1x, the
-   remaining ~120 MiB is builder scratch: reserve that share in `needs_flush` (index.hh, the
-   lead's fallback in the quest's Decisions) and rerun A1. Compare segment counts main vs head.
-2. Check CI on quest/xapiand/flush-within-budget (Linux) for A4.
-3. Write docs/perf/flush-spill.md (strata) with the A1 numbers; ask for the correctness review.
+1. Read 261113-182303-c8b3af's a1.txt: peak RSS <= 1,170,329 KiB and segments == 2. If the
+   segment count moved, say so in the journal and docs/perf/flush-spill.md; add the row there.
+2. Read suite 261113-182306-1d133e (budget tests may depend on the old trigger) and CI on the
+   branch (A4).
+3. Ask for the correctness review.
 
 ## Blocked on
 
@@ -26,10 +30,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261113-171233-02281e (head, checks <= 1.1x) vs 261113-171217-033927 (main) — pending |
-| A2 | suite 261113-171054-2e840c: index_test `flush_spill()` compares io_spill's bytes with string_spill's (0, 100 B, 1 MiB, 3 MiB; writes below, at and past the gather); flush_memory_test's pinned segment digests — pending |
-| A3 | suite 261113-171054-2e840c: index_test `flush_spill()` faults (write 1st/2nd before/after effect, create, ENOSPC capacity): throws that errno, no `.spill` left, charge 0 — pending |
-| A4 | suite 261113-171054-2e840c + CI on the branch — pending |
+| A1 | 261113-182303-c8b3af at ecd11e74 (checks <= 1.1x) vs 261113-171217-033927 at main (1.52x) — pending; 92408e2e alone 1.29x (261113-171233-02281e, failed the bound) |
+| A2 | suite 261113-182306-1d133e (92408e2e: 261113-171054-2e840c green): index_test `flush_spill()` compares io_spill's bytes with string_spill's (0, 100 B, 1 MiB, 3 MiB; writes below, at and past the gather); flush_memory_test's pinned segment digests — pending |
+| A3 | suite 261113-182306-1d133e (92408e2e: 261113-171054-2e840c green): index_test `flush_spill()` faults (write 1st/2nd before/after effect, create, ENOSPC capacity): throws that errno, no `.spill` left, charge 0 — pending |
+| A4 | suite 261113-182306-1d133e (92408e2e: 261113-171054-2e840c green) + CI on the branch — pending |
 
 ## Result
 
@@ -37,7 +41,8 @@ strata:92408e2e: `index_detail::io_spill` (index.hh) holds a flush's deferred se
 gathered in memory (charged by capacity), the rest written to `seg-<id>.spill` through the
 index's IO, read back by `copy_to()` and removed, also on destruction after a failure. Both
 flush paths (`flush_active`, `flush_documents`) use it; `detail::chunked_spill` (section_io.hh)
-is gone (no other user). Numbers pending A1.
+is gone (no other user). strata:ecd11e74 adds the trigger reserve (`buffer_limit()`, 26% measured). Notes and numbers:
+strata docs/perf/flush-spill.md.
 
 ## Rulings I made
 
@@ -56,3 +61,7 @@ is gone (no other user). Numbers pending A1.
   exercised by A1's prospect run.
 - A1 measurement scaffolding: local prospect branches fwb-a1-main / fwb-a1-head (not pushed)
   = explore/index-memory with strata pinned at 397c02d578cc / 92408e2e.
+- Reserve sized from the 92408e2e run's RSS growth (26%), not the budget charge (20%):
+  RSS is what A1 bounds, and the flush allocates past what it charges. A fixed measured
+  constant, not adaptive per index (the first flush has nothing to adapt from); it applies
+  only with a budget and only lowers a share above capacity/1.26. The pressure path is as it was.
