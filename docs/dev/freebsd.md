@@ -28,10 +28,8 @@ gh run list --repo Kronuz/Xapiand --branch codex/freebsd-ci \
   --json databaseId,status,conclusion,url
 ```
 
-The branch is pushed at Xapiand:ebe543e8b, but the latter command returns
-an empty list as of November 14, 2026, 01:00 UTC. The GitHub API confirms
-Actions are enabled and all actions allowed; the remote branch contains
-the expected workflow. No run URL exists yet, and the reason for the
-missing push run is unknown. No FreeBSD compiler or test failure is
-observed because no FreeBSD build has run. CI and portability validation
-remain incomplete; no test is claimed to pass.
+[CI run 43537931113](https://github.com/Kronuz/Xapiand/actions/runs/43537931113)
+is building Xapiand:db6a58275 in the FreeBSD VM. The package job is
+correctly skipped for the branch push. The workflow, VM startup, and
+checkout are observed; compiler and CTest results remain pending.
+No FreeBSD test is claimed to pass yet.
