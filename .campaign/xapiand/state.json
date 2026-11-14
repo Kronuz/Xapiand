@@ -13121,6 +13121,37 @@
       "title": "Pool cleanup and wakeup fixes",
       "updated": "2026-11-08T13:25:08"
     },
+    "pool-from-memory": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/opts.*",
+        "src/main.cc",
+        "src/database/pool.*",
+        "tests/**",
+        "docs/src/**",
+        "harness/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "The open-index pool is sized from memory, not a fixed 200",
+      "updated": "2026-11-13T16:18:27"
+    },
     "pool-sweep-wait": {
       "accepted": {},
       "after": [],
