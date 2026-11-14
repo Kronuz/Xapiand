@@ -33,8 +33,10 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   xapiand_search_pinned_indexes_peak). With --pool P (the server's --database-pool-size; default its own), it also
   prints the cost of one open index: the resident memory the first search added over the indexes it left open
   (xapiand_resident_memory_bytes and xapiand_databases before and after). It prints each loop's lag over the timed
-  searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor). Run it under `quiet strict`; the servers use ports PORT and PORT + 1 and keep
-  their data under OUTDIR; both are killed on exit.
+  searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor), its max read from the window's
+  histogram. --create-only creates the indexes and stops; --reuse searches the indexes an earlier run left in OUTDIR,
+  so a light job can create them and a strict one time the searches. Run it under `quiet strict`; the servers use
+  ports PORT and PORT + 1 and keep their data under OUTDIR; both are killed on exit.
 """
 
 import argparse
@@ -62,6 +64,8 @@ ap.add_argument("--indexes", type=int, default=10000)
 ap.add_argument("--k", type=int, default=4)
 ap.add_argument("--runs", type=int, default=30)
 ap.add_argument("--pool", type=int, default=0)
+ap.add_argument("--create-only", action="store_true")
+ap.add_argument("--reuse", action="store_true")
 args = ap.parse_args()
 BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
 DATA = os.path.join(OUT, "data")
@@ -294,11 +298,14 @@ def metric(name: str) -> float:
 
 def gate() -> None:
     count = args.indexes
-    shutil.rmtree(OUT, ignore_errors=True)
-    os.makedirs(DATA)
-    node = start("create")
-    create_all(count)
-    stop(node)
+    if not args.reuse:
+        shutil.rmtree(OUT, ignore_errors=True)
+        os.makedirs(DATA)
+        node = start("create")
+        create_all(count)
+        stop(node)
+        if args.create_only:
+            return
     node = start("search", *(["--database-pool-size", str(args.pool)] if args.pool else []))
     rss0, open0 = metric("xapiand_resident_memory_bytes"), metric("xapiand_databases")
     body = {"_query": {"tag": "x"}, "_sort": "n", "_limit": 10, "_aggs": {"all": {"_sum": {"_field": "n"}}}}
@@ -327,7 +334,8 @@ def gate() -> None:
     lag = stall_load.lag_delta(lag0, stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())) if lag0 else {}
     for loop, v in sorted(lag.items(), key=lambda kv: -(kv[1]["p99_us"] or 0)):
         print(
-            f"SR3 loop {loop}: {v['wakes']} wakes, p99 {v['p99_us']} us, p99.9 {v['p999_us']} us, max so far {v['max_us_so_far']} us"
+            f"SR3 loop {loop}: {v['wakes']} wakes, p99 {v['p99_us']} us, p99.9 {v['p999_us']} us, "
+            f"max at most {v['max_us_window']} us, max since start {v['max_us_so_far']} us"
         )
     times.sort()
     p50 = statistics.median(times)

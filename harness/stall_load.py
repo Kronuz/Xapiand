@@ -480,7 +480,8 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
 
 
 def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    """Per-loop lag between two scrapes: wakes, p50, p99, p99.9 (bucket upper edges, us) and the max so far."""
+    """Per-loop lag between two scrapes: wakes, p50, p99, p99.9 and the window's max (bucket upper edges, us), and the
+    max since the node started."""
     out: dict[str, Any] = {}
     for loop, post in after["lag"].items():
         pre = before["lag"].get(loop, {"edges": [], "count": 0})
@@ -509,6 +510,7 @@ def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
             "p50_us": q(0.50),
             "p99_us": q(0.99),
             "p999_us": q(0.999),
+            "max_us_window": q(1.0),
             "max_us_so_far": post["max_us"],
             "p99_within_1ms": (q(0.99) or 0) <= 1024,
         }

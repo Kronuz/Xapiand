@@ -264,9 +264,11 @@ class StallLoad(unittest.TestCase):
         self.assertEqual(delta["p99_us"], 1024.0)
         self.assertTrue(delta["p99_within_1ms"])
         self.assertEqual(delta["max_us_so_far"], 4000.0)
+        self.assertEqual(delta["max_us_window"], 1024.0)  # the 5,120 us wakes came before the window
         whole = stall_load.lag_delta({"lag": {}, "gauges": {}}, after)["http0"]
         self.assertEqual(whole["p99_us"], 5120.0)
         self.assertEqual(whole["p50_us"], 1024.0)
+        self.assertEqual(whole["max_us_window"], 5120.0)
         self.assertTrue(whole["p99_within_1ms"] is False)
 
     def test_percentiles(self) -> None:
