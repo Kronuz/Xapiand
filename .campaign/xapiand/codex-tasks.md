@@ -161,6 +161,26 @@ branch, never to `main`, no campaign-state edits. Evidence: commands and numbers
 
 Not for Codex now (Detent's call): namespace-followups, consensus-late-append.
 
+## C10. Kronuz/sortable: a trusted decoder (from the owner, 11-14)
+
+Why: C1 left double decode 3.6-16.1% slower than the old codec, and part of that may be strictness.
+Bytes read back from our own index were written by `encode`; they need memory safety, not canonical
+checks.
+
+- On a new branch `codex/sortable-trusted` from `codex/sortable-speed`, add a trusted decode path,
+  typed per result (`to_double`, `to_int64`, `to_uint64` straight from bytes, no intermediate
+  `number` if that is faster), keeping `decode` exactly as it is.
+- Safety floor: it reads only within its input, never has undefined behavior, never throws, for any
+  bytes (rules 1, 3 and 6 of `docs/mechanisms/sortable.md`, The decoder, or their equivalent). The
+  other rules may go: on bytes `encode` wrote it returns what `decode` would; on other bytes, any
+  value. Prove it: every `vectors.txt` line agrees with `decode`, a property test on random
+  encodings, and a libFuzzer target (ASan, UBSan, one CPU-hour) on arbitrary bytes.
+- Measure with C1's bench and method (same sets, A/A, both platforms): old codec vs strict vs
+  trusted decode, per set. Also split the cost: strict decode with only the safety rules, to show
+  how much of the gap strictness is.
+- Deliverable: the branch and `sortable/docs/perf/trusted-decode.md`; never `main` (the API lands
+  inside sortable-encoding).
+
 ## Status (Codex fills one row per task as it finishes or stops)
 
 Commit this file on Xapiand `master` after each row (a `.campaign/`-only commit runs no CI). If
