@@ -1,0 +1,11 @@
+# Global configuration is independent of the legacy test fixture location.
+file(MAKE_DIRECTORY "${WORK}")
+set(FIXTURES_PATH "${WORK}/checkout-a/oldtests")
+configure_file("${TEMPLATE}" "${WORK}/first.h" @ONLY)
+set(FIXTURES_PATH "${WORK}/checkout-with-a-longer-name/oldtests")
+configure_file("${TEMPLATE}" "${WORK}/second.h" @ONLY)
+file(SHA256 "${WORK}/first.h" first_hash)
+file(SHA256 "${WORK}/second.h" second_hash)
+if(NOT first_hash STREQUAL second_hash)
+    message(FATAL_ERROR "Global config depends on the legacy fixture location")
+endif()

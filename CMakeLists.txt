@@ -417,7 +417,6 @@ endif ()
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
 set (XAPIAND_DATA_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand")
 
 
@@ -1864,6 +1863,10 @@ message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAK
 
 if (BUILD_TESTS)
 	enable_testing()
+	add_test(NAME test_config_relocatable COMMAND ${CMAKE_COMMAND}
+		-DTEMPLATE=${PROJECT_SOURCE_DIR}/config.h.in
+		-DWORK=${PROJECT_BINARY_DIR}/tests/config-relocatable
+		-P ${PROJECT_SOURCE_DIR}/tests/check_config_relocatable.cmake)
 	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 endif ()
 
@@ -2042,6 +2045,8 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
 			)
+			target_compile_definitions(${PROJECT_TEST} PRIVATE
+				FIXTURES_PATH="${PROJECT_SOURCE_DIR}/oldtests")
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ
