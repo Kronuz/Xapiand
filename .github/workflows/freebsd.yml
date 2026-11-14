@@ -48,9 +48,8 @@ jobs:
               -DASIO_INCLUDE_DIR=/usr/local/include
             cmake --build build --parallel 4
             ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
-            mkdir -p "$PWD/.scratch/freebsd-e2e"
-            TMPDIR="$PWD/.scratch/freebsd-e2e" RUN_ALL_STRICT=1 \
-              BIN="$PWD/build/bin/xapiand" bash harness/run_all.sh e2e
+            install -d -o nobody -g nobody "$PWD/.scratch/freebsd-e2e"
+            su -m nobody -c 'TMPDIR="$PWD/.scratch/freebsd-e2e" RUN_ALL_STRICT=1 BIN="$PWD/build/bin/xapiand" bash harness/run_all.sh e2e'
       - name: Preserve test logs
         if: always()
         uses: actions/upload-artifact@v4
