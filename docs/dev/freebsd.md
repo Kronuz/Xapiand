@@ -14,9 +14,10 @@ cmake --build build --parallel 4
 ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
 ```
 
-The job has a 120-minute limit and preserves CTest logs on failure. Docs E2E
-is deferred until a first build establishes the remaining runtime budget;
-there is no measured FreeBSD E2E result yet.
+The job has a 120-minute limit and preserves CTest logs on failure. The initial Release build and all 39 tests finish in about 16 minutes
+inside the 120-minute job budget. The job also runs the docs E2E layer
+with `RUN_ALL_STRICT=1` so missing prerequisites fail the job. Bash,
+Python, curl, Node 24, and Newman 6 are installed inside the VM.
 
 ## Results
 
@@ -29,7 +30,12 @@ gh run list --repo Kronuz/Xapiand --branch codex/freebsd-ci \
 ```
 
 [CI run 43537931113](https://github.com/Kronuz/Xapiand/actions/runs/43537931113)
-is building Xapiand:db6a58275 in the FreeBSD VM. The package job is
-correctly skipped for the branch push. The workflow, VM startup, and
-checkout are observed; compiler and CTest results remain pending.
-No FreeBSD test is claimed to pass yet.
+passes at Xapiand:db6a58275: Release builds and **39/39 CTest cases pass**
+on FreeBSD 14.3 amd64. CTest reports 40.21 seconds; the entire job spans
+15 minutes 38 seconds. No FreeBSD compiler fixes or failing tests are
+needed. The package job is correctly skipped for the branch push.
+[Test logs](https://github.com/Kronuz/Xapiand/actions/runs/43537931113/artifacts/14090829562)
+are retained by the workflow.
+
+The docs E2E extension awaits a new CI run; the initial green run does not
+exercise that layer.
