@@ -1176,6 +1176,37 @@
       "title": "Instrument engine seam usage",
       "updated": "2026-11-08T13:25:15"
     },
+    "cheap-reopen": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/pool.*",
+        "src/engine/strata/**",
+        "docs/design/cheap-reopen.md",
+        "tests/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Reopening an evicted index costs near a cached open",
+      "updated": "2026-11-13T16:18:29"
+    },
     "ci-quest-branches": {
       "accepted": {},
       "after": [],
