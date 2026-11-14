@@ -5754,6 +5754,39 @@
       "title": "An MIT source and binary release",
       "updated": "2026-11-08T22:56:37"
     },
+    "light-share": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/*",
+        "src/database/pool.*",
+        "src/manager.*",
+        "harness/**",
+        "tests/**",
+        "docs/design/light-share.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Light requests keep their bound under heavy load",
+      "updated": "2026-11-13T20:23:33"
+    },
     "linux-sanitizers": {
       "accepted": {},
       "after": [],
