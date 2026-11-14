@@ -168,3 +168,4 @@ pushing is blocked, say so in the row and leave the branch local.
 
 | Task | State (done, partial, blocked) | Repo and branch | Commit | Report path | Result in one line |
 |---|---|---|---|---|---|
+| C9 | done | Detent `codex/s6-v1-removal-survey` | Detent:9ba4c7d2 | `Detent/docs/design/s6-v1-removal-survey.md` | Read-only inventory, D8/D88 costs, format effects and commit order; pushed. |
