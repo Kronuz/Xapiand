@@ -132,6 +132,12 @@ branch, never to `main`, no campaign-state edits. Evidence: commands and numbers
   timers. Allocator stats plus RSS, release build, `quiet exclusive`.
 - Report `http/docs/perf/idle-cost-baseline.md`: commands, raw numbers, top owners, and 2-3
   candidate cuts with estimated bytes saved.
+- Host limit (lead, 11-13 19:10): the first 100K runs left ~30,000 loopback sockets in
+  FIN_WAIT_1/CLOSING to ports 18920-18926 and exhausted macOS's 16,384 ephemeral ports, which broke
+  other campaigns' jobs (EADDRNOTAVAIL) and GitHub access. Spread clients over source addresses
+  (127.0.0.2, 127.0.0.3, ... bound before connect), close server and client sides cleanly, check
+  `netstat -an -p tcp | grep -c FIN_WAIT_1` is back near zero after each run, or run the 100K
+  arms in the Linux VM.
 - Add only a bench under `bench/`; never touch a product header (`*.h`). Feeds Detent quest
   http-idle-cost (A1).
 
