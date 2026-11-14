@@ -1,7 +1,7 @@
 # Idle-node wakeups
 
 **Date:** 2026-11-13  
-**Status:** Partial attribution; privileged scheduler tracing unavailable.
+**Status:** Process baseline complete; privileged per-thread trace queued.
 
 An idle node has two explicit polling sources: eight WAL writer threads each wait at most 100 ms, and seventeen reactor lag probes rearm every 100 ms. These are timer-expiration opportunities, not measured package wakeups. macOS coalesces timers, so their rates must not be added and labeled as hardware wakeups.
 
@@ -83,4 +83,4 @@ date -u > "$base/idle-end.txt"
 
 ## Remaining evidence
 
-Exact per-thread wake rates and a complete scheduler-wakeup ledger require a privileged trace. `dtrace -l -n 'mach_kernel::wakeup'` fails with `DTrace requires additional privileges`; `sudo -n true` reports that a password is required. This macOS release does not accept `powermetrics --show-process-wakeups`; its supported `tasks` sampler also requires elevated access. The stack sample and source periods cannot substitute for that trace. No exact per-thread count, power saving, or equivalence to the earlier 0.48%/37-wakeups baseline is claimed.
+Exact per-thread rates require the queued privileged trace. Unprivileged DTrace fails, and unattended sudo requires authentication. Native macOS administrator authentication now succeeds: root lists `sched:::on-cpu`, `sched:::off-cpu`, `syscall::kevent:return`, `syscall::psynch_cvwait:return`, and `syscall::ulock_wait2:return`, and the `powermetrics -s tasks` sampler runs. This resolves the access limitation. The bounded five-minute follow-up aggregates wait returns by thread, syscall and user stack, with scheduler dispatches reported separately. A scheduler dispatch is not itself proof of a wake from sleep. Until that run completes, no exact per-thread count or power saving is claimed. This macOS release does not accept `powermetrics --show-process-wakeups`; use its supported `tasks` sampler.
