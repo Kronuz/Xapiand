@@ -1,9 +1,9 @@
 # Idle-node wakeups
 
 **Date:** 2026-11-13  
-**Status:** Process baseline complete; privileged per-thread trace queued.
+**Status:** Process baseline and privileged per-thread wait/dispatch trace complete; worker-waker correlation remains inferred.
 
-An idle node has two explicit polling sources: eight WAL writer threads each wait at most 100 ms, and seventeen reactor lag probes rearm every 100 ms. These are timer-expiration opportunities, not measured package wakeups. macOS coalesces timers, so their rates must not be added and labeled as hardware wakeups.
+An idle node has four recurring timer sources: eight WAL writer threads each wait at most 100 ms, seventeen reactor lag probes rearm every 100 ms, the catalog sweep rearms every second, and the fsync scheduler caps an empty wait at 30 seconds. These are timer-expiration opportunities, not measured package wakeups. macOS coalesces timers, so their rates must not be added and labeled as hardware wakeups.
 
 The executable is built from Xapiand:c3f270ecc, RelWithDebInfo with LTO off, on x86_64 macOS 15.8.1. Dependencies include reactor:ab69cf2, logger:f61d8df, and scheduler:d57e8fc. The node uses default worker counts, port 18899 bound to loopback, and one index with one document (`{"value":1,"_id":"doc","_version":1}`). No product source changes are included.
 
@@ -15,8 +15,8 @@ The executable is built from Xapiand:c3f270ecc, RelWithDebInfo with LTO off, on 
 | Main control reactor | `src/manager.cc:555`, reactor `reactor_lag.h:105` and `:116` | 100 ms idle | 10, inferred from source | Arm lag diagnostics only while activity exists; define how the next activity reactivates measurement. |
 | 16 unnamed HTTP reactor threads | `src/manager.cc:956`, reactor `reactor.h:665`, `reactor_lag.h:105` | 100 ms idle | 160 total, inferred from source | Apply the same lag-probe policy to every loop; preserve stall detection semantics explicitly. |
 | Main control reactor housekeeping | `src/manager.h:139`, `src/manager.cc:826`, `src/control_plane.h:143` | 60 s | 1/60, inferred from source | Keep scheduled housekeeping when required; do not replace a deadline with a shorter polling interval. |
-| Xapiand:W00 through W15 | threadpool `work_pool.hh:1087` in sampled stacks | Event-driven | Unmeasured | Sampled parked atomic waits give no evidence of a periodic idle poll. |
-| Xapiand:FS-- and FS00 through FS07 | scheduler `scheduler.h:598` | Next deadline | Unmeasured | Preserve deadline-driven waits; trace pending deadlines before assigning a cost. |
+| Xapiand:W14/W15 | threadpool `work_pool.hh:260,1068`; Strata `include/strata/core/catalog.hh:375,2457` | Catalog timer: 1 s | 300 / 302 park returns in 300 s | The park is indefinite. The one-second catalog sweep posts work; avoid that sweep while no maintenance deadline or pressure needs it. The timer-to-worker correlation is inferred from source and matching rate, not a captured wake-address link. Other workers record zero park returns. |
+| Xapiand:FS-- | scheduler `scheduler.h:513,598` | At most 30 s even when empty | 10 wait returns / 300 s, measured | Use an indefinite wait when there is no queued deadline; notify on arrival and shutdown. FS00 through FS07 record no wait returns in the trace. |
 | Xapiand:LOG | logger `logger.cc:1337` | Next line deadline, indefinite when empty | Unmeasured | Empty logger already blocks indefinitely; do not attribute a 1 ms idle poll from its batching constant. |
 
 The five-second stack sample shows WAL writers in `BlockingConcurrentQueue::wait_dequeue_timed`, workers parked in `WorkPool::park`, and reactor threads in `kevent`. It also catches a `reactor::LagProbe::Tick` rearming a timer. `--log thread-names` names the worker families; HTTP reactor threads remain unnamed in the sample.
@@ -81,6 +81,90 @@ date -u > "$base/idle-end.txt"
 "$base/idle-usage" "$node" > "$base/idle-after.txt"
 ```
 
-## Remaining evidence
+## Privileged trace
 
-Exact per-thread rates require the queued privileged trace. Unprivileged DTrace fails, and unattended sudo requires authentication. Native macOS administrator authentication now succeeds: root lists `sched:::on-cpu`, `sched:::off-cpu`, `syscall::kevent:return`, `syscall::psynch_cvwait:return`, and `syscall::ulock_wait2:return`, and the `powermetrics -s tasks` sampler runs. This resolves the access limitation. The bounded five-minute follow-up aggregates wait returns by thread, syscall and user stack, with scheduler dispatches reported separately. A scheduler dispatch is not itself proof of a wake from sleep. Until that run completes, no exact per-thread count or power saving is claimed. This macOS release does not accept `powermetrics --show-process-wakeups`; use its supported `tasks` sampler.
+Native macOS administrator authentication succeeds. A second exclusive run at the same executable records 300 seconds of DTrace events. DTrace exits 0 with no diagnostics. Each wait-return stack identifies its thread family; a separate sample maps TIDs to names. The trace also records scheduler `on-cpu` events separately.
+
+**These are wait-call returns, not counts of physical CPU wakeups.** `kevent` includes nonblocking polls and may return without a context switch. The roughly 20 calls/s per HTTP reactor must not be labeled 20 timer wakeups/s. The lag probe has a 100 ms idle timer; scheduler dispatch counts are about 11/s per reactor. Likewise, a dispatch can follow preemption rather than a sleeping-thread wake. Package-idle and interrupt counts in the earlier process-level table retain their own meaning.
+
+| Thread / TID | Wait-return event | Returns in 300 s | Returns/s | On-CPU probe events |
+|---|---|---:|---:|---:|
+| Main control / 225889133 | `kevent` | 6,279 | 20.93000 | 3,963 |
+| Xapiand:W14 / 225889165 | `ulock_wait2` | 300 | 1.00000 | 322 |
+| Xapiand:W15 / 225889166 | `ulock_wait2` | 302 | 1.00667 | 330 |
+| Xapiand:WL00 / 225889167 | `psynch_cvwait` | 2,899 | 9.66333 | 3,199 |
+| Xapiand:WL01 / 225889168 | `psynch_cvwait` | 2,898 | 9.66000 | 3,198 |
+| Xapiand:WL02 / 225889169 | `psynch_cvwait` | 2,899 | 9.66333 | 3,206 |
+| Xapiand:WL03 / 225889170 | `psynch_cvwait` | 2,899 | 9.66333 | 3,216 |
+| Xapiand:WL04 / 225889171 | `psynch_cvwait` | 2,898 | 9.66000 | 3,184 |
+| Xapiand:WL05 / 225889172 | `psynch_cvwait` | 2,896 | 9.65333 | 3,171 |
+| Xapiand:WL06 / 225889173 | `psynch_cvwait` | 2,898 | 9.66000 | 3,190 |
+| Xapiand:WL07 / 225889174 | `psynch_cvwait` | 2,898 | 9.66000 | 3,178 |
+| Xapiand:FS-- / 225889177 | `psynch_cvwait` | 10 | 0.03333 | 12 |
+| Unnamed HTTP reactor / 225889196 | `kevent` | 5,973 | 19.91000 | 3,237 |
+| Unnamed HTTP reactor / 225889197 | `kevent` | 5,973 | 19.91000 | 3,340 |
+| Unnamed HTTP reactor / 225889198 | `kevent` | 5,973 | 19.91000 | 3,328 |
+| Unnamed HTTP reactor / 225889199 | `kevent` | 5,973 | 19.91000 | 3,316 |
+| Unnamed HTTP reactor / 225889200 | `kevent` | 5,973 | 19.91000 | 3,291 |
+| Unnamed HTTP reactor / 225889201 | `kevent` | 5,973 | 19.91000 | 3,307 |
+| Unnamed HTTP reactor / 225889202 | `kevent` | 5,973 | 19.91000 | 3,285 |
+| Unnamed HTTP reactor / 225889203 | `kevent` | 5,973 | 19.91000 | 3,295 |
+| Unnamed HTTP reactor / 225889204 | `kevent` | 5,973 | 19.91000 | 3,305 |
+| Unnamed HTTP reactor / 225889205 | `kevent` | 5,973 | 19.91000 | 3,282 |
+| Unnamed HTTP reactor / 225889206 | `kevent` | 5,973 | 19.91000 | 3,309 |
+| Unnamed HTTP reactor / 225889207 | `kevent` | 5,973 | 19.91000 | 3,222 |
+| Unnamed HTTP reactor / 225889208 | `kevent` | 5,973 | 19.91000 | 3,282 |
+| Unnamed HTTP reactor / 225889209 | `kevent` | 5,973 | 19.91000 | 3,301 |
+| Unnamed HTTP reactor / 225889210 | `kevent` | 5,973 | 19.91000 | 3,296 |
+| Unnamed HTTP reactor / 225889211 | `kevent` | 5,973 | 19.91000 | 3,228 |
+| Xapiand:LOG / 225889217 | `psynch_cvwait` | 1 | 0.00333 | 1 |
+
+The other sampled worker/fsync threads have no wait-return or on-CPU events in the aggregation. LOG has one deadline-return event, with no evidence of a periodic empty-logger poll.
+
+The catalog's default `sweep_period_ns` is 1,000,000,000 (`catalog.hh:375`). `arm_period()` posts a pass on that timer and `run_pass()` rearms it (`:2441-2466`). Xapiand supplies the timer through `DatabasePool::make_host` (`src/database/pool.cc:554`). This accounts for a one-second control-loop task and is consistent with W14/W15's 300/302 wake-return events. A follow-up trace of unpark addresses and caller stacks would make the timer-to-worker link direct. The fsync scheduler's explicit `now + 30s` cap (`scheduler.h:513`) accounts for its ten timed returns. These two sources are missed by the initial parked-stack sample alone.
+
+### Trace command
+
+Authenticate before acquiring the exclusive hold, so time spent at the native administrator dialog does not consume the trace deadline. Start the unprivileged node and read its existing document, allow activity-triggered probes to return to idle, then execute as root:
+
+```sh
+/usr/sbin/dtrace -Z -q -s .scratch/idle-waits.d -p NODE_PID > .scratch/idle-traced-waits.txt
+```
+
+The exact D program is:
+
+```d
+syscall::kevent:return,
+syscall::kevent64:return,
+syscall::kevent_qos:return,
+syscall::*wait*:return
+/pid == $target/
+{
+    @waits[tid, probefunc] = count();
+    @stacks[tid, ustack(12)] = count();
+}
+sched:::on-cpu
+/pid == $target/
+{
+    @dispatch[tid] = count();
+}
+tick-300s
+{
+    exit(0);
+}
+END
+{
+    printf("WAIT RETURNS BY THREAD AND SYSCALL\n");
+    printa("%d %s %@d\n", @waits);
+    printf("CPU DISPATCHES BY THREAD\n");
+    printa("%d %@d\n", @dispatch);
+    printf("WAIT RETURN STACKS\n");
+    printa(@stacks);
+}
+```
+
+The local raw artifacts are `.scratch/codex/idle-traced-waits.txt`, `idle-traced-stacks.txt`, and `idle-traced-dtrace.log`. The table preserves every nonzero per-thread aggregation from that run. No product timer, wheel, housekeeping, database, or engine file changes are included.
+
+## Remaining attribution
+
+The periodic families and exact per-thread call/dispatch counts are available. A direct wake-address link from the catalog callback to W14/W15 remains to be captured. Separating blocking and nonblocking `kevent` calls would further explain the reactor's syscall count. No claim equates call returns, timer firings, scheduler dispatches, interrupt wakeups, or package-idle wakeups. No power saving is measured.
