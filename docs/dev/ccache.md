@@ -1,34 +1,41 @@
-# Cross-checkout ccache investigation
+# Cross-checkout ccache
 
-Status: partial. The reported 31 misses out of 202 translation units after
-Xapiand:05960cb81 are the starting observation, not a reproduced result.
-The fixture-path fix has a failing-before regression. Full-build hit counts
-and a replacement cache-size recommendation remain unmeasured.
+`FIXTURES_PATH` embeds the checkout's absolute `oldtests/` path in the
+shared generated `config.h`. That changes the header digest in every new
+checkout, forcing preprocessing for translation units that include it.
+The fix defines the path only on legacy test targets.
 
-## Environment
+## Evidence
 
-The investigation starts at Xapiand:c3f270ecc on x86_64 macOS with Apple
-Clang, ccache 4.14.1, Release, LTO off, and the system libc++. Two fresh
-worktrees use the same commit and existing dependency source directories.
-This controls dependency versions but does not reproduce independent
-FetchContent directory layouts. The current compilation database contains
-230 entries, so its denominator differs from the earlier 202-TU report.
+The baseline is Xapiand:c3f270ecc, which contains Xapiand:05960cb81. The
+fix is Xapiand:573d33cd4; the full fixed builds use Xapiand:6f1a5424f,
+whose product code is identical. This is x86_64 macOS, Apple Clang 17,
+ccache 4.14.1, Release (`-O3 -DNDEBUG`), and LTO off. Each checkout has
+independent dependency source directories cloned from the pinned sources
+in the completed master build. Each arm uses a separate initially empty
+cache with eviction disabled, compression on, and file cloning off.
 
-The shared cache snapshot reports a 15.0 GB limit, 15.0 GB occupied, and
-5,535 cleanups. Its cumulative totals span unrelated builds; they cannot
-measure one Xapiand configuration's working set. The filesystem reports
-52 GiB available at the start. No shared cache statistics, settings, or
-entries are reset or removed by these probes.
+Each full build makes 224 compilation calls. The second-checkout results
+are:
 
-## Cause and fix
+| Code | Direct hits | Preprocessed hits | Misses |
+|---|---:|---:|---:|
+| Xapiand:c3f270ecc | 193 / 224 | 31 / 224 | 0 / 224 |
+| Xapiand:6f1a5424f | 224 / 224 | 0 / 224 | 0 / 224 |
 
-At Xapiand:c3f270ecc, the two generated `src/config.h` files differ only in
-`FIXTURES_PATH`: one contains the first checkout's absolute `oldtests/`
-path, and the other the second checkout's. Sizes are 18,440 and 18,447
-bytes. This unused macro changes the file digest even for production
-translation units that do not use legacy fixtures.
+Both first checkouts record 224 cold misses. All 31 baseline fallback
+logs identify the same generated `config.h` digest mismatch. The fix
+eliminates 31 preprocessor runs per fresh checkout. A cached clean rebuild
+also records 224/224 direct hits: the observed A/A hit-count spread is zero.
+No elapsed-time,
+CPU-time, power, or dollar saving is claimed.
+The compilation database has 229 entries; five targets are excluded from
+the default build. The earlier task's 202-TU denominator is not reused.
 
-The second-checkout ccache log for `src/server/mime_types.cc` records:
+The two baseline headers differ only in `FIXTURES_PATH`. The direct-mode
+input streams from the representative `package.cc`, `length.cc`, and
+`server/mime_types.cc` probes are identical across checkouts. For the last
+of those, ccache records:
 
 ```text
 Mismatch for src/config.h: size 18447 != 18440
@@ -36,88 +43,105 @@ Did not find result key in manifest
 Result: preprocessed_cache_hit
 ```
 
-The direct-mode input streams for all three probes are byte-identical;
-this is a manifest header mismatch rather than a compiler-argument
-mismatch. At Xapiand:573d33cd4, `FIXTURES_PATH` moves out of `config.h.in`
-and into the legacy test targets' private compile definitions. Its only
-users are `oldtests/test_patcher.cc` and `oldtests/test_geospatial.cc`.
-Production configuration no longer carries the checkout's fixture path.
+The complete build's 31 fallback logs report a header hash mismatch rather
+than a size mismatch because its two checkout names have equal lengths.
+`FIXTURES_PATH` has two users: `oldtests/test_patcher.cc` and
+`oldtests/test_geospatial.cc`. Their targets retain the absolute fixture
+location as a private compile definition.
 
 `tests/check_config_relocatable.cmake` configures the actual template with
 two fixture roots and requires identical output. It fails against the
-baseline template and passes against the fix, under `quiet light`:
+baseline template and passes with the fix. It is also registered in CTest.
+[Linux CI](https://github.com/Kronuz/Xapiand/actions/runs/43550909873)
+passes at Xapiand:6f1a5424f.
+
+## Reproduction
+
+`cmake/ccache_build.sh` builds one configuration with at most four jobs,
+records compilation-only statistics in `BUILD_BASENAME.stats`, and writes
+ccache's cumulative counters and debug inputs alongside them. Run it under
+`quiet light`; it requires absolute paths. `DEPENDENCY_SEED` is a completed
+build's `_deps/` containing the pinned `*-src` trees. It copies those trees
+into each checkout's `.scratch/ccache-deps/`. Configure compiler probes
+occupy the cache but are excluded from the per-build stats log.
 
 ```sh
 ROOT="$HOME/code/Kronuz/.scratch/codex"
-git -C "$ROOT/ccache" show c3f270ecc:config.h.in \
-  > "$ROOT/ccache-evidence/baseline.h.in"
+REPO="$HOME/code/Kronuz/Xapiand"
+SEED="$ROOT/idle-wakeups/build/_deps"
+HELPER="$ROOT/ccache/cmake/ccache_build.sh"
+git -C "$REPO" worktree add --detach "$ROOT/repro-before-a" c3f270ecc
+git -C "$REPO" worktree add --detach "$ROOT/repro-before-b" c3f270ecc
 quiet check
-quiet light codex-ccache-regression 5 "Check configuration relocation" -- \
+CCACHE_BASEDIR="$ROOT" quiet light ccache-before-a 30 "Baseline first checkout" -- \
+  sh "$HELPER" "$ROOT/repro-before-a" "$ROOT/repro-before-a/build" \
+  "$ROOT/repro-before-cache" "$SEED" release
+CCACHE_BASEDIR="$ROOT" quiet light ccache-before-b 30 "Baseline second checkout" -- \
+  sh "$HELPER" "$ROOT/repro-before-b" "$ROOT/repro-before-b/build" \
+  "$ROOT/repro-before-cache" "$SEED" release
+```
+
+Repeat with two fresh worktrees at Xapiand:6f1a5424f and a separate cache
+evidence directory. Use fresh build directories; the first discarded
+fixed-arm attempt reused a cache whose `COMPRESSORS_LZ4_PINNED=ON` setting
+conflicted with Xapiand's LZ4 v1.8.1 source override. That configure failure
+is unrelated to the fixture-path fix and is excluded from the results.
+
+For the regression, extract the baseline template and run the same check
+against each template:
+
+```sh
+git -C "$REPO" show c3f270ecc:config.h.in > "$ROOT/baseline-config.h.in"
+quiet light ccache-regression 5 "Check configuration relocation" -- \
   cmake -DTEMPLATE="$ROOT/ccache/config.h.in" \
-  -DWORK="$ROOT/ccache-evidence/fixed" \
+  -DWORK="$ROOT/config-check" \
   -P "$ROOT/ccache/tests/check_config_relocatable.cmake"
-# The same command with baseline.h.in must exit nonzero.
+# Replacing TEMPLATE with baseline-config.h.in must exit nonzero.
 ```
 
-## Probe
+## Working set
 
-The probe compiles `src/package.cc`, `src/length.cc`, and
-`src/server/mime_types.cc` from each checkout through ccache. It uses an
-isolated cache and writes debug inputs and per-checkout stats logs.
-This is a diagnostic subset, not a full-build hit-rate measurement.
+Each configuration uses a dedicated initially empty cache with
+`CCACHE_MAXSIZE=0`. Sizes are ccache's logical compressed cache size in
+KiB, including compiler probes and manifests; filesystem allocation from
+`du` is a different quantity. No shared cache is cleared or reconfigured. The shared cache enables
+`file_clone=true`, while these isolated caches use ccache's default
+`file_clone=false`; compressed footprint is therefore a distinct profile.
+`ccache --show-compression` also records the uncompressed content size so
+capacity planning can account for the shared cache's clone mode.
+
+ASan+UBSan and TSan use Homebrew Clang 23.1.2 with the SDK libc++ headers
+and library. Explicit `-nostdinc++ -I.../c++/v1` places the SDK C++ wrappers before
+the SDK C headers and disables LLVM's default C++ include directory.
+The initial attempts with LLVM's default C++ headers fail their wrapper
+checks and do not constitute complete working sets. Reproduce the matched
+SDK configuration as follows:
 
 ```sh
-ROOT="$HOME/code/Kronuz/.scratch/codex"
-quiet check
-quiet light codex-ccache-config 10 "Configure two checkouts" -- \
-  sh "$ROOT/ccache-evidence/configure.sh"
-quiet light codex-ccache-probe-a 5 "Collect first checkout cache inputs" -- \
-  /usr/local/bin/python3 "$ROOT/ccache-evidence/probe.py" ccache
-quiet light codex-ccache-probe-b 5 "Collect second checkout cache inputs" -- \
-  /usr/local/bin/python3 "$ROOT/ccache-evidence/probe.py" ccache-second
+export SANITIZER_CC=/usr/local/opt/llvm/bin/clang
+export SANITIZER_CXX=/usr/local/opt/llvm/bin/clang++
+export SANITIZER_CXX_FLAGS="-nostdinc++ -I$(xcrun --show-sdk-path)/usr/include/c++/v1"
+CCACHE_BASEDIR="$ROOT" quiet light ccache-asan 30 "ASan cache working set" -- \
+  sh "$HELPER" "$ROOT/ccache-second" "$ROOT/asan-repro" \
+  "$ROOT/asan-cache" "$SEED" asan
 ```
 
-Local raw evidence is in `$ROOT/ccache-evidence/`: `configure.log`,
-`probe-a.log`, `probe-b.log`, `ccache.stats`, `ccache-second.stats`, and
-`debug/`. The scripts record the exact dependency-source overrides and
-compilation-database commands. `CCACHE_DEBUG=1` writes the
-`.ccache-input-text` files; `CCACHE_BASEDIR=$ROOT` and
-`CCACHE_NOHASHDIR=true` normalize checkout paths without modifying the
-compiler commands in CMake. The first checkout produces three cold misses. Before the fix, the second
-checkout returns two direct hits and one preprocessed hit.
+Repeat with `tsan` or `tests` and separate build/cache directories. The
+test configuration uses Apple Clang, RelWithDebInfo, `BUILD_TESTS=ON`,
+and `ASSERTS=ON`.
 
-## Results
+| Complete configuration | Compressed cache, KiB | Uncompressed content, MiB |
+|---|---:|---:|
+| Release | 21,328 | 71.1 |
+| ASan + UBSan | 159,644 | 500.9 |
+| Test targets | 166,624 | 521.6 |
 
-| Code | Second-checkout direct hits | Preprocessed hits | Cold first-checkout misses |
-|---|---:|---:|---:|
-| Xapiand:c3f270ecc | 2 / 3 | 1 / 3 | 3 / 3 |
-| Xapiand:573d33cd4 | 3 / 3 | 0 / 3 | 3 / 3 |
+TSan is paused before compilation to let the pending isolated measurements
+run. Its complete footprint and the final size recommendation remain to
+be collected. The three completed profiles perform no cache cleanups.
 
-The fixed checkouts produce identical generated config headers. Each arm
-uses a separate initially empty cache, and no source output bytes change.
-The after arm is recorded in `probe-after.log` and `after/`:
-
-```sh
-quiet light codex-ccache-after 5 "Compare fixed checkouts" -- \
-  env CODEX_CCACHE_EVIDENCE=ccache-evidence/after \
-  /usr/local/bin/python3 "$ROOT/ccache-evidence/probe.py" ccache ccache-second
-```
-
-These counts establish the cause for one translation unit in the subset;
-they do not establish that every one of the original 31 misses has this
-cause. No elapsed-time or CPU-efficiency result is measured.
-
-## Remaining evidence
-
-Release, ASan, TSan, and test-target working sets each require a full build
-into a dedicated initially empty cache with eviction disabled, recording
-compressed cache bytes and files before discarding build output. Distinct
-configuration caches avoid attributing another configuration's cleanup to
-this one. Shared-cache cumulative bytes and cleanup counts do not answer
-that question.
-
-The full 230-entry baseline, independent dependency-layout comparison,
-second full build, and four configuration sizes remain unmeasured.
-No before/after speed claim is made; A/A timing spread is unavailable.
-Keep the existing cache limit until the working sets and disk headroom
-support a measured replacement.
+Local raw evidence is under `$ROOT/ccache-evidence/`: `full-before.log`,
+`full-before/`, `full-after-clean.log`, `full-after-clean/`, and
+`working-*.log`/`working-*/`. The original exact commands are retained in
+`full-release.sh` and `working-set.sh`; they use independently cloned
+`.deps/` directories rather than the committed helper's `.scratch/` path.
