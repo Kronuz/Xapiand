@@ -13273,6 +13273,35 @@
       "updated": "2026-11-10T21:41:42",
       "worktree": ""
     },
+    "platform-rows": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        ".github/workflows/**",
+        "harness/**",
+        "docs/dev/freebsd.md",
+        "docs/dev/platforms.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "7c's rows pass on FreeBSD and arm64 in CI",
+      "updated": "2026-11-13T20:23:36"
+    },
     "pool-concurrency": {
       "accepted": {},
       "after": [],
