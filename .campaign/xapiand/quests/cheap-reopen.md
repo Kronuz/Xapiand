@@ -5,21 +5,18 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Reopening an index the catalog evicted costs close to finding it open: a search across more indexes than the pool holds stays within a small factor of one that fits (D89). The design picks the mechanism (cached metadata or manifest kept past eviction, lazy reader opens, or what the measurement shows), in strata where it belongs, not in Xapiand.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] Design note with the measured reopen breakdown and the chosen mechanism: `docs/design/cheap-reopen.md`
+- A2 2,500-index search at a pool of 200: p50 within 2x of the pool-5000 run at the same commit (884 vs 132 ms at 0d97b2da7 today): strict jobs before and after
+- A3 Durability unchanged: the crash and recovery checks pass, and a reopened index serves exactly its last commit: the suite plus a reopen-after-crash test
+- A4 The suite passes and CI is green at the landed code
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes strata's catalog and open path; any strata change is its own quest in strata ordered `after` this design.
 
 ## Decisions
 
