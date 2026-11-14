@@ -18067,6 +18067,39 @@
       "updated": "2026-11-09T11:44:42",
       "worktree": ""
     },
+    "wide-search-loop": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/*",
+        "src/query_dsl.cc",
+        "src/server/*",
+        "harness/**",
+        "tests/**",
+        "docs/design/wide-search-loop.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "A wide search never stalls the HTTP loops, alone or concurrent",
+      "updated": "2026-11-13T20:10:34"
+    },
     "write-buffer": {
       "accepted": {},
       "after": [],
