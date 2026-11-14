@@ -1,4 +1,4 @@
-name: FreeBSD package
+name: FreeBSD
 
 # Build Xapiand inside a real FreeBSD VM (vmactions runs it on the Linux runner)
 # and attach a FreeBSD package to the release. Unlike Homebrew, the VM has network,
@@ -12,8 +12,10 @@ on:
         required: true
         default: v1.0.0-alpha.1
   push:
+    branches: [master, 'quest/**', 'quick/**', 'codex/**']
     tags:
       - 'v[0-9]+.*'
+    paths-ignore: ['.campaign/**']
 
 permissions:
   contents: write
@@ -22,7 +24,42 @@ env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  freebsd-test:
+    name: FreeBSD 14 Release + tests
+    if: github.event_name == 'push' && github.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test in a FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.3"
+          usesh: true
+          prepare: |
+            pkg install -y cmake ninja git pkgconf zstd asio bash python3 curl node24 npm-node24
+            npm install -g newman@6
+          run: |
+            set -eux
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DLTO=OFF \
+              -DASIO_INCLUDE_DIR=/usr/local/include
+            cmake --build build --parallel 4
+            ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
+            install -d -o nobody -g nobody "$PWD/.scratch/freebsd-e2e"
+            su -m nobody -c 'TMPDIR="$PWD/.scratch/freebsd-e2e" RUN_ALL_STRICT=1 BIN="$PWD/build/bin/xapiand" bash harness/run_all.sh e2e'
+      - name: Preserve test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-test-logs
+          path: build/Testing/Temporary/LastTest*.log
+          if-no-files-found: ignore
+
   freebsd-pkg:
+    if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
     name: FreeBSD .pkg (amd64)
     runs-on: ubuntu-latest
     steps:
