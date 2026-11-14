@@ -10,7 +10,7 @@ file sets of the active quests (x7-gate, exact-id-keys, and sortable-encoding on
   every timing under `quiet strict` (or `quiet exclusive` for numbers that decide), at most 10
   minutes per run. Run `quiet check` first. Detent's agents and the xapiand campaign share the host.
 - Never touch: `src/database/*`, `src/serialise.*`, `src/query_dsl.cc`, `src/engine/strata/*`,
-  `docs/gates/*`, `.campaign/**` (except your report rows named below), Kronuz/sortable's byte
+  `docs/gates/*`, `.campaign/**` (except this file's Status table), Kronuz/sortable's byte
   format (`vectors.txt`, `reject.txt` and anything that changes them).
 - Never open GPL sources: `src/sortable_serialise.{cc,h}`,
   `contrib/python/xapiand-py/xapiand/utils/sortable.py`, or Xapian.
@@ -154,3 +154,11 @@ branch, never to `main`, no campaign-state edits. Evidence: commands and numbers
   `include/`, `tests/` or `.campaign/`.
 
 Not for Codex now (Detent's call): namespace-followups, consensus-late-append.
+
+## Status (Codex fills one row per task as it finishes or stops)
+
+Commit this file on Xapiand `master` after each row (a `.campaign/`-only commit runs no CI). If
+pushing is blocked, say so in the row and leave the branch local.
+
+| Task | State (done, partial, blocked) | Repo and branch | Commit | Report path | Result in one line |
+|---|---|---|---|---|---|
