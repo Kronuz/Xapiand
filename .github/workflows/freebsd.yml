@@ -39,7 +39,7 @@ jobs:
           release: "14.3"
           usesh: true
           prepare: |
-            pkg install -y cmake ninja git pkgconf zstd asio bash python311 curl node24 npm-node24
+            pkg install -y cmake ninja git pkgconf zstd asio bash python3 curl node24 npm-node24
             npm install -g newman@6
           run: |
             set -eux
