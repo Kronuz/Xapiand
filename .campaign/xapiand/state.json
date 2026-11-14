@@ -4118,6 +4118,8 @@
     "flush-within-budget": {
       "accepted": {},
       "after": [],
+      "base": "397c02d578cc495813426757d5022e14d88d506a",
+      "branch": "quest/xapiand/flush-within-budget",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4133,6 +4135,7 @@
         "test/index_test.cc",
         "docs/perf/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/flush-within-budget",
       "landed": [],
       "lenses": [
         "correctness"
@@ -4142,9 +4145,10 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Indexing stays within its memory budget through the flush",
-      "updated": "2026-11-11T05:09:59"
+      "updated": "2026-11-13T17:03:38",
+      "worktree": "../strata-wt/xapiand/flush-within-budget"
     },
     "flushmem": {
       "accepted": {},
