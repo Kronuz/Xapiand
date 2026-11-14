@@ -170,3 +170,4 @@ pushing is blocked, say so in the row and leave the branch local.
 |---|---|---|---|---|---|
 | C9 | done | Detent `codex/s6-v1-removal-survey` | Detent:9ba4c7d2 | `Detent/docs/design/s6-v1-removal-survey.md` | Read-only inventory, D8/D88 costs, format effects and commit order; pushed. |
 | C6 | done | Xapiand `codex/py-sortable` | Xapiand:32e6ab315 | `Xapiand/contrib/python/xapiand-py/docs/sortable-codec.md` | 113491 vectors, 39 rejects, 1M C++ comparisons pass; strict types/lint clean; throughput measured; pushed. |
+| C8 | partial | Detent `codex/ci-flakes-triage` | Detent:9f6121a1 | `Detent/docs/dev/ci-flakes-triage.md` | Snapshot timeout reproduced and helper flaw forced; DNS port theft forced; four flakes pass 10/10 repeats with causes unresolved; pushed. |
