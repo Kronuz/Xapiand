@@ -42,14 +42,28 @@ client is outside that scope. Verification used `/usr/local/bin/python3`, Python
 
 ## Speed
 
-Encode/decode values per second remain unmeasured. C6 is partial until an isolated run fills
-these results. The benchmark reads the complete fixture, warms once and emits seven samples:
+At `Xapiand:7beed68d4`, an exclusive run on an Intel Core i9-9980HK (macOS 15.8.1,
+Python 3.15.2) measured the complete fixture, one warmup and seven samples of three passes
+(340,473 values per sample). Median encoding throughput is **903,108 values/s**; decoding
+is **736,738 values/s**. The ranges below expose the spread within this run; these are
+baseline observations, not a before/after optimization claim.
+
+| Sample | Encode values/s | Decode values/s |
+|---|---:|---:|
+| 0 | 936,837.7 | 736,737.6 |
+| 1 | 800,501.3 | 729,673.9 |
+| 2 | 903,107.5 | 776,981.8 |
+| 3 | 955,946.7 | 719,236.7 |
+| 4 | 893,577.6 | 769,656.4 |
+| 5 | 976,037.3 | 724,600.9 |
+| 6 | 873,554.5 | 769,738.2 |
+
+The following command ran successfully under the exclusive hold `codex-py-speed`:
 
 ```sh
-quiet strict c6-speed 10 'Python codec encode/decode throughput' -- /usr/local/bin/python3 -I tests/bench_sortable_codec.py "$SORTABLE" 3
+quiet exclusive c6-speed 10 'Python codec encode/decode throughput' -- /usr/local/bin/python3 -I tests/bench_sortable_codec.py "$SORTABLE" 3
 ```
 
-On this x86_64 macOS host strict isolation waits for existing light holds. The x7 campaign had
-long-running holds, so this task did not pause it or publish timings from a shared run.
+The run started after the existing campaign holds cleared. No other campaign was paused.
 This branch is intended for integration inside sortable-encoding; it does not replace the
 legacy client module or land independently.
