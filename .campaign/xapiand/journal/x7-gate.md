@@ -350,6 +350,12 @@ build behind each number; T11, coverage, A21 and X3-4 name their older fixed com
   instead of creating 10,000 more, then deletes it.
 - R22 (N6). The Linux job builds Lua from the pin (`-DFETCHCONTENT_SOURCE_DIR_LUA=` clears the VM's patched copy);
   lua.org refuses the VM, the PUC-Rio mirror (88139a40e) serves it (curl 200 from the VM).
+- R23. SR3 closes only if every loop's lag over the timed searches stays at the 1,024 us edge (the window's highest
+  bucket). 809e9e's HTTP loops reach 49-100 ms, so SR3 stays open and A16 scores MISS on it; the 10,000-index
+  latency half is a reported value with no target.
+- R24. A16's two default-pool runs at the same code (cb2a87 884 ms, 809e9e 1,364 ms) are both reported; the gap is
+  not code (empty `src`/build diff 0d97b2da7..d53d85c22, same flags, timed harness path unchanged) and is put on the
+  host only as an inference, since no log samples load. No new job (lead's instruction).
 
 - R14 (msg-1). Applied the x7-loop-fix-c amendment to `docs/design/phase7c.md` (Xapiand:0a0321691): D4's flush row
   gains the RESTORE writes, D12's RESTORE sentence is fix (c)'s description. One correction against the code: the
