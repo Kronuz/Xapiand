@@ -14437,7 +14437,7 @@
       "risk": "high",
       "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-13T14:27:52",
+      "updated": "2026-11-13T21:25:04",
       "worktree": ""
     },
     "reclaim-backlog": {
