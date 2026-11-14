@@ -175,3 +175,4 @@ pushing is blocked, say so in the row and leave the branch local.
 | C3 | done | Xapiand `codex/freebsd-ci` | Xapiand:76d19f2c2 | `Xapiand/docs/dev/freebsd.md` | FreeBSD 14.3 Release, 39/39 CTests and docs E2E pass; tag packaging preserved; pushed. |
 | C1 | partial | sortable `codex/sortable-speed` | sortable:722c30e | `sortable/docs/perf/speed.md` | 31 matched profiles and both-platform A/A measured; decode +7.9%/+3.6% outside noise misses D87; three experiments dropped; pushed. |
 | C7 | partial | http `codex/http-idle-baseline` | http:ff0399a | `http/docs/perf/idle-cost-baseline.md` | 3-sample 10K prototype: TLS charged footprint -44.82%, allocator -74.60%; plain 100K passes; TLS 100K times out; pushed. |
+| C5 | done | Xapiand `codex/ccache` | Xapiand:bec178d7f | `Xapiand/docs/dev/ccache.md` | Application direct hits 171/202 to 202/202; all 31 misses attributed; zero A/A hit-count spread; four cache profiles measured; pushed. |
