@@ -19315,11 +19315,11 @@
     "x7-gate": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-13T19:49:57",
+          "at": "2026-11-13T20:26:55",
           "base": "7251f1f7b109a4e64ae8f977d3186ce01d4184fb",
           "blobs": {
             "docs/design/phase7c.md": "100644:7c76cae40d3b19c6d5914ab1963a0cb8e4923a93",
-            "docs/gates/phase7c.md": "100644:ecfec4a4ff8dc7fe3ce8da89cab46d61e6468f53",
+            "docs/gates/phase7c.md": "100644:1736836728ef980513bd87f9385ef0d1543548a0",
             "harness/README.md": "100644:04e9cf659efc7bf47c25baafb89488e91a3d058b",
             "harness/gate7c_rows.sh": "100755:2dd731b4bbd9fea80084ac93fd82673064fb6909",
             "harness/lua_bounds.py": "100644:9e9101eb285760f0af42f1aca0643f943f23a4af",
@@ -19328,11 +19328,11 @@
             "harness/wide_search_check.py": "100755:a97248d9f792daa7b869c1716419d2a7f9f5a42f"
           },
           "by": "review",
-          "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
-          "criteria": "f9dcb97acc9f58b6",
+          "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+          "criteria": "62caa4aed3ac4515",
           "diffs": {
             "docs/design/phase7c.md": "7017e0b4206ec762",
-            "docs/gates/phase7c.md": "7dbf7add4080e605",
+            "docs/gates/phase7c.md": "709e38be184e3b56",
             "harness/README.md": "13921d73e39d4b69",
             "harness/gate7c_rows.sh": "f25c78ada3954771",
             "harness/lua_bounds.py": "1419671961f165da",
@@ -19920,7 +19920,7 @@
       "risk": "high",
       "status": "active",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-13T20:10:44",
+      "updated": "2026-11-13T20:26:55",
       "worktree": "../Xapiand-wt/xapiand/x7-gate"
     },
     "x7-http-repin": {
