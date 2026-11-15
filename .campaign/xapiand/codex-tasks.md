@@ -198,3 +198,7 @@ pushing is blocked, say so in the row and leave the branch local.
 | C5 | done | Xapiand `codex/ccache` | Xapiand:bec178d7f | `Xapiand/docs/dev/ccache.md` | Application direct hits 171/202 to 202/202; all 31 misses attributed; zero A/A hit-count spread; four cache profiles measured; pushed. |
 | C4 | partial | cpp-libraries `codex/parser-fuzz`; per-repo `codex/parser-fuzz` | cpp-libraries:2046803 | `cpp-libraries/docs/fuzz-2026-11.md` | All seven harnesses on default branches with CI green; six sanitizer CPU-hours complete; radix slow inputs preserved; router budget and Apple libc defect remain; report pushed. |
 | C10 | done | sortable `codex/sortable-trusted` | sortable:a2958f1 | `sortable/docs/perf/trusted-decode.md` | Bounded typed decode; 113491-vector/property parity, 3801.51 sanitizer CPU s / 674417247 executions, independent review and full CI green; both-platform tables; pushed, never main. |
+
+Landed by the lead (11-15): C1 and C10 squashed onto sortable `main` as sortable:5b841f0 (trusted
+typed decode) and sortable:d927b7e (bench and reports), README Performance at sortable:8f3889f; the
+`codex/sortable-*` branches are deleted, so their commits above are reachable only through these.
