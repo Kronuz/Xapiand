@@ -1,7 +1,7 @@
 # Idle-node wakeups
 
 **Date:** 2026-11-13  
-**Status:** Process baseline and privileged per-thread wait/dispatch trace complete; worker-waker correlation remains inferred.
+**Status:** Process baseline, privileged macOS wait/dispatch trace, and exact Linux scheduler wake attribution complete.
 
 An idle node has four recurring timer sources: eight WAL writer threads each wait at most 100 ms, seventeen reactor lag probes rearm every 100 ms, the catalog sweep rearms every second, and the fsync scheduler caps an empty wait at 30 seconds. These are timer-expiration opportunities, not measured package wakeups. macOS coalesces timers, so their rates must not be added and labeled as hardware wakeups.
 
@@ -15,7 +15,7 @@ The executable is built from Xapiand:c3f270ecc, RelWithDebInfo with LTO off, on 
 | Main control reactor | `src/manager.cc:555`, reactor `reactor_lag.h:105` and `:116` | 100 ms idle | 10, inferred from source | Arm lag diagnostics only while activity exists; define how the next activity reactivates measurement. |
 | 16 unnamed HTTP reactor threads | `src/manager.cc:956`, reactor `reactor.h:665`, `reactor_lag.h:105` | 100 ms idle | 160 total, inferred from source | Apply the same lag-probe policy to every loop; preserve stall detection semantics explicitly. |
 | Main control reactor housekeeping | `src/manager.h:139`, `src/manager.cc:826`, `src/control_plane.h:143` | 60 s | 1/60, inferred from source | Keep scheduled housekeeping when required; do not replace a deadline with a shorter polling interval. |
-| Xapiand:W14/W15 | threadpool `work_pool.hh:260,1068`; Strata `include/strata/core/catalog.hh:375,2457` | Catalog timer: 1 s | 300 / 302 park returns in 300 s | The park is indefinite. The one-second catalog sweep posts work; avoid that sweep while no maintenance deadline or pressure needs it. The timer-to-worker correlation is inferred from source and matching rate, not a captured wake-address link. Other workers record zero park returns. |
+| Xapiand:W14/W15 | threadpool `work_pool.hh:260,1068`; Strata `include/strata/core/catalog.hh:375,2457` | Catalog timer: 1 s | 300 / 302 park returns in 300 s | The park is indefinite. The one-second catalog sweep posts work; avoid that sweep while no maintenance deadline or pressure needs it. The Linux trace below captures the main-to-worker and worker-to-worker wake calls directly. Other workers record zero park returns. |
 | Xapiand:FS-- | scheduler `scheduler.h:513,598` | At most 30 s even when empty | 10 wait returns / 300 s, measured | Use an indefinite wait when there is no queued deadline; notify on arrival and shutdown. FS00 through FS07 record no wait returns in the trace. |
 | Xapiand:LOG | logger `logger.cc:1337` | Next line deadline, indefinite when empty | Unmeasured | Empty logger already blocks indefinitely; do not attribute a 1 ms idle poll from its batching constant. |
 
@@ -121,7 +121,7 @@ Native macOS administrator authentication succeeds. A second exclusive run at th
 
 The other sampled worker/fsync threads have no wait-return or on-CPU events in the aggregation. LOG has one deadline-return event, with no evidence of a periodic empty-logger poll.
 
-The catalog's default `sweep_period_ns` is 1,000,000,000 (`catalog.hh:375`). `arm_period()` posts a pass on that timer and `run_pass()` rearms it (`:2441-2466`). Xapiand supplies the timer through `DatabasePool::make_host` (`src/database/pool.cc:554`). This accounts for a one-second control-loop task and is consistent with W14/W15's 300/302 wake-return events. A follow-up trace of unpark addresses and caller stacks would make the timer-to-worker link direct. The fsync scheduler's explicit `now + 30s` cap (`scheduler.h:513`) accounts for its ten timed returns. These two sources are missed by the initial parked-stack sample alone.
+The catalog's default `sweep_period_ns` is 1,000,000,000 (`catalog.hh:375`). `arm_period()` posts a pass on that timer and `run_pass()` rearms it (`:2441-2466`). Xapiand supplies the timer through `DatabasePool::make_host` (`src/database/pool.cc:554`). This accounts for a one-second control-loop task and is consistent with W14/W15's 300/302 wake-return events. The Linux trace below captures the main-to-worker wake caller; identifying that caller as the catalog callback still uses the matching one-second period and source path, rather than an application-level call stack. The fsync scheduler's explicit `now + 30s` cap (`scheduler.h:513`) accounts for its ten timed returns. These two sources are missed by the initial parked-stack sample alone.
 
 ### Trace command
 
@@ -165,6 +165,47 @@ END
 
 The local raw artifacts are `.scratch/codex/idle-traced-waits.txt`, `idle-traced-stacks.txt`, and `idle-traced-dtrace.log`. The table preserves every nonzero per-thread aggregation from that run. No product timer, wheel, housekeeping, database, or engine file changes are included.
 
-## Remaining attribution
+## Linux scheduler wake attribution
 
-The periodic families and exact per-thread call/dispatch counts are available. A direct wake-address link from the catalog callback to W14/W15 remains to be captured. Separating blocking and nonblocking `kevent` calls would further explain the reactor's syscall count. No claim equates call returns, timer firings, scheduler dispatches, interrupt wakeups, or package-idle wakeups. No power saving is measured.
+The existing eight-vCPU Ubuntu 24.04 VM runs the same Xapiand:c3f270ecc source, built separately as RelWithDebInfo with LTO off using GCC 13.3.0. The one-document node idles from 2026-11-15 07:11:56 to 07:16:56 UTC. Linux creates four WAL writers and eight HTTP reactors at this CPU count, versus eight and sixteen on the macOS host. The VM uses port 18772 for SSH; Detent's ports 18762/18763 are untouched.
+
+Root `perf record -g -e sched:sched_waking -e sched:sched_wakeup -a -- sleep 300` captures both the initiating thread and the target's transition to runnable. The target PID/TID map comes from `/proc/NODE_PID/task/*/comm` after startup and the document read. Both event types record **39,838** Xapiand targets, with equal per-TID counts and every target mapped; all 27 mapped threads are listed below, including the ten with zero events. The recorded rate is **132.793 scheduler wakes/s** across this Linux process. It is not a hardware/package wakeup rate and must not be compared numerically with macOS's 52.983 package-idle wakeups/s.
+
+| Thread / Linux TID | Wake events / 300 s | Wakes/s | Waker and kernel path | Source and proposed fix |
+|---|---:|---:|---|---|
+| Main control / 587363 | 3,567 | 11.890 | 3,268 timerfd; 299 worker `epoll_ctl` | `src/manager.cc:555`, `reactor_lag.h:105,116` (100 ms), catalog `catalog.hh:375,2457` (1 s), `work_pool.hh:260`; arm lag diagnostics only during activity and avoid an empty catalog sweep. |
+| W05 / 587373 | 302 | 1.007 | Main `futex_wake` 161; W06 `futex_wake` 141 | `work_pool.hh:260,1068`, catalog `catalog.hh:375,2457`; avoid the idle sweep and redundant worker unpark. |
+| W06 / 587374 | 300 | 1.000 | Main `futex_wake` 139; W05 `futex_wake` 161 | Same worker/catalog source and fix. |
+| WL00 / 587376 | 2,971 | 9.903 | Kernel `hrtimer_wakeup` | `src/database/wal.cc:776` (100 ms); wait indefinitely while empty and notify shutdown. |
+| WL01 / 587377 | 2,971 | 9.903 | Kernel `hrtimer_wakeup` | Same WAL source and fix. |
+| WL02 / 587378 | 2,971 | 9.903 | Kernel `hrtimer_wakeup` | Same WAL source and fix. |
+| WL03 / 587379 | 2,971 | 9.903 | Kernel `hrtimer_wakeup` | Same WAL source and fix. |
+| FS-- / 587380 | 10 | 0.033 | Kernel `hrtimer_wakeup` | `scheduler.h:513,598` (30 s cap); wait indefinitely without a deadline. |
+| HTTP reactor / 587387 | 2,972 | 9.907 | Kernel timerfd callback | `src/manager.cc:956`, `reactor.h:665`, `reactor_lag.h:105` (100 ms); activity-gate lag diagnostics. |
+| HTTP reactor / 587388 | 2,972 | 9.907 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587389 | 2,972 | 9.907 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587390 | 2,971 | 9.903 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587391 | 2,971 | 9.903 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587392 | 2,972 | 9.907 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587393 | 2,972 | 9.907 | Kernel timerfd callback | Same reactor source and fix. |
+| HTTP reactor / 587394 | 2,972 | 9.907 | Kernel timerfd callback | Same reactor source and fix. |
+| LOG / 587367 | 1 | 0.003 | Kernel `hrtimer_wakeup` | `logger.cc:1337`; one event does not establish an idle poll. |
+| W00-W04, W07 / 587368-587372, 587375 | 0 | 0 | Parked | No periodic wake source. |
+| FS00-FS03 / 587381-587384 | 0 | 0 | Parked | No periodic wake source. |
+
+`sched_waking` shows the main control TID issuing 300 worker `futex_wake` calls; W05/W06 issue 302 further peer wakes. W05/W06 in turn wake the main reactor 299 times through `epoll_ctl`. The one-second cadence and catalog source above identify the likely callback; the exact application call stack is unavailable from this optimized binary. The reactor timerfd wakes and the direct WAL/FS high-resolution timer wakes have kernel call stacks in the raw trace. No recorded Xapiand wake target or initiator is unclassified.
+
+The exact baseline source was made with `git -C Xapiand archive --format=tar --output=.scratch/codex/c2-xapiand-c3f270ecc.tar c3f270ecc` (SHA-256 `537d12e6eae3b8281fa68ae5394400cc4a689f57dbe1090f27c889f9357de846`), copied to the VM, and configured with `cmake -S src -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF`. The executed host holds were:
+
+```sh
+quiet check
+quiet light c2-linux-prepare 10 'Configure exact C2 Linux baseline' -- sh .scratch/codex/c2-linux-prepare.sh
+quiet light c2-linux-build 30 'Build exact Xapiand baseline for wake trace' -- ssh -i strata/.scratch/linux-vm/ssh_key -o UserKnownHostsFile=strata/.scratch/linux-vm/known_hosts -p 18772 strata@127.0.0.1 'cmake --build /home/strata/.scratch/c2-xapiand-c3f270ecc/build -j4 --target xapiand'
+quiet exclusive c2-linux-wakes 9 'Five-minute exact Linux scheduler wake trace' -- ssh -i strata/.scratch/linux-vm/ssh_key -o UserKnownHostsFile=strata/.scratch/linux-vm/known_hosts -p 18772 strata@127.0.0.1 'sh /home/strata/.scratch/c2-xapiand-c3f270ecc/trace.sh 300'
+```
+
+The runner and parser are in the evidence archive, along with the command's setup and interval markers. Both short smoke traces exited 0 before the full trace. `perf record` exits 0 after 99,695 system-wide samples, with no lost-event message; `perf script` exits 0 with an empty diagnostic log. The local evidence archive is `.scratch/codex/c2-linux-trace-300/trace-300-evidence.tar.gz`, SHA-256 `7e336ac8b4613bfa427a0705c39e71a6603c4bc4acf3c481c54601a39caa7f23`. It contains the 27 MB `wakeups.data`, compressed raw event text, complete per-thread summary, node log and document, and interval markers.
+
+## Interpretation limits
+
+The Linux trace counts scheduler wake events per thread and links them to the initiating thread or kernel timer. It does not apportion macOS package-idle wakeups to threads, show every application timer callback in a user stack, or estimate watts. The macOS `kevent` return count includes nonblocking calls; the Linux scheduler trace is the direct per-thread wake count. No power saving is measured. The timer and housekeeping fixes remain proposals for their owning quests.
