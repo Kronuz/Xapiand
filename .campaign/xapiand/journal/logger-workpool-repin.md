@@ -1,6 +1,6 @@
 # logger-workpool-repin: journal
 
-State: working
+State: waiting on jobs 261116-080905-f910ab 261116-080906-dbeaea (A1, A2) and the A3 job (below)
 Quest: .campaign/xapiand/quests/logger-workpool-repin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Repin committed and pushed; jobs running.
 
 ## Next
 
-1. <step>
+1. When jobs pass: read A3 report (ab/aa report.json), fill Result; check CI.
 
 ## Blocked on
 
@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261116-080905-f910ab |
+| A2 | e2e 261116-080906-dbeaea |
+| A3 | A3JOB (Detent's A2 job 261116-051232-7ae5c2 ran logger's own workpool pin 640c66b, not Xapiand's 406d2f3, so not cited) |
 
 ## Result
 
@@ -37,4 +39,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Renamed src/xapiand_threadpool_trace.h to xapiand_workpool_trace.h and its macros to WORKPOOL_THREAD_REGISTER/UNREGISTER (workpool's names; the old ones would silently drop crash-registry hooks); docs/dev/extraction-backlog.md follows. Outside CMakeLists.txt but required by the rename.
+- A3 script .campaign/xapiand/ab-logger-workpool-repin.sh builds both logger commits against workpool 406d2f3 (FETCHCONTENT_SOURCE_DIR_WORKPOOL), 5 rounds A/B then A/A.
