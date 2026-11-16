@@ -3094,7 +3094,7 @@ static void test_exact_reads_a_value_as_its_type() {
 			}
 			CHECK_EQ(got, std::string(t.as));
 		} catch (const ClientError& exc) {
-			std::fprintf(stderr, "  %s as %s is refused: %s\n", t.value, enum_name(t.type).data(), exc.get_message().c_str());
+			std::fprintf(stderr, "  %s as %s is refused: %s\n", t.value, enum_name(t.type).data(), exc.get_message());
 			CHECK(false);
 		}
 	}
@@ -3109,7 +3109,7 @@ static void test_exact_reads_a_value_as_its_type() {
 		{FieldType::integer, "[1]", "[1]"},
 		{FieldType::integer, "9223372036854775808", "9223372036854775808"},
 		{FieldType::integer, "\"9223372036854775808\"", "9223372036854775808"},
-		{FieldType::integer, "1e300", "1e+300"},
+		{FieldType::integer, "1e300", "1e300"},
 		{FieldType::integer, "{\"_integer\":1e300}", "_integer"},
 		{FieldType::integer, "{\"_integer\":18446744073709551615}", "_integer"},
 		{FieldType::integer, "{\"_float\":1.5}", "_float"},
@@ -3119,7 +3119,7 @@ static void test_exact_reads_a_value_as_its_type() {
 		{FieldType::positive, "\"-1\"", "-1"},
 		{FieldType::positive, "-0.5", "-0.5"},
 		{FieldType::positive, "\"18446744073709551616\"", "18446744073709551616"},
-		{FieldType::positive, "18446744073709551616", "1.8446744073709552e+19"},
+		{FieldType::positive, "18446744073709551616", "18446744073709552000"},
 		{FieldType::positive, "{\"_positive\":-1}", "_positive"},
 		{FieldType::positive, "{\"_positive\":\"-1\"}", "_positive"},
 		{FieldType::positive, "{\"_positive\":-1.5}", "_positive"},
@@ -3156,6 +3156,19 @@ static void test_exact_reads_a_value_as_its_type() {
 	CHECK(threw);
 }
 
+// A document written by a RESTORE line, whose body names its `_id`: the line's own answer.
+static Reply restore_line(const std::string& path, const std::string& line) {
+	const auto reply = call("RESTORE", path + "?commit", line + "\n", "application/x-ndjson");
+	const auto items = field_of(reply, "items");
+	Reply item;
+	if (items.is_array() && items.size() == 1) {
+		item.body = items.at(0);
+		const auto status = item.body.find("status");
+		item.status = status == item.body.end() ? 200 : static_cast<int>(status.value().as_i64());
+	}
+	return item;
+}
+
 // The schema of the indexes below: integer (or positive) ids, and fields i (integer) and p (positive).
 static void create_typed_index(const std::string& name, const char* id_type) {
 	create_index(name, 1, std::string(R"({"_type":"object","_id":{"_type":")") + id_type + R"("},"i":{"_type":"integer"},"p":{"_type":"positive"}})");
@@ -3169,15 +3182,17 @@ static void test_writes_take_only_exact_values() {
 	const std::string ints = "/sv_w_int/";
 	const std::string poss = "/sv_w_pos/";
 
-	CHECK_EQ(call("PUT", ints + "1.5?commit", R"({"n":"x"})").status, 400);
+	// In the path an id is text (a dot there starts a selector, so a fraction is written in the body).
 	CHECK_EQ(call("PUT", ints + "abc?commit", R"({"n":"x"})").status, 400);
 	CHECK_EQ(call("PUT", ints + "9223372036854775808?commit", R"({"n":"x"})").status, 400);
 	CHECK_EQ(call("PUT", poss + "-1?commit", R"({"n":"x"})").status, 400);
 	CHECK_EQ(call("PUT", poss + "abc?commit", R"({"n":"x"})").status, 400);
 	CHECK_EQ(call("PUT", poss + "18446744073709551616?commit", R"({"n":"x"})").status, 400);
-	CHECK_EQ(call("POST", ints + "?commit", R"({"_id":1.5,"n":"x"})").status, 400);
-	CHECK_EQ(call("POST", ints + "?commit", R"({"_id":"abc","n":"x"})").status, 400);
-	CHECK_EQ(call("POST", poss + "?commit", R"({"_id":-1,"n":"x"})").status, 400);
+	CHECK_EQ(restore_line(ints, R"({"_id":1.5,"n":"x"})").status, 400);
+	CHECK_EQ(restore_line(ints, R"({"_id":"abc","n":"x"})").status, 400);
+	CHECK_EQ(restore_line(ints, R"({"_id":9223372036854775808,"n":"x"})").status, 400);
+	CHECK_EQ(restore_line(poss, R"({"_id":-1,"n":"x"})").status, 400);
+	CHECK_EQ(restore_line(poss, R"({"_id":"abc","n":"x"})").status, 400);
 	for (const auto* body : {R"({"i":1.5})", R"({"i":"abc"})", R"({"i":"1.5"})", R"({"i":true})", R"({"i":9223372036854775808})",
 			R"({"i":18446744073709551616})", R"({"p":-1})", R"({"p":"-1"})", R"({"p":18446744073709551616})"}) {
 		const auto reply = call("PUT", ints + "1?commit", body);
@@ -3195,6 +3210,10 @@ static void test_writes_take_only_exact_values() {
 	CHECK_EQ(call("PUT", ints + "9223372036854775807?commit", R"({"n":"max","i":9223372036854775807})").status, 204);
 	CHECK_EQ(call("PUT", ints + "-9223372036854775808?commit", R"({"n":"min","i":-9223372036854775808})").status, 204);
 	CHECK_EQ(call("PUT", poss + "18446744073709551615?commit", R"({"n":"max","p":18446744073709551615})").status, 204);
+	CHECK_EQ(restore_line(ints, R"({"_id":"21","n":"21"})").status, 200);   // an id's text spelling an integer
+	CHECK_EQ(restore_line(ints, R"({"_id":22.0,"n":"22"})").status, 200);   // an integral float is the integer
+	CHECK_EQ(text_of(call("GET", ints + "21"), "n"), "21");
+	CHECK_EQ(text_of(call("GET", ints + "22"), "n"), "22");
 	for (const auto& [path, n] : std::vector<std::pair<std::string, std::string>>{{ints + "12", "12"}, {ints + "7", "7"},
 			{ints + "9223372036854775807", "max"}, {ints + "-9223372036854775808", "min"}, {poss + "18446744073709551615", "max"}}) {
 		const auto got = call("GET", path);
@@ -3298,13 +3317,13 @@ static void test_a_refused_value_names_its_field_value_and_type() {
 	const std::string ints = "/sv_m_int/";
 	const std::string poss = "/sv_m_pos/";
 	const auto search = [](const std::string& path, const std::string& query) { return call("SEARCH", path + "?volatile", R"({"_query":)" + query + "}"); };
-	check_refused(call("PUT", ints + "1.5?commit", R"({"n":"x"})"), "_id", "1.5", "integer");
-	check_refused(call("PUT", poss + "-1?commit", R"({"n":"x"})"), "_id", "-1", "positive");
-	check_refused(call("POST", ints + "?commit", R"({"_id":"abc","n":"x"})"), "_id", "abc", "integer");
+	check_refused(restore_line(ints, R"({"_id":1.5,"n":"x"})"), "_id", "1.5", "integer");
+	check_refused(restore_line(poss, R"({"_id":-1,"n":"x"})"), "_id", "-1", "positive");
+	check_refused(restore_line(ints, R"({"_id":"abc","n":"x"})"), "_id", "abc", "integer");
 	check_refused(call("PUT", ints + "1?commit", R"({"i":1.5})"), "i", "1.5", "integer");
 	check_refused(call("PUT", ints + "1?commit", R"({"i":"abc"})"), "i", "abc", "integer");
 	check_refused(call("PUT", ints + "1?commit", R"({"p":-1})"), "p", "-1", "positive");
-	check_refused(call("PUT", ints + "1?commit", R"({"i":18446744073709551616})"), "i", "1.8446744073709552e+19", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":18446744073709551616})"), "i", "18446744073709552000", "integer");
 	check_refused(call("PUT", ints + "1?commit", R"({"p":{"_positive":-1}})"), "p", "-1", "positive");
 	check_refused(search(ints, R"({"_id":1.5})"), "_id", "1.5", "integer");
 	check_refused(search(poss, R"({"_id":-1})"), "_id", "-1", "positive");

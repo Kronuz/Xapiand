@@ -189,12 +189,12 @@ std::optional<MsgPack>
 exact_number(FieldType type, const MsgPack& v)
 {
 	switch (v.get_type()) {
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			if (type != FieldType::positive) {
+		case MsgPack::Type::NEGATIVE_INTEGER:  // an int64, of either sign
+			if (type != FieldType::positive || v.i64() >= 0) {
 				return v;
 			}
 			break;
-		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::POSITIVE_INTEGER:  // a uint64
 			if (type != FieldType::integer || v.u64() <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
 				return v;
 			}

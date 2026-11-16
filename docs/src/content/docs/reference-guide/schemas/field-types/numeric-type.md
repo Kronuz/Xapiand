@@ -84,14 +84,17 @@ pm.test("1.5 is no integer", function() {
 ```
 e2e:end -->
 
-The IDs of this index are integers, set by its first document, so an ID is held to the same rule:
+The IDs of this index are integers, set by its first document, so an ID is held to the same rule. Here a restore
+names each document's `_id` in its body; the second one is refused and the others are written:
 
 ```rest
-PUT /exactvalues/1.5
+RESTORE /exactvalues/
 
-{
-  "count": 1
-}
+[
+  { "_id": 4, "count": 4 },
+  { "_id": 1.5, "count": 1 },
+  { "_id": "5", "count": 5 }
+]
 ```
 
 <!-- e2e:begin
@@ -101,11 +104,14 @@ description: Exact values: a fraction as an integer ID
 
 ```js
 pm.test("1.5 is no integer ID", function() {
-  pm.response.to.have.status(400);
-  var message = pm.response.json().message;
-  pm.expect(message).to.include("_id");
-  pm.expect(message).to.include("1.5");
-  pm.expect(message).to.include("integer");
+  pm.response.to.be.success;
+  var items = pm.response.json().items;
+  pm.expect(items.length).to.equal(3);
+  pm.expect(items[1].status).to.equal(400);
+  pm.expect(items[1].message).to.include("_id");
+  pm.expect(items[1].message).to.include("1.5");
+  pm.expect(items[1].message).to.include("integer");
+  pm.expect(pm.response.json().indexed).to.equal(2);
 });
 ```
 e2e:end -->

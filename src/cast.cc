@@ -196,8 +196,11 @@ Cast::positive(const MsgPack& obj)
 	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64();
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			THROW(CastError, "Value {} is out of range for positive", obj.to_string());
+		case MsgPack::Type::NEGATIVE_INTEGER:  // an int64, of either sign
+			if (obj.i64() < 0) {
+				THROW(CastError, "Value {} is out of range for positive", obj.to_string());
+			}
+			return obj.i64();
 		case MsgPack::Type::FLOAT: {
 			const double d = std::trunc(obj.f64());  // a cast truncates the fraction; it never wraps
 			if (!(d >= 0 && d < 0x1p64)) {
