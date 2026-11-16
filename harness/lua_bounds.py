@@ -381,7 +381,9 @@ def main():
 
         def lib_worker(i):
             t0 = time.time()
-            lib_statuses[i] = request(args.port, "PUT", f"/lua_lib{i}/doc?commit", script_doc(LIB_LOOP, x=1), timeout=120)[0]
+            lib_statuses[i], body = request(args.port, "PUT", f"/lua_lib{i}/doc?commit", script_doc(LIB_LOOP, x=1), timeout=120)
+            if not 200 <= lib_statuses[i] < 300:
+                print(f"library-call loop {i} answered {lib_statuses[i]}: {str(body)[:300]}")
             lib_timings[i] = time.time() - t0
 
         def lib_during():

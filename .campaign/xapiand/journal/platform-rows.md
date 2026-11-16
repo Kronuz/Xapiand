@@ -9,17 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Run 4 (arm64 43834602759, FreeBSD 43834602347). Only t1_census (expected-fail until the repin, P1) and t10_lua fail on arm64; FreeBSD passes 11 of 14 rows (census now works via procstat and passes; t3, gate_tools, x6, t7, t8 pass).
+Run 5 (arm64 43840819547, FreeBSD 43840819520). arm64: only t1_census fails (expected until the repin, P1); all 13 other rows pass.
 
-arm64 t10_lua (Release): "the foreign-script node did not come up" again after the sleep fix (2nd run in a row). HARNESS: lua_bounds.py started that node on port+1, and the flood phases just before it leave client sockets across the ephemeral range, so port+1 can be taken. It now takes a fresh free port. Third look at this row: the readiness loop was the first guess and wrong; the port was the cause.
+PRODUCT FINDING P2 (FreeBSD, named): a UBSan abort kills the ASan node at its first GET /:metrics. The node log ends with `.deps/system-src/memory_stats.cc:245:37: runtime error: signed integer overflow: 9009393984544989 * 4096 cannot be represented in type 'int64_t'` and then its SUMMARY. The source (Kronuz/system at 20ffc71647, get_total_virtual_memory, FreeBSD branch) reads `vm.stats.vm.v_page_count`, a 32-bit u_int, into an uninitialized `int64_t total_pages` (the sysctl writes 4 bytes, the other 4 are garbage), then multiplies by getpagesize(). Fix (library, for the lead): read a u_int, or zero-initialize total_pages, then widen. This is the cause of t2_e2e_asan's 5 "HTTP None" assertions: /:metrics comes late in the docs collection, next to the WAL pages, so those requests find the node dead (the walapi PUT and WAL requests are collateral, not separate bugs), and of t10_lua_asan's RemoteDisconnected in lag_buckets (also GET /:metrics). Evidence: run 43840819520 job log, node log tail. The Release build does not trap, so t10_lua does not share it: its 2 of 4 library-call loops answering 400 (run 5: [400, 204, 400, 204]) stay UNEXPLAINED; lua_bounds.py now prints each non-2xx body, read it from the next FreeBSD run.
 
-PRODUCT FINDING P2 (FreeBSD only, suspected): valid requests are closed without a response.
-- t2_e2e_asan: 5 of 761 assertions fail, all "HTTP None": GET /:metrics, PUT /walapi/, PUT /walapi/doc/1, WAL /walapi/, WAL /walapi-five/. The node survives (later requests answer).
-- t10_lua_asan: `GET /:metrics` raises RemoteDisconnected ("Remote end closed connection without response") in lag_buckets.
-- t10_lua (Release): 2 of 4 library-call loops answer 400 not 204 ([400, 204, 204, 400]); related or a Lua library difference on FreeBSD, unconfirmed.
-Evidence: run 43834602347 job log (assert block and tracebacks). Not harness: the same rows pass on arm64 Linux. The node's own log was not printed; the job now prints xe2e_node.log's tail. The cause is for the lead (src/) once that log shows it.
-
-Pushed; re-runs FreeBSD 43840819520, arm64 43840819547.
+FreeBSD in run 5: 11 of 14 rows pass; the failing rows are t2_e2e_asan and t10_lua_asan (P2) and t10_lua (unexplained).
 
 ## Next
 
