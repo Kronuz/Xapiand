@@ -93,7 +93,7 @@ static void test_id_accuracy_prefix() {
 	}
 	engine::Document doc;
 	GenerateTerms::integer(doc, accuracy, acc_prefix, 1234);
-	const auto stored = doc.serialise();
+	const auto stored = doc.serialize();
 	CHECK(stored.find(std::string(DOCUMENT_ID_ACCURACY_TERM_PREFIX) + get_prefix(100)) != std::string::npos);
 	CHECK(stored.find(std::string(DOCUMENT_ID_TERM_PREFIX) + get_prefix(100)) == std::string::npos);
 	CHECK_FALSE(GenerateTerms::numeric(int64_t(1200), int64_t(1300), accuracy, acc_prefix).empty());
@@ -180,7 +180,11 @@ static void test_datetime_range_finds_every_value_in_range() {
 	for (int year : { 1899, 1900, 1969, 1970, 1971, 1999, 2000, 2001, 2019, 2020, 2037, 2038, 2039, 2100, 2300 }) {
 		for (auto [mon, day, hour, min, sec] : std::vector<std::array<int, 5>>{ {1, 1, 0, 0, 0}, {1, 1, 0, 0, 1}, {2, 28, 23, 59, 59}, {3, 1, 0, 0, 0}, {6, 15, 12, 34, 56}, {12, 31, 23, 59, 59} }) {
 			Datetime::tm_t tm(year, mon, day, hour, min, sec);
-			stamps.push_back(static_cast<double>(Datetime::timegm(tm)));
+			const auto whole = static_cast<double>(Datetime::timegm(tm));
+			// A fraction below a boundary, before 1970 too, is in the earlier second (its floor).
+			for (double fraction : { 0.0, -0.5, -0.000001 }) {
+				stamps.push_back(whole + fraction);
+			}
 		}
 	}
 	std::sort(stamps.begin(), stamps.end());
@@ -198,7 +202,7 @@ static void test_datetime_range_finds_every_value_in_range() {
 		auto& shard = *opened.shard;
 		for (auto t : stamps) {
 			engine::Document doc;
-			GenerateTerms::datetime(doc, accuracy, prefix, Datetime::to_tm_t(static_cast<std::time_t>(t)));
+			GenerateTerms::datetime(doc, accuracy, prefix, Datetime::to_tm_t(t));
 			doc.set_key("K" + std::to_string(++keys));
 		engine::sync_wait(shard.add(doc, {}));
 		}

@@ -26,21 +26,21 @@
 #include <string>                                 // for std::string
 #include <string_view>                            // for std::string_view
 
-#include "exception_engine.h"                     // for SerialisationError
-#include "length.h"                               // for serialise_string
-#include "serialise.h"
+#include "exception_engine.h"                     // for SerializationError
+#include "length.h"                               // for serialize_string
+#include "serialize.h"
 
 
-constexpr char SERIALISED_LIST_MAGIC  = '\0';
+constexpr char SERIALIZED_LIST_MAGIC  = '\0';
 
 
 template <class Impl, class T>
-class SerialiseList {
+class SerializeList {
 	template <typename Value>
 	class Iterator : public std::iterator<std::forward_iterator_tag, Value> {
-		using SerialiseImpl = SerialiseList<Impl, T>;
+		using SerializeImpl = SerializeList<Impl, T>;
 
-		friend SerialiseImpl;
+		friend SerializeImpl;
 
 		const Impl* owner;
 		const char* pos;
@@ -52,21 +52,21 @@ class SerialiseList {
 			  pos(nullptr),
 			  length(0) { }
 
-		Iterator(const SerialiseImpl* owner_, const char* ptr_)
+		Iterator(const SerializeImpl* owner_, const char* ptr_)
 			: owner(static_cast<const Impl*>(owner_)),
 			  pos(ptr_),
 			  length(0)
 		{
 			if (pos != owner->_end) {
 				if (owner->single()) {
-					length = owner->_serialised.size();
+					length = owner->_serialized.size();
 				} else {
 					length = owner->get_length(&pos);
 				}
 			}
 		}
 
-		Iterator(const SerialiseImpl* owner_, const char* pos_, size_t length_)
+		Iterator(const SerializeImpl* owner_, const char* pos_, size_t length_)
 			: owner(static_cast<const Impl*>(owner_)),
 			  pos(pos_),
 			  length(length_) { }
@@ -182,18 +182,18 @@ private:
 	}
 
 protected:
-	std::string_view _serialised;
+	std::string_view _serialized;
 	const char *_ptr;
 	const char *_end;
 	bool _single;
 
 	void init() {
-		_ptr = _serialised.data();
-		_end = _ptr + _serialised.size();
+		_ptr = _serialized.data();
+		_end = _ptr + _serialized.size();
 		_single = true;
 
-		if (!_serialised.empty()) {
-			if (*_ptr == SERIALISED_LIST_MAGIC) {
+		if (!_serialized.empty()) {
+			if (*_ptr == SERIALIZED_LIST_MAGIC) {
 				++_ptr;
 				_single = false;
 			}
@@ -204,37 +204,37 @@ protected:
 		_i_cend = const_iterator(_i_end.owner, _i_end.pos, _i_end.length);
 	}
 
-	SerialiseList(std::string_view serialised)
-		: _serialised(serialised)
+	SerializeList(std::string_view serialized)
+		: _serialized(serialized)
 	{
 		init();
 	}
 
-	SerialiseList(SerialiseList&& o) noexcept
-		: _serialised(std::move(o._serialised))
+	SerializeList(SerializeList&& o) noexcept
+		: _serialized(std::move(o._serialized))
 	{
 		init();
 	}
 
-	SerialiseList(const SerialiseList& o) noexcept
-		: _serialised(o._serialised)
+	SerializeList(const SerializeList& o) noexcept
+		: _serialized(o._serialized)
 	{
 		init();
 	}
 
-	SerialiseList& operator=(SerialiseList&& o) noexcept {
-		_serialised = std::move(o._serialised);
+	SerializeList& operator=(SerializeList&& o) noexcept {
+		_serialized = std::move(o._serialized);
 		init();
 	}
 
-	SerialiseList& operator=(const SerialiseList& o) noexcept {
-		_serialised = o._serialised;
+	SerializeList& operator=(const SerializeList& o) noexcept {
+		_serialized = o._serialized;
 		init();
 	}
 
 public:
 	bool empty() const noexcept {
-		return _serialised.empty();
+		return _serialized.empty();
 	}
 
 	bool single() const noexcept {
@@ -299,46 +299,46 @@ public:
 };
 
 
-class StringList : public SerialiseList<StringList, std::string_view> {
+class StringList : public SerializeList<StringList, std::string_view> {
 	size_t get_length(const char** pos) const {
-		return unserialise_length_and_check(pos, _end);
+		return unserialize_length_and_check(pos, _end);
 	}
 
 	std::string_view get_value(const char* pos, size_t length) const {
 		return std::string_view(pos, length);
 	}
 
-	friend class SerialiseList<StringList, std::string_view>;
+	friend class SerializeList<StringList, std::string_view>;
 
 public:
 	template <typename S>
-	StringList(S&& serialised)
-		: SerialiseList<StringList, std::string_view>(std::forward<S>(serialised)) { }
+	StringList(S&& serialized)
+		: SerializeList<StringList, std::string_view>(std::forward<S>(serialized)) { }
 
 	template <typename InputIt>
-	static std::string serialise(InputIt first, InputIt last) {
+	static std::string serialize(InputIt first, InputIt last) {
 		const auto size = std::distance(first, last);
 		if (size == 1) {
 			return *first;
 		} else if (size > 1) {
-			std::string serialised(1, SERIALISED_LIST_MAGIC);
+			std::string serialized(1, SERIALIZED_LIST_MAGIC);
 			for ( ; first != last; ++first) {
-				serialised.append(serialise_string(*first));
+				serialized.append(serialize_string(*first));
 			}
-			return serialised;
+			return serialized;
 		}
 
 		return std::string();
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const char** ptr, const char* end, OutputIt d_first) {
+	static void unserialize(const char** ptr, const char* end, OutputIt d_first) {
 		const char* pos = *ptr;
 		if (pos != end) {
-			if (*pos == SERIALISED_LIST_MAGIC) {
+			if (*pos == SERIALIZED_LIST_MAGIC) {
 				++pos;
 				for ( ; pos != end; ++d_first) {
-					const auto length = unserialise_length_and_check(&pos, end);
+					const auto length = unserialize_length_and_check(&pos, end);
 					*d_first = typename OutputIt::container_type::value_type(std::string_view(pos, length));
 					pos += length;
 				}
@@ -349,157 +349,157 @@ public:
 	}
 
 	template <typename OutputIt>
-	static void unserialise(std::string_view serialised, OutputIt d_first) {
-		auto ptr = serialised.data();
-		auto end = ptr + serialised.size();
-		unserialise(&ptr, end, d_first);
+	static void unserialize(std::string_view serialized, OutputIt d_first) {
+		auto ptr = serialized.data();
+		auto end = ptr + serialized.size();
+		unserialize(&ptr, end, d_first);
 	}
 };
 
 
-class CartesianList : public SerialiseList<CartesianList, Cartesian> {
+class CartesianList : public SerializeList<CartesianList, Cartesian> {
 	size_t get_length(const char**) const {
-		return SERIALISED_LENGTH_CARTESIAN;
+		return SERIALIZED_LENGTH_CARTESIAN;
 	}
 
 	Cartesian get_value(const char* pos, size_t length) const {
-		return Unserialise::cartesian(std::string_view(pos, length));
+		return Unserialize::cartesian(std::string_view(pos, length));
 	}
 
-	friend class SerialiseList<CartesianList, Cartesian>;
+	friend class SerializeList<CartesianList, Cartesian>;
 
 public:
 	template <typename S>
-	CartesianList(S&& serialised)
-		: SerialiseList<CartesianList, Cartesian>(std::forward<S>(serialised))
+	CartesianList(S&& serialized)
+		: SerializeList<CartesianList, Cartesian>(std::forward<S>(serialized))
 	{
-		if (((_end - _ptr) % SERIALISED_LENGTH_CARTESIAN) != 0) {
-			THROW(SerialisationError, "Bad encoded length: insufficient data");
+		if (((_end - _ptr) % SERIALIZED_LENGTH_CARTESIAN) != 0) {
+			THROW(SerializationError, "Bad encoded length: insufficient data");
 		}
 	}
 
 	size_t size() const noexcept {
-		return _serialised.size() / SERIALISED_LENGTH_CARTESIAN;
+		return _serialized.size() / SERIALIZED_LENGTH_CARTESIAN;
 	}
 
 	template <typename InputIt>
-	static std::string serialise(InputIt first, InputIt last) {
+	static std::string serialize(InputIt first, InputIt last) {
 		const auto size = std::distance(first, last);
 		if (size == 1) {
-			return Serialise::cartesian(*first);
+			return Serialize::cartesian(*first);
 		} else if (size > 1) {
-			std::string serialised;
-			serialised.reserve(SERIALISED_LENGTH_CARTESIAN * size + 1);
-			serialised.push_back(SERIALISED_LIST_MAGIC);
+			std::string serialized;
+			serialized.reserve(SERIALIZED_LENGTH_CARTESIAN * size + 1);
+			serialized.push_back(SERIALIZED_LIST_MAGIC);
 			for ( ; first != last; ++first) {
-				serialised.append(Serialise::cartesian(*first));
+				serialized.append(Serialize::cartesian(*first));
 			}
-			return serialised;
+			return serialized;
 		}
 
 		return std::string();
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const char** ptr, const char* end, OutputIt d_first) {
+	static void unserialize(const char** ptr, const char* end, OutputIt d_first) {
 		const char* pos = *ptr;
 		if (pos != end) {
-			if (*pos == SERIALISED_LIST_MAGIC) {
+			if (*pos == SERIALIZED_LIST_MAGIC) {
 				++pos;
-				if ((end - pos) % SERIALISED_LENGTH_CARTESIAN == 0) {
+				if ((end - pos) % SERIALIZED_LENGTH_CARTESIAN == 0) {
 					for ( ; pos != end; ++d_first) {
-						*d_first = Unserialise::cartesian(std::string_view(pos, SERIALISED_LENGTH_CARTESIAN));
-						pos += SERIALISED_LENGTH_CARTESIAN;
+						*d_first = Unserialize::cartesian(std::string_view(pos, SERIALIZED_LENGTH_CARTESIAN));
+						pos += SERIALIZED_LENGTH_CARTESIAN;
 					}
 				} else {
-					THROW(SerialisationError, "Bad encoded length: insufficient data");
+					THROW(SerializationError, "Bad encoded length: insufficient data");
 				}
-			} else if ((end - pos) == SERIALISED_LENGTH_CARTESIAN) {
-				*d_first = Unserialise::cartesian(std::string_view(pos, SERIALISED_LENGTH_CARTESIAN));
+			} else if ((end - pos) == SERIALIZED_LENGTH_CARTESIAN) {
+				*d_first = Unserialize::cartesian(std::string_view(pos, SERIALIZED_LENGTH_CARTESIAN));
 			} else {
-				THROW(SerialisationError, "Bad encoded length: insufficient data");
+				THROW(SerializationError, "Bad encoded length: insufficient data");
 			}
 		}
 	}
 
 	template <typename OutputIt>
-	static void unserialise(std::string_view serialised, OutputIt d_first) {
-		auto ptr = serialised.data();
-		auto end = ptr + serialised.size();
-		unserialise(&ptr, end, d_first);
+	static void unserialize(std::string_view serialized, OutputIt d_first) {
+		auto ptr = serialized.data();
+		auto end = ptr + serialized.size();
+		unserialize(&ptr, end, d_first);
 	}
 };
 
 
-class RangeList : public SerialiseList<RangeList, range_t> {
+class RangeList : public SerializeList<RangeList, range_t> {
 	size_t get_length(const char**) const {
-		return SERIALISED_LENGTH_RANGE;
+		return SERIALIZED_LENGTH_RANGE;
 	}
 
 	range_t get_value(const char* pos, size_t length) const {
-		return Unserialise::range(std::string_view(pos, length));
+		return Unserialize::range(std::string_view(pos, length));
 	}
 
-	friend class SerialiseList<RangeList, range_t>;
+	friend class SerializeList<RangeList, range_t>;
 
 public:
 	template <typename S>
-	RangeList(S&& serialised)
-		: SerialiseList<RangeList, range_t>(std::forward<S>(serialised))
+	RangeList(S&& serialized)
+		: SerializeList<RangeList, range_t>(std::forward<S>(serialized))
 	{
-		if (((_end - _ptr) % SERIALISED_LENGTH_RANGE) != 0) {
-			THROW(SerialisationError, "Bad encoded length: insufficient data");
+		if (((_end - _ptr) % SERIALIZED_LENGTH_RANGE) != 0) {
+			THROW(SerializationError, "Bad encoded length: insufficient data");
 		}
 	}
 
 	size_t size() const noexcept {
-		return _serialised.size() / SERIALISED_LENGTH_RANGE;
+		return _serialized.size() / SERIALIZED_LENGTH_RANGE;
 	}
 
 	template <typename InputIt>
-	static std::string serialise(InputIt first, InputIt last) {
+	static std::string serialize(InputIt first, InputIt last) {
 		const auto size = std::distance(first, last);
 		if (size == 1) {
-			return Serialise::range(*first);
+			return Serialize::range(*first);
 		} else if (size > 1) {
-			std::string serialised;
-			serialised.reserve(SERIALISED_LENGTH_RANGE * size + 1);
-			serialised.push_back(SERIALISED_LIST_MAGIC);
+			std::string serialized;
+			serialized.reserve(SERIALIZED_LENGTH_RANGE * size + 1);
+			serialized.push_back(SERIALIZED_LIST_MAGIC);
 			for ( ; first != last; ++first) {
-				serialised.append(Serialise::range(*first));
+				serialized.append(Serialize::range(*first));
 			}
-			return serialised;
+			return serialized;
 		}
 
 		return std::string();
 	}
 
 	template <typename OutputIt>
-	static void unserialise(const char** ptr, const char* end, OutputIt d_first) {
+	static void unserialize(const char** ptr, const char* end, OutputIt d_first) {
 		const char* pos = *ptr;
 		if (pos != end) {
-			if (*pos == SERIALISED_LIST_MAGIC) {
+			if (*pos == SERIALIZED_LIST_MAGIC) {
 				++pos;
-				if ((end - pos) % SERIALISED_LENGTH_RANGE == 0) {
+				if ((end - pos) % SERIALIZED_LENGTH_RANGE == 0) {
 					for ( ; pos != end; ++d_first) {
-						*d_first = Unserialise::range(std::string_view(pos, SERIALISED_LENGTH_RANGE));
-						pos += SERIALISED_LENGTH_RANGE;
+						*d_first = Unserialize::range(std::string_view(pos, SERIALIZED_LENGTH_RANGE));
+						pos += SERIALIZED_LENGTH_RANGE;
 					}
 				} else {
-					THROW(SerialisationError, "Bad encoded length: insufficient data");
+					THROW(SerializationError, "Bad encoded length: insufficient data");
 				}
-			} else if ((end - pos) == SERIALISED_LENGTH_RANGE) {
-				*d_first = Unserialise::range(std::string_view(pos, SERIALISED_LENGTH_RANGE));
+			} else if ((end - pos) == SERIALIZED_LENGTH_RANGE) {
+				*d_first = Unserialize::range(std::string_view(pos, SERIALIZED_LENGTH_RANGE));
 			} else {
-				THROW(SerialisationError, "Bad encoded length: insufficient data");
+				THROW(SerializationError, "Bad encoded length: insufficient data");
 			}
 		}
 	}
 
 	template <typename OutputIt>
-	static void unserialise(std::string_view serialised, OutputIt d_first) {
-		auto ptr = serialised.data();
-		auto end = ptr + serialised.size();
-		unserialise(&ptr, end, d_first);
+	static void unserialize(std::string_view serialized, OutputIt d_first) {
+		auto ptr = serialized.data();
+		auto end = ptr + serialized.size();
+		unserialize(&ptr, end, d_first);
 	}
 };

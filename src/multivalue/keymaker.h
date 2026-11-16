@@ -39,17 +39,19 @@
 #include "hashes.hh"                              // for fnv1ah32
 #include "phf.hh"                                 // for phf
 #include "phonetic.h"                             // for SoundexEnglish, SoundexFrench...
-#include "serialise_list.h"                       // for StringList, ...
+#include "serialize_list.h"                       // for StringList, ...
+#include "sortable.hh"                             // for sortable::max_finite, sortable::min_finite
 #include "strict_stox.hh"                         // for strict_stoull
-#include "string_metric.h"                        // for Jaccard, Jaro, ..., Serialisable* wrappers, DoubleMetaphone
+#include "string_metric.h"                        // for Jaccard, Jaro, ..., Serializable* wrappers, DoubleMetaphone
 
 
-const std::string MAX_CMPVALUE(Serialise::floating(DBL_MAX));
-const std::string MIN_CMPVALUE(Serialise::floating(-DBL_MAX));
+// A missing value's key: at DBL_MAX (or -DBL_MAX), below +inf (or above -inf).
+const std::string MAX_CMPVALUE(sortable::max_finite);
+const std::string MIN_CMPVALUE(sortable::min_finite);
 
-const std::string SERIALISED_ZERO(Serialise::floating(0));
-const std::string SERIALISED_ONE(Serialise::floating(1));
-const std::string SERIALISED_M_PI(Serialise::floating(M_PI));
+const std::string SERIALIZED_ZERO(Serialize::floating(0));
+const std::string SERIALIZED_ONE(Serialize::floating(1));
+const std::string SERIALIZED_M_PI(Serialize::floating(M_PI));
 
 const std::string MAX_STR_CMPVALUE("\xff");
 const std::string MIN_STR_CMPVALUE("\x00");
@@ -78,8 +80,8 @@ public:
 
 	virtual std::string_view name() const noexcept = 0;
 	virtual std::unique_ptr<BaseKey> clone() const = 0;
-	virtual std::string serialise() const;
-	virtual void unserialise(const char** p, const char* p_end);
+	virtual std::string serialize() const;
+	virtual void unserialize(const char** p, const char* p_end);
 
 	bool get_reverse() const noexcept {
 		return _reverse;
@@ -90,24 +92,24 @@ public:
 };
 
 
-// Class for creating key from serialised value.
-class SerialiseKey : public BaseKey {
+// Class for creating key from serialized value.
+class SerializeKey : public BaseKey {
 public:
-	SerialiseKey() = default;
+	SerializeKey() = default;
 
-	SerialiseKey(engine::valueno slot, bool reverse)
+	SerializeKey(engine::valueno slot, bool reverse)
 		: BaseKey(slot, reverse) { }
 
 	std::string_view name() const noexcept override {
-		return "SerialiseKey";
+		return "SerializeKey";
 	}
 
 	std::unique_ptr<BaseKey> clone() const override {
-		return std::make_unique<SerialiseKey>(*this);
+		return std::make_unique<SerializeKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -125,7 +127,7 @@ public:
 	FloatKey(engine::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
-		  _ser_ref_val(Serialise::floating(_ref_val)) { }
+		  _ser_ref_val(Serialize::floating(_ref_val)) { }
 
 	std::string_view name() const noexcept override {
 		return "FloatKey";
@@ -135,8 +137,8 @@ public:
 		return std::make_unique<FloatKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -154,7 +156,7 @@ public:
 	IntegerKey(engine::valueno slot, bool reverse, int64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
-		  _ser_ref_val(Serialise::integer(_ref_val)) { }
+		  _ser_ref_val(Serialize::integer(_ref_val)) { }
 
 	std::string_view name() const noexcept override {
 		return "IntegerKey";
@@ -164,8 +166,8 @@ public:
 		return std::make_unique<IntegerKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -183,7 +185,7 @@ public:
 	PositiveKey(engine::valueno slot, bool reverse, uint64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
-		  _ser_ref_val(Serialise::positive(_ref_val)) { }
+		  _ser_ref_val(Serialize::positive(_ref_val)) { }
 
 	std::string_view name() const noexcept override {
 		return "PositiveKey";
@@ -193,8 +195,8 @@ public:
 		return std::make_unique<PositiveKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -212,7 +214,7 @@ public:
 	DateKey(engine::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
-		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
+		  _ser_ref_val(Serialize::timestamp(_ref_val)) { }
 
 	std::string_view name() const noexcept override {
 		return "DateKey";
@@ -222,8 +224,8 @@ public:
 		return std::make_unique<DateKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -239,7 +241,7 @@ public:
 
 	BoolKey(engine::valueno slot, bool reverse, bool val)
 		: BaseKey(slot, reverse),
-		  _ser_ref_val(Serialise::boolean(val)) { }
+		  _ser_ref_val(Serialize::boolean(val)) { }
 
 	std::string_view name() const noexcept override {
 		return "BoolKey";
@@ -249,8 +251,8 @@ public:
 		return std::make_unique<BoolKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -277,12 +279,12 @@ public:
 		return std::make_unique<StringKey<StringMetric>>(*this);
 	}
 
-	std::string serialise() const override {
-		return _metric.serialise();
+	std::string serialize() const override {
+		return _metric.serialize();
 	}
 
-	void unserialise(const char** p, const char* p_end) override {
-		_metric.unserialise(p, p_end);
+	void unserialize(const char** p, const char* p_end) override {
+		_metric.unserialize(p, p_end);
 	}
 
 	std::string findSmallest(const engine::DocView& doc) const override {
@@ -298,13 +300,13 @@ public:
 			double distance = _metric.distance(value);
 			if (distance < min_distance) {
 				if (distance < DBL_TOLERANCE) {
-					return SERIALISED_ZERO;
+					return SERIALIZED_ZERO;
 				}
 				min_distance = distance;
 			}
 		}
 
-		return Serialise::floating(min_distance);
+		return Serialize::floating(min_distance);
 	}
 
 	std::string findBiggest(const engine::DocView& doc) const override {
@@ -323,7 +325,7 @@ public:
 			}
 		}
 
-		return Serialise::floating(max_distance);
+		return Serialize::floating(max_distance);
 	}
 };
 
@@ -348,8 +350,8 @@ public:
 		return std::make_unique<GeoKey>(*this);
 	}
 
-	std::string serialise() const override;
-	void unserialise(const char** p, const char* p_end) override;
+	std::string serialize() const override;
+	void unserialize(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const engine::DocView& doc) const override;
 	std::string findBiggest(const engine::DocView& doc) const override;
@@ -371,14 +373,14 @@ class Multi_MultiValueKeyMaker : public engine::KeyMaker {
 public:
 	std::unique_ptr<engine::KeyMaker> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view serialised) const override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view serialized) const override;
 
 	std::string key(const engine::DocView& doc) const override;
 
 	template <typename... Args>
-	void add_serialise(Args... args) {
-		slots.push_back(std::make_unique<SerialiseKey>(std::forward<Args>(args)...));
+	void add_serialize(Args... args) {
+		slots.push_back(std::make_unique<SerializeKey>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
@@ -413,62 +415,62 @@ public:
 
 	template <typename... Args>
 	void add_string_levenshtein(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableLevenshtein>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableLevenshtein>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaro(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Jaro>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableMetric<Jaro>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaro_winkler(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableJaroWinkler>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableJaroWinkler>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_sorensen_dice(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableMetric<Sorensen_Dice>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaccard(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Jaccard>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableMetric<Jaccard>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_lcs(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableMetric<LCSubstr>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_lcsq(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializableMetric<LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_en(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializablePhoneticMetric<SoundexEnglish, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_fr(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializablePhoneticMetric<SoundexFrench, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_de(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializablePhoneticMetric<SoundexGerman, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_es(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializablePhoneticMetric<SoundexSpanish, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_double_metaphone(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerializablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>

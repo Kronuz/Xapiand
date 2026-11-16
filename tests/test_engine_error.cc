@@ -165,7 +165,7 @@ void test_http_answers() {
 	// Not engine errors.
 	CHECK_EQ(answer([] { THROW(ClientError, "client"); }).first, static_cast<int>(HTTP_STATUS_BAD_REQUEST));
 	CHECK_EQ(answer([] { THROW(MissingTypeError, "missing type"); }).first, static_cast<int>(HTTP_STATUS_PRECONDITION_FAILED));
-	CHECK_EQ(answer([] { THROW(SerialisationError, "bad bytes"); }).first, static_cast<int>(HTTP_STATUS_BAD_REQUEST));
+	CHECK_EQ(answer([] { THROW(SerializationError, "bad bytes"); }).first, static_cast<int>(HTTP_STATUS_BAD_REQUEST));
 	CHECK_EQ(answer([] { throw std::runtime_error("rt"); }).first, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 	CHECK_EQ(answer([] { throw 3; }).first, static_cast<int>(HTTP_STATUS_INTERNAL_SERVER_ERROR));
 }
@@ -255,28 +255,28 @@ void test_a_damaged_segment_answers_corrupt_until_healed() {
 	fs::remove_all(path);
 }
 
-// The doubles that metric_serialise.h and the callbacks put on the wire: eight bytes, the IEEE bits
+// The doubles that metric_serialize.h and the callbacks put on the wire: eight bytes, the IEEE bits
 // least significant byte first.
 void test_double_bytes() {
-	CHECK_EQ(engine::serialise_double(1.0), std::string("\x00\x00\x00\x00\x00\x00\xf0\x3f", 8));
-	CHECK_EQ(engine::serialise_double(-2.0), std::string("\x00\x00\x00\x00\x00\x00\x00\xc0", 8));
-	CHECK_EQ(engine::serialise_double(0.0), std::string(8, '\0'));
-	CHECK_EQ(engine::serialise_double(-0.0), std::string("\x00\x00\x00\x00\x00\x00\x00\x80", 8));
-	CHECK_EQ(engine::serialise_double(0.1), std::string("\x9a\x99\x99\x99\x99\x99\xb9\x3f", 8));
+	CHECK_EQ(engine::serialize_double(1.0), std::string("\x00\x00\x00\x00\x00\x00\xf0\x3f", 8));
+	CHECK_EQ(engine::serialize_double(-2.0), std::string("\x00\x00\x00\x00\x00\x00\x00\xc0", 8));
+	CHECK_EQ(engine::serialize_double(0.0), std::string(8, '\0'));
+	CHECK_EQ(engine::serialize_double(-0.0), std::string("\x00\x00\x00\x00\x00\x00\x00\x80", 8));
+	CHECK_EQ(engine::serialize_double(0.1), std::string("\x9a\x99\x99\x99\x99\x99\xb9\x3f", 8));
 
 	const std::vector<double> values = {0.0, -0.0, 1.0, -1.0, 0.1, 0.7, 0.25, 1e-300, 1e300, 3.141592653589793,
 		-2.5e-7, 65536.0, 4503599627370496.0, 123456789.123456789, 1.7976931348623157e308, 2.2250738585072014e-308};
 	for (double v : values) {
-		const auto bytes = engine::serialise_double(v);
+		const auto bytes = engine::serialize_double(v);
 		CHECK_EQ(bytes.size(), 8u);
 		const char* p = bytes.data();
-		CHECK_TRUE(engine::unserialise_double(&p, bytes.data() + bytes.size()) == v);
+		CHECK_TRUE(engine::unserialize_double(&p, bytes.data() + bytes.size()) == v);
 		CHECK_TRUE(p == bytes.data() + bytes.size());
 	}
 	bool rejected = false;
 	try {
 		const char* p = "";
-		engine::unserialise_double(&p, p);
+		engine::unserialize_double(&p, p);
 	} catch (const engine::Error& error) {
 		rejected = error.kind == errc::invalid;
 	}

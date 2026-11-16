@@ -70,8 +70,8 @@ public:
 	std::string key(const engine::DocView& doc) const override { return doc.value(slot_); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(slot_); }
 	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return std::to_string(slot_); }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view s) const override { return std::make_unique<SlotKey>(static_cast<engine::valueno>(std::stoul(std::string(s)))); }
+	std::string serialize() const override { return std::to_string(slot_); }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view s) const override { return std::make_unique<SlotKey>(static_cast<engine::valueno>(std::stoul(std::string(s)))); }
 
 private:
 	engine::valueno slot_;
@@ -87,12 +87,12 @@ public:
 	std::string key(const engine::DocView&) const override { throw ClientLike("key"); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<ThrowingKey>(); }
 	std::string name() const override { return "ThrowingKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<ThrowingKey>(); }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view) const override { return std::make_unique<ThrowingKey>(); }
 };
 
 // Counts documents per group (slot 2) and sums the numbers of slot 3, and keeps the documents it saw.
-// What it holds serialises and merges, as an engine that matches shards apart needs.
+// What it holds serializes and merges, as an engine that matches shards apart needs.
 class GroupSpy final : public engine::MatchSpy {
 public:
 	std::map<std::string, std::pair<std::uint64_t, std::uint64_t>> groups;
@@ -113,9 +113,9 @@ public:
 	}
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<GroupSpy>(); }
 	std::string name() const override { return "GroupSpy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<GroupSpy>(); }
-	std::string serialise_results() const override {
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return std::make_unique<GroupSpy>(); }
+	std::string serialize_results() const override {
 		std::ostringstream out;
 		out.precision(17);
 		for (const auto& [group, entry] : groups) {
@@ -127,8 +127,8 @@ public:
 		out << "w " << weights << '\n';
 		return out.str();
 	}
-	void merge_results(std::string_view serialised) override {
-		std::istringstream in{std::string(serialised)};
+	void merge_results(std::string_view serialized) override {
+		std::istringstream in{std::string(serialized)};
 		std::string kind;
 		while (in >> kind) {
 			if (kind == "g") {
@@ -161,8 +161,8 @@ public:
 	double max_weight() const override { return max_; }
 	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<Between>(slot_, low_, high_, max_); }
 	std::string name() const override { return "Between"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view) const override { return clone(); }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view) const override { return clone(); }
 	std::string description() const override { return "Between"; }
 
 private:
@@ -745,9 +745,9 @@ void test_spy() {
 				void see(const engine::DocView& doc, double) override { ids.insert(doc.did()); }
 				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
 				std::string name() const override { return "IdSpy"; }
-				std::string serialise() const override { return ""; }
-				std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return nullptr; }
-				std::string serialise_results() const override { return ""; }
+				std::string serialize() const override { return ""; }
+				std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return nullptr; }
+				std::string serialize_results() const override { return ""; }
 				void merge_results(std::string_view) override { }
 				std::string description() const override { return "IdSpy"; }
 			} from_strata;
@@ -757,17 +757,17 @@ void test_spy() {
 			CHECK_EQ(from_strata.ids.count(60), static_cast<std::size_t>(shard_count));
 			CHECK_EQ(from_strata.ids.count(61), std::size_t(0));
 		}
-		// A spy that asks for the document's serialisation is refused: the strata engine keeps no term lists.
+		// A spy that asks for the document's serialization is refused: the strata engine keeps no term lists.
 		{
 			struct TermsSpy final : engine::MatchSpy {
 				void see(const engine::DocView& doc, double) override {
-					(void)doc.serialise();
+					(void)doc.serialize();
 				}
 				std::unique_ptr<engine::MatchSpy> clone() const override { return nullptr; }
 				std::string name() const override { return "TermsSpy"; }
-				std::string serialise() const override { return ""; }
-				std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return nullptr; }
-				std::string serialise_results() const override { return ""; }
+				std::string serialize() const override { return ""; }
+				std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return nullptr; }
+				std::string serialize_results() const override { return ""; }
 				void merge_results(std::string_view) override { }
 				std::string description() const override { return "TermsSpy"; }
 			} asking;

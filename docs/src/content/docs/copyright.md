@@ -15,11 +15,6 @@ licenses and copyright notices, are listed in `THIRD-PARTY-NOTICES`. Every
 package installs `LICENSE`, `NOTICE` and `THIRD-PARTY-NOTICES` into
 `share/doc/xapiand`.
 
-:::note
-`src/sortable_serialise.{cc,h}` derive from Xapian and are GPL licensed. They are
-being replaced before release.
-:::
-
 ### Elasticsearch
 
 The Python client in `contrib/python/xapiand-py` is a fork of _elasticsearch-py_,

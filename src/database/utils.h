@@ -31,7 +31,6 @@
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
-#include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
 #include "database/data.h"         // for ct_type_t, Data
 #include "engine/types.h"          // for engine::valueno, engine::rev, engine::doccount
@@ -100,11 +99,6 @@ struct query_field_t {
 };
 
 
-inline std::string get_hashed(std::string_view name) {
-	return sortable_serialise(xxh64::hash(name));
-}
-
-
 inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {
 	auto pos = path.find("/.__");
 	bool sharded = pos != std::string_view::npos;
@@ -117,9 +111,9 @@ std::string field_name(std::string_view field_prefix, char field_type);
 // The flat term for a term under a field: the field's name and the term joined. Only for logs;
 // documents and queries name the field and the term apart.
 std::string flat_term(std::string_view term, std::string_view field_prefix, char field_type);
-// A document's key: the type character of its id and the id's serialised bytes. It is what the
+// A document's key: the type character of its id and the id's serialized bytes. It is what the
 // engine's key field holds (engine::KEY_FIELD) and what replace-by-key, erase and find take.
-std::string document_key(std::string_view serialised_id, char field_type);
+std::string document_key(std::string_view serialized_id, char field_type);
 // The engine field and bytes of a term under a Xapiand field. The id field's terms are the key
 // field's, led by the type character (document_key); any other field's are as given.
 struct FieldTerm {

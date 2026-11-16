@@ -26,70 +26,70 @@
 #include <string>                              // for std::string
 #include <string_view>                         // for std::string_view
 
-#include "length.h"                            // for serialise_bool/string/length, unserialise_*
-#include "engine/codec.h"                      // for engine::serialise_double, unserialise_double
+#include "length.h"                            // for serialize_bool/string/length, unserialize_*
+#include "engine/codec.h"                      // for engine::serialize_double, unserialize_double
 #include "string_metric.h"                     // the library metrics (Levenshtein, Jaro, ..., PhoneticMetric)
 
 // The string-similarity library is the pure algorithms; it drops the
-// serialise()/unserialise() persistence (that pulled length.h + GPL
-// serialise-double). Re-attach it here as thin subclasses that (de)serialise the
+// serialize()/unserialize() persistence (that pulled length.h + GPL
+// serialize-double). Re-attach it here as thin subclasses that (de)serialize the
 // metric's protected state, reproducing the original on-the-wire format exactly.
 // StringKey<...> is instantiated with these wrappers in keymaker.{h,cc}.
 
 // Base state (icase + comparison string): for metrics with no extra params
 // (Jaro, Jaccard, Sorensen_Dice, LCSubstr, LCSubsequence).
 template <typename Metric>
-struct SerialisableMetric : Metric {
+struct SerializableMetric : Metric {
 	using Metric::Metric;
-	std::string serialise() const {
+	std::string serialize() const {
 		std::string s;
-		s += serialise_bool(this->_icase);
-		s += serialise_string(this->_str);
+		s += serialize_bool(this->_icase);
+		s += serialize_string(this->_str);
 		return s;
 	}
-	void unserialise(const char** p, const char* p_end) {
-		this->_icase = unserialise_bool(p, p_end);
-		this->_str = unserialise_string(p, p_end);
+	void unserialize(const char** p, const char* p_end) {
+		this->_icase = unserialize_bool(p, p_end);
+		this->_str = unserialize_string(p, p_end);
 	}
 };
 
-// Levenshtein adds its three costs (serialise_length), matching the original.
-struct SerialisableLevenshtein : Levenshtein {
+// Levenshtein adds its three costs (serialize_length), matching the original.
+struct SerializableLevenshtein : Levenshtein {
 	using Levenshtein::Levenshtein;
-	std::string serialise() const {
+	std::string serialize() const {
 		std::string s;
-		s += serialise_bool(_icase);
-		s += serialise_string(_str);
-		s += serialise_length(_subst_cost);
-		s += serialise_length(_ins_del_cost);
-		s += serialise_length(_maxCost);
+		s += serialize_bool(_icase);
+		s += serialize_string(_str);
+		s += serialize_length(_subst_cost);
+		s += serialize_length(_ins_del_cost);
+		s += serialize_length(_maxCost);
 		return s;
 	}
-	void unserialise(const char** p, const char* p_end) {
-		_icase = unserialise_bool(p, p_end);
-		_str = unserialise_string(p, p_end);
-		_subst_cost = unserialise_length(p, p_end);
-		_ins_del_cost = unserialise_length(p, p_end);
-		_maxCost = unserialise_length(p, p_end);
+	void unserialize(const char** p, const char* p_end) {
+		_icase = unserialize_bool(p, p_end);
+		_str = unserialize_string(p, p_end);
+		_subst_cost = unserialize_length(p, p_end);
+		_ins_del_cost = unserialize_length(p, p_end);
+		_maxCost = unserialize_length(p, p_end);
 	}
 };
 
-// Jaro-Winkler adds its scaling factor and boost threshold (serialise_double).
-struct SerialisableJaroWinkler : Jaro_Winkler {
+// Jaro-Winkler adds its scaling factor and boost threshold (serialize_double).
+struct SerializableJaroWinkler : Jaro_Winkler {
 	using Jaro_Winkler::Jaro_Winkler;
-	std::string serialise() const {
+	std::string serialize() const {
 		std::string s;
-		s += serialise_bool(_icase);
-		s += serialise_string(_str);
-		s += engine::serialise_double(_p);
-		s += engine::serialise_double(_bt);
+		s += serialize_bool(_icase);
+		s += serialize_string(_str);
+		s += engine::serialize_double(_p);
+		s += engine::serialize_double(_bt);
 		return s;
 	}
-	void unserialise(const char** p, const char* p_end) {
-		_icase = unserialise_bool(p, p_end);
-		_str = unserialise_string(p, p_end);
-		_p = engine::unserialise_double(p, p_end);
-		_bt = engine::unserialise_double(p, p_end);
+	void unserialize(const char** p, const char* p_end) {
+		_icase = unserialize_bool(p, p_end);
+		_str = unserialize_string(p, p_end);
+		_p = engine::unserialize_double(p, p_end);
+		_bt = engine::unserialize_double(p, p_end);
 	}
 };
 
@@ -98,18 +98,18 @@ struct SerialisableJaroWinkler : Jaro_Winkler {
 // format wrote it, so write it (from the protected encoder's public encode()
 // getter) and consume it on the way back in.
 template <typename Encoder, typename Metric>
-struct SerialisablePhoneticMetric : PhoneticMetric<Encoder, Metric> {
+struct SerializablePhoneticMetric : PhoneticMetric<Encoder, Metric> {
 	using PhoneticMetric<Encoder, Metric>::PhoneticMetric;
-	std::string serialise() const {
+	std::string serialize() const {
 		std::string s;
-		s += serialise_bool(this->_icase);
-		s += serialise_string(this->_str);
-		s += serialise_string(this->_soundex.encode());
+		s += serialize_bool(this->_icase);
+		s += serialize_string(this->_str);
+		s += serialize_string(this->_soundex.encode());
 		return s;
 	}
-	void unserialise(const char** p, const char* p_end) {
-		this->_icase = unserialise_bool(p, p_end);
-		this->_str = unserialise_string(p, p_end);
-		unserialise_string(p, p_end);  // consume the redundant encoder code
+	void unserialize(const char** p, const char* p_end) {
+		this->_icase = unserialize_bool(p, p_end);
+		this->_str = unserialize_string(p, p_end);
+		unserialize_string(p, p_end);  // consume the redundant encoder code
 	}
 };

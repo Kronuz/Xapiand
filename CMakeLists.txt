@@ -489,8 +489,8 @@ FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-c
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
-FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+# sortable: the exact number codec (docs/design/sortable-encoding.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG 2fad5a281098b55cfac266af92ac13ce665cfa0f)
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
@@ -887,9 +887,9 @@ if(TRACKED_MEM)
 endif()
 
 # soundex: the language Soundex encoders (english/french/german/spanish). The
-# library is the pure algorithm; the serialise()/unserialise() persistence Xapiand
+# library is the pure algorithm; the serialize()/unserialize() persistence Xapiand
 # needs is re-attached Xapiand-side in src/metrics/soundex_metric.h
-# (SerialisableSoundex), so it stays out of the library. Depends on strings
+# (SerializableSoundex), so it stays out of the library. Depends on strings
 # (already on the path); header-only, so it just goes on the include path.
 FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG 3fd0402a6d169f1b9944e3037d5e1d691dc5e85e)
 FetchContent_MakeAvailable(soundex)
@@ -899,9 +899,9 @@ include_directories("${soundex_SOURCE_DIR}")
 # Jaro-Winkler, Jaccard, Sorensen-Dice, LCSubstr, LCSubsequence, and the
 # encoder-agnostic PhoneticMetric). Header-only, headers flat at the repo root.
 # Like soundex, the library is the pure algorithms and deliberately drops the
-# serialise()/unserialise() persistence (that pulled length.h + GPL
-# serialise-double); Xapiand re-attaches it Xapiand-side via the thin Serialisable*
-# subclasses in src/metric_serialise.h, pulled in by src/string_metric.h. Depends
+# serialize()/unserialize() persistence (that pulled length.h + GPL
+# serialize-double); Xapiand re-attaches it Xapiand-side via the thin Serializable*
+# subclasses in src/metric_serialize.h, pulled in by src/string_metric.h. Depends
 # on strings + soundex (both already on the path); just goes on the include path.
 # double-metaphone: the Double Metaphone phonetic encoder, a selectable encoder
 # alongside the soundex family for PhoneticMetric. Its one out-of-line file
@@ -1004,8 +1004,9 @@ include_directories(
 # NaN/Inf -- relaxed JSON the REST API (and every doc example) relies on. De-vendoring
 # to upstream rapidjson dropped that, so bare doc.Parse() started rejecting it. Restore
 # it globally to match the prior behavior. (Caught by the docs E2E suite: dozens of
-# PUT/SEARCH bodies with trailing commas or // comments were 400ing.)
-add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag)")
+# PUT/SEARCH bodies with trailing commas or // comments were 400ing.) Full precision makes a
+# JSON decimal the nearest double, the value strict_stod gives its text (docs/design/sortable-encoding.md D6).
+add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag|kParseFullPrecisionFlag)")
 
 # prometheus-cpp: use upstream core only. Xapiand keeps its application-specific
 # metric catalog in src/metrics.*.
@@ -1897,7 +1898,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
+		foreach (VAR_TEST fieldparser serialize_list endpoint serialize generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialize quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1920,6 +1921,22 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
+
+		# test_serialize reads the pinned sortable's vectors and its exact comparator (design T1).
+		target_include_directories(${PROJECT_NAME}_test_serialize PRIVATE "${sortable_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_test_serialize PRIVATE SORTABLE_TEST_DIR="${sortable_SOURCE_DIR}/test")
+
+		# The pinned sortable codec's order proof, and the Python client's bytes against its C++ (design T1, T3).
+		add_executable(sortable_property "${sortable_SOURCE_DIR}/test/property.cc")
+		target_include_directories(sortable_property PRIVATE "${sortable_SOURCE_DIR}/test")
+		add_test(NAME sortable_property COMMAND sortable_property)
+		add_executable(sortable_cli "${sortable_SOURCE_DIR}/tools/cli.cc")
+		find_package(Python3 3.10 COMPONENTS Interpreter REQUIRED)
+		add_test(NAME sortable_xlang COMMAND ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tests/sortable_xlang.py"
+			"${sortable_SOURCE_DIR}" $<TARGET_FILE:sortable_cli>)
+		add_dependencies(check sortable_property sortable_cli)
 
 		# The Lua limits patch applies to the pinned tarball and yields the tree that was built.
 		if (LUA)
@@ -2040,7 +2057,7 @@ if (BUILD_TESTS)
 		### OLD:
 		foreach (VAR_TEST
 			endpoint fieldparser generate_terms geospatial
-			patcher serialise serialise_list
+			patcher serialize serialize_list
 		)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}

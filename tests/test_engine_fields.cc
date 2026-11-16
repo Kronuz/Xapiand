@@ -116,7 +116,7 @@ static void test_field_refs() {
 }
 
 // A document built through fields holds each (field, term) once, with the sum of the frequencies and the
-// set of the positions given for it, and its serialised form reads back the same.
+// set of the positions given for it, and its serialized form reads back the same.
 static void test_field_terms_match_model() {
 	struct Term {
 		engine::termcount wdf = 0;
@@ -170,10 +170,10 @@ static void test_field_terms_match_model() {
 		check(doc);
 		// The log line names every field, so the empty name does not read back.
 		if (!used_empty_name) {
-			const auto bytes = doc.serialise();
-			const auto back = engine::Document::unserialise(bytes);
+			const auto bytes = doc.serialize();
+			const auto back = engine::Document::unserialize(bytes);
 			check(back);
-			CHECK_EQ(back.serialise(), bytes);
+			CHECK_EQ(back.serialize(), bytes);
 		}
 	}
 }
@@ -314,7 +314,7 @@ static void test_text_fields() {
 								expected.add_term(field, term, wdf);
 							}
 						}, {.wdf_inc = 2, .prefix = prefix, .positions = positions});
-						CHECK_EQ(doc.serialise(), expected.serialise());
+						CHECK_EQ(doc.serialize(), expected.serialize());
 					}
 				}
 			}
@@ -385,8 +385,8 @@ static void test_strata_fields() {
 	CHECK_EQ(native.find_term("title.", "")->wdf, 0u);
 
 	// The log line carries the fields: it reads back to the same document.
-	auto back = engine::Document::unserialise(doc.serialise());
-	CHECK_EQ(back.serialise(), doc.serialise());
+	auto back = engine::Document::unserialize(doc.serialize());
+	CHECK_EQ(back.serialize(), doc.serialize());
 }
 
 // A field with many terms finds each by its hash through the growing table, adds repeats to the same term,
@@ -413,8 +413,8 @@ static void test_strata_many_terms() {
 	}
 	CHECK_EQ(native.find_term("b", "x7")->wdf, 2u * 3 * 8);  // 300 / 40 rounded: ids 7, 47, ... 287 is 8 hits per round
 	CHECK_TRUE(native.find_term("b", "x40") == nullptr);
-	auto back = engine::Document::unserialise(doc.serialise());
-	CHECK_EQ(back.serialise(), doc.serialise());
+	auto back = engine::Document::unserialize(doc.serialize());
+	CHECK_EQ(back.serialize(), doc.serialize());
 	CHECK_EQ(strata_document(back).field("a.S")->term_count, 300u);
 
 	// Two fields given the same id by hand are still two fields.

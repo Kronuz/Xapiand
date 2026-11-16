@@ -121,9 +121,6 @@ def main(deps, out):
     section("y2j (src/y2j)", "MIT", (root / "src/y2j/LICENSE").read_text(encoding="utf-8"))
     section("src/length.{cc,h}", "MIT",
             "Copyright (c) 2006-2012 Olly Betts, who granted the MIT license for these two files.")
-    section("src/sortable_serialise.{cc,h}", "GPL-2.0-or-later (temporary)",
-            "Derived from Xapian (Copyright Olly Betts and others). Being replaced before release;\n"
-            "this notice goes away with it.")
     o.append("Docs and clients: the documentation and the Python client (contrib/python/xapiand-py,\n"
              "not in any package) are heavily based upon Elasticsearch's, licensed under the\n"
              "Apache License, Version 2.0 (Copyright (c) 2017 Elasticsearch).\n")

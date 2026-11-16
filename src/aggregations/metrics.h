@@ -41,8 +41,8 @@
 #include "msgpack.h"                // for MsgPack, object::object
 #include "repr.hh"                  // for repr (was transitive via htm.h -> strings.hh)
 #include "reserved/aggregations.h"  // for RESERVED_AGGS_*
-#include "serialise_list.h"         // for StringList, RangeList
-#include "engine/codec.h"          // for serialise_double, unserialise_double
+#include "serialize_list.h"         // for StringList, RangeList
+#include "engine/codec.h"          // for serialize_double, unserialize_double
 #include "engine/doc_view.h"       // for DocView
 #include "engine/types.h"          // for valueno
 
@@ -156,43 +156,43 @@ public:
 
 	void _aggregate_float(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_float(Unserialise::floating(value), doc);
+			aggregate_float(Unserialize::floating(value), doc);
 		}
 	}
 
 	void _aggregate_integer(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_integer(Unserialise::integer(value), doc);
+			aggregate_integer(Unserialize::integer(value), doc);
 		}
 	}
 
 	void _aggregate_positive(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_positive(Unserialise::positive(value), doc);
+			aggregate_positive(Unserialize::positive(value), doc);
 		}
 	}
 
 	void _aggregate_date(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_date(Unserialise::timestamp(value), doc);
+			aggregate_date(Unserialize::timestamp(value), doc);
 		}
 	}
 
 	void _aggregate_time(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_time(Unserialise::time_d(value), doc);
+			aggregate_time(Unserialize::time_d(value), doc);
 		}
 	}
 
 	void _aggregate_timedelta(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_timedelta(Unserialise::timedelta_d(value), doc);
+			aggregate_timedelta(Unserialize::timedelta_d(value), doc);
 		}
 	}
 
 	void _aggregate_boolean(const engine::DocView& doc)  {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_boolean(Unserialise::boolean(value), doc);
+			aggregate_boolean(Unserialize::boolean(value), doc);
 		}
 	}
 
@@ -212,7 +212,7 @@ public:
 
 	void _aggregate_uuid(const engine::DocView& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_uuid(Unserialise::uuid(value), doc);
+			aggregate_uuid(Unserialize::uuid(value), doc);
 		}
 	}
 
@@ -241,16 +241,16 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += engine::serialise_double(_count);
+		results += engine::serialize_double(_count);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricCount::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		_count += engine::unserialise_double(p, p_end);
+		_count += engine::unserialize_double(p, p_end);
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -329,16 +329,16 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += engine::serialise_double(_sum);
+		results += engine::serialize_double(_sum);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetriSum::merge_results({})", repr(std::string_view(p, p_end - p)));
 
-		_sum += engine::unserialise_double(p, p_end);
+		_sum += engine::unserialize_double(p, p_end);
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -404,11 +404,11 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += MetricSum::serialise_results();
-		results += engine::serialise_double(_count);
-		// results += engine::serialise_double(_avg);  // calculated during update()
+		results += MetricSum::serialize_results();
+		results += engine::serialize_double(_count);
+		// results += engine::serialize_double(_avg);  // calculated during update()
 		return results;
 	}
 
@@ -417,8 +417,8 @@ public:
 
 		MetricSum::merge_results(p, p_end);
 
-		_count += engine::unserialise_double(p, p_end);
-		// _avg = engine::unserialise_double(p, p_end);  // calculated during update()
+		_count += engine::unserialize_double(p, p_end);
+		// _avg = engine::unserialize_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -500,16 +500,16 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += engine::serialise_double(_min);
+		results += engine::serialize_double(_min);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMin::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = engine::unserialise_double(p, p_end);
+		auto value = engine::unserialize_double(p, p_end);
 		if (_min > value) {
 			_min = value;
 		}
@@ -586,16 +586,16 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += engine::serialise_double(_max);
+		results += engine::serialize_double(_max);
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMax::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = engine::unserialise_double(p, p_end);
+		auto value = engine::unserialize_double(p, p_end);
 		if (_max < value) {
 			_max = value;
 		}
@@ -667,11 +667,11 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += MetricAvg::serialise_results();
-		results += engine::serialise_double(_sq_sum);
-		// results += engine::serialise_double(_variance);  // calculated during update()
+		results += MetricAvg::serialize_results();
+		results += engine::serialize_double(_sq_sum);
+		// results += engine::serialize_double(_variance);  // calculated during update()
 		return results;
 	}
 
@@ -680,8 +680,8 @@ public:
 
 		MetricAvg::merge_results(p, p_end);
 
-		_sq_sum += engine::unserialise_double(p, p_end);
-		// _variance = engine::unserialise_double(p, p_end);  // calculated during update()
+		_sq_sum += engine::unserialize_double(p, p_end);
+		// _variance = engine::unserialize_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -782,13 +782,13 @@ public:
 	}
 
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += MetricVariance::serialise_results();
-		results += engine::serialise_double(_sigma);
-		// results += engine::serialise_double(_std);  // calculated during update()
-		// results += engine::serialise_double(_upper);  // calculated during update()
-		// results += engine::serialise_double(_lower);  // calculated during update()
+		results += MetricVariance::serialize_results();
+		results += engine::serialize_double(_sigma);
+		// results += engine::serialize_double(_std);  // calculated during update()
+		// results += engine::serialize_double(_upper);  // calculated during update()
+		// results += engine::serialize_double(_lower);  // calculated during update()
 		return results;
 	}
 
@@ -796,10 +796,10 @@ public:
 		L_CALL("MetricStdDeviation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricVariance::merge_results(p, p_end);
-		_sigma = engine::unserialise_double(p, p_end);
-		// _std = engine::unserialise_double(p, p_end);  // calculated during update()
-		// _upper = engine::unserialise_double(p, p_end);  // calculated during update()
-		// _lower = engine::unserialise_double(p, p_end);  // calculated during update()
+		_sigma = engine::unserialize_double(p, p_end);
+		// _std = engine::unserialize_double(p, p_end);  // calculated during update()
+		// _upper = engine::unserialize_double(p, p_end);  // calculated during update()
+		// _lower = engine::unserialize_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -859,25 +859,25 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += serialise_length(_values.size());
+		results += serialize_length(_values.size());
 		for (auto& value : _values) {
-			results += engine::serialise_double(value);
+			results += engine::serialize_double(value);
 		}
-		// results += engine::serialise_double(_median);  // calculated during update()
+		// results += engine::serialize_double(_median);  // calculated during update()
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMedian::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		size_t size = unserialise_length(p, p_end);
+		size_t size = unserialize_length(p, p_end);
 		while (size--) {
-			auto value = engine::unserialise_double(p, p_end);
+			auto value = engine::unserialize_double(p, p_end);
 			_values.push_back(value);
 		}
-		// _median = engine::unserialise_double(p, p_end);  // calculated during update()
+		// _median = engine::unserialize_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -962,27 +962,27 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += serialise_length(_histogram.size());
+		results += serialize_length(_histogram.size());
 		for (auto& item : _histogram) {
-			results += engine::serialise_double(item.first);
-			results += serialise_length(item.second);
+			results += engine::serialize_double(item.first);
+			results += serialize_length(item.second);
 		}
-		// results += engine::serialise_double(_mode);  // calculated during update()
+		// results += engine::serialize_double(_mode);  // calculated during update()
 		return results;
 	}
 
 	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetricMode::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		size_t size = unserialise_length(p, p_end);
+		size_t size = unserialize_length(p, p_end);
 		while (size--) {
-			auto key = engine::unserialise_double(p, p_end);
-			auto value = unserialise_length(p, p_end);
+			auto key = engine::unserialize_double(p, p_end);
+			auto value = unserialize_length(p, p_end);
 			_histogram[key] += value;
 		}
-		// _mode = engine::unserialise_double(p, p_end);  // calculated during update()
+		// _mode = engine::unserialize_double(p, p_end);  // calculated during update()
 	}
 
 	void merge_results(const BaseAggregation* other) override {
@@ -1061,11 +1061,11 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += MetricAvg::serialise_results();
-		results += _min_metric.serialise_results();
-		results += _max_metric.serialise_results();
+		results += MetricAvg::serialize_results();
+		results += _min_metric.serialize_results();
+		results += _max_metric.serialize_results();
 		return results;
 	}
 
@@ -1166,11 +1166,11 @@ public:
 		};
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
-		results += MetricStdDeviation::serialise_results();
-		results += _min_metric.serialise_results();
-		results += _max_metric.serialise_results();
+		results += MetricStdDeviation::serialize_results();
+		results += _min_metric.serialize_results();
+		results += _max_metric.serialize_results();
 		return results;
 	}
 

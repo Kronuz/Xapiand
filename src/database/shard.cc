@@ -44,14 +44,14 @@
 #include "engine/sync.h"            // for engine::sync_wait
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
-#include "length.h"               // for serialise_string
+#include "length.h"               // for serialize_string
 #include "log.h"                  // for L_CALL
 #include "manager.h"              // for XapiandManager
 #include "msgpack.h"              // for MsgPack
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
-#include "serialise.h"             // for Serialise::floating
+#include "serialize.h"             // for Serialize::floating
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
@@ -89,11 +89,11 @@
 static inline std::optional<engine::rev>
 expected_version(const engine::Document& doc)
 {
-	auto serialised = doc.get_value(DB_SLOT_VERSION);
-	if (serialised.empty()) {
+	auto serialized = doc.get_value(DB_SLOT_VERSION);
+	if (serialized.empty()) {
 		return std::nullopt;
 	}
-	return static_cast<engine::rev>(sortable_unserialise(serialised));
+	return Unserialize::version(serialized);
 }
 
 
@@ -116,7 +116,7 @@ finalise_write(engine::Document& doc, engine::WriteResult& info)
 	if (data_modified || (main_locator != nullptr && main_locator->type == Locator::Type::inplace)) {   // prepare leaves it raw
 		data.set_obj(data_obj);
 		data.flush();
-		doc.set_data(data.serialise());
+		doc.set_data(data.serialize());
 	}
 }
 
@@ -412,11 +412,11 @@ issue_id(engine::Document& doc, std::uint64_t issued)
 		}
 		data.set_obj(obj, false);
 		data.flush();
-		doc.set_data(data.serialise());
+		doc.set_data(data.serialize());
 	}
 	auto key = numeric_key(issued);
 	doc.set_key(key);
-	doc.add_value(DB_SLOT_ID, Serialise::positive(issued));  // the id slot's value, as index_item gives it
+	doc.add_value(DB_SLOT_ID, Serialize::positive(issued));  // the id slot's value, as index_item gives it
 	return key;
 }
 
@@ -879,9 +879,9 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 		const auto shards = doc.get_value(DB_SLOT_SHARDS);
 		const char *p = shards.data();
 		const char *p_end = p + shards.size();
-		const size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-		const size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-		const std::uint64_t floor = p == p_end ? 0 : unserialise_length(&p, p_end);  // the other shards' counters
+		const size_t shard_num = p == p_end ? 0 : unserialize_length(&p, p_end);
+		const size_t n_shards = p == p_end ? 1 : unserialize_length(&p, p_end);
+		const std::uint64_t floor = p == p_end ? 0 : unserialize_length(&p, p_end);  // the other shards' counters
 		issued = next_auto_id(std::max(id_high_, floor), shard_num, n_shards);
 		if (issued == 0) {
 			throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
@@ -1116,7 +1116,7 @@ ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
 							if (writable_storage->closed()) {
 								writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 							}
-							offset = writable_storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
+							offset = writable_storage->write(serialize_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
 							writable_storage->volume = static_cast<uint32_t>(next_volume_.fetch_add(1));
@@ -1133,9 +1133,9 @@ ShardEndpoint::storage_push_blobs_blocking(std::string&& doc_data)
 				}
 			}
 		}
-		pushed.second = std::move(data.serialise());
+		pushed.second = std::move(data.serialize());
 		data.flush();
-		pushed.first = std::move(data.serialise());
+		pushed.first = std::move(data.serialize());
 	}
 	return pushed;
 }
@@ -1254,7 +1254,7 @@ ShardEndpoint::upload_begin(engine::Chores& chores_, std::string ct_type, std::u
 	// The record is the content type, then the blob, as a `stored` record is: the framing is written first and
 	// the blob's bytes follow.
 	static_assert(STORED_UPLOAD_LIMIT + 1024 == DataStorage::stream_max_size, "the upload limit leaves 1 KiB for the framing");
-	std::string head = serialise_string(ct_type) + serialise_length(size);
+	std::string head = serialize_string(ct_type) + serialize_length(size);
 	const std::uint64_t record = head.size() + size;
 	if (record > DataStorage::stream_max_size) {
 		THROW(PayloadTooLarge, "A stored blob has a size limit of {}", strings::from_bytes(DataStorage::stream_max_size - head.size()));
@@ -1309,8 +1309,8 @@ ShardEndpoint::storage_read_blocking(std::string_view key)
 	const char *p = key.data();
 	const char *p_end = p + key.size();
 	++p;  // the lead byte that says it is a locator
-	ssize_t volume = unserialise_length(&p, p_end);
-	size_t offset = unserialise_length(&p, p_end);
+	ssize_t volume = unserialize_length(&p, p_end);
+	size_t offset = unserialize_length(&p, p_end);
 	DataStorage reader(path, this, STORAGE_OPEN);
 	reader.open(strings::format(DATA_STORAGE_PATH "{}", volume));
 	reader.seek(static_cast<uint32_t>(offset));

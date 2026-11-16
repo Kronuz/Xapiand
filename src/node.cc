@@ -29,11 +29,11 @@
 #include <algorithm>            // for std::lower_bound
 
 #include "hashes.hh"            // for fnv1ah32::hash
-#include "length.h"             // for serialise_length, unserialise_length, ser...
+#include "length.h"             // for serialize_length, unserialize_length, ser...
 #include "log.h"                // for L_CALL
 #include "logger.h"             // for Logging::tab_title, Logging::badge
 #include "opts.h"               // for opts::*
-#include "serialise.h"          // for Serialise
+#include "serialize.h"          // for Serialize
 #include "xapiand_strings.hh"           // for strings::format, strings::lower
 
 

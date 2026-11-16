@@ -61,7 +61,7 @@
 #include "hashes.hh"                             // for jump_consistent_hash
 #include "io.hh"                                 // for io::*
 #include "index_resolver_lru.h"                  // for IndexResolverLRU
-#include "length.h"                              // for serialise_length
+#include "length.h"                              // for serialize_length
 #include "log.h"                                 // for L_CALL, L_DEBUG
 #include "lru.h"                                 // for lru::lru
 #include "memory_stats.h"                        // for get_total_ram, get_total_virtual_memor...
@@ -72,8 +72,8 @@
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package
 #include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
-#include "serialise.h"                           // for KEYWORD_STR
-#include "serialise_list.h"                      // for StringList
+#include "serialize.h"                           // for KEYWORD_STR
+#include "serialize_list.h"                      // for StringList
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
 #ifdef XAPIAND_TLS
 #include "http_asio_tls.h"                       // Kronuz/http: the TLS connection factory
@@ -1337,7 +1337,7 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_search_pinned_indexes.Set(static_cast<double>(search_pinned_indexes(false)));
 	metrics.xapiand_search_pinned_indexes_peak.Set(static_cast<double>(search_pinned_indexes(true)));
 
-	return metrics.serialise() + reactor_lag_metrics();
+	return metrics.serialize() + reactor_lag_metrics();
 }
 
 

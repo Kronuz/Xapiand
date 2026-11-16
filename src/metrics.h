@@ -49,10 +49,10 @@ public:
 
 	static const prometheus::Summary::Quantiles& summary_quantiles();
 
-	// Raises `peak` to `now` when that is more (a compare-exchange loop); serialise() publishes it to its gauge.
+	// Raises `peak` to `now` when that is more (a compare-exchange loop); serialize() publishes it to its gauge.
 	static void raise_peak(std::atomic<std::size_t>& peak, std::size_t now) noexcept;
 
-	std::string serialise();
+	std::string serialize();
 
 	prometheus::Family<prometheus::Summary>& xapiand_operations_summary;
 	prometheus::Family<prometheus::Summary>& xapiand_http_requests_summary;

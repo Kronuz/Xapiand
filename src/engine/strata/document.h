@@ -72,7 +72,7 @@ public:
 	std::string get_value(valueno slot) const override;
 	void set_data(std::string data) override;
 	std::string get_data() const override;
-	std::string serialise() const override;
+	std::string serialize() const override;
 #ifdef ENGINE_CENSUS
 	void census_terms(const std::function<void(std::string_view, termcount, std::size_t)>& visit) const override;
 	std::size_t census_values() const override;
@@ -114,9 +114,9 @@ public:
 	// its version.
 	bool replayed() const noexcept { return replayed_; }
 
-	// Replaces this document's content with what `serialised` holds. Raises errc::syntax on bytes
-	// that are not a serialised document.
-	void unserialise_from(std::string_view serialised);
+	// Replaces this document's content with what `serialized` holds. Raises errc::syntax on bytes
+	// that are not a serialized document.
+	void unserialize_from(std::string_view serialized);
 
 private:
 	// The term under a field, created empty when absent; the field's kind widens to the call's.
@@ -147,7 +147,7 @@ private:
 std::unique_ptr<Document::Native> new_native();
 
 // The document the write-ahead log's bytes hold.
-Document unserialise_document(std::string_view serialised);
+Document unserialize_document(std::string_view serialized);
 
 // The strata document inside an engine document of this implementation.
 StrataDocument& strata_document(Document& doc);

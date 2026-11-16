@@ -204,7 +204,7 @@ Cast::positive(const MsgPack& obj)
 }
 
 
-long double
+double
 Cast::floating(const MsgPack& obj)
 {
 	switch (obj.get_type()) {

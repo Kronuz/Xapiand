@@ -31,7 +31,7 @@
 #include "opts.h"                 // for opts::*
 #include "reserved/schema.h"      // RESERVED_*
 #include "reserved/fields.h"      // ID_FIELD_NAME, ...
-#include "serialise.h"            // for KEYWORD_STR
+#include "serialize.h"            // for KEYWORD_STR
 
 
 
@@ -337,7 +337,7 @@ load_settings(const std::string& unsharded_normalized_path)
 				if (version_ser.empty()) {
 					THROW(Error, "Inconsistency in '{}' configured for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 				}
-				index_settings.version = sortable_unserialise(version_ser);
+				index_settings.version = Unserialize::version(version_ser);
 			}
 
 			it = obj.find("number_of_replicas");

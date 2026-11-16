@@ -723,14 +723,6 @@ License: MIT
 Copyright (c) 2006-2012 Olly Betts, who granted the MIT license for these two files.
 
 
-src/sortable_serialise.{cc,h}
------------------------------
-License: GPL-2.0-or-later (temporary)
-
-Derived from Xapian (Copyright Olly Betts and others). Being replaced before release;
-this notice goes away with it.
-
-
 Docs and clients: the documentation and the Python client (contrib/python/xapiand-py,
 not in any package) are heavily based upon Elasticsearch's, licensed under the
 Apache License, Version 2.0 (Copyright (c) 2017 Elasticsearch).

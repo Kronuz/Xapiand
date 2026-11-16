@@ -32,7 +32,7 @@
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
 #include "opts.h"                                 // for opts.schema_versions_size
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_FOREIGN, ...
-#include "serialise.h"                            // for KEYWORD_STR
+#include "serialize.h"                            // for KEYWORD_STR
 #include "xapiand_strings.hh"                             // for strings::format, strings::replace
 #include "url_parser.h"                           // for urldecode
 
@@ -121,7 +121,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			if (version_ser.empty()) {
 				THROW(Error, "Inconsistency in '{}' for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 			}
-			version = sortable_unserialise(version_ser);
+			version = Unserialize::version(version_ser);
 		}
 		obj = obj[SCHEMA_FIELD_NAME];
 		Schema::check<Error>(obj, "Foreign schema is invalid: ", false);

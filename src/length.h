@@ -29,11 +29,11 @@
 #include <string>                                 // for string
 #include <string_view>                            // for std::string_view
 
-#include "xapiand_exception.h"                            // for MSG_SerialisationError, SerialisationError
+#include "xapiand_exception.h"                            // for MSG_SerializationError, SerializationError
 #include "likely.h"                               // for likely, unlikely
 
 
-/** Serialise a length as a variable-length string.
+/** Serialize a length as a variable-length string.
  *
  *  The encoding specifies its own length.
  *
@@ -41,9 +41,9 @@
  *
  *  @return	The encoded length.
  */
-std::string serialise_length(unsigned long long len);
+std::string serialize_length(unsigned long long len);
 
-/** Unserialise a length encoded by serialise_length.
+/** Unserialize a length encoded by serialize_length.
  *
  *  @param p	Pointer to a pointer to the string, which will be advanced past
  *		the encoded length.
@@ -53,36 +53,36 @@ std::string serialise_length(unsigned long long len);
  *
  *  @return	The decoded length.
  */
-unsigned long long unserialise_length(const char** p, const char* end);
-unsigned long long unserialise_length_and_check(const char** p, const char* end);
+unsigned long long unserialize_length(const char** p, const char* end);
+unsigned long long unserialize_length_and_check(const char** p, const char* end);
 
-std::string serialise_bool(bool value);
+std::string serialize_bool(bool value);
 
-bool unserialise_bool(const char** p, const char* end);
+bool unserialize_bool(const char** p, const char* end);
 
-std::string serialise_char(char value);
+std::string serialize_char(char value);
 
-char unserialise_char(const char** p, const char* end);
+char unserialize_char(const char** p, const char* end);
 
-std::string serialise_string(std::string_view input);
+std::string serialize_string(std::string_view input);
 
-std::string_view unserialise_string(const char** p, const char* end);
+std::string_view unserialize_string(const char** p, const char* end);
 
-void serialise_length(int fd, unsigned long long len);
+void serialize_length(int fd, unsigned long long len);
 
-unsigned long long unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
+unsigned long long unserialize_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
-void serialise_string(int fd, std::string_view input);
+void serialize_string(int fd, std::string_view input);
 
-std::string unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
+std::string unserialize_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
-void serialise_char(int fd, char ch);
+void serialize_char(int fd, char ch);
 
-char unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
+char unserialize_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc);
 
-std::string serialise_strings(const std::vector<std::string_view>& strings);
+std::string serialize_strings(const std::vector<std::string_view>& strings);
 
-std::string_view unserialise_string_at(size_t at, const char** p, const char* end);
+std::string_view unserialize_string_at(size_t at, const char** p, const char* end);
 
 
 /** Append an encoded unsigned integer to a string.
@@ -91,7 +91,7 @@ std::string_view unserialise_string_at(size_t at, const char** p, const char* en
  *  @param value	The unsigned integer to encode.
  */
 template<class T>
-inline void serialise_unsigned(std::string & s, T value)
+inline void serialize_unsigned(std::string & s, T value)
 {
 	// Check T is an unsigned type.
 	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
@@ -111,7 +111,7 @@ inline void serialise_unsigned(std::string & s, T value)
  *  @param result   Where to store the result (or NULL to just skip it).
  */
 template<class T>
-inline void unserialise_unsigned(const char** p, const char* end, T* result) {
+inline void unserialize_unsigned(const char** p, const char* end, T* result) {
 	// Check T is an unsigned type.
 	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
@@ -126,7 +126,7 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 		if unlikely(ptr == end) {
 			// Out of data.
 			*p = NULL;
-			THROW(SerialisationError, "Bad encoded unsigned: no data");
+			THROW(SerializationError, "Bad encoded unsigned: no data");
 		}
 	} while (static_cast<unsigned char>(*ptr++) >= 128);
 
@@ -153,7 +153,7 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 	size_t minbits = maxbits - 6;
 	if unlikely(minbits > sizeof(T) * 8) {
 		// Overflow.
-		THROW(SerialisationError, "Bad encoded unsigned: overflow");
+		THROW(SerializationError, "Bad encoded unsigned: overflow");
 	}
 
 	while (--ptr != start) {
@@ -165,70 +165,70 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 	*result <<= 7;
 	if unlikely(*result < tmp) {
 		// Overflow.
-		THROW(SerialisationError, "Bad encoded unsigned: overflow");;
+		THROW(SerializationError, "Bad encoded unsigned: overflow");;
 	}
 	*result |= T(static_cast<unsigned char>(*ptr) & 0x7f);
 	return;
 }
 
 
-inline unsigned long long unserialise_length(std::string_view data) {
+inline unsigned long long unserialize_length(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_length(&p, p_end);
+	return unserialize_length(&p, p_end);
 }
 
 
-inline unsigned long long unserialise_length_and_check(std::string_view data) {
+inline unsigned long long unserialize_length_and_check(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_length_and_check(&p, p_end);
+	return unserialize_length_and_check(&p, p_end);
 }
 
 
-inline std::string_view unserialise_string(std::string_view data) {
+inline std::string_view unserialize_string(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_string(&p, p_end);
+	return unserialize_string(&p, p_end);
 }
 
 
-inline bool unserialise_bool(std::string_view data) {
+inline bool unserialize_bool(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_bool(&p, p_end);
+	return unserialize_bool(&p, p_end);
 }
 
 
-inline bool unserialise_char(std::string_view data) {
+inline bool unserialize_char(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_char(&p, p_end);
+	return unserialize_char(&p, p_end);
 }
 
 
-inline std::string_view unserialise_string_at(size_t at, std::string_view data) {
+inline std::string_view unserialize_string_at(size_t at, std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_string_at(at, &p, p_end);
+	return unserialize_string_at(at, &p, p_end);
 }
 
 
 template<class T>
-inline void unserialise_unsigned(std::string_view data, T* result)
+inline void unserialize_unsigned(std::string_view data, T* result)
 {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	unserialise_unsigned(&p, p_end, result);
+	unserialize_unsigned(&p, p_end, result);
 }
 
 
 template<class T>
-inline T unserialise_unsigned(std::string_view data)
+inline T unserialize_unsigned(std::string_view data)
 {
 	T result;
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	unserialise_unsigned(&p, p_end, &result);
+	unserialize_unsigned(&p, p_end, &result);
 	return result;
 }

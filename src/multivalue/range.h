@@ -67,8 +67,8 @@ public:
 	double weight(std::string_view value) const override;
 	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view serialized) const override;
 	std::string description() const override;
 
 	// Call this function for create a new Query based in ranges.
@@ -103,8 +103,8 @@ public:
 	double weight(std::string_view value) const override;
 	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view serialized) const override;
 	std::string description() const override;
 };
 
@@ -136,7 +136,7 @@ public:
 	double weight(std::string_view value) const override;
 	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view serialized) const override;
 	std::string description() const override;
 };

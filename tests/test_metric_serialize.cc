@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 
-// The phonetic sort metrics Xapiand serialises between nodes: a comparand that arrives as a
+// The phonetic sort metrics Xapiand serializes between nodes: a comparand that arrives as a
 // view (a stored value) is encoded by each of the four language encoders, and a metric that
-// is serialised and read back scores the same.
+// is serialized and read back scores the same.
 
 #include "test_harness.h"
 
@@ -33,19 +33,19 @@
 #include "french_soundex.h"
 #include "german_soundex.h"
 #include "spanish_soundex.h"
-#include "metric_serialise.h"
+#include "metric_serialize.h"
 
 template <typename Encoder>
 static void check_phonetic() {
-	using Metric = SerialisablePhoneticMetric<Encoder, LCSubsequence>;
+	using Metric = SerializablePhoneticMetric<Encoder, LCSubsequence>;
 	Metric metric("Robert");
 	CHECK_EQ(metric.distance(std::string_view("Robert")), 0.0);
 	CHECK(metric.distance(std::string_view("Xylophone")) > 0.0);
 
-	const std::string bytes = metric.serialise();
+	const std::string bytes = metric.serialize();
 	Metric copy;
 	const char* p = bytes.data();
-	copy.unserialise(&p, bytes.data() + bytes.size());
+	copy.unserialize(&p, bytes.data() + bytes.size());
 	CHECK(p == bytes.data() + bytes.size());
 	CHECK_EQ(copy.distance(std::string_view("Robert")), 0.0);
 	CHECK_EQ(copy.distance(std::string_view("Xylophone")), metric.distance(std::string_view("Xylophone")));

@@ -47,8 +47,8 @@ did before.
 
 - `test_ids_that_shared_a_key_are_separate_documents` (`tests/test_node.cc`): 4294967297 and 4311744512, 2^40 + 3
   and 2^40 + 3 * 2^24, 2^53 - 1 and 2^53 + 1, 2^63 and 2^64 - 1 stay separate through PUT, GET, a term search on
-  `_id`, DELETE and RESTORE, across reopens, over 1 and 3 shards. `tests/exact_id_mutants.sh old-codec` puts the
-  value codec back for keys and the test fails; `query-old-codec` does it for the term search alone.
+  `_id`, DELETE and RESTORE, across reopens, over 1 and 3 shards. Ids and values share one codec
+  (`docs/mechanisms/value-encoding.md`), so no mutant puts different bytes back for keys alone.
 - `test_new_numeric_ids_pass_two_to_the_thirty_two`: a counter at 2^32 - 1 issues 2^32 and on, in the shard owning
   each id's bucket, across a reopen; the cap is 2^63 - 1. `exact_id_mutants.sh cap-2-32` makes it fail.
 

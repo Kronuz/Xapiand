@@ -11,9 +11,6 @@ from are fetched from github.com/Kronuz at the pins in CMakeLists.txt.
 Third-party components bundled in the binary and the packages, with their
 licenses and copyright notices, are listed in THIRD-PARTY-NOTICES.
 
-Temporary: src/sortable_serialise.{cc,h} (and the Python client's port of it)
-derive from Xapian and are GPL licensed. They are being replaced before release.
-
 Elasticsearch
 -------------
 

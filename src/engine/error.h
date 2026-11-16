@@ -45,7 +45,7 @@ enum class errc {
 	corrupt,           // the stored data failed its integrity checks
 	database,          // any other failure of the shard itself: close it
 	invalid,           // the caller passed something the engine rejects
-	syntax,            // query or serialised input the engine cannot parse: a client error
+	syntax,            // query or serialized input the engine cannot parse: a client error
 	internal,          // anything else
 };
 

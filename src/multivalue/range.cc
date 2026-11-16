@@ -23,10 +23,13 @@
 
 #include "range.h"
 
+#include <cmath>                                  // for std::isnan
+#include <cstdint>                                // for std::int64_t, std::uint64_t
 #include <limits>                                 // for std::numeric_limits
 #include <stdexcept>                              // for out_of_range
 #include <sys/types.h>                            // for int64_t, uint64_t
 #include <type_traits>                            // for decay_t, enable_if_t, is_i...
+#include <utility>                                // for std::pair, std::cmp_less, std::cmp_greater
 #include <vector>                                 // for vector
 
 #include "cast.h"                                 // for Cast
@@ -38,10 +41,10 @@
 #include "xapiand_exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange
-#include "length.h"                               // for serialise_length
+#include "length.h"                               // for serialize_length
 #include "math.hh"                          // for max, min
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO
-#include "serialise_list.h"                       // for StringList
+#include "serialize_list.h"                       // for StringList
 
 
 // Terms-only fields (no value slot) have no exact check behind the terms, so they get a larger budget.
@@ -64,20 +67,59 @@ require_terms_only_cover(const required_spc_t& field_spc, bool open_ended, const
 }
 
 
-// The truncated integer a double is indexed as (static_cast truncates), saturating at T's limits.
-template <typename T>
+// An integer as the nearest T, saturating at T's limits.
+template <typename T, typename I>
 static T
-truncate_saturating(double d)
+saturate(I v)
 {
-	constexpr double lowest = static_cast<double>(std::numeric_limits<T>::min());
-	constexpr double highest = static_cast<double>(std::numeric_limits<T>::max());  // 2^63 or 2^64: first out of range
-	if (!(d > lowest)) {
+	if (std::cmp_less(v, std::numeric_limits<T>::min())) {
 		return std::numeric_limits<T>::min();
 	}
-	if (d >= highest) {
+	if (std::cmp_greater(v, std::numeric_limits<T>::max())) {
 		return std::numeric_limits<T>::max();
 	}
-	return static_cast<T>(d);
+	return static_cast<T>(v);
+}
+
+
+// A numeric range bound: its bytes in its own type, and the T its accuracy terms cover. One number has one
+// encoding whatever its type, so 6.5 on an integer field or 2^53 + 1 on a floating one compares exactly
+// against the slot. A string reads as a value's text does, whatever the
+// field's type; NaN is refused.
+template <typename T>
+static std::pair<std::string, T>
+numeric_bound(const MsgPack& bound)
+{
+	const MsgPack value = bound.is_map() ? Cast::cast(bound) : bound;
+	auto floating = [](double v) -> std::pair<std::string, T> {
+		if (std::isnan(v)) {
+			THROW(SerializationError, "A range bound cannot be NaN");
+		}
+		return { Serialize::floating(v), GenerateTerms::truncate<T>(v) };
+	};
+	auto integer = [](std::int64_t v) -> std::pair<std::string, T> { return { Serialize::integer(v), saturate<T>(v) }; };
+	auto positive = [](std::uint64_t v) -> std::pair<std::string, T> { return { Serialize::positive(v), saturate<T>(v) }; };
+	switch (value.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return positive(value.u64());
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return integer(value.i64());
+		case MsgPack::Type::FLOAT:
+			return floating(value.f64());
+		case MsgPack::Type::BOOLEAN:
+			return positive(value.boolean());
+		case MsgPack::Type::STR: {
+			// Text reads as a value's text does (int64, uint64, then double), whatever the field's type.
+			const MsgPack number = Cast::cast(FieldType::empty, value);
+			if (!number.is_string()) {
+				return numeric_bound<T>(number);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+	THROW(CastError, "Type {} cannot be cast to a range bound", enum_name(value.get_type()));
 }
 
 
@@ -85,53 +127,14 @@ template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<
 engine::Query
 getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	std::string ser_start, ser_end;
-	T value_s, value_e;
-	switch (field_spc.get_type()) {
-		case FieldType::floating: {
-			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::floating(*start) : std::numeric_limits<double>::lowest();
-			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : std::numeric_limits<double>::max();
+	// An absent bound is unbounded: -inf or +inf, whatever the field's type (design D6).
+	auto [ser_start, value_s] = start ? numeric_bound<T>(*start)
+		: std::pair<std::string, T>(Serialize::floating(-std::numeric_limits<double>::infinity()), std::numeric_limits<T>::min());
+	auto [ser_end, value_e] = end ? numeric_bound<T>(*end)
+		: std::pair<std::string, T>(Serialize::floating(std::numeric_limits<double>::infinity()), std::numeric_limits<T>::max());
 
-			if (val_s > val_e) {
-				return engine::Query();
-			}
-
-			ser_start = Serialise::floating(val_s);
-			ser_end = Serialise::floating(val_e);
-			value_s = truncate_saturating<T>(val_s);
-			value_e = truncate_saturating<T>(val_e);
-			break;
-		}
-		case FieldType::integer: {
-			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : std::numeric_limits<int64_t>::min();
-			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : std::numeric_limits<int64_t>::max();
-
-			if (val_s > val_e) {
-				return engine::Query();
-			}
-
-			ser_start = Serialise::integer(val_s);
-			ser_end = Serialise::integer(val_e);
-			value_s = val_s;
-			value_e = val_e;
-			break;
-		}
-		case FieldType::positive: {
-			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : std::numeric_limits<uint64_t>::min();
-			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : std::numeric_limits<uint64_t>::max();
-
-			if (val_s > val_e) {
-				return engine::Query();
-			}
-
-			ser_start = Serialise::positive(val_s);
-			ser_end = Serialise::positive(val_e);
-			value_s = val_s;
-			value_e = val_e;
-			break;
-		}
-		default:
-			THROW(QueryParserError, "Expected numeric type for query range");
+	if (ser_start > ser_end) {
+		return engine::Query();
 	}
 
 	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
@@ -169,8 +172,8 @@ engine::Query
 getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	if (field_spc.slot != engine::BAD_VALUENO) {
-		std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
-		std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
+		std::string start_s = start ? Serialize::MsgPack(field_spc, *start) : "";
+		std::string end_s = end ? Serialize::MsgPack(field_spc, *end) : "";
 
 		if (start_s > end_s) {
 			return engine::Query();
@@ -208,10 +211,10 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(timestamp_s);
+		ser_start = Serialize::timestamp(timestamp_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(timestamp_e);
+		ser_end = Serialize::timestamp(timestamp_e);
 	}
 
 	auto query = start && end ? GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix) : engine::Query();
@@ -257,13 +260,13 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(time_s);
+		ser_start = Serialize::timestamp(time_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(time_e);
+		ser_end = Serialize::timestamp(time_e);
 	}
 
-	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(time_s), truncate_saturating<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	auto query = GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(time_s), GenerateTerms::truncate<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
 	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
@@ -305,13 +308,13 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(timedelta_s);
+		ser_start = Serialize::timestamp(timedelta_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(timedelta_e);
+		ser_end = Serialize::timestamp(timedelta_e);
 	}
 
-	auto query = GenerateTerms::numeric(truncate_saturating<int64_t>(timedelta_s), truncate_saturating<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
+	auto query = GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(timedelta_s), GenerateTerms::truncate<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
 	require_terms_only_cover(field_spc, !start || !end, query);
 
 	if (field_spc.slot != engine::BAD_VALUENO) {
@@ -426,7 +429,7 @@ MultipleValueRange::insideRange(std::string_view value) const noexcept
 		}
 
 		return false;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -454,30 +457,30 @@ MultipleValueRange::name() const
 
 
 std::string
-MultipleValueRange::serialise() const
+MultipleValueRange::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), start, end };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), start, end };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueRange::unserialise(std::string_view serialised) const
+MultipleValueRange::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 3) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueRange");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string start(*++it);
 		std::string end(*++it);
 		return std::make_unique<MultipleValueRange>(slot, std::move(start), std::move(end));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueRange");
 	}
 }
 
@@ -510,7 +513,7 @@ MultipleValueGE::insideRange(std::string_view value) const noexcept
 		}
 
 		return data.back() >= start;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -538,29 +541,29 @@ MultipleValueGE::name() const
 
 
 std::string
-MultipleValueGE::serialise() const
+MultipleValueGE::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), start };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), start };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueGE::unserialise(std::string_view serialised) const
+MultipleValueGE::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueGE");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string start(*++it);
 		return std::make_unique<MultipleValueGE>(slot, std::move(start));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueGE");
 	}
 }
 
@@ -592,7 +595,7 @@ MultipleValueLE::insideRange(std::string_view value) const noexcept
 		}
 
 		return data.front() <= end;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -620,29 +623,29 @@ MultipleValueLE::name() const
 
 
 std::string
-MultipleValueLE::serialise() const
+MultipleValueLE::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), end };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), end };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueLE::unserialise(std::string_view serialised) const
+MultipleValueLE::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueLE");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string end(*++it);
 		return std::make_unique<MultipleValueLE>(slot, std::move(end));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueLE");
 	}
 }
 
