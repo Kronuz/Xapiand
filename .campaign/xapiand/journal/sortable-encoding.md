@@ -77,8 +77,8 @@ Nothing. (The 11-16 decision answered the A12 library question; the license file
 | A7 | T8 261116-042250-335a75 after build 261116-042217-f60d1c; load 261116-042253-9e3c64 (pending) |
 | A8 | no-gpl 261116-042126-e622f7 (passed); license notes Xapiand:b635c16a4 |
 | A9 | CI run 43865811902 at Xapiand:7700cb179 (pending; sortable pin 2fad5a2) |
-| A10 | [artifact] docs/mechanisms/value-encoding.md |
-| A11 | [artifact] docs/src/content/docs/changelog.md |
+| A10 | `docs/mechanisms/value-encoding.md` |
+| A11 | `docs/src/content/docs/changelog.md` |
 | A12 | grep 261116-042128-29afcc (passed) |
 
 ## Result
