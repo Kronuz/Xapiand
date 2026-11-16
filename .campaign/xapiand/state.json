@@ -18939,7 +18939,102 @@
       "worktree": ""
     },
     "strict-values": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T13:21:40",
+          "base": "26ab9c5a1aa154660faae528ff01b0cc464d248d",
+          "blobs": {
+            "docs/src/content/docs/changelog.md": "100644:6cbc1831257e0d22e32efcde2dc58d337bf866ad",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "100644:9998bfd58e55fd171c4de3dd53bfae750a6511d4",
+            "docs/src/content/docs/reference-guide/schemas/field-types/numeric-type.md": "100644:cd5bcb622fc98287e837b7484d051119dc2e0439",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md": "100644:0e59ade591f19a74995cf7b7db15094ae00de29f",
+            "src/cast.cc": "100644:a8527cb971b7a68c65769a75632b1ca062fa7168",
+            "src/cast.h": "100644:941994d313c8423de176bcae9b2e65664e241fba",
+            "src/database/schema.cc": "100644:e359e8302ed89851153b83cedfc300e47ef78ff3",
+            "src/multivalue/range.cc": "100644:1acd6f9c9d8019b0e9b57d996972647cb1449649",
+            "src/query_dsl.cc": "100644:9053c51c264fd6d3cfca522901d32340b3586878",
+            "src/query_dsl.h": "100644:39af16aa99e5f9cd285948f2863fc04bca885f6f",
+            "src/serialize.cc": "100644:25258beb98a9c27ddd4619a765d795014ded2bef",
+            "src/serialize.h": "100644:204e5be2510199116c53669dcd80e9bf7619719e",
+            "tests/test_node.cc": "100644:1fe800d2b024dc04eba95e60fefacaa468a964ad"
+          },
+          "by": "review",
+          "commit": "64213e8b5099739a770e83440707ac8efa21c296",
+          "criteria": "4a48ecef35b9d5cc",
+          "diffs": {
+            "docs/src/content/docs/changelog.md": "8d47cda6edabc58e",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "b0cc454261a1a5a7",
+            "docs/src/content/docs/reference-guide/schemas/field-types/numeric-type.md": "d75098f2ef63e6fb",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md": "b8f9482d78e2732b",
+            "src/cast.cc": "19ab86257140919c",
+            "src/cast.h": "c3508509aaf8dcd7",
+            "src/database/schema.cc": "5329484a16943346",
+            "src/multivalue/range.cc": "d19d09b93bfdc062",
+            "src/query_dsl.cc": "57464dba4ec4d077",
+            "src/query_dsl.h": "6b4e56d6d6db26c1",
+            "src/serialize.cc": "9e06b2aed4d326e1",
+            "src/serialize.h": "f1e5ecb124f1e3e8",
+            "tests/test_node.cc": "0428aea4b050579a"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/strict-values/fails_on_src.sh 26ab9c5a1aa154660faae528ff01b0cc464d248d test_writes_take_only_exact_values",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102322-382d53",
+                  "level": "light",
+                  "seconds": 374.3,
+                  "state": "done",
+                  "what": "strict-values: test_writes_take_only_exact_values fails on master's src (B1)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-strict-values-correctness/probe.sh",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102358-db013f",
+                  "level": "light",
+                  "seconds": 317.7,
+                  "state": "done",
+                  "what": "review correctness: probes at head at 8440e071e427"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "C3": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-strict-values-correctness/probe_wrap.sh",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102359-659f2d",
+                  "level": "light",
+                  "seconds": 531.6,
+                  "state": "done",
+                  "what": "review correctness: text wrap probes at 8440e071e427"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "bff2dfa91b40b5e3df9d8491f46c53e347ef5aa3",
+          "reviewed": "710beb9f3f9ac372a02ce23b2a15f5f115534ee5",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "26ab9c5a1aa154660faae528ff01b0cc464d248d",
       "branch": "quest/xapiand/strict-values",
@@ -18976,7 +19071,9 @@
         "docs/src/content/docs/changelog.md"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -18984,7 +19081,7 @@
       "risk": "normal",
       "status": "review",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T09:40:03",
+      "updated": "2026-11-16T13:21:40",
       "worktree": "../Xapiand-wt/xapiand/strict-values"
     },
     "sync-at-first-commit": {
