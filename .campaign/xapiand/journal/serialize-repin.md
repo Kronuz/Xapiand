@@ -1,6 +1,6 @@
 # serialize-repin: journal
 
-State: working
+State: waiting on jobs 261116-051529-669e33 261116-051529-20615b 261116-051829-ed3fbe 261116-051832-47864e 261116-051859-74d69e
 Quest: .campaign/xapiand/quests/serialize-repin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
