@@ -5,27 +5,18 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Xapiand pins logger:6e7ab9e (Detent's burst-cost fix) and fetches workpool from `workpool.git` under the name `workpool`, at its main (at or after workpool:406d2f3), instead of `threadpool.git` at 63e03a5. No source behavior changes.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 Pins: logger 6e7ab9e and workpool main as full shas; no `threadpool` name left in CMakeLists.txt; the full suite passes: the `build-test` check
+- A2 The docs E2E passes: the `e2e` check
+- A3 Logging cost: the logger burst row Detent measured (4 producers) is within its A/A band against f61d8df in Xapiand's build, or Detent's job is cited if it ran Xapiand's pin: a job
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-16: one repin quest for both, after serialize-repin (both touch CMakeLists.txt).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

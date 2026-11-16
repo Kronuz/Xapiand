@@ -5,27 +5,19 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+At the end of each RESTORE chunk, freeing the chunk's per-document results (`~DocIndexer`, src/server/search_views.cc:1774; `_results`, src/database/handler.h:361) no longer holds the reactor loop for 10-25 ms. Fix the cause: the results live in one arena or flat buffer released at once, or are released off the loop. Slicing the free with budget checkpoints (harness/restore_stall_slice_results.patch) is the fallback only if the cause cannot be removed, with the reason recorded.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 During a RESTORE stream, trivial GET p99 is within 2x of the A/A idle p99 (before: 22.4-24.4 ms against 2.2 ms) and no loop turn exceeds 5 ms in the RESTORE phase, macOS under `quiet strict`, ABBA against master: a job
+- A2 RESTORE throughput is within the A/A band of master (about 6,700 docs/s on the probe corpus): the same job
+- A3 RESTORE results are unchanged: the docs E2E plus the restore tests pass: the `e2e` and `build-test` checks
+- A4 [artifact] The measurement note: `docs/perf/restore-stall.md`
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 11-16: the cause is the one-turn free (81% macOS madvise); fix it at the allocation, not by spreading the free. Measure Linux once if a Linux host is available through CI; otherwise say so.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
