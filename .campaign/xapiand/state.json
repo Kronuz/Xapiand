@@ -6709,6 +6709,8 @@
     "logger-workpool-repin": {
       "accepted": {},
       "after": [],
+      "base": "648193f74336996a74f7bc6a345eac0e7992a016",
+      "branch": "quest/xapiand/logger-workpool-repin",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -6734,9 +6736,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Repin logger 6e7ab9e and fetch workpool by its name",
-      "updated": "2026-11-16T08:07:08"
+      "updated": "2026-11-16T08:07:40",
+      "worktree": "../Xapiand-wt/xapiand/logger-workpool-repin"
     },
     "loop-scheduling": {
       "accepted": {
