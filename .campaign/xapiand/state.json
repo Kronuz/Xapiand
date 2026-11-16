@@ -323,6 +323,13 @@
       "closed": "src/query_dsl.cc added to exact-id-keys's file set",
       "id": "msg-46",
       "text": "exact-id-keys: the _id term search builds its term in src/query_dsl.cc (get_regular_query -> Serialise::MsgPack -> field_term in src/database/utils.cc), both outside the quest's file set. Serialise::MsgPack itself can't change for _id because range.cc uses it for the _id value slot (values stay old). Request: add src/query_dsl.cc to the file set (one branch: an _id field with a numeric type serialises via the new id codec). Default if no answer: I edit query_dsl.cc minimally and record it under Rulings."
+    },
+    {
+      "at": "2026-11-16T08:23:55",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-49",
+      "text": "restore-free-off-loop: a deterministic regression test is possible but needs a file outside the set. Cause found: every MsgPack owns a msgpack::zone that mallocs an 8,200-byte chunk eagerly, so _results (one MsgPack per object) is 5,000 x 8 KB blocks freed in ~DocIndexer. Fix in progress: results packed into one buffer. Test: in tests/test_loop_yield.cc (its in-process node), run DocIndexer::index on the test thread and count this thread's operator-delete calls across the indexer's destruction: >= N on master (one Body per result), a handful with the fix. Deterministic, no timing. Request: add tests/test_loop_yield.cc to this quest's file set (alternative: a new tests/test_restore_results.cc needs one word in CMakeLists.txt's test list and would duplicate RunningNode). Default if no answer: I record it under Blocked on and land without the test."
     }
   ],
   "quests": {
