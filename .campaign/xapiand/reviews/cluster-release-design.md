@@ -1,0 +1,81 @@
+# cluster-release review: design
+
+Commit: Xapiand:5dc60256ac392a991bf12dee492c39ad83bdcafe
+Verdict: CHANGES
+Date: 2026-11-15
+
+APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
+blocking finding's fix and its test pass the suite at the fixed commit; with only nits, an APPROVE.
+REJECT: the approach is wrong; the quest is re-planned.
+
+The shape is right: one strata group per shard at every `rf` (no WAL at `rf = 1`), one root group,
+document mode with prepared commands, one transport with a request lane, idle groups closed.
+Six gaps would be built in wrong or could not be proven: the install drops stored blobs (F1),
+RESTORE and T11 have no defined path or baseline (F2), the shipped read levels cannot give the
+linearizable histories the gate asks for (F3), wildcard index patterns walk only the local disk
+(F4), the command size bound names the wrong mechanism (F5), and the root's cost at millions of
+indexes is unstated (F6). Each fix is a decision and a criterion in the note, not a new approach.
+
+## Evidence I relied on
+
+No jobs: the note is a design and nothing is built or measured. I relied on the code and documents
+it cites, read at its pins: Xapiand `a9cfa2cba`, strata `9bcb142e`, consensus `a95847e`, journal
+`8f3e410`, Detent `13a2ae42` and `5e4903e8` (the note on Xapiand's driver needs), Detent's
+`docs/design/async-drivers.md`, strata `docs/REPLICATION.md`, `docs/DISTRIBUTION.md`,
+`docs/design/track-c.md` and `docs/design/durability-modes.md`. Section 1's Xapian-era citations
+are history and I took them as stated.
+
+## What I checked myself
+
+- `.scratch/review-cluster-release-design/evidence.sh` (read-only, seconds, no hold): prints every
+  code and document line the findings cite, at the pinned commits; its output is `evidence.out` beside
+  it. Rerun after a revision to recheck the facts each fix answers.
+- Held up under the named risks: consensus admits a membership change only after an entry of the
+  leader's own term commits, one voter or witness at a time (consensus `ARCHITECTURE.md:31`), so
+  D7's replace steps are safe; reopening a closed group as its old leader keeps one leader per term,
+  because quiescence requires every member matched (track-c D12) and a deposed leader at an old
+  term commits nothing; failure detection is per node pair (track-c D12), the transport per host
+  (async-drivers D10), the journal per core with one barrier per turn, and an idle group holds no
+  descriptor under D97 Q3 (b); an `rf = 1` group whose node is down cannot be replaced by D7's steps
+  (no leader to add a learner), so it waits rather than splitting; the sortable-encoding note is
+  right that no code ordering is needed (D87).
+
+## Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F1 | yes | defect | A replacement or a new replica loses `stored` blobs. D12 writes each voter's `DataStorage` at apply, but quest 6's install moves only strata's segment pack from a pinned manifest, and the journal is truncated at checkpoints. `DataStorage` volumes are Xapiand files, located by a node-local volume counter and offset, and no install carries them. A learner from D7's replace, quest 9's `rf` growth or quest 16's migration holds documents whose locators name volumes it lacks. After the dead voter is removed and a second replacement follows, the blobs live on one copy, then on none: acknowledged content lost through repairs that each stay inside the fault model | design :223-227, :336-340; `src/database/shard.cc:1100-1130`; strata `REPLICATION.md:88-100` ("Strata owns its segment files ... the journal never copies them") | (a) The checkpoint bundle names `DataStorage`'s state at the applied position (each volume and its length, synced before the manifest), and install moves it as an application file set on the same transfer (durability-modes D17's file sets; rotated volumes are immutable, so a retry sends only what is missing). Say where a partly streamed upload's volume stands at a checkpoint. (b) Blobs move into strata (track-d D7, today a non-goal; owner's call). Recommend (a). Test: after a replace, `rf` 1 to 3 and a migration, every stored blob reads back byte-equal from the new replica, and a mutant that skips the volumes fails; quest 16's digest covers blob bytes |
+| F2 | yes | gap | RESTORE has no defined path, and T11 has no baseline. RESTORE opens shards with `DB_DISABLE_WAL`, and `profile_bulk.sh`, the procedure quest 10 A3 names for T11, profiles a RESTORE. The WAL writes no record there (the profile's WAL share was the per-checkin `delete_wal`), so "the journal at most half of the WAL per document" has nothing to halve. Two paths are possible, and the note picks neither. Through the journal: T12 (RESTORE docs/s at least 1.0x pre-7c) and R8's ingest absorb a log write and a barrier per turn that master never paid. Around it: a second durability path at `rf = 1`, with nothing for replicas | `src/server/search_views.cc:1687`; `src/database/handler.cc:1159`; `harness/profile_bulk.sh:22-31`, `:76`; `docs/perf/bulk-index-profile.md:49`; strata `REPLICATION.md` Xapiand mapping ("bulk-import command whose segments the leader builds") | Decide RESTORE's path at `rf = 1` and `rf > 1`. Give T11 a baseline where the WAL writes: PUT or bulk with the WAL on, at its async default and at `DB_SYNCHRONOUS_WAL`. Put T12's RESTORE row in quest 10's criteria on the chosen path, numbers stated even if the journal loses |
+| F3 | yes | defect | The shipped read levels cannot give the linearizable get-by-id histories the gate requires. D4 ships `read=leader`, which durability-modes D10's one vocabulary does not have (linearizable, bounded, session, prefix, eventual), and section 4 lists `leader` among the levels that follow the release. Undefined, `leader` is the node that believes it leads, and consensus has no leases. A deposed leader, partitioned or reopened at its old term, serves stale reads until CheckQuorum steps it down (up to `election_max`, 2 s by default). R2, D14 and quest 7 still require linearizable get-by-id histories, which neither `prefix` nor an unprobed `leader` provides. D1's "failover never produces two leaders" holds only per term, as R3 states it | design :41, :147-156, :240, :257, :343, :425-426; strata `durability-modes.md:2047-2056`; track-c D7 (CheckQuorum), timing profile | Ship `read=linearizable` at `quorum` as `?volatile`'s successor: Core's quorum-probe read, already a Driver call (async-drivers D2, D8), plus the live version map for get-by-id. Or define `leader` in D10's table with its staleness bound. State the read level of each R2 history, and restate D1 as R3 does. Test: the checker flags a planted stale get-by-id from a partitioned old leader at `prefix` and `leader`, and passes at `linearizable` |
+| F4 | yes | gap | Wildcard index patterns miss every index with no local shard. Patterns expand by walking the local data directory, and D10 fans out only named indexes. In a cluster, a pattern search (nested paths, `twitter/*`) silently returns partial results, with nothing in `_shards.failed` | `src/server/search_views.cc:2342-2362` (`index_pattern::expand(Endpoint::cwd, ...)`) | Resolve patterns from the authority's namespace records. D5 keys them by path, so a pattern is a range scan with nested paths included: the cluster form of `name-index`, one mechanism and not a second index. Quest 14 criterion: a wildcard search from any node of 3 and 5 nodes returns the same indexes and hits as the one-node walk over the same tree, nested paths included |
+| F5 | yes | defect | The command size bound names the wrong mechanism. D12 bounds a command at 64 MiB, "the journal's batch bound". Consensus's per-group defaults cap a command at 1 MiB (`command_bytes`), an RPC at 2 MiB and the retained log at 64 MiB, and an entry above `Flow::frame_bytes` goes alone. A 64 MiB append holds every other group's control frames on the shared node-pair connection for about 0.5 s at 1 Gb/s, longer on slower links, past the 1 s minimum election timeout: the `reader_test` hazard. Master accepts a 1 MiB non-stored blob and stored uploads to about 4 GiB, and a serialized document with its terms is larger than its JSON | consensus `include/consensus/types.h:55-67`, `ARCHITECTURE.md:41`, `:216`; `src/database/handler.cc:94`; `src/database/pool.h:161`; async-drivers D10 (writer never behind more than one append frame) | Name consensus's limits as the mechanism. Set Xapiand's per-group `command_bytes`, `rpc_bytes`, `frame_bytes` and `log_bytes` from the largest document master accepts (limits rule). Carry every blob above the frame cap as chunk commands (D12's stream path). Criterion: a maximal document and a 4 GiB upload commit while another group on the same connection keeps its heartbeat gaps under the minimum election timeout |
+| F6 | yes | gap | The root group's cost at millions of indexes is unstated. D5 puts a namespace record per index and a shard record per shard into one group of 3 to 5 voters, and every index creation (indexes are created on first write) becomes a strict root proposal before the shard group exists. R10 states the authority as functions of the node count, and section 10 calls it fine "at the release's scale" in nodes. The questions that decide quest 8's bytes are open: records in memory with whole checkpoints, or a strata index on the root's core; bytes per index; the root's checkpoint and install time; index creations per second; and whether each node's shard-map cache holds every record or fills on a miss | design :158-168, :433, :521-522; memory `many-indexes-workload` (millions of indexes per host) | State these in D5 with arithmetic. Quest 8 criterion at 10^6 namespaces: root memory, checkpoint and install time, creation rate and latency, a node's cache size. R10 states the same as functions of the index and shard counts |
+| F7 | no | defect | "Answers equal one node's" (D10) holds only per replica: ranking statistics count dead ordinals, and the physical segments of document-mode replicas differ, so one query ranks differently by replica, and quest 14 A1 holds only on corpora without deletes | strata `durability-modes.md:395-397`; `REPLICATION.md:84-86` | Take a shard's statistics and partial from one replica per request, and state the residue. A1 adds a corpus with replaces: logical results (counts, aggregations) exact, ranking compared within one replica choice |
+| F8 | no | gap | Raising `number_of_replicas` from 0 to 1 (`rf` 1 to 2 + witness) passes through a voter plus a witness, or two voters, and neither is an allowed mix; quest 9 A3 tests only `rf` 1 to 3 to 1 | track-c D9 (`track-c.md:389-397`) | State the path. Test 0, 1, 2, 1, 0 |
+| F9 | no | gap | "Runs short" (D7) is undefined when there are fewer nodes than voters (default `number_of_replicas` 1 on two nodes, `rf` 3 on two): a two-voter group, which REPLICATION.md does not support, or a voter plus learners | design :180-182; `REPLICATION.md` replica count | Say which |
+| F10 | no | defect | File sets and edges. Quest 10 lists `src/database/{shard,wal,handler}.*`, but the WAL also lives in `src/database/pool.*`, `src/manager.*`, `src/opts.*` and `src/xapiand_storage_io.h`, overlapping quest 12, which can run beside it. Quests 14 and 15 run together and both write `src/server/search_views.cc`, and 15's `docs/**` holds 16's `upgrade.md`. Missing edges: 3 and 12 after `detent:consensus-transport` (the node keepalive and node authentication); 10 and 13 need 1; 15 needs 9 | `git grep` at `a9cfa2cba` (evidence.sh F10); design :276-294, :405-410; Detent:5e4903e8 ("after consensus-driver and consensus-transport") | Correct the file sets and edges |
+| F11 | no | defect | Quest 13 A1 needs section 1's whole checklist on 5 processes, but items 3 and 4 (search and aggregations from any node) depend on quest 14's fan-out | design :72-78, :365 | Move items 3 and 4 to quest 14 |
+| F12 | no | defect | `format-freeze`'s edges disagree: section 5 says after 3, 4, 5, 8, 10 and 11 "beside" `sortable-encoding`, and section 6 says after `cluster-gate`. Quest 6's install bytes (and F1's file set) and quest 13's records fall outside the first list | design :390, :397, :414-418; `quests/format-freeze.md` ("Lands after sortable-encoding") | After 17 and after `sortable-encoding` |
+| F13 | no | gap | Detent plans to create a consensus-quiescence quest itself, and the note lists it as Xapiand's quest 3. Detent's note asks for idle CPU at 1M groups, while A1 counts frames over 10^6 steps | Detent:5e4903e8 | Name one owner before either starts. Align the scale |
+| F14 | no | gap | A closed group's records pin turn-log segments until it checkpoints, and a closed group runs no timer, so write-once indexes grow the per-host retained log | strata `REPLICATION.md` (checkpoints by bytes and time); design D11 | Closing checkpoints first, or the reclaimer reopens pinning groups. R10 measures the retained log |
+| F15 | no | gap | A lone voter campaigns at `Start` (Detent quest 4), so reopening a closed `rf = 1` group may cost a term bump and its barrier before the first write, on the many-indexes path (D89) | async-drivers D5 (X5) | Say whether a lone voter resumes its stored leadership. R10 measures first-write latency after reopen against master |
+| F16 | no | gap | `get` of a stored blob (to 4 GiB) and `forward_write` of a streamed upload need streamed bodies under credit, or a redirect to the owner node, and the lane needs connections to nodes that share no group (D10 opens them only while a group is shared) | design D9, :305-306; async-drivers D10 | Add both to section 8's requests to Detent |
+| F17 | no | gap | Membership lives in each group's log, but the shard record also holds members and a leader hint | track-c D1; design :163 | The group log is authoritative. The record follows a committed change and is reconciled after a crash. Leader hints are never written to the root per election. A shard never gets a new group while a member of its old one may live |
+| F18 | no | gap | Replay to flush marks covers flush-prefix states, not "each state a real power loss can leave". Replaying every mark of 200 runs of 60 s is hours per run. R8's old cluster needs a multicast L2 | design :241-246, :425 | State the coverage, sample marks (around each ack plus random), estimate the cost, and name `-netdev socket,mcast` |
+| F19 | no | gap | Not put to the owner: multicast discovery and `--discovery-*` are removed, `/.nodes` becomes `/:nodes`, `/:cluster/health` and `:drain` are new, and `:flush` (a pathless admin command on master) becomes a per-index checkpoint beside the existing `COMMIT` | design :170-176, :152-153, :185; `src/server/search_views.cc:609`, `:1521-1543` | Add to section 9 with options, including keeping multicast as a seed source and mapping the checkpoint to `COMMIT` (durability-modes Q12) |
+| F20 | no | nit | "`search_batched` with one batch per node" conflicts with its contract, which batches whole indexes for their statistics | `src/engine/search.h:147-154` | Quest 14 changes the batch key |
+| F21 | no | nit | R8 against the old async replication names no level | design :431 | `none` for like durability, `quorum` beside it |
+| F22 | no | nit | D6's keepalive table needs every node connected to the root leader | async-drivers D10 | Say what carries it (the lane or root learners) |
+| F23 | no | nit | D8 "forwards at most once" and a redirect on a stale hint: it does not say who follows the redirect | design :189-192, :367 | Say it and count it in quest 13 A2 |
+| F24 | no | nit | Quest 6's scrubber goes past parity; reads already fail closed | design :283, :339-340 | Keep or defer, the lead's call |
+
+## Not run
+
+- No build, test, simulator or VM run: nothing exists to run, and my probes are the cited lines
+  (evidence.sh).
+- Not checked: section 1's Xapian-era citations at `5a517b052^`; prospect's `searcher.hh` claim;
+  the segment-mode CPU estimate (0.38x to 0.43x), the 62 ms append figure and R5's comparison
+  numbers; Detent's own quest designs beyond what the note depends on; whether master's get-by-id
+  reads unrefreshed writes.
+- Not read, per the clean room: Xapian's sources, `src/sortable_serialise.{cc,h}`, the Python
+  `sortable.py` and strata-oracle.
