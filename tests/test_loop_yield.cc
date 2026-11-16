@@ -1197,6 +1197,37 @@ static void test_a_restores_results_are_freed_as_one_buffer() {
 }
 
 
+// A RESTORE's objects are freed off its loop: each is a tree of MsgPack bodies, and its loop neither builds the tree
+// (`reads_stored` reads the raw map) nor frees it (the run is cleared in a chore). Before, the loop freed the trees of
+// a whole run in one turn (docs/perf/restore-stall.md, round 2).
+static void test_a_restores_objects_are_freed_off_its_loop() {
+	constexpr int objects = 2000;
+	CHECK_EQ(http_call("RESTORE", "/offloopfree/?commit", R"({"_id":"f0","n":0})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists
+	std::string body;
+	for (int i = 1; i <= objects; ++i) {
+		body += R"({"_id":"f)" + std::to_string(i) + R"(","n":)" + std::to_string(i) + R"(,"a":"x","b":"y","c":"z"})" "\n";
+	}
+	std::atomic<bool> set{false};
+	asio::post(XapiandManager::manager()->http_service->reactor(0).io(), [&] {
+		counted_thread = pthread_self();
+		deletes_counted = 0;
+		counting = true;
+		set = true;
+	});
+	eventually([&] { return set.load(); }, 10s);
+	CHECK_EQ(http_call("RESTORE", "/offloopfree/?commit", body, "application/x-ndjson") / 100, 2);
+	std::atomic<std::size_t> freed{0};
+	set = false;
+	asio::post(XapiandManager::manager()->http_service->reactor(0).io(), [&] {   // after the request's own frees
+		counting = false;
+		freed = deletes_counted;
+		set = true;
+	});
+	eventually([&] { return set.load(); }, 10s);
+	std::fprintf(stderr, "  the loop freed %zu blocks restoring %d objects\n", freed.load(), objects);
+	CHECK_LT(freed.load(), std::size_t{objects * 50});   // 34 per object measured; 75 with the trees on the loop
+}
+
 int main() {
 	RunningNode node;
 	if (!node.ready()) {
@@ -1219,6 +1250,7 @@ int main() {
 	test_a_request_after_a_heavy_one_starts_light();
 	test_each_chunk_of_a_streamed_restore_starts_light();
 	test_a_restores_results_are_freed_as_one_buffer();
+	test_a_restores_objects_are_freed_off_its_loop();
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;

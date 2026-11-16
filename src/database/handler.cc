@@ -32,6 +32,7 @@
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
 #include <optional>                         // for std::optional
+#include <span>                             // for std::span
 #include <unordered_map>                    // for std::unordered_map
 #include <unordered_set>                    // for std::unordered_set
 #include <tuple>                            // for std::tie
@@ -2350,18 +2351,32 @@ struct Admitted {
 
 
 // Whether an object's prepare reads the stored document or updates the schema as it fetches it (the design's D1):
-// it is prepared on the loop, after every earlier object of its stream has applied.
+// it is prepared on the loop, after every earlier object of its stream has applied. It reads the map's raw pairs,
+// as `find` would (a repeated key's last value wins), so the loop builds no MsgPack tree of the object.
 bool
 reads_stored(const MsgPack& obj)
 {
 	if (!obj.is_map()) {
 		return false;
 	}
-	auto it = obj.find(RESERVED_OP_TYPE);
-	if (it != obj.end() && !(it.value().is_string() && it.value().str_view() == "index")) {
+	const msgpack::object raw(obj);
+	const msgpack::object* op_type = nullptr;
+	bool script_or_schema = false;
+	for (const auto& kv : std::span(raw.via.map.ptr, raw.via.map.size)) {
+		if (kv.key.type != msgpack::type::STR) {
+			THROW(msgpack::type_error, "MAP keys must be of type STR");
+		}
+		const std::string_view key(kv.key.via.str.ptr, kv.key.via.str.size);
+		if (key == RESERVED_OP_TYPE) {
+			op_type = &kv.val;
+		} else if (key == RESERVED_SCRIPT || key == RESERVED_SCHEMA) {
+			script_or_schema = true;
+		}
+	}
+	if (op_type != nullptr && !(op_type->type == msgpack::type::STR && std::string_view(op_type->via.str.ptr, op_type->via.str.size) == "index")) {
 		return true;
 	}
-	return obj.find(RESERVED_SCRIPT) != obj.end() || obj.find(RESERVED_SCHEMA) != obj.end();
+	return script_or_schema;
 }
 
 
@@ -2945,7 +2960,10 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			co_await apply(run[at]);
 			co_await checkpoint();
 		}
-		run.clear();
+		// The run's objects are freed in a chore: each is a tree of MsgPack bodies and zones, thousands per batch.
+		if (!run.empty()) {
+			co_await chores.run(engine::ChoreClass::flush, [&run] { run.clear(); });
+		}
 	};
 
 	const auto take = [&](MsgPack&& obj) -> task::task<void> {
@@ -2968,9 +2986,11 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		if (obj.is_array()) {
 			for (auto& o : obj) {
 				co_await take(std::move(o));
+				co_await checkpoint();
 			}
 		} else {
 			co_await take(std::move(obj));
+			co_await checkpoint();
 		}
 	}
 	co_await apply_run();   // the batch's last run applies before the next batch is read

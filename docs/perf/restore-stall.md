@@ -132,8 +132,46 @@ bytes per document instead of a zone each (arithmetic, not measured: 8 KB per do
 The RESTORE responses are unchanged: `harness/restore_stall_items.py` sends the same 32 RESTOREs (streamed and array
 bodies; given, new numeric and repeated ids; one and three shards; echo, comments and neither; failing and script
 objects) to a node of each binary, in JSON and in MessagePack, and all 64 responses match byte for byte but `took`
-(96 failed items among them). The A/B under `quiet strict` (two ABBA rounds and a spin run,
-`harness/restore_stall_ab.sh`) is pending; its table goes here.
+(96 failed items among them).
+
+The first exclusive A/B of this fix (job 261116-140557-b42752, Xapiand:6c51552ef against master Xapiand:ceb058569, ABBA):
+RESTORE-phase p99 22.0/22.4 ms on master, 8.2/8.0 ms on the fix; loop lag p99.9 20.5 ms to 2.6 ms; 6,623 to 6,975
+docs/s. The 8 ms left is the next section.
+
+## Fix, round 2: the 8 ms left
+
+Three things, measured on the fix above (screening runs under `quiet strict` beside light holds, so a few ms of
+noise; raw output under `.scratch/e1`-`e6` of the quest's worktree, not committed):
+
+1. The loop still built and freed each object's MsgPack tree. Spin probe at 1 ms: 1,207-1,686 loop turns over 1 ms
+   in a 20 s RESTORE phase, nearly all 1-2 ms; their stack captures are `DocIndexer::index`'s `take`
+   (`reads_stored` calls `MsgPack::find`, whose `_init_map` builds the whole child map of the object on the loop:
+   182 of 290 captures) and `Admitted::~Admitted` under `run.clear()` (48; 22.5% of the loop's `sample` busy
+   samples, half of it `madvise`).
+2. Those turns are not the 8 ms. A GET that touches no index (`/:none`, a 400 from the URL resolver) has the same
+   p99 during the RESTORE as the document GET (8.3-8.9 against 8.3-8.6 ms), while the loop's lag probe stays at
+   p99.9 1.3-2.6 ms.
+3. The 8 ms is the probe's own client. The trivial GETs and the RESTORE client shared one Python event loop, and
+   building and sending each 5,000-document body stalls that loop: a 1 ms ticker in the client wakes 10-11 ms
+   late at p99.9 during the RESTORE phase (0.5 ms in the trivial phase). With the RESTORE client in a process of
+   its own (`harness/restore_stall_probe.py` now runs it so), the same binaries measure:
+
+| Binary | trivial p99 (A/A) | RESTORE-phase p99 | p99.9 | max | docs/s |
+|---|---:|---:|---:|---:|---:|
+| fix of round 1, client inline (earlier runs) | 1.1-1.5 | 8.3-10.5 | 15-22 | 20-32 | 5,700-7,100 |
+| fix of round 1, client in its own process | 1.06-1.10 | 2.25-2.86 | 2.9-4.1 | 5.0-6.2 | 5,710-6,472 |
+| round 2, client in its own process | 1.09 | 1.71 | 2.62 | 4.33 | 6,508 |
+| master, client in its own process | 0.87 | 11.25 | 20.94 | 25.7 | 6,409 |
+
+Round 2 (`src/database/handler.cc`) takes the per-object tree off the loop: `reads_stored` reads the map's raw
+pairs (the last of a repeated key wins, as `find`; a key that is not a string throws as before), the run's objects
+are freed in a chore of the RESTORE's group, and `index` checkpoints after each object it takes, so a batch of any
+size admits in slices. Spin at 1 ms: 72-115 turns over 1 ms in the RESTORE phase, against 1,686 on round 1. The
+few turns over 4 ms left hold no RESTORE frame: their captures are the spin probe's own `fprintf` to `node.log`.
+`tests/test_loop_yield.cc` `test_a_restores_objects_are_freed_off_its_loop` counts the blocks the loop frees in a
+2,000-object RESTORE.
+
+The deciding numbers are the exclusive A/B jobs in the quest's journal.
 
 ## 2. The lag probe's 49-82 ms
 
