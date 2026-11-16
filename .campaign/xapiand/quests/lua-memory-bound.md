@@ -13,8 +13,8 @@ A node's Lua memory has a bound below host RAM whatever scripts clients PUT: a c
 - A2 One script-cache default: `opts.h` and the CLI agree, and the default is sized from the measured bound: a test
 - A3 T10's Lua rows still pass (flood and per-call caps): the rows job
 - A4 The memory bound is per call: concurrent calls of one script on one thread (one cached state, src/lua/processor.cc:611, the heap the allocator meters at :144) each get the full `max_bytes`. Today they share it, so T10's 4 library-call loops answer [204, 204, 400, 400] wherever fewer reactors than loops run (platform-rows run 7: arm64 and FreeBSD, Xapiand:36c2c0ede). Proof: a test running two concurrent calls of one script on one reactor that fails on master
-- A5 T10 passes on arm64 and FreeBSD in CI (the platform-rows workflows on the quest branch)
-- A6 The suite passes and CI is green at the landed code
+- A5 [manual] T10 passes on arm64 and FreeBSD in CI: the platform-rows workflows on the rows branch (master + platform-rows + this quest), checked by the lead from the run ids
+- A6 The suite passes at the landed code (the build-test check; CI is checked by `campaign land`)
 
 ## Contracts
 
