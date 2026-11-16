@@ -1276,6 +1276,33 @@ void test_a_cancelled_call_leaves_no_garbage() {
 }
 
 
+void test_a_cancel_inside_the_collection_lets_it_finish() {
+	// A request cancelled after its script ended keeps its result, and the collection runs on in slices of its own
+	// (N3, N4): the cancel lands in the collection of 800,000 strings.
+	Processor processor("cancel-collect", short_strings_800k + "_doc.n = #t", MsgPack::MAP());
+	const auto idle = processor.resident_bytes();
+	for (std::size_t when : {0, 3, 10}) {
+		task::inline_scheduler scheduler;
+		task::cancel_source source;
+		task::budget budget(every_checkpoint, source.token());
+		Pending pending;
+		pending.doc = MsgPack::MAP();
+		start(scheduler, pending, processor, budget);
+		const auto printed = Processor::printed_bytes();
+		scheduler.run_until([&] { return Processor::printed_bytes() > printed; });
+		std::size_t n = 0;
+		scheduler.run_until([&] { return ++n > when; });
+		REQUIRE(!pending.finished);
+		source.request();
+		const std::size_t after = scheduler.run_until([] { return false; });
+		REQUIRE(pending.finished);
+		CHECK(pending.outcome.ok());
+		CHECK_EQ(pending.doc.at("n").i64(), 800);
+		CHECK_GT(after, 4u);   // still in slices
+		CHECK_LE(processor.resident_bytes(), idle + (16u << 10));
+	}
+}
+
 // --- SR1: a foreign link is an index path, and an index path names a place inside the data directory ----------
 
 void test_a_foreign_link_that_leaves_the_data_directory_is_refused() {
@@ -1352,6 +1379,7 @@ TEST_MAIN(
 	test_without_a_budget_a_script_runs_to_its_end,
 	test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread,
 	test_a_cancelled_call_leaves_no_garbage,
+	test_a_cancel_inside_the_collection_lets_it_finish,
 	test_a_charged_loop_yields_before_its_slice_of_instructions_is_spent,
 	test_a_foreign_link_that_leaves_the_data_directory_is_refused
 )

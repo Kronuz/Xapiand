@@ -883,13 +883,14 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	// One call per state: the cached state when it is free; else a small script's call compiles one of its own
 	// and a large script's call waits for the cached state.
 	task::async_mutex::guard held;
+	const task::cancel_token token = budget != nullptr ? budget->token() : task::cancel_token{};
 	if (source.size() > own_state_source) {
-		held = co_await resident_lock.lock(budget != nullptr ? budget->token() : task::cancel_token{});
+		held = co_await resident_lock.lock(token);
 		if (!held) {
 			throw task::cancelled{};
 		}
-	} else if (auto take = resident_lock.lock(); take.await_ready()) {
-		held = take.await_resume();
+	} else if (auto take = resident_lock.lock(task::cancel_token{}); take.await_ready()) {
+		held = take.await_resume();   // free: taken without waiting
 	}
 	std::unique_ptr<detail::State> own;
 	detail::State* state = resident.get();
