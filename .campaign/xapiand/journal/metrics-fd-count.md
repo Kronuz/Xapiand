@@ -1,6 +1,6 @@
 # metrics-fd-count: journal
 
-State: working
+State: waiting on jobs 261116-081527-017d42 261116-083135-f2643d 261116-083148-c3780d 261116-083142-1bc561 261116-083142-e4f744 261116-082207-28c2d6
 Quest: .campaign/xapiand/quests/metrics-fd-count.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-system:a5dc407 (branch quest/xapiand/metrics-fd-count in ~/code/Kronuz/system, worktree system-wt/metrics-fd-count) lists
-/proc/self/fd and /dev/fd instead of polling; pushed, CI running. Xapiand:56871ecea adds tests/test_manager_fd_count.cc
-(registered in CMakeLists.txt) and the probe harness/metrics_scrape_*. Before-binary build job 261116-081527-017d42
-(-> /Users/kronuz/.scratch/fd-ab/before).
+system:a5dc407 (branch quest/xapiand/metrics-fd-count, ~/code/Kronuz/system, worktree system-wt/metrics-fd-count):
+/proc/self/fd and /dev/fd listing; system CI green on all 9 jobs (run 43905242900, FreeBSD included). Xapiand:56871ecea
+adds tests/test_manager_fd_count.cc and harness/metrics_scrape_{probe.py,build.sh,ab.sh,reactor_lag.patch};
+Xapiand:1324fb278 repins system. Jobs: before build 261116-081527-017d42 (-> ~/.scratch/fd-ab/before), after build
+261116-083135-f2643d (-> ~/.scratch/fd-ab/after), A2 strict ABBA x3 261116-083148-c3780d (after both), build-test
+261116-083142-1bc561, e2e 261116-083142-e4f744, A1 mutant 261116-082207-28c2d6 (system:a5dc407 with the listing
+counting its own dirfd; must fail). docs/mechanisms/metrics.md is drafted with a RESULTS placeholder.
 
 ## Next
 
-1. system CI green -> repin CMakeLists.txt system GIT_TAG to a5dc407, push, CI.
-2. Build the after binary (metrics_scrape_build.sh) at the repin commit; A2 job: `quiet strict`
-   harness/metrics_scrape_ab.sh before after 3.
-3. A1 `build-test` check, A3 `e2e` check via `campaign verify`; docs/mechanisms/metrics.md with the numbers.
+1. When the jobs finish: read A2's log (`campaign job log 261116-083148-c3780d`), put the numbers in
+   docs/mechanisms/metrics.md (replace RESULTS) and the Result below; confirm the Xapiand CI on 1324fb278 is green.
+2. If A2's loop turn is not under 3 ms, look at what else is in the scrape (the old scan was 52-56 ms of it).
+3. The system branch is unlanded: the lead fast-forwards Kronuz/system main to a5dc407 (the pin names that sha).
 
 ## Blocked on
 
@@ -33,7 +36,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | test tests/test_manager_fd_count.cc (and system test/test.cc): build-test 261116-083142-1bc561; mutant (listing counts its own dirfd) 261116-082207-28c2d6 |
+| A2 | 261116-083148-c3780d (strict ABBA x3, spin probe over 3 ms; builds 261116-081527-017d42 before, 261116-083135-f2643d after) |
+| A3 | e2e 261116-083142-e4f744 |
 
 ## Result
 
