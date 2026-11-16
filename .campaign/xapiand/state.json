@@ -3302,6 +3302,84 @@
       "updated": "2026-11-10T04:36:25",
       "worktree": ""
     },
+    "distributed-search": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+          "level": "none",
+          "minutes": 5,
+          "name": "no-walk"
+        }
+      ],
+      "consumes": [
+        "prospect:supplied-stats",
+        "xapiand:shard-rpc",
+        "strata:placement-records"
+      ],
+      "files": [
+        "src/engine/search.*",
+        "src/engine/strata/search.*",
+        "src/database/handler.cc",
+        "src/server/search_views.cc",
+        "src/index_pattern.*",
+        "src/walk_gate.h",
+        "tests/test_index_pattern.cc",
+        "tests/fuzz_index_pattern.cc",
+        "tests/fuzz_index_expand.cc",
+        "tests/cluster/test_search*",
+        "harness/cluster/search*",
+        "docs/mechanisms/distributed-search.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "prospect-supplied-stats",
+        "shard-groups"
+      ],
+      "provides": [
+        "xapiand:search-fanout"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Fan-out, exact statistics, merged aggregations, patterns from the root",
+      "updated": "2026-11-15T23:05:33"
+    },
     "docs-site-audit": {
       "accepted": {},
       "after": [],
