@@ -57,7 +57,7 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
     async def one(sched: float, doc_id: int) -> None:
         conn = await pool.get()
         try:
-            status, _ = await conn.request("GET", f"/accounts/{doc_id}", timeout=60)
+            status, _ = await conn.request("GET", args.path.format(id=doc_id), timeout=60)
             if status != 200:
                 errors[0] += 1
             elif sched - t0 >= args.warmup:
@@ -219,6 +219,7 @@ def main() -> int:
     ap.add_argument("--warmup", type=float, default=2.0)
     ap.add_argument("--rate", type=float, default=200.0)
     ap.add_argument("--conns", type=int, default=16)
+    ap.add_argument("--path", default="/accounts/{id}", help="the trivial GET's path; `/` reads no document")
     ap.add_argument("--phases", default="trivial,trivial2,restore,trivial3")
     ap.add_argument("--sample", action="store_true")
     ap.add_argument(
