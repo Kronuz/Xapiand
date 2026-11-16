@@ -1,6 +1,6 @@
 # exact-id-keys: journal
 
-State: waiting on jobs 261113-142237-97068b 261113-142240-d936af 261113-142246-dbceae 261113-142257-1b699b 261113-142303-cc6119 261113-142310-ef98cf 261113-142316-4db9b3
+State: waiting on jobs 261115-210614-d6a201 261115-210629-01840c 261115-210632-ca9170 261115-210635-274f76 261115-210639-ed1c27
 Quest: .campaign/xapiand/quests/exact-id-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,24 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Suite 261113-140055-efd7e7 at 83fea2fc4 aborted test_node in test_far_ids_keep_the_docids_dense (dense_s3) on
-`assert(current_revision == prior_revision + 1)` in do_commit. Cause, pre-existing in the test: its merge_all called
-`prospect::index::commit()` directly on a shard holding uncommitted far PUTs, a new revision the engine never noted
-(`Core::note()` caches `committed_revision`); the shard's debounced autocommit then read the stale revision as prior
-and saw +2. Fires only when the autocommit lands after the merge and before a refresh. Not this branch: the same
-assert hit this test at one-id 8d61b1913 (job 261113-083755-2de9cb, an ancestor of master). Fixed at 7b23f319e:
-merge_all commits through the shard, merges, syncs the merge output (strata bumps the revision only for applied
-writes) and CHECKs engine revision == manifest revision. Also fixed the old-codec mutant, which no longer applied at
-83fea2fc4 (job 261113-140102-b8b97c: MUTATION NOT APPLIED).
-
-Jobs at 7b23f319e: suite 261113-142237-97068b (A4); A1 test 261113-142240-d936af, A1 mutant old-codec
-261113-142246-dbceae; A2 test 261113-142257-1b699b, A2 mutant cap-2-32 261113-142303-cc6119; probe index-commit
-mutant 261113-142310-ef98cf (exit 0 = the new CHECK fails without the fix). At master 07be4daa4: probe
-261113-142316-4db9b3 (master's test plus only the revision CHECK; exit 0 = stale revision pre-existing).
+Master merged into the branch (68f26a25e, no conflicts). Gate at the merged head: suite 261115-210614-d6a201 (A4);
+A1 test 261115-210629-01840c, A1 mutant old-codec 261115-210632-ca9170; A2 test 261115-210635-274f76, A2 mutant
+cap-2-32 261115-210639-ed1c27. docs/design/exact-id-keys.md (A3) was already written and committed at c4d10938d;
+checked against the final code, no em dashes, no GPL source read.
 
 ## Next
 
-1. When the jobs finish: paste brief's Evidence table, A3 row, State "ready for review" (or fix failures).
+1. When the jobs finish: if all pass, State "ready for review" and update the Evidence table with these ids;
+   if one fails, diagnose it (merge interaction first).
 
 ## Blocked on
 
@@ -35,12 +26,15 @@ there; edited minimally, see R5.
 
 ## Evidence
 
+At the merged head 68f26a25e (earlier runs at 7b23f319e: A1 261113-142240-d936af / 261113-142246-dbceae, A2
+261113-142257-1b699b / 261113-142303-cc6119, suite 261113-142237-97068b, all exit 0).
+
 | Criterion | Evidence |
 |---|---|
-| A1 | 261113-142240-d936af (test); fails without: 261113-142246-dbceae (old-codec) |
-| A2 | 261113-142257-1b699b (test); fails without: 261113-142303-cc6119 (cap-2-32) |
+| A1 | 261115-210629-01840c (test); fails without: 261115-210632-ca9170 (old-codec) |
+| A2 | 261115-210635-274f76 (test); fails without: 261115-210639-ed1c27 (cap-2-32) |
 | A3 | [artifact] docs/design/exact-id-keys.md |
-| A4 | suite 261113-142237-97068b; CI on quest/xapiand/exact-id-keys |
+| A4 | suite 261115-210614-d6a201; CI on quest/xapiand/exact-id-keys |
 
 ## Result
 
