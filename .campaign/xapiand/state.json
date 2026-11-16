@@ -13950,7 +13950,7 @@
     "placement-repair": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -13998,7 +13998,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-15T23:05:18"
+      "updated": "2026-11-16T10:28:35"
     },
     "placement-root": {
       "accepted": {},
