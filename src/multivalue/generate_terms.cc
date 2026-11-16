@@ -23,6 +23,7 @@
 
 #include "generate_terms.h"
 
+#include <cmath>                                   // for std::floor
 #include <optional>                                // for std::optional
 #include <set>                                    // for std::set
 #include <stdexcept>                              // for std::invalid_argument
@@ -576,8 +577,9 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 		return engine::Query::match_all();
 	}
 
-	auto tm_s = Datetime::to_tm_t(static_cast<std::time_t>(start_));
-	auto tm_e = Datetime::to_tm_t(static_cast<std::time_t>(end_));
+	// A value's terms come from its whole seconds, the floor: truncation would put -0.5 in 1970, not 1969.
+	auto tm_s = Datetime::to_tm_t(static_cast<std::time_t>(std::floor(start_)));
+	auto tm_e = Datetime::to_tm_t(static_cast<std::time_t>(std::floor(end_)));
 
 	uint64_t diff = tm_e.year - tm_s.year, acc = -1;
 	// Find the accuracy needed.

@@ -32,7 +32,8 @@ Starts BIN on a fresh data directory and checks, per group, that every answer eq
   minmax    min and max aggregations (a double: the nearest double of the exact extreme)
   wide      one field typed integer in one index and floating in another, under one search
   ids       integer ids above 2^53: ranges and sorts on _id
-  midpoint  9007199254740993.0000001 as a JSON number, a string value and a range bound is its nearest double
+  midpoint  9007199254740993.0000001 as a JSON number, a _float cast of its text and a range bound is its
+            nearest double
   refuse    a NaN bound, a NaN value and an integer of 2^63 or more answer 400; -0.0 indexes as 0
 
 Prints each group's wrong count and exits 1 when any answer is wrong.
@@ -316,7 +317,10 @@ MIDPOINT = "9007199254740993.0000001"  # just above the midpoint of 2^53 and 2^5
 
 
 def check_midpoint() -> None:
-    """A decimal just past a midpoint is its nearest double as a JSON number, a string value and a range bound (F3)."""
+    """A decimal just past a midpoint is its nearest double as a JSON number, a cast text and a range bound (F3).
+
+    A numeric field refuses a bare string value; the text reaches it through the `_float` cast.
+    """
     nearest = float(MIDPOINT)
     assert nearest == 2.0**53 + 2
     schema = {"_schema": {"_type": "object", "f": {"_type": "floating"}, "i": {"_type": "integer"}}}
@@ -324,7 +328,7 @@ def check_midpoint() -> None:
     assert status in (200, 201, 204)
     bodies = {
         "json": f'{{"i": 0, "f": {MIDPOINT}}}',
-        "string": f'{{"i": 1, "f": "{MIDPOINT}"}}',
+        "cast": f'{{"i": 1, "f": {{"_float": "{MIDPOINT}"}}}}',
         "below": '{"i": 2, "f": 9007199254740992.0}',
         "integer": '{"i": 3, "f": 9007199254740994}',
     }
