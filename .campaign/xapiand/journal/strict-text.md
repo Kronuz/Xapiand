@@ -1,6 +1,6 @@
 # strict-text: journal
 
-State: working
+State: waiting on jobs (see below)
 Quest: .campaign/xapiand/quests/strict-text.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -38,3 +38,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## Rulings I made (strict-text)
+
+- Added `strict_text` to the test list in CMakeLists.txt (outside the file set) to register tests/test_strict_text.cc.
+- Numeric text uses a JSON number grammar (no leading zeros, `+`, hex, spaces); explicit casts (Cast::*) unchanged.

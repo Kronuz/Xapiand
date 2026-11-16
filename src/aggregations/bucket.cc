@@ -67,11 +67,11 @@ FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view na
 		std::set<std::string> s_values;
 		if (values.is_array()) {
 			for (const auto& value : values) {
-				s_values.insert(Serialize::MsgPack(field_spc, value));
+				s_values.insert(Serialize::MsgPack(field_spc, Serialize::exact(field_name, field_spc.get_type(), value)));
 			}
 			func = &FilterAggregation::check_multiple;
 		} else {
-			s_values.insert(Serialize::MsgPack(field_spc, values));
+			s_values.insert(Serialize::MsgPack(field_spc, Serialize::exact(field_name, field_spc.get_type(), values)));
 			func = &FilterAggregation::check_single;
 		}
 		_filters.emplace_back(field_spc.slot, std::move(s_values));
