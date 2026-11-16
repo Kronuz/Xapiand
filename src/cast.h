@@ -79,6 +79,7 @@ namespace Cast {
 
 	MsgPack cast(const MsgPack& obj);
 	MsgPack cast(FieldType type, const MsgPack& obj);
+	// A float truncates to an integer; a value outside the type's range is a CastError, never wrapped.
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
 	double floating(const MsgPack& obj);

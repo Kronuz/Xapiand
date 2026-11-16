@@ -22,10 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **A value must be exactly of its field's type, everywhere.** Field writes, `_id` writes and searches (terms, range bounds
+  and `q=`) hold a value to one rule: it must be exactly a value of the field's type, else the request answers `400` with a
+  message naming the field, the value and the type. `1.5` or `"abc"` in an integer field or an integer `_id`, `-1` in a
+  positive one and 2^64 in an integer one are refused: an `_id` used to be truncated (1.5 stored and found 1) or wrapped
+  (-1 found 2^64-1), and a search with a value of another type answered `200` with no hits. Exact values are taken as before,
+  text spelling one included (`"12"` and `12.0` in an integer field). A cast object is the one way to convert:
+  `{"_integer": 1.5}` stores and finds 1, the same in writes and searches, and a cast truncates but never wraps
+  (`{"_positive": -1}` answers `400`). See [Exact Values](/Xapiand/reference-guide/schemas/field-types/numeric-type#exact-values).
 - **Numbers sort and range in exact numeric order, ids and values alike.** Every number Xapiand sorts, ranges or
   looks up by term (field values, numeric document ids, versions) is encoded by the MIT [sortable](https://github.com/Kronuz/sortable)
   codec: 1 to 10 bytes whose byte order is the exact numeric order across integer, positive and floating fields. Integers above
-  2^53 (snowflake ids, nanosecond times), negative fractions, float bounds on integer fields and one field typed integer in one
+  2^53 (snowflake ids, nanosecond times), negative fractions and one field typed integer in one
   index and floating in another answer exactly, and 5, `5u` and 5.0 are one value. A NaN value or range bound, and an integer of
   2^63 or more for an integer field, answer `400`; -0.0 indexes as 0; a decimal sent as a JSON number, a string or a range bound is
   its nearest double; an absent range bound includes the infinities. The bytes on disk change and nothing reads the earlier ones:

@@ -27,6 +27,7 @@
 #include <cmath>                                      // for std::isnan
 #include <cstdint>                                    // for int64_t, uint64_t
 #include <limits>                                     // for std::numeric_limits
+#include <optional>                                   // for std::optional
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view
 
@@ -37,6 +38,7 @@
 #include "opts.h"                                   // for opts.legacy_ids (v1 vs v6 codec)
 #include "database/schema.h"                          // for FieldType, FieldType::keyword, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
+#include "exception_engine.h"                          // for CastError, SerializationError
 #include "xapiand_exception.h"                                // for SerializationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
@@ -44,6 +46,7 @@
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
+#include "reserved/fields.h"                           // for ID_FIELD_NAME
 #include "serialize_list.h"                           // for StringList, CartesianList and RangeList
 #include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
@@ -143,6 +146,134 @@ Serialize::isUUID(std::string_view field_value) noexcept
 		return true;
 	}
 	return false;
+}
+
+
+namespace {
+
+[[noreturn]] void
+not_exact(std::string_view field, FieldType type, const MsgPack& value, std::string_view why = {})
+{
+	if (why.empty()) {
+		THROW(ClientError, "Field {} expects a value of type {}, got {}", repr(field), enum_name(type), value.to_string());
+	}
+	THROW(ClientError, "Field {} expects a value of type {}, got {}: {}", repr(field), enum_name(type), value.to_string(), why);
+}
+
+
+// The number a text spells, read as JSON reads one (int64, else uint64, else double); undefined when it spells none.
+MsgPack
+number_of(std::string_view text)
+{
+	int errno_save;
+	const auto i = strict_stoll(&errno_save, text);
+	if (errno_save == 0) {
+		return MsgPack(static_cast<int64_t>(i));
+	}
+	if (!text.empty() && text.front() != '-') {  // strtoull wraps a negative
+		const auto u = strict_stoull(&errno_save, text);
+		if (errno_save == 0) {
+			return MsgPack(static_cast<uint64_t>(u));
+		}
+	}
+	const auto d = strict_stod(&errno_save, text);
+	if (errno_save == 0) {
+		return MsgPack(d);
+	}
+	return MsgPack();
+}
+
+
+// `v` as exactly a number of the numeric `type`: an integral float as the integer, text as the number it spells.
+std::optional<MsgPack>
+exact_number(FieldType type, const MsgPack& v)
+{
+	switch (v.get_type()) {
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			if (type != FieldType::positive) {
+				return v;
+			}
+			break;
+		case MsgPack::Type::POSITIVE_INTEGER:
+			if (type != FieldType::integer || v.u64() <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+				return v;
+			}
+			break;
+		case MsgPack::Type::FLOAT: {
+			const double d = v.f64();
+			if (std::isnan(d)) {
+				break;
+			}
+			if (type == FieldType::floating) {
+				return v;
+			}
+			if (!std::isfinite(d) || std::trunc(d) != d) {
+				break;
+			}
+			if (type == FieldType::integer && d >= -0x1p63 && d < 0x1p63) {
+				return MsgPack(static_cast<int64_t>(d));
+			}
+			if (type == FieldType::positive && d >= 0 && d < 0x1p64) {
+				return MsgPack(static_cast<uint64_t>(d));
+			}
+			break;
+		}
+		case MsgPack::Type::STR: {
+			const auto number = number_of(v.str_view());
+			if (number.is_number()) {
+				return exact_number(type, number);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+	return std::nullopt;
+}
+
+}  // namespace
+
+
+MsgPack
+Serialize::exact(std::string_view field, FieldType type, const class MsgPack& value)
+{
+	switch (type) {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::uuid:
+			break;
+		default:
+			return value;
+	}
+
+	::MsgPack converted;
+	if (value.is_map()) {
+		try {
+			converted = Cast::cast(value);
+		} catch (const CastError& exc) {
+			not_exact(field, type, value, exc.get_message());
+		}
+	}
+	const auto& v = value.is_map() ? converted : value;
+
+	switch (type) {
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::uuid:
+			if (v.is_string()) {
+				return v;
+			}
+			break;
+		default:
+			if (auto number = exact_number(type, v)) {
+				return std::move(*number);
+			}
+			break;
+	}
+	not_exact(field, type, value);
 }
 
 
@@ -948,11 +1079,11 @@ Serialize::id(const required_spc_t& spc_id, const class MsgPack& document_id)
 		case FieldType::integer:
 		case FieldType::positive:
 		case FieldType::floating: {
-			const auto value = Cast::cast(type, document_id.is_map() ? Cast::cast(document_id) : document_id);
-			switch (type) {
-				case FieldType::integer:
+			const auto value = exact(ID_FIELD_NAME, type, document_id);
+			switch (value.get_type()) {
+				case MsgPack::Type::NEGATIVE_INTEGER:
 					return integer(value.i64());
-				case FieldType::positive:
+				case MsgPack::Type::POSITIVE_INTEGER:
 					return positive(value.u64());
 				default:
 					return floating(FieldType::floating, value.f64());

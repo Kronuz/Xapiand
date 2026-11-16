@@ -159,9 +159,9 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 
 
 MsgPack
-QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
+QueryDSL::parse_range(std::string_view path, const required_spc_t& field_spc, std::string_view range)
 {
-	L_CALL("QueryDSL::parse_range(<field_spc>, {})", repr(range));
+	L_CALL("QueryDSL::parse_range({}, <field_spc>, {})", repr(path), repr(range));
 
 	FieldParser fp(range);
 	fp.parse();
@@ -169,15 +169,22 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 		THROW(QueryDslError, "Invalid range [<string>]: {}", repr(range));
 	}
 
+	// A bound's text is a value of the field's type by the one rule (Serialize::exact); text it leaves as text is cast.
+	const auto type = field_spc.get_type();
+	const auto bound = [&](std::string_view text) {
+		auto exact = Serialize::exact(path, type, MsgPack(text));
+		return exact.is_string() ? Cast::cast(type, exact) : exact;
+	};
+
 	MsgPack value;
 	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack::MAP();
 	auto start = fp.get_start();
 	if (!start.empty()) {
-		_range[RESERVED_QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
+		_range[RESERVED_QUERYDSL_FROM] = bound(start);
 	}
 	auto end = fp.get_end();
 	if (!end.empty()) {
-		_range[RESERVED_QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
+		_range[RESERVED_QUERYDSL_TO] = bound(end);
 	}
 
 	return value;
@@ -435,7 +442,7 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, engine::Op def
 	L_CALL("QueryDSL::get_in_query({}, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (path.empty()) {
-		return get_global_in_query(default_spc, obj, default_op, wqf, flags);
+		return get_global_in_query(path, default_spc, obj, default_op, wqf, flags);
 	}
 
 	auto data_field = schema->get_data_field(path, true);
@@ -446,9 +453,7 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, engine::Op def
 	// }
 
 	try {
-		return get_regular_in_query(field_spc, obj, default_op, wqf, flags);
-	} catch (const SerializationError&) {
-		return get_global_in_query(field_spc, obj, default_op, wqf, flags);
+		return get_regular_in_query(path, field_spc, obj, default_op, wqf, flags);
 	} catch (const TermsOnlyRangeError& exc) {
 		THROW(QueryParserError, "Cannot answer a range on field {}: {}; index its values (not only its terms) to make ranges exact", repr(path), exc.what());
 	}
@@ -467,23 +472,14 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, engine::Op 
 	const auto& field_spc = data_field.first;
 
 	if (!data_field.second.empty()) {
-		return get_accuracy_query(field_spc, data_field.second, obj, default_op, wqf, flags);
+		return get_accuracy_query(path, field_spc, data_field.second, obj, default_op, wqf, flags);
 	}
 
-	// An unresolved field type can never serialize as a regular term and always
-	// falls through to the global query below. Take that path directly instead of
-	// letting get_regular_query throw a SerializationError just to catch it here:
-	// exception unwinding is very expensive and this is the query hot path for
-	// any missing or still-dynamic field.
+	// A field without a type yet is searched globally; a typed one takes only values of its type (D92).
 	if (field_spc.get_type() == FieldType::empty) {
 		return get_global_query(field_spc, obj, default_op, wqf, flags);
 	}
-
-	try {
-		return get_regular_query(field_spc, obj, default_op, wqf, flags);
-	} catch (const SerializationError&) {
-		return get_global_query(field_spc, obj, default_op, wqf, flags);
-	}
+	return get_regular_query(path, field_spc, obj, default_op, wqf, flags);
 }
 
 
@@ -568,7 +564,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_v
 
 
 inline engine::Query
-QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
+QueryDSL::get_acc_num_query(std::string_view path, const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op /*default_op*/, engine::termcount wqf, [[maybe_unused]] unsigned flags)
 {
 	L_CALL("QueryDSL::get_acc_num_query(<required_spc_t>, {}, {}, <wqf>, ({}))", repr(field_accuracy), repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -577,7 +573,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 	if (errno_save != 0) {
 		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
-	auto value = Cast::integer(obj);
+	const auto value = Serialize::exact(path, FieldType::integer, obj).i64();
 	return engine::Query::term(field_name(field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), Serialize::integer(value - modulus(value, acc)), wqf);
 }
 
@@ -603,13 +599,13 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 
 
 inline engine::Query
-QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
+QueryDSL::get_accuracy_query(std::string_view path, const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, {}, {}, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
 	switch (field_spc.get_type()) {
 		case FieldType::integer:
-			return get_acc_num_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
+			return get_acc_num_query(path, field_spc, field_accuracy, obj, default_op, wqf, flags);
 		case FieldType::date:
 		case FieldType::datetime:
 			return get_acc_date_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
@@ -661,7 +657,7 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 
 
 inline engine::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
+QueryDSL::get_regular_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
@@ -683,7 +679,8 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 
 	// A numeric id's term is its key's bytes (Serialize::id), not its value's.
 	const bool numeric_id = field_spc.prefix() == DOCUMENT_ID_TERM_PREFIX && field_spc.get_ctype() == 'N';
-	auto serialized_term = numeric_id ? Serialize::id(field_spc, obj) : Serialize::MsgPack(field_spc, obj);
+	const auto value = Serialize::exact(path, field_spc.get_type(), obj);
+	auto serialized_term = numeric_id ? Serialize::id(field_spc, value) : Serialize::MsgPack(field_spc, value);
 	return get_term_query(field_spc, serialized_term, default_op, wqf, flags);
 }
 
@@ -858,10 +855,37 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 }
 
 
-inline engine::Query
-QueryDSL::get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
+namespace {
+
+// `obj` with its `_range` bounds as values of `type` by the one rule (Serialize::exact); else `obj` as it is.
+MsgPack
+exact_range(std::string_view path, FieldType type, const MsgPack& obj)
 {
-	L_CALL("QueryDSL::get_global_in_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
+	if (!obj.is_map() || obj.size() != 1) {
+		return obj;
+	}
+	const auto it = obj.find(RESERVED_QUERYDSL_RANGE);
+	if (it == obj.end() || !it.value().is_map()) {
+		return obj;
+	}
+	MsgPack exact = obj;
+	auto& range = exact[RESERVED_QUERYDSL_RANGE];
+	for (const auto* bound : { RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO }) {
+		const auto b = range.find(bound);
+		if (b != range.end()) {
+			range[bound] = Serialize::exact(path, type, b.value());
+		}
+	}
+	return exact;
+}
+
+}  // namespace
+
+
+inline engine::Query
+QueryDSL::get_global_in_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
+{
+	L_CALL("QueryDSL::get_global_in_query({}, <field_spc>, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (obj.is_string()) {
 		auto parsed = parse_guess_range(field_spc, obj.str_view());
@@ -874,19 +898,21 @@ QueryDSL::get_global_in_query(const required_spc_t& field_spc, const MsgPack& ob
 	if (field_type == FieldType::empty) {
 		return engine::Query::match_all();
 	}
-	return get_in_query(Schema::get_prefixed_global(field_type, field_spc.prefix()), obj, default_op, wqf, flags);
+	// No field type to hold the bounds to: a numeric range's bounds are any numbers, as a float field takes them.
+	const bool numeric = field_type == FieldType::integer || field_type == FieldType::positive || field_type == FieldType::floating;
+	return get_in_query(Schema::get_prefixed_global(field_type, field_spc.prefix()), numeric ? exact_range(path, FieldType::floating, obj) : obj, default_op, wqf, flags);
 }
 
 
 inline engine::Query
-QueryDSL::get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
+QueryDSL::get_regular_in_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags)
 {
-	L_CALL("QueryDSL::get_regular_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
+	L_CALL("QueryDSL::get_regular_in_query({}, <field_spc>, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (obj.is_string()) {
-		return get_in_query(field_spc, parse_range(field_spc, obj.str_view()), default_op, wqf, flags);
+		return get_in_query(field_spc, parse_range(path, field_spc, obj.str_view()), default_op, wqf, flags);
 	}
-	return get_in_query(field_spc, obj, default_op, wqf, flags);
+	return get_in_query(field_spc, exact_range(path, field_spc.get_type(), obj), default_op, wqf, flags);
 }
 
 

@@ -117,8 +117,9 @@ Sources: `src/server/search_views.cc:938-985`; `src/database/schema.cc:2713-2717
 
 The ID in the path takes the type of the index's `_id` field. Where the IDs are
 integers, any integer is an ID, `0` and negative numbers included, and the
-document answers it as a number. Where the IDs are keywords, `0` and `00` are
-two IDs, each answered as a string.
+document answers it as a number; anything else, such as `1.5` or `abc`, answers
+`400` (see [Exact Values](/Xapiand/reference-guide/schemas/field-types/numeric-type#exact-values)).
+Where the IDs are keywords, `0` and `00` are two IDs, each answered as a string.
 
 ```rest
 PUT /idsapi/numbers/7

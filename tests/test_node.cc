@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <deque>
 #include <cstdint>
@@ -39,6 +40,7 @@
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -3033,6 +3035,288 @@ static void test_a_claim_between_flight_end_and_store_is_served_by_the_publicati
 }
 
 
+// D92: a value meets a typed field as exactly a value of its type, else a 400 naming the field, the value and the type.
+
+static MsgPack json_value(const std::string& text) {
+	rapidjson::Document rdoc;
+	json_load(rdoc, "[" + text + "]");
+	return MsgPack(rdoc).at(0);
+}
+
+// A refusal: 400, its message naming `field` (quoted), `value` and `type`.
+static void check_refused(const Reply& reply, const std::string& field, const std::string& value, const std::string& type) {
+	CHECK_EQ(reply.status, 400);
+	const auto message = text_of(reply, "message");
+	const bool named = message.find("'" + field + "'") != std::string::npos && message.find(value) != std::string::npos
+		&& message.find(type) != std::string::npos;
+	if (!named) {
+		std::fprintf(stderr, "  refusal of %s %s as %s says: %s\n", field.c_str(), value.c_str(), type.c_str(), message.c_str());
+	}
+	CHECK(named);
+}
+
+// Serialize::exact, the one rule: what each type takes as itself, and what it refuses.
+static void test_exact_reads_a_value_as_its_type() {
+	struct Taken { FieldType type; const char* value; const char* as; };
+	const Taken taken[] = {
+		{FieldType::integer, "12", "12"},
+		{FieldType::integer, "\"12\"", "12"},
+		{FieldType::integer, "\"-12\"", "-12"},
+		{FieldType::integer, "12.0", "12"},
+		{FieldType::integer, "\"12.0\"", "12"},
+		{FieldType::integer, "-0.0", "0"},
+		{FieldType::integer, "9223372036854775807", "9223372036854775807"},
+		{FieldType::integer, "-9223372036854775808", "-9223372036854775808"},
+		{FieldType::integer, "\"9223372036854775807\"", "9223372036854775807"},
+		{FieldType::integer, "{\"_integer\":1.5}", "1"},
+		{FieldType::integer, "{\"_integer\":-1.5}", "-1"},
+		{FieldType::positive, "18446744073709551615", "18446744073709551615"},
+		{FieldType::positive, "\"18446744073709551615\"", "18446744073709551615"},
+		{FieldType::positive, "0", "0"},
+		{FieldType::positive, "{\"_positive\":2.5}", "2"},
+		{FieldType::positive, "{\"_integer\":3.5}", "3"},
+		{FieldType::floating, "1.5", "1.5"},
+		{FieldType::floating, "\"1.5\"", "1.5"},
+		{FieldType::floating, "9007199254740993", "9007199254740993"},
+		{FieldType::floating, "\"9007199254740993\"", "9007199254740993"},
+		{FieldType::floating, "-3", "-3"},
+		{FieldType::floating, "{\"_integer\":1.5}", "1"},
+		{FieldType::keyword, "\"abc\"", "\"abc\""},
+		{FieldType::keyword, "{\"_keyword\":84535}", "\"84535\""},
+		{FieldType::text, "\"12\"", "\"12\""},
+		{FieldType::boolean, "\"abc\"", "\"abc\""},   // a type the rule leaves to its own reader
+	};
+	for (const auto& t : taken) {
+		try {
+			const auto got = Serialize::exact("f", t.type, json_value(t.value)).to_string();
+			if (got != t.as) {
+				std::fprintf(stderr, "  %s as %s gives %s, not %s\n", t.value, enum_name(t.type).data(), got.c_str(), t.as);
+			}
+			CHECK_EQ(got, std::string(t.as));
+		} catch (const ClientError& exc) {
+			std::fprintf(stderr, "  %s as %s is refused: %s\n", t.value, enum_name(t.type).data(), exc.get_message().c_str());
+			CHECK(false);
+		}
+	}
+	struct Refused { FieldType type; const char* value; const char* shown; };
+	const Refused refused[] = {
+		{FieldType::integer, "1.5", "1.5"},
+		{FieldType::integer, "\"1.5\"", "1.5"},
+		{FieldType::integer, "\"abc\"", "abc"},
+		{FieldType::integer, "\"\"", "\"\""},
+		{FieldType::integer, "true", "true"},
+		{FieldType::integer, "null", "null"},
+		{FieldType::integer, "[1]", "[1]"},
+		{FieldType::integer, "9223372036854775808", "9223372036854775808"},
+		{FieldType::integer, "\"9223372036854775808\"", "9223372036854775808"},
+		{FieldType::integer, "1e300", "1e+300"},
+		{FieldType::integer, "{\"_integer\":1e300}", "_integer"},
+		{FieldType::integer, "{\"_integer\":18446744073709551615}", "_integer"},
+		{FieldType::integer, "{\"_float\":1.5}", "_float"},
+		{FieldType::integer, "{\"_text\":\"abc\"}", "_text"},
+		{FieldType::integer, "{\"_nothing\":1}", "_nothing"},
+		{FieldType::positive, "-1", "-1"},
+		{FieldType::positive, "\"-1\"", "-1"},
+		{FieldType::positive, "-0.5", "-0.5"},
+		{FieldType::positive, "\"18446744073709551616\"", "18446744073709551616"},
+		{FieldType::positive, "18446744073709551616", "1.8446744073709552e+19"},
+		{FieldType::positive, "{\"_positive\":-1}", "_positive"},
+		{FieldType::positive, "{\"_positive\":\"-1\"}", "_positive"},
+		{FieldType::positive, "{\"_positive\":-1.5}", "_positive"},
+		{FieldType::floating, "\"abc\"", "abc"},
+		{FieldType::floating, "false", "false"},
+		{FieldType::keyword, "12", "12"},
+		{FieldType::text, "true", "true"},
+		{FieldType::uuid, "1", "1"},
+	};
+	for (const auto& r : refused) {
+		std::string message;
+		try {
+			const auto got = Serialize::exact("f", r.type, json_value(r.value));
+			std::fprintf(stderr, "  %s as %s is taken as %s\n", r.value, enum_name(r.type).data(), got.to_string().c_str());
+		} catch (const ClientError& exc) {
+			message = exc.get_message();
+		}
+		const bool named = message.find("'f'") != std::string::npos && message.find(r.shown) != std::string::npos
+			&& message.find(enum_name(r.type)) != std::string::npos;
+		if (!named) {
+			std::fprintf(stderr, "  %s as %s: %s\n", r.value, enum_name(r.type).data(), message.c_str());
+		}
+		CHECK(named);
+	}
+	// NaN is no number of any type; an infinity is a float.
+	for (const auto type : {FieldType::integer, FieldType::positive, FieldType::floating}) {
+		bool threw = false;
+		try { Serialize::exact("f", type, MsgPack(std::nan(""))); } catch (const ClientError&) { threw = true; }
+		CHECK(threw);
+	}
+	CHECK_EQ(Serialize::exact("f", FieldType::floating, MsgPack(std::numeric_limits<double>::infinity())).f64(), std::numeric_limits<double>::infinity());
+	bool threw = false;
+	try { Serialize::exact("f", FieldType::integer, MsgPack(std::numeric_limits<double>::infinity())); } catch (const ClientError&) { threw = true; }
+	CHECK(threw);
+}
+
+// The schema of the indexes below: integer (or positive) ids, and fields i (integer) and p (positive).
+static void create_typed_index(const std::string& name, const char* id_type) {
+	create_index(name, 1, std::string(R"({"_type":"object","_id":{"_type":")") + id_type + R"("},"i":{"_type":"integer"},"p":{"_type":"positive"}})");
+}
+
+// A1: a write takes only exact values, in `_id` and in fields; exact ones, text spelling them included, store.
+static void test_writes_take_only_exact_values() {
+	Watchdog watchdog("writes take only exact values", 240s);
+	create_typed_index("sv_w_int", "integer");
+	create_typed_index("sv_w_pos", "positive");
+	const std::string ints = "/sv_w_int/";
+	const std::string poss = "/sv_w_pos/";
+
+	CHECK_EQ(call("PUT", ints + "1.5?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("PUT", ints + "abc?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("PUT", ints + "9223372036854775808?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("PUT", poss + "-1?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("PUT", poss + "abc?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("PUT", poss + "18446744073709551616?commit", R"({"n":"x"})").status, 400);
+	CHECK_EQ(call("POST", ints + "?commit", R"({"_id":1.5,"n":"x"})").status, 400);
+	CHECK_EQ(call("POST", ints + "?commit", R"({"_id":"abc","n":"x"})").status, 400);
+	CHECK_EQ(call("POST", poss + "?commit", R"({"_id":-1,"n":"x"})").status, 400);
+	for (const auto* body : {R"({"i":1.5})", R"({"i":"abc"})", R"({"i":"1.5"})", R"({"i":true})", R"({"i":9223372036854775808})",
+			R"({"i":18446744073709551616})", R"({"p":-1})", R"({"p":"-1"})", R"({"p":18446744073709551616})"}) {
+		const auto reply = call("PUT", ints + "1?commit", body);
+		if (reply.status != 400) {
+			std::fprintf(stderr, "  PUT %s answered %d\n", body, reply.status);
+		}
+		CHECK_EQ(reply.status, 400);
+	}
+	CHECK_EQ(field_of(call("SEARCH", ints + "?volatile"), "total").as_u64(), 0u);   // nothing refused was stored
+	CHECK_EQ(field_of(call("SEARCH", poss + "?volatile"), "total").as_u64(), 0u);
+
+	// Exact values store and read back: text spelling a number, an integral float, and each type's extremes.
+	CHECK_EQ(call("PUT", ints + "12?commit", R"({"n":"12","i":"12","p":"12"})").status, 204);
+	CHECK_EQ(call("PUT", ints + "7?commit", R"({"n":"7","i":7.0})").status, 204);
+	CHECK_EQ(call("PUT", ints + "9223372036854775807?commit", R"({"n":"max","i":9223372036854775807})").status, 204);
+	CHECK_EQ(call("PUT", ints + "-9223372036854775808?commit", R"({"n":"min","i":-9223372036854775808})").status, 204);
+	CHECK_EQ(call("PUT", poss + "18446744073709551615?commit", R"({"n":"max","p":18446744073709551615})").status, 204);
+	for (const auto& [path, n] : std::vector<std::pair<std::string, std::string>>{{ints + "12", "12"}, {ints + "7", "7"},
+			{ints + "9223372036854775807", "max"}, {ints + "-9223372036854775808", "min"}, {poss + "18446744073709551615", "max"}}) {
+		const auto got = call("GET", path);
+		CHECK_EQ(got.status, 200);
+		CHECK_EQ(text_of(got, "n"), n);
+		CHECK_EQ(text_of(got, "_id"), path.substr(path.rfind('/') + 1));
+	}
+	const auto found = [&](const std::string& path, const std::string& query) { return hits_of(call("SEARCH", path + "?volatile", R"({"_query":)" + query + "}")); };
+	CHECK(found(ints, R"({"i":12})") == std::vector<std::string>{"12"});
+	CHECK(found(ints, R"({"p":12})") == std::vector<std::string>{"12"});
+	CHECK(found(ints, R"({"i":7})") == std::vector<std::string>{"7"});
+	CHECK(found(ints, R"({"i":9223372036854775807})") == std::vector<std::string>{"max"});
+	CHECK(found(ints, R"({"i":-9223372036854775808})") == std::vector<std::string>{"min"});
+	CHECK(found(ints, R"({"_id":9223372036854775807})") == std::vector<std::string>{"max"});
+	CHECK(found(ints, R"({"_id":-9223372036854775808})") == std::vector<std::string>{"min"});
+	CHECK(found(poss, R"({"p":18446744073709551615})") == std::vector<std::string>{"max"});
+}
+
+// A2: a search takes only exact values: terms, range bounds and `q=`, on `_id` and on fields; exact ones still match.
+static void test_searches_take_only_exact_values() {
+	Watchdog watchdog("searches take only exact values", 240s);
+	create_typed_index("sv_s_int", "integer");
+	create_typed_index("sv_s_pos", "positive");
+	const std::string ints = "/sv_s_int/";
+	const std::string poss = "/sv_s_pos/";
+	CHECK_EQ(call("PUT", ints + "1?commit", R"({"n":"1","i":1,"p":1})").status, 204);
+	CHECK_EQ(call("PUT", ints + "12?commit", R"({"n":"12","i":12,"p":12})").status, 204);
+	CHECK_EQ(call("PUT", ints + "4294967297?commit", R"({"n":"4294967297","i":4294967297})").status, 204);
+	CHECK_EQ(call("PUT", poss + "5?commit", R"({"n":"5","p":5})").status, 204);
+	CHECK_EQ(call("PUT", poss + "18446744073709551615?commit", R"({"n":"max","p":18446744073709551615})").status, 204);
+
+	const auto search = [](const std::string& path, const std::string& query) { return call("SEARCH", path + "?volatile", R"({"_query":)" + query + "}"); };
+	const auto q = [](const std::string& path, const std::string& query) { return call("SEARCH", path + "?volatile&q=" + query); };
+	const auto refused = [](const char* what, const Reply& reply) {
+		if (reply.status != 400) {
+			std::fprintf(stderr, "  %s answered %d with hits %zu\n", what, reply.status, hits_of(reply).size());
+		}
+		CHECK_EQ(reply.status, 400);
+	};
+	for (const auto* query : {R"({"_id":1.5})", R"({"_id":"abc"})", R"({"_id":"1.5"})", R"({"_id":9223372036854775808})",
+			R"({"i":1.5})", R"({"i":"abc"})", R"({"i":18446744073709551616})", R"({"p":-1})", R"({"p":"-1"})",
+			R"({"i":{"_in":{"_range":{"_from":1.5,"_to":20}}}})", R"({"i":{"_in":{"_range":{"_to":"abc"}}}})",
+			R"({"p":{"_in":{"_range":{"_from":-1}}}})", R"({"i":{"_in":"1.5..20"}})"}) {
+		refused(query, search(ints, query));
+	}
+	for (const auto* query : {"_id:1.5", "_id:abc", "i:1.5", "i:abc", "p:-1", "i:1.5..20", "p:-1..5"}) {
+		refused(query, q(ints, query));
+	}
+	refused("positive _id:-1", search(poss, R"({"_id":-1})"));
+	refused("positive _id:abc", search(poss, R"({"_id":"abc"})"));
+	refused("positive q=_id:-1", q(poss, "_id:-1"));
+
+	const std::vector<std::string> twelve{"12"};
+	CHECK(hits_of(search(ints, R"({"_id":12})")) == twelve);
+	CHECK(hits_of(search(ints, R"({"_id":"12"})")) == twelve);
+	CHECK(hits_of(search(ints, R"({"_id":12.0})")) == twelve);
+	CHECK(hits_of(q(ints, "_id:12")) == twelve);
+	CHECK(hits_of(search(ints, R"({"_id":4294967297.0})")) == std::vector<std::string>{"4294967297"});
+	CHECK(hits_of(search(ints, R"({"i":12})")) == twelve);
+	CHECK(hits_of(search(ints, R"({"i":"12"})")) == twelve);
+	CHECK(hits_of(search(ints, R"({"p":12})")) == twelve);
+	CHECK(hits_of(q(ints, "i:12")) == twelve);
+	CHECK(hits_of(search(ints, R"({"i":{"_in":{"_range":{"_from":"10","_to":13}}}})")) == twelve);
+	CHECK(hits_of(search(ints, R"({"p":{"_in":{"_range":{"_from":10.0,"_to":"13"}}}})")) == twelve);
+	CHECK(hits_of(q(ints, "i:10..13")) == twelve);
+	CHECK(hits_of(search(poss, R"({"_id":18446744073709551615})")) == std::vector<std::string>{"max"});
+	CHECK(hits_of(q(poss, "_id:18446744073709551615")) == std::vector<std::string>{"max"});
+	CHECK(hits_of(search(poss, R"({"p":{"_in":{"_range":{"_from":0,"_to":6}}}})")) == std::vector<std::string>{"5"});
+}
+
+// A3: a cast object converts one value on request, the same on writes and searches; it truncates, never wraps.
+static void test_a_cast_converts_one_value_and_never_wraps() {
+	Watchdog watchdog("a cast converts one value and never wraps", 240s);
+	create_typed_index("sv_c_int", "integer");
+	create_typed_index("sv_c_pos", "positive");
+	const std::string ints = "/sv_c_int/";
+	const std::string poss = "/sv_c_pos/";
+	CHECK_EQ(call("PUT", ints + "1?commit", R"({"n":"1","i":{"_integer":1.5}})").status, 204);
+	CHECK_EQ(call("PUT", poss + "2?commit", R"({"n":"2","p":{"_positive":2.5}})").status, 204);
+	const auto search = [](const std::string& path, const std::string& query) { return call("SEARCH", path + "?volatile", R"({"_query":)" + query + "}"); };
+	CHECK(hits_of(search(ints, R"({"i":1})")) == std::vector<std::string>{"1"});
+	CHECK(hits_of(search(ints, R"({"i":{"_integer":1.5}})")) == std::vector<std::string>{"1"});
+	CHECK(hits_of(search(ints, R"({"_id":{"_integer":1.5}})")) == std::vector<std::string>{"1"});
+	CHECK(hits_of(search(poss, R"({"p":{"_positive":2.5}})")) == std::vector<std::string>{"2"});
+	CHECK(hits_of(search(poss, R"({"p":{"_in":{"_range":{"_from":{"_positive":1.5},"_to":{"_integer":2.9}}}}})")) == std::vector<std::string>{"2"});
+
+	CHECK_EQ(call("PUT", poss + "3?commit", R"({"n":"3","p":{"_positive":-1}})").status, 400);
+	CHECK_EQ(call("PUT", ints + "3?commit", R"({"n":"3","i":{"_integer":1e300}})").status, 400);
+	CHECK_EQ(call("PUT", ints + "3?commit", R"({"n":"3","i":{"_float":1.5}})").status, 400);   // a float is still no integer
+	CHECK_EQ(search(poss, R"({"p":{"_positive":-1}})").status, 400);
+	CHECK_EQ(search(poss, R"({"_id":{"_positive":-1}})").status, 400);
+	CHECK_EQ(search(ints, R"({"i":{"_integer":18446744073709551615}})").status, 400);
+	CHECK_EQ(field_of(call("SEARCH", poss + "?volatile"), "total").as_u64(), 1u);   // the refused writes stored nothing
+}
+
+// A4: every refusal names the field, the value and the type, whichever path it comes from.
+static void test_a_refused_value_names_its_field_value_and_type() {
+	Watchdog watchdog("a refused value names its field, value and type", 240s);
+	create_typed_index("sv_m_int", "integer");
+	create_typed_index("sv_m_pos", "positive");
+	const std::string ints = "/sv_m_int/";
+	const std::string poss = "/sv_m_pos/";
+	const auto search = [](const std::string& path, const std::string& query) { return call("SEARCH", path + "?volatile", R"({"_query":)" + query + "}"); };
+	check_refused(call("PUT", ints + "1.5?commit", R"({"n":"x"})"), "_id", "1.5", "integer");
+	check_refused(call("PUT", poss + "-1?commit", R"({"n":"x"})"), "_id", "-1", "positive");
+	check_refused(call("POST", ints + "?commit", R"({"_id":"abc","n":"x"})"), "_id", "abc", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":1.5})"), "i", "1.5", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":"abc"})"), "i", "abc", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"p":-1})"), "p", "-1", "positive");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":18446744073709551616})"), "i", "1.8446744073709552e+19", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"p":{"_positive":-1}})"), "p", "-1", "positive");
+	check_refused(search(ints, R"({"_id":1.5})"), "_id", "1.5", "integer");
+	check_refused(search(poss, R"({"_id":-1})"), "_id", "-1", "positive");
+	check_refused(search(ints, R"({"i":"abc"})"), "i", "abc", "integer");
+	check_refused(search(ints, R"({"i":{"_in":{"_range":{"_from":1.5}}}})"), "i", "1.5", "integer");
+	check_refused(search(ints, R"({"p":{"_positive":-1}})"), "p", "-1", "positive");
+	check_refused(call("SEARCH", ints + "?volatile&q=p:-1"), "p", "-1", "positive");
+	check_refused(call("SEARCH", ints + "?volatile&q=i:1.5..20"), "i", "1.5", "integer");
+	check_refused(call("SEARCH", poss + "?volatile&q=_id:-1"), "_id", "-1", "positive");
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -3115,6 +3399,11 @@ int main(int argc, char** argv) {
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
 		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
+		{"test_exact_reads_a_value_as_its_type", test_exact_reads_a_value_as_its_type},
+		{"test_writes_take_only_exact_values", test_writes_take_only_exact_values},
+		{"test_searches_take_only_exact_values", test_searches_take_only_exact_values},
+		{"test_a_cast_converts_one_value_and_never_wraps", test_a_cast_converts_one_value_and_never_wraps},
+		{"test_a_refused_value_names_its_field_value_and_type", test_a_refused_value_names_its_field_value_and_type},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {
