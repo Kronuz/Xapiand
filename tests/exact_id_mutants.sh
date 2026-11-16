@@ -17,10 +17,10 @@ PY
 }
 
 case $mutant in
-	query-old-codec)   # a term search on a numeric _id builds its term with the value codec
+	query-double)   # a term search on a numeric _id encodes the key as a double: inexact above 2^53
 		mutate src/query_dsl.cc \
-			"	const bool numeric_id = field_spc.prefix() == DOCUMENT_ID_TERM_PREFIX && field_spc.get_ctype() == 'N';" \
-			'	const bool numeric_id = false;' ;;
+			"	auto serialized_term = numeric_id ? Serialize::id(field_spc, obj) : Serialize::MsgPack(field_spc, obj);" \
+			'	auto serialized_term = numeric_id ? Serialize::id(field_spc, MsgPack(obj.as_f64())) : Serialize::MsgPack(field_spc, obj);' ;;
 	cap-2-32)   # the counter's bound goes back to 2^32 - 1
 		mutate src/database/handler.h \
 			'inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 63) - 1;' \

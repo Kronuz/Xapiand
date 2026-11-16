@@ -1,6 +1,6 @@
 /*
  * Copyright © 2026 Germán Méndez Bravo (Kronuz)
- * Copyright (c) 2015-2019 Dubalu LLC
+ * Copyright (c) 2015-2018 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,49 +21,41 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#include "test_serialize.h"
 
-#include "../src/geospatial/htm.h"
+#include "gtest/gtest.h"
 
-
-struct test_date_t {
-	std::string datetime;
-	std::string serialised;
-};
+#include "utils.h"
 
 
-struct test_cartesian_t {
-	Cartesian cartesian;
-	std::string serialised;
-};
+TEST(SerializeUnserializeTest, Date) {
+	EXPECT_EQ(test_datetotimestamp(), 0);
+	EXPECT_EQ(test_unserialize_date(), 0);
+}
 
 
-struct test_range_t {
-	range_t range;
-	std::string serialised;
-};
+TEST(SerializeUnserializeTest, Cartesian) {
+	EXPECT_EQ(test_serialize_cartesian(), 0);
+	EXPECT_EQ(test_unserialize_cartesian(), 0);
+}
 
 
-struct test_uuid_t {
-	std::string uuid;
-	std::string serialised;
-	std::string unserialised;
-};
+TEST(SerializeUnserializeTest, Range) {
+	EXPECT_EQ(test_serialize_range(), 0);
+	EXPECT_EQ(test_unserialize_range(), 0);
+}
 
 
-// Testing the transformation between datetime string and timestamp.
-int test_datetotimestamp();
-// Testing unserialise datetime.
-int test_unserialise_date();
-// Testing serialise Cartesian.
-int test_serialise_cartesian();
-// Testing unserialise Cartesian.
-int test_unserialise_cartesian();
-// Testing serialise range_t.
-int test_serialise_range();
-// Testing unserialise range_t.
-int test_unserialise_range();
-// Testing serialise uuid.
-int test_serialise_uuid();
-// Testing unserialise uuid.
-int test_unserialise_uuid();
+TEST(SerializeUnserializeTest, UUID) {
+	EXPECT_EQ(test_serialize_uuid(), 0);
+	EXPECT_EQ(test_unserialize_uuid(), 0);
+}
+
+
+int main(int argc, char **argv) {
+	auto initializer = Initializer::create();
+	::testing::InitGoogleTest(&argc, argv);
+	int ret = RUN_ALL_TESTS();
+	initializer.destroy();
+	return ret;
+}

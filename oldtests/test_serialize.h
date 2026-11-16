@@ -1,6 +1,6 @@
 /*
  * Copyright © 2026 Germán Méndez Bravo (Kronuz)
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,41 +21,49 @@
  * THE SOFTWARE.
  */
 
-#include "test_serialise.h"
+#pragma once
 
-#include "gtest/gtest.h"
-
-#include "utils.h"
+#include "../src/geospatial/htm.h"
 
 
-TEST(SerialiseUnserialiseTest, Date) {
-	EXPECT_EQ(test_datetotimestamp(), 0);
-	EXPECT_EQ(test_unserialise_date(), 0);
-}
+struct test_date_t {
+	std::string datetime;
+	std::string serialized;
+};
 
 
-TEST(SerialiseUnserialiseTest, Cartesian) {
-	EXPECT_EQ(test_serialise_cartesian(), 0);
-	EXPECT_EQ(test_unserialise_cartesian(), 0);
-}
+struct test_cartesian_t {
+	Cartesian cartesian;
+	std::string serialized;
+};
 
 
-TEST(SerialiseUnserialiseTest, Range) {
-	EXPECT_EQ(test_serialise_range(), 0);
-	EXPECT_EQ(test_unserialise_range(), 0);
-}
+struct test_range_t {
+	range_t range;
+	std::string serialized;
+};
 
 
-TEST(SerialiseUnserialiseTest, UUID) {
-	EXPECT_EQ(test_serialise_uuid(), 0);
-	EXPECT_EQ(test_unserialise_uuid(), 0);
-}
+struct test_uuid_t {
+	std::string uuid;
+	std::string serialized;
+	std::string unserialized;
+};
 
 
-int main(int argc, char **argv) {
-	auto initializer = Initializer::create();
-	::testing::InitGoogleTest(&argc, argv);
-	int ret = RUN_ALL_TESTS();
-	initializer.destroy();
-	return ret;
-}
+// Testing the transformation between datetime string and timestamp.
+int test_datetotimestamp();
+// Testing unserialize datetime.
+int test_unserialize_date();
+// Testing serialize Cartesian.
+int test_serialize_cartesian();
+// Testing unserialize Cartesian.
+int test_unserialize_cartesian();
+// Testing serialize range_t.
+int test_serialize_range();
+// Testing unserialize range_t.
+int test_unserialize_range();
+// Testing serialize uuid.
+int test_serialize_uuid();
+// Testing unserialize uuid.
+int test_unserialize_uuid();

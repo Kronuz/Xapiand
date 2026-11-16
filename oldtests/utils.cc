@@ -151,7 +151,7 @@ DB_Test::get_body(std::string_view body, std::string_view ct_type)
 			break;
 		case _.fhhl(MSGPACK_CONTENT_TYPE):
 		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
-			msgpack = MsgPack::unserialise(body);
+			msgpack = MsgPack::unserialize(body);
 			break;
 		default:
 			msgpack = MsgPack(body);
