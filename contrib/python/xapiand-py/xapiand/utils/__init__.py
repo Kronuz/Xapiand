@@ -21,18 +21,18 @@
 #
 
 from .hashes import jump_consistent_hash
-from .serialise import serialise_length, unserialise_length, serialise_string, \
-    unserialise_string, serialise_char, unserialise_char
+from .serialize import serialize_length, unserialize_length, serialize_string, \
+    unserialize_string, serialize_char, unserialize_char
 from .client import NamespacedClient, make_url, query_params, SKIP_IN_PATH
 
 __all__ = [
     'jump_consistent_hash',
-    'serialise_length',
-    'unserialise_length',
-    'serialise_string',
-    'unserialise_string',
-    'serialise_char',
-    'unserialise_char',
+    'serialize_length',
+    'unserialize_length',
+    'serialize_string',
+    'unserialize_string',
+    'serialize_char',
+    'unserialize_char',
     'NamespacedClient',
     'make_url',
     'query_params',

@@ -47,8 +47,8 @@ function ExceptionUUID(mensaje, uuid='') {
 }
 
 const UUID_TIME_INITIAL = [31830073, 3355707392];
-const UUID_MIN_SERIALISED_LENGTH = 2;
-const UUID_MAX_SERIALISED_LENGTH = 17;
+const UUID_MIN_SERIALIZED_LENGTH = 2;
+const UUID_MAX_SERIALIZED_LENGTH = 17;
 const UUID_LENGTH = 36;
 
 const TIME_BITS = 60;
@@ -408,11 +408,11 @@ class UUID {
         } else {
             bytes_[last] |= VL[length][0][0];
         }
-        const serialised = bytes_.map(val => String.fromCharCode(val)).reverse().join('');
-        return { serialised, compacted_node, compacted_time: compacted_time_out, compacted_clock };
+        const serialized = bytes_.map(val => String.fromCharCode(val)).reverse().join('');
+        return { serialized, compacted_node, compacted_time: compacted_time_out, compacted_clock };
     }
 
-    serialise() {
+    serialize() {
         // Encode-side dispatch by the version nibble: v1 uses the mt expander, v6 the splitmix
         // expander with UUIDv6 field order; anything else falls back to the full 17-byte form.
         const version = this.bytes[6] >> 4;
@@ -439,21 +439,21 @@ class UUID {
         this.compacted_node = r.compacted_node;
         this.compacted_time = r.compacted_time;
         this.compacted_clock = r.compacted_clock;
-        return r.serialised;
+        return r.serialized;
     }
 
     static _decode(encoded, count=undefined) {
         if (encoded.length >= 7 &&  encoded[0] == '~') {
-            const serialised = bs59.b59decode(encoded);
-            if (UUID._is_serialised(serialised, count)) {
-                return serialised;
+            const serialized = bs59.b59decode(encoded);
+            if (UUID._is_serialized(serialized, count)) {
+                return serialized;
             }
         }
         const u = new UUID(encoded);
-        return u.serialise();
+        return u.serialize();
     }
 
-    static _unserialise_condensed(bytes_, codec=CODEC_V6) {
+    static _unserialize_condensed(bytes_, codec=CODEC_V6) {
         const size = bytes_.length;
         let length = size;
         let byte0 = bytes_.charCodeAt(0);
@@ -583,15 +583,15 @@ class UUID {
         return [UUID._uuid_buff_from_args(time, clock, node), length];
     }
 
-    static unserialise(serialised, codec=CODEC_V6) {
-        const uuid = UUID._unserialise(serialised, codec);
-        if (uuid[1] > serialised.length) {
-            throw new ExceptionUUID("Invalid serialised uuid", serialised);
+    static unserialize(serialized, codec=CODEC_V6) {
+        const uuid = UUID._unserialize(serialized, codec);
+        if (uuid[1] > serialized.length) {
+            throw new ExceptionUUID("Invalid serialized uuid", serialized);
         }
         return uuid[0];
     }
 
-    static _unserialise_full(bytes_) {
+    static _unserialize_full(bytes_) {
         if (bytes_.length < 17) {
             throw new ExceptionUUID("Bad encoded uuid");
         }
@@ -599,15 +599,15 @@ class UUID {
         return [bytesToUUID(bytes_.slice(1, 17).split('').map(val => val.charCodeAt(0))), 17];
     }
 
-    static _unserialise(bytes_, codec=CODEC_V6) {
+    static _unserialize(bytes_, codec=CODEC_V6) {
         if (bytes_ === undefined || bytes_.length < 2) {
             throw new ExceptionUUID("Bad encoded uuid");
         }
 
         if (bytes_.length && bytes_.charCodeAt(0) === 1) {
-            return UUID._unserialise_full(bytes_);
+            return UUID._unserialize_full(bytes_);
         } else {
-            return UUID._unserialise_condensed(bytes_, codec);
+            return UUID._unserialize_condensed(bytes_, codec);
         }
     }
 
@@ -615,7 +615,7 @@ class UUID {
         if (this.compacted_node.length) {
             return this.compacted_node;
         } else {
-            this.serialise();
+            this.serialize();
             return this.compacted_node;
         }
     }
@@ -632,9 +632,9 @@ class UUID {
         return this.to_string();
     }
 
-    static _is_serialised(serialised, count=undefined) {
+    static _is_serialized(serialized, count=undefined) {
         let offset = 0;
-        while (serialised.length) {
+        while (serialized.length) {
             if (count !== undefined) {
                 if (!count) {
                     return false;
@@ -642,15 +642,15 @@ class UUID {
                 count -= 1;
             }
             let length;
-            const size = serialised.length;
-            if (serialised.length < 2) {
+            const size = serialized.length;
+            if (serialized.length < 2) {
                 return false;
             }
-            let byte0 = serialised[0].charCodeAt(0);
+            let byte0 = serialized[0].charCodeAt(0);
             if (byte0 === 1) {
                 length = 17;
             } else {
-                length = serialised.length;
+                length = serialized.length;
                 const q = byte0 & 0xf0 ? 1 : 0;
                 for (let i = 0; i < 13; i++) {
                     if (VL[i][q][0] === (byte0 & VL[i][q][1])) {
@@ -663,13 +663,13 @@ class UUID {
                 return false;
             }
             offset = length;
-            serialised = serialised.slice(offset);
+            serialized = serialized.slice(offset);
         }
         return true;
     }
 
     encode(encoding='encoded') {
-        return encode(this.serialise(), encoding);
+        return encode(this.serialize(), encoding);
     }
 
     static new_uuid(data=undefined, compacted=undefined) {
@@ -871,32 +871,32 @@ class UUID {
     }
 }
 
-const unserialise = (bytes_, codec=CODEC_V6) => {
+const unserialize = (bytes_, codec=CODEC_V6) => {
     let uuids = [];
     while (bytes_.length) {
-        uuid = UUID._unserialise(bytes_, codec);
+        uuid = UUID._unserialize(bytes_, codec);
         uuids.push(uuid[0]);
         bytes_ = bytes_.slice(uuid[1]);
     }
     return uuids;
 }
 
-module.exports.encode = (serialised, rep='encoded', codec=CODEC_V6) => {
-    const typ = toType(serialised);
+module.exports.encode = (serialized, rep='encoded', codec=CODEC_V6) => {
+    const typ = toType(serialized);
     if (typ === 'string') {
         if (rep === 'guid') {
-            return unserialise(serialised, codec).map(v => `{${v}}`).join(';');
+            return unserialize(serialized, codec).map(v => `{${v}}`).join(';');
         } else if (rep === 'urn') {
-            return 'urn:uuid:' + unserialise(serialised, codec).join(';');
+            return 'urn:uuid:' + unserialize(serialized, codec).join(';');
         } else if (rep === 'encoded') {
-            const last = serialised.length - 1;
-            if (serialised[0].charCodeAt(0) != 1 && ((serialised[last].charCodeAt(0) & 1) || (serialised.length >= 6 && serialised[last-5].charCodeAt(0) & 2))) {
-                return '~' + bs59.b59encode(tobytes(serialised));
+            const last = serialized.length - 1;
+            if (serialized[0].charCodeAt(0) != 1 && ((serialized[last].charCodeAt(0) & 1) || (serialized.length >= 6 && serialized[last-5].charCodeAt(0) & 2))) {
+                return '~' + bs59.b59encode(tobytes(serialized));
             }
         }
-        return unserialise(serialised, codec).join(';');
+        return unserialize(serialized, codec).join(';');
     }
-    throw new ExceptionUUID("Invalid serialised UUID: ", serialised);
+    throw new ExceptionUUID("Invalid serialized UUID: ", serialized);
 }
 
 module.exports.decode = (encoded) => {
@@ -915,8 +915,8 @@ module.exports.decode = (encoded) => {
         }
     }
     if (typ === 'array') {
-        let serialised = encoded.map(u => { return UUID._decode(u); });
-        return serialised.join('');
+        let serialized = encoded.map(u => { return UUID._decode(u); });
+        return serialized.join('');
     }
     throw new ExceptionUUID("Invalid encoded UUID: ", encoded);
 }
@@ -932,10 +932,10 @@ module.exports.encode_uuid = (uuid) => {
 }
 
 module.exports.decode_uuid = (code, codec=CODEC_V6) => {
-    return UUID.unserialise(decode(code), codec);
+    return UUID.unserialize(decode(code), codec);
 }
 
 module.exports.UUID = UUID;
-module.exports.unserialise = unserialise;
+module.exports.unserialize = unserialize;
 module.exports.CODEC_V1 = CODEC_V1;
 module.exports.CODEC_V6 = CODEC_V6;

@@ -31,24 +31,24 @@
 #include "index_path.h"                           // for index_path::valid
 #include "node.h"                                 // for Node::
 #include "opts.h"                                 // for opts
-#include "serialise.h"                            // for UUIDRepr, Serialise
+#include "serialize.h"                            // for UUIDRepr, Serialize
 #include "xapiand_exception.h"                   // for ClientError
 #include "xapiand_strings.hh"                             // for strings::format
-#include "exception_engine.h"                     // for SerialisationError
+#include "exception_engine.h"                     // for SerializationError
 
 
 static inline std::string
 normalize(const void *p, size_t size)
 {
 	auto repr = static_cast<UUIDRepr>(opts.uuid_repr);
-	std::string serialised_uuid;
+	std::string serialized_uuid;
 	std::string normalized;
-	std::string unserialised(static_cast<const char*>(p), size);
-	if (Serialise::possiblyUUID(unserialised)) {
+	std::string unserialized(static_cast<const char*>(p), size);
+	if (Serialize::possiblyUUID(unserialized)) {
 		try {
-			serialised_uuid = Serialise::uuid(unserialised);
-			normalized = Unserialise::uuid(serialised_uuid, repr);
-		} catch (const SerialisationError&) { }
+			serialized_uuid = Serialize::uuid(unserialized);
+			normalized = Unserialize::uuid(serialized_uuid, repr);
+		} catch (const SerializationError&) { }
 	}
 	return normalized;
 }
@@ -58,14 +58,14 @@ static inline std::string
 normalize_and_partition(const void *p, size_t size)
 {
 	auto repr = static_cast<UUIDRepr>(opts.uuid_repr);
-	std::string serialised_uuid;
+	std::string serialized_uuid;
 	std::string normalized;
-	std::string unserialised(static_cast<const char*>(p), size);
-	if (Serialise::possiblyUUID(unserialised)) {
+	std::string unserialized(static_cast<const char*>(p), size);
+	if (Serialize::possiblyUUID(unserialized)) {
 		try {
-			serialised_uuid = Serialise::uuid(unserialised);
-			normalized = Unserialise::uuid(serialised_uuid, repr);
-		} catch (const SerialisationError& exc) {
+			serialized_uuid = Serialize::uuid(unserialized);
+			normalized = Unserialize::uuid(serialized_uuid, repr);
+		} catch (const SerializationError& exc) {
 			return normalized;
 		}
 	} else {
@@ -100,11 +100,11 @@ normalize_and_partition(const void *p, size_t size)
 		case UUIDRepr::encoded:
 			if (
 				// Is UUID condensed
-				serialised_uuid.front() != 1 && (
+				serialized_uuid.front() != 1 && (
 					// and compacted
-					((serialised_uuid.back() & 1) != 0) ||
+					((serialized_uuid.back() & 1) != 0) ||
 					// or has node multicast bit "on" for (uuid with Data)
-					(serialised_uuid.size() > 5 && ((*(serialised_uuid.rbegin() + 5) & 2) != 0))
+					(serialized_uuid.size() > 5 && ((*(serialized_uuid.rbegin() + 5) & 2) != 0))
 				)
 			) {
 				auto cit = normalized.cbegin();

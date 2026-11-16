@@ -36,7 +36,7 @@ namespace {
 [[noreturn]] void
 no_term_lists()
 {
-	throw Error(errc::syntax, "The strata engine keeps no term lists, so it does not serialise a stored document");
+	throw Error(errc::syntax, "The strata engine keeps no term lists, so it does not serialize a stored document");
 }
 
 }  // namespace
@@ -72,7 +72,7 @@ SegmentDocView::values(const ValueSink& sink) const
 
 
 std::string
-SegmentDocView::serialise() const
+SegmentDocView::serialize() const
 {
 	no_term_lists();
 }
@@ -102,7 +102,7 @@ OwnedDocView::values(const ValueSink& sink) const
 
 
 std::string
-OwnedDocView::serialise() const
+OwnedDocView::serialize() const
 {
 	no_term_lists();
 }

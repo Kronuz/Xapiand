@@ -25,12 +25,12 @@ A value takes 1 to 10 bytes; on Xapiand's real sets the mean is 4.25 B (`docs/de
 
 ## Where it is called
 
-`src/serialise.h` holds the only calls. `Serialise::integer`, `positive`, `floating`, `timestamp` (seconds rounded to
+`src/serialize.h` holds the only calls. `Serialize::integer`, `positive`, `floating`, `timestamp` (seconds rounded to
 the microsecond) and `version` call `sortable::encode`. Stored bytes decode with the trusted conversions
 (`sortable::to_double`, `to_int64`, `to_uint64`), which keep the read bounds and skip the canonical checks;
-`Unserialise::integer` and `positive` fall back to the strict `sortable::decode` and truncate and saturate a fraction
+`Unserialize::integer` and `positive` fall back to the strict `sortable::decode` and truncate and saturate a fraction
 or an out-of-range value, since a slot shared by integer and floating fields holds both. Bytes that are not a number raise
-`SerialisationError`. Ids use the same entry points (`Serialise::id`). A missing sort value keys as
+`SerializationError`. Ids use the same entry points (`Serialize::id`). A missing sort value keys as
 `sortable::max_finite` or `min_finite`, after every finite number and before the infinity.
 
 ## Rules for user values
@@ -55,7 +55,7 @@ byte for byte on every vector and on 10^6 seeded inputs, and that both decoders 
 
 | Check | What it shows |
 |---|---|
-| CTest `test_serialise` | every line of sortable's `vectors.txt` through `Serialise::`/`Unserialise::`: bytes, round trip, cross-type equality, memcmp order |
+| CTest `test_serialize` | every line of sortable's `vectors.txt` through `Serialize::`/`Unserialize::`: bytes, round trip, cross-type equality, memcmp order |
 | CTest `sortable_property` | sortable's order proof over edge and random values |
 | CTest `sortable_xlang` | the Python client equals the C++ codec |
 | `tests/numeric_range_check.py BIN` | ranges, sorts and min/max equal brute force at the old failures |

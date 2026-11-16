@@ -46,7 +46,7 @@
 #include "exception_engine.h"                     // for AggregationError, MSG_Agg...
 #include "xapiand_strings.hh"                             // for strings::format
 #include "hashes.hh"                              // for xxh64
-#include "engine/codec.h"                        // for serialise_double, unserialise_double
+#include "engine/codec.h"                        // for serialize_double, unserialize_double
 #include "engine/doc_view.h"                     // for DocView
 #include "engine/types.h"                        // for valueno
 
@@ -547,30 +547,30 @@ public:
 
 	// A bucket's order keys (`slot`, `idx`), which the merge cannot recompute: the long double as two doubles that
 	// add up to it (exact on x86, the second one is 0 where long double is double), then the index.
-	static std::string serialise_order(const Aggregation& agg) {
+	static std::string serialize_order(const Aggregation& agg) {
 		const double hi = static_cast<double>(agg.slot);
 		const double lo = std::isfinite(hi) ? static_cast<double>(agg.slot - hi) : 0.0;
-		return engine::serialise_double(hi) + engine::serialise_double(lo) + serialise_length(agg.idx);
+		return engine::serialize_double(hi) + engine::serialize_double(lo) + serialize_length(agg.idx);
 	}
 
-	static void unserialise_order(std::string_view order, Aggregation& agg) {
+	static void unserialize_order(std::string_view order, Aggregation& agg) {
 		const char* p = order.data();
 		const char* p_end = p + order.size();
-		const long double hi = engine::unserialise_double(&p, p_end);
-		const long double lo = engine::unserialise_double(&p, p_end);
+		const long double hi = engine::unserialize_double(&p, p_end);
+		const long double lo = engine::unserialize_double(&p, p_end);
 		agg.slot = hi + lo;
-		agg.idx = unserialise_length(&p, p_end);
+		agg.idx = unserialize_length(&p, p_end);
 		if (p != p_end) {
-			THROW(SerialisationError, "Junk found at end of serialised bucket order");
+			THROW(SerializationError, "Junk found at end of serialized bucket order");
 		}
 	}
 
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string results;
 		auto put = [&](const std::string& bucket, const Aggregation& agg) {
-			results += serialise_string(bucket);
-			results += serialise_string(serialise_order(agg));
-			results += serialise_string(agg.serialise_results());
+			results += serialize_string(bucket);
+			results += serialize_string(serialize_order(agg));
+			results += serialize_string(agg.serialize_results());
 		};
 		if (_capped && _aggs.size() > _shard_size) {
 			for (auto& it : _best(_shard_size)) {
@@ -588,15 +588,15 @@ public:
 		L_CALL("BucketAggregation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		while (*p != p_end) {
-			auto bucket = unserialise_string(p, p_end);
-			auto order = unserialise_string(p, p_end);
+			auto bucket = unserialize_string(p, p_end);
+			auto order = unserialize_string(p, p_end);
 			auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 			if (it == _aggs.end()) {
 				auto emplaced = _aggs.emplace(std::piecewise_construct,
 					std::forward_as_tuple(bucket),
 					std::forward_as_tuple(_context, _schema));
 				it = emplaced.first;
-				unserialise_order(order, it->second);
+				unserialize_order(order, it->second);
 
 				// Find and store the Aggregation the value should be recovered from:
 				if (!_sort_field.empty()) {
@@ -620,12 +620,12 @@ public:
 					}
 				}
 			}
-			auto data = unserialise_string(p, p_end);
+			auto data = unserialize_string(p, p_end);
 			const char* q = data.data();
 			const char* q_end = q + data.size();
 			it->second.merge_results(&q, q_end);
 			if (q != q_end) {
-				THROW(SerialisationError, "Junk found at end of serialised Aggregation");
+				THROW(SerializationError, "Junk found at end of serialized Aggregation");
 			}
 		}
 	}
@@ -1247,7 +1247,7 @@ public:
 
 	MsgPack get_result() const override;
 
-	std::string serialise_results() const override;
+	std::string serialize_results() const override;
 
 	void merge_results(const char** p, const char* p_end) override;
 	void merge_results(const BaseAggregation* other) override;

@@ -28,7 +28,7 @@
 #
 
 
-def serialise_length(length):
+def serialize_length(length):
     if length < 255:
         return chr(length)
     result = chr(0xff)
@@ -43,7 +43,7 @@ def serialise_length(length):
     return result
 
 
-def unserialise_length(data, check_remaining=False):
+def unserialize_length(data, check_remaining=False):
     if not data:
         raise ValueError("Bad encoded length: no data")
     length = ord(data[0])
@@ -67,22 +67,22 @@ def unserialise_length(data, check_remaining=False):
     return length, data
 
 
-def serialise_string(s):
-    return serialise_length(len(s)) + s
+def serialize_string(s):
+    return serialize_length(len(s)) + s
 
 
-def unserialise_string(data):
-    length, data = unserialise_length(data, True)
+def unserialize_string(data):
+    length, data = unserialize_length(data, True)
     return data[:length], data[length:]
 
 
-def serialise_char(c):
+def serialize_char(c):
     if len(c) != 1:
-        raise ValueError("Serialisation error: Cannot serialise empty char")
+        raise ValueError("Serialization error: Cannot serialize empty char")
     return c
 
 
-def unserialise_char(data):
+def unserialize_char(data):
     if len(data) < 1:
         raise ValueError("Bad encoded length: insufficient data")
     return data[:1], data[1:]

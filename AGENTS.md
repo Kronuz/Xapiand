@@ -39,7 +39,7 @@ designs in `docs/design/`, their architect reviews in `docs/reviews/`, and devel
 | Query languages | `src/query_dsl.*` (JSON/MsgPack); the string parser is the [boolean-parser](https://github.com/Kronuz/boolean-parser) library |
 | Aggregations | `src/aggregations/` |
 | Geospatial | `src/geospatial/`, `src/multivalue/geospatialrange.*` |
-| Value encoding | `src/serialise*.{cc,h}` over [sortable](https://github.com/Kronuz/sortable), `src/length.*` |
+| Value encoding | `src/serialize*.{cc,h}` over [sortable](https://github.com/Kronuz/sortable), `src/length.*` |
 | Logging | `src/log.h` (category switches); the logger is the [logger](https://github.com/Kronuz/logger) library |
 | Scripting | `src/lua/`, `src/script.*` |
 | Small utilities | top-level `src/*.hh` / `*.h` (see the table in ARCHITECTURE.md) |
@@ -101,7 +101,7 @@ E2E above, load, soak/stress, benchmarks, and the
   done with compile-time perfect-hash tables (`phf::make_phf`), not if-ladders.
   Add a keyword by extending both the hash table and its `switch`.
 - **Serialization is order-sensitive.** Values stored for range/sort use
-  the `sortable` codec through `Serialise::` (memcmp order == exact numeric order,
+  the `sortable` codec through `Serialize::` (memcmp order == exact numeric order,
   across integer and floating types). If you change how a value
   is encoded, you change its sort/range semantics — tread carefully and keep the
   encoding monotonic.
@@ -117,7 +117,7 @@ E2E above, load, soak/stress, benchmarks, and the
 
 - **Trixel ids encode the quadtree path 2 bits per level**, which is *why* a
   region is a contiguous integer range and why geo serialization is big-endian
-  (the [htm](https://github.com/Kronuz/htm) library, `src/serialise.cc`). Any change to id construction or
+  (the [htm](https://github.com/Kronuz/htm) library, `src/serialize.cc`). Any change to id construction or
   endianness breaks geo indexing silently.
 - **The storage write cursor lives in the volume header**; bins are 8-byte
   aligned and a volume is capped at 32 GiB. Don't write a bin without going
@@ -145,7 +145,7 @@ E2E above, load, soak/stress, benchmarks, and the
   polymorphism, `string_view` over copies, RAII for every resource (sockets,
   shard uses, turns).
 - When adding a field type, reserved word, or aggregation, you'll typically touch
-  three places: the reserved vocabulary (`src/reserved/`), the schema/serialise
+  three places: the reserved vocabulary (`src/reserved/`), the schema/serialize
   layer, and the perfect-hash dispatch. Grep an existing one end-to-end first.
 - If you extract a utility to its own repo (the `base-x` / `uinteger_t` /
   `fantasyname` pattern), check the licensing note in ARCHITECTURE.md.

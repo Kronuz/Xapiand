@@ -65,7 +65,7 @@ private:
 };
 
 std::string wal_line(engine::rev rev, DatabaseWAL::Type type, const std::string& data) {
-	return serialise_length(rev) + serialise_length(toUType(type)) + compress_lz4(data);
+	return serialize_length(rev) + serialize_length(toUType(type)) + compress_lz4(data);
 }
 std::string fresh(const char* name) {
 	std::string p = name;
@@ -88,7 +88,7 @@ void erase_missing() {
 	Target target(path, engine::sync_wait(engine::open_local(path, true, true)));
 	DatabaseWAL wal(&target);
 	auto rev = target.engine().revision();
-	auto r = run(wal, wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialise_length(7)));
+	auto r = run(wal, wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialize_length(7)));
 	std::printf("replayed erase of a missing document through execute_line: %s\n", r.c_str());
 	CHECK_EQ(r, "ok");
 }
@@ -103,11 +103,11 @@ void double_replay() {
 	std::vector<std::string> lines;
 	engine::WriteArgs a;
 	auto d1 = make("a1"); auto r1 = engine::sync_wait(e.replace_by_key("Qa", d1, a));
-	lines.push_back(wal_line(rev, DatabaseWAL::Type::REPLACE_DOCUMENT, serialise_length(r1.did) + d1.serialise()));
+	lines.push_back(wal_line(rev, DatabaseWAL::Type::REPLACE_DOCUMENT, serialize_length(r1.did) + d1.serialize()));
 	engine::sync_wait(e.erase(r1.did, true, std::nullopt));
-	lines.push_back(wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialise_length(r1.did)));
+	lines.push_back(wal_line(rev, DatabaseWAL::Type::DELETE_DOCUMENT, serialize_length(r1.did)));
 	auto d2 = make("a2"); auto r2 = engine::sync_wait(e.replace_by_key("Qa", d2, a));
-	lines.push_back(wal_line(rev, DatabaseWAL::Type::REPLACE_DOCUMENT, serialise_length(r2.did) + d2.serialise()));
+	lines.push_back(wal_line(rev, DatabaseWAL::Type::REPLACE_DOCUMENT, serialize_length(r2.did) + d2.serialize()));
 	const auto want = state(e);
 	std::printf("primary: %s\n", want.c_str());
 	for (int pass = 1; pass <= 2; ++pass) {

@@ -29,9 +29,9 @@ namespace engine {
 
 // Doubles in the form callbacks ship their results between shards. Both ends of a
 // connection must agree, so an engine supplies the one form it speaks.
-std::string serialise_double(double value);
+std::string serialize_double(double value);
 
 // Reads a double at *p and advances it. Throws on bytes that are not one.
-double unserialise_double(const char** p, const char* end);
+double unserialize_double(const char** p, const char* end);
 
 }  // namespace engine

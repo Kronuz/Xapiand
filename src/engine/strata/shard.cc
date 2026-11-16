@@ -46,7 +46,7 @@
 #include "prospect/index.hh"       // for prospect::index
 
 #include "log.h"                   // for L_ERR
-#include "serialise.h"             // for Serialise::version
+#include "serialize.h"             // for Serialize::version
 
 #include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/census.h"         // for ENGINE_CENSUS_*
@@ -189,7 +189,7 @@ struct Core {
 	std::chrono::milliseconds drain_timeout{30000};  // how long a close or a reopen waits for the readers of the old index
 	std::unique_ptr<kronuz::journal::PosixIO> io;  // the hostless path's; a catalog's index has the catalog's
 	prospect::index::options options;      // how the index is opened, again after a reopen
-	bool host = false;                     // a host serialises the writers and refreshes before it reads
+	bool host = false;                     // a host serializes the writers and refreshes before it reads
 	// A host's catalog owns the index, its IO and its views' handle for as long as the pin that made this Core
 	// holds the slot (docs/design/x-pool.md D2): a fence is the catalog's to replace, never this Core's.
 	bool borrowed = false;
@@ -352,7 +352,7 @@ mark_fenced(Core* core) noexcept
 
 namespace {
 
-// The handles of a shard in this process share its Core; the entry serialises opening and closing it.
+// The handles of a shard in this process share its Core; the entry serializes opening and closing it.
 struct Entry {
 	std::mutex mtx;
 	int handles = 0;
@@ -631,7 +631,7 @@ void
 stamp_version(StrataDocument& native, rev version)
 {
 	native.stamp(version);
-	native.add_value(DB_SLOT_VERSION, Serialise::version(version));
+	native.add_value(DB_SLOT_VERSION, Serialize::version(version));
 }
 
 [[noreturn]] void

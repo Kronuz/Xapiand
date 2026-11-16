@@ -40,7 +40,7 @@
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
-#include "length.h"                           // for serialise_length
+#include "length.h"                           // for serialize_length
 #include "opts.h"                             // for opts::*
 #include "node.h"                             // for Node, local_node
 #include "task.hh"                            // for task::task
@@ -64,16 +64,16 @@ struct IndexSettings;
 extern void sig_exit(int sig);
 
 
-inline std::string serialise_node_id(uint64_t node_id) {
-	return Base62::inverted().encode(serialise_length(node_id));
+inline std::string serialize_node_id(uint64_t node_id) {
+	return Base62::inverted().encode(serialize_length(node_id));
 }
 
 
-inline uint64_t unserialise_node_id(std::string_view node_id_str) {
+inline uint64_t unserialize_node_id(std::string_view node_id_str) {
 	auto serialized = Base62::inverted().decode(node_id_str);
 	const char *p = serialized.data();
 	const char *p_end = p + serialized.size();
-	return unserialise_length(&p, p_end);
+	return unserialize_length(&p, p_end);
 }
 
 

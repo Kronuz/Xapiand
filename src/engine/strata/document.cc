@@ -57,11 +57,11 @@ put(std::string& out, std::string_view bytes)
 [[noreturn]] void
 malformed(const char* what)
 {
-	throw Error(errc::syntax, std::string("Bad serialised document: ") + what);
+	throw Error(errc::syntax, std::string("Bad serialized document: ") + what);
 }
 
 
-// A reader over serialised bytes that never reads past the end.
+// A reader over serialized bytes that never reads past the end.
 class Cursor {
 public:
 	explicit Cursor(std::string_view bytes) : bytes_(bytes) { }
@@ -447,7 +447,7 @@ StrataDocument::get_data() const
 // format, written version, key, key frequency, data, values (slot, bytes), fields (name, kind, terms (term, wdf,
 // positions as increasing deltas)).
 std::string
-StrataDocument::serialise() const
+StrataDocument::serialize() const
 {
 	std::string out;
 	out.push_back(static_cast<char>(serial_version));
@@ -487,9 +487,9 @@ StrataDocument::serialise() const
 
 
 void
-StrataDocument::unserialise_from(std::string_view serialised)
+StrataDocument::unserialize_from(std::string_view serialized)
 {
-	Cursor in(serialised);
+	Cursor in(serialized);
 	const auto format = in.byte();
 	if (format == 1 || format == 2) {
 		malformed("formats 1 and 2 predate fields and are no longer read");
@@ -594,10 +594,10 @@ new_native()
 
 
 Document
-unserialise_document(std::string_view serialised)
+unserialize_document(std::string_view serialized)
 {
 	auto native = std::make_unique<StrataDocument>();
-	native->unserialise_from(serialised);
+	native->unserialize_from(serialized);
 	return Document(std::move(native));
 }
 

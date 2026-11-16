@@ -21,7 +21,7 @@
  */
 
 // libFuzzer target for the strata document's decoder (the bytes the write-ahead log keeps): any input
-// decodes to a document that serialises back to the same bytes, or raises a syntax error.
+// decodes to a document that serializes back to the same bytes, or raises a syntax error.
 
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint8_t
@@ -29,7 +29,7 @@
 #include <string_view>             // for std::string_view
 
 #include "engine/error.h"          // for Error, errc
-#include "engine/strata/document.h"  // for unserialise_document
+#include "engine/strata/document.h"  // for unserialize_document
 
 
 extern "C" int
@@ -37,9 +37,9 @@ LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
 {
 	const std::string_view bytes(reinterpret_cast<const char*>(data), size);
 	try {
-		const auto doc = engine::strata::unserialise_document(bytes);
-		const auto again = engine::strata::unserialise_document(doc.serialise());
-		if (again.serialise() != doc.serialise()) {
+		const auto doc = engine::strata::unserialize_document(bytes);
+		const auto again = engine::strata::unserialize_document(doc.serialize());
+		if (again.serialize() != doc.serialize()) {
 			std::abort();  // the form is not a fixed point
 		}
 		const auto& before = engine::strata::strata_document(doc);

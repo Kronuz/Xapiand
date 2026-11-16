@@ -28,8 +28,8 @@
 #include "xapiand_exception.h"                            // for InvalidArgumentError, MSG_I...
 #include "geospatial/ewkt.h"                      // for EWKT
 #include "engine/error.h"                       // for Error, errc
-#include "length.h"                               // for serialise_length, unserialise_length
-#include "engine/codec.h"                       // for serialise_double, unserialise_double
+#include "length.h"                               // for serialize_length, unserialize_length
+#include "engine/codec.h"                       // for serialize_double, unserialize_double
 
 
 namespace {
@@ -52,41 +52,41 @@ inline int64_t iabs(int64_t v) noexcept {
 
 
 std::string
-BaseKey::serialise() const
+BaseKey::serialize() const
 {
-	std::string serialised;
-	serialised += serialise_length(_slot);
-	serialised += serialise_length(_reverse);
-	return serialised;
+	std::string serialized;
+	serialized += serialize_length(_slot);
+	serialized += serialize_length(_reverse);
+	return serialized;
 }
 
 
 void
-BaseKey::unserialise(const char** p, const char* p_end)
+BaseKey::unserialize(const char** p, const char* p_end)
 {
-	_slot = unserialise_length(p, p_end);
-	_reverse = unserialise_length(p, p_end);
+	_slot = unserialize_length(p, p_end);
+	_reverse = unserialize_length(p, p_end);
 }
 
 
 std::string
-SerialiseKey::serialise() const
+SerializeKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	return serialized;
 }
 
 
 void
-SerialiseKey::unserialise(const char** p, const char* p_end)
+SerializeKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
+	BaseKey::unserialize(p, p_end);
 }
 
 
 std::string
-SerialiseKey::findSmallest(const engine::DocView& doc) const
+SerializeKey::findSmallest(const engine::DocView& doc) const
 {
 	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
@@ -100,7 +100,7 @@ SerialiseKey::findSmallest(const engine::DocView& doc) const
 
 
 std::string
-SerialiseKey::findBiggest(const engine::DocView& doc) const
+SerializeKey::findBiggest(const engine::DocView& doc) const
 {
 	const auto multiValues = doc.value(_slot);
 	if (multiValues.empty()) {
@@ -114,22 +114,22 @@ SerialiseKey::findBiggest(const engine::DocView& doc) const
 
 
 std::string
-FloatKey::serialise() const
+FloatKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += engine::serialise_double(_ref_val);
-	serialised += serialise_string(_ser_ref_val);
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += engine::serialize_double(_ref_val);
+	serialized += serialize_string(_ser_ref_val);
+	return serialized;
 }
 
 
 void
-FloatKey::unserialise(const char** p, const char* p_end)
+FloatKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	_ref_val = engine::unserialise_double(p, p_end);
-	_ser_ref_val = unserialise_string(p, p_end);
+	BaseKey::unserialize(p, p_end);
+	_ref_val = engine::unserialize_double(p, p_end);
+	_ser_ref_val = unserialize_string(p, p_end);
 }
 
 
@@ -144,29 +144,29 @@ FloatKey::findSmallest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::floating(std::fabs(Unserialise::floating(values.front()) - _ref_val));
+		return Serialize::floating(std::fabs(Unserialize::floating(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::floating(Unserialise::floating(*it) - _ref_val);
+		return Serialize::floating(Unserialize::floating(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::floating(_ref_val - Unserialise::floating(*last));
+		return Serialize::floating(_ref_val - Unserialize::floating(*last));
 	}
 
 	auto it_p = it++;
 	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
 	if (it.compare(_ser_ref_val) == 0) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
 
-	double distance1 = _ref_val - Unserialise::floating(*it_p);
-	double distance2 = Unserialise::floating(*it) - _ref_val;
-	return Serialise::floating(distance1 < distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialize::floating(*it_p);
+	double distance2 = Unserialize::floating(*it) - _ref_val;
+	return Serialize::floating(distance1 < distance2 ? distance1 : distance2);
 }
 
 
@@ -181,42 +181,42 @@ FloatKey::findBiggest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::floating(std::fabs(Unserialise::floating(values.front()) - _ref_val));
+		return Serialize::floating(std::fabs(Unserialize::floating(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::floating(Unserialise::floating(values.back()) - _ref_val);
+		return Serialize::floating(Unserialize::floating(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::floating(_ref_val - Unserialise::floating(*it));
+		return Serialize::floating(_ref_val - Unserialize::floating(*it));
 	}
 
-	double distance1 = _ref_val - Unserialise::floating(*it);
-	double distance2 = Unserialise::floating(*last) - _ref_val;
-	return Serialise::floating(distance1 > distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialize::floating(*it);
+	double distance2 = Unserialize::floating(*last) - _ref_val;
+	return Serialize::floating(distance1 > distance2 ? distance1 : distance2);
 }
 
 
 std::string
-IntegerKey::serialise() const
+IntegerKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += serialise_length(_ref_val);
-	serialised += serialise_string(_ser_ref_val);
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += serialize_length(_ref_val);
+	serialized += serialize_string(_ser_ref_val);
+	return serialized;
 }
 
 
 void
-IntegerKey::unserialise(const char** p, const char* p_end)
+IntegerKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	_ref_val = unserialise_length(p, p_end);
-	_ser_ref_val = unserialise_string(p, p_end);
+	BaseKey::unserialize(p, p_end);
+	_ref_val = unserialize_length(p, p_end);
+	_ser_ref_val = unserialize_string(p, p_end);
 }
 
 
@@ -231,29 +231,29 @@ IntegerKey::findSmallest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::integer(iabs(isub(Unserialise::integer(values.front()), _ref_val)));
+		return Serialize::integer(iabs(isub(Unserialize::integer(values.front()), _ref_val)));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(isub(Unserialise::integer(*it), _ref_val));
+		return Serialize::integer(isub(Unserialize::integer(*it), _ref_val));
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(isub(_ref_val, Unserialise::integer(*last)));
+		return Serialize::integer(isub(_ref_val, Unserialize::integer(*last)));
 	}
 
 	auto it_p = it++;
 	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
 	if (it.compare(_ser_ref_val) == 0) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
 
-	int64_t distance1 = isub(_ref_val, Unserialise::integer(*it_p));
-	int64_t distance2 = isub(Unserialise::integer(*it), _ref_val);
-	return Serialise::integer(distance1 < distance2 ? distance1 : distance2);
+	int64_t distance1 = isub(_ref_val, Unserialize::integer(*it_p));
+	int64_t distance2 = isub(Unserialize::integer(*it), _ref_val);
+	return Serialize::integer(distance1 < distance2 ? distance1 : distance2);
 }
 
 
@@ -268,42 +268,42 @@ IntegerKey::findBiggest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::integer(iabs(isub(Unserialise::integer(values.front()), _ref_val)));
+		return Serialize::integer(iabs(isub(Unserialize::integer(values.front()), _ref_val)));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::integer(isub(Unserialise::integer(values.back()), _ref_val));
+		return Serialize::integer(isub(Unserialize::integer(values.back()), _ref_val));
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::integer(isub(_ref_val, Unserialise::integer(*it)));
+		return Serialize::integer(isub(_ref_val, Unserialize::integer(*it)));
 	}
 
-	int64_t distance1 = isub(_ref_val, Unserialise::integer(*it));
-	int64_t distance2 = isub(Unserialise::integer(*last), _ref_val);
-	return Serialise::integer(distance1 > distance2 ? distance1 : distance2);
+	int64_t distance1 = isub(_ref_val, Unserialize::integer(*it));
+	int64_t distance2 = isub(Unserialize::integer(*last), _ref_val);
+	return Serialize::integer(distance1 > distance2 ? distance1 : distance2);
 }
 
 
 std::string
-PositiveKey::serialise() const
+PositiveKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += serialise_length(_ref_val);
-	serialised += serialise_string(_ser_ref_val);
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += serialize_length(_ref_val);
+	serialized += serialize_string(_ser_ref_val);
+	return serialized;
 }
 
 
 void
-PositiveKey::unserialise(const char** p, const char* p_end)
+PositiveKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	_ref_val = unserialise_length(p, p_end);
-	_ser_ref_val = unserialise_string(p, p_end);
+	BaseKey::unserialize(p, p_end);
+	_ref_val = unserialize_length(p, p_end);
+	_ser_ref_val = unserialize_string(p, p_end);
 }
 
 
@@ -318,30 +318,30 @@ PositiveKey::findSmallest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		uint64_t val = Unserialise::positive(values.front());
-		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+		uint64_t val = Unserialize::positive(values.front());
+		return Serialize::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::positive(Unserialise::positive(*it) - _ref_val);
+		return Serialize::positive(Unserialize::positive(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::positive(_ref_val - Unserialise::positive(*last));
+		return Serialize::positive(_ref_val - Unserialize::positive(*last));
 	}
 
 	auto it_p = it++;
 	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
 	if (it.compare(_ser_ref_val) == 0) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
 
-	uint64_t distance1 = _ref_val - Unserialise::positive(*it_p);
-	uint64_t distance2 = Unserialise::positive(*it) - _ref_val;
-	return Serialise::positive(distance1 < distance2 ? distance1 : distance2);
+	uint64_t distance1 = _ref_val - Unserialize::positive(*it_p);
+	uint64_t distance2 = Unserialize::positive(*it) - _ref_val;
+	return Serialize::positive(distance1 < distance2 ? distance1 : distance2);
 }
 
 
@@ -356,43 +356,43 @@ PositiveKey::findBiggest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		uint64_t val = Unserialise::positive(values.front());
-		return Serialise::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
+		uint64_t val = Unserialize::positive(values.front());
+		return Serialize::positive(val > _ref_val ? val - _ref_val : _ref_val - val);
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::positive(Unserialise::positive(values.back()) - _ref_val);
+		return Serialize::positive(Unserialize::positive(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::positive(_ref_val - Unserialise::positive(*it));
+		return Serialize::positive(_ref_val - Unserialize::positive(*it));
 	}
 
-	uint64_t distance1 = _ref_val - Unserialise::positive(*it);
-	uint64_t distance2 = Unserialise::positive(*last) - _ref_val;
-	return Serialise::positive(distance1 > distance2 ? distance1 : distance2);
+	uint64_t distance1 = _ref_val - Unserialize::positive(*it);
+	uint64_t distance2 = Unserialize::positive(*last) - _ref_val;
+	return Serialize::positive(distance1 > distance2 ? distance1 : distance2);
 }
 
 
 std::string
-DateKey::serialise() const
+DateKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += engine::serialise_double(_ref_val);
-	serialised += serialise_string(_ser_ref_val);
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += engine::serialize_double(_ref_val);
+	serialized += serialize_string(_ser_ref_val);
+	return serialized;
 }
 
 
 void
-DateKey::unserialise(const char** p, const char* p_end)
+DateKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	_ref_val = engine::unserialise_double(p, p_end);
-	_ser_ref_val = unserialise_string(p, p_end);
+	BaseKey::unserialize(p, p_end);
+	_ref_val = engine::unserialize_double(p, p_end);
+	_ser_ref_val = unserialize_string(p, p_end);
 }
 
 
@@ -407,29 +407,29 @@ DateKey::findSmallest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
+		return Serialize::timestamp(std::fabs(Unserialize::timestamp(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::timestamp(Unserialise::timestamp(*it) - _ref_val);
+		return Serialize::timestamp(Unserialize::timestamp(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::timestamp(_ref_val - Unserialise::timestamp(*last));
+		return Serialize::timestamp(_ref_val - Unserialize::timestamp(*last));
 	}
 
 	auto it_p = it++;
 	for ( ; it != last && it.compare(_ser_ref_val) < 0; it_p = it++);
 
 	if (it.compare(_ser_ref_val) == 0) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
 
-	double distance1 = _ref_val - Unserialise::timestamp(*it_p);
-	double distance2 = Unserialise::timestamp(*it) - _ref_val;
-	return Serialise::timestamp(distance1 < distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialize::timestamp(*it_p);
+	double distance2 = Unserialize::timestamp(*it) - _ref_val;
+	return Serialize::timestamp(distance1 < distance2 ? distance1 : distance2);
 }
 
 
@@ -444,40 +444,40 @@ DateKey::findBiggest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::timestamp(std::fabs(Unserialise::timestamp(values.front()) - _ref_val));
+		return Serialize::timestamp(std::fabs(Unserialize::timestamp(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::timestamp(Unserialise::timestamp(values.back()) - _ref_val);
+		return Serialize::timestamp(Unserialize::timestamp(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::timestamp(_ref_val - Unserialise::timestamp(*it));
+		return Serialize::timestamp(_ref_val - Unserialize::timestamp(*it));
 	}
 
-	double distance1 = _ref_val - Unserialise::timestamp(*it);
-	double distance2 = Unserialise::timestamp(*last) - _ref_val;
-	return Serialise::timestamp(distance1 > distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialize::timestamp(*it);
+	double distance2 = Unserialize::timestamp(*last) - _ref_val;
+	return Serialize::timestamp(distance1 > distance2 ? distance1 : distance2);
 }
 
 
 std::string
-BoolKey::serialise() const
+BoolKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += serialise_string(_ser_ref_val);
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += serialize_string(_ser_ref_val);
+	return serialized;
 }
 
 
 void
-BoolKey::unserialise(const char** p, const char* p_end)
+BoolKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	_ser_ref_val = unserialise_string(p, p_end);
+	BaseKey::unserialize(p, p_end);
+	_ser_ref_val = unserialize_string(p, p_end);
 }
 
 
@@ -492,9 +492,9 @@ BoolKey::findSmallest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.front().at(0) == _ser_ref_val.at(0) || values.back().at(0) == _ser_ref_val.at(0)) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
-	return SERIALISED_ONE;
+	return SERIALIZED_ONE;
 }
 
 
@@ -509,27 +509,27 @@ BoolKey::findBiggest(const engine::DocView& doc) const
 	StringList values(multiValues);
 
 	if (values.front().at(0) != _ser_ref_val.at(0) || values.back().at(0) != _ser_ref_val.at(0)) {
-		return SERIALISED_ONE;
+		return SERIALIZED_ONE;
 	}
-	return SERIALISED_ZERO;
+	return SERIALIZED_ZERO;
 }
 
 
 std::string
-GeoKey::serialise() const
+GeoKey::serialize() const
 {
-	std::string serialised;
-	serialised += BaseKey::serialise();
-	serialised += serialise_string(Serialise::centroids(_centroids));
-	return serialised;
+	std::string serialized;
+	serialized += BaseKey::serialize();
+	serialized += serialize_string(Serialize::centroids(_centroids));
+	return serialized;
 }
 
 
 void
-GeoKey::unserialise(const char** p, const char* p_end)
+GeoKey::unserialize(const char** p, const char* p_end)
 {
-	BaseKey::unserialise(p, p_end);
-	for (const auto& centroid : Unserialise::centroids(unserialise_string(p, p_end))) {
+	BaseKey::unserialize(p, p_end);
+	for (const auto& centroid : Unserialize::centroids(unserialize_string(p, p_end))) {
 		_centroids.emplace_back(std::move(centroid));
 	}
 }
@@ -543,10 +543,10 @@ GeoKey::findSmallest(const engine::DocView& doc) const
 		return MAX_CMPVALUE;
 	}
 
-	auto centroids = Unserialise::centroids(multiValues);
+	auto centroids = Unserialize::centroids(multiValues);
 
 	if (centroids.empty()) {
-		return SERIALISED_M_PI;
+		return SERIALIZED_M_PI;
 	}
 
 	double min_angle = M_PI;
@@ -559,7 +559,7 @@ GeoKey::findSmallest(const engine::DocView& doc) const
 		}
 	}
 
-	return Serialise::floating(min_angle);
+	return Serialize::floating(min_angle);
 }
 
 
@@ -571,10 +571,10 @@ GeoKey::findBiggest(const engine::DocView& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	auto centroids = Unserialise::centroids(multiValues);
+	auto centroids = Unserialize::centroids(multiValues);
 
 	if (centroids.empty()) {
-		return SERIALISED_ZERO;
+		return SERIALIZED_ZERO;
 	}
 
 	double max_angle = 0;
@@ -587,7 +587,7 @@ GeoKey::findBiggest(const engine::DocView& doc) const
 		}
 	}
 
-	return Serialise::floating(max_angle);
+	return Serialize::floating(max_angle);
 }
 
 
@@ -610,22 +610,22 @@ Multi_MultiValueKeyMaker::name() const
 
 
 std::string
-Multi_MultiValueKeyMaker::serialise() const
+Multi_MultiValueKeyMaker::serialize() const
 {
-	std::string serialised;
+	std::string serialized;
 	for (const auto& slot : slots) {
-		serialised += serialise_string(slot->name());
-		serialised += serialise_string(slot->serialise());
+		serialized += serialize_string(slot->name());
+		serialized += serialize_string(slot->serialize());
 	}
-	return serialised;
+	return serialized;
 }
 
 
 std::unique_ptr<engine::KeyMaker>
-Multi_MultiValueKeyMaker::unserialise(std::string_view serialised) const
+Multi_MultiValueKeyMaker::unserialize(std::string_view serialized) const
 {
 	constexpr static auto _ = phf::make_phf({
-		hh("SerialiseKey"),
+		hh("SerializeKey"),
 		hh("FloatKey"),
 		hh("IntegerKey"),
 		hh("PositiveKey"),
@@ -647,18 +647,18 @@ Multi_MultiValueKeyMaker::unserialise(std::string_view serialised) const
 	});
 
 	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
-	const char *p = serialised.data();
-	const char *p_end = p + serialised.size();
+	const char *p = serialized.data();
+	const char *p_end = p + serialized.size();
 	try {
 		while (p != p_end) {
-			auto name = unserialise_string(&p, p_end);
-			auto data = unserialise_string(&p, p_end);
+			auto name = unserialize_string(&p, p_end);
+			auto data = unserialize_string(&p, p_end);
 			const char *q = data.data();
 			const char *q_end = q + data.size();
 			std::unique_ptr<BaseKey> slot;
 			switch (_.fhh(name)) {
-				case _.fhh("SerialiseKey"):
-					slot = std::make_unique<SerialiseKey>();
+				case _.fhh("SerializeKey"):
+					slot = std::make_unique<SerializeKey>();
 					break;
 				case _.fhh("FloatKey"):
 					slot = std::make_unique<FloatKey>();
@@ -679,55 +679,55 @@ Multi_MultiValueKeyMaker::unserialise(std::string_view serialised) const
 					slot = std::make_unique<GeoKey>();
 					break;
 				case _.fhh("Levenshtein"):
-					slot = std::make_unique<StringKey<SerialisableLevenshtein>>();
+					slot = std::make_unique<StringKey<SerializableLevenshtein>>();
 					break;
 				case _.fhh("Jaro"):
-					slot = std::make_unique<StringKey<SerialisableMetric<Jaro>>>();
+					slot = std::make_unique<StringKey<SerializableMetric<Jaro>>>();
 					break;
 				case _.fhh("Jaro_Winkler"):
-					slot = std::make_unique<StringKey<SerialisableJaroWinkler>>();
+					slot = std::make_unique<StringKey<SerializableJaroWinkler>>();
 					break;
 				case _.fhh("Sorensen_Dice"):
-					slot = std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>();
+					slot = std::make_unique<StringKey<SerializableMetric<Sorensen_Dice>>>();
 					break;
 				case _.fhh("Jaccard"):
-					slot = std::make_unique<StringKey<SerialisableMetric<Jaccard>>>();
+					slot = std::make_unique<StringKey<SerializableMetric<Jaccard>>>();
 					break;
 				case _.fhh("LCSubstr"):
-					slot = std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>();
+					slot = std::make_unique<StringKey<SerializableMetric<LCSubstr>>>();
 					break;
 				case _.fhh("LCSubsequence"):
-					slot = std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializableMetric<LCSubsequence>>>();
 					break;
 				case _.fhh("SoundexEnglish"):
-					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializablePhoneticMetric<SoundexEnglish, LCSubsequence>>>();
 					break;
 				case _.fhh("SoundexFrench"):
-					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializablePhoneticMetric<SoundexFrench, LCSubsequence>>>();
 					break;
 				case _.fhh("SoundexGerman"):
-					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializablePhoneticMetric<SoundexGerman, LCSubsequence>>>();
 					break;
 				case _.fhh("SoundexSpanish"):
-					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializablePhoneticMetric<SoundexSpanish, LCSubsequence>>>();
 					break;
 				// The persistence dispatch key is the encoder's name() ("dmetaphone"),
 				// the same convention the Soundex slots use (key == encoder name()), so
-				// the name written by serialise() round-trips here.
+				// the name written by serialize() round-trips here.
 				case _.fhh("dmetaphone"):
-					slot = std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>();
+					slot = std::make_unique<StringKey<SerializablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>();
 					break;
 				default:
-					THROW(SerialisationError, "{} not implemented", name);
+					THROW(SerializationError, "{} not implemented", name);
 			}
-			slot->unserialise(&q, q_end);
+			slot->unserialize(&q, q_end);
 			if (q != q_end) {
-				THROW(SerialisationError, "Bad serialised {} - junk at end", name);
+				THROW(SerializationError, "Bad serialized {} - junk at end", name);
 			}
 			sorter->slots.push_back(std::move(slot));
 		}
-	} catch (const SerialisationError& exc) {
-		throw engine::Error(engine::errc::invalid, std::string("Bad serialised Multi_MultiValueKeyMaker: ") + exc.what());
+	} catch (const SerializationError& exc) {
+		throw engine::Error(engine::errc::invalid, std::string("Bad serialized Multi_MultiValueKeyMaker: ") + exc.what());
 	}
 	return sorter;
 }

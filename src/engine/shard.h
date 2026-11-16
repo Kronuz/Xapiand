@@ -92,7 +92,7 @@ using ScanSink = std::function<void(const DocView&)>;
 
 // One shard of an index: the write, read and lifecycle slice. Every operation that can block on I/O
 // returns a task. The referenced arguments must outlive the task. Writes, refreshes, commits and the
-// other operations that change the index are made by one task at a time: the host serialises them (the
+// other operations that change the index are made by one task at a time: the host serializes them (the
 // index's turn). Reads (find_key, get, scan, stats, metadata, doc_count and search) take no turn: each
 // reads one published view of the index, as of the last refresh, and never waits for a write. The written
 // reads (written_key, written_count) are made in the turn and read what the writes applied, flushed or not.

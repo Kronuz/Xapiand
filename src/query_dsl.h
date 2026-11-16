@@ -65,7 +65,7 @@ class QueryDSL {
 	engine::Query get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_global_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_term_query(const required_spc_t& field_spc, std::string_view serialized_term, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);

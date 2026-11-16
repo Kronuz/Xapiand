@@ -35,13 +35,13 @@
 #include "database/utils.h"                       // for field_name, flat_term
 #include "engine/document.h"                       // for engine::Document
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
-#include "serialise.h"                            // for serialise
+#include "serialize.h"                            // for serialize
 #include "engine/query.h"                         // for engine::Query, Op
 
 
 constexpr size_t MAX_TERMS_LEVEL        = 256;
 constexpr size_t MAX_TERMS              = 128;
-constexpr size_t MAX_SERIALISE_LENGTH   = 18;
+constexpr size_t MAX_SERIALIZE_LENGTH   = 18;
 
 
 extern const char ctype_date;
@@ -51,7 +51,7 @@ extern const char ctype_integer;
 
 // Returns the upper bound's length given the prefix's length, number of unions and union's length.
 inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unions, size_t length_union) noexcept {
-	auto max_length_term = length_prefix + MAX_SERIALISE_LENGTH;
+	auto max_length_term = length_prefix + MAX_SERIALIZE_LENGTH;
 	return (max_length_term + length_union) * number_unions + max_length_term;
 }
 

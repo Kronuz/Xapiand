@@ -29,7 +29,7 @@
 #include "lua/processor.h"
 #include "md5.h"
 #include "reserved/schema.h"
-#include "serialise.h"
+#include "serialize.h"
 #include "phf.hh"                                 // for phf
 
 

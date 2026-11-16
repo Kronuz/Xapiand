@@ -50,7 +50,7 @@ struct BucketBudget {
 	size_t max = AGGS_MAX_BUCKETS;
 };
 
-// The budget of the spy collecting on this thread, or null (merging serialised results is not charged).
+// The budget of the spy collecting on this thread, or null (merging serialized results is not charged).
 extern thread_local BucketBudget* current_bucket_budget;
 
 
@@ -69,7 +69,7 @@ public:
 
 	virtual MsgPack get_result() const = 0;
 
-	virtual std::string serialise_results() const = 0;
+	virtual std::string serialize_results() const = 0;
 	virtual void merge_results(const char** p, const char* end) = 0;
 	virtual void merge_results(const BaseAggregation* other) = 0;
 
@@ -105,7 +105,7 @@ public:
 
 	MsgPack get_result() const override;
 
-	std::string serialise_results() const override;
+	std::string serialize_results() const override;
 	void merge_results(const char** p, const char* p_end) override;
 	void merge_results(const BaseAggregation* other) override;
 
@@ -177,10 +177,10 @@ public:
 
 	std::unique_ptr<engine::MatchSpy> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view serialised) const override;
-	std::string serialise_results() const override;
-	void merge_results(std::string_view serialised) override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view serialized) const override;
+	std::string serialize_results() const override;
+	void merge_results(std::string_view serialized) override;
 	void merge_results(const AggregationMatchSpy& other);
 
 	std::string description() const override;

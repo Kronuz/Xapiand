@@ -48,8 +48,8 @@
 #include "database/wal.h"                   // for DatabaseWAL
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
-#include "io.hh"                            // for io::write (for MsgPack::serialise)
-#include "length.h"                         // for serialise_string, unserialise_string
+#include "io.hh"                            // for io::write (for MsgPack::serialize)
+#include "length.h"                         // for serialize_string, unserialize_string
 #include "log.h"                            // for L_CALL
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
@@ -70,7 +70,7 @@
 #include "response.h"                       // for RESPONSE_*
 #include "script.h"                         // for Script
 #include "xapiand_strings.hh"                       // for strings::from_bytes
-#include "serialise.h"                      // for cast, serialise, type
+#include "serialize.h"                      // for cast, serialize, type
 #include "server/http_utils.h"              // for catch_http_errors
 #include "work_pool.hh"                     // for WorkPool::threads
 
@@ -137,7 +137,7 @@ numeric_id(std::string_view key)
 	if (key.size() < 2 || key[0] != 'N') {
 		return 0;
 	}
-	const auto id = Unserialise::id(key.substr(1));
+	const auto id = Unserialize::id(key.substr(1));
 	return id && *id >= 1 && *id <= MAX_NUMERIC_ID ? *id : 0;
 }
 
@@ -145,7 +145,7 @@ numeric_id(std::string_view key)
 std::string
 numeric_key(std::uint64_t id)
 {
-	return document_key(Serialise::id(id), 'N');  // the key a PUT of the integer id names
+	return document_key(Serialize::id(id), 'N');  // the key a PUT of the integer id names
 }
 
 
@@ -315,12 +315,12 @@ finish_prepared(std::tuple<std::string, engine::Document, MsgPack>& prepared, Da
 	auto& doc = std::get<1>(prepared);
 	data.set_obj(std::get<2>(prepared), false);
 	data.flush();
-	auto serialised = data.serialise();
-	if (!serialised.empty()) {
-		doc.set_data(serialised);
+	auto serialized = data.serialize();
+	if (!serialized.empty()) {
+		doc.set_data(serialized);
 	}
 	if (document_ver != UNKNOWN_REVISION) {
-		doc.add_value(DB_SLOT_VERSION, Serialise::version(document_ver));
+		doc.add_value(DB_SLOT_VERSION, Serialize::version(document_ver));
 	} else if (!data.version.empty()) {
 		doc.add_value(DB_SLOT_VERSION, data.version);
 	}
@@ -395,7 +395,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, const std::share
 
 #if XAPIAND_DATABASE_WAL
 task::task<MsgPack>
-DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised)
+DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialized)
 {
 	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
 
@@ -409,7 +409,7 @@ DatabaseHandler::repr_wal(engine::rev start_revision, engine::rev end_revision, 
 	const auto path = endpoints[0].path;
 	co_await chores.run(engine::ChoreClass::query, [&] {
 		DatabaseWAL wal(path);
-		result = wal.to_string(start_revision, end_revision, unserialised);
+		result = wal.to_string(start_revision, end_revision, unserialized);
 	});
 	co_return result;
 }
@@ -488,7 +488,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	std::tuple<std::string, engine::Document, MsgPack> prepared;
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
-		const auto current = Unserialise::version(data.version);
+		const auto current = Unserialize::version(data.version);
 		if (document_ver != current) {
 			throw engine::version_conflict(current);  // early; the shard checks it again in the write's turn
 		}
@@ -962,9 +962,9 @@ DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 #ifdef XAPIAND_DATA_STORAGE
 				auto stored = co_await storage_get_stored(locator, did);
 				obj[RESERVED_DATA].push_back(MsgPack({
-					{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
+					{ "_content_type", unserialize_string_at(STORED_CONTENT_TYPE, stored) },
 					{ "_type", "stored" },
-					{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
+					{ "_blob", unserialize_string_at(STORED_BLOB, stored) },
 				}));
 #endif
 				break;
@@ -1518,7 +1518,7 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 			break;
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
+		} catch (const SerializationError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const QueryDslError& exc) {
 			THROW(ClientError, exc.what());
@@ -1627,7 +1627,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	auto id_type = spc_id.get_type();
 	if (id_type == FieldType::empty) {
 		// Search like namespace.
-		const auto type_ser = Serialise::guess_id(document_id);
+		const auto type_ser = Serialize::guess_id(document_id);
 		id_type = type_ser.first;
 		if (id_type == FieldType::text) {
 			id_type = FieldType::keyword;
@@ -1636,7 +1636,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 		spc_id.flags.bool_term = true;
 		unprefixed_term_id = type_ser.second;
 	} else {
-		unprefixed_term_id = Serialise::id(spc_id, Cast::cast(id_type, document_id));
+		unprefixed_term_id = Serialize::id(spc_id, Cast::cast(id_type, document_id));
 	}
 	co_return document_key(unprefixed_term_id, spc_id.get_ctype());
 }
@@ -2018,7 +2018,7 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 			// A new one goes to the shard its id's bucket names.
 			shard_num = id_shard(term, n_shards);
 		}
-		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards) + serialise_length(floor));
+		doc.add_value(DB_SLOT_SHARDS, serialize_length(shard_num) + serialize_length(n_shards) + serialize_length(floor));
 	}
 
 	auto& endpoint = endpoints[shard_num];
@@ -2045,7 +2045,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 
 	auto version = co_await document.get_value(DB_SLOT_VERSION);
 	if (!version.empty()) {
-		info[RESPONSE_VERSION] = Unserialise::version(version);
+		info[RESPONSE_VERSION] = Unserialize::version(version);
 	}
 
 	size_t n_shards = endpoints.size();
@@ -2056,7 +2056,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 	}
 
 	if (raw_data) {
-		info[RESPONSE_RAW_DATA] = data.serialise();
+		info[RESPONSE_RAW_DATA] = data.serialize();
 	}
 
 	auto& info_data = info[RESPONSE_DATA];
@@ -2235,37 +2235,37 @@ DatabaseHandler::reopen()
 
 
 task::task<MsgPack>
-DatabaseHandler::unserialise_term_id(std::string_view term_id)
+DatabaseHandler::unserialize_term_id(std::string_view term_id)
 {
-	L_CALL("DatabaseHandler::unserialise_term_id({})", repr(term_id));
+	L_CALL("DatabaseHandler::unserialize_term_id({})", repr(term_id));
 
 	assert(!term_id.empty());
 	if (term_id.size() < 2) {
-		THROW(SerialisationError, "Term cannot be unserialised");
+		THROW(SerializationError, "Term cannot be unserialized");
 	}
 	auto type = term_id[0];
 	term_id.remove_prefix(1);
 	switch (type) {
 		case 'U':
-			co_return Unserialise::MsgPack(FieldType::uuid, term_id);
+			co_return Unserialize::MsgPack(FieldType::uuid, term_id);
 		case 'K':
-			co_return Unserialise::MsgPack(FieldType::keyword, term_id);
+			co_return Unserialize::MsgPack(FieldType::keyword, term_id);
 		case 'S':
-			co_return Unserialise::MsgPack(FieldType::text, term_id);
+			co_return Unserialize::MsgPack(FieldType::text, term_id);
 		case 'B':
-			co_return Unserialise::MsgPack(FieldType::boolean, term_id);
+			co_return Unserialize::MsgPack(FieldType::boolean, term_id);
 		case 'G':
-			co_return Unserialise::MsgPack(FieldType::geo, term_id);
+			co_return Unserialize::MsgPack(FieldType::geo, term_id);
 		case 'N':
-			co_return Unserialise::id((co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type(), term_id);
+			co_return Unserialize::id((co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type(), term_id);
 		case 'D':
 		case 'T': {
 			// These three types need further information, get such from the schema.
 			auto field_type = (co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type();
-			co_return Unserialise::MsgPack(field_type, term_id);
+			co_return Unserialize::MsgPack(field_type, term_id);
 		}
 		default:
-			THROW(SerialisationError, "Term type: {} is an unknown type", type);
+			THROW(SerializationError, "Term type: {} is an unknown type", type);
 	}
 }
 
@@ -2427,11 +2427,11 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				std::rethrow_exception(error);
 			}
 			if (term_id == NEW_NUMERIC_KEY) {
-				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+				result[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
 			} else {
 				auto it_id = data_obj.find(ID_FIELD_NAME);
 				if (it_id == data_obj.end()) {
-					result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+					result[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
 				} else {
 					result[ID_FIELD_NAME] = it_id.value();
 				}
@@ -2643,7 +2643,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 				if (n_shards > 1) {
 					// A new one goes to the shard its id's bucket names.
 					shard = id_shard(term, n_shards);
-					write.doc.add_value(DB_SLOT_SHARDS, serialise_length(shard) + serialise_length(n_shards));
+					write.doc.add_value(DB_SLOT_SHARDS, serialize_length(shard) + serialize_length(n_shards));
 				}
 			}
 			if (!seen[shard].insert(term).second) {
@@ -2980,14 +2980,14 @@ Document::get_docid()
 
 
 task::task<std::string>
-Document::serialise()
+Document::serialize()
 {
-	L_CALL("Document::serialise()");
+	L_CALL("Document::serialize()");
 
-	std::string serialised;
+	std::string serialized;
 
 	if (db_handler == nullptr) {
-		co_return serialised;
+		co_return serialized;
 	}
 
 	if (did == 0u) {
@@ -3009,7 +3009,7 @@ Document::serialise()
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto doc = co_await lk_shard->get_view(shard_did);
-			serialised = doc->serialise();
+			serialized = doc->serialize();
 			break;
 		} catch (const engine::Error& error) {
 			lk_shard->retry_read(error, t);
@@ -3017,7 +3017,7 @@ Document::serialise()
 		co_await lk_shard->reopen();
 	}
 
-	co_return serialised;
+	co_return serialized;
 }
 
 
@@ -3195,7 +3195,7 @@ Document::get_value(std::string_view slot_name)
 
 	if (db_handler != nullptr) {
 		auto slot_field = (co_await db_handler->get_schema())->get_slot_field(slot_name);
-		co_return Unserialise::MsgPack(slot_field.get_type(), co_await get_value(slot_field.slot));
+		co_return Unserialize::MsgPack(slot_field.get_type(), co_await get_value(slot_field.slot));
 	}
 	co_return MsgPack::NIL();
 }

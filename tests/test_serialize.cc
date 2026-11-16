@@ -21,10 +21,10 @@
  * THE SOFTWARE.
  */
 
-// Unit tests for value serialisation round-trips. Revived from the retired
-// oldtests serialise suite, keeping the robust round-trip checks (serialise ->
-// unserialise is stable / recovers the input) and dropping the byte-exact repr()
-// assertions, which pinned internal encodings. Cartesian / range serialisation is
+// Unit tests for value serialization round-trips. Revived from the retired
+// oldtests serialize suite, keeping the robust round-trip checks (serialize ->
+// unserialize is stable / recovers the input) and dropping the byte-exact repr()
+// assertions, which pinned internal encodings. Cartesian / range serialization is
 // geospatial and belongs with the geospatial tests.
 
 #include "test_harness.h"
@@ -43,7 +43,7 @@
 #include "datetime.h"
 #include "exact.hh"   // sortable's codec-independent comparator (its test/ directory)
 #include "exception_engine.h"
-#include "serialise.h"
+#include "serialize.h"
 
 static void test_datetime_timestamp() {
 	// The Unix epoch is timestamp 0 (a fixed, timezone-independent anchor).
@@ -52,8 +52,8 @@ static void test_datetime_timestamp() {
 }
 
 static void test_datetime_roundtrip() {
-	// Serialising the unserialised form must be stable: serialise -> unserialise
-	// -> serialise reproduces the same bytes for any accepted datetime.
+	// Serializing the unserialized form must be stable: serialize -> unserialize
+	// -> serialize reproduces the same bytes for any accepted datetime.
 	const char* datetimes[] = {
 		"2015-10-10T23:03:03.000",
 		"1970-01-01T00:00:00.000",
@@ -61,15 +61,15 @@ static void test_datetime_roundtrip() {
 		"2019-06-17T08:15:30.500",
 	};
 	for (const auto* d : datetimes) {
-		std::string serialised = Serialise::datetime(std::string_view(d));
-		std::string canonical = Unserialise::datetime(serialised);
-		std::string reserialised = Serialise::datetime(std::string_view(canonical));
-		CHECK_EQ(serialised, reserialised);
+		std::string serialized = Serialize::datetime(std::string_view(d));
+		std::string canonical = Unserialize::datetime(serialized);
+		std::string reserialized = Serialize::datetime(std::string_view(canonical));
+		CHECK_EQ(serialized, reserialized);
 	}
 }
 
 static void test_uuid_roundtrip() {
-	// A textual UUID serialises and unserialises back to the same textual UUID under the
+	// A textual UUID serializes and unserializes back to the same textual UUID under the
 	// default (v6) codec: version-4 UUIDs keep their full 16 bytes, and version-6 UUIDs
 	// round-trip through the condensed wire. A version-1 UUID does NOT round-trip here: the
 	// condensed wire carries no version marker, so it decodes with the running codec (v6 by
@@ -82,8 +82,8 @@ static void test_uuid_roundtrip() {
 		"2280898d-9810-6800-88b4-038db356b8d1",   // v6, condensed + compacted
 	};
 	for (const auto* u : uuids) {
-		std::string serialised = Serialise::uuid(std::string_view(u));
-		std::string back = Unserialise::uuid(serialised);
+		std::string serialized = Serialize::uuid(std::string_view(u));
+		std::string back = Unserialize::uuid(serialized);
 		CHECK_EQ(back, std::string(u));
 	}
 }
@@ -96,7 +96,7 @@ static std::string unhex(std::string_view hex) {
 	return out;
 }
 
-// Every line of the pinned sortable's vectors.txt through Serialise::/Unserialise:: (design T1): the bytes,
+// Every line of the pinned sortable's vectors.txt through Serialize::/Unserialize:: (design T1): the bytes,
 // the round trip, one encoding per number whatever its type, and memcmp order equal to exact order.
 static void test_number_vectors() {
 	std::ifstream in(SORTABLE_TEST_DIR "/vectors.txt");
@@ -110,28 +110,28 @@ static void test_number_vectors() {
 		const std::string want = unhex(hex);
 		if (kind == "i") {
 			const auto v = static_cast<std::int64_t>(std::strtoll(text.c_str(), nullptr, 10));
-			CHECK_EQ(exact::hex(Serialise::integer(v)), hex);
-			CHECK_EQ(Unserialise::integer(want), v);
+			CHECK_EQ(exact::hex(Serialize::integer(v)), hex);
+			CHECK_EQ(Unserialize::integer(want), v);
 			seen.emplace_back(exact::from_int64(v), want);
 		} else if (kind == "u") {
 			const auto v = static_cast<std::uint64_t>(std::strtoull(text.c_str(), nullptr, 10));
-			CHECK_EQ(exact::hex(Serialise::positive(v)), hex);
-			CHECK_EQ(Unserialise::positive(want), v);
+			CHECK_EQ(exact::hex(Serialize::positive(v)), hex);
+			CHECK_EQ(Unserialize::positive(want), v);
 			if (v <= static_cast<std::uint64_t>(INT64_MAX)) {
-				CHECK_EQ(exact::hex(Serialise::integer(static_cast<std::int64_t>(v))), hex);
+				CHECK_EQ(exact::hex(Serialize::integer(static_cast<std::int64_t>(v))), hex);
 			}
 			seen.emplace_back(exact::from_uint64(v), want);
 		} else {
 			const double v = std::strtod(text.c_str(), nullptr);
-			CHECK_EQ(exact::hex(Serialise::floating(v)), hex);
-			const double back = Unserialise::floating(want);
+			CHECK_EQ(exact::hex(Serialize::floating(v)), hex);
+			const double back = Unserialize::floating(want);
 			if (std::isnan(v)) {
 				CHECK_TRUE(std::isnan(back));
 			} else {
 				CHECK_EQ(std::bit_cast<std::uint64_t>(back), std::bit_cast<std::uint64_t>(v == 0 ? 0.0 : v));
 			}
 			if (v == std::floor(v) && std::fabs(v) < 9.2e18) {
-				CHECK_EQ(exact::hex(Serialise::integer(static_cast<std::int64_t>(v))), hex);
+				CHECK_EQ(exact::hex(Serialize::integer(static_cast<std::int64_t>(v))), hex);
 			}
 			seen.emplace_back(exact::from_double(v), want);
 		}
@@ -144,13 +144,13 @@ static void test_number_vectors() {
 	}
 }
 
-// Bytes that are not a serialised number raise SerialisationError, never a value read past the input.
+// Bytes that are not a serialized number raise SerializationError, never a value read past the input.
 static void test_number_rejects() {
 	for (std::string_view bad : { std::string_view(), std::string_view("\x00", 1), std::string_view("\x7f", 1), std::string_view("\x81", 1) }) {
 		bool thrown = false;
 		try {
-			(void)Unserialise::floating(bad);
-		} catch (const SerialisationError&) {
+			(void)Unserialize::floating(bad);
+		} catch (const SerializationError&) {
 			thrown = true;
 		}
 		CHECK_TRUE(thrown);

@@ -887,9 +887,9 @@ if(TRACKED_MEM)
 endif()
 
 # soundex: the language Soundex encoders (english/french/german/spanish). The
-# library is the pure algorithm; the serialise()/unserialise() persistence Xapiand
+# library is the pure algorithm; the serialize()/unserialize() persistence Xapiand
 # needs is re-attached Xapiand-side in src/metrics/soundex_metric.h
-# (SerialisableSoundex), so it stays out of the library. Depends on strings
+# (SerializableSoundex), so it stays out of the library. Depends on strings
 # (already on the path); header-only, so it just goes on the include path.
 FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG 3fd0402a6d169f1b9944e3037d5e1d691dc5e85e)
 FetchContent_MakeAvailable(soundex)
@@ -899,9 +899,9 @@ include_directories("${soundex_SOURCE_DIR}")
 # Jaro-Winkler, Jaccard, Sorensen-Dice, LCSubstr, LCSubsequence, and the
 # encoder-agnostic PhoneticMetric). Header-only, headers flat at the repo root.
 # Like soundex, the library is the pure algorithms and deliberately drops the
-# serialise()/unserialise() persistence (that pulled length.h + GPL
-# serialise-double); Xapiand re-attaches it Xapiand-side via the thin Serialisable*
-# subclasses in src/metric_serialise.h, pulled in by src/string_metric.h. Depends
+# serialize()/unserialize() persistence (that pulled length.h + GPL
+# serialize-double); Xapiand re-attaches it Xapiand-side via the thin Serializable*
+# subclasses in src/metric_serialize.h, pulled in by src/string_metric.h. Depends
 # on strings + soundex (both already on the path); just goes on the include path.
 # double-metaphone: the Double Metaphone phonetic encoder, a selectable encoder
 # alongside the soundex family for PhoneticMetric. Its one out-of-line file
@@ -1898,7 +1898,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
+		foreach (VAR_TEST fieldparser serialize_list endpoint serialize generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialize quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1924,9 +1924,9 @@ if (BUILD_TESTS)
 
 		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
 
-		# test_serialise reads the pinned sortable's vectors and its exact comparator (design T1).
-		target_include_directories(${PROJECT_NAME}_test_serialise PRIVATE "${sortable_SOURCE_DIR}/test")
-		target_compile_definitions(${PROJECT_NAME}_test_serialise PRIVATE SORTABLE_TEST_DIR="${sortable_SOURCE_DIR}/test")
+		# test_serialize reads the pinned sortable's vectors and its exact comparator (design T1).
+		target_include_directories(${PROJECT_NAME}_test_serialize PRIVATE "${sortable_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_test_serialize PRIVATE SORTABLE_TEST_DIR="${sortable_SOURCE_DIR}/test")
 
 		# The pinned sortable codec's order proof, and the Python client's bytes against its C++ (design T1, T3).
 		add_executable(sortable_property "${sortable_SOURCE_DIR}/test/property.cc")
@@ -2057,7 +2057,7 @@ if (BUILD_TESTS)
 		### OLD:
 		foreach (VAR_TEST
 			endpoint fieldparser generate_terms geospatial
-			patcher serialise serialise_list
+			patcher serialize serialize_list
 		)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}

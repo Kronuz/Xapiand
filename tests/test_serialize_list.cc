@@ -21,14 +21,14 @@
  * THE SOFTWARE.
  */
 
-// Unit tests for StringList, the serialised list of strings used by the
-// multi-value serialiser. Revived and modernized from the retired oldtests
-// serialise_list suite. (CartesianList / RangeList follow the same shape but
+// Unit tests for StringList, the serialized list of strings used by the
+// multi-value serializer. Revived and modernized from the retired oldtests
+// serialize_list suite. (CartesianList / RangeList follow the same shape but
 // need the geospatial / range types; StringList is the self-contained case.)
 //
-// Note serialise() takes an input range whose elements are std::string (a single
+// Note serialize() takes an input range whose elements are std::string (a single
 // element is stored verbatim; two or more get a magic byte + length prefixes),
-// while the list itself yields std::string_view over the serialised buffer.
+// while the list itself yields std::string_view over the serialized buffer.
 
 #include "test_harness.h"
 
@@ -37,17 +37,17 @@
 #include <string_view>
 #include <vector>
 
-#include "serialise_list.h"
+#include "serialize_list.h"
 
 static void test_StringListRoundTrip() {
 	const std::vector<std::string> values = {
 		"alpha", "beta", "gamma delta", "x", "a longer value with spaces"
 	};
 
-	const std::string serialised = StringList::serialise(values.begin(), values.end());
+	const std::string serialized = StringList::serialize(values.begin(), values.end());
 
-	// Construct a StringList over the serialised buffer and iterate it.
-	StringList list(serialised);
+	// Construct a StringList over the serialized buffer and iterate it.
+	StringList list(serialized);
 	REQUIRE_EQ(list.size(), values.size());
 	size_t i = 0;
 	for (const auto& sv : list) {
@@ -57,9 +57,9 @@ static void test_StringListRoundTrip() {
 	}
 	CHECK_EQ(i, values.size());
 
-	// unserialise into a fresh container and compare element by element.
+	// unserialize into a fresh container and compare element by element.
 	std::vector<std::string_view> restored;
-	StringList::unserialise(serialised, std::back_inserter(restored));
+	StringList::unserialize(serialized, std::back_inserter(restored));
 	REQUIRE_EQ(restored.size(), values.size());
 	for (size_t j = 0; j < restored.size(); ++j) {
 		CHECK_EQ(restored[j], values[j]);
@@ -68,22 +68,22 @@ static void test_StringListRoundTrip() {
 
 static void test_StringListEmpty() {
 	const std::vector<std::string> values;
-	const std::string serialised = StringList::serialise(values.begin(), values.end());
+	const std::string serialized = StringList::serialize(values.begin(), values.end());
 
-	StringList list(serialised);
+	StringList list(serialized);
 	CHECK_EQ(list.size(), 0u);
 	CHECK(list.begin() == list.end());
 
 	std::vector<std::string_view> restored;
-	StringList::unserialise(serialised, std::back_inserter(restored));
+	StringList::unserialize(serialized, std::back_inserter(restored));
 	CHECK(restored.empty());
 }
 
 static void test_StringListSingleWithEmbeddedNul() {
 	const std::vector<std::string> values = { std::string("with\0nul and spaces", 19) };
 
-	const std::string serialised = StringList::serialise(values.begin(), values.end());
-	StringList list(serialised);
+	const std::string serialized = StringList::serialize(values.begin(), values.end());
+	StringList list(serialized);
 	REQUIRE_EQ(list.size(), 1u);
 	CHECK_EQ(*list.begin(), values[0]);      // survives the embedded NUL
 	CHECK_EQ((*list.begin()).size(), 19u);

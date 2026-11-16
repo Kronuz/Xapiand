@@ -29,7 +29,7 @@
 #include "engine/error.h"                         // for engine::Error
 #include "generate_terms.h"                       // for GenerateTerms
 #include "geospatial/geospatial.h"                // for GeoSpatial
-#include "serialise_list.h"                       // for StringList
+#include "serialize_list.h"                       // for StringList
 
 
 engine::Query
@@ -64,7 +64,7 @@ GeoSpatialRange::calculateWeight(std::string_view value) const
 {
 	// A value that does not decode weighs like one with no centroid.
 	try {
-		const auto centroids = Unserialise::centroids(value);
+		const auto centroids = Unserialize::centroids(value);
 
 		if (_centroids.empty()) {
 			return geo_weight_from_angle(M_PI);
@@ -80,7 +80,7 @@ GeoSpatialRange::calculateWeight(std::string_view value) const
 			}
 		}
 		return geo_weight_from_angle(min_angle);
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return geo_weight_from_angle(M_PI);
 	}
 }
@@ -91,7 +91,7 @@ GeoSpatialRange::insideRanges(std::string_view value) const
 {
 	// A value that does not decode is not accepted.
 	try {
-		const auto ranges = Unserialise::ranges(value);
+		const auto ranges = Unserialize::ranges(value);
 
 		if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
 			return false;
@@ -117,7 +117,7 @@ GeoSpatialRange::insideRanges(std::string_view value) const
 		}
 
 		return false;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -145,31 +145,31 @@ GeoSpatialRange::name() const
 
 
 std::string
-GeoSpatialRange::serialise() const
+GeoSpatialRange::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), Serialise::ranges_centroids(_ranges, _centroids) };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), Serialize::ranges_centroids(_ranges, _centroids) };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-GeoSpatialRange::unserialise(std::string_view serialised) const
+GeoSpatialRange::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised GeoSpatialRange");
+			throw engine::Error(engine::errc::invalid, "Bad serialized GeoSpatialRange");
 		}
 
 		auto it = data.begin();
-		const auto slot = static_cast<engine::valueno>(unserialise_length(*it));
-		auto ranges_centroids = Unserialise::ranges_centroids(*++it);
+		const auto slot = static_cast<engine::valueno>(unserialize_length(*it));
+		auto ranges_centroids = Unserialize::ranges_centroids(*++it);
 		return std::make_unique<GeoSpatialRange>(slot,
 			std::vector<range_t>(std::make_move_iterator(ranges_centroids.first.begin()), std::make_move_iterator(ranges_centroids.first.end())),
 			std::vector<Cartesian>(std::make_move_iterator(ranges_centroids.second.begin()), std::make_move_iterator(ranges_centroids.second.end())));
-	} catch (const SerialisationError&) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised GeoSpatialRange");
+	} catch (const SerializationError&) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized GeoSpatialRange");
 	}
 }
 

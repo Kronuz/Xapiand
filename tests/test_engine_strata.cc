@@ -21,7 +21,7 @@
  */
 
 // Unit tests for the strata engine shard: versioned writes by id and by key, errors by kind, get by
-// id, scan, metadata, stats, transactions, persistence, replay through the serialised document, the
+// id, scan, metadata, stats, transactions, persistence, replay through the serialized document, the
 // key lead byte, the shared handle and the document codec.
 
 #include "test_harness.h"
@@ -51,7 +51,7 @@
 #include "engine/strata/document.h"
 #include "engine/strata/shard.h"
 #include "engine/sync.h"
-#include "serialise.h"
+#include "serialize.h"
 
 namespace {
 
@@ -233,7 +233,7 @@ void shared() {
 	std::filesystem::remove_all(path);
 }
 
-// Replay: the log keeps the serialised document (after the write, so it carries what the write
+// Replay: the log keeps the serialized document (after the write, so it carries what the write
 // stamped) and replays it by id. A line the index already holds changes nothing: the same
 // version, data and values; an older line does not roll a newer document back.
 void replay() {
@@ -247,17 +247,17 @@ void replay() {
 	doc.add_value(7, "seven");
 	CHECK_EQ(engine::sync_wait(shard.replace(5, doc, plain)).did, 5u);
 	CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 1u);
-	const auto line1 = doc.serialise();
-	auto replayed = engine::Document::unserialise(line1);
+	const auto line1 = doc.serialize();
+	auto replayed = engine::Document::unserialize(line1);
 	CHECK_EQ(replayed.get_data(), "first");
 	CHECK_EQ(replayed.get_value(7), "seven");
-	CHECK_EQ(replayed.serialise(), line1);
+	CHECK_EQ(replayed.serialize(), line1);
 	CHECK_EQ(engine::sync_wait(shard.find_key("Qr")), 5u);
 	CHECK_EQ(engine::sync_wait(shard.stats()).lastdocid, 5u);
 
 	// The same line, again: nothing changes, however many times it comes.
 	for (int i = 0; i < 3; ++i) {
-		auto again = engine::Document::unserialise(line1);
+		auto again = engine::Document::unserialize(line1);
 		const auto result = engine::sync_wait(shard.replace(5, again, plain));
 		CHECK_EQ(result.did, 5u);
 		CHECK_EQ(result.version, 1u);
@@ -271,9 +271,9 @@ void replay() {
 	// A newer write is not rolled back by replaying the older line; replaying the newer one is a no-op too.
 	auto second = make("Qr", "second");
 	CHECK_EQ(engine::sync_wait(shard.replace(5, second, plain)).version, 2u);
-	const auto line2 = second.serialise();
+	const auto line2 = second.serialize();
 	for (const auto& line : {line1, line2, line1, line2}) {
-		auto again = engine::Document::unserialise(line);
+		auto again = engine::Document::unserialize(line);
 		CHECK_EQ(engine::sync_wait(shard.replace(5, again, plain)).version, 2u);
 		auto view = engine::sync_wait(shard.get(5));
 		CHECK_EQ(view->version(), 2u);
@@ -281,7 +281,7 @@ void replay() {
 	}
 
 	// The same holds by key, and a line that is ahead of the index is applied (the index is behind).
-	auto by_key = engine::Document::unserialise(line2);
+	auto by_key = engine::Document::unserialize(line2);
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qr", by_key, plain)).version, 2u);
 	CHECK_EQ(engine::sync_wait(shard.get(5))->version(), 2u);
 	auto third = make("Qr", "third");
@@ -295,7 +295,7 @@ void replay() {
 	CHECK_EQ(engine::sync_wait(shard.stats()).doc_count, 2u);
 
 	// A line that is not a document is a syntax error, not a crash.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(std::string("\xff\xff\xff", 3)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialize(std::string("\xff\xff\xff", 3)); }) == engine::errc::syntax);
 
 	opened.shard.reset();
 	std::filesystem::remove_all(path);
@@ -360,7 +360,7 @@ void declared() {
 		CHECK_TRUE(kept[i].kind == later[i].kind);
 		CHECK_EQ(kept[i].key, later[i].key);
 	}
-	auto line = engine::Document::unserialise(one.serialise());
+	auto line = engine::Document::unserialize(one.serialize());
 	engine::sync_wait(reopened.replace_by_key("Kone", line, plain));
 	CHECK_EQ(reopened.declared_fields().size(), 5u);
 	again.shard.reset();
@@ -427,8 +427,8 @@ void strata_only() {
 	// Spelling is not kept.
 	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.add_spelling("word", 1)); }) == engine::errc::not_available);
 
-	// The strata engine keeps no term lists: a stored document does not serialise.
-	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialise(); }) == engine::errc::syntax);
+	// The strata engine keeps no term lists: a stored document does not serialize.
+	CHECK_TRUE(error_kind([&] { (void)engine::sync_wait(shard.get(1))->serialize(); }) == engine::errc::syntax);
 
 	// Search is S2's: match-all finds every document.
 	{
@@ -508,9 +508,9 @@ void codec() {
 	doc.add_value(1, "x");
 	doc.add_value(0xfffffffe, std::string(300, 'y'));
 	doc.set_data(std::string("bin\0data", 8));
-	const auto bytes = doc.serialise();
-	auto back = engine::Document::unserialise(bytes);
-	CHECK_EQ(back.serialise(), bytes);
+	const auto bytes = doc.serialize();
+	auto back = engine::Document::unserialize(bytes);
+	CHECK_EQ(back.serialize(), bytes);
 	CHECK_EQ(back.get_data(), std::string("bin\0data", 8));
 	const auto& restored = engine::strata::strata_document(back);
 	CHECK_EQ(restored.positions_of(*restored.find_term("f", "b")), (std::vector<engine::termpos>{ 2, 9 }));  // sorted and unique
@@ -526,23 +526,23 @@ void codec() {
 	CHECK_EQ(engine::strata::strata_document(back).version(), 0u);
 	CHECK_FALSE(engine::strata::strata_document(back).replayed());
 	engine::strata::strata_document(back).stamp(77);
-	auto stamped = engine::Document::unserialise(back.serialise());
+	auto stamped = engine::Document::unserialize(back.serialize());
 	CHECK_EQ(engine::strata::strata_document(stamped).version(), 77u);
 	CHECK_TRUE(engine::strata::strata_document(stamped).replayed());
-	CHECK_EQ(stamped.serialise(), back.serialise());
+	CHECK_EQ(stamped.serialize(), back.serialize());
 	engine::strata::strata_document(back).stamp(0);
 
 	// Every truncation fails cleanly.
 	for (std::size_t n = 0; n < bytes.size(); ++n) {
-		CHECK_TRUE(error_kind([&] { engine::Document::unserialise(std::string_view(bytes).substr(0, n)); }) == engine::errc::syntax);
+		CHECK_TRUE(error_kind([&] { engine::Document::unserialize(std::string_view(bytes).substr(0, n)); }) == engine::errc::syntax);
 	}
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(bytes + "x"); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialize(bytes + "x"); }) == engine::errc::syntax);
 	// A count larger than the input could hold is refused before anything is allocated for it.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(std::string("\x03\x00\x00\x00\x00\xff\xff\xff\xff\x0f", 10)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialize(std::string("\x03\x00\x00\x00\x00\xff\xff\xff\xff\x0f", 10)); }) == engine::errc::syntax);
 	// A field named like the key field holds no terms of its own: it is refused.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(std::string("\x03\x00\x00\x00\x00\x00\x01\x03_id\x00\x00", 13)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialize(std::string("\x03\x00\x00\x00\x00\x00\x01\x03_id\x00\x00", 13)); }) == engine::errc::syntax);
 	// Formats 1 and 2 are named and refused.
-	CHECK_TRUE(error_kind([&] { engine::Document::unserialise(std::string("\x02\x00\x00\x00\x00\x00", 6)); }) == engine::errc::syntax);
+	CHECK_TRUE(error_kind([&] { engine::Document::unserialize(std::string("\x02\x00\x00\x00\x00\x00", 6)); }) == engine::errc::syntax);
 
 	// Random single-byte damage never crashes: it either decodes or raises a syntax error.
 	std::mt19937 random(42);
@@ -553,8 +553,8 @@ void codec() {
 			damaged.resize(random() % (damaged.size() + 1));
 		}
 		try {
-			auto result = engine::Document::unserialise(damaged);
-			(void)result.serialise();
+			auto result = engine::Document::unserialize(damaged);
+			(void)result.serialize();
 		} catch (const engine::Error& error) {
 			CHECK_TRUE(error.kind == engine::errc::syntax);
 		}
@@ -972,7 +972,7 @@ struct Primary {
 	void write(const std::string& key, const std::string& data) {
 		auto doc = make(key, data);
 		const auto result = engine::sync_wait(opened.shard->replace_by_key(key, doc, plain));
-		log.push_back({Logged::put, result.did, doc.serialise()});
+		log.push_back({Logged::put, result.did, doc.serialize()});
 	}
 	void drop(engine::docid did) {
 		engine::sync_wait(opened.shard->erase(did, true, std::nullopt));
@@ -998,7 +998,7 @@ std::string shard_state(engine::Shard& shard) {
 void replay_line(engine::Shard& shard, const Logged& line) {
 	engine::WriteArgs plain;
 	if (line.type == Logged::put) {
-		auto doc = engine::Document::unserialise(line.line);
+		auto doc = engine::Document::unserialize(line.line);
 		engine::sync_wait(shard.replace(line.did, doc, plain));
 	} else {
 		try {
@@ -1057,7 +1057,7 @@ void old_format() {
 	const auto old_line = std::string("\x01\x01Qk\x01x\x00\x00", 8);
 	for (const auto& line : {old_line, std::string("\x02\x00\x00\x00\x00\x00", 6)}) {
 		try {
-			engine::Document::unserialise(line);
+			engine::Document::unserialize(line);
 			CHECK_TRUE(false);
 		} catch (const engine::Error& error) {
 			CHECK_TRUE(error.kind == engine::errc::syntax);
@@ -1065,14 +1065,14 @@ void old_format() {
 		}
 	}
 	try {
-		engine::Document::unserialise(std::string("\x09", 1));
+		engine::Document::unserialize(std::string("\x09", 1));
 		CHECK_TRUE(false);
 	} catch (const engine::Error& error) {
 		CHECK_TRUE(error.description().find("unknown version") != std::string::npos);
 	}
 	engine::Document doc;
 	doc.set_key("Qk");
-	CHECK_EQ(static_cast<unsigned char>(doc.serialise()[0]), 3u);
+	CHECK_EQ(static_cast<unsigned char>(doc.serialize()[0]), 3u);
 }
 
 // The version slot the host reads back to check a write holds the version the write landed at, whatever
@@ -1084,20 +1084,20 @@ void version_slot() {
 	const auto slot = [&](engine::docid did) { return engine::sync_wait(shard.get(did))->value(1); };
 	engine::WriteArgs plain;
 	auto doc = make("Qa", "one");
-	doc.add_value(1, Serialise::version(0));   // what the host asks for on a new document
+	doc.add_value(1, Serialize::version(0));   // what the host asks for on a new document
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qa", doc, plain)).version, 1u);
-	CHECK_EQ(slot(1), Serialise::version(1));
+	CHECK_EQ(slot(1), Serialize::version(1));
 	for (engine::rev v = 1; v < 4; ++v) {
 		engine::WriteArgs expect;
 		expect.expected_version = v;
 		auto next = make("Qa", "again");
-		next.add_value(1, Serialise::version(v));
+		next.add_value(1, Serialize::version(v));
 		CHECK_EQ(engine::sync_wait(shard.replace(1, next, expect)).version, v + 1);
-		CHECK_EQ(slot(1), Serialise::version(v + 1));
+		CHECK_EQ(slot(1), Serialize::version(v + 1));
 	}
 	auto added = make("Qb", "b");
 	CHECK_EQ(engine::sync_wait(shard.add(added, plain)).version, 1u);
-	CHECK_EQ(slot(2), Serialise::version(1));
+	CHECK_EQ(slot(2), Serialize::version(1));
 }
 
 // The stats report the shortest and longest document length of the shard (D3).

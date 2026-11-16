@@ -23,7 +23,7 @@
 #include "engine/document.h"
 
 #include "engine/error.h"          // for Error, errc
-#include "engine/strata/document.h"  // for engine::strata::new_native, unserialise_document
+#include "engine/strata/document.h"  // for engine::strata::new_native, unserialize_document
 
 
 // A document is built in the representation of the engine that will write it (engine-write-path.md).
@@ -50,7 +50,7 @@ engine::Document::field(std::string_view name, FieldKind kind)
 
 
 engine::Document
-engine::Document::unserialise(std::string_view serialised)
+engine::Document::unserialize(std::string_view serialized)
 {
-	return strata::unserialise_document(serialised);
+	return strata::unserialize_document(serialized);
 }

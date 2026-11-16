@@ -60,12 +60,12 @@ constexpr const char FOREIGN_STR[]   = "foreign";
 constexpr const char EMPTY_STR[]     = "empty";
 
 
-constexpr char SERIALISED_FALSE      = 'f';
-constexpr char SERIALISED_TRUE       = 't';
+constexpr char SERIALIZED_FALSE      = 'f';
+constexpr char SERIALIZED_TRUE       = 't';
 
 
-constexpr std::uint8_t SERIALISED_LENGTH_CARTESIAN = 12;
-constexpr std::uint8_t SERIALISED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
+constexpr std::uint8_t SERIALIZED_LENGTH_CARTESIAN = 12;
+constexpr std::uint8_t SERIALIZED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
 
 
 constexpr std::uint32_t DOUBLE2INT = 1000000000;
@@ -90,7 +90,7 @@ enum class FieldType : std::uint8_t;
 struct required_spc_t;
 
 
-namespace Serialise {
+namespace Serialize {
 	bool isText(std::string_view field_value) noexcept;
 
 	// Returns if field_value is UUID.
@@ -99,17 +99,17 @@ namespace Serialise {
 
 
 	/*
-	 * Serialise field_value according to field_spc.
+	 * Serialize field_value according to field_spc.
 	 */
 
 	std::string MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value);
 
 	std::string object(const required_spc_t& field_spc, const class MsgPack& o);
 
-	std::string serialise(const required_spc_t& field_spc, const class MsgPack& field_value);
-	std::string serialise(const required_spc_t& field_spc, std::string_view field_value);
-	inline std::string serialise(const required_spc_t& field_spc, const std::string& field_value) {
-		return serialise(field_spc, std::string_view(field_value));
+	std::string serialize(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string serialize(const required_spc_t& field_spc, std::string_view field_value);
+	inline std::string serialize(const required_spc_t& field_spc, const std::string& field_value) {
+		return serialize(field_spc, std::string_view(field_value));
 	}
 
 	std::string string(const required_spc_t& field_spc, std::string_view field_value);
@@ -122,7 +122,7 @@ namespace Serialise {
 
 
 	/*
-	 * Serialise field_value according to field_type.
+	 * Serialize field_value according to field_type.
 	 */
 
 	std::string floating(FieldType field_type, double field_value);
@@ -131,7 +131,7 @@ namespace Serialise {
 	std::string boolean(FieldType field_type, bool field_value);
 	std::string geospatial(FieldType field_type, const class MsgPack& field_value);
 
-	// Serialise field_value like datetime.
+	// Serialize field_value like datetime.
 	std::string datetime(std::string_view field_value);
 	inline std::string datetime(const std::string& field_value) {
 		return datetime(std::string_view(field_value));
@@ -142,14 +142,14 @@ namespace Serialise {
 		return sortable::encode(std::round(field_value * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS);
 	}
 
-	// Serialise value like datetime and fill tm.
+	// Serialize value like datetime and fill tm.
 	std::string datetime(const class MsgPack& value, Datetime::tm_t& tm);
 
 	inline std::string datetime(const Datetime::tm_t& tm) {
 		return timestamp(Datetime::timestamp(tm));
 	}
 
-	// Serialise value like time.
+	// Serialize value like time.
 	std::string time(std::string_view field_value);
 	inline std::string time(const std::string& field_value) {
 		return time(std::string_view(field_value));
@@ -158,7 +158,7 @@ namespace Serialise {
 	std::string time(const class MsgPack& field_value, double& t_val);
 	std::string time(double field_value);
 
-	// Serialise value like timedelta.
+	// Serialize value like timedelta.
 	std::string timedelta(std::string_view field_value);
 	inline std::string timedelta(const std::string& field_value) {
 		return timedelta(std::string_view(field_value));
@@ -167,7 +167,7 @@ namespace Serialise {
 	std::string timedelta(const class MsgPack& field_value, double& t_val);
 	std::string timedelta(double field_value);
 
-	// Serialise field_value like float.
+	// Serialize field_value like float.
 	std::string floating(std::string_view field_value);
 
 	// Total: -0.0 is 0 and NaN is one value; the entry points for user values refuse NaN (D4).
@@ -175,14 +175,14 @@ namespace Serialise {
 		return sortable::encode(field_value);
 	}
 
-	// Serialise field_value like integer.
+	// Serialize field_value like integer.
 	std::string integer(std::string_view field_value);
 
 	inline std::string integer(std::int64_t field_value) {
 		return sortable::encode(field_value);
 	}
 
-	// Serialise field_value like positive integer.
+	// Serialize field_value like positive integer.
 	std::string positive(std::string_view field_value);
 
 	inline std::string positive(std::uint64_t field_value) {
@@ -194,39 +194,39 @@ namespace Serialise {
 		return sortable::encode(document_version);
 	}
 
-	// Serialise field_value like UUID.
+	// Serialize field_value like UUID.
 	std::string uuid(std::string_view field_value);
 
-	// Serialise field_value like boolean.
+	// Serialize field_value like boolean.
 	std::string boolean(std::string_view field_value);
 
 	inline std::string boolean(bool field_value) {
-		return std::string(1, field_value ? SERIALISED_TRUE : SERIALISED_FALSE);
+		return std::string(1, field_value ? SERIALIZED_TRUE : SERIALIZED_FALSE);
 	}
 
-	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
+	// Serialize a vector of ranges and a vector of centroids generate by GeoSpatial.
 	std::string ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids);
 
-	// Serialise a vector of ranges generates by GeoSpatial.
+	// Serialize a vector of ranges generates by GeoSpatial.
 	std::string ranges(const std::vector<range_t>& ranges);
 
-	// Serialise a vector of centroids generates by GeoSpatial.
+	// Serialize a vector of centroids generates by GeoSpatial.
 	std::string centroids(const std::vector<Cartesian>& centroids);
 
-	// Serialise a vector of ranges hash.
+	// Serialize a vector of ranges hash.
 	std::string ranges_hash(const std::vector<range_t>& ranges);
 
-	// Serialise field_value like geospatial.
+	// Serialize field_value like geospatial.
 	std::string geospatial(const class MsgPack& field_value);
 	std::string geospatial(std::string_view field_value);
 
-	// Serialise a normalize cartesian coordinate in SERIALISED_LENGTH_CARTESIAN bytes.
+	// Serialize a normalize cartesian coordinate in SERIALIZED_LENGTH_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);
 
-	// Serialise a HTM trixel's id.
+	// Serialize a HTM trixel's id.
 	std::string trixel_id(std::uint64_t id);
 
-	// Serialise a range_t.
+	// Serialize a range_t.
 	std::string range(const range_t& range);
 
 	// Guess type of field_value. If bool_term can not return FieldType::text.
@@ -234,148 +234,148 @@ namespace Serialise {
 
 
 	/*
-	 * Given a field_value, it guess the type and serialise. If bool_term can not return FieldType::text.
+	 * Given a field_value, it guess the type and serialize. If bool_term can not return FieldType::text.
 	 *
-	 * Returns the guess type and the serialised values according to type.
+	 * Returns the guess type and the serialized values according to type.
 	 */
 
-	std::pair<FieldType, std::string> guess_serialise(const class MsgPack& field_value);
+	std::pair<FieldType, std::string> guess_serialize(const class MsgPack& field_value);
 
 	// A document id's bytes after its type character (docs/design/exact-id-keys.md). A numeric id's are
-	// Kronuz/sortable's, exact for every int64, uint64 and double; any other id's are serialise()'s.
+	// Kronuz/sortable's, exact for every int64, uint64 and double; any other id's are serialize()'s.
 	std::string id(const required_spc_t& spc_id, const class MsgPack& document_id);
 
 	// The bytes of the integer id N, as id() gives them for N in an integer, positive or floating id field.
 	std::string id(std::uint64_t document_id);
 
-	// guess_serialise() of an id in an index whose id type is not set yet, with id()'s bytes.
+	// guess_serialize() of an id in an index whose id type is not set yet, with id()'s bytes.
 	std::pair<FieldType, std::string> guess_id(const class MsgPack& document_id);
 
-	inline std::string serialise(std::string_view val) {
+	inline std::string serialize(std::string_view val) {
 		return std::string(val);
 	}
 
-	inline std::string serialise(std::int64_t val) {
+	inline std::string serialize(std::int64_t val) {
 		return integer(val);
 	}
 
-	inline std::string serialise(std::uint64_t val) {
+	inline std::string serialize(std::uint64_t val) {
 		return positive(val);
 	}
 
-	inline std::string serialise(bool val) {
+	inline std::string serialize(bool val) {
 		return boolean(val);
 	}
 
-	inline std::string serialise(double val) {
+	inline std::string serialize(double val) {
 		return floating(val);
 	}
 
-	inline std::string serialise(Datetime::tm_t& tm) {
+	inline std::string serialize(Datetime::tm_t& tm) {
 		return datetime(tm);
 	}
 
-	inline std::string serialise(const std::vector<range_t>& val) {
+	inline std::string serialize(const std::vector<range_t>& val) {
 		return ranges(val);
 	}
 }
 
 
-namespace Unserialise {
-	// The integer a numeric id's bytes (Serialise::id) name exactly, else nothing (a fraction, a negative).
-	std::optional<std::uint64_t> id(std::string_view serialised_id);
+namespace Unserialize {
+	// The integer a numeric id's bytes (Serialize::id) name exactly, else nothing (a fraction, a negative).
+	std::optional<std::uint64_t> id(std::string_view serialized_id);
 
 	// A numeric id from its bytes, in the id field's type (integer, positive or floating).
-	class MsgPack id(FieldType field_type, std::string_view serialised_id);
+	class MsgPack id(FieldType field_type, std::string_view serialized_id);
 
-	// Unserialise serialised_val according to field_type and returns a MsgPack.
-	MsgPack MsgPack(FieldType field_type, std::string_view serialised_val);
+	// Unserialize serialized_val according to field_type and returns a MsgPack.
+	MsgPack MsgPack(FieldType field_type, std::string_view serialized_val);
 
-	// Unserialise a serialised datetime.
-	std::string datetime(std::string_view serialised_date);
+	// Unserialize a serialized datetime.
+	std::string datetime(std::string_view serialized_date);
 
-	// Raises SerialisationError naming bytes that are not a serialised number.
-	[[noreturn]] void invalid_number(std::string_view serialised_number);
+	// Raises SerializationError naming bytes that are not a serialized number.
+	[[noreturn]] void invalid_number(std::string_view serialized_number);
 
-	// Unserialise a serialised float: stored bytes, read without the canonical checks (design D2).
-	inline double floating(std::string_view serialised_float) {
-		if (const auto value = sortable::to_double(serialised_float)) {
+	// Unserialize a serialized float: stored bytes, read without the canonical checks (design D2).
+	inline double floating(std::string_view serialized_float) {
+		if (const auto value = sortable::to_double(serialized_float)) {
 			return *value;
 		}
-		invalid_number(serialised_float);
+		invalid_number(serialized_float);
 	}
 
-	// Unserialise a serialised datetime returns the timestamp.
-	inline double timestamp(std::string_view serialised_timestamp) {
-		return floating(serialised_timestamp);
+	// Unserialize a serialized datetime returns the timestamp.
+	inline double timestamp(std::string_view serialized_timestamp) {
+		return floating(serialized_timestamp);
 	}
 
-	// Unserialise a serialised time.
-	std::string time(std::string_view serialised_time);
+	// Unserialize a serialized time.
+	std::string time(std::string_view serialized_time);
 
-	// Unserialise a serialised time and returns the timestamp.
-	double time_d(std::string_view serialised_time);
+	// Unserialize a serialized time and returns the timestamp.
+	double time_d(std::string_view serialized_time);
 
-	// Unserialise a serialised timedelta.
-	std::string timedelta(std::string_view serialised_timedelta);
+	// Unserialize a serialized timedelta.
+	std::string timedelta(std::string_view serialized_timedelta);
 
-	// Unserialise a serialised timedelta and returns the timestamp.
-	double timedelta_d(std::string_view serialised_time);
+	// Unserialize a serialized timedelta and returns the timestamp.
+	double timedelta_d(std::string_view serialized_time);
 
-	// The number serialised_number names, checked strictly (sortable::decode), else SerialisationError.
-	sortable::number number(std::string_view serialised_number);
+	// The number serialized_number names, checked strictly (sortable::decode), else SerializationError.
+	sortable::number number(std::string_view serialized_number);
 
-	// Unserialise a serialised integer; a fraction truncates toward zero and a value out of range saturates
+	// Unserialize a serialized integer; a fraction truncates toward zero and a value out of range saturates
 	// (a slot shared by integer and floating fields holds both).
-	inline std::int64_t integer(std::string_view serialised_integer) {
-		if (const auto value = sortable::to_int64(serialised_integer)) {
+	inline std::int64_t integer(std::string_view serialized_integer) {
+		if (const auto value = sortable::to_int64(serialized_integer)) {
 			return *value;
 		}
-		return number(serialised_integer).saturate_int64();
+		return number(serialized_integer).saturate_int64();
 	}
 
-	// Unserialise a serialised positive, truncating and saturating like integer().
-	inline std::uint64_t positive(std::string_view serialised_positive) {
-		if (const auto value = sortable::to_uint64(serialised_positive)) {
+	// Unserialize a serialized positive, truncating and saturating like integer().
+	inline std::uint64_t positive(std::string_view serialized_positive) {
+		if (const auto value = sortable::to_uint64(serialized_positive)) {
 			return *value;
 		}
-		return number(serialised_positive).saturate_uint64();
+		return number(serialized_positive).saturate_uint64();
 	}
 
-	// A document version from its DB_SLOT_VERSION bytes (Serialise::version).
-	inline std::uint64_t version(std::string_view serialised_version) {
-		if (const auto value = sortable::to_uint64(serialised_version)) {
+	// A document version from its DB_SLOT_VERSION bytes (Serialize::version).
+	inline std::uint64_t version(std::string_view serialized_version) {
+		if (const auto value = sortable::to_uint64(serialized_version)) {
 			return *value;
 		}
-		invalid_number(serialised_version);
+		invalid_number(serialized_version);
 	}
 
-	// Unserialise a serialised boolean.
-	inline bool boolean(std::string_view serialised_boolean) {
-		return serialised_boolean.at(0) == SERIALISED_TRUE;
+	// Unserialize a serialized boolean.
+	inline bool boolean(std::string_view serialized_boolean) {
+		return serialized_boolean.at(0) == SERIALIZED_TRUE;
 	}
 
-	// Unserialise a serialised pair of ranges and centroids.
-	std::pair<RangeList, CartesianList> ranges_centroids(std::string_view serialised_geo);
+	// Unserialize a serialized pair of ranges and centroids.
+	std::pair<RangeList, CartesianList> ranges_centroids(std::string_view serialized_geo);
 
-	// Unserialise ranges from serialised pair of ranges and centroids.
-	RangeList ranges(std::string_view serialised_geo);
+	// Unserialize ranges from serialized pair of ranges and centroids.
+	RangeList ranges(std::string_view serialized_geo);
 
-	// Unserialise centroids from serialised pair of ranges and centroids.
-	CartesianList centroids(std::string_view serialised_geo);
+	// Unserialize centroids from serialized pair of ranges and centroids.
+	CartesianList centroids(std::string_view serialized_geo);
 
-	// Unserialise a serialised UUID.
-	std::string uuid(std::string_view serialised_uuid, UUIDRepr repr=UUIDRepr::vanilla);
+	// Unserialize a serialized UUID.
+	std::string uuid(std::string_view serialized_uuid, UUIDRepr repr=UUIDRepr::vanilla);
 
-	// Unserialise a serialised cartesian coordinate.
-	Cartesian cartesian(std::string_view serialised_val);
+	// Unserialize a serialized cartesian coordinate.
+	Cartesian cartesian(std::string_view serialized_val);
 
-	// Unserialise a serialised HTM trixel's id.
-	std::uint64_t trixel_id(std::string_view serialised_id);
+	// Unserialize a serialized HTM trixel's id.
+	std::uint64_t trixel_id(std::string_view serialized_id);
 
-	// Unserialise a serialised range_t
-	range_t range(std::string_view serialised_range);
+	// Unserialize a serialized range_t
+	range_t range(std::string_view serialized_range);
 
-	// Unserialise str_type to its FieldType.
+	// Unserialize str_type to its FieldType.
 	FieldType get_field_type(std::string_view str_type);
 }

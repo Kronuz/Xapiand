@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-// bench_number_codec VALUES.tsv [PASSES]: ns per value of Serialise:: and Unserialise:: over a real-value set
+// bench_number_codec VALUES.tsv [PASSES]: ns per value of Serialize:: and Unserialize:: over a real-value set
 // (design T8). VALUES.tsv lines are `set TAB i|u|d TAB value`. Each direction runs PASSES times over every value
 // and the fastest pass is reported. It builds against the old codec's tree too (tests/bench_number_codec.cmake).
 
@@ -33,7 +33,7 @@
 #include <string>
 #include <vector>
 
-#include "serialise.h"
+#include "serialize.h"
 
 struct Value {
 	char kind;
@@ -44,17 +44,17 @@ struct Value {
 
 static std::string encode(const Value& v) {
 	switch (v.kind) {
-		case 'i': return Serialise::integer(v.i);
-		case 'u': return Serialise::positive(v.u);
-		default: return Serialise::floating(v.d);
+		case 'i': return Serialize::integer(v.i);
+		case 'u': return Serialize::positive(v.u);
+		default: return Serialize::floating(v.d);
 	}
 }
 
 static double decode(char kind, const std::string& bytes) {
 	switch (kind) {
-		case 'i': return static_cast<double>(Unserialise::integer(bytes));
-		case 'u': return static_cast<double>(Unserialise::positive(bytes));
-		default: return static_cast<double>(Unserialise::floating(bytes));
+		case 'i': return static_cast<double>(Unserialize::integer(bytes));
+		case 'u': return static_cast<double>(Unserialize::positive(bytes));
+		default: return static_cast<double>(Unserialize::floating(bytes));
 	}
 }
 

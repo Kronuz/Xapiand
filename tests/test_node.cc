@@ -70,7 +70,7 @@
 #include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
-#include "serialise.h"
+#include "serialize.h"
 #include "engine/chores.h"
 #include "engine/host.h"
 #include "engine/document.h"
@@ -2040,7 +2040,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 	const auto replace = [&](engine::docid did, bool must_exist, std::optional<engine::rev> expected = std::nullopt) -> std::optional<engine::errc> {
 		auto doc = std::get<1>(x.prepare("again"));
 		if (expected) {
-			doc.add_value(DB_SLOT_VERSION, Serialise::version(*expected));
+			doc.add_value(DB_SLOT_VERSION, Serialize::version(*expected));
 		}
 		try {
 			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));
@@ -2533,8 +2533,8 @@ static void test_ids_that_shared_a_key_are_separate_documents() {
 		const auto kb = numeric_key(std::stoull(b));
 		CHECK_NE(ka, kb);
 		CHECK_TRUE(ka.size() <= 11 && kb.size() <= 11);   // 'N' and at most sortable::max_size bytes
-		CHECK_EQ(Unserialise::id(std::string_view(ka).substr(1)).value_or(0), std::stoull(a));
-		CHECK_EQ(Unserialise::id(std::string_view(kb).substr(1)).value_or(0), std::stoull(b));
+		CHECK_EQ(Unserialize::id(std::string_view(ka).substr(1)).value_or(0), std::stoull(a));
+		CHECK_EQ(Unserialize::id(std::string_view(kb).substr(1)).value_or(0), std::stoull(b));
 	}
 	// Keys order as their numbers, byte by byte, over the ids above and their neighbours.
 	const std::vector<std::uint64_t> ascending{1, 1023, (std::uint64_t{1} << 32) - 1, 4294967296, 4294967297, 4311744512, 1099511627779,
@@ -2542,8 +2542,8 @@ static void test_ids_that_shared_a_key_are_separate_documents() {
 	for (std::size_t i = 1; i < ascending.size(); ++i) {
 		CHECK_TRUE(numeric_key(ascending[i - 1]) < numeric_key(ascending[i]));
 	}
-	CHECK_EQ(document_key(Serialise::id(floating, MsgPack(1099511627776.0)), 'N'), numeric_key(std::uint64_t{1} << 40));
-	CHECK_FALSE(Unserialise::id(Serialise::id(floating, MsgPack(1.5))).has_value());
+	CHECK_EQ(document_key(Serialize::id(floating, MsgPack(1099511627776.0)), 'N'), numeric_key(std::uint64_t{1} << 40));
+	CHECK_FALSE(Unserialize::id(Serialize::id(floating, MsgPack(1.5))).has_value());
 }
 
 // Automatic ids pass 2^32: a counter at 2^32 - 1 issues 2^32 and on, each in the shard owning its bucket (D85), across

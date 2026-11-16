@@ -111,9 +111,9 @@ std::string field_name(std::string_view field_prefix, char field_type);
 // The flat term for a term under a field: the field's name and the term joined. Only for logs;
 // documents and queries name the field and the term apart.
 std::string flat_term(std::string_view term, std::string_view field_prefix, char field_type);
-// A document's key: the type character of its id and the id's serialised bytes. It is what the
+// A document's key: the type character of its id and the id's serialized bytes. It is what the
 // engine's key field holds (engine::KEY_FIELD) and what replace-by-key, erase and find take.
-std::string document_key(std::string_view serialised_id, char field_type);
+std::string document_key(std::string_view serialized_id, char field_type);
 // The engine field and bytes of a term under a Xapiand field. The id field's terms are the key
 // field's, led by the type character (document_key); any other field's are as given.
 struct FieldTerm {

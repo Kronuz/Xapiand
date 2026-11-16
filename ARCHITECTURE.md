@@ -41,7 +41,7 @@ utility, wire-format, HTTP-parser, compression, and metrics bundles are pulled b
 | Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` loops; each request is a task on its loop, and device work is a chore on one `WorkPool`. No libev. |
 | Search / query | `src/query_dsl.*`, `src/aggregations/`, `src/multivalue/`, `src/engine/` | JSON/MsgPack DSL and a boolean string language, both compiling to engine queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
-| Serialization | `src/serialise*.{cc,h}`, `Kronuz/sortable`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
+| Serialization | `src/serialize*.{cc,h}`, `Kronuz/sortable`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
 | Logging | `src/log.h`, `src/logger_fwd.h`, `src/colors.h`, `Kronuz/logger`, `Kronuz/traceback` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
 | Utility layer | top-level `src/*.hh` / `*.h` | Dozens of small, mostly self-contained headers (data structures, concurrency, metaprogramming, string tools). |
 
@@ -306,7 +306,7 @@ reconstructs a DSL tree from its RPN so both languages share `process()`.
 **Aggregations** (`aggregations/`) are deliberately Elasticsearch-shaped
 (`_count`, `_sum`, `_avg`, `_stats`, `_terms`, `_histogram`, `_range`, …), built
 as a tree of `BaseAggregation` run as a match spy over the engine's matches and
-**mergeable across shards** via serialise/merge. Many
+**mergeable across shards** via serialize/merge. Many
 ES agg types are scaffolded but commented out, so the framework is broader than
 what's wired up.
 
@@ -331,16 +331,16 @@ OR-of-terms candidate filter precedes an exact range re-check ranked by angular
 distance. The serialized trixel ids are **big-endian on purpose** so their byte
 order matches their integer order.
 
-### Serialization (`src/serialise*.{cc,h}`, `Kronuz/sortable`, `Kronuz/msgpack`)
+### Serialization (`src/serialize*.{cc,h}`, `Kronuz/sortable`, `Kronuz/msgpack`)
 
 The linchpin is [`Kronuz/sortable`](https://github.com/Kronuz/sortable): every
 number Xapiand sorts, ranges or looks up by term, `int64`, `uint64` and `double`
 alike, becomes 1 to 10 bytes whose `memcmp` order is the exact numeric order across
 types (5, `5u` and 5.0 are one encoding), so value-range queries and slot-based
-sorting work directly on the stored bytes. `Serialise::` and `Unserialise::` are its
+sorting work directly on the stored bytes. `Serialize::` and `Unserialize::` are its
 only callers; `docs/mechanisms/value-encoding.md` describes the bytes and the
 rules for NaN, -0.0 and open bounds. Length/varint encoding comes in two flavors
-(`length.*`), and `serialise_list.h` is a tidy CRTP design that stores a single
+(`length.*`), and `serialize_list.h` is a tidy CRTP design that stores a single
 element bare (no magic byte, no length prefix) for the overwhelmingly common
 cardinality-1 field. The former in-tree MsgPack keystone now lives in
 [`Kronuz/msgpack`](https://github.com/Kronuz/msgpack): bundled msgpack-c v1.3.0,
@@ -404,7 +404,7 @@ licensing notes**, see [extraction.md](docs/design/extraction.md).
 |---|---|---|---|---|
 | **Compile-time perfect hash** | `phf.hh` | Easy | High | Fully `constexpr` minimal perfect hash for integer keys, zero deps. Rare and publishable as-is. (Fix the inverted `empty()` first.) |
 | **Intrusive LRU + TTL** | `lru.h` | Easy | High | Policy-callback eviction (LRU/LFU-ish/TTL) over `unordered_map`, pure STL. |
-| **String-distance kit** | `metrics/` | Easy | High | CRTP base + Levenshtein, Jaro, Jaro–Winkler, Jaccard, Sørensen–Dice, LCS, soundex-metric. Only the serialise helpers couple to the project. |
+| **String-distance kit** | `metrics/` | Easy | High | CRTP base + Levenshtein, Jaro, Jaro–Winkler, Jaccard, Sørensen–Dice, LCS, soundex-metric. Only the serialize helpers couple to the project. |
 | **Multilingual soundex** | `phonetic/` | Easy | High | English/French/German/Spanish phonetic encoders. Spanish/French coverage is rare in OSS. (Spanish has a real bug, below.) |
 | **Callable introspection** | `callable_traits.hh` | Easy | High | Full C++17 callable traits (functions/pointers/functors, all qualifiers). Drop-in. |
 | **Strict numeric parsing** | `strict_stox.hh` | Easy | High | `std::sto*` that actually rejects trailing garbage and overflow, throwing and nothrow variants. |

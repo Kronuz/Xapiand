@@ -40,13 +40,13 @@
 
 #include "base_x.hh"                              // for Base64
 #include "cast.h"                                 // for Cast
-#include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialise
+#include "cuuid.hh"                                // for UUIDGenerator, cuuid::generate/serialize
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, isDatetime, tm_t
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
-#include "exception_engine.h"                     // for ClientError, SerialisationError
+#include "exception_engine.h"                     // for ClientError, SerializationError
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
@@ -54,7 +54,7 @@
 #include "random.hh"                              // for random_int
 #include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
-#include "serialise_list.h"                       // for StringList
+#include "serialize_list.h"                       // for StringList
 #include "split.h"                                // for Split
 #include "static_string.hh"                       // for static_string
 #include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
@@ -2804,7 +2804,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						unprefixed_term_id = mint(opts.uuid_compact);
 						term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					}
-					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
+					document_id = Unserialize::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
 				// A new numeric id: the shard issues it when it is written; 0 holds its place until then.
@@ -2849,7 +2849,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(mint(true));
-						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
+						auto tmp_unprefixed_term_id = Serialize::serialize(spc_id, tmp_document_id);
 						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
 						auto tmp_shard_num = id_shard(tmp_term_id, n_shards);
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
@@ -2866,7 +2866,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						// id empty when the loop cannot find a candidate on an active target
 						// shard (shards can be momentarily inactive while being created).
 						document_id = Base64::rfc4648url_unpadded().encode(mint(true));
-						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+						unprefixed_term_id = Serialize::serialize(spc_id, document_id);
 						term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
 					}
 					break;
@@ -2878,7 +2878,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			// Get early term ID when possible
 			switch (id_type) {
 				case FieldType::empty: {
-					const auto type_ser = Serialise::guess_id(document_id);
+					const auto type_ser = Serialize::guess_id(document_id);
 					id_type = type_ser.first;
 					if (id_type == FieldType::text) {
 						id_type = FieldType::keyword;
@@ -2898,7 +2898,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::text:
 				case FieldType::keyword:
 					document_id = Cast::cast(id_type, document_id);
-					unprefixed_term_id = Serialise::id(spc_id, document_id);
+					unprefixed_term_id = Serialize::id(spc_id, document_id);
 					break;
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
@@ -2975,7 +2975,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		index_fields(properties, doc, data_ptr, fields);
 
 		for (const auto& elem : map_values) {
-			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
+			const auto val_ser = StringList::serialize(elem.second.begin(), elem.second.end());
 			doc.add_value(elem.first, val_ser);
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
 		}
@@ -5113,9 +5113,9 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					return Serialise::guess_type(item_doc);
+					return Serialize::guess_type(item_doc);
 				} else if (!fits_integer_type(specification.sep_types[SPC_CONCRETE_TYPE], item_doc)) {
-					THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(Serialise::guess_type(item_doc)));
+					THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(Serialize::guess_type(item_doc)));
 				}
 				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
@@ -5145,7 +5145,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.str_view();
-			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
+			if (specification.flags.uuid_detection && Serialize::isUUID(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
 					return FieldType::uuid;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::uuid) {
@@ -5361,15 +5361,15 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 				switch (value.get_type()) {
 					case MsgPack::Type::NEGATIVE_INTEGER:
 						term_val = value.i64();
-						ser_value = Serialise::integer(term_val);
+						ser_value = Serialize::integer(term_val);
 						break;
 					case MsgPack::Type::POSITIVE_INTEGER:
 						term_val = static_cast<int64_t>(std::min(value.u64(), static_cast<uint64_t>(std::numeric_limits<int64_t>::max())));
-						ser_value = Serialise::positive(value.u64());
+						ser_value = Serialize::positive(value.u64());
 						break;
 					default:
 						term_val = GenerateTerms::truncate<int64_t>(value.f64());
-						ser_value = Serialise::floating(FieldType::floating, value.f64());
+						ser_value = Serialize::floating(FieldType::floating, value.f64());
 						break;
 				}
 				if (global_terms && field_terms) {
@@ -5403,7 +5403,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::integer: {
 			if (fits_integer_type(FieldType::integer, value)) {
 				const auto i_val = value.i64();
-				auto ser_value = Serialise::integer(i_val);
+				auto ser_value = Serialize::integer(i_val);
 				if (global_terms && field_terms) {
 					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
@@ -5435,7 +5435,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::positive: {
 			if (fits_integer_type(FieldType::positive, value)) {
 				const auto u_val = value.u64();
-				auto ser_value = Serialise::positive(u_val);
+				auto ser_value = Serialize::positive(u_val);
 				if (global_terms && field_terms) {
 					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
@@ -5467,7 +5467,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::date:
 		case FieldType::datetime: {
 			Datetime::tm_t tm;
-			auto ser_value = Serialise::datetime(value, tm);
+			auto ser_value = Serialize::datetime(value, tm);
 			if (global_terms && field_terms) {
 				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
@@ -5495,7 +5495,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 
 		case FieldType::time: {
 			double t_val = 0.0;
-			auto ser_value = Serialise::time(value, t_val);
+			auto ser_value = Serialize::time(value, t_val);
 			if (global_terms && field_terms) {
 				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
@@ -5523,7 +5523,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 
 		case FieldType::timedelta: {
 			double t_val = 0.0;
-			auto ser_value = Serialise::timedelta(value, t_val);
+			auto ser_value = Serialize::timedelta(value, t_val);
 			if (global_terms && field_terms) {
 				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
@@ -5557,7 +5557,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 					auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
 					if (!ranges.empty()) {
 						if (global_terms && field_terms) {
-							auto ser_value = Serialise::ranges_hash(ranges);
+							auto ser_value = Serialize::ranges_hash(ranges);
 							index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 							index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 							if (specification.accuracy == g_specification.accuracy) {
@@ -5567,11 +5567,11 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 								GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
 							}
 						} else if (global_terms) {
-							auto ser_value = Serialise::ranges_hash(ranges);
+							auto ser_value = Serialize::ranges_hash(ranges);
 							index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 							GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
 						} else if (field_terms) {
-							auto ser_value = Serialise::ranges_hash(ranges);
+							auto ser_value = Serialize::ranges_hash(ranges);
 							index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
 						}
@@ -5586,7 +5586,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 					auto global_ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
 					if (!global_ranges.empty()) {
 						if (global_terms) {
-							auto ser_value = Serialise::ranges_hash(global_ranges);
+							auto ser_value = Serialize::ranges_hash(global_ranges);
 							index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 							GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, global_ranges);
 						}
@@ -5597,7 +5597,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 					auto field_ranges = geometry->getRanges(specification.flags.partials, specification.error);
 					if (!field_ranges.empty()) {
 						if (field_terms) {
-							auto ser_value = Serialise::ranges_hash(field_ranges);
+							auto ser_value = Serialize::ranges_hash(field_ranges);
 							index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, field_ranges);
 						}
@@ -5610,7 +5610,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 				auto ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
 				if (!ranges.empty()) {
 					if (global_terms) {
-						auto ser_value = Serialise::ranges_hash(ranges);
+						auto ser_value = Serialize::ranges_hash(ranges);
 						index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 						GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
 					}
@@ -5622,7 +5622,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 				auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
 				if (!ranges.empty()) {
 					if (field_terms) {
-						auto ser_value = Serialise::ranges_hash(ranges);
+						auto ser_value = Serialize::ranges_hash(ranges);
 						index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
 						GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
 					}
@@ -5705,7 +5705,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		}
 
 		case FieldType::boolean: {
-			auto ser_value = Serialise::MsgPack(specification, value);
+			auto ser_value = Serialize::MsgPack(specification, value);
 			if (global_terms) {
 				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 			}
@@ -5723,7 +5723,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 
 		case FieldType::uuid: {
 			if (value.is_string()) {
-				auto ser_value = Serialise::uuid(value.str_view());
+				auto ser_value = Serialize::uuid(value.str_view());
 				if (global_terms) {
 					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
 				}
@@ -5818,9 +5818,9 @@ Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> r
 	L_CALL("Schema::merge_geospatial_values(...)");
 
 	if (s.empty()) {
-		s.insert(Serialise::ranges_centroids(ranges, centroids));
+		s.insert(Serialize::ranges_centroids(ranges, centroids));
 	} else {
-		auto prev_value = Unserialise::ranges_centroids(*s.begin());
+		auto prev_value = Unserialize::ranges_centroids(*s.begin());
 		s.clear();
 		ranges = HTM::range_union(std::move(ranges), std::vector<range_t>(std::make_move_iterator(prev_value.first.begin()), std::make_move_iterator(prev_value.first.end())));
 		const auto& prev_centroids = prev_value.second;
@@ -5835,7 +5835,7 @@ Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> r
 			}
 			centroids.insert(centroids.end(), missing.begin(), missing.end());
 		}
-		s.insert(Serialise::ranges_centroids(ranges, centroids));
+		s.insert(Serialize::ranges_centroids(ranges, centroids));
 	}
 }
 
@@ -5914,16 +5914,16 @@ Schema::detect_dynamic(std::string_view field_name)
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.uuid_field = true;
 		specification.flags.uuid_path = true;
-	} else if (Serialise::possiblyUUID(field_name)) {
+	} else if (Serialize::possiblyUUID(field_name)) {
 		try {
-			auto ser_uuid = Serialise::uuid(field_name);
+			auto ser_uuid = Serialize::uuid(field_name);
 			specification.local_prefix.uuid.assign(ser_uuid);
 			static const auto uuid_field_prefix = get_prefix(UUID_FIELD_NAME);
 			specification.local_prefix.field.assign(uuid_field_prefix);
 			specification.meta_name.assign(UUID_FIELD_NAME);
 			specification.flags.uuid_field = true;
 			specification.flags.uuid_path = true;
-		} catch (const SerialisationError&) {
+		} catch (const SerializationError&) {
 			specification.local_prefix.field.assign(get_prefix(field_name));
 			specification.meta_name.assign(field_name);
 			specification.flags.uuid_field = false;
@@ -9821,16 +9821,16 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 				}
 			}
 		} else {
-			if (Serialise::possiblyUUID(field_name)) {
+			if (Serialize::possiblyUUID(field_name)) {
 				try {
-					const auto prefix_uuid = Serialise::uuid(field_name);
+					const auto prefix_uuid = Serialize::uuid(field_name);
 					spc.has_uuid_prefix = true;
 					field_it = spc.properties->find(UUID_FIELD_NAME);
 					if (field_it != spc.properties->end()) {
 						spc.properties = &field_it.value();
 					}
 					spc.prefix.append(prefix_uuid);
-				} catch (const SerialisationError&) {
+				} catch (const SerializationError&) {
 					spc.prefix.append(default_prefix.empty() ? get_prefix(field_name) : default_prefix);
 				}
 			} else {
@@ -9846,11 +9846,11 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 			for (++it; it != it_e; ++it) {
 				auto partial_field = *it;
 				if (is_valid(partial_field)) {
-					if (Serialise::possiblyUUID(field_name)) {
+					if (Serialize::possiblyUUID(field_name)) {
 						try {
-							spc.prefix.append(Serialise::uuid(partial_field));
+							spc.prefix.append(Serialize::uuid(partial_field));
 							spc.has_uuid_prefix = true;
-						} catch (const SerialisationError&) {
+						} catch (const SerializationError&) {
 							spc.prefix.append(default_prefix.empty() ? get_prefix(partial_field) : default_prefix);
 						}
 					} else {

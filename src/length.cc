@@ -30,7 +30,7 @@
 #include <cmath>                                  // for scalbn, frexp, HUGE_VAL
 #include <functional>                             // for std::reference_wrapper
 
-#include "exception_engine.h"                     // for SerialisationError
+#include "exception_engine.h"                     // for SerializationError
 #include "io.hh"                                  // for io::read and io::write
 
 
@@ -38,7 +38,7 @@ constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
 
 
 std::string
-serialise_length(unsigned long long len)
+serialize_length(unsigned long long len)
 {
 	std::string result;
 	if (len < 255) {
@@ -62,10 +62,10 @@ serialise_length(unsigned long long len)
 
 
 unsigned long long
-unserialise_length(const char** p, const char* end)
+unserialize_length(const char** p, const char* end)
 {
 	if (*p == end) {
-		THROW(SerialisationError, "Bad encoded length: no data");
+		THROW(SerializationError, "Bad encoded length: no data");
 	}
 
 	unsigned long long len = static_cast<unsigned char>(*(*p)++);
@@ -75,7 +75,7 @@ unserialise_length(const char** p, const char* end)
 		unsigned shift = 0;
 		do {
 			if (*p == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7))
-				THROW(SerialisationError, "Bad encoded length: insufficient data");
+				THROW(SerializationError, "Bad encoded length: insufficient data");
 			ch = *(*p)++;
 			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
 			shift += 7;
@@ -87,36 +87,36 @@ unserialise_length(const char** p, const char* end)
 
 
 unsigned long long
-unserialise_length_and_check(const char** p, const char* end)
+unserialize_length_and_check(const char** p, const char* end)
 {
-	auto len = unserialise_length(p, end);
+	auto len = unserialize_length(p, end);
 	if (len > static_cast<unsigned long long>(end - *p)) {
-		THROW(SerialisationError, "Bad encoded length: length greater than data");
+		THROW(SerializationError, "Bad encoded length: length greater than data");
 	}
 	return len;
 }
 
 
 std::string
-serialise_bool(bool value)
+serialize_bool(bool value)
 {
 	return value ? "1" : "0";
 }
 
 
 bool
-unserialise_bool(const char** p, const char* end)
+unserialize_bool(const char** p, const char* end)
 {
 	const char *ptr = *p;
 	assert(ptr);
 	assert(ptr <= end);
 
 	if unlikely(ptr == end) {
-		THROW(SerialisationError, "Bad encoded boolean: no data");
+		THROW(SerializationError, "Bad encoded boolean: no data");
 	}
 
 	if (*ptr < '0' || *ptr > '1') {
-		THROW(SerialisationError, "Bad encoded boolean: invalid");
+		THROW(SerializationError, "Bad encoded boolean: invalid");
 	}
 	bool value(*ptr++ != '0');
 
@@ -126,21 +126,21 @@ unserialise_bool(const char** p, const char* end)
 
 
 std::string
-serialise_char(char value)
+serialize_char(char value)
 {
 	return std::string(1, value);
 }
 
 
 char
-unserialise_char(const char** p, const char* end)
+unserialize_char(const char** p, const char* end)
 {
 	const char *ptr = *p;
 	assert(ptr);
 	assert(ptr <= end);
 
 	if unlikely(ptr == end) {
-		THROW(SerialisationError, "Bad encoded char: no data");
+		THROW(SerializationError, "Bad encoded char: no data");
 	}
 
 	char value = *ptr++;
@@ -151,23 +151,23 @@ unserialise_char(const char** p, const char* end)
 
 
 std::string
-serialise_string(std::string_view input) {
+serialize_string(std::string_view input) {
 	std::string output;
 	unsigned long long input_size = input.size();
 	output.reserve(max_length_size + input_size);
-	output.append(serialise_length(input_size));
+	output.append(serialize_length(input_size));
 	output.append(input);
 	return output;
 }
 
 
 std::string_view
-unserialise_string(const char** p, const char* end) {
+unserialize_string(const char** p, const char* end) {
 	const char *ptr = *p;
 	assert(ptr);
 	assert(ptr <= end);
 
-	unsigned long long length = unserialise_length_and_check(&ptr, end);
+	unsigned long long length = unserialize_length_and_check(&ptr, end);
 	std::string_view string(ptr, length);
 	ptr += length;
 
@@ -178,18 +178,18 @@ unserialise_string(const char** p, const char* end) {
 
 
 void
-serialise_length(int fd, unsigned long long len)
+serialize_length(int fd, unsigned long long len)
 {
 	ssize_t w;
 
-	auto length = serialise_length(len);
+	auto length = serialize_length(len);
 	w = io::write(fd, length.data(), length.size());
 	if (w < 0) { THROW(Error, "Cannot write to file [{}]", fd); }
 }
 
 
 unsigned long long
-unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
+unserialize_length(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
 	ssize_t r;
 	if (buffer.size() - off < 10) {
@@ -204,7 +204,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 	auto end = start + buffer.size();
 	start += off;
 	auto pos = start;
-	auto length = unserialise_length(&pos, end);
+	auto length = unserialize_length(&pos, end);
 	off += (pos - start);
 
 	return length;
@@ -212,9 +212,9 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 
 
 void
-serialise_string(int fd, std::string_view input)
+serialize_string(int fd, std::string_view input)
 {
-	serialise_length(fd, input.size());
+	serialize_length(fd, input.size());
 
 	ssize_t w = io::write(fd, input.data(), input.size());
 	if (w < 0) { THROW(Error, "Cannot write to file [{}]", fd); }
@@ -222,9 +222,9 @@ serialise_string(int fd, std::string_view input)
 
 
 std::string
-unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
+unserialize_string(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
-	ssize_t length = unserialise_length(fd, buffer, off, acc);
+	ssize_t length = unserialize_length(fd, buffer, off, acc);
 
 	auto pos = buffer.data();
 	auto end = pos + buffer.size();
@@ -244,7 +244,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 		if (r < 0) { THROW(Error, "Cannot read from file [{}]", fd); }
 		acc += r;
 		if (r != length - available) {
-			THROW(SerialisationError, "Invalid input: insufficient data (needed {}, read {})", length - available, r);
+			THROW(SerializationError, "Invalid input: insufficient data (needed {}, read {})", length - available, r);
 		}
 		buffer.clear();
 		off = 0;
@@ -259,7 +259,7 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 }
 
 void
-serialise_char(int fd, char ch)
+serialize_char(int fd, char ch)
 {
 	ssize_t w;
 
@@ -269,7 +269,7 @@ serialise_char(int fd, char ch)
 
 
 char
-unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
+unserialize_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc)
 {
 	ssize_t r;
 	if (buffer.size() - off < 1) {
@@ -285,7 +285,7 @@ unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc
 	start += off;
 	auto pos = start;
 	if (pos == end) {
-		THROW(SerialisationError, "Invalid input: insufficient data");
+		THROW(SerializationError, "Invalid input: insufficient data");
 	}
 	char ch = *pos;
 	++pos;
@@ -296,18 +296,18 @@ unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc
 
 
 std::string
-serialise_strings(const std::vector<std::string_view>& strings)
+serialize_strings(const std::vector<std::string_view>& strings)
 {
 	std::string output;
 	for (const auto& s : strings) {
-		output.append(serialise_string(s));
+		output.append(serialize_string(s));
 	}
 	return output;
 }
 
 
 std::string_view
-unserialise_string_at(size_t at, const char** p, const char* end)
+unserialize_string_at(size_t at, const char** p, const char* end)
 {
 	const char *ptr = *p;
 	assert(ptr);
@@ -319,7 +319,7 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 	do {
 		ptr += length;
 		if (ptr >= end) { break; }
-		length = unserialise_length_and_check(&ptr, end);
+		length = unserialize_length_and_check(&ptr, end);
 	} while (--at != 0u);
 
 	std::string_view string = "";

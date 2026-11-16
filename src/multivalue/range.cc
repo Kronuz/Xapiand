@@ -41,10 +41,10 @@
 #include "xapiand_exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange
-#include "length.h"                               // for serialise_length
+#include "length.h"                               // for serialize_length
 #include "math.hh"                          // for max, min
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO
-#include "serialise_list.h"                       // for StringList
+#include "serialize_list.h"                       // for StringList
 
 
 // Terms-only fields (no value slot) have no exact check behind the terms, so they get a larger budget.
@@ -92,12 +92,12 @@ numeric_bound(FieldType field_type, const MsgPack& bound)
 	const MsgPack value = bound.is_map() ? Cast::cast(bound) : bound;
 	auto floating = [](double v) -> std::pair<std::string, T> {
 		if (std::isnan(v)) {
-			THROW(SerialisationError, "A range bound cannot be NaN");
+			THROW(SerializationError, "A range bound cannot be NaN");
 		}
-		return { Serialise::floating(v), GenerateTerms::truncate<T>(v) };
+		return { Serialize::floating(v), GenerateTerms::truncate<T>(v) };
 	};
-	auto integer = [](std::int64_t v) -> std::pair<std::string, T> { return { Serialise::integer(v), saturate<T>(v) }; };
-	auto positive = [](std::uint64_t v) -> std::pair<std::string, T> { return { Serialise::positive(v), saturate<T>(v) }; };
+	auto integer = [](std::int64_t v) -> std::pair<std::string, T> { return { Serialize::integer(v), saturate<T>(v) }; };
+	auto positive = [](std::uint64_t v) -> std::pair<std::string, T> { return { Serialize::positive(v), saturate<T>(v) }; };
 	switch (value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return positive(value.u64());
@@ -125,9 +125,9 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 {
 	// An absent bound is unbounded: -inf or +inf, whatever the field's type (design D6).
 	auto [ser_start, value_s] = start ? numeric_bound<T>(field_spc.get_type(), *start)
-		: std::pair<std::string, T>(Serialise::floating(-std::numeric_limits<double>::infinity()), std::numeric_limits<T>::min());
+		: std::pair<std::string, T>(Serialize::floating(-std::numeric_limits<double>::infinity()), std::numeric_limits<T>::min());
 	auto [ser_end, value_e] = end ? numeric_bound<T>(field_spc.get_type(), *end)
-		: std::pair<std::string, T>(Serialise::floating(std::numeric_limits<double>::infinity()), std::numeric_limits<T>::max());
+		: std::pair<std::string, T>(Serialize::floating(std::numeric_limits<double>::infinity()), std::numeric_limits<T>::max());
 
 	if (ser_start > ser_end) {
 		return engine::Query();
@@ -168,8 +168,8 @@ engine::Query
 getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	if (field_spc.slot != engine::BAD_VALUENO) {
-		std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
-		std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
+		std::string start_s = start ? Serialize::MsgPack(field_spc, *start) : "";
+		std::string end_s = end ? Serialize::MsgPack(field_spc, *end) : "";
 
 		if (start_s > end_s) {
 			return engine::Query();
@@ -207,10 +207,10 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(timestamp_s);
+		ser_start = Serialize::timestamp(timestamp_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(timestamp_e);
+		ser_end = Serialize::timestamp(timestamp_e);
 	}
 
 	auto query = start && end ? GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix) : engine::Query();
@@ -256,10 +256,10 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(time_s);
+		ser_start = Serialize::timestamp(time_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(time_e);
+		ser_end = Serialize::timestamp(time_e);
 	}
 
 	auto query = GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(time_s), GenerateTerms::truncate<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
@@ -304,10 +304,10 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 
 	std::string ser_start, ser_end;
 	if (start) {
-		ser_start = Serialise::timestamp(timedelta_s);
+		ser_start = Serialize::timestamp(timedelta_s);
 	}
 	if (end) {
-		ser_end = Serialise::timestamp(timedelta_e);
+		ser_end = Serialize::timestamp(timedelta_e);
 	}
 
 	auto query = GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(timedelta_s), GenerateTerms::truncate<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix, 1, field_spc.slot != engine::BAD_VALUENO ? MAX_TERMS : TERMS_ONLY_MAX_TERMS);
@@ -425,7 +425,7 @@ MultipleValueRange::insideRange(std::string_view value) const noexcept
 		}
 
 		return false;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -453,30 +453,30 @@ MultipleValueRange::name() const
 
 
 std::string
-MultipleValueRange::serialise() const
+MultipleValueRange::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), start, end };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), start, end };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueRange::unserialise(std::string_view serialised) const
+MultipleValueRange::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 3) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueRange");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string start(*++it);
 		std::string end(*++it);
 		return std::make_unique<MultipleValueRange>(slot, std::move(start), std::move(end));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueRange");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueRange");
 	}
 }
 
@@ -509,7 +509,7 @@ MultipleValueGE::insideRange(std::string_view value) const noexcept
 		}
 
 		return data.back() >= start;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -537,29 +537,29 @@ MultipleValueGE::name() const
 
 
 std::string
-MultipleValueGE::serialise() const
+MultipleValueGE::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), start };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), start };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueGE::unserialise(std::string_view serialised) const
+MultipleValueGE::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueGE");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string start(*++it);
 		return std::make_unique<MultipleValueGE>(slot, std::move(start));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueGE");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueGE");
 	}
 }
 
@@ -591,7 +591,7 @@ MultipleValueLE::insideRange(std::string_view value) const noexcept
 		}
 
 		return data.front() <= end;
-	} catch (const SerialisationError&) {
+	} catch (const SerializationError&) {
 		return false;
 	}
 }
@@ -619,29 +619,29 @@ MultipleValueLE::name() const
 
 
 std::string
-MultipleValueLE::serialise() const
+MultipleValueLE::serialize() const
 {
-	std::vector<std::string> data = { serialise_length(slot_), end };
-	return StringList::serialise(data.begin(), data.end());
+	std::vector<std::string> data = { serialize_length(slot_), end };
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::PostingSource>
-MultipleValueLE::unserialise(std::string_view serialised) const
+MultipleValueLE::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
+			throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueLE");
 		}
 
 		auto it = data.begin();
-		const auto slot = unserialise_length(*it);
+		const auto slot = unserialize_length(*it);
 		std::string end(*++it);
 		return std::make_unique<MultipleValueLE>(slot, std::move(end));
-	} catch (const SerialisationError& er) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised MultipleValueLE");
+	} catch (const SerializationError& er) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized MultipleValueLE");
 	}
 }
 

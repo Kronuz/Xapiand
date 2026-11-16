@@ -31,10 +31,10 @@
 #include "database/schema.h"                // for Schema
 #include "database/utils.h"                 // for is_valid
 #include "engine/error.h"                   // for Error, errc
-#include "exception_engine.h"               // for AggregationError, SerialisationError
+#include "exception_engine.h"               // for AggregationError, SerializationError
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
-#include "length.h"                         // for serialise_length
+#include "length.h"                         // for serialize_length
 #include "phf.hh"                           // for phf
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 
@@ -292,13 +292,13 @@ Aggregation::get_result() const
 
 
 std::string
-Aggregation::serialise_results() const
+Aggregation::serialize_results() const
 {
 	std::string results;
-	results += serialise_length(_doc_count);
+	results += serialize_length(_doc_count);
 	for (auto& sub_agg : _sub_aggs) {
-		results += serialise_string(sub_agg.first);
-		results += serialise_string(sub_agg.second->serialise_results());
+		results += serialize_string(sub_agg.first);
+		results += serialize_string(sub_agg.second->serialize_results());
 	}
 	return results;
 }
@@ -309,19 +309,19 @@ Aggregation::merge_results(const char** p, const char* p_end)
 {
 	L_CALL("Aggregation::merge_results({})", repr(std::string(p, p_end - p)));
 
-	_doc_count += unserialise_length(p, p_end);
+	_doc_count += unserialize_length(p, p_end);
 	while (*p != p_end) {
-		auto name = unserialise_string(p, p_end);
-		auto data = unserialise_string(p, p_end);
+		auto name = unserialize_string(p, p_end);
+		auto data = unserialize_string(p, p_end);
 		const char *q = data.data();
 		const char *q_end = q + data.size();
 		auto it = _sub_aggs.find(name);
 		if (it == _sub_aggs.end()) {
-			THROW(SerialisationError, "Unknown aggregation {} in serialised Aggregation", repr(name));
+			THROW(SerializationError, "Unknown aggregation {} in serialized Aggregation", repr(name));
 		}
 		it->second->merge_results(&q, q_end);
 		if (q != q_end) {
-			THROW(SerialisationError, "Junk found at end of serialised Aggregation");
+			THROW(SerializationError, "Junk found at end of serialized Aggregation");
 		}
 	}
 }
@@ -417,45 +417,45 @@ AggregationMatchSpy::name() const
 
 
 std::string
-AggregationMatchSpy::serialise() const
+AggregationMatchSpy::serialize() const
 {
 	std::vector<std::string> data = { _aggs.serialise(), _schema->get_const_schema()->serialise() };
-	return StringList::serialise(data.begin(), data.end());
+	return StringList::serialize(data.begin(), data.end());
 }
 
 
 std::unique_ptr<engine::MatchSpy>
-AggregationMatchSpy::unserialise(std::string_view serialised) const
+AggregationMatchSpy::unserialize(std::string_view serialized) const
 {
 	try {
-		StringList data(serialised);
+		StringList data(serialized);
 
 		if (data.size() != 2) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised AggregationMatchSpy");
+			throw engine::Error(engine::errc::invalid, "Bad serialized AggregationMatchSpy");
 		}
 
 		auto it = data.begin();
 		auto aggs = MsgPack::unserialise(*it);
 		auto schema = MsgPack::unserialise(*++it);  // argument order is unspecified, so not inline
 		return std::make_unique<AggregationMatchSpy>(std::move(aggs), std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(schema)), nullptr, ""));
-	} catch (const SerialisationError&) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised AggregationMatchSpy");
+	} catch (const SerializationError&) {
+		throw engine::Error(engine::errc::invalid, "Bad serialized AggregationMatchSpy");
 	}
 }
 
 
 std::string
-AggregationMatchSpy::serialise_results() const
+AggregationMatchSpy::serialize_results() const
 {
-	return _aggregation.serialise_results();
+	return _aggregation.serialize_results();
 }
 
 
 void
-AggregationMatchSpy::merge_results(std::string_view serialised)
+AggregationMatchSpy::merge_results(std::string_view serialized)
 {
-	const char *p = serialised.data();
-	const char *p_end = p + serialised.size();
+	const char *p = serialized.data();
+	const char *p_end = p + serialized.size();
 	_aggregation.merge_results(&p, p_end);
 }
 

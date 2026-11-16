@@ -173,9 +173,9 @@ public:
 
 	std::string_view data() const;
 
-	static Locator unserialise(std::string_view locator_str);
+	static Locator unserialize(std::string_view locator_str);
 
-	std::string serialise() const;
+	std::string serialize() const;
 
 	// How many records this process has zstd-compressed (tests count a write's compressions).
 	static std::uint64_t compressions() noexcept;
@@ -189,12 +189,12 @@ public:
 
 
 class Data {
-	std::string serialised;
+	std::string serialized;
 	std::vector<Locator> locators;
 
 	std::vector<Locator> pending;
 
-	void feed(std::string&& new_serialised, std::string&& new_version);
+	void feed(std::string&& new_serialized, std::string&& new_version);
 
 	void flush(const std::vector<Locator>& ops);
 
@@ -202,8 +202,8 @@ public:
 	mutable std::string version;
 
 	Data();
-	Data(std::string&& serialised);
-	Data(std::string&& serialised, std::string&& version);
+	Data(std::string&& serialized);
+	Data(std::string&& serialized, std::string&& version);
 	Data(Data&& other);
 	Data(const Data& other);
 
@@ -239,7 +239,7 @@ public:
 
 	void flush();
 
-	const std::string& serialise() const;
+	const std::string& serialize() const;
 
 	bool operator==(const Data& other) const noexcept;
 

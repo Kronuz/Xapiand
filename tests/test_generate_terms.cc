@@ -93,7 +93,7 @@ static void test_id_accuracy_prefix() {
 	}
 	engine::Document doc;
 	GenerateTerms::integer(doc, accuracy, acc_prefix, 1234);
-	const auto stored = doc.serialise();
+	const auto stored = doc.serialize();
 	CHECK(stored.find(std::string(DOCUMENT_ID_ACCURACY_TERM_PREFIX) + get_prefix(100)) != std::string::npos);
 	CHECK(stored.find(std::string(DOCUMENT_ID_TERM_PREFIX) + get_prefix(100)) == std::string::npos);
 	CHECK_FALSE(GenerateTerms::numeric(int64_t(1200), int64_t(1300), accuracy, acc_prefix).empty());
