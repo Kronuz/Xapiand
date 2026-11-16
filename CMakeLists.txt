@@ -517,7 +517,7 @@ include_directories(
 # the library's own target.
 
 # traceback (headers only, up front). Xapiand's trace adapters inject traceback.h into
-# the extracted libraries: threadpool -> xapiand_threadpool_trace.h -> traceback.h, and
+# the extracted libraries: workpool -> xapiand_workpool_trace.h -> traceback.h, and
 # scheduler / logger, which pull thread.hh and work_pool.hh transitively. traceback proper is fetched
 # further down (its traceback.cc compiles into XAPIAND_OBJ), but its headers must be on
 # the include path BEFORE those libraries so their collateral targets can find traceback.h
@@ -529,23 +529,23 @@ FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/tracebac
 FetchContent_MakeAvailable(traceback)
 include_directories("${traceback_SOURCE_DIR}")
 
-# threadpool: WorkPool + the Thread primitive, extracted from Xapiand. Like
+# workpool: WorkPool + the Thread primitive, extracted from Xapiand. Like
 # located-exception, we compile its one out-of-line file (thread.cc) as part of
 # Xapiand (below) so it picks up Xapiand's config.h and the trace injection,
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 63e03a5deca9c91f08755d900c61885dd5e75822)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
-FetchContent_MakeAvailable(threadpool)
-include_directories("${threadpool_SOURCE_DIR}")
+FetchContent_Declare(workpool GIT_REPOSITORY https://github.com/Kronuz/workpool.git GIT_TAG 406d2f37cefb7386428a92e7cb6d993324eab536)  # workpool main: WorkPool, WorkGroup, on_idle, block_guard
+FetchContent_MakeAvailable(workpool)
+include_directories("${workpool_SOURCE_DIR}")
 add_compile_definitions(
-	THREADPOOL_TRACE_HEADER="xapiand_threadpool_trace.h"
-	THREADPOOL_THREAD_NAME_PREFIX="Xapiand:"
+	WORKPOOL_TRACE_HEADER="xapiand_workpool_trace.h"
+	WORKPOOL_THREAD_NAME_PREFIX="Xapiand:"
 )
 
 # scheduler: the timer-wheel scheduler + debouncer, extracted from Xapiand. It is
 # header-driven (scheduler.h, debouncer.h, callable_traits.hh) and builds on stash
-# + threadpool (fetched above). Its random_time helper is provided by Xapiand's
+# + workpool (fetched above). Its random_time helper is provided by Xapiand's
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + xapiand_colors.h.
@@ -560,7 +560,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG f61d8df44ee524c49820ad42e630042103d3fb92)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 6e7ab9ea01578d60e459137940e9e645a6727744)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
@@ -812,7 +812,7 @@ include_directories(
 # src/http_parser.{c,h,enums.h} (same 2.7.1, same enums split), so this is a pure
 # de-vendor with no behavior change. Its http_parser_enums.h #includes "enum.h"
 # (enum_reflection, already on the path above) and http_parser.cc #includes
-# "likely.h" (already provided by the server/threadpool/... deps). The ~2.4k-line
+# "likely.h" (already provided by the server/workpool/... deps). The ~2.4k-line
 # state machine lives in http_parser.cc, compiled into XAPIAND_OBJ below (the
 # "logger way"), so we Populate + put the headers on the path here. This unifies
 # the parser with Kronuz/http, whose HttpConnection uses the same fork.
@@ -1147,8 +1147,8 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 # Compile the located-exception library's out-of-line implementation as part of
 # Xapiand (C++20 + std::format), instead of linking its standalone target.
 list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
-# Same for the threadpool library's out-of-line implementation.
-list(APPEND XAPIAND_SRC_LIST "${threadpool_SOURCE_DIR}/thread.cc")
+# Same for the workpool library's out-of-line implementation.
+list(APPEND XAPIAND_SRC_LIST "${workpool_SOURCE_DIR}/thread.cc")
 # Same for the datetime library's pure ISO-8601/date-math core; the MsgPack
 # structured-object glue (src/datetime_msgpack.cc) stays in Xapiand and is
 # globbed above.
@@ -2052,7 +2052,7 @@ if (BUILD_TESTS)
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz
-	# libraries (boolparser, msgpack, threadpool, url_parser, ...) were dropped since
+	# libraries (boolparser, msgpack, workpool, url_parser, ...) were dropped since
 	# they're now tested in their own repos; what remains is Xapiand-specific and is a
 	# migration backlog for tests/.  Re-enable with -DBUILD_LEGACY_TESTS=ON and bring
 	# modules current one at a time.
