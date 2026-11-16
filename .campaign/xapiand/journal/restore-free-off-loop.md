@@ -54,6 +54,12 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
 Nothing. msg-49 and msg-50 answered by the lead: tests/test_loop_yield.cc added to the file set;
 the delete-count test is committed (Xapiand:6e31d4d65) and jobbed.
 
+## Decisions
+
+- Probe's RESTORE client in its own process (Xapiand:8961d6ae0): lead confirmed, 11-16. It fixes the probe, not
+  the server; the bound and the base-versus-head comparison are unchanged; `/:none` and the client ticker show the
+  8 ms was the client's own loop.
+
 ## Evidence
 
 Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
