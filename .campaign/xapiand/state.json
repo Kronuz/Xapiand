@@ -2221,14 +2221,15 @@
       ],
       "milestone": "",
       "needs": [
-        "cluster-harness"
+        "cluster-harness",
+        "faultlab-design"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-16T12:28:26"
+      "updated": "2026-11-16T14:23:56"
     },
     "cold-tier-item5": {
       "accepted": {},
