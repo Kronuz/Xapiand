@@ -11459,7 +11459,9 @@
         "src/manager.cc",
         "src/manager.h",
         "tests/test_manager*.cc",
-        "docs/mechanisms/metrics.md"
+        "docs/mechanisms/metrics.md",
+        "CMakeLists.txt",
+        "harness/metrics_scrape_*"
       ],
       "landed": [],
       "lenses": [],
@@ -11470,7 +11472,7 @@
       "risk": "low",
       "status": "active",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T08:35:33",
+      "updated": "2026-11-16T11:34:15",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
