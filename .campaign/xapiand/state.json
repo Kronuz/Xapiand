@@ -1959,9 +1959,9 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-16T11:22:09",
+      "updated": "2026-11-16T11:43:56",
       "worktree": "../Xapiand-wt/xapiand/cluster-harness"
     },
     "cluster-membership": {
