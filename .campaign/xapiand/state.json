@@ -16690,7 +16690,14 @@
         "docs/design/sortable-encoding/**",
         "docs/status/sortable-encoding.md",
         "docs/mechanisms/value-encoding.md",
-        "docs/src/content/docs/changelog.md"
+        "docs/src/content/docs/changelog.md",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "cmake/generate_third_party_notices.py",
+        "docs/mechanisms/third-party-notices.md",
+        "docs/src/content/docs/copyright.md",
+        "docs/dev/extraction-ledger.md",
+        "docs/design/exact-id-keys.md"
       ],
       "history": [
         {
@@ -16904,7 +16911,7 @@
       "risk": "critical",
       "status": "active",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-15T23:01:19",
+      "updated": "2026-11-15T23:44:56",
       "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
     },
     "sortable-followups": {
