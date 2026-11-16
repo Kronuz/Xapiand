@@ -35,6 +35,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
+#include <new>
+#include <optional>
 #include <string>
 #include <thread>
 #include <time.h>
@@ -42,6 +44,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -52,6 +55,8 @@
 #include "database/pool.h"
 #include "database/utils.h"
 #include "endpoint.h"
+#include "engine/chores.h"
+#include "engine/sync.h"
 #include "http_asio.h"
 #include "manager.h"
 #include "msgpack.h"
@@ -62,6 +67,34 @@
 #include "xapiand_exception.h"
 
 using namespace std::chrono_literals;
+
+// operator delete calls on one thread while `counting` (the test's own), to count the blocks a destruction frees.
+namespace {
+std::atomic<bool> counting{false};
+pthread_t counted_thread;
+std::size_t deletes_counted = 0;
+
+void count_delete() noexcept {
+	if (counting.load(std::memory_order_relaxed) && pthread_equal(pthread_self(), counted_thread)) {
+		++deletes_counted;
+	}
+}
+}  // namespace
+
+void* operator new(std::size_t size) {
+	if (void* p = std::malloc(size != 0 ? size : 1)) {
+		return p;
+	}
+	throw std::bad_alloc();
+}
+void operator delete(void* p) noexcept {
+	count_delete();
+	std::free(p);
+}
+void operator delete(void* p, std::size_t) noexcept {
+	count_delete();
+	std::free(p);
+}
 
 namespace {
 
@@ -1135,6 +1168,35 @@ static void test_each_chunk_of_a_streamed_restore_starts_light() {
 }
 
 
+// A RESTORE's results are one buffer, not a MsgPack (a zone of 8 KB) per object: destroying the indexer of 2,000
+// objects frees a few blocks, where one MsgPack per result frees thousands in one turn of its loop
+// (docs/perf/restore-stall.md).
+static void test_a_restores_results_are_freed_as_one_buffer() {
+	constexpr int objects = 2000;
+	CHECK_EQ(http_call("RESTORE", "/results/?commit", R"({"_id":"r0","n":0})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists
+	const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint("results"), true));
+	query_field_t query_field;
+	std::optional<DocIndexer> indexer;
+	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
+	std::vector<MsgPack> batch;
+	for (int i = 1; i <= objects; ++i) {
+		batch.push_back(MsgPack({{"_id", "r" + std::to_string(i)}, {"n", i}}));
+	}
+	engine::sync_wait(indexer->index(batch));
+	engine::sync_wait(indexer->commit());
+	batch.clear();
+	CHECK_EQ(indexer->indexed(), std::size_t{objects});
+	CHECK_EQ(indexer->results().size(), std::size_t{objects});
+	counted_thread = pthread_self();
+	deletes_counted = 0;
+	counting = true;
+	indexer.reset();
+	counting = false;
+	std::fprintf(stderr, "  the indexer of %d objects freed %zu blocks\n", objects, deletes_counted);
+	CHECK_LT(deletes_counted, std::size_t{objects / 10});
+}
+
+
 int main() {
 	RunningNode node;
 	if (!node.ready()) {
@@ -1156,6 +1218,7 @@ int main() {
 	test_a_light_request_runs_ahead_of_heavy_turns();
 	test_a_request_after_a_heavy_one_starts_light();
 	test_each_chunk_of_a_streamed_restore_starts_light();
+	test_a_restores_results_are_freed_as_one_buffer();
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;
