@@ -1,6 +1,6 @@
 # sortable-encoding: journal
 
-State: waiting on jobs 261116-015731-e054a5 261116-015732-5e733b 261116-015749-1ae5c0 261116-015751-8cdc2a 261116-015759-0b2751 261116-015810-e1d6f5 261116-015824-69ed7a 261116-015826-9436ee 261116-015840-c4c33c 261116-021315-77ee31
+State: waiting on jobs 261116-041115-99655a 261116-041115-e10c28 261116-041115-77cd6d 261116-041118-a44776 261116-041118-36d20e 261116-041119-3d3040 261116-041119-07b968 and measurement 261116-041137-a6cf93 261116-041145-a813cf 261116-041147-3aec36 261116-041150-8bba2a; CI 43864388357 (+FreeBSD 43864388321). Ready for review once they pass.
 Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
@@ -39,8 +39,13 @@ Session 11-16 (fresh contributor), head Xapiand:beec843ec. Master merged (campai
 
 ## Next
 
-1. Read the jobs; fix what they show. Rerun nothing that passed.
-2. Fill the Evidence table and Result; the ledger row's proof names T5/T6 passing, so confirm or amend it.
+1. Session 11-16 (3rd): repinned sortable to 2fad5a2 (Xapiand:34211bb50; was 915b014, whose test overflowed under UBSan), pushed.
+   A9 CI run 43864388357 replaces 43848582711 (ASan+UBSan sortable_property failure).
+2. Measurement jobs rewired (each build and run share a named slot; run `--after` build): T8 build 261116-041137-a6cf93 -> run
+   261116-041150-8bba2a (slot sortable-t8); load build 261116-041145-a813cf -> run 261116-041147-3aec36 (slot sortable-load).
+   Earlier failures: 261116-015826-9436ee ran before its build (0.9 s, no build dirs); 261116-021315-77ee31 got a fresh checkout without build-load-old.
+3. All passed jobs rerun at 34211bb50 (checks 99655a, e10c28, 77cd6d; T3 a44776; T6 36d20e; T5 3d3040; A12 07b968).
+4. When they finish: read, fix what they show, fill Result, confirm the ledger row's proof wording.
 
 ## For the lead
 
@@ -62,17 +67,17 @@ Nothing. (The 11-16 decision answered the A12 library question; the license file
 | Criterion | Evidence |
 |---|---|
 | A1 | D87 (PLAN.md decision row, owner 2026-11-13) |
-| A2 | build-test 261116-015731-e054a5 (pending) |
-| A3 | T3 261116-015749-1ae5c0 (pending); mutants killed earlier: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 |
-| A4 | T5 + E2E bodydiff 261116-015810-e1d6f5 (pending) |
-| A5 | T6 261116-015751-8cdc2a (pending); fails-without: old build 261115-232755-9ae906, floor 261116-015759-0b2751 (pending) |
-| A6 | load 261116-021315-77ee31 after build 261116-015840-c4c33c (pending) |
-| A7 | T8 261116-015826-9436ee after build 261116-015824-69ed7a; load 261116-021315-77ee31 (pending) |
-| A8 | no-gpl 261116-015732-c8963d (passed); license notes Xapiand:b635c16a4 |
-| A9 | CI on the pushed branch (lead) |
+| A2 | build-test 261116-041115-99655a (pending) |
+| A3 | T3 261116-041118-a44776 (pending); mutants killed earlier: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 |
+| A4 | T5 + E2E bodydiff 261116-041119-3d3040 (pending) |
+| A5 | T6 261116-041118-36d20e (pending); fails-without: old build 261115-232755-9ae906, floor 261116-015759-0b2751 (passed) |
+| A6 | load 261116-041147-3aec36 after build 261116-041145-a813cf (pending) |
+| A7 | T8 261116-041150-8bba2a after build 261116-041137-a6cf93; load 261116-041147-3aec36 (pending) |
+| A8 | no-gpl 261116-041115-77cd6d (pending); license notes Xapiand:b635c16a4 |
+| A9 | CI run 43864388357 at Xapiand:34211bb50 (pending; sortable pin 2fad5a2) |
 | A10 | [artifact] docs/mechanisms/value-encoding.md |
 | A11 | [artifact] docs/src/content/docs/changelog.md |
-| A12 | grep 261116-015845-03fa0e (passed; src, tests, contrib, CMakeLists.txt) |
+| A12 | grep 261116-041119-07b968 (pending) |
 
 ## Result
 
