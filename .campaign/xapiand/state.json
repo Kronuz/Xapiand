@@ -1873,7 +1873,7 @@
     "cluster-gate": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -1922,11 +1922,89 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-15T23:05:48"
+      "updated": "2026-11-16T10:28:23"
     },
     "cluster-harness": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T12:28:34",
+          "base": "74ddd7bf94b30c8053c841de69e81b649d5d9b25",
+          "blobs": {
+            "harness/cluster/README.md": "100644:49bf32feccc66f8f0b29a531948331f288e10cd6",
+            "harness/cluster/checklist.py": "100755:2e61872bf8080fa1a4a6b54d25ff10859bb2d9cc",
+            "harness/cluster/cluster.py": "100755:12ad4e52eb170e61061d07e5e03a0bb84c01c39c",
+            "harness/cluster/history.py": "100755:c6e7bfcd3c71d0880dd7b29555bd77f9cb1e317c",
+            "harness/cluster/proxy.py": "100755:04276873afbd435b19501e2a48bbd79cd1b0fa9b",
+            "harness/cluster/proxy_test.py": "100644:9e3ed601b77d608a555500064dea427c4da3d62a",
+            "harness/cluster/pyrefly.toml": "100644:27a9742b77bcb284d2227c1bb952d84dec60be11",
+            "harness/cluster/run.sh": "100755:08dbce45a778eb72c20d519b7c0a709532dd6326",
+            "harness/cluster/selftest.py": "100755:b9518e253dee765633c9bd32b1fe473d8e6fd12d"
+          },
+          "by": "review",
+          "commit": "5e9711f66502963db3b5b179250dc8eca5c78a00",
+          "criteria": "57c2ccde10155d1f",
+          "diffs": {
+            "harness/cluster/README.md": "0393293b54717380",
+            "harness/cluster/checklist.py": "9b85157ea54574ea",
+            "harness/cluster/cluster.py": "21918f8609840d15",
+            "harness/cluster/history.py": "fe66259c51d6253b",
+            "harness/cluster/proxy.py": "610ee91b2227973e",
+            "harness/cluster/proxy_test.py": "a1d7474fc1174c70",
+            "harness/cluster/pyrefly.toml": "5a905f267e9a9535",
+            "harness/cluster/run.sh": "70119da8439b0630",
+            "harness/cluster/selftest.py": "9bf5cffbd88a2a36"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "harness/cluster/run.sh selftest",
+                  "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-120747-f043a1",
+                  "level": "light",
+                  "seconds": 2.6,
+                  "state": "done",
+                  "what": "A2: history checker self-test (planted histories, zones vs brute force) at df3596550c89"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c '/usr/local/bin/python3 -I /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-cluster-harness-correctness/proxy_probe.py \"$JOB_SRC\"'",
+                  "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-120746-2a5167",
+                  "level": "none",
+                  "seconds": 13.2,
+                  "state": "done",
+                  "what": "correctness review: what crosses a partitioned proxy link at df3596550c89"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "harness/cluster/proxy_test.py"
+            ],
+            "reason": "proxy_test.py is F2's regression test (fails on the old proxy, job 261116-120758-c77697); it adds no mechanism"
+          },
+          "note": "",
+          "review": "4942c1d0cc37956959f568217090217a8de1a8dc",
+          "reviewed": "45d76f523d7d202827e450890e36bad72f22aaf4",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
+      "base": "b6f2f7c89e1a8112ab5a621e9b845eaaa9044238",
+      "branch": "quest/xapiand/cluster-harness",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -1957,9 +2035,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "review",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-15T23:04:35"
+      "updated": "2026-11-16T12:28:34",
+      "worktree": "../Xapiand-wt/xapiand/cluster-harness"
     },
     "cluster-membership": {
       "accepted": {},
@@ -2019,7 +2098,7 @@
     "cluster-migration": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -2057,7 +2136,38 @@
       "risk": "high",
       "status": "planned",
       "title": "One node to a cluster and back, without loss",
-      "updated": "2026-11-15T23:05:39"
+      "updated": "2026-11-16T10:28:28"
+    },
+    "cluster-vm-tier": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/vm/cluster.sh",
+        "harness/cluster/vm/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "cluster-harness"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "The VM tier of the cluster harness",
+      "updated": "2026-11-16T12:28:26"
     },
     "cold-tier-item5": {
       "accepted": {},
@@ -2771,8 +2881,7 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -2823,7 +2932,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-15T23:04:46"
+      "updated": "2026-11-16T10:28:41"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -5454,7 +5563,7 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -5515,7 +5624,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-15T23:04:55"
+      "updated": "2026-11-16T10:28:31"
     },
     "group-sim": {
       "accepted": {},
@@ -6730,19 +6839,59 @@
         "CMakeLists.txt",
         "src/xapiand_threadpool_trace.h",
         "src/xapiand_workpool_trace.h",
+        "src/xapiand_storage_trace.h",
         "docs/dev/extraction-backlog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T11:33:47",
+          "commit": "f9204936c5e7217ced86bc76e7b79814ccb69c53",
+          "criteria": {
+            "A1": "261116-093310-f57aae (the build-test check), 261116-093310-f57aae (passed at a0b759f81f10; only merges from main since), 261116-093310-172696 (passed at a0b759f81f10; only merges from main since)",
+            "A2": "261116-093310-172696 (the e2e check), 261116-093310-f57aae (passed at a0b759f81f10; only merges from main since), 261116-093310-172696 (passed at a0b759f81f10; only merges from main since)",
+            "A3": "261116-110227-e02716"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "a0b759f81f10912b09f7835d162ce1ff0f302b54",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-093310-f57aae",
+              "level": "light",
+              "seconds": 1000.2,
+              "state": "done",
+              "what": "logger-workpool-repin check build-test at a0b759f81f10"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "a0b759f81f10912b09f7835d162ce1ff0f302b54",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-093310-172696",
+              "level": "light",
+              "seconds": 1074.8,
+              "state": "done",
+              "what": "logger-workpool-repin check e2e at a0b759f81f10"
+            }
+          ],
+          "final": true,
+          "from": "1bd7f71ebfa1aeb0332976ef88da34dd718b07c8",
+          "reason": "",
+          "tested": "29fe602f2b6077db9912460f4d28f76f5764a409"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Repin logger 6e7ab9e and fetch workpool by its name",
-      "updated": "2026-11-16T08:10:12",
-      "worktree": "../Xapiand-wt/xapiand/logger-workpool-repin"
+      "updated": "2026-11-16T11:33:56",
+      "worktree": ""
     },
     "loop-scheduling": {
       "accepted": {
@@ -6984,6 +7133,8 @@
     "lua-memory-bound": {
       "accepted": {},
       "after": [],
+      "base": "5800937cfd4d68ba4aa6d7779086bb5812067978",
+      "branch": "quest/xapiand/lua-memory-bound",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7010,9 +7161,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T08:58:26"
+      "updated": "2026-11-16T11:37:02",
+      "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
       "accepted": {
@@ -11414,7 +11566,9 @@
         "src/manager.cc",
         "src/manager.h",
         "tests/test_manager*.cc",
-        "docs/mechanisms/metrics.md"
+        "docs/mechanisms/metrics.md",
+        "CMakeLists.txt",
+        "harness/metrics_scrape_*"
       ],
       "landed": [],
       "lenses": [],
@@ -11425,7 +11579,7 @@
       "risk": "low",
       "status": "active",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T08:35:33",
+      "updated": "2026-11-16T11:34:15",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
@@ -13946,7 +14100,7 @@
     "placement-repair": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -13994,7 +14148,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-15T23:05:18"
+      "updated": "2026-11-16T10:28:35"
     },
     "placement-root": {
       "accepted": {},
@@ -14193,7 +14347,9 @@
     },
     "platform-rows": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "lua-memory-bound"
+      ],
       "base": "5b3c89d71edd53ed9f3a2330033439718965e3d5",
       "branch": "quest/xapiand/platform-rows",
       "checks": [
@@ -14225,7 +14381,7 @@
       "risk": "normal",
       "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-16T05:13:02",
+      "updated": "2026-11-16T08:59:05",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
@@ -16128,6 +16284,7 @@
         "src/database/handler.h",
         "src/database/handler.cc",
         "tests/test_restore*.cc",
+        "tests/test_loop_yield.cc",
         "harness/restore_stall_*",
         "docs/perf/restore-stall.md"
       ],
@@ -16140,7 +16297,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T08:07:49",
+      "updated": "2026-11-16T09:59:09",
       "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
     },
     "restore-mixed-sign-integers": {
@@ -16753,7 +16910,7 @@
     "shard-groups": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -16827,7 +16984,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Shards across nodes: routing, members, replicas, linearizable reads",
-      "updated": "2026-11-15T23:05:29"
+      "updated": "2026-11-16T10:28:38"
     },
     "shard-rpc": {
       "accepted": {},
@@ -18785,9 +18942,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T08:24:49",
+      "updated": "2026-11-16T09:40:03",
       "worktree": "../Xapiand-wt/xapiand/strict-values"
     },
     "sync-at-first-commit": {
