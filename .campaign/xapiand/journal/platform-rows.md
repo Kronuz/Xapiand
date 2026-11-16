@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI runs 43822616910 (FreeBSD, also 43822426951 still running) 43822616893 (arm64, replaces 43822427028 cancelled)
+State: waiting on CI runs 43828387680 (FreeBSD) 43828387576 (arm64)
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First runs (freebsd 43817110685, arm64 43817110777) failed. Findings:
-- FreeBSD: Release build + 40/40 ctest passed; the ASan build's pool.cc compile was OOM-killed (exit 137, -parallel 4). Workflow: now -parallel 2.
-- arm64 t3_crash, t3_crash_asan: strata_check tool not built (harness needs the target). Workflow: build the target in both trees.
-- arm64 t1_census: 5 Xapiand:MAIN threads at 4 reactors where 1 is allowed. Per the lead's ruling this is a PRODUCT finding (4 threads never set their own name); not allowlisted. Harness now caps Xapiand:MAIN at exactly 1 and harness/thread_stacks.sh (run by the arm64 job, artifact thread_stacks.txt) prints each thread's tid, comm and gdb backtrace so the 4 extras and their creator can be named. Product finding is pending that run; fix goes to the lead (src/ is not mine).
-- arm64 t2_e2e_asan: 49 of 761 assertions fail; assert.txt was not uploaded, so it is unclassified. Now uploaded; newman 6 installed explicitly. Classify from the next run.
-Passed on arm64: t1_strict_owed, t2_stored_asan, t7_asan, t8 light/heavy, t10 lua and lua_asan, x6_shutdown, gate_tools.
+Runs 43822616893 (arm64) and 43822616910 (FreeBSD) failed; findings from their artifacts and logs. Fixes pushed; re-runs: FreeBSD 43828387680, arm64 43828387576.
+
+PRODUCT FINDING P1 (arm64 t1_census, any Linux): 5 `Xapiand:MAIN` threads at 4 reactors. The 4 extras are the reactor threads started by `reactor::TcpServer::start(unsigned short)::{lambda()#1}` (std::thread running `asio::scheduler::run`, one per reactor); they never call set_thread_name, so on Linux they inherit the creator's comm "Xapiand:MAIN". The creator is the main thread (XapiandManager::run_loop, tid = pid). Fix for the lead: name the thread at the top of that lambda (the census allowlist then needs that prefix). Evidence: run 43822616893, artifact arm64-rows-logs: thread_stacks.txt (tids 25240-25243) and t1_census.log (`offender Xapiand:MAIN`). The harness caps MAIN at exactly 1.
+
+arm64 t2_e2e_asan (51 failures): HARNESS. All trace to the `RESTORE /bank/` request ("HTTP None", response lost) and the checks after it (doc_count 856 not 1000, counts and sort order off). The node log shows "Request took too long! ~49.9s" and no sanitizer report or crash: newman's `--timeout-request 30000` expired on a slow ASan restore. Now `E2E_TIMEOUT_REQUEST` (default 30000), set to 180000 on arm64 and FreeBSD. If it still fails, the 50 s ASan restore of 1000 documents on 4 arm64 cores is itself a perf question for the lead.
+
+arm64 t10_lua (Release, 105 s): "the foreign-script node did not come up"; t10_lua_asan passed. HARNESS: lua_bounds.py's readiness loop spun without sleeping on a non-200 reply. Now sleeps every iteration (a port+1 clash is the other candidate).
+
+arm64 t3 rows now pass; the other arm64 rows pass.
+
+FreeBSD: build and 40/40 ctest passed; ASan tree built at --parallel 2. Rows pass: t1_strict_owed, t2_stored_asan, t2_restore_stream_asan (info), t7_asan, t8 light and heavy. Rows fail: t1_census (24 s), t2_e2e_asan (14 s), t3_crash and t3_crash_asan (0 s), t10_lua and t10_lua_asan (0 s), gate_tools (25 s). Artifacts did not come back from the VM, so causes are unknown; the workflow now prints each failed row's log tail in the job log.
 
 ## Next
 
-1. Read the new runs; classify t2_e2e_asan; FreeBSD rows are still unseen.
+1. Read the new runs; classify the FreeBSD row failures from the printed logs.
 2. Add green run links to docs/dev/freebsd.md and new docs/dev/platforms.md (A1, A2); fill Evidence.
 
 ## Blocked on
