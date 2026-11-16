@@ -11679,16 +11679,54 @@
         "CMakeLists.txt",
         "harness/metrics_scrape_*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T14:53:25",
+          "commit": "f920f9042216f40cc88c1df745aae9def9dd8cc4",
+          "criteria": {
+            "A1": "261116-130908-3189de (the build-test check), 261116-130908-3189de (passed at c8f942934634; only merges from main since), 261116-130909-79ebc8 (passed at c8f942934634; only merges from main since), 261116-130853-906011 (passed at c8f942934634; only merges from main since); fails without: 261116-142201-a98983",
+            "A2": "261116-130901-9a8ee3 (passed at c8f942934634; only merges from main since)",
+            "A3": "261116-130909-79ebc8 (the e2e check), 261116-130908-3189de (passed at c8f942934634; only merges from main since), 261116-130909-79ebc8 (passed at c8f942934634; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "55f87de5cb24cf52e557a51085ae7cd3438ad460",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-130908-3189de",
+              "level": "light",
+              "seconds": 328.0,
+              "state": "done",
+              "what": "metrics-fd-count check build-test at 55f87de5cb24"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "55f87de5cb24cf52e557a51085ae7cd3438ad460",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-130909-79ebc8",
+              "level": "light",
+              "seconds": 189.2,
+              "state": "done",
+              "what": "metrics-fd-count check e2e at 55f87de5cb24"
+            }
+          ],
+          "final": true,
+          "from": "8a40038dcf54edf3af3adff947e1e1a0b403fbd9",
+          "reason": "",
+          "tested": "21274139f100d4fa4dc525dfb73c63eb403aaaf6"
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T11:34:15",
+      "updated": "2026-11-16T14:53:25",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
