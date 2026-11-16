@@ -79,3 +79,66 @@ are history and I took them as stated.
   reads unrefreshed writes.
 - Not read, per the clean room: Xapian's sources, `src/sortable_serialise.{cc,h}`, the Python
   `sortable.py` and strata-oracle.
+
+## Re-check (b7b0a4451)
+
+Commit: Xapiand:b7b0a4451
+Verdict: APPROVE
+Date: 2026-11-15
+
+Scope: `git diff 5dc60256a..b7b0a4451 -- docs/design/cluster-release.md`, against F1-F24, with
+Detent's later inputs (D97 gives `detent:consensus-quiescence` to Detent; consensus-transport's
+bulk-budget criterion). Line numbers are the note's at b7b0a4451. Probes:
+`.scratch/review-cluster-release-design/recheck-b7b0a4451.sh` (read-only, seconds), its output
+`recheck-b7b0a4451.out` beside it, and `evidence.sh` for the old facts.
+
+All six blockers are closed, and the fixes add none. D16 makes volume numbers a function of the
+log, names every volume (open uploads included) with its length in the bundle, and truncates and
+replays on recovery; chunks that a higher term abandons are deleted in log order on every voter,
+so replicas stay equal. D17's T11 baseline writes the WAL, and T12 is measured on the new path and
+goes to the owner on a miss. D4's `linearizable` reads at or past the probe's commit index, which
+matches strata `REPLICATION.md:134`. D12's limits agree with consensus `ARCHITECTURE.md:41` and
+with Detent's bulk-budget criterion, and 13 A5 keeps a control that fails. What remains is
+planning and statement work, listed below.
+
+| Old ID | State | Where |
+|---|---|---|
+| F1 | closed | D16 :368-386; D12 :325-333; quests 5 A1, 6 A1-A2, 10 A7, 13 A6, 16 A1 |
+| F2 | closed | D17 :388-401; quest 10 A3, A6 :535-543; R7 |
+| F3 | closed | D1 :132-134; D4 :161-183; R2 :637; quests 1 A2, 5 A5, 13 A7 |
+| F4 | partly closed (F4 below) | D5 :195-204; quests 8 A5, 14 A4 |
+| F5 | closed | D12 :312-333; quests 4 A4, 10 A8, 13 A5 |
+| F6 | partly closed (F6 below) | D5 :213-226; quests 8 A4, 9 A4; R10 |
+| F7 | closed | D10 :287-291; quest 14 A1 |
+| F8 | closed | D7 :250-257; quest 9 A3 |
+| F9 | closed | D7 :241-245 |
+| F10 | partly closed (F10 below) | section 5 table :441-451 |
+| F11 | closed | quests 13 A1 :554, 14 A1 :566 |
+| F12 | closed | :592-593, :627 |
+| F13 | closed | :118, row 3 :434, quest 3 :486-490 |
+| F14 | closed | D11 :303-305; quest 5 A6; R10 |
+| F15 | closed | D11 :306-308; section 8 item 3; R10 |
+| F16 | closed | D9 :272-275; section 8 items 4-5; quest 4 A4, A5 |
+| F17 | closed | D5 :206-211 |
+| F18 | closed | D14 :343-363; quest 1 A3 |
+| F19 | closed | Q7, Q8 :731-762 |
+| F20 | closed | D10 :281-284 |
+| F21 | closed | R8 :643 |
+| F22 | closed | D6 :230-232; quest 12 A4 |
+| F23 | closed | D8 :261-264; quest 13 A2, A3 |
+| F24 | closed | section 4 :410 |
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F4 | no | gap | Not every pattern is a prefix scan. `**`, `_all`, `**/some-??`, a leading `*` and `-` exclusions match at any depth, and `.` names are never listed. So `_all` or `**/x` scans all 10^6 records, and the walk's work bound (`walk_gate.h`) has no root equivalent. 8 A5 tests "a prefix scan" only | `src/index_pattern.h:34-46` (recheck); note :195-198, :527-528 | Say that the root scan runs the `Glob` automaton over sorted keys, seeking past subtrees that cannot match, under walk_gate's bound. 8 A5 and 14 A4 cover `**`, `_all`, exclusions and `.` names |
+| F6 | no | gap | The rate estimate (:221, at least 1,000 creations/s) includes `rf` × shards group creates per index. 8 A4 measures records only (:524-527), so nothing measures the end-to-end rate. Section 8 calls the namespace record "the only path-to-group map" (:652), yet a node fills its own groups "from their local group metadata" after a restart without the root (:223). At 10^6 indexes per host, the note does not say how a node maps a path to its local groups, or at what memory cost | note :221-223, :524-527, :652 | State that mapping and its cost. Add an end-to-end creation-rate row (with group creates) to R10 or 13 |
+| F10 | no | defect | Quest 10's file set still misses WAL users that `land` would refuse to touch: `CMakeLists.txt` (its test list at :1897 names `wal_replay`), `src/database/flags.h`, `tests/test_wal_replay.cc`, `tests/test_{pool,engine_error,reactor_requests,wide_search}.cc`, `harness/wal_{recovery,replay,replay_agg}_check.sh`, and `harness/{README.md,async_allowlist.tsv,async_check.py,removed_options_check.sh,test_gate_tools.py}`. Quest 14 misses `tests/{test_index_pattern,fuzz_index_pattern,fuzz_index_expand}.cc` | recheck F10 (`git grep` at `a9cfa2cba`) | Add them, and give 1 or 10 the harness `run_all.sh` entry for the replaced scripts |
+| F25 | no | defect | 12 after 10 is right for the file sets as written. Both claim `src/opts.*` and `src/manager.*`. The mitigation in section 6 (build 12 beside 10 and rebase it) cannot run: `campaign start` refuses overlapping file sets. So the critical path is 5, 10, 12, 13 (2,800 lines, against 1,400 through 6), and the abstract (:52-53) and section 6 (:607-613) name the wrong one | `SKILL.md:27`, `:145`; note :441, :443, :607-613 | Recommend: 12 owns only `src/cluster/{node,membership}*` and its tests, and 13 does the options and manager wiring (13 already needs 10 and 12). Drop 12's edge on 10. Or keep the edge and restate the critical path |
+| F26 | no | gap | `log_bytes` is 64 MiB and checkpoints trigger on it, so a 4 GiB upload forces about 64 checkpoints (each a strata commit with its volumes synced). RESTORE checkpoints at a cadence master never paid, which can decide T12. D7's `transfer_leadership` balancing raises the term and, by D12's rule, aborts every open chunked upload in that group | note :239-240, :323, :330-332, :391 | State the checkpoint cadence under RESTORE and uploads, or a larger `log_bytes` for them and what it costs installs. Have balancing skip or wait for groups with an open chunked command. T12's profile shows the checkpoint share |
+| F27 | no | gap | The release narrows master's read-your-writes, and the note does not put it to the owner. Master refreshes a dirty shard before every read, so a search or get-by-id on one node sees every prior write. Here the default `read=prefix` reads the last refreshed snapshot with `refresh=false` at 1 s, so on a lone voter a get right after a PUT can miss it for up to 1 s. The owner decides. Options: (a) keep master's behavior where the reader holds the leader's replica (refresh before read when dirty, which a lone voter always is); (b) keep `prefix` as written and list the change in Q8's style; (c) default `refresh=wait_for`. Quest 10 A1's E2E may catch it either way | `src/engine/strata/shard.cc:311-316`, `:1555` (recheck F27); note :164-165, :172 | Add as a question in section 9; recommend (a) |
+| F28 | no | nit | D4 cites strata `ARCHITECTURE.md:91-93`, but the file is `docs/ARCHITECTURE.md`, and those lines cover the version check. The source for get-by-id from the version map is `REPLICATION.md:134`. 10 A3 does not say which journal level is compared against which WAL mode (A4 does). D12's chunk must fit `command_bytes` with its header, and "a final entry, the command itself" reads as the whole command, not its header | recheck F28; note :168-169, :325-333, :535-540 | Fix the citation and the wording |
+
+Not checked: whether `DataStorage` writes anything non-deterministic, such as a timestamp in a
+volume header (A1's digests and 13 A6 would catch it). Also not checked: Core's quorum-probe read
+requiring an entry of the leader's own term (consensus's own tests). Per the clean room, I did not
+read Xapian's sources, `src/sortable_serialise.*`, `sortable.py` or strata-oracle.
