@@ -1870,6 +1870,60 @@
       "title": "Settings, health, :info, docs, changelog",
       "updated": "2026-11-15T23:05:44"
     },
+    "cluster-gate": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        }
+      ],
+      "consumes": [
+        "xapiand:shard-map",
+        "xapiand:search-fanout",
+        "xapiand:cluster-routes"
+      ],
+      "files": [
+        "docs/gates/cluster-release.md",
+        "harness/cluster/gate*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "cluster-harness",
+        "group-sim",
+        "distributed-search",
+        "cluster-api",
+        "cluster-migration"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "critical",
+      "status": "planned",
+      "title": "The release's cluster gate",
+      "updated": "2026-11-15T23:05:48"
+    },
     "cluster-harness": {
       "accepted": {},
       "after": [],
