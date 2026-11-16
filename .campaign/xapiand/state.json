@@ -379,6 +379,13 @@
       "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
       "id": "msg-54",
       "text": "detent:consensus-driver started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-55",
+      "text": "detent:consensus-driver started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
     }
   ],
   "quests": {
