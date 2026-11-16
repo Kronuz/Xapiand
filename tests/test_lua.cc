@@ -397,6 +397,36 @@ void test_the_script_cache_default_is_one_and_fits_the_budget() {
 	CHECK_LE(bytes, Processor::cache_budget() / 4);   // the count binds first for ordinary scripts
 }
 
+// fuzz_lua's slowest input under TSan: a vararg chain to the work cap, alone and three interleaved, with the
+// fuzzer's limits. Reports what each takes; each must end.
+void test_report_the_cost_of_a_vararg_chain() {
+	const char* const body = "local function f(...) if select('#', ...) > 2^53 then return ... end return f(1, ...) end _doc.va = select('#', f())";
+	Limits limits;
+	limits.max_instructions = 300'000;
+	limits.max_unyielded_hooks = 20;
+	limits.max_bytes = 256u << 20;
+	auto t0 = std::chrono::steady_clock::now();
+	Processor alone("vararg", body, MsgPack::MAP(), limits);
+	const auto out = call(alone, MsgPack::MAP());
+	CHECK(!out.ok());
+	const auto ms_alone = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+	t0 = std::chrono::steady_clock::now();
+	Processor shared("vararg", body, MsgPack::MAP(), limits);
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending calls[3];
+	for (auto& pending : calls) {
+		pending.doc = MsgPack::MAP();
+		start(scheduler, pending, shared, budget);
+	}
+	scheduler.run();
+	for (auto& pending : calls) {
+		CHECK(pending.finished);
+	}
+	const auto ms_three = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+	std::printf("a vararg chain to the work cap (%s): %.0f ms alone, %.0f ms for three interleaved\n", out.what.substr(0, 40).c_str(), ms_alone, ms_three);
+}
+
 // What a trivial call costs, end to end on one thread (reported, not checked).
 void test_report_the_cost_of_a_trivial_call() {
 	Processor processor("cost", "_doc.x = _doc.x * 2", MsgPack::MAP());
@@ -1161,6 +1191,7 @@ TEST_MAIN(
 	test_a_call_of_its_own_state_leaves_the_cached_one_as_it_was,
 	test_a_threads_cached_scripts_hold_at_most_one_calls_cap,
 	test_the_script_cache_default_is_one_and_fits_the_budget,
+	test_report_the_cost_of_a_vararg_chain,
 	test_report_the_cost_of_a_trivial_call,
 	test_writes_do_not_outlive_their_call,
 	test_the_environment_is_closed,

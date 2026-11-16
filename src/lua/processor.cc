@@ -702,8 +702,16 @@ namespace {
 // checkpoint between steps, so a heap of garbage does not hold the reactor. Cancelling ends the slices, not
 // the collection.
 task::task<void> collect(detail::State& state, task::budget* budget) {
+	// A basic step is about 8 KiB of the heap: two cycles over a 64 MiB heap are about 16,000 steps. Past four times
+	// that, one full collection ends it (cycles always end; this bounds the loop should a step stop advancing).
+	constexpr int max_steps = 1 << 16;
 	std::exception_ptr cancelled;
-	for (int ends = 0; ends < 2;) {
+	int steps = 0;
+	for (int ends = 0; ends < 2; ++steps) {
+		if (steps == max_steps) {
+			lua_gc(state.L, LUA_GCCOLLECT);
+			break;
+		}
 		ends += lua_gc(state.L, LUA_GCSTEP, 0);
 		if (budget != nullptr) {
 			try {

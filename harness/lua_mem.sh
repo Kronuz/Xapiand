@@ -26,20 +26,21 @@ set -u
 . "$(dirname "$0")/env.sh"
 H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
 OUT=${JOB_OUT:-$REPO/.scratch/lua_mem}; mkdir -p "$OUT"
+SRC=${LUA_MEM_SRC:-$REPO}   # the source to build: another checkout (a job's --ref) measures it with these probes
 probe=$1; shift
-cmake -S "$REPO" -B "$REPO/build" -DFETCHCONTENT_BASE_DIR="$REPO/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+cmake -S "$SRC" -B "$SRC/build" -DFETCHCONTENT_BASE_DIR="$SRC/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 	-DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >"$OUT/configure.log" 2>&1 || { tail -30 "$OUT/configure.log"; exit 3; }
-cmake --build "$REPO/build" -j4 --target xapiand xapiand_test_lua >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log"; exit 3; }
-echo "commit $(git -C "$REPO" rev-parse --short HEAD)"
+cmake --build "$SRC/build" -j4 --target xapiand xapiand_test_lua >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log"; exit 3; }
+echo "harness $(git -C "$REPO" rev-parse --short HEAD), source $(git -C "$SRC" rev-parse --short HEAD)"
 case $probe in
-	seq) exec "$PY" -I "$H/lua_mem_seq.py" "$REPO/build/bin/xapiand" "$OUT/seq" "$@" ;;
-	same) exec "$PY" -I "$H/lua_mem_same.py" "$REPO/build/bin/xapiand" "$OUT/same" "$@" ;;
-	test) exec "$REPO/build/bin/xapiand_test_lua" "$@" ;;
+	seq) exec "$PY" -I "$H/lua_mem_seq.py" "$SRC/build/bin/xapiand" "$OUT/seq" "$@" ;;
+	same) exec "$PY" -I "$H/lua_mem_same.py" "$SRC/build/bin/xapiand" "$OUT/same" "$@" ;;
+	test) exec "$SRC/build/bin/xapiand_test_lua" "$@" ;;
 	t10)
-		bin="$REPO/build/bin/xapiand"
+		bin="$SRC/build/bin/xapiand"
 		if [ -n "${1:-}" ]; then
 			bin="$OUT/xapiand-$1"
-			printf '#!/bin/sh\nexec "%s" "$@" --processors %s\n' "$REPO/build/bin/xapiand" "$1" >"$bin"; chmod +x "$bin"
+			printf '#!/bin/sh\nexec "%s" "$@" --processors %s\n' "$SRC/build/bin/xapiand" "$1" >"$bin"; chmod +x "$bin"
 		fi
 		GATE7C_ROWS=t10_lua bash "$H/gate7c_rows.sh" "$bin" "$bin" "$OUT/rows"; rc=$?
 		cat "$OUT/rows/t10_lua.log"; exit $rc ;;
