@@ -373,7 +373,7 @@ stored_numeric_id(const engine::Document& doc)
 			return value.u64() <= MAX_NUMERIC_ID ? value.u64() : 0;
 		case MsgPack::Type::FLOAT: {
 			const auto f = value.f64();
-			return f >= 1 && f <= static_cast<double>(MAX_NUMERIC_ID) && f == std::floor(f) ? static_cast<std::uint64_t>(f) : 0;
+			return f >= 1 && f < 0x1p63 && f == std::floor(f) ? static_cast<std::uint64_t>(f) : 0;  // 0x1p63 is MAX_NUMERIC_ID + 1
 		}
 		default:
 			return 0;
@@ -381,15 +381,17 @@ stored_numeric_id(const engine::Document& doc)
 }
 
 
+// The largest id a float `_id` holds with every integer below it: 2^53.
+inline constexpr std::uint64_t MAX_FLOAT_ID = std::uint64_t{1} << 53;
+
 // Writes an issued numeric id into a new document: its stored `_id` (in its placeholder's type), its id slot and its
-// key, which is the one a PUT of that id names, so the log and the stored data carry the id too. The record stays raw
-// for finalise_write to compress once.
+// key, which is the one a PUT of that id names (an integer's and an equal float's are one), so the log and the stored
+// data carry the id too. The record stays raw for finalise_write to compress once.
 static std::string
 issue_id(engine::Document& doc, std::uint64_t issued)
 {
 	Data data(doc.get_data());
 	auto obj = data.get_obj();
-	bool floating = false;
 	if (auto it = obj.find(ID_FIELD_NAME); it != obj.end()) {
 		auto& value = it.value();
 		switch (value.get_type()) {
@@ -400,8 +402,10 @@ issue_id(engine::Document& doc, std::uint64_t issued)
 				value = static_cast<int64_t>(issued);
 				break;
 			case MsgPack::Type::FLOAT:
+				if (issued > MAX_FLOAT_ID) {
+					throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
+				}
 				value = static_cast<double>(issued);
-				floating = true;
 				break;
 			default:
 				break;
@@ -410,9 +414,9 @@ issue_id(engine::Document& doc, std::uint64_t issued)
 		data.flush();
 		doc.set_data(data.serialise());
 	}
-	auto key = floating ? document_key(Serialise::floating(static_cast<long double>(issued)), 'N') : numeric_key(issued);
+	auto key = numeric_key(issued);
 	doc.set_key(key);
-	doc.add_value(DB_SLOT_ID, key.substr(1));
+	doc.add_value(DB_SLOT_ID, Serialise::positive(issued));  // the id slot's value, as index_item gives it
 	return key;
 }
 
