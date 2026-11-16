@@ -19317,9 +19317,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:26:53",
+      "updated": "2026-11-16T15:35:22",
       "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {
