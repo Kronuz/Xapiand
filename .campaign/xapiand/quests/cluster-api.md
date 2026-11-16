@@ -1,31 +1,43 @@
 # cluster-api: Settings, health, :info, docs, changelog
 
-Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status cluster-api`.
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine
+state (status, branch, checks, reviews) is in `state.json`: `campaign status cluster-api`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Users see and control the cluster: `number_of_replicas` is back in `_settings` (set at create,
+changed live through placement-repair's steps), `GET /:cluster/health` reports green, yellow or red
+by replica count, `:info` lists each shard's group, members and leader, and `POST
+/:nodes/<n>/:drain` drains a node. The docs describe the cluster (options, installation,
+architecture, FAQ, reference guide, tutorials), the levels and their limits (design section 10),
+and the changelog's `[Unreleased]` names every user-visible change against master.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Every route and setting above documented, and the docs E2E green (the `e2e` check)
+- A2 `GET _settings` shows `number_of_replicas`; health is green with every shard at `rf`, yellow
+  with one short, red with a group without quorum, each driven on 3 processes (a harness job)
+- A3 `PUT _settings {number_of_replicas}` 0 to 2 and back on a live index returns at each step and
+  health follows (a harness job)
+- A4 The defaults: `number_of_replicas` and the shard count per cluster-release Q3 and Q9 (a test
+  of a fresh index's settings)
+- A5 [decision] cluster-release Q3 and Q9, pending owner; lead defaults (a) `number_of_replicas` 1
+  as `rf = 2 + witness`, and (b) one shard by default
+- A6 [artifact] `docs/src/content/docs/changelog.md`: `[Unreleased]` names the cluster, the levels,
+  the removed multicast discovery and options, and the read-your-writes ruling (Q-F27)
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides `xapiand:cluster-routes`: `number_of_replicas`, `GET /:cluster/health`, `:info`'s shard
+section, and the drain route (routes per Q8). Consumes `xapiand:shard-map` and
+`strata:placement-repair`.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Design section 5: the changelog is `sortable-encoding`'s until it lands, so this quest needs it;
+  `search_views.cc` is also distributed-search's, so this lands after it.
+- Lead: the docs pages are this quest's; `upgrade.md` is cluster-migration's alone.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The docs pages once A2's behavior has landed in shard-groups; the changelog last.

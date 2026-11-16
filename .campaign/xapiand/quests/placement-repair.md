@@ -5,27 +5,41 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The root authority keeps every shard at its `rf` (design D7): a node `down` longer than
+`--replace-after` (default 300 s) is replaced by learner, install, promote, remove; a drain moves a
+node's replicas away by the same steps; `number_of_replicas` grows and shrinks through D7's steps,
+the 0-to-1 growth window included; leaders are spread by `transfer_leadership`, which defers for a
+group whose application reports an open multi-entry command, so balancing never aborts a chunked
+upload (F26); a new root voter installs the root's records.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A node down past `--replace-after` is replaced with no acknowledged loss; an `rf = 1` group
+  whose node is down waits for it (a simulation-style test and a job)
+- A2 A drain empties a node, with no acknowledged loss and no shard below its `rf` at any step
+  where a replacement exists (a job)
+- A3 `number_of_replicas` 0, 1, 2, 1, 0 on a live group under writes, through D7's steps, with no
+  acknowledged loss and digests equal after each step (a job)
+- A4 Leader balancing defers a transfer while the group's application reports an open multi-entry
+  command and performs it once the command ends; a mutant that transfers anyway aborts the
+  command (`--fails-without`, a test with values)
+- A5 A new root voter installs at 10^6 namespace records; the install time and bytes stated
+  against D5's estimate of 2.5 s per 300 MB at 1 Gb/s (an `exclusive` job)
+- A6 [artifact] `docs/mechanisms/placement-repair.md`
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides `strata:placement-repair`: the replace, drain, `rf`-change and balance steps, and the
+application hook a group exposes to defer leadership transfer. Consumes `strata:group-install` and
+`strata:placement-records`.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Design D7, F8 (the 0-to-1 window tolerates no failure, as the lone voter it grows from), F26
+  (balancing waits for open chunked commands; the hook is generic, the chunked command is
+  Xapiand's).
+- Design section 5: track-c D9 gains D7's growth window (the lead's edit to `track-c`).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Replace and drain (A1, A2) before the `rf` change and balancing.
