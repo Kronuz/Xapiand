@@ -6735,17 +6735,56 @@
         "src/xapiand_storage_trace.h",
         "docs/dev/extraction-backlog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T11:33:47",
+          "commit": "f9204936c5e7217ced86bc76e7b79814ccb69c53",
+          "criteria": {
+            "A1": "261116-093310-f57aae (the build-test check), 261116-093310-f57aae (passed at a0b759f81f10; only merges from main since), 261116-093310-172696 (passed at a0b759f81f10; only merges from main since)",
+            "A2": "261116-093310-172696 (the e2e check), 261116-093310-f57aae (passed at a0b759f81f10; only merges from main since), 261116-093310-172696 (passed at a0b759f81f10; only merges from main since)",
+            "A3": "261116-110227-e02716"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "a0b759f81f10912b09f7835d162ce1ff0f302b54",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-093310-f57aae",
+              "level": "light",
+              "seconds": 1000.2,
+              "state": "done",
+              "what": "logger-workpool-repin check build-test at a0b759f81f10"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "a0b759f81f10912b09f7835d162ce1ff0f302b54",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-093310-172696",
+              "level": "light",
+              "seconds": 1074.8,
+              "state": "done",
+              "what": "logger-workpool-repin check e2e at a0b759f81f10"
+            }
+          ],
+          "final": true,
+          "from": "1bd7f71ebfa1aeb0332976ef88da34dd718b07c8",
+          "reason": "",
+          "tested": "29fe602f2b6077db9912460f4d28f76f5764a409"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Repin logger 6e7ab9e and fetch workpool by its name",
-      "updated": "2026-11-16T09:32:56",
-      "worktree": "../Xapiand-wt/xapiand/logger-workpool-repin"
+      "updated": "2026-11-16T11:33:56",
+      "worktree": ""
     },
     "loop-scheduling": {
       "accepted": {
