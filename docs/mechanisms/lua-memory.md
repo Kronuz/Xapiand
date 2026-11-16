@@ -35,7 +35,7 @@ A call's bytes are capped at `Limits::max_bytes` (64 MiB). Two things made that 
 3. **The cache is capped in bytes.** A thread's cache charges each script its settled bytes plus its source (kept to
    compile states of a call's own), and drops the least recently used scripts while the count passes
    `--scripts-cache-size` (default 100, `opts_t`) or the bytes pass one call's cap (64 MiB). An ordinary script settles
-   at TBD bytes, so the count binds first; scripts of several MiB (a body up to the 16 MiB body cap, its constants
+   at about 24 KB (23,800 bytes with its source; 100 of them hold 2.3 MiB), so the count binds first; scripts of several MiB (a body up to the 16 MiB body cap, its constants
    in the state) hit the byte cap.
 
 The node's Lua memory is then at most: script threads x 64 MiB of cached scripts, plus 64 MiB for each call in
@@ -50,7 +50,15 @@ concurrency; a state of the call's own is closed instead. A full `lua_gc(LUA_GCC
 simpler but runs to its end on the reactor (tens of milliseconds over a million small objects); the stepped cycle
 yields between steps like the call did.
 
-Measured: TBD.
+Measured (macOS x86_64, RelWithDebInfo):
+
+1. `lua_mem_seq.py` at the defaults (16 reactors), 200 distinct scripts each leaving 56 MiB of garbage: before, RSS
+   reached 1,162 MiB after 20 scripts (job 261116-101116-e8fd26); after, 290 MiB after 200, about 0.6 MiB a script
+   in the second half (job 261116-101130-d8dfc8). Each request also makes a new index; `--control` runs the same
+   requests without the garbage to measure that cost (job 261116-111156-44ae75).
+2. A trivial call (`_doc.x = _doc.x * 2`, end to end): 14.6 us before, 14.1 us after: the collection of a small
+   state costs nothing measurable.
+3. Twelve scripts of 8 MiB: the cache keeps 48 MiB of them, with or without a count bound.
 
 ## Where it is tested
 
