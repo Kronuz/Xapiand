@@ -33,10 +33,12 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "endpoint.h"
 #include "lua/exception.h"
 #include "lua/processor.h"
+#include "opts.h"
 #include "task.hh"
 
 #include <unistd.h>
@@ -310,6 +312,84 @@ void test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap() {
 		REQUIRE(p->outcome.ok());
 		CHECK_EQ(p->doc.at("n").i64(), 36);
 	}
+}
+
+// The x7-gate probe's script (S1): 56 MiB of strings, garbage once the call ends.
+const char* const garbage_56 = "local t = {} for i = 1, 56 do t[i] = string.rep('x', 1048000 + i) end _doc.s = #t";
+
+void test_a_call_leaves_no_garbage_in_its_state() {
+	Processor processor("garbage", garbage_56, MsgPack::MAP());
+	const auto idle = processor.resident_bytes();
+	for (int i = 0; i < 3; ++i) {
+		auto out = call(processor, MsgPack::MAP());
+		REQUIRE(out.ok());
+		CHECK_EQ(out.doc.at("s").i64(), 56);
+		CHECK_LE(processor.resident_bytes(), idle + (16u << 10));   // what stays is the script, not the call's 56 MiB
+	}
+	// A call cut by a bound leaves none either.
+	Processor capped("capped", "local t = {} for i = 1, 100 do t[i] = string.rep('x', 1048000 + i) end", MsgPack::MAP());
+	const auto capped_idle = capped.resident_bytes();
+	CHECK(call(capped, MsgPack::MAP()).limit);
+	CHECK_LE(capped.resident_bytes(), capped_idle + (16u << 10));
+}
+
+void test_a_call_of_its_own_state_leaves_the_cached_one_as_it_was() {
+	Processor processor("own", garbage_56, MsgPack::MAP());
+	const auto idle = processor.resident_bytes();
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending calls[3];
+	for (auto& pending : calls) {
+		pending.doc = MsgPack::MAP();
+		start(scheduler, pending, processor, budget);
+	}
+	scheduler.run();
+	for (auto& pending : calls) {
+		REQUIRE(pending.finished);
+		REQUIRE(pending.outcome.ok());
+		CHECK_EQ(pending.doc.at("s").i64(), 56);
+	}
+	CHECK_LE(processor.resident_bytes(), idle + (16u << 10));
+	CHECK(call(processor, MsgPack::MAP()).ok());   // the cached state is free again
+}
+
+// Compiles `n` distinct scripts named `prefix<i>` with `body` on a fresh thread; returns its cache's bytes.
+std::size_t cache_after(const std::string& prefix, const std::string& body, int n) {
+	std::size_t bytes = 0;
+	std::thread([&] {
+		for (int i = 0; i < n; ++i) {
+			MsgPack object({{"_name", prefix + std::to_string(i)}, {"_body", body + " -- " + std::to_string(i)}});
+			Script script(object);
+			auto processor = Processor::compile_local(script);
+			CHECK(call(*processor, MsgPack::MAP()).ok());
+		}
+		bytes = Processor::cached_bytes();
+	}).join();
+	return bytes;
+}
+
+void test_a_threads_cached_scripts_hold_at_most_one_calls_cap() {
+	// Scripts as large as a client can send: a string constant of 8 MiB each. The cache keeps what fits.
+	const std::string big = "local s = '" + std::string(8u << 20, 'k') + "' _doc.n = #s";
+	const auto bytes = cache_after("big", big, 12);
+	std::printf("12 scripts of 8 MiB: the cache holds %zu MiB (budget %zu MiB)\n", bytes >> 20, Processor::cache_budget() >> 20);
+	CHECK_LE(bytes, Processor::cache_budget());
+	CHECK_GE(bytes, 2 * (8u << 20));   // it still keeps some
+}
+
+void test_the_script_cache_default_is_one_and_fits_the_budget() {
+	// The CLI's default is the struct's (N5), and that many ordinary scripts fit the byte budget.
+	std::vector<std::string> args = {"xapiand"};
+	std::vector<char*> argv;
+	for (auto& arg : args) {
+		argv.push_back(arg.data());
+	}
+	const opts_t parsed = parseOptions(static_cast<int>(argv.size()), argv.data());
+	CHECK_EQ(parsed.scripts_cache_size, opts_t{}.scripts_cache_size);
+	const auto count = static_cast<int>(opts_t{}.scripts_cache_size);
+	const auto bytes = cache_after("small", garbage_56, count);
+	std::printf("%d ordinary scripts after their calls: %zu KiB, %zu bytes each\n", count, bytes >> 10, bytes / count);
+	CHECK_LE(bytes, Processor::cache_budget() / 4);   // the count binds first for ordinary scripts
 }
 
 // What a trivial call costs, end to end on one thread (reported, not checked).
@@ -1053,6 +1133,10 @@ TEST_MAIN(
 	test_the_calls_really_interleaved,
 	test_collection_runs_while_calls_are_suspended,
 	test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap,
+	test_a_call_leaves_no_garbage_in_its_state,
+	test_a_call_of_its_own_state_leaves_the_cached_one_as_it_was,
+	test_a_threads_cached_scripts_hold_at_most_one_calls_cap,
+	test_the_script_cache_default_is_one_and_fits_the_budget,
 	test_report_the_cost_of_a_trivial_call,
 	test_writes_do_not_outlive_their_call,
 	test_the_environment_is_closed,

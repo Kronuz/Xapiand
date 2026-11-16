@@ -31,10 +31,12 @@
 #include <chrono>                                 // for std::chrono::steady_clock
 #include <cstdint>                                // for int64_t
 #include <cstdlib>                                // for realloc, free
+#include <exception>                              // for std::exception_ptr
 #include <functional>                             // for std::hash
 #include <new>                                    // for std::bad_alloc
 #include <string>
 #include <string_view>
+#include <thread>                                 // for std::this_thread
 #include <utility>                                // for std::exchange
 
 extern "C" {
@@ -60,11 +62,21 @@ namespace lua {
 
 namespace detail {
 
-// The live bytes of a state, and the cap that `metered` switches on (only while a script runs).
-struct Heap {
+// A lua_State with the base and one compiled script, and the live bytes its allocator meters against
+// the cap that `metered` switches on (only while a script runs).
+struct State {
 	std::size_t used = 0;
 	std::size_t limit = 0;
 	bool metered = false;
+	std::size_t settled = 0;            // `used` after the last full collection
+	lua_State* L = nullptr;
+	int func_ref = 0;                   // the compiled chunk, in the registry
+	int new_env_ref = 0;                // the base's environment factory, in the registry
+
+	State(std::string_view name, const std::string& source, std::size_t limit);
+	~State();
+	State(const State&) = delete;
+	State& operator=(const State&) = delete;
 };
 
 }  // namespace detail
@@ -134,7 +146,7 @@ void raise_kill(lua_State* L) {
 }
 
 void* lua_alloc(void* ud, void* ptr, std::size_t osize, std::size_t nsize) {
-	auto* heap = static_cast<detail::Heap*>(ud);
+	auto* heap = static_cast<detail::State*>(ud);
 	const std::size_t old = ptr != nullptr ? osize : 0;  // osize is a type tag for a new block
 	if (nsize == 0) {
 		heap->used -= old;
@@ -554,6 +566,29 @@ ScriptLRU& cache() {
 	return script_lru;
 }
 
+// What a thread's cached scripts may hold: one call's cap.
+constexpr std::size_t cache_budget = Limits{}.max_bytes;
+
+std::size_t cached_bytes(ScriptLRU& lru) {
+	std::size_t total = 0;
+	for (const auto& entry : lru) {
+		total += entry.second->resident_bytes();
+	}
+	return total;
+}
+
+// Drops the least recently used scripts past the count or past the byte budget.
+void trim(ScriptLRU& lru) {
+	std::size_t total = cached_bytes(lru);
+	lru.trim_and([&](const ScriptLRU::value_type& entry, bool overflowed, bool /*expired*/) {
+		if (overflowed || total > cache_budget) {
+			total -= entry.second->resident_bytes();
+			return ScriptLRU::DropAction::evict;
+		}
+		return ScriptLRU::DropAction::stop;
+	});
+}
+
 std::shared_ptr<Processor> cached(const std::string& name, std::string_view body) {
 	auto& lru = cache();
 	auto it = lru.find(name);
@@ -567,10 +602,12 @@ std::shared_ptr<Processor> cached(const std::string& name, std::string_view body
 
 std::shared_ptr<Processor> remember(const std::string& name, std::shared_ptr<Processor> processor) {
 	L_INFO("Script {} ({:x}) compiled and ready.", repr(name), processor->get_hash());
-	auto inserted = cache().emplace(name, processor);
+	auto& lru = cache();
+	auto inserted = lru.emplace(name, processor);
 	if (!inserted.second) {
 		inserted.first->second = processor;  // the script changed under its name
 	}
+	trim(lru);
 	return processor;
 }
 
@@ -601,15 +638,12 @@ void throw_if_condemned(const Call& call, const Limits& limits) {
 }  // namespace
 
 
-Processor::Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits_) :
-	hash(std::hash<std::string_view>()(body)),
-	heap(std::make_unique<detail::Heap>()),
-	script_params(std::move(params)),
-	limits(limits_),
-	owner(std::this_thread::get_id())
+namespace detail {
+
+State::State(std::string_view name, const std::string& source, std::size_t limit_) :
+	limit(limit_)
 {
-	heap->limit = limits.max_bytes;
-	L = lua_newstate(lua_alloc, heap.get());
+	L = lua_newstate(lua_alloc, this);
 	if (L == nullptr) {
 		throw std::bad_alloc();
 	}
@@ -642,16 +676,13 @@ Processor::Processor(std::string_view name, std::string_view body, MsgPack param
 		}
 		new_env_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-		script_params.lock();
-
-		// The body on the line of `local _ENV`, so line numbers hold.
-		std::string source = "local _ENV = ...; ";
-		source.append(body);
 		const std::string chunk_name(name);
 		if (luaL_loadbufferx(L, source.data(), source.size(), chunk_name.c_str(), "t") != LUA_OK) {
 			THROW(ClientError, "Script {} syntax error: {}", repr(name), lua_tostring(L, -1));
 		}
 		func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+		lua_gc(L, LUA_GCCOLLECT);   // the compiler's garbage
+		settled = used;
 	} catch (...) {
 		lua_close(L);
 		throw;
@@ -659,17 +690,33 @@ Processor::Processor(std::string_view name, std::string_view body, MsgPack param
 }
 
 
-Processor::~Processor()
+State::~State()
 {
 	lua_close(L);
 }
 
+}  // namespace detail
 
-task::task<void>
-Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget)
-{
-	assert(owner == std::this_thread::get_id());  // a Processor is its thread's own
 
+namespace {
+
+// Collects what a call left on its state: the cycle in progress, then a whole one, a step at a time with a
+// checkpoint between steps, so a heap of garbage does not hold the reactor.
+task::task<void> collect(detail::State& state, task::budget* budget) {
+	for (int ends = 0; ends < 2;) {
+		ends += lua_gc(state.L, LUA_GCSTEP, 0);
+		if (budget != nullptr) {
+			co_await budget->checkpoint();
+		}
+	}
+	state.settled = state.used;
+}
+
+// Runs one call of the state's script on `doc`.
+task::task<void> run(detail::State& state, const Limits& limits, std::string_view method, MsgPack& doc, const MsgPack& old_doc,
+	const MsgPack& script_params, const MsgPack& params, task::budget* budget) {
+	lua_State* L = state.L;
+	[[maybe_unused]] const auto owner = std::this_thread::get_id();
 	Call call{&limits};
 	call.count = limits.hook_period;
 	call.prints_left = limits.max_print_bytes;
@@ -678,7 +725,7 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	{
 		// The call's environment, over the base.
 		StackGuard guard(L);
-		lua_rawgeti(L, LUA_REGISTRYINDEX, new_env_ref);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, state.new_env_ref);
 		lua_call(L, 0, 1);
 		const int env = lua_gettop(L);
 		auto set = [&](const char* key, auto&& push) {
@@ -704,19 +751,19 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 		*static_cast<Call**>(lua_getextraspace(co)) = &call;
 		call.co = co;
 		lua_sethook(co, hook, LUA_MASKCOUNT, static_cast<int>(limits.hook_period));
-		lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);
+		lua_rawgeti(L, LUA_REGISTRYINDEX, state.func_ref);
 		lua_pushvalue(L, env);
 		lua_xmove(L, co, 2);
 	}
 
 	int nargs = 1;
 	for (;;) {
-		assert(owner == std::this_thread::get_id());
+		assert(owner == std::this_thread::get_id());  // a state is its thread's own
 		int nres = 0;
 		Call* const outer = std::exchange(current_call, &call);
-		heap->metered = true;
+		state.metered = true;
 		const int status = lua_resume(co, L, nargs, &nres);
-		heap->metered = false;
+		state.metered = false;
 		current_call = outer;
 		nargs = 0;
 		if (status == LUA_YIELD) {
@@ -756,6 +803,69 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 	lua_rawget(L, -2);
 	Walk walk{limits.max_result_nodes, limits.max_result_bytes};
 	doc = lua_to_msgpack(L, -1, walk, 0);
+}
+
+}  // namespace
+
+
+Processor::Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits_) :
+	hash(std::hash<std::string_view>()(body)),
+	script_name(name),
+	script_params(std::move(params)),
+	limits(limits_),
+	owner(std::this_thread::get_id())
+{
+	// The body on the line of `local _ENV`, so line numbers hold.
+	source = "local _ENV = ...; ";
+	source.append(body);
+	script_params.lock();
+	resident = std::make_unique<detail::State>(script_name, source, limits.max_bytes);
+}
+
+
+Processor::~Processor() = default;
+
+
+std::size_t
+Processor::resident_bytes() const
+{
+	return resident->settled + source.size();
+}
+
+
+task::task<void>
+Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params, task::budget* budget)
+{
+	assert(owner == std::this_thread::get_id());  // a Processor is its thread's own
+
+	// One call per state: the cached state when it is free, else one of the call's own.
+	std::unique_ptr<detail::State> own;
+	detail::State* state = resident.get();
+	bool* const held = busy ? nullptr : &busy;
+	if (held == nullptr) {
+		own = std::make_unique<detail::State>(script_name, source, limits.max_bytes);
+		state = own.get();
+	} else {
+		*held = true;
+	}
+	struct Release {
+		bool* flag;
+		~Release() { if (flag != nullptr) { *flag = false; } }
+	} release{held};
+
+	std::exception_ptr error;
+	try {
+		co_await run(*state, limits, method, doc, old_doc, script_params, params, budget);
+	} catch (const task::cancelled&) {
+		throw;   // what it left is collected after the state's next call, or closed with a state of its own
+	} catch (...) {
+		error = std::current_exception();
+	}
+	assert(owner == std::this_thread::get_id());
+	co_await collect(*state, budget);
+	if (error) {
+		std::rethrow_exception(error);
+	}
 }
 
 
@@ -811,6 +921,20 @@ std::size_t
 Processor::printed_bytes()
 {
 	return printed;
+}
+
+
+std::size_t
+Processor::cached_bytes()
+{
+	return lua::cached_bytes(cache());
+}
+
+
+std::size_t
+Processor::cache_budget()
+{
+	return lua::cache_budget;
 }
 
 
