@@ -1927,6 +1927,8 @@
     "cluster-harness": {
       "accepted": {},
       "after": [],
+      "base": "b6f2f7c89e1a8112ab5a621e9b845eaaa9044238",
+      "branch": "quest/xapiand/cluster-harness",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -1957,9 +1959,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-15T23:04:35"
+      "updated": "2026-11-16T11:22:09",
+      "worktree": "../Xapiand-wt/xapiand/cluster-harness"
     },
     "cluster-membership": {
       "accepted": {},
