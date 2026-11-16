@@ -4692,9 +4692,9 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
-      "updated": "2026-11-16T14:23:23",
+      "updated": "2026-11-16T14:34:15",
       "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
     },
     "field-table": {
