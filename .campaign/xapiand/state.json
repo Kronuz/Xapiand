@@ -5228,6 +5228,52 @@
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
       "updated": "2026-11-15T23:04:55"
     },
+    "group-sim": {
+      "accepted": {},
+      "after": [
+        "group-install"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group"
+      ],
+      "files": [
+        "sim/**",
+        "docs/gates/phase-3r.md",
+        "docs/mechanisms/simulator.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Phase 3R gate rows in the simulator",
+      "updated": "2026-11-15T23:04:59"
+    },
     "hashes-cl-1": {
       "accepted": {},
       "after": [],
