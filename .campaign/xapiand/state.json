@@ -2024,10 +2024,50 @@
         "harness/cluster/**",
         "tools/vm/cluster.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T12:28:41",
+          "commit": "72845aeba59d50c910b96f9f7752416619081d94",
+          "criteria": {
+            "A1": "261116-120748-f8c92d",
+            "A2": "261116-120747-f043a1; fails without: 261116-114144-9d35dc, 261116-114148-339c7a, 261116-114152-beba20, 261116-120747-b1209b, 261116-120747-d81b09, 261116-120748-80201d, 261116-120801-b68506",
+            "A4": "261116-120749-48d2e7, 261116-120754-9af804; fails without: 261116-120758-c77697",
+            "A5": "`harness/cluster/README.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-120804-c631b7",
+              "level": "light",
+              "seconds": 280.5,
+              "state": "done",
+              "what": "cluster-harness check build-test at df3596550c89"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-120804-7ab3fb",
+              "level": "light",
+              "seconds": 169.9,
+              "state": "done",
+              "what": "cluster-harness check e2e at df3596550c89"
+            }
+          ],
+          "final": true,
+          "from": "3d43a30e393c0065ecaeefcdc7b98bc996988fc2",
+          "reason": "",
+          "tested": "5e9711f66502963db3b5b179250dc8eca5c78a00"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -2035,10 +2075,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-16T12:28:34",
-      "worktree": "../Xapiand-wt/xapiand/cluster-harness"
+      "updated": "2026-11-16T12:28:49",
+      "worktree": ""
     },
     "cluster-membership": {
       "accepted": {},
