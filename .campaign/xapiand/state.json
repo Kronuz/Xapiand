@@ -16508,7 +16508,9 @@
         "docs/status/strata-fields.md",
         "docs/status/x1-delete-xapian.md",
         "docs/status/x1-tests.md",
-        "docs/status/xapiand-on-strata.md"
+        "docs/status/xapiand-on-strata.md",
+        "oldtests/**",
+        "docs_to_postman.py"
       ],
       "history": [
         {
@@ -16555,7 +16557,7 @@
       "risk": "low",
       "status": "active",
       "title": "Repin the renamed libraries and finish serialize in Xapiand",
-      "updated": "2026-11-16T05:13:05",
+      "updated": "2026-11-16T05:23:11",
       "worktree": "../Xapiand-wt/xapiand/serialize-repin"
     },
     "sha256-cl-10": {
