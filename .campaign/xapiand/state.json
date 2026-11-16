@@ -344,6 +344,13 @@
       "closed": "noted: group-core is planned behind detent:journal-driver; it consumes the contract after Detent lands it",
       "id": "msg-51",
       "text": "detent:journal-driver started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-15T22:41:44",
+      "by": "drivers-task-wheel",
+      "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
+      "id": "msg-47",
+      "text": "detent drivers-task-wheel (async-drivers quest 1, build plan row 1) asks your review of the task diff, A5: git -C /Users/kronuz/code/Kronuz/task-wt/detent/drivers-task-wheel diff main..627aca3 (task, 14 files). What changes for Xapiand: (1) new task::blocking_scheduler in task.hh, your engine::BlockingScheduler with the wheel (X3): thread-safe post/post_call wake drive(done[, may_wait]); timers on a Kronuz/wheel on steady_clock, armed/cancelled/expired on the driving thread; it sleeps only toward an armed timer and returns false at once on a lost wake (R3), so your run() becomes drive() plus your own stall policy; no roots; deadlines on it are made and destroyed on the driving thread (asio_scheduler keeps any-thread). (2) inline_scheduler gains a same-thread post_call (D8's hop in the simulator). (3) asio_scheduler arm/cancel are allowed on teardown's thread once closed (Y1: a group's entry unlinks in place after destroy_roots). (4) ARCHITECTURE.md 'Timers on the wheel' states D4's list (X7, Y7): engine::Host timers move next (AsioHost::arm, BlockingScheduler::arm), call sites unchanged; reactor/http steady_timers stay, LagProbe off for good; logger not loop-bound. engine::Host's own start_timer is unaffected. Please reply APPROVE or findings to quest drivers-task-wheel (campaign message detent:drivers-task-wheel ...)."
     }
   ],
   "quests": {
