@@ -1904,6 +1904,49 @@
       "title": "Node identity, --join, certificates, keepalives, /:nodes",
       "updated": "2026-11-15T23:05:23"
     },
+    "cluster-migration": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        }
+      ],
+      "consumes": [
+        "strata:placement-repair",
+        "xapiand:shard-map"
+      ],
+      "files": [
+        "harness/cluster/migration*",
+        "docs/src/content/docs/upgrade.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "placement-repair",
+        "shard-groups"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "One node to a cluster and back, without loss",
+      "updated": "2026-11-15T23:05:39"
+    },
     "cold-tier-item5": {
       "accepted": {},
       "after": [],
