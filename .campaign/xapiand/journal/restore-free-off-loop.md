@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: working (round 2: what holds the loop for the remaining ~8 ms; exclusive A/B 261116-140557-b42752 failed A1 at 8.0-8.2 ms against 3.39 ms, passed A2)
+State: waiting on jobs 261116-152341-b40b49 261116-152344-390c05 261116-152346-3f7758 261116-152349-798018 261116-152359-61089b 261116-152402-172aef 261116-152404-9e4b93 261116-152405-fc88a5
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,21 +28,25 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
   `sample`: `Admitted::~Admitted` 22.5% of the loop's busy samples (madvise 10.8%), `_init_map` 13.8%.
   Model: a light GET waits one heavy turn per loop pass (task docs/lanes.md); turns of 1-2 ms with no
   checkpoint (the take loop) times the GET's 4-5 passes is the 8 ms.
-- E2 (`reads_stored` reads the raw map; `run.clear()` in a chore): ABBA beside 11 light holds,
-  inconclusive (7.5/10.1 ms against head 7.2/10.5 ms).
-- E3 (E2 plus a checkpoint after each taken object): running.
+- E2 (`reads_stored` reads the raw map; `run.clear()` in a chore): spin at 1 ms, 72 turns over 1 ms (head
+  1,686 in the same hold). GET p99 unchanged (7.5/10.1 against 7.2/10.5 ms, beside 11 light holds).
+- E3 (E2 plus a checkpoint after each taken object): spin 115 turns over 1 ms; its 4 turns of 16-22 ms hold no
+  RESTORE frame (captures are the spin probe's own fprintf to node.log). GET p99 unchanged.
+- E4/E5 controls: the client's own 1 ms ticker wakes 10-11 ms late at p99.9 in the RESTORE phase (0.5 ms in the
+  trivial phase); a GET touching no index (`/:none`, 400) has the same p99 as the document GET (8.3-8.9 ms).
+- E6 (cause): the probe ran the RESTORE client in the GET generator's Python loop, and building and sending each
+  5,000-document body stalls it 10-20 ms. RESTORE client in its own process: round-1 head 2.25/2.86 ms, round 2
+  1.71 ms, master 11.25 ms; A/A trivial 0.87-1.10 ms. Probe fixed (Xapiand:8961d6ae0); round 2 committed
+  (Xapiand:386235f70); master merged (Xapiand:a85559290).
 
 ## Next
 
-1. Jobs at 11252fa (slot rfo-ab, binaries built by 261116-084544-274492, done): strict
-   261116-084546-66f6bc, 261116-084548-54a3f4 (ABBA, A1 p99 + A2), 261116-084550-4e8f42 (spin, A1
-   turns); light 261116-084552-9a4f9d (items byte-identical, A3); build-test 261116-084554-997d0d;
-   e2e 261116-084554-c40c01 done exit 0. Combined verdict over the slot's .scratch/rs-abba1,
-   rs-abba2, rs-spin: `python3 harness/restore_stall_verdict.py DIR...`.
-2. Put the A/B table in the note's Fix section (the "is pending; its table goes here" line of
-   docs/perf/restore-stall.md) and update its Limits and Reproduce, commit (A4).
-3. Test committed (Xapiand:6e31d4d65): head job 261116-095950-a9b23d, mutant (master's
-   handler.{h,cc}) 261116-095955-dfb9cc, slot rfo-test.
+1. Jobs at Xapiand:a85559290 (BASE = master Xapiand:49a73300d): exclusive ABBA rounds 261116-152341-b40b49
+   (rs-abba1) and 261116-152344-390c05 (rs-abba2), spin 261116-152346-3f7758 (A1 turns); items byte-identity
+   261116-152349-798018 (A3); mutants 261116-152359-61089b (master's handler: results test fails) and
+   261116-152402-172aef (round-1 handler.cc: objects-off-loop test fails); build-test 261116-152404-9e4b93, e2e
+   261116-152405-fc88a5. None chained with --after.
+2. Put the A/B rounds' numbers in docs/perf/restore-stall.md's round-2 section (it cites the screening runs).
 
 ## Blocked on
 
@@ -57,10 +61,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261116-084546-66f6bc, 261116-084548-54a3f4 (ABBA p99), 261116-084550-4e8f42 (spin turns): queued |
-| A2 | 261116-084546-66f6bc, 261116-084548-54a3f4: queued |
-| A3 | test_a_restores_results_are_freed_as_one_buffer: head 261116-095950-a9b23d, --fails-without 261116-095955-dfb9cc (local: 4 blocks on head, 6,003 with master's handler); 261116-084552-9a4f9d (64 of 64 RESTORE responses byte-identical, base vs head); e2e 261116-084554-c40c01 passed; build-test 261116-084554-997d0d running; test_loop_yield and test_node passed locally |
-| A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" (A/B table pending) |
+| A1 | 261116-152341-b40b49, 261116-152344-390c05 (ABBA p99, exclusive); 261116-152346-3f7758 (spin turns): queued |
+| A2 | 261116-152341-b40b49, 261116-152344-390c05: queued |
+| A3 | e2e 261116-152405-fc88a5, build-test 261116-152404-9e4b93; items 261116-152349-798018; mutants 261116-152359-61089b, 261116-152402-172aef (--fails-without): queued |
+| A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" and "Fix, round 2: the 8 ms left" |
 
 ## Result
 
@@ -72,6 +76,14 @@ The msgpack library's eager 8 KB first chunk (every MsgPack value) is the lead's
 not this quest's.
 
 ## Rulings I made
+
+- Round 2: the probe runs its RESTORE client in a process of its own. Its in-process client stalled the GET
+  generator's loop 10-20 ms per chunk, so the 8 ms A1 failed on was mostly the probe's own (E4-E6). The criterion,
+  the verdict and its 2x bound are unchanged; the old A/B rows are measurements of the old probe.
+- Round 2 also takes the per-object MsgPack trees off the loop (raw `reads_stored`, the run freed in a chore, a
+  checkpoint per taken object): turns over 1 ms 1,686 -> 72-115 per 20 s RESTORE; p99 2.25-2.86 -> 1.71 ms in
+  screening. Not slicing: the loop no longer builds or frees the trees at all.
+- The objects-off-loop test bounds the loop's frees at 50 per object (34 measured, 75 on round 1).
 
 - Fixed at the allocation (one packed buffer), not off the loop or by slicing: the cost was 5,000
   8 KB zones, so removing them also removes the per-object zone made and freed while recording.
