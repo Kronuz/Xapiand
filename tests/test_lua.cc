@@ -284,6 +284,48 @@ void test_collection_runs_while_calls_are_suspended() {
 	}
 }
 
+void test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap() {
+	// Each call holds 36 MiB, under the 64 MiB cap alone and over it together: T10's library-call loops where
+	// fewer reactors than loops run (platform-rows run 7 answered [204, 204, 400, 400]).
+	Processor processor("halves",
+		"local t = {} for i = 1, 36 do t[i] = string.rep('x', 1048000 + i) end "
+		"local s = 0 for i = 1, 300000 do s = s + i end _doc.n = #t",
+		MsgPack::MAP());
+	REQUIRE(call(processor, MsgPack::MAP()).ok());   // alone, a call fits
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending a, b;
+	a.doc = MsgPack::MAP();
+	b.doc = MsgPack::MAP();
+	start(scheduler, a, processor, budget);
+	start(scheduler, b, processor, budget);
+	std::size_t resumes = scheduler.run_until([&] { return a.finished || b.finished; });
+	CHECK_GT(resumes, 4u);   // they overlapped
+	scheduler.run();
+	REQUIRE(a.finished && b.finished);
+	for (Pending* p : {&a, &b}) {
+		if (!p->outcome.ok()) {
+			std::printf("a concurrent call ended: %s\n", p->outcome.what.c_str());
+		}
+		CHECK(p->outcome.ok());
+		CHECK_EQ(p->doc.at("n").i64(), 36);
+	}
+}
+
+// What a trivial call costs, end to end on one thread (reported, not checked).
+void test_report_the_cost_of_a_trivial_call() {
+	Processor processor("cost", "_doc.x = _doc.x * 2", MsgPack::MAP());
+	constexpr int n = 20000;
+	const auto t0 = std::chrono::steady_clock::now();
+	for (int i = 0; i < n; ++i) {
+		MsgPack doc({{"x", i}});
+		MsgPack old_doc = MsgPack::MAP();
+		task::sync_wait(processor("PUT", doc, old_doc, MsgPack::MAP()));
+	}
+	const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - t0).count();
+	std::printf("a trivial call: %.2f us\n", static_cast<double>(ns) / n / 1000.0);
+}
+
 void test_writes_do_not_outlive_their_call() {
 	// Each call starts from the base: the last call's globals and library writes are gone.
 	Processor processor("persist",
@@ -1010,6 +1052,8 @@ TEST_MAIN(
 	test_interleaved_calls_keep_their_own_doc_and_globals,
 	test_the_calls_really_interleaved,
 	test_collection_runs_while_calls_are_suspended,
+	test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap,
+	test_report_the_cost_of_a_trivial_call,
 	test_writes_do_not_outlive_their_call,
 	test_the_environment_is_closed,
 	test_a_script_cannot_set_a_finalizer,
