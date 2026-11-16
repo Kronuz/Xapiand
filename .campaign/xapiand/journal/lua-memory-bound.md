@@ -1,6 +1,6 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs 261116-091202-d7bb0a 261116-091512-ce4041 261116-091556-27c491 261116-092016-425ef9 261116-092020-f5728f 261116-092023-4668af 261116-092027-f463a6 261116-092038-52142f 261116-092041-9abe61 261116-092044-f3b45f; CI runs 43917519747 43917520640
+State: waiting on jobs 261116-101214-ce0a1e 261116-101116-e8fd26 261116-101119-b19ec0 261116-101152-fa5074 261116-101126-2bc205 261116-101130-d8dfc8 261116-101133-813db6 261116-101136-539595 261116-101139-e87a30 261116-101225-c83216
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -43,6 +43,11 @@ the base each call, about the cost of a call or more); a pool of idle states per
 peak concurrency, and the cache would have to count and trim states inside a script).
 
 ## Evidence
+
+Resubmitted 10:12 after the first round was skipped (the mutant had no inverted exit; `--fails-without`
+expects exit 0 when the test fails). Mutant: 261116-101214-ce0a1e. Before (master src 2e30d05c6): A1 e8fd26,
+lua_mem_same b19ec0, T10 x2 fa5074. After: test_lua 2bc205 (A2, A4), A1 d8dfc8, lua_mem_same 813db6,
+T10 defaults 539595 (A3), T10 x2 e87a30. TSan c83216 (150 min, light). The ids in the table below are stale.
 
 | Criterion | Evidence |
 |---|---|
