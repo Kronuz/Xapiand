@@ -85,7 +85,11 @@ class Link:
         self.inbound.rate = rate
 
     def partition(self) -> None:
-        """Holds every byte in flight and every new connection until heal: a silent network, not a reset."""
+        """Holds every byte, FIN and reset in flight, and every new connection, until heal: a silent network.
+
+        Healing delivers what was held in order (bytes, then the FIN or reset behind them), as TCP's
+        retransmissions would to connections that outlived the partition; `reset()` models one that did not.
+        """
         self.open.clear()
 
     def heal(self) -> None:
@@ -128,9 +132,11 @@ class Link:
                 await self.open.wait()
                 destination.write(payload)
                 await destination.drain()
+            await self.open.wait()
             if destination.can_write_eof():
                 destination.write_eof()
         except (ConnectionError, OSError):
+            await self.open.wait()
             destination.transport.abort()
 
     async def close(self) -> None:

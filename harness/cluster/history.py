@@ -29,7 +29,8 @@ A history is one JSON line per invocation and one per completion:
 The checker treats each key as a register whose writes carry unique values, and runs three checks:
 
 - written: every read returns the initial null or a value some write on its key had begun to write.
-- prefix: no client reads a value that is definitely older than one it already read.
+- prefix: one order of the key's writes explains every read as a prefix of it (durability-modes
+  D10), monotonic on each node's launch and never behind a `quorum` write that node acknowledged.
 - linearizable: the writes and the reads at level `linearizable` linearize (Gibbons and Korach's zones).
 
 python3 -I harness/cluster/history.py FILE [--level prefix|linearizable]
@@ -43,7 +44,7 @@ import json
 import sys
 import time
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -75,6 +76,8 @@ class Op:
     invoke: float
     complete: float
     line: int
+    node: str | None = None  # the node that served or acknowledged it, when the history names one
+    launch: int = 1  # that node's launch: a restart starts the next
 
     @property
     def is_read(self) -> bool:
@@ -82,7 +85,8 @@ class Op:
 
     def describe(self) -> str:
         end = "?" if self.complete == INF else f"{self.complete:.3f}"
-        return f"{self.op}({self.value!r}) by {self.client} [{self.invoke:.3f}, {end}] line {self.line}"
+        where = f" on {self.node}#{self.launch}" if self.node else ""
+        return f"{self.op}({self.value!r}) by {self.client}{where} [{self.invoke:.3f}, {end}] line {self.line}"
 
 
 class Recorder:
@@ -92,10 +96,14 @@ class Recorder:
         self.path = path
         self.file: TextIO = path.open("a", buffering=1)
         self.start = time.monotonic()
+        self.last = -1.0
 
-    def record(self, client: str, op: str, key: str, value: Value, level: str, outcome: str, **extra: str) -> None:
+    def record(
+        self, client: str, op: str, key: str, value: Value, level: str, outcome: str, **extra: str | int
+    ) -> None:
         line = {"client": client, "op": op, "key": key, "value": value, "level": level, "outcome": outcome}
-        line["time"] = round(time.monotonic() - self.start, 6)
+        self.last = max(round(time.monotonic() - self.start, 6), round(self.last + 1e-6, 6))  # strictly increasing
+        line["time"] = self.last
         self.file.write(json.dumps(line | extra) + "\n")
 
     def close(self) -> None:
@@ -106,6 +114,7 @@ def load(lines: list[str]) -> list[Op]:
     """Pairs each client's invocations with their completions; an invocation left open is `info`."""
     ops: list[Op] = []
     pending: dict[str, tuple[int, dict[str, Any]]] = {}  # decoded JSON lines
+    finished: dict[str, float] = {}  # each client's last completion
     for number, text in enumerate(lines, 1):
         if not text.strip():
             continue
@@ -126,6 +135,8 @@ def load(lines: list[str]) -> list[Op]:
         if outcome == "invoke":
             if client in pending:
                 raise HistoryError(f"line {number}: {client} invokes while line {pending[client][0]} is open")
+            if float(entry["time"]) <= finished.get(client, -INF):  # a tie keeps the client's program order
+                entry = entry | {"time": finished[client] + 1e-9}
             pending[client] = (number, entry)
             continue
         if client not in pending:
@@ -135,6 +146,7 @@ def load(lines: list[str]) -> list[Op]:
             raise HistoryError(f"line {number}: completes a different operation than line {start}")
         value = entry["value"] if op in READS else call["value"]
         complete = INF if outcome == "info" else float(entry["time"])
+        finished[client] = float(entry["time"])
         ops.append(_op(call, value, outcome, complete, start))
     for start, call in pending.values():
         ops.append(_op(call, call["value"] if call["op"] == "write" else None, "info", INF, start))
@@ -155,6 +167,8 @@ def _op(call: dict[str, Any], value: object, outcome: str, complete: float, line
         invoke,
         complete,
         line,
+        str(call["node"]) if call.get("node") is not None else None,
+        int(call.get("launch", 1)),
     )
 
 
@@ -199,23 +213,78 @@ def _written(key: str, reads: list[Op], writes: dict[Value, Op]) -> list[str]:
 
 
 def _prefix(key: str, reads: list[Op], writes: dict[Value, Op]) -> list[str]:
+    """Consistent prefix (durability-modes D10): some one order of the writes explains every read.
+
+    A read of v sees the prefix that ends at v (null: the empty prefix). The order must put a write
+    that completed before another began first; each node's launch reads monotonically in real
+    time; and a node's read is never behind a `quorum` write that node acknowledged before it.
+    Each rule is a "before" edge between writes, so one order exists when the edges have no cycle.
+    A `none` write may commit after its acknowledgement, so it orders nothing by real time. A read
+    whose history line names no node may come from any replica, so only the order binds it.
+    """
     violations: list[str] = []
-    seen: dict[str, tuple[float, Op]] = {}  # client: the latest invocation among the writes it has read
-    for read in sorted(reads, key=lambda op: op.invoke):
-        if read.value is None:
-            if read.client in seen:
-                _, earlier = seen[read.client]
-                violations.append(f"{key}: prefix: {read.describe()} reads null after {earlier.describe()}")
-            continue
-        write = _source(read, writes)
-        if write is None:
-            continue
-        newest, earlier = seen.get(read.client, (-INF, read))
-        if write.complete < newest:
-            violations.append(f"{key}: prefix: {read.describe()} goes back before {earlier.describe()}")
-        elif write.invoke > newest:
-            seen[read.client] = (write.invoke, read)
+    edges: dict[Value, dict[Value, str]] = defaultdict(dict)  # a: {b: why a precedes b}
+
+    def before(a: Value, b: Value, why: str) -> None:
+        if a != b and a is not None:
+            if b is None:
+                violations.append(f"{key}: prefix: {why}")
+            else:
+                edges[a].setdefault(b, why)
+
+    for a, first in writes.items():
+        for b, second in writes.items():
+            settled = first.outcome == "ok" and first.level == "quorum"  # a `none` write may commit later
+            if settled and second.outcome != "fail" and first.complete < second.invoke:
+                edges[a].setdefault(b, f"{first.describe()} completed before {second.describe()} began")
+    seen = [read for read in reads if read.value is None or _source(read, writes) is not None]
+    by_replica: dict[tuple[str, int], list[Op]] = defaultdict(list)
+    for read in seen:
+        if read.node is not None:
+            by_replica[read.node, read.launch].append(read)
+    for replica in by_replica.values():
+        for first in replica:
+            for second in replica:
+                if first.complete < second.invoke:
+                    before(first.value, second.value, f"{second.describe()} reads behind {first.describe()}")
+    for read in seen:
+        for write in writes.values():
+            durable = write.outcome == "ok" and write.level == "quorum" and write.complete < read.invoke
+            if durable and read.node is not None and write.node == read.node:
+                before(
+                    write.value, read.value, f"{read.describe()} reads behind {write.describe()}, acknowledged there"
+                )
+    cycle = _cycle(edges)
+    if cycle:
+        steps = [edges[a][b] for a, b in itertools.pairwise(cycle)]
+        violations.append(f"{key}: prefix: no one order of the writes explains the reads: " + "; ".join(steps))
     return violations
+
+
+def _cycle(edges: dict[Value, dict[Value, str]]) -> list[Value]:
+    """A cycle of the graph as a closed walk [a, ..., a], or [] when it has none."""
+    state: dict[Value, int] = {}  # 1 on the stack, 2 done
+    for root in list(edges):
+        if root in state:
+            continue
+        stack: list[tuple[Value, list[Value]]] = [(root, list(edges[root]))]
+        path = [root]
+        state[root] = 1
+        while stack:
+            node, todo = stack[-1]
+            if not todo:
+                state[node] = 2
+                stack.pop()
+                path.pop()
+                continue
+            nxt = todo.pop()
+            if state.get(nxt) == 1:
+                return [*path[path.index(nxt) :], nxt]
+            if nxt not in state:
+                state[nxt] = 1
+                path.append(nxt)
+                stack.append((nxt, list(edges.get(nxt, {}))))
+    return []
 
 
 def _linearizable(key: str, reads: list[Op], writes: dict[Value, Op]) -> list[str]:
@@ -225,7 +294,9 @@ def _linearizable(key: str, reads: list[Op], writes: dict[Value, Op]) -> list[st
     completion to its latest invocation, forward when the first is earlier. The history is
     linearizable when no read precedes its write, no two forward zones overlap, and no backward
     zone lies inside a forward one. A write nobody read may be dropped (it could take effect last),
-    so only acknowledged `quorum` writes and the writes some read observed form clusters.
+    so only acknowledged `quorum` writes and the writes some read observed form clusters. A `none`
+    write is acknowledged before it commits (cluster-release D4), so an observed one completes at
+    infinity, as an `info` write does.
     """
     clusters: dict[Value, list[Op]] = defaultdict(list)
     violations: list[str] = []
@@ -239,7 +310,7 @@ def _linearizable(key: str, reads: list[Op], writes: dict[Value, Op]) -> list[st
     for value, write in writes.items():
         required = write.outcome == "ok" and write.level == "quorum"
         if required or value in clusters:
-            members[value] = [write]
+            members[value] = [replace(write, complete=INF) if write.level == "none" else write]
     forward: list[tuple[float, float, Value]] = []
     backward: list[tuple[float, float, Value]] = []
     for value, group in members.items():

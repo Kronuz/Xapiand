@@ -25,6 +25,7 @@
 #   run.sh history FILE [--level L]       check a recorded history (history.py)
 #   run.sh selftest [--mutant CHECK]      the checker against planted histories (selftest.py)
 #   run.sh bandwidth [--mbit 100] [...]   a capped proxy link against its cap (proxy.py)
+#   run.sh proxytest                      a partitioned link holds every event until heal (proxy_test.py)
 #
 # The command runs in its own process group with every node it starts; on exit, on a signal and
 # after CLUSTER_TIMEOUT seconds (default 1800) the whole group is killed, so no node outlives it.
@@ -38,7 +39,8 @@ case "${1:-}" in
 	history) script=history.py ;;
 	selftest) script=selftest.py ;;
 	bandwidth) script=proxy.py ;;
-	*) sed -n '22,30p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+	proxytest) script=proxy_test.py ;;
+	*) sed -n '22,31p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
 [ "$1" = bandwidth ] || shift
 
@@ -60,8 +62,8 @@ trap reap EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
-set -m  # the watchdog and its sleep share a group, so one kill ends both
-( sleep "${CLUSTER_TIMEOUT:-1800}"; echo "run.sh: timeout after ${CLUSTER_TIMEOUT:-1800} s" >&2; kill -TERM -- "-$child" 2>/dev/null ) &
+set -m  # the watchdog and its sleep share a group, so one kill ends both; it also ends with run.sh
+( t=0; while [ "$t" -lt "${CLUSTER_TIMEOUT:-1800}" ]; do sleep 1; kill -0 $$ 2>/dev/null || exit 0; t=$((t + 1)); done; echo "run.sh: timeout after ${CLUSTER_TIMEOUT:-1800} s" >&2; kill -TERM -- "-$child" 2>/dev/null ) &
 watchdog=$!
 set +m
 wait "$child"

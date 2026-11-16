@@ -13,6 +13,7 @@ harness/cluster/run.sh check --nodes 5 --expect-fail membership,read,search,aggr
 harness/cluster/run.sh history build/cluster/run-123/history.jsonl --level linearizable
 harness/cluster/run.sh selftest [--mutant written|prefix|linearizable]
 harness/cluster/run.sh bandwidth --mbit 100 [--streams 4]
+harness/cluster/run.sh proxytest                       # a partitioned link holds every event until heal
 ```
 
 `check` takes `--bin` (default `build/bin/xapiand`, or `$BIN`), `--out DIR` (default
@@ -46,7 +47,9 @@ directories unless `--keep`.
 `run.sh` starts the Python side in its own process group, and every node joins it. On exit, on
 SIGINT, SIGTERM or SIGHUP, and after `CLUSTER_TIMEOUT` seconds (default 1,800), `run.sh` sends the
 group SIGTERM, then SIGCONT and SIGKILL to whatever is left, so a paused node dies too. The
-Python side also stops its nodes on its own `--timeout` and on a signal.
+Python side also stops its nodes on its own `--timeout` and on a signal, and kills them within a
+second when run.sh itself dies without reaping (SIGKILL). A node that never answers `GET /` makes
+the run a harness error (exit 2), not a failed item.
 
 ### Faults
 
@@ -58,7 +61,7 @@ Scenarios drive `cluster.Cluster` and its `proxy.Mesh` from Python:
 | stop | `cluster.stop(node)` | SIGTERM, SIGKILL after 10 s |
 | pause | `cluster.pause(node)`, `cluster.resume(node)` | SIGSTOP and SIGCONT: a node that stops answering, then wakes with stale state |
 | restart | `cluster.restart(node)`, `cluster.launch(node)` | the same ports, data directory and arguments |
-| partition | `mesh.isolate(i)`, `link.partition()`; `mesh.heal(i)`, `link.heal()` | silence: bytes in flight and new connections wait, nothing is reset; healing resumes them |
+| partition | `mesh.isolate(i)`, `link.partition()`; `mesh.heal(i)`, `link.heal()` | silence: bytes, FINs and resets in flight wait, and a new connection is accepted by the proxy but reaches nothing; healing delivers what was held, in order, as TCP retransmission would to connections that outlived the partition |
 | reset | `link.reset()` | every connection on the link aborted, as by a RST |
 | bandwidth | `mesh.cap(mbit)`, `link.cap(mbit)` | each direction of a link paced to the cap, shared by its connections like one wire |
 
@@ -90,8 +93,8 @@ One JSON line per invocation and one per completion, in the order they happen:
 ```json
 {"client": "put@node1", "op": "write", "key": "cluster_probe/1", "value": "t1", "level": "quorum", "outcome": "invoke", "time": 0.104}
 {"client": "put@node1", "op": "write", "key": "cluster_probe/1", "value": "t1", "level": "quorum", "outcome": "ok", "time": 0.311}
-{"client": "get@node2", "op": "get", "key": "cluster_probe/1", "value": null, "level": "prefix", "outcome": "invoke", "time": 0.312}
-{"client": "get@node2", "op": "get", "key": "cluster_probe/1", "value": "t1", "level": "prefix", "outcome": "ok", "time": 0.320}
+{"client": "get@node2", "op": "get", "key": "cluster_probe/1", "value": null, "level": "prefix", "outcome": "invoke", "time": 0.312, "node": "node2", "launch": 1}
+{"client": "get@node2", "op": "get", "key": "cluster_probe/1", "value": "t1", "level": "prefix", "outcome": "ok", "time": 0.320, "node": "node2", "launch": 1}
 ```
 
 - `client`: one sequential client; it completes each operation before it invokes the next.
@@ -103,17 +106,29 @@ One JSON line per invocation and one per completion, in the order they happen:
   `linearizable`).
 - `outcome`: `invoke`, then `ok`, `fail` (it did not happen: a 4xx) or `info` (unknown: a timeout,
   a reset or a 5xx). An invocation without a completion is `info`.
-- `time`: seconds on one monotonic clock. Other fields (`node`) are kept for people and ignored.
+- `time`: seconds on one monotonic clock. A client's invocation at the same time as its previous
+  completion is taken as after it.
+- `node` and `launch` (optional, read from the invocation): the node that served the read or
+  acknowledged the write, and its launch, counted from 1, so a restart starts the next. A read
+  without a `node` may come from any replica. Other fields are ignored.
 
 The checker (`history.py`) runs three checks on each key:
 
 1. `written`: every read returns null or the value of a write that had begun and was not refused.
-2. `prefix`: no client reads a value older than one it read before, where a write is older when it
-   completed before the other began.
+2. `prefix`: consistent prefix as cluster-release D4 and durability-modes D10 define it, any
+   replica's snapshot of one log applied in order. One order of the key's writes must explain
+   every read as the prefix ending at its value (null: the empty prefix), where an acknowledged
+   `quorum` write that completed before another began comes first, each node's launch reads
+   monotonically in real time, and a node never reads behind a `quorum` write it acknowledged. A
+   restart may go back, never past that. The rules are edges between writes, so the check looks
+   for a cycle; `selftest.py` compares it with every order on 3,000 random histories.
 3. `linearizable`: the `quorum` writes acknowledged, the writes some read observed, and the reads
    at level `linearizable` linearize. It is Gibbons and Korach's zone test for registers with
-   unique writes: exact, and polynomial where a search for a linearization is exponential; `selftest.py` checks it against an
-   exhaustive search on 3,000 random histories. An unread `none` or `info` write may be lost.
+   unique writes: exact, and polynomial where a search for a linearization is exponential;
+   `selftest.py` checks it against an exhaustive search on 3,000 random histories. An unread
+   `none` or `info` write may be lost; an observed one may commit any time after it began, since
+   `none` acknowledges before commit. A write that only `prefix` reads observed is not in this
+   check, as D4 scopes linearizability to `quorum` writes and `linearizable` reads.
 
 `--level` checks every read at that level instead of its own. The self-test plants a lost
 acknowledged write, a stale read and a stale get-by-id from a partitioned old leader, which fail

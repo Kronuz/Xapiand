@@ -30,7 +30,8 @@
 7. history: every write and get-by-id above, recorded, passes history.py at its own levels.
 
 Exit status: 0 when every item passes (or exactly the --expect-fail items fail), 1 when items fail,
-2 when the harness itself fails (an item raised, the binary is missing, or the run timed out).
+2 when the harness itself fails (an item raised, a node never answered, the binary is missing, or
+the run timed out).
 
 harness/cluster/run.sh check [--nodes N] [--bin PATH] [--out DIR] [--expect-fail ITEM,...]
 """
@@ -112,16 +113,20 @@ class Checklist:
         self.tokens += 1
         token = f"t{self.tokens}"
         key = f"{index}/{doc_id}"
-        self.recorder.record(client, "write", key, token, self.write_level, "invoke", node=node.name)
+        self.recorder.record(
+            client, "write", key, token, self.write_level, "invoke", node=node.name, launch=node.launches
+        )
         response = await request(node.http, "PUT", f"/{index}/{doc_id}", doc | {"token": token})
         status = response.status
         outcome = "ok" if 200 <= status < 300 else "info" if status == 0 or status >= 500 else "fail"
-        self.recorder.record(client, "write", key, token, self.write_level, outcome, node=node.name)
+        self.recorder.record(
+            client, "write", key, token, self.write_level, outcome, node=node.name, launch=node.launches
+        )
         return Response(status, token if outcome == "ok" else None, response.error)
 
     async def get(self, client: str, node: Node, index: str, doc_id: str) -> tuple[Value, Response]:
         key = f"{index}/{doc_id}"
-        self.recorder.record(client, "get", key, None, self.read_level, "invoke", node=node.name)
+        self.recorder.record(client, "get", key, None, self.read_level, "invoke", node=node.name, launch=node.launches)
         response = await request(node.http, "GET", f"/{index}/{doc_id}{self.read_query}")
         value: Value = None
         outcome = "info"
@@ -131,7 +136,7 @@ class Checklist:
             outcome = "ok"
         elif response.status == 404:
             outcome = "ok"
-        self.recorder.record(client, "get", key, value, self.read_level, outcome, node=node.name)
+        self.recorder.record(client, "get", key, value, self.read_level, outcome, node=node.name, launch=node.launches)
         return value, response
 
     async def read_until(self, node: Node, index: str, doc_id: str, token: Value, seconds: float) -> Response | None:
@@ -388,7 +393,17 @@ class Checklist:
         )
 
 
-async def run(args: argparse.Namespace, out: Path) -> dict[str, Item]:
+async def orphaned(cluster: Cluster, main: asyncio.Task[object]) -> None:
+    """Kills the nodes and stops the run when run.sh dies without reaping the group (SIGKILL)."""
+    parent = os.getppid()
+    while os.getppid() == parent:
+        await asyncio.sleep(1)
+    print("== run.sh is gone: killing the nodes", flush=True)
+    cluster.kill_now()
+    main.cancel()
+
+
+async def run(args: argparse.Namespace, out: Path, missing: list[str]) -> dict[str, Item]:
     cluster = Cluster(args.bin, out, args.nodes, args.node_args, args.join_args)
     recorder = Recorder(out / "history.jsonl")
     checklist = Checklist(cluster, recorder, args)
@@ -398,9 +413,10 @@ async def run(args: argparse.Namespace, out: Path) -> dict[str, Item]:
     assert main is not None
     for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         loop.add_signal_handler(signum, main.cancel)
+    watchdog = asyncio.create_task(orphaned(cluster, main))
     try:
         print(f"== cluster checklist: {args.nodes} node(s), {args.bin}, out {out}", flush=True)
-        missing = await cluster.start()
+        missing += await cluster.start()
         for node in cluster.nodes.values():
             print(
                 f"   {node.name}: http {node.http} peer {node.peer} {'(never answered)' if node.name in missing else ''}"
@@ -417,17 +433,20 @@ async def run(args: argparse.Namespace, out: Path) -> dict[str, Item]:
             if item.skipped:
                 print(f"  skip: {item.skipped}", flush=True)
     finally:
+        watchdog.cancel()
         recorder.close()
         await cluster.close()
     return items
 
 
-def verdict(items: dict[str, Item], expect_fail: set[str], timed_out: bool) -> int:
+def verdict(items: dict[str, Item], expect_fail: set[str], timed_out: bool, missing: list[str]) -> int:
     failed = {name for name, item in items.items() if item.status == "fail"}
     errors = {name for name, item in items.items() if item.status == "error"}
     print("\n== items: " + ", ".join(f"{name} {item.status}" for name, item in items.items()))
-    if timed_out or errors:
-        print(f"=== VERDICT: HARNESS ERROR ({'timeout' if timed_out else 'errors in ' + ', '.join(sorted(errors))})")
+    if timed_out or errors or missing:
+        why = "timeout" if timed_out else f"errors in {', '.join(sorted(errors))}" if errors else ""
+        why = why or f"{', '.join(missing)} never answered GET /"
+        print(f"=== VERDICT: HARNESS ERROR ({why})")
         return 2
     if expect_fail:
         matched = failed == expect_fail
@@ -472,10 +491,11 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True)
     timed_out = False
     items: dict[str, Item] = {}
+    missing: list[str] = []
 
     async def bounded() -> dict[str, Item]:
         async with asyncio.timeout(args.timeout):
-            return await run(args, out)
+            return await run(args, out, missing)
 
     try:
         items = asyncio.run(bounded())
@@ -484,7 +504,7 @@ def main(argv: list[str]) -> int:
     except (asyncio.CancelledError, KeyboardInterrupt):
         print("== interrupted", flush=True)
         return 2
-    status = verdict(items, expect_fail, timed_out)
+    status = verdict(items, expect_fail, timed_out, missing)
     summary = {
         name: {"status": item.status, "error": item.error, "skipped": item.skipped} for name, item in items.items()
     }
