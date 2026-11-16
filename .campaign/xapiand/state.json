@@ -18791,9 +18791,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T08:24:49",
+      "updated": "2026-11-16T09:40:03",
       "worktree": "../Xapiand-wt/xapiand/strict-values"
     },
     "sync-at-first-commit": {
