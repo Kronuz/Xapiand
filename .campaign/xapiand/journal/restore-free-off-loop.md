@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-140557-b42752 261116-140600-dfb82e 261116-140602-394ce3 261116-140605-e630ee 261116-140607-21ac0f (build script fixed at 6c51552ef; build-test/e2e passed at 851d4d442)
+State: working (round 2: what holds the loop for the remaining ~8 ms; exclusive A/B 261116-140557-b42752 failed A1 at 8.0-8.2 ms against 3.39 ms, passed A2)
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,6 +17,20 @@ Fix (at the allocation): `_results` is now one packed MessagePack buffer (`_pack
 (offset, size) per object (`_at`); `results()` builds the response array once. No per-object
 MsgPack exists for results. Compiling locally (.scratch/build) to check, then build-test/e2e jobs
 and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdict.py).
+
+## Round 2 (lead, 11-16): the ~8 ms left
+
+- E1 (head, strict beside 4 light holds; .scratch/e1): `GET /` (reads no document) p99 in RESTORE 8.8 ms,
+  `GET /accounts/{id}` 9.0 ms: the delay is the loop, not the document read. Spin at 1 ms: 1,207 turns
+  over 1 ms in 20 s (1,004 of 1-2 ms, 21 of 2-4 ms, 7 over 4 ms). Stall captures by first app frame: 182
+  `take` (`reads_stored` -> `MsgPack::_init_map` builds each object's whole child map on the loop, and
+  `run.push_back` with a placeholder MsgPack, an 8 KB zone), 48 `Admitted::~Admitted` (`run.clear()`).
+  `sample`: `Admitted::~Admitted` 22.5% of the loop's busy samples (madvise 10.8%), `_init_map` 13.8%.
+  Model: a light GET waits one heavy turn per loop pass (task docs/lanes.md); turns of 1-2 ms with no
+  checkpoint (the take loop) times the GET's 4-5 passes is the 8 ms.
+- E2 (`reads_stored` reads the raw map; `run.clear()` in a chore): ABBA beside 11 light holds,
+  inconclusive (7.5/10.1 ms against head 7.2/10.5 ms).
+- E3 (E2 plus a checkpoint after each taken object): running.
 
 ## Next
 
