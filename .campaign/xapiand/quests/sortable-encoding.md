@@ -54,6 +54,7 @@ byte.
   format marker and no compatibility code: pre-release bytes change freely. Docs and new names use
   American spelling (serializer).
 - Lead, 11-13: exact-id-keys folds in; its files join this set at start.
+- Lead, 11-16, from the design re-check (APPROVE at 3f95a5edd): F3, T6 adds a near-midpoint decimal string (e.g. `9007199254740993.0000001`) as a value and as a range bound, so double rounding cannot return unseen; F13, the changelog (A11) and `docs/mechanisms/value-encoding.md` say to dump every index with the old build, start the new build on an empty data directory, then restore (the `.xapiand/indexes` registry is written with the old codec too).
 - Lead, 11-16: A8 rests on the `no-gpl` check (there is no `harness/seam_check.sh`). A12's `docs/**` and `harness/**` join the file set once platform-rows (which holds `harness/**` and two `docs/dev` pages) lands; do the rename there last.
 
 - Lead, 11-10 (D52): the switch also updates the docs pages that describe value encoding and the About page's licence sentence (written by docs-site-refresh against the old encoding); they join the file set once docs-site-refresh lands.
