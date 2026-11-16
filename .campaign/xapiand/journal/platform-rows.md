@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI runs 43828387680 (FreeBSD) 43828387576 (arm64)
+State: waiting on CI runs 43834602347 (FreeBSD) 43834602759 (arm64)
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,7 +19,7 @@ FreeBSD rows (run 43828387680), logs printed by the workflow:
 - t2_e2e_asan: 5 of 761 assertions fail; the detail was not printed. The job now prints assert.txt for this row. UNCLASSIFIED until the next run.
 - Passing: t1_strict_owed, t2_stored_asan, t2_restore_stream_asan (info), t7_asan, t8 light and heavy, x6_shutdown.
 
-Pushed the fixes; runs below.
+Pushed the fixes; re-runs FreeBSD 43834602347, arm64 43834602759.
 
 ## Next
 
