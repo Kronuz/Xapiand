@@ -1,17 +1,23 @@
-> Status: DRAFT (2026-11-03) designing (ready for preliminary review). Workstream sortable-encoding, branch `design/sortable-encoding` from Xapiand:432299ed0. Phase 8a's first item (`docs/status/road-to-release.md:32`). Adopts the bytes of `Kronuz/sortable` (sortable:67b2a90) and, on Q1 (a), supersedes the unlanded `docs/design/sortable-codec.md` revision 2 (branch `design/sortable-codec`).
+> Status: DRAFT (2026-11-16) revised for the owner's D87 (ready for the design reviewer's confirmation). Workstream sortable-encoding, quest branch `quest/xapiand/sortable-encoding`. Phase 8a's first item (`docs/status/road-to-release.md:32`). Adopts the bytes of `Kronuz/sortable` (pinned at sortable:915b014; the bytes are those of sortable:67b2a90) and supersedes the unlanded `docs/design/sortable-codec.md` revision 2 (branch `design/sortable-codec`).
 
 # A clean-room, memcmp-ordered number encoding for Xapiand
 
 Xapiand turns every number it sorts, ranges, or looks up by term into bytes whose `memcmp` order is the
 numeric order. Today that is `sortable_serialise`, a GPL file of Xapian origin, and its Python twin in the
 client. This design replaces both with MIT code: the `Kronuz/sortable` codec (exact, cross-type, 1 to 10
-bytes) in C++, a clean-room Python port with a cross-language identity test, and a per-shard format marker
-so a new binary refuses old bytes instead of misreading them.
+bytes) in C++ and a clean-room Python port with a cross-language identity test. There is no format marker
+and no compatibility with earlier bytes: formats are open before the release (owner, D87).
 
-**Recommendation.** Use the variable-length codec, not the "8-byte map" the plan names (Q1). No 8-byte code
-can be exact across `int64`, `uint64` and `double` together, and Xapiand's slots and terms mix the three. On
-430,166 real numbers the variable form averages 4.25 B per value; any 8-byte form is 88% larger per value,
-26% larger per distinct value and 32% per distinct term (`sortable-encoding/sizes.txt`).
+**The owner's answers (D87).** Q1: the variable-length codec, held to a speed gate (it must not become a
+bottleneck). Q2: Python names that read well, with no aliases for the old ones. Q3: confirmed, NaN and an
+out-of-range integer answer 400 and -0.0 indexes as 0. No marker and no compatibility code. D91 puts the
+cluster before the format freeze; this encoding stays open until then and is embedded in the future journal
+commands.
+
+**Why variable.** No 8-byte code can be exact across `int64`, `uint64` and `double` together, and Xapiand's
+slots and terms mix the three. On 430,166 real numbers the variable form averages 4.25 B per value; any
+8-byte form is 88% larger per value, 26% larger per distinct value and 32% per distinct term
+(`sortable-encoding/sizes.txt`).
 
 **Clean room.** Not opened: `src/sortable_serialise.{cc,h}`, anything of Xapian, and
 `contrib/python/xapiand-py/xapiand/utils/sortable.py`. One `git grep` printed the lines of ARCHITECTURE.md
@@ -22,20 +28,21 @@ Lucene's `NumericUtils`.
 
 ## Where numbers are encoded today
 
-26 direct calls in 9 files, grep at Xapiand:432299ed0, excluding the two GPL files:
+Direct calls at Xapiand:cd9c216b5, excluding the two GPL files. Ids already use `sortable` (exact-id-keys,
+Xapiand:73fbcb48d: `Serialise::id`, `Unserialise::id`).
 
 | Use | Sites | Type |
 |---|---|---|
-| Field values: integer, positive, floating, datetime (µs-rounded seconds) | `serialise.h:140, 172, 179, 186`; decoded at `:275, 292, 311, 316` | `int64`, `uint64`, `long double`, `double` |
-| time and timedelta | `serialise.cc:1145, 1152, 1164, 1171` | `double` |
-| Numeric document ids (`N` term, `DB_SLOT_ID`) | `database/shard.cc:113, 909`, `handler.cc:519, 1836`; literal zero `"N\x80"` at `handler.cc:428, 435, 2236`, `schema.cc:2985, 5291` | `double` |
-| Versions (`DB_SLOT_VERSION`) | `shard.cc:99`, `handler.cc:340, 372, 1914`, `search_views.cc:1878, 2032`, `schemas_lru.cc:123`, `index_resolver_lru.cc:340`, `engine/strata/shard.cc:632` | `uint64`, or `double` (`strata/shard.cc:632`) |
-| `get_hashed` | `database/utils.h:104`; no caller (only an include, `cast.h:28`) | `uint64` |
+| Field values: integer, positive, floating, datetime (µs-rounded seconds) | `serialise.h:141, 173, 180, 187`; decoded at `:292, 309, 328, 333` | `int64`, `uint64`, `long double`, `double` |
+| time and timedelta | decoded at `serialise.cc:1228, 1235, 1247, 1254` | `double` |
+| Versions (`DB_SLOT_VERSION`) | `database/shard.cc:96`, `handler.cc:323, 491, 2048`, `search_views.cc:1904, 2059`, `schemas_lru.cc:124`, `index_resolver_lru.cc:340`, `engine/strata/shard.cc:634` | `double` |
+| `get_hashed` | `database/utils.h:103-104`; no caller (only an include, `cast.h:28`) | `uint64` |
+| Sort sentinels | `multivalue/keymaker.h:47-48` | `double` |
 
 Everything else reaches the codec through `Serialise::`/`Unserialise::`: accuracy terms
-(`generate_terms.cc`), sort keys and distances (`keymaker.cc`, sentinels `keymaker.h:47-48`), ranges
-(`range.cc:92-121`), aggregations (`aggregations/metrics.h:159-189`). Nothing persists a decoded number;
-the document's own MsgPack data stays the source of truth.
+(`generate_terms.cc`), sort keys and distances (`keymaker.cc`), ranges (`range.cc:92-121`), aggregations
+(`aggregations/metrics.h`). Nothing persists a decoded number; the document's own MsgPack data stays the
+source of truth.
 
 The types meet in one order in four places:
 
@@ -59,12 +66,13 @@ than 2^64 codes, so any 8-byte encoding of both is lossy or orders them in separ
 per-type maps (`ordered.hh:34, 38`: `i64` sign-flipped, `f64` Lucene-style) encode 5 as `8000000000000005`
 and 5.0 as `c014000000000000`, breaking the first three meeting points above; mapping everything through `f64`
 keeps the order but merges integers above 2^53 (snowflake ids, nanosecond times, hashes), short of
-Lucene's exact `long`. Q1 asks the owner.
+Lucene's exact `long`.
 
 **D2. Variable width: the `Kronuz/sortable` codec, bytes unchanged.** The library is published, header-only,
 MIT, CI-green on Linux x86_64 and arm64, macOS, FreeBSD and sanitizers (`sortable/docs/status/sortable.md`);
-its bytes are fixed by `tools/model.py` and were validated by the architect's re-check of the sortable-codec
-design. Real data, `sizes.py` (mean bytes; terms are the exact-value term plus Xapiand's accuracy terms):
+its bytes are fixed by `tools/model.py`, and `test/vectors.txt` and `test/reject.txt` have the sha256
+`c4d4a425c09e6d3e...` and `a679d215ec843a0f...` from sortable:67b2a90 to sortable:915b014. Real data,
+`sizes.py` (mean bytes; terms are the exact-value term plus Xapiand's accuracy terms):
 
 | Set | Values | Value B | Distinct value B | Distinct term B |
 |---|---|---|---|---|
@@ -80,9 +88,13 @@ design. Real data, `sizes.py` (mean bytes; terms are the exact-value term plus X
 A fixed 8 bytes is 1.88x the variable bytes per value, 1.26x per distinct value and 1.32x per distinct
 term; an exact fixed 10 bytes (sign, 15-bit exponent, 64-bit significand) is 2.35x, 1.57x and 1.65x.
 strata stores a `bytes` slot as a per-segment sorted dictionary plus ordinals (phase-4 D3a), so distinct
-values and distinct terms are what reach disk; the on-disk effect after strata's own compression is an
-estimate until T7 measures it. Fixed width would buy a simpler decoder, but the variable one already
-exists with exhaustive and fuzz proof.
+values and distinct terms are what reach disk.
+
+*Speed (D87's gate).* Stored values decode with the trusted typed conversions (`sortable::to_double`,
+`to_int64`, `to_uint64` on bytes), which keep the read bounds and skip the canonical checks; bytes from
+outside the program (ids in a request, user-supplied serialized values) use the strict `decode`. sortable's
+`docs/perf/` measures both against the old codec's public API on a frozen real-value set
+(`data/real-values.tsv.gz`, 434,977 values); T8 repeats it in Xapiand at named commits.
 
 **D3. The encoding.** A finite nonzero |v| = 2^E x (1 + f), f with L <= 63 fraction bits. The first byte is a
 tag, then a 2-byte escape field (extreme exponents only), then the tail: n = ceil(L/8) bytes of f x 2^(8n),
@@ -98,7 +110,7 @@ big-endian, last byte nonzero, empty for a power of two.
 | +inf, -inf | `feffff`, `010000` | |
 | NaN (any payload or sign) | `ff` | |
 
-Integers take their exact magnitude, a `double` its exact binary value (a subnormal normalises below
+Integers take their exact magnitude, a `double` its exact binary value (a subnormal normalizes below
 E = -1022). `0x00` and `0x7f` are never written, so nothing collides with StringList's `0x00` marker.
 
 *Order, proof sketch.* (1) Tags rise with the exponent for positives, `0x82..0xFD` between the escapes
@@ -112,111 +124,91 @@ negative tag is below `0x80` and every positive above; NaN is `0xFF`, above +inf
 exponent and one fraction, so one encoding, whatever their type. The encoding is not prefix-free; the key
 maker already frames concatenated keys (`0x00` escaped).
 
-**D4. Values Xapiand will not store.** Carried from the lead's rulings on the sortable-codec design
-(2026-10-27), reversible before release: a NaN field value answers 400; -0.0 indexes as 0; a `uint64` of
-2^63 or more given to an integer field answers 400 instead of wrapping negative (`serialise.cc:440-441`). Q3.
+**D4. Values Xapiand will not store (D87 Q3).** A NaN field value or range bound answers 400; -0.0 indexes
+as 0; a `uint64` of 2^63 or more given to an integer field answers 400 instead of wrapping negative
+(`serialise.cc:440-441`).
 
 **D5. The decoder is strict.** `sortable::decode` accepts exactly the outputs of `encode`: it rejects the
 empty input, the unwritten tags, bytes after zero, NaN or an infinity, a missing or non-canonical escape
 field, a tail over 8 bytes or ending in `00`, 64 fraction bits, and any value that is neither a `double` nor
 an integer in [-2^63, 2^64) (nine rules, `sortable/docs/mechanisms/sortable.md`). It reads only inside its
 input, allocates nothing, never throws. Its result converts exactly (`to_int64`, `to_uint64`, `to_double`)
-or saturating (`saturate_int64`, `saturate_uint64`, today's `clamp_int64` semantics, `serialise.h:296-309`).
-In Xapiand a rejected stored value raises `SerialisationError` naming the slot.
+or saturating (`saturate_int64`, `saturate_uint64`, today's `clamp_int64` semantics, `serialise.h:313-326`).
+In Xapiand a rejected value raises `SerializationError` naming it.
 
-**D6. Xapiand's switch.** `Serialise::integer/positive/floating/timestamp` and the `Unserialise` twins call
-`sortable`; the floating path narrows `long double` to `double` (field values are `f64` already,
-`schema.cc:5359`). Every direct call in the first table moves to them, ids and versions encode their
-integers directly, not through `double`. The `"N\x80"` literals stay correct (zero is `80`) and become a
-named constant. `MAX_CMPVALUE`/`MIN_CMPVALUE` become `sortable::max_finite`/`min_finite`.
-`get_hashed` is deleted. `src/sortable_serialise.{cc,h}` are removed with `git rm`, unopened; the
-ARCHITECTURE.md, AGENTS.md, README.md and docs-site paragraphs about the old routine are replaced whole
-from this design, not edited.
+**D6. Xapiand's switch.** `Serialize::integer/positive/floating/timestamp` and the `Unserialize` twins call
+`sortable`, and every direct call in the first table moves to them; versions encode their `uint64` directly,
+not through `double`, through `Serialize::version`/`Unserialize::version`, which the engine adapter
+(`engine/strata/shard.cc`) also calls. The floating path is `double` end to end: the `long double` overloads
+go, and a string parses with strict_stod, so one decimal string gives one value on every platform and
+equals the same number sent as JSON or as a range bound (review F3). An absent range bound is unbounded: it
+encodes as -inf or +inf for every numeric type, so `x >= 5` includes +inf and a range over the shared slot
+answers the same whatever the query's field type (F4c). `MAX_CMPVALUE`/`MIN_CMPVALUE` become
+`sortable::max_finite`/`min_finite`. `get_hashed` is deleted. `src/sortable_serialise.{cc,h}` are removed
+with `git rm`, unopened; the ARCHITECTURE.md, AGENTS.md, README.md and docs-site paragraphs about the old
+routine are replaced whole from this design, not edited.
 
 **D7. The Python client: a clean-room port.** `contrib/python/xapiand-py/xapiand/utils/sortable.py` is
-removed with `git rm`, unopened, and a new module is written from D3 and D5 alone:
-`encode(int | float) -> bytes` and `decode(bytes) -> int | float | None`. Integer arithmetic only: a
-`float` is split with `struct.pack(">d")`, an `int` must lie in [-2^63, 2^64) (else `ValueError`), `bool`
-raises `TypeError`. `decode` returns `int` for an integer in [-2^63, 2^64) and `float` otherwise (exact,
-by D5's last rule), `None` for anything D5 rejects. T3 proves its bytes equal the C++ library's. The
-exported names change with it (Q2).
+removed with `git rm`, unopened, with its two exports. The port written from D3 and D5 alone (branch
+`codex/py-sortable`, Xapiand:f4b0ee4fa) becomes `xapiand/sortable.py`: `encode(int | float) -> bytes` and
+`decode(data: bytes, kind: type[int] | type[float])`. Integer arithmetic only; an `int` must lie in
+[-2^63, 2^64) (else `ValueError`), `bool` raises `TypeError`; `decode` raises `ValueError` for anything D5
+rejects and for a value that is not exactly an integer when `kind` is `int`, and rounds to nearest even for
+`float`, as `to_double` does.
 
-**D8. A format marker per shard.** Formats are open until the release, so old bytes are not upgraded; they
-are refused. Every shard carries metadata `_format`, Xapiand's index-format generation: absent means 0
-(`sortable_serialise` bytes), the switch writes `"1"`, and any later pre-release byte change bumps it. A build
-accepts only its own generation. `ShardEndpoint::open_index_blocking` writes it through the engine
-(`engine/shard.h:118`) when the open created the shard (`Opened::created`, `engine/open.h:44`, after
-`database/shard.cc:494`) and checks it before the WAL replay (`:515`); another generation on a shard with
-documents or a WAL refuses the open with "index X was written by format generation N; dump it with the
-build that wrote it and restore it with this one", and an empty shard is adopted. The HTTP metadata API
-(`search_views.cc:1171` guards only `schema`, `wal`, `metrics`) also refuses writes to `_format`.
-There are no replicas or remote shards before Phase 7b, so the single open path covers every shard.
+**D8. No format marker, no compatibility (D87).** A build reads only the bytes it writes. Indexes written
+before the switch (developer data: no release shipped them) are deleted and re-created, or dumped with the
+old build and restored with the new one; dumps hold typed MsgPack (`changelog.md:182`), so they cross the
+switch unchanged. Any later pre-release byte change does the same. Xapian-era data (alpha.9, alpha.10) is
+already refused at startup and moves by dump and restore (`changelog.md:113-116`). With no marker, the
+design review's F1 (the marker's crash window), F8, F9 and F10 have nothing to apply to, and the marker's
+gate row is gone (T8 is now speed).
 
-**Migration cost.** Xapian-era data (alpha.9, alpha.10) is already refused at startup and moves by dump and
-restore (`changelog.md:113-116`); dumps hold typed MsgPack and carry `_version` (`:182`), so this design adds
-nothing there. Strata indexes written before the switch (developer data: no release shipped them) are
-refused by D8 and move the same way: one dump with the old build and one restore, at the restore's
-indexing rate (T7 measures it).
+## Gate rows
+
+T1 and T3 run in Xapiand's own CTest, so every CI platform and sanitizer job runs them on every push (review
+F2). Both read the fetched library's fixtures, never a copy, and assert their sha256 (D2), so a pin bump or
+a client edit that changes bytes fails a check.
+
+| Row | Target | Procedure |
+|---|---|---|
+| T1 Order | `memcmp` agrees with an exact comparator on every adjacent pair, any mix of types; equal numbers give equal bytes; 0 failures | CTest `sortable_property`, built from `${sortable_SOURCE_DIR}/test/property.cc`: the edge set (2^k + d for k 0..63, d in [-1024, 1024], both signs; every 2^e for e -1074..1023 with `nextafter` neighbours; fractions of every length at the window edges) plus 3x10^6 random values with a fixed, printed seed (F11). A Xapiand unit test runs every line of `vectors.txt` through `Serialize::`/`Unserialize::` and checks the bytes, adjacent order and cross-type equality |
+| T2 Round trip | `decode(encode(x)) == x` exactly (-0.0 to 0, NaN to one NaN) on T1's set; all 2^32 binary32 values widened; 0 failures | sortable's own CI and its exhaustive run (done at sortable:937c7c6; the bytes are unchanged since) |
+| T3 C++ equals Python | The client's `encode` reproduces every line of `vectors.txt` (113,491); for 10^6 seeded random inputs (half integers with log-uniform magnitudes in [-2^63, 2^64) (F12), half random binary64 bit patterns) the C++ and Python bytes are identical; `decode` accepts and rejects the same inputs over every 0-2 byte string, every 3-byte string starting with an escape tag, `reject.txt`, and 10^5 seeded mutations of valid encodings, with equal results | CTest `sortable_xlang`: builds `sortable_cli` from `${sortable_SOURCE_DIR}/tools/cli.cc` and runs `tests/sortable_xlang.py SORTABLE_SOURCE_DIR SORTABLE_CLI` (stdlib only, the client module loaded by path) |
+| T4 Decoder fuzz | One CPU-hour, 0 crashes, 0 accepted inputs that fail to re-encode to themselves, ASan and UBSan clean | sortable's own (done at 2e85e15 and, with the trusted conversions, at 2299f14); rerun if `sortable.hh` changes |
+| T5 Same answers | Docs E2E: every assertion passes and response bodies equal the pre-switch run except raw-byte fields; real corpus: every sort and range answer equals the pre-switch answer, or differs only where brute-force truth says the old one was wrong | `harness/e2e_capture.sh` with each binary, then `harness/bodydiff.py`; `tests/sort_range_identity.py OLD NEW` restores accounts, cities and a frozen file-metadata ndjson (digest checked, F6), runs ascending and descending sorts per numeric and datetime field, 1,000 seeded ranges and a seeded geo set over cities (F5), compares hit ids, and checks each difference against brute force |
+| T6 Exact at the old failures | Range, sort and min/max answers equal brute force on 2^k + d (k 31..63), -(2^a) - d (a 30..62), 1 + 2^-k, negative fractions (pre-1970 datetimes with sub-second parts), ids and versions above 2^53; float bounds on integer fields; open bounds with ±inf values; one field typed integer in one index and floating in another under one wide search; the global numeric slot; NaN bounds answer 400; 0 wrong (F4) | `tests/numeric_range_check.py` (the harness check extended), a sort check and an aggregation check |
+| T7 Size and cost (the lead, on `main`) | On-disk index size and the bulk-index plus query mix before and after, the honest magnitude either way, the disk delta in dollars; the restore rate that prices re-creating an index | `harness/loadtest.py` both builds, interleaved, under `quiet exclusive`; `du` of the data directory after `FLUSH` of the restored accounts, cities and the frozen file corpus, first on the branch (F7) |
+| T8 Speed (D87) | Encode and decode ns per value at or below the old codec on the real-value set; indexing, sort and range throughput at or above master's, outside the A/A band only if faster | a Xapiand micro-benchmark over `Serialize::`/`Unserialize::` and `harness/loadtest.py`, under `quiet exclusive`, at named commits |
+| T9 No GPL | No `sortable_serialise` in `src/` or `contrib/`; both GPL files gone; ARCHITECTURE and the license note updated | `git grep -n sortable_serialise -- src contrib` prints nothing (the quest's `no-gpl` check) |
+| T10 Platforms | T1, T3 and the unit tests pass on every CI platform and sanitizer job | each repository's CI |
 
 ## Changes to other designs
 
 1. prospect `docs/design/phase-4.md` D3a ("Xapiand's replacement", `:149-155`), strata `docs/PLAN.md:679-680`
-   and `docs/status/road-to-release.md:32` name "the 8-byte map"; on Q1 (a) they name `Kronuz/sortable`.
-   D3a's typed columns keep the fixed per-type maps, which are column keys, not byte strings.
-2. `docs/design/sortable-codec.md` revision 2: D1-D7 stand (this design adopts them); D9-D11 (in-place
-   upgrade of Xapian shards, cluster and remote-protocol bumps) are obsolete since X1 deleted Xapian and the
-   cluster; D8 here replaces its D9 marker. The lead relabels it SUPERSEDED on Q1 (a).
+   and `docs/status/road-to-release.md:32` name "the 8-byte map"; they name `Kronuz/sortable`. D3a's typed
+   columns keep the fixed per-type maps, which are column keys, not byte strings; D3a should say which
+   Xapiand fields, if any, use them, so no later quest adds a third number encoding.
+2. `docs/design/sortable-codec.md` revision 2 is SUPERSEDED by this design (the lead relabels it).
 3. The license audit: `contrib/python/xapiand-py/setup.py:24` says Apache 2.0 while the package's headers
    say MIT.
 
-## Gate rows
+## Steps
 
-| Row | Target | Procedure |
-|---|---|---|
-| T1 Order | `memcmp` agrees with an exact comparator on every adjacent pair, any mix of types; equal numbers give equal bytes; 0 failures | `sortable_property` (`sortable/test/property.cc`): edge set (2^k + d for k 0..63, d in [-1024, 1024], both signs; every 2^e for e -1074..1023 with `nextafter` neighbours; fractions of every length at the window edges; runs `1 0^r 1`, `1^r`) plus 10^7 random values per type and 10^7 cross-type pairs, seed printed |
-| T2 Round trip | `decode(encode(x)) == x` exactly (-0.0 to 0, NaN to one NaN) on T1's set; all 2^32 binary32 values widened; 0 failures | `sortable_property`; `cmake -DSORTABLE_EXHAUSTIVE=ON` then `sortable_exhaustive_float` once under `quiet light` |
-| T3 C++ equals Python | The client's `encode` reproduces every line of `sortable/test/vectors.txt` (113,491); for 10^6 seeded random inputs (half integers in [-2^63, 2^64), half random binary64 bit patterns, passed as hex bits) the C++ and Python bytes are identical; `decode` accepts and rejects the same inputs over every 0-2 byte string, every 3-byte string starting with an escape tag, `test/reject.txt`, and 10^6 seeded mutations of valid encodings, with equal results | `contrib/python/xapiand-py/tests/test_sortable.py` (vectors, rejects); `harness/sortable_xlang.py SORTABLE_CLI` drives a new `sortable/tools/cli.cc` (`encode`/`decode` over stdin lines) against the client and prints the first mismatch |
-| T4 Decoder fuzz | One CPU-hour, 0 crashes, 0 accepted inputs that fail to re-encode to themselves, ASan and UBSan clean | `sortable_fuzz -max_total_time=3600 -timeout=5` (`sortable/fuzz/decode_fuzz.cc`) at the gate's commit, under `quiet light` |
-| T5 Same answers | Docs E2E: every assertion passes and response bodies equal the pre-switch run except raw-byte fields; real corpus: every sort and range answer equals the pre-switch answer, or differs only where brute-force truth says the old one was wrong | `harness/e2e_capture.sh` with each binary, then `harness/bodydiff.py`; new `harness/sort_range_identity.py OLD NEW` restores accounts, cities and a 200,000-file metadata corpus, runs ascending and descending sorts per numeric and datetime field and 1,000 seeded ranges, compares hit ids, and checks each difference against brute force |
-| T6 Exact at the old failures | Range, sort and min/max answers equal brute force on 2^k + d (k 31..63), -(2^a) - d (a 30..62), 1 + 2^-k, ids and versions above 2^53; float bounds on integer fields; the global numeric slot; 0 wrong | `harness/numeric_range_check.py` extended with these values, a sort check and an aggregation check |
-| T7 Size and cost (the lead, on `main`) | On-disk index size and the bulk-index plus query mix before and after, the honest magnitude either way; the restore rate that prices the migration | `harness/loadtest.py` both builds, interleaved, under `quiet exclusive`; `du` of the data directory after `FLUSH` |
-| T8 Marker | A pre-switch index (generation 0) with documents, and one with only a WAL, is refused by the switch build with the D8 message, and the switch's index by a step-2 build; an empty unmarked shard is adopted; a new shard has `_format` after its first commit; `_format = "2"` is refused; a metadata write of `_format` answers 400; RESTORE into a fresh index marks every shard | `harness/format_marker_check.sh OLD NEW`; unit tests for the adoption rule |
-| T9 No GPL | No `sortable_serialise` in `src/` or `contrib/`; both GPL files gone; ARCHITECTURE and the license note updated | `git grep -n sortable_serialise -- src contrib` prints nothing, added to `harness/seam_check.sh` |
-| T10 Platforms | T1, T2's CI part, T3 and the unit tests pass on every CI platform and sanitizer job | each repository's CI; `cpp-libraries/tools/preflight.sh` for `sortable` |
-
-## Open questions for the owner
-
-**Q1. Width.** (a) Variable, `Kronuz/sortable` (D2): exact, cross-type, 4.25 B per value on real data.
-(b) 8 bytes through `f64` for every number: one shape with strata's `f64` columns, but integers above 2^53
-merge and values cost 1.88x. (c) 8 bytes per type, with Xapiand's shared numeric slot, ctype and accuracy
-prefixes split by type: exact, but a field typed integer in one index and floating in another no longer
-sorts as one, which narrows wide searches. Recommendation: (a).
-
-**Q2. The Python client's names.** (a) `xapiand.utils.sortable.encode` and `decode`, the C++ names, and the
-old exports deleted (no caller in the client). (b) Keep `sortable_serialise`/`sortable_unserialise` with
-the new bytes. Recommendation: (a): the bytes change anyway; old names would promise a compatibility they lack.
-
-**Q3. D4's carried rulings.** Confirm NaN and an out-of-range integer answer 400 and -0.0 indexes as 0.
-Recommendation: confirm; JSON has no NaN, and the alternative to the 400 is a silently negative number.
-
-## First steps
-
-1. **The library's remaining proof** (developer, `sortable` repository; starts now): T2's exhaustive
-   binary32 run, T4's CPU-hour, and `tools/cli.cc` for T3. Review: the security reviewer's decoder-safety
-   review (the floor for a decoder on users' disks).
-2. **One seam and the marker** (developer, branch `phase8/sortable-encoding`; starts now, no byte change):
-   move every direct call of the first table behind `Serialise::`/`Unserialise::` without opening the GPL
-   files, delete `get_hashed`, name the zero literal, and build D8 at generation 0 with T8's cases that
-   need no switch.
-3. **The switch** (same branch, after Q1): D5-D7 with T1-T6, T9 and T10; `git rm` both GPL files and the
-   Python module; the clean-room Python port and T3's harness; changelog `[Unreleased]` (exact numeric order;
-   earlier strata indexes need a dump and restore); a how-it-works note `docs/mechanisms/value-encoding.md`;
-   the extraction ledger row. Review: one code review; the lead measures T7 on `main`.
+1. **The library's proof** (done in `sortable`: T2's exhaustive run, T4's CPU-hours, `tools/cli.cc`). In
+   Xapiand: T1's and T3's CTests and the Python port, with no byte change.
+2. **One seam** (no byte change): every direct call of the first table behind `Serialise::`/`Unserialise::`
+   (versions through `version`), `get_hashed` deleted.
+3. **The switch** (after the design review confirms this revision): D4-D7 with T1-T6, T8 and T9; `git rm`
+   both GPL files and the Python module; the American-spelling rename (D88); changelog `[Unreleased]`
+   (exact numeric order; earlier strata indexes are re-created or restored); a how-it-works note
+   `docs/mechanisms/value-encoding.md`; the extraction ledger row. Review: one code review; the lead
+   measures T7 on `main`.
 
 ## Limits
 
-1. Silent: a build older than D8 opening a generation-1 index reads wrong numbers with no error (a
-   downgrade); the changelog says a downgrade is a dump and a restore. Step 2 lands before step 3 so every
-   build from then on checks.
+1. Silent: a build from before the switch opening an index written after it, or the reverse, reads wrong
+   numbers with no error. Accepted before the release (D87); the changelog says such an index is
+   re-created or restored.
 2. The tail is not prefix-free; a caller concatenating encodings must frame them (the key maker does).
 3. Doubles below 2^-60 take the 3-byte escape (up to 10 B); none of the real sets holds one.

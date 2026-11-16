@@ -1,10 +1,10 @@
-> Status: CURRENT (2026-11-03) sortable-encoding workstream ledger; branch `design/sortable-encoding`, local only.
+> Status: CURRENT (2026-11-16) sortable-encoding workstream ledger; quest branch `quest/xapiand/sortable-encoding`.
 
 # sortable-encoding (design)
 
 - Design: `docs/design/sortable-encoding.md` (Phase 8a's first item: replace `sortable_serialise`, C++ and the Python client's port).
 - Branch / worktree: `design/sortable-encoding` at `~/code/Kronuz/Xapiand-wt/sortable-encoding`, from Xapiand:432299ed0; local only, never pushed.
-- State: designing (ready for preliminary review)
+- State: implementing; the design's D87 revision awaits the design reviewer's confirmation
 
 ## Done
 
@@ -14,13 +14,12 @@
 
 ## Next
 
-1. Preliminary review (architect, sent by the lead). New for a reviewer: D1's case against the 8-byte map, D7 (the Python port), D8 (the generation marker), T3 and T5.
-2. Steps 1 and 2 can start now; step 3 waits for Q1.
-3. On Q1 (a), the lead relabels `docs/design/sortable-codec.md` (branch `design/sortable-codec`) SUPERSEDED.
+1. Design reviewer confirms the D87 revision (no marker: F1, F8-F10 obsolete; F2's CTest home; F3-F7, F11, F12 folded in).
+2. Steps 1 and 2 (CTests, the Python port, the seam), no byte change; step 3 after the confirmation.
 
 ## Blocked on
 
-Q1 (width: the variable codec against the plan's "8-byte map"), Q2 (the Python client's exported names), Q3 (confirm the carried NaN, -0.0 and integer-overflow rulings), for the owner. Steps 1 and 2 are not blocked.
+Nothing for steps 1 and 2. Owner answered Q1-Q3 (D87).
 
 ## Last verified
 
@@ -30,3 +29,4 @@ Q1 (width: the variable codec against the plan's "8-byte map"), Q2 (the Python c
 
 - 2026-11-03: worktree and ledger created from Xapiand:432299ed0.
 - 2026-11-03: size study run; draft written, Xapiand:e04fdf092; ready for preliminary review.
+- 2026-11-16: design revised for D87 (no format marker or compatibility; T1 and T3 homed in Xapiand's CTest).
