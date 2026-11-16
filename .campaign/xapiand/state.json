@@ -6727,7 +6727,10 @@
       ],
       "consumes": [],
       "files": [
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "src/xapiand_threadpool_trace.h",
+        "src/xapiand_workpool_trace.h",
+        "docs/dev/extraction-backlog.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6738,7 +6741,7 @@
       "risk": "low",
       "status": "active",
       "title": "Repin logger 6e7ab9e and fetch workpool by its name",
-      "updated": "2026-11-16T08:07:40",
+      "updated": "2026-11-16T08:10:12",
       "worktree": "../Xapiand-wt/xapiand/logger-workpool-repin"
     },
     "loop-scheduling": {
@@ -11387,7 +11390,9 @@
     },
     "metrics-fd-count": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "logger-workpool-repin"
+      ],
       "base": "befc7db535f5aeae2e50af495395f4a41260cd1e",
       "branch": "quest/xapiand/metrics-fd-count",
       "checks": [
@@ -11420,7 +11425,7 @@
       "risk": "low",
       "status": "active",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T08:07:44",
+      "updated": "2026-11-16T08:35:33",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
@@ -16100,6 +16105,8 @@
     "restore-free-off-loop": {
       "accepted": {},
       "after": [],
+      "base": "ceb05856963b4075c80043b9ea832bed1148fa56",
+      "branch": "quest/xapiand/restore-free-off-loop",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -16131,9 +16138,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T08:07:16"
+      "updated": "2026-11-16T08:07:49",
+      "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
     },
     "restore-mixed-sign-integers": {
       "accepted": {},
@@ -18732,6 +18740,55 @@
       "title": "Two strata races found as test flakes are fixed",
       "updated": "2026-11-11T15:03:25",
       "worktree": ""
+    },
+    "strict-values": {
+      "accepted": {},
+      "after": [],
+      "base": "26ab9c5a1aa154660faae528ff01b0cc464d248d",
+      "branch": "quest/xapiand/strict-values",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "src/cast.cc",
+        "src/cast.h",
+        "src/serialize.cc",
+        "src/serialize.h",
+        "src/multivalue/range.cc",
+        "tests/test_query*.cc",
+        "tests/test_schema*.cc",
+        "tests/test_node.cc",
+        "tests/test_cast*.cc",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/changelog.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "One strict rule for values, ids and searches",
+      "updated": "2026-11-16T08:24:49",
+      "worktree": "../Xapiand-wt/xapiand/strict-values"
     },
     "sync-at-first-commit": {
       "accepted": {

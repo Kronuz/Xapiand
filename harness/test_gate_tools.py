@@ -55,7 +55,9 @@ class AsyncCheck(unittest.TestCase):
             shutil.rmtree(root, ignore_errors=True)
 
     def tree(self, files: dict[str, str], allowlist: str = "") -> tuple[str, str]:
-        root = tempfile.mkdtemp(prefix="asynccheck", dir=os.path.join(os.path.dirname(HERE), ".scratch"))
+        scratch = os.path.join(os.path.dirname(HERE), ".scratch")
+        os.makedirs(scratch, exist_ok=True)  # a fresh checkout (a campaign job) has none
+        root = tempfile.mkdtemp(prefix="asynccheck", dir=scratch)
         self.roots.append(root)
         for rel, text in files.items():
             os.makedirs(os.path.dirname(os.path.join(root, rel)), exist_ok=True)
