@@ -1,23 +1,21 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs 261116-111128-14c2ac 261116-111131-929a79 261116-111134-c035c3 261116-111137-6970f9 261116-111156-44ae75
+State: waiting on jobs 261116-113249-880538 261116-113252-d65b43 (vararg A/B); A5 CI 43940511521 43940511755
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Round 3 (11:12): TSan HANG investigation and T10 x2 rerun queued.
-
-1. TSan fuzz_lua 60 1 HANGed (alarm 60 s) on the vararg chain (job c83216). Native cost of the same script and the
-   TSan cost are now reported by `test_report_the_cost_of_a_vararg_chain`. Comparison: TSan fuzz_lua 60 1 at
-   master's src 14c2ac vs head 929a79. The collect loop is now bounded anyway: past 2^16 basic steps it finishes
-   with one full collection (fa6136633). Reasoning: the chain is a tail call, so its stack stays small; it ends at
-   the work cap (5x10^8 units); fuzz_lua runs it 7 times per input under one 60 s alarm.
-2. T10 on 2 reactors (e87a30) failed only in its last phase, "the foreign-script node did not come up". All four
-   library-call loops answered 204. Master's lua_bounds.py starts that node on `args.port + 1`, which can be a
-   client socket of the flood phase; platform-rows' lua_bounds.py fixes it with free_port(). The master-src
-   comparison fa5074 did not run T10 at all (exit 2: 2e30d05c6's lua_mem.sh has no t10 probe). Rerun: 6970f9.
-3. A4 at node level does not reproduce on macOS: master on 1 reactor answered [204, 204, 204, 204] three rounds
-   (b19ec0). A4's fails-without is the unit mutant ce0a1e.
+Round 4 (11:35). The TSan HANG was TSan slowness: fuzz_lua 60 1 passes at master's src (14c2ac) and at the head
+(929a79). Under TSan the vararg chain to the work cap takes 6,525 ms alone and 19,828 ms for three interleaved, and
+fuzz_lua runs it 7 times under one 60 s alarm. Plain build: 253 / 838 ms (c035c3).
+Is the head slower than master on that work-capped path? Strict A/B, test_lua x5, each printing the vararg and
+trivial-call times: master's src plus only the timing test (local branch probe/lua-memory-bound-master-vararg,
+449030e0c) 880538 vs head d65b43.
+A5: rows branch quest/xapiand/lua-memory-bound-rows = merge of this branch (6d024683d) and platform-rows
+(978b707a3) at 38c81f547, pushed; the push ran arm64 43940511521, FreeBSD 43940511755, CI 43940511723.
+Dropped: the local 2-reactor T10 row (6970f9 and e87a30 failed at master lua_bounds.py's port+1 foreign node,
+fixed on platform-rows; its loops answered 204). A4 at node level does not reproduce on macOS (master b19ec0:
+all 204); the unit mutant ce0a1e is A4's fails-without.
 
 ## Blocked on
 
@@ -46,13 +44,14 @@ peak concurrency, and the cache would have to count and trim states inside a scr
 
 | Criterion | Evidence |
 |---|---|
-| A1 | before 261116-101116-e8fd26 (master: 1,162 MiB after 20 scripts, FAIL); after 261116-101130-d8dfc8 (290 MiB after 200, second half +62 MiB); control 261116-111156-44ae75 (queued) |
-| A2 | test_lua 261116-101126-2bc205 (`test_the_script_cache_default_is_one_and_fits_the_budget`: 100 scripts hold 2,324 KiB, 23,800 bytes each); rerun c035c3 queued |
+| A1 | before 261116-101116-e8fd26 (master: 1,162 MiB after 20 scripts, FAIL); after 261116-101130-d8dfc8 (200 scripts: 290 MiB, +62 MiB over the second half); control 261116-111156-44ae75 (same requests, no garbage: 65 MiB, +20 MiB). Lua keeps 24 KB a script (A2's test); the remaining ~0.4 MiB a script over the control is the allocator holding freed 1 MiB blocks, not live Lua bytes |
+| A2 | test_lua 261116-111134-c035c3, 897 checks (`test_the_script_cache_default_is_one_and_fits_the_budget`: 100 scripts hold 2,324 KiB, 23,800 bytes each) |
 | A3 | T10 row at defaults 261116-101136-539595 (pass) |
-| A4 | fails without: unit mutant 261116-101214-ce0a1e; passes: test_lua 261116-101126-2bc205; node 4 loops on 1 reactor 261116-101133-813db6 (all 204; master b19ec0 also all 204 on macOS); T10 x2 261116-101139-e87a30 (loops 204, foreign-node startup failed, rerun 6970f9) |
-| A5 | not run: the rows branch waits for the TSan answer |
-| A6 | CI 43917520640 and FreeBSD 43917519747 green at dd27793e6; `campaign verify` not run |
-| TSan | 261116-101225-c83216: test_lua 893 checks pass; fuzz_lua HANG on the vararg chain (investigating: 14c2ac master, 929a79 head) |
+| A4 | fails without: unit mutant 261116-101214-ce0a1e; passes: test_lua 261116-111134-c035c3; node, 4 loops on 1 reactor: 261116-101133-813db6 (all 204; master b19ec0 also all 204 on macOS) |
+| A5 | rows branch at 38c81f547: arm64 43940511521, FreeBSD 43940511755 (running) |
+| A6 | quest branch CI 43917520640 and FreeBSD 43917519747 green at dd27793e6; head 6d024683d pushed; `campaign verify` not run |
+| TSan | test_lua passes (c83216, 929a79); fuzz_lua 60 1 passes at master 14c2ac and head 929a79 |
+| Cost | trivial call 14.6 us master / 14.1 us head (ce0a1e / 2bc205); vararg chain A/B 880538 / d65b43 (queued) |
 
 ## Result
 
