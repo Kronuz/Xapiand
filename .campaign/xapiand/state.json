@@ -16129,6 +16129,85 @@
       "title": "Hardware SHA-256 kernels (CL-10)",
       "updated": "2026-11-08T15:41:20"
     },
+    "shard-groups": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group-install",
+        "strata:placement-records",
+        "xapiand:shard-rpc",
+        "xapiand:node-directory",
+        "xapiand:command"
+      ],
+      "files": [
+        "src/index_resolver_lru.*",
+        "src/database/pool.*",
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/cluster/**",
+        "src/opts.*",
+        "src/manager.*",
+        "tests/cluster/**",
+        "harness/cluster/groups*",
+        "harness/cluster/upload*",
+        "docs/mechanisms/shard-groups.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "cluster-harness",
+        "group-install",
+        "journal-replaces-wal",
+        "shard-rpc",
+        "cluster-membership"
+      ],
+      "provides": [
+        "xapiand:shard-map"
+      ],
+      "repo": ".",
+      "risk": "critical",
+      "status": "planned",
+      "title": "Shards across nodes: routing, members, replicas, linearizable reads",
+      "updated": "2026-11-15T23:05:29"
+    },
     "shard-rpc": {
       "accepted": {},
       "after": [],
