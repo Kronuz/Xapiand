@@ -5,7 +5,7 @@
 ## What
 
 A script arrives in a client's request, so a call must neither pin the reactor that runs it nor exhaust the node. Every call has a
-set of meters; the first to cross its bound ends the call, and the request answers 4xx. The bound is on work done, not on calls made.
+set of meters (its bytes are its own state's, `lua-memory.md`); the first to cross its bound ends the call, and the request answers 4xx. The bound is on work done, not on calls made.
 
 ## How
 
