@@ -7054,9 +7054,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T08:58:33",
+      "updated": "2026-11-16T11:37:02",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
