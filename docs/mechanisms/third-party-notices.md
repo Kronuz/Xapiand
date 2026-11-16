@@ -21,8 +21,8 @@ sources. Three modes:
 
 The Kronuz libraries that embed third-party code (allocators, compressors, enum-reflection, boolean-parser, cuuid, hashes, scheduler) carry the notice in their `LICENSE`;
 the script still reads the leading comment of the embedding header, which holds the same text, so it works at a pin before and after that change. md5 and sha256 (zlib) are read from
-their headers only. `src/y2j/LICENSE`, the Olly Betts
-permission for `src/length.{cc,h}` and the temporary note for `src/sortable_serialise.{cc,h}` are written in by the script.
+their headers only. `src/y2j/LICENSE` and the Olly Betts
+permission for `src/length.{cc,h}` are written in by the script.
 
 Rerun the script at every repin and at the release commit; a run against the master pins reproduces the committed file byte for byte.
 
