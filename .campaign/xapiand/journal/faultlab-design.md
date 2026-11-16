@@ -6,12 +6,12 @@ Quest: .campaign/xapiand/quests/faultlab-design.md (the lead's; never edit it)
 ## Doing
 
 Nothing: both reviews (Xapiand design D1-D4, Detent R1-R7) folded in at cpp-libraries:bcf85b4;
-Detent R8/R9 at cpp-libraries:9d23d74; review E1-E4 at cpp-libraries:3d412e5 (pushed); doc check
-job 261116-145912-59d8ba queued at 3d412e5.
+Detent R8/R9 at cpp-libraries:9d23d74; review E1-E4 at cpp-libraries:3d412e5; Detent R10/R11 at
+cpp-libraries:727e417 (pushed); doc check job 261116-145941-40df1d queued at 727e417.
 
 ## Next
 
-1. Re-review of 3d412e5 (E1); owner rules F9.
+1. Re-review of 727e417 (E1, R10); owner rules F9.
 
 ## Blocked on
 
@@ -53,12 +53,16 @@ Review findings, by id (Xapiand review at Xapiand:6853e3469; Detent review fault
   every call, crash, kill, snapshot; crash and kill detach), with its three tests named. E2: no
   concurrent stores and calls in faultfs tests. E3: a lease releases when its file closes. E4:
   journaled-filesystem claim softened.
+- R10: `EntryInspection::extended_acl` (faultfs false) and `create_exclusive` applying the exact
+  mode (F8), so ChangeWriter's fchmod and ACL check move onto the seam. R11: citations fixed (F10).
+  E1 was already pushed as its own commit (3d412e5) when R10 arrived, so R10+R11 are a second
+  commit rather than one; no force-push.
 - These are design-text fixes: their tests are faultlab's build tests (migration "Checks"), not
   runnable before the repository exists.
 
 ## Result
 
-`docs/design/faultlab.md` (cpp-libraries:3d412e5): 16 decisions F1-F16, migration table, three
+`docs/design/faultlab.md` (cpp-libraries:727e417): 16 decisions F1-F16, migration table, three
 Detent questions answered, first buildable steps. No code moved, no repository created.
 
 ## Rulings I made
