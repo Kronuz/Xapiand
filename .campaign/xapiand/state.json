@@ -7328,8 +7328,8 @@
     "lua-memory-bound": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-16T15:08:27",
-          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "at": "2026-11-16T15:36:37",
+          "base": "e35bf2e28b855076f28f4c7ab06ce0dbaf16de74",
           "blobs": {
             "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
             "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
@@ -7344,8 +7344,8 @@
             "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
           },
           "by": "review",
-          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
-          "criteria": "125f23c275731226",
+          "commit": "f99c8bb0aba34d26739af792af6f6128da1284bf",
+          "criteria": "ea048df324eeef8c",
           "diffs": {
             "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
             "docs/mechanisms/lua-memory.md": "51593a74bd065914",
@@ -7512,7 +7512,7 @@
       "risk": "high",
       "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T15:08:56",
+      "updated": "2026-11-16T15:36:37",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
