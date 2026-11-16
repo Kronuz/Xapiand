@@ -11,9 +11,10 @@ section 6. The owner confirms Goals, Non-goals and Reserved decisions.
 
 ## Goals
 
-- The first Xapian-free release of Xapiand: Phase 8 at `rf = 1`, single node, shipped after the
-  single-node gate (7a and 7c) (road-to-release header; strata `docs/PLAN.md` Phase 7, owner
-  2026-10-29).
+- The first Xapian-free release of Xapiand works in a cluster, as the Xapian-era releases did:
+  shards across nodes, replicas, failover and distributed search, on strata's groups (Phase 3R, the
+  part of Tracks C and D it needs, 7b), before the format freeze (owner, 2026-11-16, D91; supersedes
+  D9's single-node release).
 - Phase 7c's gate passes on master: rows T1 to T13 of `docs/design/phase7c.md` section 4, reported
   in `docs/gates/phase7c.md`, with the Linux and FreeBSD runs owed since 7a (C5) (road-to-release, X7).
 - Before the release (D39, D40): the rows of Phases 3 to 5 that guard what users get back
@@ -53,10 +54,9 @@ section 6. The owner confirms Goals, Non-goals and Reserved decisions.
   words inside phrases (Phase 5, `phrase-expansion`), `_cjk_words` (`cjk-words`) and `min_score`
   (owner, 2026-10-29). "More like this" comes before it (`more-like-this`, D40).
 
-Not non-goals, but after the release (blocked quests with the owner's reason): 7b, the cluster
-(shards as groups, the journal replacing the WAL, the shard RPC) (owner, 2026-10-29, D9); Tracks C and
-D and Phase 3R, parked behind engine speed (owner, 2026-10-20, D4): strata's peer transport,
-simulator and durability modes; Xapiand's failover and PKI fold into 7b and Track C. The recovery
+Not non-goals, but after the release (blocked quests with the owner's reason): the scale gates past
+what local VMs can run (30 and 300 nodes, D35), pending the owner's answer to D91's open question.
+Xapiand's failover and PKI fold into 7b and Track C. The recovery
 tooling waits for the engine to be complete (owner, 2026-10-18, D28).
 
 ## Constraints
@@ -273,6 +273,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D88 | 2026-11-13 | Rename serialise/Serialise to American spelling (serialize/Serializer) everywhere, in sortable-encoding's landing | owner | quest sortable-encoding A12 |
 | D89 | 2026-11-13 | Many indexes (A16 bisect, docs/perf/a16-many-index-regression.md on explore/a16-bisect): pin strata main (sync-at-first-commit; 2,500-index search p50 23,507 -> 884 ms); size the open-index pool from memory, default 1% of RAM at ~40 KiB per open index (~6,000 on 16 GiB), within the descriptor budget, instead of a fixed 200; keep prompt eviction past the pool and make reopening cheap (engine quest after 7c); a short many-index row gates every strata pin bump | owner | quests pool-from-memory, cheap-reopen |
 | D90 | 2026-11-13 | Phase 7c lands with its misses stated and every miss fixed by a Phase 8 quest: T4, T5, T10 light-share; SR3 and security S2 wide-search-loop; security S1 lua-memory-bound; T13 coverage-areas; C5 platform-rows; A16 pool-from-memory and cheap-reopen (D89) | owner | quests light-share, wide-search-loop, lua-memory-bound, coverage-areas, platform-rows |
+| D91 | 2026-11-16 | Xapiand works in a cluster before the format freeze: the Xapian-era releases did, so a release without it is a toy. Shards across nodes, replicas, failover and distributed search return on strata's groups (Phase 3R, the Track C and D pieces it needs, 7b), and `format-freeze` waits for them, since the journal and the group change bytes on disk and the wire. Supersedes D9 (single-node release) and D4's parking for this scope. Open (lead default until the owner answers): the release's cluster gate runs on local VMs (3 to 5 nodes: the cluster and power-loss checks, parity with the Xapian-era cluster's features); the 30- and 300-node scale rows and beating Elasticsearch at scale stay after the release (D35, no hardware) | owner | the owner, 2026-11-16 |
 
 ## Pending owner
 
