@@ -55,7 +55,9 @@ jobs:
             cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF \
               -DASAN=ON -DUBSAN=ON -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
               -DASIO_INCLUDE_DIR=/usr/local/include
-            cmake --build build-asan --parallel 4
+            cmake --build build-asan --parallel 2
+            cmake --build build --target strata_check
+            cmake --build build-asan --target strata_check
             install -d -o nobody -g nobody "$PWD/.scratch/rows-freebsd"
             chown -R nobody:nobody "$PWD/.deps" || true
             su -m nobody -c 'TMPDIR="$PWD/.scratch/rows-freebsd" ASAN_OPTIONS=detect_leaks=0 bash harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-freebsd"'
@@ -68,6 +70,8 @@ jobs:
             build/Testing/Temporary/LastTest*.log
             .scratch/rows-freebsd/*.tsv
             .scratch/rows-freebsd/*.log
+            .scratch/rows-freebsd/e2e-asan/*.txt
+            .scratch/rows-freebsd/e2e-asan/*.log
           if-no-files-found: ignore
 
   freebsd-pkg:

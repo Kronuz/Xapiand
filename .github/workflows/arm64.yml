@@ -53,12 +53,18 @@ jobs:
           path: .deps
           key: deps-arm64-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: deps-arm64-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install newman
+        run: npm install -g newman@6
       - name: Build Release and run the suite
         run: |
           set -eux
           cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DLTO=OFF
           ninja -C build
+          ninja -C build strata_check
           ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
       - name: Build ASan + UBSan
         run: |
@@ -66,6 +72,7 @@ jobs:
           cmake -GNinja -B build-asan -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON -DUBSAN=ON -DLTO=OFF
           ninja -C build-asan -j3
+          ninja -C build-asan strata_check
       - name: Phase 7c functional rows
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
@@ -82,4 +89,6 @@ jobs:
             build/Testing/Temporary/LastTest*.log
             .scratch/rows-arm64/*.tsv
             .scratch/rows-arm64/*.log
+            .scratch/rows-arm64/e2e-asan/*.txt
+            .scratch/rows-arm64/e2e-asan/*.log
           if-no-files-found: ignore

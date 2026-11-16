@@ -27,7 +27,7 @@
 . "$(dirname "$0")/env.sh"
 REL=$1; ASAN=$2; OUT=$3
 H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
-ALLOW=${GATE7C_ALLOW:-main,unnamed,Xapiand:W,Xapiand:LOG,Xapiand:WL,Xapiand:FS}
+ALLOW=${GATE7C_ALLOW:-main,unnamed,Xapiand:MAIN,Xapiand:W,Xapiand:LOG,Xapiand:WL,Xapiand:FS}
 mkdir -p "$OUT"; printf 'row\tgating\trc\tseconds\n' >"$OUT/rows.tsv"; failed=0
 
 row() {  # row NAME gate|info CMD...; GATE7C_ROWS="a b" runs only the rows it names

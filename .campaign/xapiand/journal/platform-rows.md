@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI runs 43817110685 (FreeBSD) 43817110777 (arm64) at Xapiand:2c972efe5
+State: waiting on CI runs (see Doing)
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Pushed 2c972efe5: freebsd.yml gains an ASan+UBSan build and gate7c_rows.sh as nobody; new arm64.yml (ubuntu-24.04-arm) builds, ctest, ASan, rows. Waiting on the two runs.
+First runs (freebsd 43817110685, arm64 43817110777) failed. Findings:
+- FreeBSD: Release build + 40/40 ctest passed; the ASan build's pool.cc compile was OOM-killed (exit 137, -parallel 4). Workflow: now -parallel 2.
+- arm64 t3_crash, t3_crash_asan: strata_check tool not built (harness needs the target). Workflow: build the target in both trees.
+- arm64 t1_census: offender Xapiand:MAIN; gate7c_rows.sh ALLOW lacked the main thread's name (src/main.cc:759 set_thread_name("MAIN")), so a harness gap, not platform. ALLOW now includes it (lead: confirm that 5 MAIN threads at 4 reactors is the intended census).
+- arm64 t2_e2e_asan: 49 of 761 assertions fail; the cause is unknown (assert.txt was not uploaded). Now uploaded; newman 6 installed explicitly. Product vs harness undecided until the next run.
+Passed on arm64: t1_strict_owed, t2_stored_asan, t7_asan, t8 light/heavy, t10 lua and lua_asan, x6_shutdown, gate_tools.
 
 ## Next
 
-1. Read run results; fix harness/workflow failures in file set; source failures go to the lead (sortable-encoding owns src/**) or become a named quest (A3).
+1. Read the new runs; classify t2_e2e_asan; FreeBSD rows are still unseen.
 2. Add green run links to docs/dev/freebsd.md and new docs/dev/platforms.md (A1, A2); fill Evidence.
 
 ## Blocked on
