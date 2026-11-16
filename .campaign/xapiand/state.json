@@ -15074,6 +15074,8 @@
     "prospect-supplied-stats": {
       "accepted": {},
       "after": [],
+      "base": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+      "branch": "quest/xapiand/prospect-supplied-stats",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -15095,6 +15097,7 @@
         "test/stats*",
         "docs/mechanisms/supplied-statistics.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/prospect-supplied-stats",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 7b",
@@ -15104,9 +15107,10 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Weights from supplied statistics",
-      "updated": "2026-11-15T23:04:41"
+      "updated": "2026-11-15T23:07:17",
+      "worktree": "../prospect-wt/xapiand/prospect-supplied-stats"
     },
     "prospect-values-bytes": {
       "accepted": {},
