@@ -29,6 +29,8 @@ Starts one node with --processors N (N reactors), loads --docs accounts, then ru
               (an aggregation over every document, a wildcard of 100 hits, an aggregation by state)
   mixed2      the same again
   slow-alone  the slow clients only (the slow queries' own latency)
+  trivial3    the trivial stream alone again, after the slow phases
+  restore     the trivial stream plus one client RESTOREing 5,000-document chunks into another index (index writes)
 
 Each phase prints the trivial p50/p99/p99.9/max, the slow queries' p50/p99 and each reactor loop's lag delta
 (`xapiand_reactor_lag_seconds`, a 1 ms probe timer: lateness is how long a turn held the loop).
@@ -75,7 +77,9 @@ def summary(values: list[int]) -> dict:
     }
 
 
-async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace, trivial: bool, slow: int) -> dict:
+async def phase(
+    node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace, trivial: bool, slow: int, restore: bool = False
+) -> dict:
     loop = asyncio.get_running_loop()
     before = await sl.scrape(ctl)
     t0 = loop.time()
@@ -134,8 +138,29 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
                 conn = sl.Conn(node.host, node.port)
         await conn.close()
 
+    restored = [0.0, 0]
+
+    async def restore_client() -> None:
+        # Index writes: 20,000-document RESTORE chunks into their own index, back to back for the phase.
+        conn = sl.Conn(node.host, node.port)
+        rows = sl.load_rows()
+        first = 1
+        while loop.time() < end_at:
+            t = loop.time()
+            status, _ = await conn.request(
+                "RESTORE", "/restore-target/?commit", sl.restore_body(rows, first, 5000), sl.NDJSON_CT, timeout=300
+            )
+            if status >= 300:
+                errors[0] += 1
+            restored[0] += loop.time() - t
+            restored[1] += 5000
+            first += 5000
+        await conn.close()
+
     cpu0 = node.cpu_s()
     jobs = [slow_client(n) for n in range(slow)]
+    if restore:
+        jobs.append(restore_client())
     if trivial:
         jobs.append(generator())
     await asyncio.gather(*jobs)
@@ -146,6 +171,8 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
         "phase": name,
         "trivial": summary(lat) if trivial else None,
         "slow": {k: summary(v) for k, v in sorted(slow_lat.items())},
+        "restored_docs": restored[1],
+        "restore_docs_per_s": round(restored[1] / restored[0], 0) if restored[0] else None,
         "errors": errors[0],
         "node_cpu_s": round((cpu1 or 0) - (cpu0 or 0), 1),
         "lag_us": {k: {x: v[x] for x in ("wakes", "p50_us", "p99_us", "p999_us", "max_us_window")} for k, v in lag.items()},
@@ -179,6 +206,7 @@ async def amain(args: argparse.Namespace) -> int:
             await phase(node, ctl, "mixed2", args, True, args.slow),
             await phase(node, ctl, "slow-alone", args, False, args.slow),
             await phase(node, ctl, "trivial3", args, True, 0),
+            await phase(node, ctl, "restore", args, True, 0, restore=True),
         ]
         if args.out:
             with open(args.out, "w") as fh:
