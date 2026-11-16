@@ -9,15 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+system:a5dc407 (branch quest/xapiand/metrics-fd-count in ~/code/Kronuz/system, worktree system-wt/metrics-fd-count) lists
+/proc/self/fd and /dev/fd instead of polling; pushed, CI running. Xapiand:56871ecea adds tests/test_manager_fd_count.cc
+(registered in CMakeLists.txt) and the probe harness/metrics_scrape_*. Before-binary build job 261116-081527-017d42
+(-> /Users/kronuz/.scratch/fd-ab/before).
 
 ## Next
 
-1. <step>
+1. system CI green -> repin CMakeLists.txt system GIT_TAG to a5dc407, push, CI.
+2. Build the after binary (metrics_scrape_build.sh) at the repin commit; A2 job: `quiet strict`
+   harness/metrics_scrape_ab.sh before after 3.
+3. A1 `build-test` check, A3 `e2e` check via `campaign verify`; docs/mechanisms/metrics.md with the numbers.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,4 +43,9 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The fix is in Kronuz/system (the function's home), one commit, then repinned here; the quest's file set lacks
+  CMakeLists.txt and harness/, both touched (pin, test registration, probe).
+- FreeBSD keeps the poll scan (its /dev/fd lists only 0-2 without fdescfs; F_MAXFD already bounds the scan to the
+  highest open descriptor) rather than linking libutil for kinfo_getfile. The scan now covers the F_MAXFD slot itself
+  (F_MAXFD is the highest descriptor, so the old range missed it).
+- Listing falls back to the scan when /proc or /dev/fd cannot be opened.
