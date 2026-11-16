@@ -23,6 +23,11 @@
 
 #include "cast.h"
 
+#include <cctype>                                 // for std::isspace
+#include <cmath>                                  // for std::trunc
+#include <cstdint>                                // for int64_t, uint64_t
+#include <limits>                                 // for std::numeric_limits
+
 #include "database/schema.h"
 #include "exception_engine.h"                     // for CastError
 #include "reserved/reserved.h"                    // for is_comment
@@ -152,21 +157,36 @@ Cast::cast(FieldType type, const MsgPack& obj)
 }
 
 
+bool
+Cast::bare_number_text(std::string_view text) noexcept
+{
+	return !text.empty() && !std::isspace(static_cast<unsigned char>(text.front())) && !std::isspace(static_cast<unsigned char>(text.back()));
+}
+
+
 int64_t
 Cast::integer(const MsgPack& obj)
 {
 	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (obj.u64() > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+				THROW(CastError, "Value {} is out of range for integer", obj.to_string());
+			}
 			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return obj.i64();
-		case MsgPack::Type::FLOAT:
-			return obj.f64();
+		case MsgPack::Type::FLOAT: {
+			const double d = std::trunc(obj.f64());  // a cast truncates the fraction; it never wraps
+			if (!(d >= -0x1p63 && d < 0x1p63)) {
+				THROW(CastError, "Value {} is out of range for integer", obj.to_string());
+			}
+			return static_cast<int64_t>(d);
+		}
 		case MsgPack::Type::STR: {
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
-			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to integer", enum_name(obj.get_type()));
+			if (errno_save != 0 || !bare_number_text(obj.str_view())) {
+				THROW(CastError, "Value {} cannot be cast to integer", obj.to_string());
 			}
 			return r;
 		}
@@ -184,15 +204,24 @@ Cast::positive(const MsgPack& obj)
 	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64();
-		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:  // an int64, of either sign
+			if (obj.i64() < 0) {
+				THROW(CastError, "Value {} is out of range for positive", obj.to_string());
+			}
 			return obj.i64();
-		case MsgPack::Type::FLOAT:
-			return obj.f64();
+		case MsgPack::Type::FLOAT: {
+			const double d = std::trunc(obj.f64());  // a cast truncates the fraction; it never wraps
+			if (!(d >= 0 && d < 0x1p64)) {
+				THROW(CastError, "Value {} is out of range for positive", obj.to_string());
+			}
+			return static_cast<uint64_t>(d);
+		}
 		case MsgPack::Type::STR: {
+			const auto text = obj.str_view();
 			int errno_save;
-			auto r = strict_stoull(&errno_save, obj.str_view());
-			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to positive", enum_name(obj.get_type()));
+			auto r = strict_stoull(&errno_save, text);
+			if (errno_save != 0 || !bare_number_text(text) || text.front() == '-') {  // strtoull wraps a negative
+				THROW(CastError, "Value {} cannot be cast to positive", obj.to_string());
 			}
 			return r;
 		}
@@ -217,8 +246,8 @@ Cast::floating(const MsgPack& obj)
 		case MsgPack::Type::STR: {
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
-			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to float", enum_name(obj.get_type()));
+			if (errno_save != 0 || !bare_number_text(obj.str_view())) {
+				THROW(CastError, "Value {} cannot be cast to float", obj.to_string());
 			}
 			return r;
 		}
