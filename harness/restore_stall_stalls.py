@@ -24,10 +24,11 @@ def main() -> int:
     ap.add_argument("--min-age-us", type=int, default=0)
     ap.add_argument("--probe-log", help="the probe's stdout: its scrape stamps and phase lines split the log by phase")
     ap.add_argument("--phase", help="keep only captures and gaps inside this phase (needs --probe-log)")
-    ap.add_argument("--uptime-clock", action="store_true", help="the probe log used time.monotonic_ns (runs before the clock fix)")
+    ap.add_argument("--probe-clock", default="raw", choices=("raw", "monotonic", "uptime"), help="the clock of the probe log's stamps")
     args = ap.parse_args()
-    # The probe stamps scrapes with time.monotonic_ns (uptime clock); the node's steady_clock counts sleep too.
-    shift = time.clock_gettime_ns(time.CLOCK_MONOTONIC) - time.monotonic_ns() if args.uptime_clock else 0
+    # The node's steady_clock is CLOCK_MONOTONIC_RAW; an older probe log may carry another clock.
+    probe_clock = {"uptime": time.monotonic_ns, "monotonic": lambda: time.clock_gettime_ns(time.CLOCK_MONOTONIC), "raw": None}[args.probe_clock]
+    shift = 0 if probe_clock is None else time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - probe_clock()
     windows: dict[str, tuple[int, int]] = {}
     scrapes: list[tuple[int, int]] = []
     if args.probe_log:
@@ -36,6 +37,9 @@ def main() -> int:
             if line.startswith('{"scrape"'):
                 a, b = re.findall(r"\d+", line)
                 scrapes.append((int(a) + shift, int(b) + shift))
+            elif line.startswith('{"quiet"'):
+                a, b = re.findall(r"\d+", line)
+                windows["quiet"] = (int(a) + shift, int(b) + shift)
             elif m := re.match(r'\{"phase": "(\w+)"', line):
                 names.append(m.group(1))
         for i, name in enumerate(names):

@@ -30,10 +30,10 @@ _scrape = sl.scrape
 
 
 async def scrape_logged(conn: sl.Conn) -> dict:
-    # Each scrape's start and end on the steady clock (CLOCK_MONOTONIC, the clock of the node's SPIN/STALL at_ns).
-    t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
+    # Each scrape's start and end on the steady clock (CLOCK_MONOTONIC_RAW, libc++'s steady_clock, the clock of the node's SPIN/STALL at_ns).
+    t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
     out = await _scrape(conn)
-    print(json.dumps({"scrape": [t0, time.clock_gettime_ns(time.CLOCK_MONOTONIC)]}), flush=True)
+    print(json.dumps({"scrape": [t0, time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)]}), flush=True)
     return out
 
 
@@ -62,6 +62,11 @@ async def amain(args: argparse.Namespace) -> int:
         await sl.settle_merges(node, "accounts")
         ctl = sl.Conn(node.host, node.port)
         print(json.dumps({"loaded_docs": args.docs, "load_s": round(t, 1), "pid": node.pid}), flush=True)
+        if args.quiet_secs:
+            # No request at all for this long: the node's SPIN gaps in the window are the loop's own (nothing scraped it).
+            q0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
+            await asyncio.sleep(args.quiet_secs)
+            print(json.dumps({"quiet": [q0, time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)]}), flush=True)
         results.append(await idle(node, ctl, args.idle_secs))
         for name in args.phases.split(","):
             if name == "restore":
@@ -104,6 +109,7 @@ def main() -> int:
     ap.add_argument("--conns", type=int, default=16)
     ap.add_argument("--phases", default="trivial,trivial2,restore,trivial3")
     ap.add_argument("--sample", action="store_true")
+    ap.add_argument("--quiet-secs", type=float, default=0.0, help="a stretch with no request at all, before the idle phase")
     ap.add_argument("--spin", type=int, default=0, help="XAPIAND_LAG_SPIN threshold in us (patched reactor_lag.h)")
     ap.add_argument("--keep", default=os.path.join(sl.REPO, ".scratch", "restore_stall_out"), help="where node.log and the sample go")
     ap.add_argument("--out")
