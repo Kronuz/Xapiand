@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: blocked on the lead: green runs need the repin (reactor:2ef28dc, system:563880a) and a ruling on P3 (FreeBSD t10_lua memory limit)
+State: waiting on CI run 7
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
