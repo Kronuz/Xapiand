@@ -13277,6 +13277,8 @@
     "platform-rows": {
       "accepted": {},
       "after": [],
+      "base": "5b3c89d71edd53ed9f3a2330033439718965e3d5",
+      "branch": "quest/xapiand/platform-rows",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -13299,9 +13301,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-13T20:23:36"
+      "updated": "2026-11-15T22:25:14",
+      "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
       "accepted": {},
