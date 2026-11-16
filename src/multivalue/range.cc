@@ -84,10 +84,11 @@ saturate(I v)
 
 // A numeric range bound: its bytes in its own type, and the T its accuracy terms cover. One number has one
 // encoding whatever its type, so 6.5 on an integer field or 2^53 + 1 on a floating one compares exactly
-// against the slot. A string parses as the field's type; NaN is refused.
+// against the slot. A string reads as a value's text does, whatever the
+// field's type; NaN is refused.
 template <typename T>
 static std::pair<std::string, T>
-numeric_bound(FieldType field_type, const MsgPack& bound)
+numeric_bound(const MsgPack& bound)
 {
 	const MsgPack value = bound.is_map() ? Cast::cast(bound) : bound;
 	auto floating = [](double v) -> std::pair<std::string, T> {
@@ -105,17 +106,20 @@ numeric_bound(FieldType field_type, const MsgPack& bound)
 			return integer(value.i64());
 		case MsgPack::Type::FLOAT:
 			return floating(value.f64());
+		case MsgPack::Type::BOOLEAN:
+			return positive(value.boolean());
+		case MsgPack::Type::STR: {
+			// Text reads as a value's text does (int64, uint64, then double), whatever the field's type.
+			const MsgPack number = Cast::cast(FieldType::empty, value);
+			if (!number.is_string()) {
+				return numeric_bound<T>(number);
+			}
+			break;
+		}
 		default:
 			break;
 	}
-	switch (field_type) {
-		case FieldType::integer:
-			return integer(Cast::integer(value));
-		case FieldType::positive:
-			return positive(Cast::positive(value));
-		default:
-			return floating(Cast::floating(value));
-	}
+	THROW(CastError, "Type {} cannot be cast to a range bound", enum_name(value.get_type()));
 }
 
 
@@ -124,9 +128,9 @@ engine::Query
 getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
 	// An absent bound is unbounded: -inf or +inf, whatever the field's type (design D6).
-	auto [ser_start, value_s] = start ? numeric_bound<T>(field_spc.get_type(), *start)
+	auto [ser_start, value_s] = start ? numeric_bound<T>(*start)
 		: std::pair<std::string, T>(Serialize::floating(-std::numeric_limits<double>::infinity()), std::numeric_limits<T>::min());
-	auto [ser_end, value_e] = end ? numeric_bound<T>(field_spc.get_type(), *end)
+	auto [ser_end, value_e] = end ? numeric_bound<T>(*end)
 		: std::pair<std::string, T>(Serialize::floating(std::numeric_limits<double>::infinity()), std::numeric_limits<T>::max());
 
 	if (ser_start > ser_end) {

@@ -45,7 +45,7 @@
 #include "string_metric.h"                        // for Jaccard, Jaro, ..., Serializable* wrappers, DoubleMetaphone
 
 
-// A missing value's key: after (or before) every finite number, below +inf (or above -inf).
+// A missing value's key: at DBL_MAX (or -DBL_MAX), below +inf (or above -inf).
 const std::string MAX_CMPVALUE(sortable::max_finite);
 const std::string MIN_CMPVALUE(sortable::min_finite);
 
