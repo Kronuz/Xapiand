@@ -13576,6 +13576,59 @@
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
     },
+    "placement-repair": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group-install",
+        "strata:placement-records"
+      ],
+      "files": [
+        "include/strata/placement/**",
+        "test/placement/**",
+        "bench/placement/**",
+        "docs/mechanisms/placement-repair.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "group-install",
+        "placement-root"
+      ],
+      "provides": [
+        "strata:placement-repair"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Re-replication, drain, leader balance, rf change, root install",
+      "updated": "2026-11-15T23:05:18"
+    },
     "placement-root": {
       "accepted": {},
       "after": [],
