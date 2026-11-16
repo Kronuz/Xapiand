@@ -2019,7 +2019,7 @@
     "cluster-migration": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -2057,7 +2057,7 @@
       "risk": "high",
       "status": "planned",
       "title": "One node to a cluster and back, without loss",
-      "updated": "2026-11-15T23:05:39"
+      "updated": "2026-11-16T10:28:28"
     },
     "cold-tier-item5": {
       "accepted": {},
