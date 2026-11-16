@@ -358,7 +358,10 @@ class DocIndexer {
 	size_t _indexed = 0;
 	size_t _total = 0;
 	size_t _idx = 0;
-	std::vector<MsgPack> _results;
+	// The objects' results, MessagePack-packed into one buffer: `_at[idx]` is object idx's (offset, size) there,
+	// size 0 until it is recorded. A MsgPack per object would hold a zone of its own (8 KB), all freed in one turn.
+	std::string _packed;
+	std::vector<std::pair<size_t, size_t>> _at;
 
 public:
 	static inline DocIndexerSeams seams;
@@ -393,9 +396,8 @@ public:
 		return _total;
 	}
 
-	const std::vector<MsgPack>& results() const noexcept {
-		return _results;
-	}
+	// The results, one per object in input order, as one array: an object not yet recorded is an empty map.
+	MsgPack results() const;
 };
 
 

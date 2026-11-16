@@ -1,7 +1,8 @@
 # restore-stall: what a RESTORE holds the reactor loop for, and what the lag probe's 49-82 ms is
 
-> Status: CURRENT (2026-11-16), exploration on `explore/restore-stall`, master Xapiand:d80a17ee2. Nothing here changes
-> `src/`; the one-TU experiment is `harness/restore_stall_slice_results.patch` (built and measured, not applied).
+> Status: CURRENT (2026-11-16). Exploration on `explore/restore-stall` at master Xapiand:d80a17ee2; the fix of answer 1
+> and its A/B are in [Fix: the results in one buffer](#fix-the-results-in-one-buffer). The sliced free
+> (`harness/restore_stall_slice_results.patch`) is the measured fallback, not applied.
 > Follows `docs/perf/reactor-offload.md` (branch `explore/reactor-offload`), whose two open rows these are.
 
 Answers.

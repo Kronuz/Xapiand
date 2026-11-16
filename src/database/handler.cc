@@ -2315,6 +2315,25 @@ co_catch_http_errors(F work)
 }
 
 
+// A msgpack stream that appends to a string.
+struct StringStream {
+	std::string& out;
+
+	void write(const char* data, std::size_t size) {
+		out.append(data, size);
+	}
+};
+
+using StringPacker = msgpack::packer<StringStream>;
+
+void
+pack_str(StringPacker& pk, std::string_view str)
+{
+	pk.pack_str(static_cast<uint32_t>(str.size()));
+	pk.pack_str_body(str.data(), static_cast<uint32_t>(str.size()));
+}
+
+
 // How long a prepare chore runs before it gives its worker back (docs/perf/x7-loop-stalls.md, D5).
 constexpr auto PREPARE_SLICE = std::chrono::milliseconds(1);
 
@@ -2401,10 +2420,32 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		--maxitems;
 		const auto idx = _idx++;
 		++_total;
-		if (_results.size() <= idx) {
-			_results.resize(idx + 1, MsgPack::MAP());
+		if (_at.size() <= idx) {
+			_at.resize(idx + 1);
 		}
 		return idx;
+	};
+
+	// Records object `idx`'s result, the bytes `pack` writes: each value packed as the MsgPack it stands for.
+	const auto put = [this](std::size_t idx, auto&& pack) {
+		const auto offset = _packed.size();
+		StringStream stream{_packed};
+		StringPacker pk(stream);
+		pack(pk);
+		_at[idx] = {offset, _packed.size() - offset};
+	};
+
+	// Records an object's failure: its status, its status's name and the error.
+	const auto put_error = [&put](std::size_t idx, const http_errors_t& errors) {
+		put(idx, [&](StringPacker& pk) {
+			pk.pack_map(3);
+			pack_str(pk, RESPONSE_STATUS);
+			pk.pack(msgpack::object(static_cast<unsigned>(errors.error_code)));
+			pack_str(pk, RESPONSE_TYPE);
+			pack_str(pk, http_status_str(errors.error_code));
+			pack_str(pk, RESPONSE_MESSAGE);
+			pack_str(pk, errors.error);
+		});
 	};
 
 	// Prepares an object on the loop, reading the stored document as its prepare needs.
@@ -2418,63 +2459,62 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	};
 
 	// Records a write's outcome, `error` or `info` (its docid in the multi-db): the object's result.
-	const auto record = [this](Admitted& one, std::exception_ptr error, engine::WriteResult info) -> task::task<void> {
-		MsgPack result;
+	const auto record = [this, &put, &put_error](Admitted& one, std::exception_ptr error, engine::WriteResult info) -> task::task<void> {
 		auto& term_id = std::get<0>(one.prepared);
 		auto& data_obj = std::get<2>(one.prepared);
+		const MsgPack* id = nullptr;   // the object's own id, or `unserialized`
+		std::optional<MsgPack> unserialized;
 		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
 			if (error) {
 				std::rethrow_exception(error);
 			}
 			if (term_id == NEW_NUMERIC_KEY) {
-				result[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
+				unserialized = co_await db_handler.unserialize_term_id(info.term);
+				id = &*unserialized;
 			} else {
 				auto it_id = data_obj.find(ID_FIELD_NAME);
 				if (it_id == data_obj.end()) {
-					result[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
+					unserialized = co_await db_handler.unserialize_term_id(info.term);
+					id = &*unserialized;
 				} else {
-					result[ID_FIELD_NAME] = it_id.value();
+					id = &it_id.value();
 				}
 			}
-
-			if (echo) {
-				result[VERSION_FIELD_NAME] = info.version;
-
-				if (comments) {
-					result[RESPONSE_xDOCID] = info.did;
-
-					size_t n_shards = endpoints.size();
-					size_t shard_num = (info.did - 1) % n_shards;
-					result[RESPONSE_xSHARD] = shard_num + 1;
-				}
-			}
-
 			++_indexed;
 		});
 		if (index_errors.error_code != HTTP_STATUS_OK) {
-			result[RESPONSE_STATUS] = static_cast<unsigned>(index_errors.error_code);
-			result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
-			result[RESPONSE_MESSAGE] = index_errors.error;
+			put_error(one.idx, index_errors);
+			co_return;
 		}
-		_results[one.idx] = std::move(result);
+		put(one.idx, [&](StringPacker& pk) {
+			pk.pack_map(echo ? (comments ? 4 : 2) : 1);
+			pack_str(pk, ID_FIELD_NAME);
+			pk.pack(msgpack::object(*id));
+			if (echo) {
+				pack_str(pk, VERSION_FIELD_NAME);
+				pk.pack(msgpack::object(info.version));
+				if (comments) {
+					pack_str(pk, RESPONSE_xDOCID);
+					pk.pack(msgpack::object(info.did));
+					size_t n_shards = endpoints.size();
+					size_t shard_num = (info.did - 1) % n_shards;
+					pack_str(pk, RESPONSE_xSHARD);
+					pk.pack(msgpack::object(shard_num + 1));
+				}
+			}
+		});
 	};
 
 	// Records an object's prepare and applies its document in the shard's turn (the serial path): the object's result.
-	const auto apply = [this, &record](Admitted& one) -> task::task<void> {
+	const auto apply = [this, &record, &put, &put_error](Admitted& one) -> task::task<void> {
 		++_processed;
-		MsgPack result;
 		if (one.error) {
-			const auto errors = catch_http_errors([&] {
+			put_error(one.idx, catch_http_errors([&] {
 				if (one.error) {
 					std::rethrow_exception(one.error);
 				}
 				return 0;
-			});
-			_results[one.idx] = MsgPack{
-				{ RESPONSE_STATUS, static_cast<unsigned>(errors.error_code) },
-				{ RESPONSE_TYPE, http_status_str(errors.error_code) },
-				{ RESPONSE_MESSAGE, errors.error }
-			};
+			}));
 			co_return;
 		}
 		++_prepared;
@@ -2493,10 +2533,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			co_await record(one, error, info);
 			co_return;
 		}
-		if (!data_obj.is_undefined()) {
-			result = std::move(data_obj);
-		}
-		_results[one.idx] = std::move(result);
+		put(one.idx, [&](StringPacker& pk) {
+			pk.pack(msgpack::object(data_obj));   // undefined when the object left nothing
+		});
 	};
 
 	// An object per slice at most: the request gives its reactor back when its slice is spent.
@@ -2935,6 +2974,25 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		}
 	}
 	co_await apply_run();   // the batch's last run applies before the next batch is read
+}
+
+
+MsgPack
+DocIndexer::results() const
+{
+	std::string packed;
+	packed.reserve(5 + _packed.size() + _at.size());
+	StringStream stream{packed};
+	StringPacker pk(stream);
+	pk.pack_array(static_cast<uint32_t>(_at.size()));
+	for (const auto& [offset, size] : _at) {
+		if (size == 0) {
+			pk.pack_map(0);
+		} else {
+			packed.append(_packed, offset, size);
+		}
+	}
+	return MsgPack::unserialize(packed);
 }
 
 
