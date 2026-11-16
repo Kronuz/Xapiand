@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sortable_xlang_mutants.sh MUTANT SORTABLE_SOURCE_DIR: applies one mutant to the client's codec in this checkout,
+# sortable_xlang_mutants.sh MUTANT SORTABLE_SOURCE_DIR: applies one mutant to the client's codec (xapiand/sortable.py) in this checkout,
 # builds sortable_cli and runs tests/sortable_xlang.py. Exits 0 only when the check fails (the mutant killed); 1 when
 # it passes or the mutant does not apply or build.
 set -u
@@ -18,8 +18,8 @@ PY
 }
 
 case $mutant in
-	rule-8)   # decode accepts an 8-byte tail with 64 fraction bits
-		mutate ' or (len(tail) == 8 and tail[-1] & 1)' '' ;;
+	rule-7)   # decode accepts a tail ending in 00 (rule 8 is implied by rule 9, so its mutant is equivalent)
+		mutate ' or (tail and tail[-1] == 0)' '' ;;
 	window-62)   # encode's direct tags end at 2^62, so 2^63..2^64 take the escape
 		mutate 'if -60 <= exponent <= 63:' 'if -60 <= exponent <= 62:' ;;
 	*) echo "unknown mutant $mutant"; exit 1 ;;
