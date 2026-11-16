@@ -143,7 +143,8 @@ def foreign_scripts_check(binary, port, tmp):
                 if request(port, "GET", "/", timeout=2)[0] == 200:
                     break
             except OSError:
-                time.sleep(0.25)
+                pass
+            time.sleep(0.25)
         else:
             return ["the foreign-script node did not come up"]
 

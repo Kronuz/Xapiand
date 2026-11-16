@@ -77,6 +77,8 @@ jobs:
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          # The ASan restore of the sample data outlasts newman's default 30 s.
+          E2E_TIMEOUT_REQUEST: "180000"
         run: |
           mkdir -p .scratch/rows-arm64
           harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-arm64"
