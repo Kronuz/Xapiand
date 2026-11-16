@@ -1849,6 +1849,61 @@
       "title": "Multi-process and VM cluster harness",
       "updated": "2026-11-15T23:04:35"
     },
+    "cluster-membership": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-transport"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:placement-records",
+        "xapiand:shard-rpc"
+      ],
+      "files": [
+        "src/cluster/node*",
+        "src/cluster/membership*",
+        "tests/cluster/test_node*",
+        "tests/cluster/test_membership*",
+        "harness/cluster/membership*",
+        "docs/mechanisms/cluster-membership.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "placement-root",
+        "shard-rpc"
+      ],
+      "provides": [
+        "xapiand:node-directory"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Node identity, --join, certificates, keepalives, /:nodes",
+      "updated": "2026-11-15T23:05:23"
+    },
     "cold-tier-item5": {
       "accepted": {},
       "after": [],
