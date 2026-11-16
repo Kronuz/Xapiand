@@ -72,6 +72,7 @@
 #include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
+#include "cast.h"
 #include "serialize.h"
 #include "engine/chores.h"
 #include "engine/host.h"
@@ -3341,6 +3342,92 @@ static void test_a_refused_value_names_its_field_value_and_type() {
 }
 
 
+// Serialize::exact refuses `value` (JSON) as `type`, naming the field.
+static void check_exact_refuses(FieldType type, const char* value) {
+	std::string message;
+	try {
+		const auto got = Serialize::exact("f", type, json_value(value));
+		std::fprintf(stderr, "  %s as %s is taken as %s\n", value, enum_name(type).data(), got.to_string().c_str());
+	} catch (const ClientError& exc) {
+		message = exc.get_message();
+	}
+	CHECK(message.find("'f'") != std::string::npos);
+}
+
+// From 2^53 on, an integral double need not be the integer sent (9007199254740993.5 reads as 9007199254740994):
+// integer and positive types refuse such a float, as a number or as text; text spelling an integer stays exact.
+static void test_a_float_from_two_to_the_53_is_no_exact_integer() {
+	Watchdog watchdog("a float from 2^53 is no exact integer", 240s);
+	for (const auto type : {FieldType::integer, FieldType::positive}) {
+		for (const auto* value : {"9007199254740993.5", "\"9007199254740993.5\"", "\"9007199254740993.0\"", "9007199254740992.0", "1e300"}) {
+			check_exact_refuses(type, value);
+		}
+	}
+	check_exact_refuses(FieldType::integer, "-9007199254740992.0");
+	CHECK_EQ(Serialize::exact("f", FieldType::integer, json_value("9007199254740991.0")).to_string(), "9007199254740991");
+	CHECK_EQ(Serialize::exact("f", FieldType::integer, json_value("-9007199254740991.0")).to_string(), "-9007199254740991");
+	CHECK_EQ(Serialize::exact("f", FieldType::integer, json_value("\"9007199254740993\"")).to_string(), "9007199254740993");
+	CHECK_EQ(Serialize::exact("f", FieldType::positive, json_value("\"18446744073709551615\"")).to_string(), "18446744073709551615");
+
+	create_typed_index("sv_b2_int", "integer");
+	const std::string ints = "/sv_b2_int/";
+	const auto search = [&](const std::string& query) { return call("SEARCH", ints + "?volatile", R"({"_query":)" + query + "}"); };
+	check_refused(call("PUT", ints + "1?commit", R"({"i":9007199254740993.5})"), "i", "900719925474099", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":"9007199254740993.0"})"), "i", "9007199254740993.0", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"p":"9007199254740993.5"})"), "p", "9007199254740993.5", "positive");
+	check_refused(restore_line(ints, R"({"_id":9007199254740993.5,"n":"x"})"), "_id", "900719925474099", "integer");
+	CHECK_EQ(field_of(call("SEARCH", ints + "?volatile"), "total").as_u64(), 0u);   // nothing refused was stored
+	CHECK_EQ(call("PUT", ints + "2?commit", R"({"n":"big","i":"9007199254740993"})").status, 204);
+	check_refused(search(R"({"i":9007199254740993.5})"), "i", "900719925474099", "integer");
+	check_refused(search(R"({"_id":9007199254740993.5})"), "_id", "900719925474099", "integer");
+	check_refused(search(R"({"i":{"_in":{"_range":{"_from":9007199254740993.5}}}})"), "i", "900719925474099", "integer");
+	check_refused(call("SEARCH", ints + "?volatile&q=i:9007199254740993.5"), "i", "9007199254740993.5", "integer");
+	CHECK(hits_of(search(R"({"i":9007199254740993})")) == std::vector<std::string>{"big"});
+	CHECK(hits_of(search(R"({"i":"9007199254740993"})")) == std::vector<std::string>{"big"});
+	CHECK(hits_of(search(R"({"i":9007199254740992})")).empty());
+}
+
+// Numeric text with white space at either end is no number: strto* skip leading space, so " -18446744073709551615"
+// passed a sign check and wrapped to 1, and {"_positive": " -5"} to 2^64-5.
+static void test_numeric_text_with_white_space_is_no_number() {
+	Watchdog watchdog("numeric text with white space is no number", 240s);
+	for (const auto* value : {"\" -18446744073709551615\"", "\" -9223372036854775809\"", "\" 12\"", "\"12 \"", "\"\\t12\""}) {
+		check_exact_refuses(FieldType::integer, value);
+	}
+	for (const auto* value : {"\" -1\"", "\" -18446744073709551615\"", "\" 5\"", "{\"_positive\":\" -5\"}"}) {
+		check_exact_refuses(FieldType::positive, value);
+	}
+	check_exact_refuses(FieldType::floating, "\" 1.5\"");
+	const auto cast_refuses = [](const char* what, auto cast) {
+		try {
+			const auto got = cast();
+			std::fprintf(stderr, "  %s casts to %s\n", what, std::to_string(got).c_str());
+			CHECK(false);
+		} catch (const ClientError&) {
+		}
+	};
+	cast_refuses("positive \" -5\"", [] { return Cast::positive(MsgPack(" -5")); });
+	cast_refuses("positive \" -18446744073709551615\"", [] { return Cast::positive(MsgPack(" -18446744073709551615")); });
+	cast_refuses("positive \"5 \"", [] { return Cast::positive(MsgPack("5 ")); });
+	cast_refuses("integer \" -5\"", [] { return Cast::integer(MsgPack(" -5")); });
+	cast_refuses("floating \" 1.5\"", [] { return Cast::floating(MsgPack(" 1.5")); });
+	CHECK_EQ(Cast::positive(MsgPack("5")), 5u);
+	CHECK_EQ(Cast::integer(MsgPack("-5")), -5);
+
+	create_typed_index("sv_b3_int", "integer");
+	const std::string ints = "/sv_b3_int/";
+	check_refused(call("PUT", ints + "1?commit", R"({"i":" -18446744073709551615"})"), "i", "-18446744073709551615", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"i":" -9223372036854775809"})"), "i", "-9223372036854775809", "integer");
+	check_refused(call("PUT", ints + "1?commit", R"({"p":" -5"})"), "p", "-5", "positive");
+	check_refused(call("PUT", ints + "1?commit", R"({"p":{"_positive":" -5"}})"), "p", "_positive", "positive");
+	CHECK_EQ(field_of(call("SEARCH", ints + "?volatile"), "total").as_u64(), 0u);   // nothing refused was stored
+	const auto search = [&](const std::string& query) { return call("SEARCH", ints + "?volatile", R"({"_query":)" + query + "}"); };
+	check_refused(search(R"({"i":" -18446744073709551615"})"), "i", "-18446744073709551615", "integer");
+	check_refused(search(R"({"p":{"_positive":" -5"}})"), "p", "_positive", "positive");
+	check_refused(search(R"({"i":{"_in":{"_range":{"_from":" 1"}}}})"), "i", " 1", "integer");
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -3428,6 +3515,8 @@ int main(int argc, char** argv) {
 		{"test_searches_take_only_exact_values", test_searches_take_only_exact_values},
 		{"test_a_cast_converts_one_value_and_never_wraps", test_a_cast_converts_one_value_and_never_wraps},
 		{"test_a_refused_value_names_its_field_value_and_type", test_a_refused_value_names_its_field_value_and_type},
+		{"test_a_float_from_two_to_the_53_is_no_exact_integer", test_a_float_from_two_to_the_53_is_no_exact_integer},
+		{"test_numeric_text_with_white_space_is_no_number", test_numeric_text_with_white_space_is_no_number},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

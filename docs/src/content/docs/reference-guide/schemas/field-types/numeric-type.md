@@ -14,8 +14,10 @@ The following _Numeric_ types are supported:
 A numeric field takes only values of its type, and so does a numeric `_id`: in a write, in a search term, in a range
 bound and in `q=`. A number qualifies when it is exactly a value of the type: `12` and `12.0` are integers, `1.5` is not,
 `-1` is not a `_positive`, and 2^63 is out of range for an `_integer`. Text that spells such a number is the number
-(`"12"`). Anything else answers `400`, with a message naming the field, the value and the type; nothing is truncated,
-wrapped, or searched as something else.
+(`"12"`, not `" 12"`). An integral float of 2^53 or more is no integer, since a fraction can round to it
+(`9007199254740993.5` reads as `9007199254740994.0`); text spelling such an integer exactly (`"9007199254740993"`) is. Anything
+else answers `400`, with a message naming the field, the value and the type; nothing is truncated, wrapped, or searched as
+something else.
 
 ```rest
 PUT /exactvalues/1

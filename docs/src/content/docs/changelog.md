@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   message naming the field, the value and the type. `1.5` or `"abc"` in an integer field or an integer `_id`, `-1` in a
   positive one and 2^64 in an integer one are refused: an `_id` used to be truncated (1.5 stored and found 1) or wrapped
   (-1 found 2^64-1), and a search with a value of another type answered `200` with no hits. Exact values are taken as before,
-  text spelling one included (`"12"` and `12.0` in an integer field). A cast object is the one way to convert:
+  text spelling one included (`"12"` and `12.0` in an integer field); an integral float of 2^53 or more and text with
+  white space around the number are refused. A cast object is the one way to convert:
   `{"_integer": 1.5}` stores and finds 1, the same in writes and searches, and a cast truncates but never wraps
   (`{"_positive": -1}` answers `400`). See [Exact Values](/Xapiand/reference-guide/schemas/field-types/numeric-type#exact-values).
 - **Numbers sort and range in exact numeric order, ids and values alike.** Every number Xapiand sorts, ranges or

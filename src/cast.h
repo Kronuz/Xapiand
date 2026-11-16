@@ -77,6 +77,9 @@ namespace Cast {
 		#undef OPTION
 	};
 
+	// Text a number is read from: not empty, no white space at either end (strto* skip it, so " -1" passes a sign check).
+	bool bare_number_text(std::string_view text) noexcept;
+
 	MsgPack cast(const MsgPack& obj);
 	MsgPack cast(FieldType type, const MsgPack& obj);
 	// A float truncates to an integer; a value outside the type's range is a CastError, never wrapped.

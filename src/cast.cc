@@ -23,6 +23,7 @@
 
 #include "cast.h"
 
+#include <cctype>                                 // for std::isspace
 #include <cmath>                                  // for std::trunc
 #include <cstdint>                                // for int64_t, uint64_t
 #include <limits>                                 // for std::numeric_limits
@@ -156,6 +157,13 @@ Cast::cast(FieldType type, const MsgPack& obj)
 }
 
 
+bool
+Cast::bare_number_text(std::string_view text) noexcept
+{
+	return !text.empty() && !std::isspace(static_cast<unsigned char>(text.front())) && !std::isspace(static_cast<unsigned char>(text.back()));
+}
+
+
 int64_t
 Cast::integer(const MsgPack& obj)
 {
@@ -177,7 +185,7 @@ Cast::integer(const MsgPack& obj)
 		case MsgPack::Type::STR: {
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
-			if (errno_save != 0) {
+			if (errno_save != 0 || !bare_number_text(obj.str_view())) {
 				THROW(CastError, "Value {} cannot be cast to integer", obj.to_string());
 			}
 			return r;
@@ -212,7 +220,7 @@ Cast::positive(const MsgPack& obj)
 			const auto text = obj.str_view();
 			int errno_save;
 			auto r = strict_stoull(&errno_save, text);
-			if (errno_save != 0 || (!text.empty() && text.front() == '-')) {  // strtoull wraps a negative
+			if (errno_save != 0 || !bare_number_text(text) || text.front() == '-') {  // strtoull wraps a negative
 				THROW(CastError, "Value {} cannot be cast to positive", obj.to_string());
 			}
 			return r;
@@ -238,7 +246,7 @@ Cast::floating(const MsgPack& obj)
 		case MsgPack::Type::STR: {
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
-			if (errno_save != 0) {
+			if (errno_save != 0 || !bare_number_text(obj.str_view())) {
 				THROW(CastError, "Value {} cannot be cast to float", obj.to_string());
 			}
 			return r;

@@ -165,12 +165,15 @@ not_exact(std::string_view field, FieldType type, const MsgPack& value, std::str
 MsgPack
 number_of(std::string_view text)
 {
+	if (!Cast::bare_number_text(text)) {
+		return MsgPack();
+	}
 	int errno_save;
 	const auto i = strict_stoll(&errno_save, text);
 	if (errno_save == 0) {
 		return MsgPack(static_cast<int64_t>(i));
 	}
-	if (!text.empty() && text.front() != '-') {  // strtoull wraps a negative
+	if (text.front() != '-') {  // strtoull wraps a negative
 		const auto u = strict_stoull(&errno_save, text);
 		if (errno_save == 0) {
 			return MsgPack(static_cast<uint64_t>(u));
@@ -207,13 +210,14 @@ exact_number(FieldType type, const MsgPack& v)
 			if (type == FieldType::floating) {
 				return v;
 			}
-			if (!std::isfinite(d) || std::trunc(d) != d) {
+			// From 2^53 on, doubles are 2 or more apart, so 9007199254740993.5 reads as the integral 9007199254740994.
+			if (std::trunc(d) != d || !(std::fabs(d) < 0x1p53)) {
 				break;
 			}
-			if (type == FieldType::integer && d >= -0x1p63 && d < 0x1p63) {
+			if (type == FieldType::integer) {
 				return MsgPack(static_cast<int64_t>(d));
 			}
-			if (type == FieldType::positive && d >= 0 && d < 0x1p64) {
+			if (d >= 0) {
 				return MsgPack(static_cast<uint64_t>(d));
 			}
 			break;
