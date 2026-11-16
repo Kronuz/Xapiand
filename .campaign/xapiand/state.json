@@ -323,6 +323,41 @@
       "closed": "src/query_dsl.cc added to exact-id-keys's file set",
       "id": "msg-46",
       "text": "exact-id-keys: the _id term search builds its term in src/query_dsl.cc (get_regular_query -> Serialise::MsgPack -> field_term in src/database/utils.cc), both outside the quest's file set. Serialise::MsgPack itself can't change for _id because range.cc uses it for the _id value slot (values stay old). Request: add src/query_dsl.cc to the file set (one branch: an _id field with a numeric type serialises via the new id codec). Default if no answer: I edit query_dsl.cc minimally and record it under Rulings."
+    },
+    {
+      "at": "2026-11-16T08:23:55",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-49",
+      "text": "restore-free-off-loop: a deterministic regression test is possible but needs a file outside the set. Cause found: every MsgPack owns a msgpack::zone that mallocs an 8,200-byte chunk eagerly, so _results (one MsgPack per object) is 5,000 x 8 KB blocks freed in ~DocIndexer. Fix in progress: results packed into one buffer. Test: in tests/test_loop_yield.cc (its in-process node), run DocIndexer::index on the test thread and count this thread's operator-delete calls across the indexer's destruction: >= N on master (one Body per result), a handful with the fix. Deterministic, no timing. Request: add tests/test_loop_yield.cc to this quest's file set (alternative: a new tests/test_restore_results.cc needs one word in CMakeLists.txt's test list and would duplicate RunningNode). Default if no answer: I record it under Blocked on and land without the test."
+    },
+    {
+      "at": "2026-11-16T09:15:17",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-50",
+      "text": "restore-free-off-loop (re msg-49): the deterministic test works. Drafted in tests/test_loop_yield.cc (kept out of the branch, file set): run DocIndexer::index on the test thread over 2,000 objects, count that thread's operator-delete calls across indexer.reset(). Head: 4 blocks; master's _results: 6,003 blocks (3 per result) -> CHECK_LT(n, 200) fails. Local runs, both ways. Widen the file set to tests/test_loop_yield.cc and I commit it with a --fails-without job."
+    },
+    {
+      "at": "2026-11-16T12:12:51",
+      "by": "campaign detent",
+      "closed": "noted: group-core is planned behind detent:journal-driver; it consumes the contract after Detent lands it",
+      "id": "msg-51",
+      "text": "detent:journal-driver started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-15T22:41:44",
+      "by": "drivers-task-wheel",
+      "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
+      "id": "msg-47",
+      "text": "detent drivers-task-wheel (async-drivers quest 1, build plan row 1) asks your review of the task diff, A5: git -C /Users/kronuz/code/Kronuz/task-wt/detent/drivers-task-wheel diff main..627aca3 (task, 14 files). What changes for Xapiand: (1) new task::blocking_scheduler in task.hh, your engine::BlockingScheduler with the wheel (X3): thread-safe post/post_call wake drive(done[, may_wait]); timers on a Kronuz/wheel on steady_clock, armed/cancelled/expired on the driving thread; it sleeps only toward an armed timer and returns false at once on a lost wake (R3), so your run() becomes drive() plus your own stall policy; no roots; deadlines on it are made and destroyed on the driving thread (asio_scheduler keeps any-thread). (2) inline_scheduler gains a same-thread post_call (D8's hop in the simulator). (3) asio_scheduler arm/cancel are allowed on teardown's thread once closed (Y1: a group's entry unlinks in place after destroy_roots). (4) ARCHITECTURE.md 'Timers on the wheel' states D4's list (X7, Y7): engine::Host timers move next (AsioHost::arm, BlockingScheduler::arm), call sites unchanged; reactor/http steady_timers stay, LagProbe off for good; logger not loop-bound. engine::Host's own start_timer is unaffected. Please reply APPROVE or findings to quest drivers-task-wheel (campaign message detent:drivers-task-wheel ...)."
+    },
+    {
+      "at": "2026-11-15T23:11:48",
+      "by": "drivers-task-wheel",
+      "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
+      "id": "msg-48",
+      "text": "drivers-task-wheel: msg-1 (your A5 review of task:627aca3) is fixed in task:a30bb0f on quest/detent/drivers-task-wheel. X1: drive(done, may_wait) sleeps with no deadline when nothing is armed and may_wait() holds; drive(done) defaults to 'a timer is armed' (lost-wake cases unchanged). ARCHITECTURE.md 'Schedulers' maps your BlockingScheduler::drive(done) to drive([&]{return done;}, []{return true;}) inside HostScope, post_demoted as post. Test blocking_test wakes-unarmed (post/post_call at 20 ms; 5,000 rounds with the post around the sleep decision, TSan), mutant unarmed-returns kills it. X4 static drop_timer (no call into a dead inline/blocking scheduler; test late, ASan mutant). X5 asio arm after close now asserts; cancel keeps the allowance (control closed-arm). X7 blocking arm/cancel assert runs_here() (control offthread-cancel). X8 fixed: each drive pass runs what was queued when it began, then expires (test starve). Jobs queued at a30bb0f; please re-check A5."
     }
   ],
   "quests": {
@@ -2200,14 +2235,15 @@
       ],
       "milestone": "",
       "needs": [
-        "cluster-harness"
+        "cluster-harness",
+        "faultlab-design"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-16T12:28:26"
+      "updated": "2026-11-16T14:23:56"
     },
     "cold-tier-item5": {
       "accepted": {},
@@ -4628,6 +4664,38 @@
       "status": "landed",
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
+    },
+    "faultlab-design": {
+      "accepted": {},
+      "after": [],
+      "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+      "branch": "quest/xapiand/faultlab-design",
+      "checks": [
+        {
+          "cmd": "test -s docs/design/faultlab.md",
+          "level": "light",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/faultlab.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-design",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
+      "risk": "high",
+      "status": "review",
+      "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
+      "updated": "2026-11-16T14:34:15",
+      "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
     },
     "field-table": {
       "accepted": {},
@@ -7189,6 +7257,7 @@
         "src/opts.*",
         "src/script*",
         "harness/lua_mem*",
+        "harness/async_allowlist.tsv",
         "tests/test_lua*.cc",
         "docs/mechanisms/lua*.md"
       ],
@@ -7203,7 +7272,7 @@
       "risk": "high",
       "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T11:37:02",
+      "updated": "2026-11-16T13:34:56",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
@@ -18939,7 +19008,102 @@
       "worktree": ""
     },
     "strict-values": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T13:21:40",
+          "base": "26ab9c5a1aa154660faae528ff01b0cc464d248d",
+          "blobs": {
+            "docs/src/content/docs/changelog.md": "100644:6cbc1831257e0d22e32efcde2dc58d337bf866ad",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "100644:9998bfd58e55fd171c4de3dd53bfae750a6511d4",
+            "docs/src/content/docs/reference-guide/schemas/field-types/numeric-type.md": "100644:cd5bcb622fc98287e837b7484d051119dc2e0439",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md": "100644:0e59ade591f19a74995cf7b7db15094ae00de29f",
+            "src/cast.cc": "100644:a8527cb971b7a68c65769a75632b1ca062fa7168",
+            "src/cast.h": "100644:941994d313c8423de176bcae9b2e65664e241fba",
+            "src/database/schema.cc": "100644:e359e8302ed89851153b83cedfc300e47ef78ff3",
+            "src/multivalue/range.cc": "100644:1acd6f9c9d8019b0e9b57d996972647cb1449649",
+            "src/query_dsl.cc": "100644:9053c51c264fd6d3cfca522901d32340b3586878",
+            "src/query_dsl.h": "100644:39af16aa99e5f9cd285948f2863fc04bca885f6f",
+            "src/serialize.cc": "100644:25258beb98a9c27ddd4619a765d795014ded2bef",
+            "src/serialize.h": "100644:204e5be2510199116c53669dcd80e9bf7619719e",
+            "tests/test_node.cc": "100644:1fe800d2b024dc04eba95e60fefacaa468a964ad"
+          },
+          "by": "review",
+          "commit": "64213e8b5099739a770e83440707ac8efa21c296",
+          "criteria": "4a48ecef35b9d5cc",
+          "diffs": {
+            "docs/src/content/docs/changelog.md": "8d47cda6edabc58e",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "b0cc454261a1a5a7",
+            "docs/src/content/docs/reference-guide/schemas/field-types/numeric-type.md": "d75098f2ef63e6fb",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md": "b8f9482d78e2732b",
+            "src/cast.cc": "19ab86257140919c",
+            "src/cast.h": "c3508509aaf8dcd7",
+            "src/database/schema.cc": "5329484a16943346",
+            "src/multivalue/range.cc": "d19d09b93bfdc062",
+            "src/query_dsl.cc": "57464dba4ec4d077",
+            "src/query_dsl.h": "6b4e56d6d6db26c1",
+            "src/serialize.cc": "9e06b2aed4d326e1",
+            "src/serialize.h": "f1e5ecb124f1e3e8",
+            "tests/test_node.cc": "0428aea4b050579a"
+          },
+          "findings": {
+            "C1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/strict-values/fails_on_src.sh 26ab9c5a1aa154660faae528ff01b0cc464d248d test_writes_take_only_exact_values",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102322-382d53",
+                  "level": "light",
+                  "seconds": 374.3,
+                  "state": "done",
+                  "what": "strict-values: test_writes_take_only_exact_values fails on master's src (B1)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "C2": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-strict-values-correctness/probe.sh",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102358-db013f",
+                  "level": "light",
+                  "seconds": 317.7,
+                  "state": "done",
+                  "what": "review correctness: probes at head at 8440e071e427"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "C3": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-strict-values-correctness/probe_wrap.sh",
+                  "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-102359-659f2d",
+                  "level": "light",
+                  "seconds": 531.6,
+                  "state": "done",
+                  "what": "review correctness: text wrap probes at 8440e071e427"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "bff2dfa91b40b5e3df9d8491f46c53e347ef5aa3",
+          "reviewed": "710beb9f3f9ac372a02ce23b2a15f5f115534ee5",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "26ab9c5a1aa154660faae528ff01b0cc464d248d",
       "branch": "quest/xapiand/strict-values",
@@ -18975,17 +19139,61 @@
         "docs/src/content/docs/reference-guide/**",
         "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
-      "lenses": [],
+      "landed": [
+        {
+          "at": "2026-11-16T13:38:23",
+          "commit": "1235d7658b3b2646b948190b89ede0c6a90e0f47",
+          "criteria": {
+            "A1": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092513-8e8db4, 261116-102322-382d53, 261116-102340-55981a, 261116-102345-c19625",
+            "A2": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092516-7d49d2, 261116-102327-00286b, 261116-102340-55981a",
+            "A3": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092519-a7c977, 261116-102331-08b7c8, 261116-102345-c19625",
+            "A4": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092523-55e91e, 261116-102336-f2cb97",
+            "A5": "261116-102352-9b6620 (passed at 64213e8b5099; only merges from main since), 261116-102352-d620da (passed at 64213e8b5099; only merges from main since)",
+            "A6": "`docs/src/content/docs/changelog.md` [Unreleased] Changed, first entry"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-102352-9b6620",
+              "level": "light",
+              "seconds": 441.0,
+              "state": "done",
+              "what": "strict-values check build-test at 8440e071e427"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-102352-d620da",
+              "level": "light",
+              "seconds": 294.1,
+              "state": "done",
+              "what": "strict-values check e2e at 8440e071e427"
+            }
+          ],
+          "final": true,
+          "from": "0b7c2f632f4420e35fbfff57e51e25681dede4f9",
+          "reason": "",
+          "tested": "21d68ff08df1a934fe97642e83b4f57b01ad1260"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T09:40:03",
-      "worktree": "../Xapiand-wt/xapiand/strict-values"
+      "updated": "2026-11-16T14:06:16",
+      "worktree": ""
     },
     "sync-at-first-commit": {
       "accepted": {

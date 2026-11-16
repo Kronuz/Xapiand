@@ -51,7 +51,7 @@ class QueryDSL {
 	FieldType get_in_type(const MsgPack& obj);
 
 	std::pair<FieldType, MsgPack> parse_guess_range(const required_spc_t& field_spc, std::string_view range);
-	MsgPack parse_range(const required_spc_t& field_spc, std::string_view range);
+	MsgPack parse_range(std::string_view path, const required_spc_t& field_spc, std::string_view range);
 
 	engine::Query process(engine::Op op, std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags, bool is_leaf);
 	engine::Query get_in_query(std::string_view path, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
@@ -60,14 +60,14 @@ class QueryDSL {
 	engine::Query get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_acc_time_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_acc_timedelta_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_acc_num_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_acc_num_query(std::string_view path, const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_acc_geo_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_accuracy_query(std::string_view path, const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_global_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_regular_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_term_query(const required_spc_t& field_spc, std::string_view serialized_term, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
-	engine::Query get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_global_in_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
+	engine::Query get_regular_in_query(std::string_view path, const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 	engine::Query get_in_query(const required_spc_t& field_spc, const MsgPack& obj, engine::Op default_op, engine::termcount wqf, unsigned flags);
 
 	void create_2exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::string& operator_dsl);
