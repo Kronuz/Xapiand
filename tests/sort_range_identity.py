@@ -53,6 +53,7 @@ PORT = int(os.environ.get("PORT", "18976"))
 SCRATCH = os.environ.get("IDENTITY_TMP") or tempfile.mkdtemp(prefix="identity_", dir=os.path.expanduser("~/.scratch"))
 SEED = 20261116
 RANGES = 1000
+TIMEOUT = 600  # seconds per request: the slowest search takes about 2 s on a loaded host
 
 Number = int | float
 Query = tuple[str, str, dict[str, Any]]  # (kind, index, body); kind: sort, range or geo
@@ -60,7 +61,7 @@ Query = tuple[str, str, dict[str, Any]]  # (kind, index, body); kind: sort, rang
 
 def call(method: str, path: str, body: object = None, ctype: str = "application/json") -> tuple[int, Any]:
     raw = body if isinstance(body, (bytes, str)) or body is None else json.dumps(body)
-    conn = http.client.HTTPConnection("localhost", PORT, timeout=120)
+    conn = http.client.HTTPConnection("localhost", PORT, timeout=TIMEOUT)
     conn.request(method, path, body=raw, headers={"Content-Type": ctype, "Accept": "application/json"})
     response = conn.getresponse()
     data = response.read()
@@ -186,13 +187,23 @@ def run(binary: str, corpora: dict[str, tuple[str, list[dict[str, Any]]]], plan:
             status, data = call("RESTORE", f"/{index}/?commit", text, "application/x-ndjson")
             assert status in (200, 201, 204), (binary, index, status, data)
         answers: list[Any] = []
+        slowest = (0.0, "")
         for kind, index, body in plan:
-            status, data = call("SEARCH", f"/{index}/?volatile", body)
+            begin = time.monotonic()
+            try:
+                status, data = call("SEARCH", f"/{index}/?volatile", body)
+            except TimeoutError:
+                # A search that never answers is a wrong answer named in the report, not a crash.
+                print(f"TIMEOUT {binary} /{index}/ {json.dumps(body)[:300]}", file=sys.stderr, flush=True)
+                answers.append(("timeout", TIMEOUT))
+                continue
+            slowest = max(slowest, (time.monotonic() - begin, f"/{index}/ {json.dumps(body)[:200]}"))
             if status != 200 or not isinstance(data, dict):
                 answers.append(("error", status))
                 continue
             ids = [h["_id"] for h in data["hits"]]
             answers.append(ids if kind != "range" else sorted(ids))
+        print(f"{binary}: slowest search {slowest[0]:.2f} s: {slowest[1]}", flush=True)
         return answers
     finally:
         node.terminate()
