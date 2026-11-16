@@ -19124,8 +19124,8 @@
       "risk": "normal",
       "status": "landed",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T13:38:31",
-      "worktree": "../Xapiand-wt/xapiand/strict-values"
+      "updated": "2026-11-16T14:06:16",
+      "worktree": ""
     },
     "sync-at-first-commit": {
       "accepted": {
