@@ -1,4 +1,4 @@
-"""Run under quiet strict: bench_sortable_codec.py SORTABLE_ROOT [PASSES]."""
+"""Run under quiet strict: bench_sortable.py SORTABLE_ROOT [PASSES]."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 from time import perf_counter_ns
 
-MODULE = Path(__file__).resolve().parents[1] / "xapiand" / "sortable_codec.py"
-spec = importlib.util.spec_from_file_location("sortable_codec", MODULE)
+MODULE = Path(__file__).resolve().parents[1] / "xapiand" / "sortable.py"
+spec = importlib.util.spec_from_file_location("sortable", MODULE)
 assert spec and spec.loader
 codec = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(codec)

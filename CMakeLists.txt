@@ -489,8 +489,8 @@ FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-c
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
-FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+# sortable: the exact number codec (docs/design/sortable-encoding.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG 915b014f417ee9ba23e682ec438ecd9cd34f485e)
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
@@ -1920,6 +1920,16 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# The pinned sortable codec's order proof, and the Python client's bytes against its C++ (design T1, T3).
+		add_executable(sortable_property "${sortable_SOURCE_DIR}/test/property.cc")
+		target_include_directories(sortable_property PRIVATE "${sortable_SOURCE_DIR}/test")
+		add_test(NAME sortable_property COMMAND sortable_property)
+		add_executable(sortable_cli "${sortable_SOURCE_DIR}/tools/cli.cc")
+		find_package(Python3 3.10 COMPONENTS Interpreter REQUIRED)
+		add_test(NAME sortable_xlang COMMAND ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tests/sortable_xlang.py"
+			"${sortable_SOURCE_DIR}" $<TARGET_FILE:sortable_cli>)
+		add_dependencies(check sortable_property sortable_cli)
 
 		# The Lua limits patch applies to the pinned tarball and yields the tree that was built.
 		if (LUA)
