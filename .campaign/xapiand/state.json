@@ -17326,11 +17326,79 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T05:12:16",
+          "commit": "658e4c6f4c7d963a83ec8127f70f4b1ed52294b5",
+          "criteria": {
+            "A1": "D87 (PLAN.md decision row, owner 2026-11-13)",
+            "A10": "`docs/mechanisms/value-encoding.md`",
+            "A11": "`docs/src/content/docs/changelog.md`",
+            "A12": "261116-042128-29afcc",
+            "A2": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7",
+            "A3": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7; fails without: 261115-224339-653d9d, 261115-224809-f01fd9",
+            "A4": "261116-042129-1e9af0",
+            "A5": "261116-042128-885821, 261116-042137-a9c947; fails without: 261115-232755-9ae906, 261116-015759-0b2751",
+            "A6": "261116-042253-9e3c64",
+            "A7": "261116-042250-335a75, 261116-042253-9e3c64",
+            "A8": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7",
+            "A9": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-a82cc5",
+              "level": "light",
+              "seconds": 867.3,
+              "state": "done",
+              "what": "sortable-encoding check build-test at 7700cb179224"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-6ee9e4",
+              "level": "light",
+              "seconds": 742.2,
+              "state": "done",
+              "what": "sortable-encoding check e2e at 7700cb179224"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "5c7b973c35d5384c37410a494daecb9f214f748f",
+              "state": "done"
+            },
+            {
+              "cmd": "! git grep -n sortable_serialise -- src contrib",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-e622f7",
+              "level": "none",
+              "seconds": 1.3,
+              "state": "done",
+              "what": "sortable-encoding check no-gpl at 7700cb179224"
+            }
+          ],
+          "final": true,
+          "from": "6c01c85f3d336e72e9d7bec6ea82fb600c0988d1",
+          "later": [
+            "261116-051216-49bc03"
+          ],
+          "reason": "",
+          "tested": "5c7b973c35d5384c37410a494daecb9f214f748f"
+        }
+      ],
       "lenses": [
         "correctness",
         "design"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -17338,10 +17406,10 @@
       ],
       "repo": ".",
       "risk": "critical",
-      "status": "review",
+      "status": "landed",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-16T05:11:36",
-      "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
+      "updated": "2026-11-16T05:12:22",
+      "worktree": ""
     },
     "sortable-followups": {
       "accepted": {},
