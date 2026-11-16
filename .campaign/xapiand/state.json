@@ -4666,7 +4666,26 @@
       "updated": "2026-11-08T15:39:22"
     },
     "faultlab-design": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-16T15:03:53",
+          "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+          "blobs": {
+            "docs/design/faultlab.md": "100644:b3841798384840a1bb0bbbda8153fea56f72962a"
+          },
+          "by": "review",
+          "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+          "criteria": "81beb3b7f5f3556b",
+          "diffs": {
+            "docs/design/faultlab.md": "59211b25e1aa6d99"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e028e190495b7c3f46dc1e7fda517c76f1934752",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
       "branch": "quest/xapiand/faultlab-design",
@@ -4727,7 +4746,7 @@
       "risk": "low",
       "status": "review",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
-      "updated": "2026-11-16T15:03:51",
+      "updated": "2026-11-16T15:03:53",
       "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
     },
     "field-table": {
