@@ -6997,10 +6997,8 @@
         "src/lua/**",
         "src/opts.*",
         "src/script*",
-        "harness/lua_*",
+        "harness/lua_mem*",
         "tests/test_lua*.cc",
-        "tests/lua_*",
-        "docs/src/content/docs/reference-guide/scripts*",
         "docs/mechanisms/lua*.md"
       ],
       "landed": [],
@@ -7014,7 +7012,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T08:58:11"
+      "updated": "2026-11-16T08:58:26"
     },
     "manifest-log": {
       "accepted": {
