@@ -84,7 +84,7 @@ The loop's RESTORE time is allocating and freeing the objects' `MsgPack` trees, 
 frees; only the last free is long enough (one per chunk, 5,000 trees) to show as a turn over 3 ms.
 
 The existing design. Prepare as a chore (`phase7c.md` D12, `x7-loop-stalls.md` fix (a)) and the per-shard apply chores are
-already on master: `DocIndexer::index` pulls rounds in `flush` chores (`handler.cc:2816` `pull_round`, `:2336`
+already on master: `DocIndexer::index` pulls rounds in `flush` chores (`handler.cc:2813` `pull_round`, `:2352`
 `prepare_plain`) and applies in chores (`:2684` `apply_slice`). So `reactor-offload.md`'s "prepare and apply run per object
 on the reactor" no longer holds on master; the design cannot remove this stall (0 ms of it is prepare or apply).
 
