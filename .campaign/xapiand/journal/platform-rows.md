@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI run 7
+State: waiting on CI run 7: FreeBSD 43903990885, arm64 43903990874 at Xapiand:36c2c0ede
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,6 +16,8 @@ PRODUCT FINDING P3 (FreeBSD Release t10_lua, unexplained): library-call loops 0 
 Docs written: docs/dev/platforms.md (new) and docs/dev/freebsd.md, with the run links and findings.
 
 Landing: A3 holds (each failure is fixed or a named finding). A1 and A2 ask for green runs, and no run is green on either platform yet. Waiting on: arm64 t1_census and FreeBSD t2_e2e_asan/t10_lua_asan need the repin; FreeBSD t10_lua needs a product answer on P3.
+
+Run 7 (Xapiand:36c2c0ede, master d273b6203 merged): census now allows `reactor` (reactor:886131b names loops reactor-<i>) with exactly one per reactor and at most one Xapiand:MAIN, no blanket allowance. FreeBSD 43903990885, arm64 43903990874. P3 (Lua memory 400s, FreeBSD): report whether it repeats.
 
 ## Next
 
