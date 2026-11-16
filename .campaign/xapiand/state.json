@@ -3936,7 +3936,52 @@
       "updated": "2026-11-08T13:25:14"
     },
     "exact-id-keys": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-15T22:25:21",
+          "base": "70612e7ce6d0d7224049cddca54ce691c5bce61f",
+          "blobs": {
+            "CMakeLists.txt": "100644:b5e88ec27dcd2a998b86d1ba248d88d220625603",
+            "docs/design/exact-id-keys.md": "100644:2a2da950697c866150f085cf3dc0f537ea08c8d6",
+            "docs/mechanisms/document-ids-and-versions.md": "100644:22f4857c2fe48ea6925631acc12dbe9b776e056a",
+            "docs/src/content/docs/changelog.md": "100644:4bac9399c37e3202a07ad2d7cd354970a7d09a9a",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "100644:346f9c70a088b87d053d1b1348efb837027285f7",
+            "src/database/handler.cc": "100644:58b2c9a6bd19df0b914f1c2322f961b36c7eed7b",
+            "src/database/handler.h": "100644:8c92ca199d1799acc778779dd32c33664c36c0ad",
+            "src/database/schema.cc": "100644:63939781e9e413bcc8f9af912b5f2876a2657d26",
+            "src/database/shard.cc": "100644:cc09b880f556e83e5a5f1b9bd6b522189f5e054c",
+            "src/query_dsl.cc": "100644:919bafe5a5cc95d09fe35ad9f0bb4bcf30802333",
+            "src/serialise.cc": "100644:391add54253c551413621e4c67fd0de932391d23",
+            "src/serialise.h": "100644:625cffa5971af66992720d198d9fdca2ce55ee04",
+            "tests/exact_id_mutants.sh": "100755:5d8c40fe71dfaf9b647cd4921ad38fa74e84832b",
+            "tests/test_node.cc": "100644:8158eb5d86b86431f48d7221ecd2547bb214d1b9"
+          },
+          "by": "review",
+          "commit": "1d073c52f59486a470e5323202a5f604a10f89b7",
+          "criteria": "c6c8fbaaeb920eea",
+          "diffs": {
+            "CMakeLists.txt": "3e622dcc6f5a7157",
+            "docs/design/exact-id-keys.md": "7cf3f905f3b53303",
+            "docs/mechanisms/document-ids-and-versions.md": "c6a511e39043c47a",
+            "docs/src/content/docs/changelog.md": "f32903e83a545439",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "5a8fa893c8fba1bd",
+            "src/database/handler.cc": "8dac334b59bf4e39",
+            "src/database/handler.h": "bb323b4134e72c61",
+            "src/database/schema.cc": "1580c225f1a8355f",
+            "src/database/shard.cc": "7f433dca94728aa5",
+            "src/query_dsl.cc": "cc658d801d7828c2",
+            "src/serialise.cc": "64d4ba584f35c546",
+            "src/serialise.h": "8bb707595544830e",
+            "tests/exact_id_mutants.sh": "0361de47fb537858",
+            "tests/test_node.cc": "06ed5cbf890e5638"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e6e06c8335f9d50f171fed1801615a7043064cc0",
+          "reviewed": "1d073c52f59486a470e5323202a5f604a10f89b7",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b37b42b0498ac975bafda90470806c960455e6ee",
       "branch": "quest/xapiand/exact-id-keys",
@@ -3990,7 +4035,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:29:24",
+      "updated": "2026-11-15T22:25:21",
       "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
     },
     "f14-step1": {
