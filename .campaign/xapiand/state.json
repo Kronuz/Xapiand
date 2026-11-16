@@ -16410,10 +16410,16 @@
       "after": [],
       "checks": [
         {
-          "cmd": "campaign-check build-test",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
           "level": "light",
-          "minutes": 60,
+          "minutes": 150,
           "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
         }
       ],
       "consumes": [],
@@ -16426,6 +16432,40 @@
         "TESTING.md",
         "contrib/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T03:54:41",
+          "checks": [
+            [
+              {
+                "cmd": "campaign-check build-test",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "replaces the placeholder build-test command written at creation with the project's real build-test and e2e commands; no work or review exists yet",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -16437,7 +16477,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Repin the renamed libraries and finish serialize in Xapiand",
-      "updated": "2026-11-16T03:53:35"
+      "updated": "2026-11-16T03:54:41"
     },
     "sha256-cl-10": {
       "accepted": {},
