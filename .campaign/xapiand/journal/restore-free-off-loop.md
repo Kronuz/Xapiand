@@ -20,19 +20,22 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
 
 ## Next
 
-1. Jobs: build 261116-082820-01ef20 (light, slot rfo-ab, head + base with lag patch), then strict
-   261116-082828-7f33b2 and 261116-082830-81632d (ABBA, A1 p99 + A2) and 261116-082832-e7e5ad
-   (spin, A1 turns); verify build-test 261116-082744-47495e, e2e 261116-082744-9228f8 (at fb633e0,
-   re-verify at final head). Combined verdict: `harness/restore_stall_verdict.py` over the slot's
-   .scratch/rs-abba1 rs-abba2 rs-spin.
-2. Local: .scratch/build test_loop_yield run (restore item tests).
-3. Fill the note's Fix section with the numbers (A4).
+1. Jobs at 11252fa (slot rfo-ab, binaries built by 261116-084544-274492, done): strict
+   261116-084546-66f6bc, 261116-084548-54a3f4 (ABBA, A1 p99 + A2), 261116-084550-4e8f42 (spin, A1
+   turns); light 261116-084552-9a4f9d (items byte-identical, A3); build-test 261116-084554-997d0d;
+   e2e 261116-084554-c40c01 done exit 0. Combined verdict over the slot's .scratch/rs-abba1,
+   rs-abba2, rs-spin: `python3 harness/restore_stall_verdict.py DIR...`.
+2. Fill the note's Fix section (RESULTS_PLACEHOLDER in docs/perf/restore-stall.md) and its
+   Reproduce, commit (A4).
+3. If the lead widens the set (msg-49/50): commit the test from .scratch/test_loop_yield.draft.cc,
+   job it, plus a --fails-without job with master's handler.{h,cc}.
 
 ## Blocked on
 
-msg-49 to the lead: the deterministic test (thread-local operator-delete count across
-~DocIndexer: >= N on master, a handful with the fix) needs tests/test_loop_yield.cc, outside the
-file set. Default if unanswered: no test, the reason recorded.
+msg-49/msg-50 to the lead: the deterministic test needs tests/test_loop_yield.cc, outside the file
+set. Drafted and run locally both ways (.scratch/test_loop_yield.draft.cc): the indexer of 2,000
+objects frees 4 blocks on head, 6,003 with master's _results (CHECK_LT 200 fails). Default if
+unanswered: not in the branch, the reason recorded.
 
 ## Evidence
 
@@ -52,4 +55,14 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Fixed at the allocation (one packed buffer), not off the loop or by slicing: the cost was 5,000
+  8 KB zones, so removing them also removes the per-object zone made and freed while recording.
+- Each result value is packed from the same msgpack::object the MsgPack held
+  (`pk.pack(msgpack::object(v))`), so the bytes match; checked by harness/restore_stall_items.py
+  (64 responses, JSON and MessagePack, base vs head) besides the e2e and test_loop_yield.
+- The probe carries its own phase runner (reactor_offload_probe.py is not on master and not in the
+  set); lag_floor.cc, fd_poll_cost.cc and run/run2/floor/scrape scripts stay on explore/restore-stall
+  (answer 2 belongs to metrics-fd-count).
+- The A/B builds head and base in one slot sharing .deps (same pins), both with the lag patch.
+- A2's band: base's min minus base's spread (verdict.py); strict holds cap at 10 min, so two ABBA
+  rounds plus a spin run, one job each.
