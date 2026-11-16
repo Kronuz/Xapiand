@@ -16546,8 +16546,48 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T08:05:51",
+          "commit": "c65cc23804a5247676b8ae9ac6d421b455244439",
+          "criteria": {
+            "A1": "build-test 261116-064759-26b223 at 5b8e4589b; CI 43889549864, FreeBSD 43889549933",
+            "A2": "261116-064804-6644f0",
+            "A3": "e2e 261116-064759-a1e3d1",
+            "A4": "261116-064804-511a73; fails without: 261116-052354-4dcdf7, 261116-064804-835cd1"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "5b8e4589bd627837fdfe64b3cd35a3205a7eacf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-064759-26b223",
+              "level": "light",
+              "seconds": 945.5,
+              "state": "done",
+              "what": "serialize-repin check build-test at 5b8e4589bd62"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "5b8e4589bd627837fdfe64b3cd35a3205a7eacf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-064759-a1e3d1",
+              "level": "light",
+              "seconds": 333.4,
+              "state": "done",
+              "what": "serialize-repin check e2e at 5b8e4589bd62"
+            }
+          ],
+          "final": true,
+          "from": "771af67dc6ddff51143c2aa9f309fb6d817182a2",
+          "reason": "",
+          "tested": "d273b620307bcc51f480a91cb8be24ed4cef8bd0"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "sortable-encoding"
@@ -16555,10 +16595,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Repin the renamed libraries and finish serialize in Xapiand",
-      "updated": "2026-11-16T05:23:11",
-      "worktree": "../Xapiand-wt/xapiand/serialize-repin"
+      "updated": "2026-11-16T08:06:35",
+      "worktree": ""
     },
     "sha256-cl-10": {
       "accepted": {},
