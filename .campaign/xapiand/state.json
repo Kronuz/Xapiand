@@ -5162,6 +5162,72 @@
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
       "updated": "2026-11-15T23:04:50"
     },
+    "group-install": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R group_install_crash",
+          "level": "light",
+          "minutes": 60,
+          "name": "crash"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "consensus:snapshot-channel"
+      ],
+      "files": [
+        "include/strata/group/**",
+        "test/group/**",
+        "docs/mechanisms/replication-group.md",
+        "docs/mechanisms/group-install.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:group-install"
+      ],
+      "repo": "../strata",
+      "risk": "critical",
+      "status": "planned",
+      "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
+      "updated": "2026-11-15T23:04:55"
+    },
     "hashes-cl-1": {
       "accepted": {},
       "after": [],
