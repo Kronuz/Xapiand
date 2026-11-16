@@ -16405,6 +16405,40 @@
       "title": "Field-aware engine seam",
       "updated": "2026-11-08T13:25:26"
     },
+    "serialize-repin": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "campaign-check build-test",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "src/**",
+        "tests/**",
+        "harness/**",
+        "docs/**",
+        "TESTING.md",
+        "contrib/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "sortable-encoding"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Repin the renamed libraries and finish serialize in Xapiand",
+      "updated": "2026-11-16T03:53:35"
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
