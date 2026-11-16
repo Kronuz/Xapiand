@@ -2558,6 +2558,63 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "consensus-rpc-lane": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-transport",
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "later": true,
+          "level": "light",
+          "minutes": 70,
+          "name": "fuzz"
+        }
+      ],
+      "consumes": [
+        "consensus:transport"
+      ],
+      "files": [
+        "include/consensus/transport/**",
+        "test/transport/rpc*",
+        "fuzz/rpc*",
+        "docs/mechanisms/rpc-lane.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "consensus:rpc-lane"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "A request lane on the host transport, streamed bodies",
+      "updated": "2026-11-15T23:04:46"
+    },
     "core-lifecycle-tests": {
       "accepted": {},
       "after": [],
