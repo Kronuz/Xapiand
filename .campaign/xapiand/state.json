@@ -330,6 +330,13 @@
       "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
       "id": "msg-49",
       "text": "restore-free-off-loop: a deterministic regression test is possible but needs a file outside the set. Cause found: every MsgPack owns a msgpack::zone that mallocs an 8,200-byte chunk eagerly, so _results (one MsgPack per object) is 5,000 x 8 KB blocks freed in ~DocIndexer. Fix in progress: results packed into one buffer. Test: in tests/test_loop_yield.cc (its in-process node), run DocIndexer::index on the test thread and count this thread's operator-delete calls across the indexer's destruction: >= N on master (one Body per result), a handful with the fix. Deterministic, no timing. Request: add tests/test_loop_yield.cc to this quest's file set (alternative: a new tests/test_restore_results.cc needs one word in CMakeLists.txt's test list and would duplicate RunningNode). Default if no answer: I record it under Blocked on and land without the test."
+    },
+    {
+      "at": "2026-11-16T09:15:17",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-50",
+      "text": "restore-free-off-loop (re msg-49): the deterministic test works. Drafted in tests/test_loop_yield.cc (kept out of the branch, file set): run DocIndexer::index on the test thread over 2,000 objects, count that thread's operator-delete calls across indexer.reset(). Head: 4 blocks; master's _results: 6,003 blocks (3 per result) -> CHECK_LT(n, 200) fails. Local runs, both ways. Widen the file set to tests/test_loop_yield.cc and I commit it with a --fails-without job."
     }
   ],
   "quests": {
