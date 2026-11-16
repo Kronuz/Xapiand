@@ -138,3 +138,23 @@ Checked and fine:
 - Ordering against epochs holds once E1's fold runs before each call's effect: a store before an
   ordering point is staged, and one after it is unordered.
 - Step 0 grows to four virtuals plus `SharedMapping` (:336), and nothing changes the order.
+
+## Re-check 3
+
+Commit: cpp-libraries:727e417a84a39597a7ce185d97eb28381b3a2b6f
+Verdict: APPROVE
+
+This round covers only 9d23d74..727e417: commit 3d412e5, which fixes E1-E4, and 727e417, which
+adds Detent's R10. Line numbers are faultlab.md at 727e417. I checked the R10 text against
+completion:7731315 posix.h:975-987 and io.h:44-49. I ran no job.
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| E1 | no | defect | Closed. A fold applies the changed sectors directly and bypasses `check`, the power counter, fault rules and short or damaged writes. It runs before every call's effect and at `crash`, `kill()` and `snapshot()`. Crash and kill then detach the mapping. `mutations()` and cut points never move, and stores made before power-off can survive a crash. The three tests asked for are in the suite checks. | faultlab.md:172-178, :376-377 | none |
+| E2 | no | gap | Closed. A faultfs test must not store into a mapping while another thread calls in, and the doc names the TSan report. | faultlab.md:178-179 | none |
+| E3 | no | nit | Closed. A lease is also released when its file closes. | faultlab.md:132 | none |
+| E4 | no | nit | Closed. The claim now reads "commit directory operations in transaction order ... is expected", still uncited but softened. | faultlab.md:98-100 | none |
+| R10a | no | nit | `create_exclusive` "applies the IO's file mode exactly". PosixIO already does: it calls `fchmod` after create, so umask cannot narrow the mode, and this is not a behavior change. But PosixIO keeps `owner.lock` at 0600 whatever the artifact mode (posix.h:984), and the new sentence omits that. | posix.h:982-986; faultlab.md:160-164 | Add "except owner.lock, always 0600", so a reader does not widen it. |
+| R10b | no | gap | faultfs always reports `extended_acl = false`, so ChangeWriter's refusal path for a file with an extended ACL (change_file.cc:45-47) cannot be reached on faultfs. Adding the field to `EntryInspection` also changes its defaulted `operator==` (io.h:48), which is harmless. | faultlab.md:160-164 | Optional: a faultfs knob that sets `extended_acl` for a name, like `set_trust`, so that refusal gets a test. |
