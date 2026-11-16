@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: working
+State: waiting on jobs 261116-084546-66f6bc 261116-084548-54a3f4 261116-084550-4e8f42 261116-084554-997d0d
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,8 +25,8 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
    turns); light 261116-084552-9a4f9d (items byte-identical, A3); build-test 261116-084554-997d0d;
    e2e 261116-084554-c40c01 done exit 0. Combined verdict over the slot's .scratch/rs-abba1,
    rs-abba2, rs-spin: `python3 harness/restore_stall_verdict.py DIR...`.
-2. Fill the note's Fix section (RESULTS_PLACEHOLDER in docs/perf/restore-stall.md) and its
-   Reproduce, commit (A4).
+2. Put the A/B table in the note's Fix section (the "is pending; its table goes here" line of
+   docs/perf/restore-stall.md) and update its Limits and Reproduce, commit (A4).
 3. If the lead widens the set (msg-49/50): commit the test from .scratch/test_loop_yield.draft.cc,
    job it, plus a --fails-without job with master's handler.{h,cc}.
 
@@ -45,13 +45,19 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261116-084546-66f6bc, 261116-084548-54a3f4 (ABBA p99), 261116-084550-4e8f42 (spin turns): queued |
+| A2 | 261116-084546-66f6bc, 261116-084548-54a3f4: queued |
+| A3 | 261116-084552-9a4f9d (64 of 64 RESTORE responses byte-identical, base vs head); e2e 261116-084554-c40c01 passed; build-test 261116-084554-997d0d running; test_loop_yield and test_node passed locally |
+| A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" (A/B table pending) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+DocIndexer's results are one packed MessagePack buffer plus (offset, size) per object
+(src/database/handler.{h,cc}); results() builds the response array once. Before, each result was a
+MsgPack whose zone mallocs 8 KB eagerly: 5,000 x 8 KB freed in ~DocIndexer's one turn. Responses
+byte-identical (A3 job). Timing numbers pending the strict jobs; note docs/perf/restore-stall.md.
+Leaves open: the msgpack library's eager 8 KB first chunk costs every MsgPack value everywhere
+(input objects, Admitted); a lazy or small first chunk in Kronuz/msgpack is the general fix.
 
 ## Rulings I made
 
