@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shares of a loop thread's busy samples by frame, from a macOS `sample` file (profile_light.parse_sample's rows).
 
-  harness/restore_stall_profile.py restore.sample.txt [--thread http0] [--top 40] [--match REGEX ...]
+  harness/restore_stall_profile.py restore.sample.txt [--thread http0 (a name; the thread running TcpServer::start is taken too)] [--top 40] [--match REGEX ...]
 
 Busy samples are those whose leaf is not an idle wait. Prints the thread totals, the busiest threads, and for the
 loop thread the inclusive share of each frame (once per stack) and the leaf shares.
@@ -34,7 +34,9 @@ def main() -> int:
     print("busiest threads (busy samples):")
     for t, n in per_thread.most_common(8):
         print(f"  {n:6d}  {t[:90]}")
-    loop = [t for t in per_thread if args.thread in t]
+    # The HTTP loop's thread is unnamed in `sample`; it is the one whose stacks run reactor::TcpServer::start's lambda.
+    http = {t for t, frames, _ in rows if any("TcpServer::start" in f for f in frames)}
+    loop = [t for t in per_thread if args.thread in t or t in http]
     if not loop:
         print("no thread matches", args.thread)
         return 1

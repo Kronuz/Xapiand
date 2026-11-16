@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import collections
+import os
 import re
 import subprocess
+import time
 
 
 def main() -> int:
@@ -20,7 +22,24 @@ def main() -> int:
     ap.add_argument("--top", type=int, default=25)
     ap.add_argument("--frames", type=int, default=14)
     ap.add_argument("--min-age-us", type=int, default=0)
+    ap.add_argument("--probe-log", help="the probe's stdout: its scrape stamps and phase lines split the log by phase")
+    ap.add_argument("--phase", help="keep only captures and gaps inside this phase (needs --probe-log)")
+    ap.add_argument("--uptime-clock", action="store_true", help="the probe log used time.monotonic_ns (runs before the clock fix)")
     args = ap.parse_args()
+    # The probe stamps scrapes with time.monotonic_ns (uptime clock); the node's steady_clock counts sleep too.
+    shift = time.clock_gettime_ns(time.CLOCK_MONOTONIC) - time.monotonic_ns() if args.uptime_clock else 0
+    windows: dict[str, tuple[int, int]] = {}
+    scrapes: list[tuple[int, int]] = []
+    if args.probe_log:
+        names: list[str] = []
+        for line in open(args.probe_log, errors="replace"):
+            if line.startswith('{"scrape"'):
+                a, b = re.findall(r"\d+", line)
+                scrapes.append((int(a) + shift, int(b) + shift))
+            elif m := re.match(r'\{"phase": "(\w+)"', line):
+                names.append(m.group(1))
+        for i, name in enumerate(names):
+            windows[name] = (scrapes[2 * i][1], scrapes[2 * i + 1][0])
     base = None
     gaps: list[tuple[int, int]] = []
     stalls: list[tuple[int, int, list[str]]] = []
@@ -29,8 +48,16 @@ def main() -> int:
             base = m.group(1)
         elif m := re.match(r"SPIN loop=\d+ at_ns=(\d+) gap_us=(\d+)", line):
             gaps.append((int(m.group(1)), int(m.group(2))))
-        elif m := re.match(r"STALL loop=\d+ at_ns=(\d+) age_us=(\d+) frames=(\S+)", line):
-            stalls.append((int(m.group(1)), int(m.group(2)), m.group(3).split(",")))
+        elif m := re.match(r"STALL loop=\d+ at_ns=(\d+) age_us=(\d+) frames=((?:0x[0-9a-f]+,?)+)", line):
+            stalls.append((int(m.group(1)), int(m.group(2)), [a for a in m.group(3).split(",") if a]))
+    if args.phase:
+        lo, hi = windows[args.phase]
+        gaps = [g for g in gaps if lo <= g[0] <= hi]
+        stalls = [x for x in stalls if lo <= x[0] <= hi]
+    if scrapes:
+        inside = [g for g in gaps if any(a <= g[0] <= b + 5_000_000 for a, b in scrapes)]
+        print(f"{len(inside)} of {len(gaps)} gaps end inside a scrape (or within 5 ms after it): "
+              f"{sorted((g for _, g in inside), reverse=True)[:10]}")
     print(f"image_base {base}; {len(gaps)} gaps >= threshold; {len(stalls)} stall captures")
     if gaps:
         h = collections.Counter()
@@ -41,8 +68,12 @@ def main() -> int:
     if not stalls or base is None:
         return 0
     addrs = sorted({a for _, _, fr in stalls for a in fr})
-    out = subprocess.run(["atos", "-o", args.bin, "-l", base, *addrs], capture_output=True, text=True).stdout.splitlines()
-    sym = dict(zip(addrs, out))
+    lo_app, hi_app = int(base, 16), int(base, 16) + 0x4000000
+    app = [a for a in addrs if lo_app <= int(a, 16) < hi_app]
+    other = [a for a in addrs if a not in app]
+    sym = dict(zip(app, subprocess.run(["atos", "-o", args.bin, "-l", base, *app], capture_output=True, text=True).stdout.splitlines()))
+    if other:  # the dyld shared cache is mapped at one address in every process of a boot
+        sym.update(zip(other, subprocess.run(["atos", "-p", str(os.getpid()), *other], capture_output=True, text=True).stdout.splitlines()))
 
     def short(a: str) -> str:
         s = sym.get(a, a)

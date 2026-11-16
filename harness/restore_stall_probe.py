@@ -30,10 +30,10 @@ _scrape = sl.scrape
 
 
 async def scrape_logged(conn: sl.Conn) -> dict:
-    # Each scrape's start and end on the steady clock (the node's SPIN/STALL lines carry the same clock's at_ns).
-    t0 = time.monotonic_ns()
+    # Each scrape's start and end on the steady clock (CLOCK_MONOTONIC, the clock of the node's SPIN/STALL at_ns).
+    t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
     out = await _scrape(conn)
-    print(json.dumps({"scrape": [t0, time.monotonic_ns()]}), flush=True)
+    print(json.dumps({"scrape": [t0, time.clock_gettime_ns(time.CLOCK_MONOTONIC)]}), flush=True)
     return out
 
 
