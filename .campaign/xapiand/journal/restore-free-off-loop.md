@@ -9,15 +9,24 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Cause: every `MsgPack` owns a `msgpack::zone` that mallocs an 8,200-byte chunk eagerly (msgpack
+cpp11_zone.hpp, MSGPACK_ZONE_CHUNK_SIZE 8192); `_results` held one MsgPack per object (plus a
+`MsgPack::MAP()` temp per admit and a `MsgPack result` temp per record), so a 5,000-object chunk
+ended with 5,000 8 KB frees in `~DocIndexer`, each a Darwin `madvise`.
+Fix (at the allocation): `_results` is now one packed MessagePack buffer (`_packed`) plus
+(offset, size) per object (`_at`); `results()` builds the response array once. No per-object
+MsgPack exists for results. Compiling locally (.scratch/build) to check, then build-test/e2e jobs
+and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdict.py).
 
 ## Next
 
-1. <step>
+1. Local compile + test_loop_yield, then commit; `campaign verify`; build job (light, slot rfo-ab)
+   then strict A/B job --for A1,A2.
+2. Update docs/perf/restore-stall.md (A4).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 

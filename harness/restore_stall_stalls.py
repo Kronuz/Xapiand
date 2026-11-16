@@ -15,6 +15,46 @@ import subprocess
 import time
 
 
+def read_windows(probe_log: str, shift: int = 0) -> tuple[dict[str, tuple[int, int]], list[tuple[int, int]]]:
+    """Each phase's window on the node's clock, between the scrapes that open and close it, and every scrape."""
+    windows: dict[str, tuple[int, int]] = {}
+    scrapes: list[tuple[int, int]] = []
+    names: list[str] = []
+    for line in open(probe_log, errors="replace"):
+        if line.startswith('{"scrape"'):
+            a, b = re.findall(r"\d+", line)
+            scrapes.append((int(a) + shift, int(b) + shift))
+        elif line.startswith('{"quiet"'):
+            a, b = re.findall(r"\d+", line)
+            windows["quiet"] = (int(a) + shift, int(b) + shift)
+        elif m := re.match(r'\{"phase": "(\w+)"', line):
+            names.append(m.group(1))
+    for i, name in enumerate(names):
+        windows[name] = (scrapes[2 * i][1], scrapes[2 * i + 1][0])
+    return windows, scrapes
+
+
+def read_log(log: str) -> tuple[str | None, list[tuple[int, int]], list[tuple[int, int, list[str]]]]:
+    """The node.log's image base, its SPIN gaps (end, us) and its STALL captures (at, age us, frames)."""
+    base = None
+    gaps: list[tuple[int, int]] = []
+    stalls: list[tuple[int, int, list[str]]] = []
+    for line in open(log, errors="replace"):
+        if m := re.match(r"SPIN loop=\d+ image_base=(0x[0-9a-f]+)", line):
+            base = m.group(1)
+        elif m := re.match(r"SPIN loop=\d+ at_ns=(\d+) gap_us=(\d+)", line):
+            gaps.append((int(m.group(1)), int(m.group(2))))
+        elif m := re.match(r"STALL loop=\d+ at_ns=(\d+) age_us=(\d+) frames=((?:0x[0-9a-f]+,?)+)", line):
+            stalls.append((int(m.group(1)), int(m.group(2)), [a for a in m.group(3).split(",") if a]))
+    return base, gaps, stalls
+
+
+def phase_gaps(log: str, probe_log: str, phase: str) -> list[int]:
+    """The loop's turns over the SPIN threshold (us) inside `phase`."""
+    lo, hi = read_windows(probe_log)[0][phase]
+    return [g for at, g in read_log(log)[1] if lo <= at <= hi]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin")
@@ -38,31 +78,8 @@ def main() -> int:
         "raw": None,
     }[args.probe_clock]
     shift = 0 if probe_clock is None else time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - probe_clock()
-    windows: dict[str, tuple[int, int]] = {}
-    scrapes: list[tuple[int, int]] = []
-    if args.probe_log:
-        names: list[str] = []
-        for line in open(args.probe_log, errors="replace"):
-            if line.startswith('{"scrape"'):
-                a, b = re.findall(r"\d+", line)
-                scrapes.append((int(a) + shift, int(b) + shift))
-            elif line.startswith('{"quiet"'):
-                a, b = re.findall(r"\d+", line)
-                windows["quiet"] = (int(a) + shift, int(b) + shift)
-            elif m := re.match(r'\{"phase": "(\w+)"', line):
-                names.append(m.group(1))
-        for i, name in enumerate(names):
-            windows[name] = (scrapes[2 * i][1], scrapes[2 * i + 1][0])
-    base = None
-    gaps: list[tuple[int, int]] = []
-    stalls: list[tuple[int, int, list[str]]] = []
-    for line in open(args.log, errors="replace"):
-        if m := re.match(r"SPIN loop=\d+ image_base=(0x[0-9a-f]+)", line):
-            base = m.group(1)
-        elif m := re.match(r"SPIN loop=\d+ at_ns=(\d+) gap_us=(\d+)", line):
-            gaps.append((int(m.group(1)), int(m.group(2))))
-        elif m := re.match(r"STALL loop=\d+ at_ns=(\d+) age_us=(\d+) frames=((?:0x[0-9a-f]+,?)+)", line):
-            stalls.append((int(m.group(1)), int(m.group(2)), [a for a in m.group(3).split(",") if a]))
+    windows, scrapes = read_windows(args.probe_log, shift) if args.probe_log else ({}, [])
+    base, gaps, stalls = read_log(args.log)
     if args.phase:
         lo, hi = windows[args.phase]
         gaps = [g for g in gaps if lo <= g[0] <= hi]
