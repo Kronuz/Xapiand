@@ -152,8 +152,8 @@ completion:7731315 posix.h:975-987 and io.h:44-49. I ran no job.
 
 | ID | Blocking | Kind | Finding | Evidence | Fix |
 |---|---|---|---|---|---|
-| E1 | no | defect | Closed. A fold applies the changed sectors directly and bypasses `check`, the power counter, fault rules and short or damaged writes. It runs before every call's effect and at `crash`, `kill()` and `snapshot()`. Crash and kill then detach the mapping. `mutations()` and cut points never move, and stores made before power-off can survive a crash. The three tests asked for are in the suite checks. | faultlab.md:172-178, :376-377 | none |
-| E2 | no | gap | Closed. A faultfs test must not store into a mapping while another thread calls in, and the doc names the TSan report. | faultlab.md:178-179 | none |
+| E1 | no | defect | Closed. A fold applies the changed sectors directly and bypasses `check`, the power counter, fault rules and short or damaged writes. It runs before every call's effect and at `crash`, `kill()` and `snapshot()`. Crash and kill then detach the mapping. `mutations()` and cut points never move, and stores made before power-off can survive a crash. The three tests asked for are in the suite checks. | faultlab.md:168-178, :375-377 | none |
+| E2 | no | gap | Closed. A faultfs test must not store into a mapping while another thread calls in, and the doc names the TSan report. | faultlab.md:176-177 | none |
 | E3 | no | nit | Closed. A lease is also released when its file closes. | faultlab.md:132 | none |
 | E4 | no | nit | Closed. The claim now reads "commit directory operations in transaction order ... is expected", still uncited but softened. | faultlab.md:98-100 | none |
 | R10a | no | nit | `create_exclusive` "applies the IO's file mode exactly". PosixIO already does: it calls `fchmod` after create, so umask cannot narrow the mode, and this is not a behavior change. But PosixIO keeps `owner.lock` at 0600 whatever the artifact mode (posix.h:984), and the new sentence omits that. | posix.h:982-986; faultlab.md:160-164 | Add "except owner.lock, always 0600", so a reader does not widen it. |
