@@ -1,6 +1,6 @@
 # sortable-encoding: journal
 
-State: waiting on jobs 261116-041115-99655a 261116-041115-e10c28 261116-041115-77cd6d 261116-041118-a44776 261116-041118-36d20e 261116-041119-3d3040 261116-041119-07b968 and measurement 261116-041137-a6cf93 261116-041145-a813cf 261116-041147-3aec36 261116-041150-8bba2a; CI 43864388357 (+FreeBSD 43864388321). Ready for review once they pass.
+State: waiting on jobs (head Xapiand:7700cb179, review fix P1): mutant 261116-042123-032811; build-test 261116-042126-a82cc5; e2e 261116-042126-6ee9e4; T6 261116-042128-885821; T5 261116-042129-1e9af0; C1 probe 261116-042137-a9c947; T8 build 261116-042217-f60d1c -> run 261116-042250-335a75; load build 261116-042224-c53ddf -> run 261116-042253-9e3c64; CI 43865811902 and FreeBSD 43865811733. Ready for review once they pass.
 Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
@@ -39,13 +39,15 @@ Session 11-16 (fresh contributor), head Xapiand:beec843ec. Master merged (campai
 
 ## Next
 
-1. Session 11-16 (3rd): repinned sortable to 2fad5a2 (Xapiand:34211bb50; was 915b014, whose test overflowed under UBSan), pushed.
-   A9 CI run 43864388357 replaces 43848582711 (ASan+UBSan sortable_property failure).
-2. Measurement jobs rewired (each build and run share a named slot; run `--after` build): T8 build 261116-041137-a6cf93 -> run
-   261116-041150-8bba2a (slot sortable-t8); load build 261116-041145-a813cf -> run 261116-041147-3aec36 (slot sortable-load).
-   Earlier failures: 261116-015826-9436ee ran before its build (0.9 s, no build dirs); 261116-021315-77ee31 got a fresh checkout without build-load-old.
-3. All passed jobs rerun at 34211bb50 (checks 99655a, e10c28, 77cd6d; T3 a44776; T6 36d20e; T5 3d3040; A12 07b968).
-4. When they finish: read, fix what they show, fill Result, confirm the ledger row's proof wording.
+1. Review CHANGES (P1, blocking; N2 fixed, N1 left, D87 covers it). Fix: `numeric_bound` (src/multivalue/range.cc) reads a text bound
+   as a value's text (int64, uint64, then double) whatever the field's type: Xapiand:7700cb179. Test first, Xapiand:59f3f86cf: T6's
+   `text` group (odd integers above 2^53 on a floating field, string bounds in the DSL and in `q=f:a..b`, plus string bounds on
+   `/t6w*/`). Fails-without job 261116-042123-032811 runs the test at 59f3f86cf (no fix). C1: probe job 261116-042137-a9c947
+   (the reviewer's probe_text_bounds.py, copied byte for byte to ~/.scratch/sortenc, against the fixed build) for `--confirm P1=`.
+2. Jobs superseded by the fix: build-test, e2e, T6, T5, A8, A12 reran at 7700cb179; the T8 and load chains were cancelled and
+   resubmitted at 7700cb179 (slots sortable-t8, sortable-load). T3 (client port vs C++, untouched by the fix) stays at 34211bb50.
+3. CI: 43865811902 (+FreeBSD 43865811733) at 7700cb179 replaces 43864388357.
+4. When they finish: fill Result, confirm the ledger row's proof wording.
 
 ## For the lead
 
@@ -67,17 +69,17 @@ Nothing. (The 11-16 decision answered the A12 library question; the license file
 | Criterion | Evidence |
 |---|---|
 | A1 | D87 (PLAN.md decision row, owner 2026-11-13) |
-| A2 | build-test 261116-041115-99655a (pending) |
-| A3 | T3 261116-041118-a44776 (pending); mutants killed earlier: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 |
-| A4 | T5 + E2E bodydiff 261116-041119-3d3040 (pending) |
-| A5 | T6 261116-041118-36d20e (pending); fails-without: old build 261115-232755-9ae906, floor 261116-015759-0b2751 (passed) |
-| A6 | load 261116-041147-3aec36 after build 261116-041145-a813cf (pending) |
-| A7 | T8 261116-041150-8bba2a after build 261116-041137-a6cf93; load 261116-041147-3aec36 (pending) |
-| A8 | no-gpl 261116-041115-77cd6d (pending); license notes Xapiand:b635c16a4 |
-| A9 | CI run 43864388357 at Xapiand:34211bb50 (pending; sortable pin 2fad5a2) |
+| A2 | build-test 261116-042126-a82cc5 (pending) |
+| A3 | T3 261116-041118-a44776 (passed at 34211bb50; the fix leaves the codec and client alone); mutants killed earlier: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 |
+| A4 | T5 + E2E bodydiff 261116-042129-1e9af0 (pending) |
+| A5 | T6 261116-042128-885821 (pending); fails-without: old build 261115-232755-9ae906, floor 261116-015759-0b2751 (passed), text bounds 261116-042123-032811 (pending); C1 probe 261116-042137-a9c947 (pending) |
+| A6 | load 261116-042253-9e3c64 after build 261116-042224-c53ddf (pending) |
+| A7 | T8 261116-042250-335a75 after build 261116-042217-f60d1c; load 261116-042253-9e3c64 (pending) |
+| A8 | no-gpl 261116-042126-e622f7 (passed); license notes Xapiand:b635c16a4 |
+| A9 | CI run 43865811902 at Xapiand:7700cb179 (pending; sortable pin 2fad5a2) |
 | A10 | [artifact] docs/mechanisms/value-encoding.md |
 | A11 | [artifact] docs/src/content/docs/changelog.md |
-| A12 | grep 261116-041119-07b968 (pending) |
+| A12 | grep 261116-042128-29afcc (passed) |
 
 ## Result
 
@@ -111,3 +113,5 @@ Nothing. (The 11-16 decision answered the A12 library question; the license file
 - A12 renames the contrib cuuid ports (Python, JavaScript) with the rest of contrib: they are Xapiand's tree, not calls
   into Kronuz/cuuid.
 - A datetime range's ends floor to whole seconds before its term cover is chosen, matching how a value's terms are built.
+- A text range bound reads as a value's text does (int64, uint64, then double) whatever the field's type (lead ruling, review P1); a boolean bound is 0 or 1.
+- N1 (the keymaker registry name) left: D87's dump-and-restore excludes a mixed-version cluster. N2 comment fixed in keymaker.h.
