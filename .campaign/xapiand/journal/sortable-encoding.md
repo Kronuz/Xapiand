@@ -1,6 +1,6 @@
 # sortable-encoding: journal
 
-State: waiting on jobs 261116-015731-e054a5 261116-015732-5e733b 261116-015732-c8963d 261116-015749-1ae5c0 261116-015751-8cdc2a 261116-015759-0b2751 261116-015810-e1d6f5 261116-015824-69ed7a 261116-015826-9436ee 261116-015840-c4c33c 261116-015842-998c13 261116-015845-03fa0e
+State: waiting on jobs 261116-015731-e054a5 261116-015732-5e733b 261116-015749-1ae5c0 261116-015751-8cdc2a 261116-015759-0b2751 261116-015810-e1d6f5 261116-015824-69ed7a 261116-015826-9436ee 261116-015840-c4c33c 261116-021315-77ee31
 Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
@@ -32,8 +32,10 @@ Session 11-16 (fresh contributor), head Xapiand:beec843ec. Master merged (campai
 4. A8 Xapiand:b635c16a4: NOTICE, THIRD-PARTY-NOTICES, its generator, third-party-notices.md and copyright.md drop
    the GPL note; the generator reproduces THIRD-PARTY-NOTICES byte for byte against the pinned _deps.
    exact-id-keys.md drops the `old-codec` mutant. Ledger row Xapiand:beec843ec.
-5. A6/A7: `tests/codec_load.py` (Xapiand:9414d5cd3): master e8f3cde1c vs head, 3 rounds ABBA, restore rate,
-   settled size, sort and range searches/s at 8 clients x 15 s, A/A band from old's spread.
+5. A6/A7: `tests/codec_load.py` (Xapiand:9414d5cd3, 4ce1f43c2): master e8f3cde1c vs head, 5 rounds ABBA, restore
+   rate, size after a clean stop, sort and range searches/s at 8 clients x 15 s, A/A band from old's spread. Two
+   same-binary dry runs: size varies about 7% (segment layout follows flush timing), restore about 6%.
+   Local build kept at build-local/ (786 MB, ignored) for follow-up fixes; delete when done.
 
 ## Next
 
@@ -64,13 +66,13 @@ Nothing. (The 11-16 decision answered the A12 library question; the license file
 | A3 | T3 261116-015749-1ae5c0 (pending); mutants killed earlier: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 |
 | A4 | T5 + E2E bodydiff 261116-015810-e1d6f5 (pending) |
 | A5 | T6 261116-015751-8cdc2a (pending); fails-without: old build 261115-232755-9ae906, floor 261116-015759-0b2751 (pending) |
-| A6 | load 261116-015842-998c13 after build 261116-015840-c4c33c (pending) |
-| A7 | T8 261116-015826-9436ee after build 261116-015824-69ed7a; load 261116-015842-998c13 (pending) |
-| A8 | no-gpl 261116-015732-c8963d (pending); license notes Xapiand:b635c16a4 |
+| A6 | load 261116-021315-77ee31 after build 261116-015840-c4c33c (pending) |
+| A7 | T8 261116-015826-9436ee after build 261116-015824-69ed7a; load 261116-021315-77ee31 (pending) |
+| A8 | no-gpl 261116-015732-c8963d (passed); license notes Xapiand:b635c16a4 |
 | A9 | CI on the pushed branch (lead) |
 | A10 | [artifact] docs/mechanisms/value-encoding.md |
 | A11 | [artifact] docs/src/content/docs/changelog.md |
-| A12 | grep 261116-015845-03fa0e (pending) |
+| A12 | grep 261116-015845-03fa0e (passed; src, tests, contrib, CMakeLists.txt) |
 
 ## Result
 
