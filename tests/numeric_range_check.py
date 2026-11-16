@@ -32,6 +32,7 @@ Starts BIN on a fresh data directory and checks, per group, that every answer eq
   minmax    min and max aggregations (a double: the nearest double of the exact extreme)
   wide      one field typed integer in one index and floating in another, under one search
   ids       integer ids above 2^53: ranges and sorts on _id
+  midpoint  9007199254740993.0000001 as a JSON number, a string value and a range bound is its nearest double
   refuse    a NaN bound, a NaN value and an integer of 2^63 or more answer 400; -0.0 indexes as 0
 
 Prints each group's wrong count and exits 1 when any answer is wrong.
@@ -311,6 +312,40 @@ def check_ids() -> None:
     record("ids", found is not None and [h["i"] for h in found] == ids, "sort _id")
 
 
+MIDPOINT = "9007199254740993.0000001"  # just above the midpoint of 2^53 and 2^53 + 2: its nearest double is 2^53 + 2
+
+
+def check_midpoint() -> None:
+    """A decimal just past a midpoint is its nearest double as a JSON number, a string value and a range bound (F3)."""
+    nearest = float(MIDPOINT)
+    assert nearest == 2.0**53 + 2
+    schema = {"_schema": {"_type": "object", "f": {"_type": "floating"}, "i": {"_type": "integer"}}}
+    status, _ = call("PUT", "/t6m/", schema)
+    assert status in (200, 201, 204)
+    bodies = {
+        "json": f'{{"i": 0, "f": {MIDPOINT}}}',
+        "string": f'{{"i": 1, "f": "{MIDPOINT}"}}',
+        "below": '{"i": 2, "f": 9007199254740992.0}',
+        "integer": '{"i": 3, "f": 9007199254740994}',
+    }
+    for name, body in bodies.items():
+        status, data = call("PUT", f"/t6m/{name}?commit", body)
+        record("midpoint", status in (200, 201, 204), f"PUT {name} answered {status} {data!r:.200}")
+    values = [nearest, nearest, 2.0**53, 2**53 + 2]
+    for lo, hi, lo_text, hi_text in (
+        (nearest, nearest, f'"{MIDPOINT}"', f'"{MIDPOINT}"'),
+        (nearest, None, MIDPOINT, None),
+        (None, 2**53 + 1, None, "9007199254740993"),
+        (2**53 + 1, None, "9007199254740993", None),
+    ):
+        want = sorted(i for i, v in enumerate(values) if in_range(v, lo, hi))
+        bounds = ", ".join(f'"{k}": {t}' for k, t in (("_from", lo_text), ("_to", hi_text)) if t is not None)
+        body = f'{{"_query": {{"f": {{"_in": {{"_range": {{{bounds}}}}}}}}}, "_limit": 10}}'
+        found = hits(*call("SEARCH", "/t6m/?volatile", body))
+        got = None if found is None else sorted(h["i"] for h in found)
+        record("midpoint", got == want, f"f [{lo_text}, {hi_text}] got {got} want {want}")
+
+
 def check_refusals() -> None:
     schema = {"_schema": {"_type": "object", "n": {"_type": "integer"}, "f": {"_type": "floating"}}}
     status, _ = call("PUT", "/t6r/", schema)
@@ -343,7 +378,14 @@ def main() -> None:
             except OSError:
                 time.sleep(0.5)
         rnd = random.Random(5)
-        for check in (lambda: check_values(rnd), check_infinities, check_wide, check_ids, check_refusals):
+        for check in (
+            lambda: check_values(rnd),
+            check_infinities,
+            check_wide,
+            check_ids,
+            check_midpoint,
+            check_refusals,
+        ):
             check()
     finally:
         node.terminate()

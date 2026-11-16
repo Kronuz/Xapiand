@@ -1,4 +1,4 @@
-> Status: DRAFT (2026-11-16) revised for the owner's D87 (ready for the design reviewer's confirmation). Workstream sortable-encoding, quest branch `quest/xapiand/sortable-encoding`. Phase 8a's first item (`docs/status/road-to-release.md:32`). Adopts the bytes of `Kronuz/sortable` (pinned at sortable:915b014; the bytes are those of sortable:67b2a90) and supersedes the unlanded `docs/design/sortable-codec.md` revision 2 (branch `design/sortable-codec`).
+> Status: ACCEPTED (2026-11-16), revised for the owner's D87; the design re-check approved it at Xapiand:3f95a5edd. Workstream sortable-encoding, quest branch `quest/xapiand/sortable-encoding`. Phase 8a's first item (`docs/status/road-to-release.md:32`). Adopts the bytes of `Kronuz/sortable` (pinned at sortable:915b014; the bytes are those of sortable:67b2a90) and supersedes the unlanded `docs/design/sortable-codec.md` revision 2 (branch `design/sortable-codec`).
 
 # A clean-room, memcmp-ordered number encoding for Xapiand
 

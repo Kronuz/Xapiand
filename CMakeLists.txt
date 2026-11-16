@@ -1004,8 +1004,9 @@ include_directories(
 # NaN/Inf -- relaxed JSON the REST API (and every doc example) relies on. De-vendoring
 # to upstream rapidjson dropped that, so bare doc.Parse() started rejecting it. Restore
 # it globally to match the prior behavior. (Caught by the docs E2E suite: dozens of
-# PUT/SEARCH bodies with trailing commas or // comments were 400ing.)
-add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag)")
+# PUT/SEARCH bodies with trailing commas or // comments were 400ing.) Full precision makes a
+# JSON decimal the nearest double, the value strict_stod gives its text (docs/design/sortable-encoding.md D6).
+add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag|kParseFullPrecisionFlag)")
 
 # prometheus-cpp: use upstream core only. Xapiand keeps its application-specific
 # metric catalog in src/metrics.*.
@@ -1920,6 +1921,8 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
 
 		# test_serialise reads the pinned sortable's vectors and its exact comparator (design T1).
 		target_include_directories(${PROJECT_NAME}_test_serialise PRIVATE "${sortable_SOURCE_DIR}/test")
