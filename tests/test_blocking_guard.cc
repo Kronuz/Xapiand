@@ -22,7 +22,7 @@
 
 
 // The blocking guard (engine::check_may_block): engine::sync_wait and the registry's waiting entry points
-// (an immediate cleanup, clear) refuse to run inside a reactor loop's run() or on a task scheduler's
+// (a flush, the pool's join) refuse to run inside a reactor loop's run() or on a task scheduler's
 // thread, and run off the loop on a plain thread, and on the loop's thread after run() returns.
 
 #include "test_harness.h"
@@ -30,6 +30,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <filesystem>
 #include <functional>
 #include <future>
 #include <memory>
@@ -41,12 +42,23 @@
 
 #include "database/flags.h"
 #include "database/pool.h"
+#include "pool_support.h"
 #include "database/shard.h"
 #include "engine/host_asio.h"
 #include "engine/sync.h"
 #include "reactor.h"
 #include "shutdown_wait.h"
 #include "task.hh"
+
+#if defined(__has_feature)
+#  if __has_feature(thread_sanitizer)
+#    define BLOCKING_GUARD_TSAN 1
+#  endif
+#endif
+#if defined(__SANITIZE_THREAD__) || defined(BLOCKING_GUARD_TSAN)
+// guard_fires forks after the control loop's threads exist; the child starts threads of its own.
+extern "C" const char* __tsan_default_options() { return "die_after_fork=0"; }
+#endif
 
 namespace {
 
@@ -81,14 +93,18 @@ void on_loop(const std::function<void()>& fn) {
 	r.run();
 }
 
-// Opens an index through the registry: a wait for the open.
+// Opens an index through the registry: a wait for the open. The index starts empty each time, so an earlier
+// build's files left in the build directory never reach the open.
 void open_through_the_registry() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint("blocking_guard_test"));
-	Shard shard(*entry.get(), DB_WRITABLE | DB_CREATE_OR_OPEN);
-	engine::sync_wait(shard.ready());
-	entry.reset();
-	pool.clear();
+	std::filesystem::remove_all("blocking_guard_test");
+	DatabasePool pool(control_loop(), 8);
+	{
+		Shard shard(engine::sync_wait(pool.pin(Endpoint("blocking_guard_test"), DB_WRITABLE | DB_CREATE_OR_OPEN)), DB_WRITABLE | DB_CREATE_OR_OPEN);
+		engine::sync_wait(shard.ready());
+	}
+	pool.finish();
+	pool.join();
+	std::filesystem::remove_all("blocking_guard_test");
 }
 
 // An object whose destructor does database work.
@@ -101,13 +117,14 @@ void destroy_on_loop() {
 }
 
 void cleanup() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	engine::sync_wait(pool.flush());
 }
 
-void clear() {
-	DatabasePool pool(8);
-	pool.clear();
+void join() {
+	DatabasePool pool(control_loop(), 8);
+	pool.finish();
+	pool.join();
 }
 
 void wait_answer() {
@@ -126,14 +143,14 @@ static void test_fires_on_loop() {
 	CHECK_TRUE(guard_fires([] { on_loop(wait_answer); }));
 	CHECK_TRUE(guard_fires([] { on_loop(open_through_the_registry); }));
 	CHECK_TRUE(guard_fires([] { on_loop(cleanup); }));
-	CHECK_TRUE(guard_fires([] { on_loop(clear); }));
+	CHECK_TRUE(guard_fires([] { on_loop(join); }));
 	CHECK_TRUE(guard_fires(destroy_on_loop));
 }
 
 // The chores of an index end with a WorkGroup, and joining one is a wait: on a loop it is left to a worker.
 static void test_quiet_when_a_loop_drops_a_group_of_chores() {
 	CHECK_FALSE(guard_fires([] {
-		DatabasePool pool(8);
+		DatabasePool pool(control_loop(), 8);
 		on_loop([&] {
 			IndexChores chores(pool.work_pool());
 		});
@@ -172,7 +189,7 @@ static void test_quiet_off_loop() {
 		on_loop([] { });
 		open_through_the_registry();  // the loop's thread, after run() returns
 		cleanup();
-		clear();
+		join();
 		wait_answer();
 	}));
 
@@ -184,7 +201,7 @@ static void test_quiet_off_loop() {
 		worker = std::thread([&] {
 			open_through_the_registry();
 			cleanup();
-			clear();
+			join();
 			wait_answer();
 			done.set_value();
 		});

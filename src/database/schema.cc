@@ -2749,7 +2749,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		std::string unprefixed_term_id;
 		std::string term_id;
 
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			switch (id_type) {
 				case FieldType::empty:
 					id_type = FieldType::uuid;
@@ -2786,7 +2786,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_unprefixed_term_id = mint(opts.uuid_compact);
 						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
-						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
+						auto tmp_shard_num = id_shard(tmp_term_id, n_shards);
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								unprefixed_term_id = std::move(tmp_unprefixed_term_id);
@@ -2807,20 +2807,18 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
+				// A new numeric id: the shard issues it when it is written; 0 holds its place until then.
 				case FieldType::integer:
 					document_id = MsgPack(0).as_i64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::positive:
 					document_id = MsgPack(0).as_u64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::floating:
 					document_id = MsgPack(0).as_f64();
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-					term_id = document_key(unprefixed_term_id, spc_id.get_ctype());
+					term_id = NEW_NUMERIC_KEY;
 					break;
 				case FieldType::text:
 				case FieldType::keyword: {
@@ -2853,7 +2851,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(mint(true));
 						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
 						auto tmp_term_id = document_key(tmp_unprefixed_term_id, spc_id.get_ctype());
-						auto tmp_shard_num = key_placement_hash(tmp_term_id) % n_shards;
+						auto tmp_shard_num = id_shard(tmp_term_id, n_shards);
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
 								document_id = std::move(tmp_document_id);
@@ -2880,7 +2878,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			// Get early term ID when possible
 			switch (id_type) {
 				case FieldType::empty: {
-					const auto type_ser = Serialise::guess_serialise(document_id);
+					const auto type_ser = Serialise::guess_id(document_id);
 					id_type = type_ser.first;
 					if (id_type == FieldType::text) {
 						id_type = FieldType::keyword;
@@ -2900,7 +2898,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::text:
 				case FieldType::keyword:
 					document_id = Cast::cast(id_type, document_id);
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					unprefixed_term_id = Serialise::id(spc_id, document_id);
 					break;
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
@@ -2982,8 +2980,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
 		}
 
-		if (term_id != "N\x80") {
-			doc.set_key(term_id);  // make sure the key is ALWAYS set!
+		if (term_id != NEW_NUMERIC_KEY) {
+			doc.set_key(term_id);  // a new numeric id's key is set when the shard issues it
 		}
 
 		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
@@ -5086,6 +5084,21 @@ Schema::validate_required_data(MsgPack& mut_properties)
 }
 
 
+// Whether the integer `value` is in the range of the integer type `type`, whatever its encoding.
+static bool
+fits_integer_type(FieldType type, const MsgPack& value)
+{
+	switch (value.get_type()) {
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return type == FieldType::integer || (type == FieldType::positive && value.i64() >= 0);
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return type == FieldType::positive || (type == FieldType::integer && value.u64() <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
+		default:
+			return false;
+	}
+}
+
+
 FieldType
 Schema::guess_concrete_type(const MsgPack& item_doc)
 {
@@ -5097,24 +5110,14 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			if (specification.flags.numeric_detection) {
-				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					return FieldType::positive;
-				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
-					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
-				}
-				return FieldType::positive;
-			}
-			break;
-
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					return FieldType::integer;
-				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
-					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+					return Serialise::guess_type(item_doc);
+				} else if (!fits_integer_type(specification.sep_types[SPC_CONCRETE_TYPE], item_doc)) {
+					THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(Serialise::guess_type(item_doc)));
 				}
-				return FieldType::integer;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
@@ -5288,10 +5291,6 @@ Schema::index_term(engine::Document& doc, std::string_view field, std::string_vi
 	L_CALL("Schema::index_term(<doc>, {}, {}, <field_spc>, {})", repr(field), repr(term), pos);
 
 	const bool is_key = field_spc.prefix.field == DOCUMENT_ID_TERM_PREFIX && field == field_name(field_spc.prefix.field, field_spc.get_ctype());
-	if (is_key && field_spc.get_ctype() == 'N' && term == "\x80") {
-		// Term reserved for numeric (autoincremented) IDs
-		return;
-	}
 
 	// The limit is on the whole term, the field's name included.
 	if (field.size() + term.size() > 245) {
@@ -5387,7 +5386,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		}
 
 		case FieldType::integer: {
-			if (value.is_number()) {
+			if (fits_integer_type(FieldType::integer, value)) {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (global_terms && field_terms) {
@@ -5419,7 +5418,7 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 		}
 
 		case FieldType::positive: {
-			if (value.is_number()) {
+			if (fits_integer_type(FieldType::positive, value)) {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (global_terms && field_terms) {

@@ -1,4 +1,24 @@
 // @ts-check
+// Copyright © 2026 Germán Méndez Bravo (Kronuz)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 import fs from 'node:fs';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
@@ -57,12 +77,17 @@ export default defineConfig({
     starlight({
       title: SITE_TITLE,
       description: SITE_DESCRIPTION,
-      logo: { src: './src/assets/logo.png', alt: 'Xapiand' },
-      favicon: '/favicon.ico',
+      logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg', alt: 'Xapiand' },
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       // The landing page uses the Jekyll site's typefaces (Lato body, Montserrat
       // display) so it reads like the old home; load them the same way Jekyll did.
       head: [
+        // brand/variants/light: .ico for older browsers, touch and app icons.
+        { tag: 'link', attrs: { rel: 'icon', href: '/Xapiand/favicon.ico', sizes: '48x48' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/Xapiand/apple-touch-icon.png' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '152x152', href: '/Xapiand/apple-touch-icon-152.png' } },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '167x167', href: '/Xapiand/apple-touch-icon-167.png' } },
         { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: true } },
         {
           tag: 'link',

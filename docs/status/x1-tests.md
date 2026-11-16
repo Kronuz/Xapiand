@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-29) x1 unit tests on strata only, branch `phase7c/x1-delete-xapian`; workstream x1-tests, developer. All 25 ctest targets build clean in build-debug and pass; no sanitizer run (the lead does).
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-29) x1 unit tests on strata only, branch `phase7c/x1-delete-xapian`; workstream x1-tests, developer. All 25 ctest targets build clean in build-debug and pass; no sanitizer run (the lead does).
 
 # x1: C++ unit tests with Xapian gone
 

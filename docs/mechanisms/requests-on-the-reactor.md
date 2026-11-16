@@ -40,7 +40,8 @@ leaves a loop is a chore (a device read or write, a commit, a parse) on the host
    (`lock_shard`, `Shard::cancel`, `take_turn`), so a read's refresh turn ends at once; a write's budget has no token and its turn wait
    ends only at `DB_TIMEOUT` (503). A search stops at its next checkpoint (`task::cancelled`, answered 503 to a client still there). A write that was admitted
    completes. RESTORE passes the budget to its indexer, so a cancel ends it at the next object and the closing commit keeps what was
-   indexed.
+   indexed. `handle` counts each request a cancel stopped (`xapiand_http_requests_cancelled` in `/:metrics`, with the
+   admission and demotion peaks: `docs/mechanisms/cancellation.md`).
    At a node's shutdown `HttpAsioService::stop()` is phase 1 of task's four teardown phases: it requests every token, waits one
    grace, closes the connections of what is left, and waits one more grace. `join()` sizes the grace from what D16's budget has
    left (`XapiandManager::http_shutdown_grace`, `docs/mechanisms/control-plane.md`: 15 s of a 35 s budget), so an admitted write waiting for its

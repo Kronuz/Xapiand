@@ -23,7 +23,9 @@
 
 #pragma once
 
+#include <functional>                         // for std::function
 #include <mutex>                              // for mutex, lock_guard, uniqu...
+#include <optional>                           // for std::optional
 #include <string>                             // for std::string
 #include <string_view>                        // for std::string_view
 #include <vector>                             // for std::vector
@@ -72,6 +74,9 @@ struct IndexSettings {
 class IndexResolverLRU {
 
 public:
+	// Test seam, awaited when a first use missed the cache and is about to claim the read.
+	std::function<task::task<void>()> before_settings_claim;
+
 	IndexResolverLRU(ssize_t resolver_cache_size, std::chrono::milliseconds resolver_cache_timeout);
 
 	task::task<IndexSettings> resolve_index_settings(std::string_view normalized_slashed_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear);
@@ -91,6 +96,10 @@ private:
 	std::mutex resolve_index_lru_mtx;
 	lru::aging_lru<std::string, IndexSettings> resolve_index_lru;
 
-	// Concurrent first uses of an index await one read of its settings.
+	// Concurrent first uses of an index await one read of its settings, which puts them in the cache before it ends.
 	SingleFlight<std::string, IndexSettings> settings_loads;
+
+	task::task<IndexSettings> load_and_publish(const std::string& unsharded_normalized_path);
+	std::optional<IndexSettings> cached_settings(const std::string& unsharded_normalized_path);
+	void store_settings(const std::string& unsharded_normalized_path, const IndexSettings& index_settings);
 };

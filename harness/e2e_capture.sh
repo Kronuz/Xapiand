@@ -1,14 +1,35 @@
 #!/usr/bin/env bash
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 #
 # e2e_capture.sh BINARY OUT.json [DATADIR]
 #
 # Boot a fresh Xapiand node and capture a newman JSON report of the doc collection.
 # This encodes the recipe (and the gotchas) the Leg-2 inversion work relies on:
 #
-#   * Kill any node squatting on :8880 FIRST. A leftover node makes our fresh node
-#     fail to bind (EADDRINUSE) and exit, and newman then silently hits the STALE
-#     node -- which looks like a bogus regression. (This bit us once; see the
-#     `kill -0 $pid` check below: we confirm OUR node is the one serving.)
+#   * Every run takes its own port and its own work directory, so concurrent runs (CI jobs
+#     on one host) never meet. An explicit PORT is freed first: only a LISTENING process on
+#     it is killed (never a client of it). A leftover node makes our fresh node fail to
+#     bind (EADDRINUSE) and exit, and newman then silently hits the STALE node -- which
+#     looks like a bogus regression; see the `kill -0 $pid` check below.
 #   * (no discovery/replication ports) + a FRESH data dir + a FIXED --name
 #     (so volatile node-identity does not diverge the bodydiff).
 #   * newman exits 1 if ANY assertion fails; in the green state every assertion passes,
@@ -25,7 +46,7 @@
 #
 # XAPIAND_FLAGS adds node flags (--tls-cert/--tls-key); SCHEME=https probes and runs the
 # collection over TLS, trusting CA (newman 6 or later, for --ssl-extra-ca-certs). PORT
-# moves the node off :8880.
+# pins the node port (default: a free one); E2E_TMP pins the work directory and keeps it.
 #
 # Example:
 #   harness/e2e_capture.sh build/bin/xapiand harness/results/e2e_base_23e1e4540.json
@@ -34,14 +55,21 @@ set -u
 
 BIN="${1:?usage: e2e_capture.sh BINARY OUT.json [DATADIR]}"
 OUT="${2:?usage: e2e_capture.sh BINARY OUT.json [DATADIR]}"
-TMPD="${E2E_TMP:-/tmp}"
+HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$HARNESS_DIR/env.sh"
+if [ -n "${E2E_TMP:-}" ]; then
+	TMPD="$E2E_TMP"; mkdir -p "$TMPD"
+else
+	TMPD="$(mktemp -d "${TMPDIR:-/tmp}/xe2e.XXXXXX")"
+	trap 'rm -rf "$TMPD"' EXIT
+fi
 DATADIR="${3:-$TMPD/xe2e_$$}"
 
-HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HARNESS_DIR")"
 COLL="${COLL:-$TMPD/xe2e_collection.json}"
 SCHEME="${SCHEME:-http}"
-PORT="${PORT:-8880}"
+PICKED_PORT=""
+[ -n "${PORT:-}" ] || { PORT="$(free_port)" && PICKED_PORT=1; }
 CA="${CA:-}"
 read -r -a node_flags <<< "${XAPIAND_FLAGS:-}"
 probe_ca=()
@@ -65,27 +93,28 @@ fi
 XAPIAND_URL="$SCHEME://localhost:$PORT" python3 "$REPO/docs_to_postman.py" > "$COLL" || { echo "docs_to_postman.py failed"; exit 1; }
 echo "collection: $COLL ($(wc -c < "$COLL") bytes)"
 
-# Free :8880 if a previous node is squatting, killing only the PID that holds the port.
+# Free an explicit PORT if a previous node is squatting, killing only the PID that listens on it.
 # Do NOT match by name (e.g. pkill -f 'bin/xapiand'): $BIN is an argument to THIS script,
 # so a name match also matches e2e_capture.sh's own command line and SIGKILLs itself --
 # which is exactly what killed the e2e step in CI on Linux (macOS pkill -f matched
 # differently, so it slipped through locally).
 squatter=""
-if command -v lsof >/dev/null 2>&1; then
-	squatter=$(lsof -ti tcp:$PORT 2>/dev/null || true)
-elif command -v fuser >/dev/null 2>&1; then
-	squatter=$(fuser "$PORT"/tcp 2>/dev/null | tr -cd '0-9 ' || true)
+if [ -n "$PICKED_PORT" ]; then
+	:
+elif command -v lsof >/dev/null 2>&1; then
+	squatter=$(lsof -ti "tcp:$PORT" -sTCP:LISTEN 2>/dev/null || true)
+elif command -v ss >/dev/null 2>&1; then
+	squatter=$(ss -Htlnp "sport = :$PORT" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u || true)
 fi
-[ -n "$squatter" ] && kill -9 $squatter 2>/dev/null || true
-sleep 1
+if [ -n "$squatter" ]; then kill -9 $squatter 2>/dev/null || true; sleep 1; fi
 rm -rf "$DATADIR"; mkdir -p "$DATADIR"
-"$BIN" --port "$PORT" --name benchnode -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >$TMPD/xe2e_node.log 2>&1 &
+"$BIN" --port "$PORT" --name benchnode -D "$DATADIR" ${node_flags[@]+"${node_flags[@]}"} >"$TMPD/xe2e_node.log" 2>&1 &
 pid=$!
 
 for _ in $(seq 1 120); do
 	if ! kill -0 "$pid" 2>/dev/null; then
-		echo "node exited before ready (EADDRINUSE / leftover node on :8880?):"
-		grep -iE 'error|exception|bind' $TMPD/xe2e_node.log | head -3
+		echo "node exited before ready (EADDRINUSE / leftover node on :$PORT?):"
+		grep -iE 'error|exception|bind' "$TMPD/xe2e_node.log" | head -3
 		exit 1
 	fi
 	[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 ${probe_ca[@]+"${probe_ca[@]}"} "$SCHEME://localhost:$PORT/" 2>/dev/null)" = "200" ] && break
@@ -93,8 +122,35 @@ for _ in $(seq 1 120); do
 done
 
 echo "node up (pid $pid); newman -> $OUT"
-newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} --reporters json --reporter-json-export "$OUT" --timeout-request 30000 >$TMPD/xe2e_newman.log 2>&1
-echo "newman exit $? (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
+# The stock reporter writes each body byte as a line (a 64 MB report); `slim` keeps a body's first 2800
+# bytes only for a request with a failed assertion. E2E_BODIES=1 keeps every body (e2e_diff.py, bodydiff.py).
+reporter=slim
+if [ -n "${E2E_BODIES:-}" ]; then
+	reporter=json
+else
+	mkdir -p "$TMPD/node_modules/newman-reporter-slim"
+	cat > "$TMPD/node_modules/newman-reporter-slim/index.js" <<'JS'
+module.exports = function (newman, options) {
+	newman.on('beforeDone', (err, o) => {
+		if (err) return;
+		for (const e of o.summary.run.executions) {
+			const r = e.response;
+			if (!r || !Buffer.isBuffer(r.stream)) continue;
+			r.stream = r.stream.subarray(0, (e.assertions || []).some((a) => a.error) ? 2800 : 0);
+		}
+		newman.exports.push({
+			name: 'slim-reporter', default: 'newman-run-report.json', path: options.export,
+			content: JSON.stringify({ ...o.summary, exports: undefined }),
+		});
+	});
+};
+JS
+fi
+NODE_PATH="$TMPD/node_modules${NODE_PATH:+:$NODE_PATH}" newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} \
+	--reporters "$reporter" --reporter-"$reporter"-export "$OUT" --timeout-request 30000 >"$TMPD/xe2e_newman.log" 2>&1
+rc=$?
+echo "newman exit $rc (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
+[ "$rc" -eq 0 ] || { echo "node log tail:"; tail -20 "$TMPD/xe2e_node.log"; }
 
 kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
 exit 0   # a captured report is success; the killed node's wait-status is not our verdict

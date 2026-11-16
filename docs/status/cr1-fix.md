@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-27) fix/cr1-replay from explore/cr1-replay (Xapiand:88d37dbf0); local only, not pushed; for the architect's durability check.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-27) fix/cr1-replay from explore/cr1-replay (Xapiand:88d37dbf0); local only, not pushed; for the architect's durability check.
 
 # cr1-fix (CR1: WAL replay must be committed)
 

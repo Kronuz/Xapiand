@@ -2,7 +2,9 @@
 title: "UUID Datatype"
 ---
 
-A UUID field can store version 1, 3, 4, and 5 UUIDs as specified in [RFC 4122].
+A UUID field stores a UUID as specified in [RFC 4122]. A value is accepted when it has the UUID
+format (the version is not checked, so versions 1, 3, 4 and 5 are accepted, and the
+version 6 ones the node mints).
 
 ```rest
 UPDATE /bank/1
@@ -12,10 +14,29 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: UUID: a detected UUID
+---
+
+```js
+pm.test("A UUID string is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc.guid).to.deep.equal("1f1e8f3f-471f-4b3d-a2a4-7aefb43a9087");
+});
+```
+e2e:end -->
+
 ## Condensed UUIDs
 
-Xapiand supports a subset of UUID 1 which can be represented as strings in
-condensed form. Document IDs are of this type by default.
+Xapiand supports a subset of UUID 1 (and the version 6 codec the node mints by default)
+which can be represented as strings in condensed form, `~` followed by the encoded
+bytes. The ID the node generates for a document with no ID of its own is such a
+condensed UUID, version 6 by default and version 1 with `--legacy-ids`; so an index whose
+first document has no ID has a `uuid` `_id` (an index whose first ID is a number or a
+string takes that type instead, see [Index Document API](/Xapiand/reference-guide/documents/index-api#automatic-id-generation)).
 
 For example, the UUID `00000000-0000-1000-8000-010000000000` can be represented
 as the string "~notmet".
@@ -39,6 +60,21 @@ UPDATE /bank/1
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: UUID: UUIDs as field names
+---
+
+```js
+pm.test("UUID field names are stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("uuids");
+});
+```
+e2e:end -->
 
 `_index_uuid_field` can be used to specify how the UUID field namess will be
 indexed:

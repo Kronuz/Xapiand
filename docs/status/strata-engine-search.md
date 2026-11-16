@@ -1,6 +1,6 @@
 # strata-engine-search (S2, phase 7a)
 
-> Status: CURRENT (2026-10-28) workstream `strata-engine-search`; branch `phase7a/strata-engine-search`, rebased by merge onto master (S1, Xapiand:5d7f3263d). Local only, not pushed, no CI run.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-28) workstream `strata-engine-search`; branch `phase7a/strata-engine-search`, rebased by merge onto master (S1, Xapiand:5d7f3263d). Local only, not pushed, no CI run.
 
 Design: `docs/design/xapiand-on-strata.md` (strata:9dc5fd3), row S2, G5, G7, D13, T6, T7, T11.
 

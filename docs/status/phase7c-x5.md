@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-02) the X5 developer's ledger (phase 7c step X5: the schema and settings caches, the control plane as tasks, inventory J); built and proved; reviewed (approve with conditions); the review's blocker and notes N1, N4, N5 are fixed below; not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-02) the X5 developer's ledger (phase 7c step X5: the schema and settings caches, the control plane as tasks, inventory J); built and proved; reviewed (approve with conditions); the review's blocker and notes N1, N4, N5 are fixed below; not pushed.
 
 # phase7c X5 (build): the caches, the control plane and inventory J
 

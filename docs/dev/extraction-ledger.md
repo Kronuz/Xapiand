@@ -2,8 +2,8 @@
 
 Every generic piece that leaves Xapiand for a Kronuz library (the "foundations") gets one row here,
 recording how much Xapiand shrank and what proves nothing was lost. The doctrine is in
-`~/code/Kronuz/KRONUZ_REFACTORING_DIRECTIVES.md`; the backlog of candidates is
-`~/code/Kronuz/memory/kronuz-extraction-backlog.md`.
+cpp-libraries `docs/REFACTORING-DIRECTIVES.md`; the backlog of candidates is
+`docs/dev/extraction-backlog.md`.
 
 ## How to add a row
 

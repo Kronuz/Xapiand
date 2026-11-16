@@ -26,7 +26,7 @@ The following snippet captures the structure of histogram aggregations:
 "<aggregation_name>": {
   "_histogram": {
     "_field": "<field_name>",
-    "_interval": "<interval>",
+    "_interval": <interval>,
     ( "_shift": <shift> )?
   },
   ...
@@ -42,9 +42,11 @@ aggregation will act upon.
 
 ### Interval
 
-The `_interval` must be a positive decimal, while the `_shift` must be a decimal
-in `[0, _interval)` (a decimal greater than or equal to `0` and less than
-`_interval`)
+The `_interval` must be a number other than zero (a string, or `0`, answers `400`), and the `_shift`
+a decimal in `[0, _interval)` (a decimal greater than or equal to `0` and less than
+`_interval`); only a zero interval is checked. The field may be numeric or a `date`, `datetime`, `time`
+or `timedelta` (the interval is then in seconds); any other type answers `400` ("Histogram aggregation
+can work only on numeric fields"). Keys are written as plain numbers (`"0"`, `"1000"`).
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Data Exploration](/Xapiand/exploration#sample-dataset)

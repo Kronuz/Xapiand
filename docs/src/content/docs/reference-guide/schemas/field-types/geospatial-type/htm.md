@@ -11,8 +11,10 @@ and smaller _trixels_:
 
 ![HTM](/Xapiand/assets/htm.png)
 
-Although the division process can continue indefinitely, the internal 64-bit
-representation runs out of bits at level 31 (i.e. `8 * 4^31` > `2^64`).
+Although the division process can continue indefinitely, the library's internal
+64-bit representation has a deepest level, 25 (about 0.3 m). A schema accepts the
+levels 0 to 25 in `_accuracy` and answers `400` for a deeper one
+(`src/database/schema.cc:4684-4694`).
 
 Approximate distance (in meters) for each level is calculated using the formula:
 `(6371008.8 * 2 * PI / 4) / (2^level)`, and distance in arcseconds is calculated
@@ -31,7 +33,6 @@ about 10 milli-arcseconds for astronomers or 0.3 meters on the earth's surface:
 | 15    | 9.8877"    |        305.41 m |
 | 20    | 0.3090"    |          9.54 m |
 | 25    | 0.0097"    |          0.30 m |
-| 30    | 0.0003"    |          0.01 m |
 
 An example of HTM trixels in real life can be found in the
 [Spatial Search Tutorial](/Xapiand/tutorials/spatial-search/#searching).

@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-03) the ledger for the task wave's first half: Xapiand on task C3. Reactor R and the http H1 move go to the next agent (Handoff, below).
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-03) the ledger for the task wave's first half: Xapiand on task C3. Reactor R and the http H1 move go to the next agent (Handoff, below).
 
 # phase7c-task-wave
 

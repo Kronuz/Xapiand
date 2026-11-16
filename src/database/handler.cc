@@ -28,18 +28,23 @@
 #include <array>                            // for std::array
 #include <cassert>                          // for assert
 #include <cctype>                           // for tolower
+#include <chrono>                           // for std::chrono::steady_clock
 #include <exception>                        // for std::exception
 #include <limits>                           // for std::numeric_limits
+#include <optional>                         // for std::optional
+#include <unordered_map>                    // for std::unordered_map
+#include <unordered_set>                    // for std::unordered_set
+#include <tuple>                            // for std::tie
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
 #include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
-#include "exception_engine.h"                     // for QueryParserError, DocVersionConflictError
+#include "exception_engine.h"                     // for QueryParserError
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
-#include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
+#include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "database/wal.h"                   // for DatabaseWAL
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
@@ -52,8 +57,10 @@
 #include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
+#include "engine/host_asio.h"               // for engine::AsioHost, engine::counted
 #include "engine/open.h"                    // for engine::check
 #include "engine/search.h"                  // for engine::search, prepare
+#include "engine/sync.h"                    // for engine::sync_wait
 #include "query_dsl.h"                      // for QueryDSL
 #include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
@@ -65,6 +72,7 @@
 #include "xapiand_strings.hh"                       // for strings::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
+#include "work_pool.hh"                     // for WorkPool::threads
 
 #ifdef XAPIAND_LUA
 #include "lua/processor.h"                  // for lua namespace
@@ -103,6 +111,86 @@ to_docid(std::string_view document_id)
 		}
 	}
 	return static_cast<engine::docid>(0);
+}
+
+
+bool
+has_document_id(const MsgPack& document_id)
+{
+	switch (document_id.get_type()) {
+		case MsgPack::Type::UNDEFINED:
+		case MsgPack::Type::NIL:
+			return false;
+		case MsgPack::Type::STR:
+			return !document_id.empty();
+		case MsgPack::Type::BOOLEAN:
+			return document_id.boolean();
+		default:
+			return true;
+	}
+}
+
+
+std::uint64_t
+numeric_id(std::string_view key)
+{
+	if (key.size() < 2 || key[0] != 'N') {
+		return 0;
+	}
+	const auto id = Unserialise::id(key.substr(1));
+	return id && *id >= 1 && *id <= MAX_NUMERIC_ID ? *id : 0;
+}
+
+
+std::string
+numeric_key(std::uint64_t id)
+{
+	return document_key(Serialise::id(id), 'N');  // the key a PUT of the integer id names
+}
+
+
+std::size_t
+id_bucket(std::string_view key)
+{
+	if (const auto id = numeric_id(key); id != 0) {
+		return static_cast<std::size_t>((id - 1) % ID_BUCKETS);
+	}
+	return static_cast<std::size_t>(key_placement_hash(key) % ID_BUCKETS);
+}
+
+
+std::size_t
+bucket_shard(std::size_t bucket, std::size_t n_shards)
+{
+	return bucket % n_shards;
+}
+
+
+std::size_t
+id_shard(std::string_view key, std::size_t n_shards)
+{
+	return n_shards > 1 ? bucket_shard(id_bucket(key), n_shards) : 0;
+}
+
+
+std::uint64_t
+next_auto_id(std::uint64_t high, std::size_t shard_num, std::size_t n_shards)
+{
+	// Within ID_BUCKETS steps every bucket comes once, so a shard that owns one finds it.
+	for (std::uint64_t id = high + 1, last = high + ID_BUCKETS; id <= last && id <= MAX_NUMERIC_ID; ++id) {
+		if (bucket_shard(static_cast<std::size_t>((id - 1) % ID_BUCKETS), n_shards) == shard_num) {
+			return id;
+		}
+	}
+	return 0;
+}
+
+
+// The version a write expects: none for UNKNOWN_REVISION.
+static std::optional<engine::rev>
+expected_of(engine::rev document_ver)
+{
+	return document_ver == UNKNOWN_REVISION ? std::nullopt : std::optional<engine::rev>(document_ver);
 }
 
 
@@ -185,6 +273,69 @@ inject_data(Data& data, const MsgPack& obj)
 				THROW(ClientError, "Data inconsistency, '{}' must be an array or an object", RESERVED_DATA);
 		}
 	}
+}
+
+
+// The id an object names: its `_id`, or the `_value` of an `_id` map; undefined when it names none.
+static MsgPack
+document_id_of(const MsgPack& body)
+{
+	auto f_it = body.find(ID_FIELD_NAME);
+	if (f_it == body.end()) {
+		return MsgPack();
+	}
+	const auto& field = f_it.value();
+	if (!field.is_map()) {
+		return field;
+	}
+	auto fv_it = field.find(RESERVED_VALUE);
+	return fv_it == field.end() ? MsgPack() : fv_it.value();
+}
+
+
+// Takes the `_op_type` out of an object: its value, "index" when it has none.
+static std::string
+take_op_type(MsgPack& body)
+{
+	std::string op_type = "index";
+	auto f_it = body.find(RESERVED_OP_TYPE);
+	if (f_it != body.end()) {
+		op_type = f_it.value().as_str();
+		body.erase(f_it);
+	}
+	return op_type;
+}
+
+
+// Finishes a prepared document: its record, raw (finalise_write compresses it once, in the shard's turn), and the
+// version the write asks for. After Schema::index, which reads `data` for a script's old document.
+static void
+finish_prepared(std::tuple<std::string, engine::Document, MsgPack>& prepared, Data& data, engine::rev document_ver)
+{
+	auto& doc = std::get<1>(prepared);
+	data.set_obj(std::get<2>(prepared), false);
+	data.flush();
+	auto serialised = data.serialise();
+	if (!serialised.empty()) {
+		doc.set_data(serialised);
+	}
+	if (document_ver != UNKNOWN_REVISION) {
+		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
+	} else if (!data.version.empty()) {
+		doc.add_value(DB_SLOT_VERSION, data.version);
+	}
+}
+
+
+// Offers a schema change made over `old_schema`: false when another change came first (the prepare runs again).
+static task::task<bool>
+offer_schema(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack> old_schema, std::shared_ptr<const MsgPack> new_schema)
+{
+	if (!new_schema) {
+		co_return true;
+	}
+	auto manager = XapiandManager::manager();
+	co_return manager && co_await manager->schemas->set(db_handler, old_schema, new_schema);
 }
 
 
@@ -337,8 +488,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	std::tuple<std::string, engine::Document, MsgPack> prepared;
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
-		if (document_ver != sortable_unserialise(data.version)) {
-			THROW(DocVersionConflictError, "Version mismatch!");
+		const auto current = static_cast<engine::rev>(sortable_unserialise(data.version));
+		if (document_ver != current) {
+			throw engine::version_conflict(current);  // early; the shard checks it again in the write's turn
 		}
 	}
 
@@ -354,26 +506,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 		}
 	}
 
-	auto& doc = std::get<1>(prepared);
-	auto& data_obj = std::get<2>(prepared);
-
-	// Finish document: add data, ID term and ID value.
-	// The following flush() **must** be after passing data to Schema::index() as
-	// it uses it to get the old document during DatabaseHandler::call_script().
-	data.set_obj(data_obj);
-	data.flush();
-	auto serialised = data.serialise();
-	if (!serialised.empty()) {
-		doc.set_data(serialised);
-	}
-
-	// Request version
-	if (document_ver != UNKNOWN_REVISION) {
-		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
-	} else if (!data.version.empty()) {
-		doc.add_value(DB_SLOT_VERSION, data.version);
-	}
-
+	finish_prepared(prepared, data, document_ver);
 	co_return prepared;
 }
 
@@ -424,15 +557,23 @@ DatabaseHandler::index(engine::docid did, const MsgPack& document_id, engine::re
 	auto& data_obj = std::get<2>(prepared);
 
 	engine::WriteResult info;
+	bool placed = false;
 	if (did) {
-		assert(term_id != "N\x80");
-		info = co_await replace_document(did, std::move(doc), commit);
-	} else {
+		assert(term_id != NEW_NUMERIC_KEY);
+		try {
+			info = co_await replace_document(did, std::move(doc), commit, true, true, true);
+			placed = true;
+		} catch (const engine::Error& error) {
+			// Erased or moved since the lookup: placed afresh, not put back where it was found.
+			if (error.kind != engine::errc::doc_not_found) { throw; }
+		}
+	}
+	if (!placed) {
 		info = co_await replace_document_term(term_id, std::move(doc), commit);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
-	if (it != data_obj.end() && term_id == "N\x80") {
+	if (it != data_obj.end() && term_id == NEW_NUMERIC_KEY) {
 		data_obj.erase(it);
 	}
 
@@ -449,7 +590,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
+	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -458,7 +599,7 @@ DatabaseHandler::index(const MsgPack& document_id, engine::rev document_ver, boo
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -501,30 +642,17 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
 	}
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
 	}
 	if (size == 0) {
 		THROW(ClientError, "A streamed blob has at least a byte");
 	}
 
-	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: a
-	// numeric id says it, and any other id is placed by its hash. A new numeric id is placed by the load of the shards
-	// when it is indexed, so it cannot stream.
+	// The blob goes to the data storage of the shard the document is indexed in, so that shard is known first: the
+	// one its id's bucket names.
 	const auto term_id = co_await get_prefixed_term_id(document_id);
-	const size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		if (term_id[0] == 'N') {
-			const engine::docid did = sortable_unserialise(term_id.substr(1));
-			if (did == 0u) {
-				THROW(ClientError, "A blob too big to buffer needs a document id in the URL");
-			}
-			shard_num = (did - 1) % n_shards;
-		} else {
-			shard_num = key_placement_hash(term_id) % n_shards;
-		}
-	}
+	const size_t shard_num = id_shard(term_id, endpoints.size());
 
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
@@ -570,7 +698,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = document_id ? co_await get_prefixed_term_id(document_id) : std::string();
+	const auto term_id = has_document_id(document_id) ? co_await get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -579,7 +707,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 			engine::docid did = 0;
 			if (!term_id.empty()) {
 				try {
-					did = co_await get_docid_term(term_id);
+					did = co_await written_docid_term(term_id);
 				} catch (const engine::Error& error) {
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
@@ -611,7 +739,7 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -628,6 +756,9 @@ DatabaseHandler::patch(const MsgPack& document_id, engine::rev document_ver, boo
 				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
+				if (document_ver != UNKNOWN_REVISION && document_ver != 0) {
+					throw engine::version_conflict(0);  // the version is checked before the document is missing
+				}
 				if (!create) {
 					throw;
 				}
@@ -660,7 +791,7 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 		THROW(Error, "Database is read-only");
 	}
 
-	if (!document_id) {
+	if (!has_document_id(document_id)) {
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
@@ -677,6 +808,9 @@ DatabaseHandler::update(const MsgPack& document_id, engine::rev document_ver, bo
 				data = Data(co_await current_document.get_data(), co_await current_document.get_value(DB_SLOT_VERSION));
 			} catch (const engine::Error& error) {
 				if (!engine::is_missing(error.kind)) { throw; }
+				if (document_ver != UNKNOWN_REVISION && document_ver != 0) {
+					throw engine::version_conflict(0);  // the version is checked before the document is missing
+				}
 				if (!create) {
 					throw;
 				}
@@ -980,15 +1114,15 @@ DatabaseHandler::dump_documents(int fd)
 
 
 task::task<std::string>
-DatabaseHandler::restore_documents(int fd)
+DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 {
-	L_CALL("DatabaseHandler::restore_documents()");
+	L_CALL("DatabaseHandler::restore_documents({}, <fd>)", repr(endpoint.to_string()));
 
 	SHA256 sha256;
-	msgpack::unpacker unpacker;
+	msgpack::unpacker unpacker = make_msgpack_unpacker();   // refuses a body nested deeper than MAX_JSON_DEPTH
 	query_field_t query_field;
 	query_field.commit = true;
-	DocIndexer indexer(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field);
+	std::optional<DocIndexer> indexer;
 	std::exception_ptr error;
 	try {
 		while (true) {
@@ -1009,7 +1143,20 @@ DatabaseHandler::restore_documents(int fd)
 			while (unpacker.next(result)) {
 				batch.emplace_back(result.get());
 			}
-			co_await indexer.index(batch);
+			if (!indexer && !batch.empty()) {
+				// Resolved as RESTORE resolves it: writable, the first object as its settings, which saves the
+				// index's settings and shard records in .xapiand/indexes before its documents are written.
+				auto endpoints = co_await XapiandManager::resolve_index_endpoints(endpoint, true, &batch.front());
+				if (endpoints.empty()) {
+					throw engine::Error(engine::errc::network, "Endpoint node not available");
+				}
+				L_INFO("Restoring into: {}", repr(endpoints.to_string()));
+				// The command line's restore has no reactor to free: its prepares run where they are awaited.
+				indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, false, false, query_field, engine::inline_chores());
+			}
+			if (indexer) {
+				co_await indexer->index(batch);
+			}
 
 			if (!bytes) {
 				break;
@@ -1018,7 +1165,9 @@ DatabaseHandler::restore_documents(int fd)
 	} catch (...) {
 		error = std::current_exception();
 	}
-	co_await indexer.commit();   // what was indexed stays, whatever ended the stream
+	if (indexer) {
+		co_await indexer->commit();   // what was indexed stays, whatever ended the stream
+	}
 	if (error) {
 		std::rethrow_exception(error);
 	}
@@ -1039,28 +1188,8 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 		THROW(ClientError, "Object must be a JSON or MsgPack");
 	}
 
-	MsgPack document_id;
-
-	auto f_it = body.find(ID_FIELD_NAME);
-	if (f_it != body.end()) {
-		const auto& field = f_it.value();
-		if (field.is_map()) {
-			auto f_it_end = field.end();
-			auto fv_it = field.find(RESERVED_VALUE);
-			if (fv_it != f_it_end) {
-				document_id = fv_it.value();
-			}
-		} else {
-			document_id = field;
-		}
-	}
-
-	std::string op_type = "index";
-	f_it = body.find(RESERVED_OP_TYPE);
-	if (f_it != body.end()) {
-		op_type = f_it.value().as_str();
-		body.erase(f_it);
-	}
+	const auto document_id = document_id_of(body);
+	const auto op_type = take_op_type(body);
 
 	if (op_type == "index") {
 		Data data;
@@ -1070,7 +1199,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 	}
 
 	if (op_type == "patch") {
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
@@ -1090,7 +1219,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 	}
 
 	if (op_type == "update" || op_type == "merge") {
-		if (!document_id) {
+		if (!has_document_id(document_id)) {
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
@@ -1289,12 +1418,16 @@ check_search_fanout(size_t shards, size_t max_search_indexes)
 size_t
 search_batch_indexes()
 {
+	// What the pool keeps open (soft_open): a batch never holds more (CT-R39).
+	auto manager = XapiandManager::manager();
+	const auto open = manager && manager->database_pool ? std::max<size_t>(1, manager->database_pool->soft_open())
+		: static_cast<size_t>(std::max<ssize_t>(1, opts.database_pool_size));
 	if (opts.concurrent_search_indexes > 0) {
-		return static_cast<size_t>(opts.concurrent_search_indexes);
+		return std::min(static_cast<size_t>(opts.concurrent_search_indexes), open);
 	}
 	// A reactor's share of the open indexes the pool holds.
 	const auto reactors = static_cast<size_t>(std::max<ssize_t>(1, opts.num_http_servers));
-	return std::max<size_t>(1, static_cast<size_t>(std::max<ssize_t>(1, opts.database_pool_size)) / reactors);
+	return std::max<size_t>(1, open / reactors);
 }
 
 
@@ -1331,34 +1464,48 @@ search_pinned_indexes(bool most)
 
 // Pins the indexes [begin, end) of the search and searches them, reopening them on a stale read. This is
 // the one place that decides how a batch's indexes are held (a use of each registry entry, each engine
-// refreshed once), so the search reads what was applied before it.
+// refreshed once), so the search reads what was applied before it. A path named twice is pinned once and searched at
+// both positions: a second pin of a key would wait for itself while its index is replaced.
 task::task<engine::BatchResult>
 DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
 {
 	std::vector<lock_shard> shards;
+	std::vector<size_t> shard_of;   // the shard of each position
 	shards.reserve(end - begin);
+	shard_of.reserve(end - begin);
 	for (auto i = begin; i < end; ++i) {
-		shards.emplace_back(endpoints[i], flags);
-		co_await shards.back().pin();
+		const auto it = std::find_if(shards.begin(), shards.end(), [&](const lock_shard& shard) { return shard.endpoint.path == endpoints[i].path; });
+		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
+		if (it == shards.end()) {
+			shards.emplace_back(endpoints[i], flags, turn_token());
+			co_await shards.back().pin();
+		}
 	}
 	PinCount pinned(shards.size());
 	engine::BatchResult batch;
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
-			std::vector<engine::Shard*> engines;
-			engines.reserve(shards.size());
-			std::vector<std::uint32_t> indexes;   // the index of each shard found
-			batch.positions.clear();
-			for (size_t i = 0; i < shards.size(); ++i) {
+			std::vector<engine::Shard*> found(shards.size(), nullptr);   // each shard's engine; null when missing
+			for (size_t s = 0; s < shards.size(); ++s) {
 				try {
-					engines.push_back(co_await shards[i]->engine_for_read());
-					batch.positions.push_back(begin + i);
-					if (!request.index_of.empty()) {
-						indexes.push_back(request.index_of[i]);
-					}
+					found[s] = co_await shards[s]->engine_for_read();
 				} catch (const engine::Error& error) {
 					if (error.kind != engine::errc::not_found) { throw; }
+				}
+			}
+			std::vector<engine::Shard*> engines;
+			engines.reserve(shard_of.size());
+			std::vector<std::uint32_t> indexes;   // the index of each shard found
+			batch.positions.clear();
+			for (size_t i = 0; i < shard_of.size(); ++i) {
+				if (found[shard_of[i]] == nullptr) {
+					continue;
+				}
+				engines.push_back(found[shard_of[i]]);
+				batch.positions.push_back(begin + i);
+				if (!request.index_of.empty()) {
+					indexes.push_back(request.index_of[i]);
 				}
 			}
 			if (engines.empty()) {
@@ -1462,12 +1609,7 @@ DatabaseHandler::update_schema()
 	L_CALL("DatabaseHandler::update_schema()");
 
 	auto mod_schema = schema->get_modified_schema();
-	if (mod_schema) {
-		auto old_schema = schema->get_const_schema();
-		auto manager = XapiandManager::manager();
-		co_return manager && co_await manager->schemas->set(this, old_schema, mod_schema);
-	}
-	co_return true;
+	co_return co_await offer_schema(this, schema->get_const_schema(), std::move(mod_schema));
 }
 
 
@@ -1476,7 +1618,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
 	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
 
-	assert(!document_id.empty());
+	assert(has_document_id(document_id));
 
 	schema = co_await get_schema();
 
@@ -1485,7 +1627,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	auto id_type = spc_id.get_type();
 	if (id_type == FieldType::empty) {
 		// Search like namespace.
-		const auto type_ser = Serialise::guess_serialise(document_id);
+		const auto type_ser = Serialise::guess_id(document_id);
 		id_type = type_ser.first;
 		if (id_type == FieldType::text) {
 			id_type = FieldType::keyword;
@@ -1494,7 +1636,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 		spc_id.flags.bool_term = true;
 		unprefixed_term_id = type_ser.second;
 	} else {
-		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
+		unprefixed_term_id = Serialise::id(spc_id, Cast::cast(id_type, document_id));
 	}
 	co_return document_key(unprefixed_term_id, spc_id.get_ctype());
 }
@@ -1652,6 +1794,22 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	co_return co_await find_docid_term(term, false);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::written_docid_term(const std::string& term)
+{
+	L_CALL("DatabaseHandler::written_docid_term({})", repr(term));
+
+	co_return co_await find_docid_term(term, true);
+}
+
+
+task::task<engine::docid>
+DatabaseHandler::find_docid_term(const std::string& term, bool written)
+{
 	assert(!term.empty());
 	assert(!endpoints.empty());
 
@@ -1661,15 +1819,23 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 	std::exception_ptr eptr;
 
-	size_t shard_num = 0;
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags, turn_token());
+	// Every placement routes by id_shard, so the document is read there first: a hit is one read. Only a document
+	// written under an earlier rule, or straight to a shard, sits elsewhere, so a miss reads the other shards in order.
+	const size_t routed = id_shard(term, n_shards);
+	for (size_t i = 0; i < n_shards; ++i) {
+		const size_t shard_num = i == 0 ? routed : i <= routed ? i - 1 : i;
+		lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 		co_await lk_shard.pin();
+		key_reads.fetch_add(1, std::memory_order_relaxed);
 
 		for (int t = DB_RETRIES; t >= 0; --t) {
 			try {
-				auto* eng = co_await lk_shard->engine_for_read();
-				auto shard_did = co_await eng->find_key(term);
+				engine::docid shard_did = 0;
+				if (written) {
+					shard_did = co_await lk_shard->written_key(term);
+				} else {
+					shard_did = co_await (co_await lk_shard->engine_for_read())->find_key(term);
+				}
 				if (shard_did != 0) {
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					co_return did;
@@ -1688,8 +1854,6 @@ DatabaseHandler::get_docid_term(const std::string& term)
 				eptr = std::current_exception(); break;
 			}
 		}
-
-		++shard_num;
 	}
 
 	if (eptr) {
@@ -1701,9 +1865,9 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 
 task::task<void>
-DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document(engine::docid did, engine::rev document_ver, bool commit, bool wal)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, commit, wal, version);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, document_ver, commit, wal);
 
 	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
@@ -1712,28 +1876,28 @@ DatabaseHandler::delete_document(engine::docid did, bool commit, bool wal, bool 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document(shard_did, commit, wal, version);
+	co_await lk_shard->delete_document(shard_did, commit, wal, expected_of(document_ver));
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document(std::string_view document_id, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document(std::string_view document_id, engine::rev document_ver, bool commit, bool wal)
 {
-	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), commit, wal, version);
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), document_ver, commit, wal);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		co_await delete_document(did, commit, wal, version);
+		co_await delete_document(did, document_ver, commit, wal);
 		co_return;
 	}
 
 	const auto term_id = co_await get_prefixed_term_id(document_id);
-	co_await delete_document_term(term_id, commit);
+	co_await delete_document_term(term_id, document_ver, commit, wal);
 }
 
 
 task::task<void>
-DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool wal, bool version)
+DatabaseHandler::delete_document_term(const std::string& term, engine::rev document_ver, bool commit, bool wal)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
@@ -1741,23 +1905,48 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 
 	size_t n_shards = endpoints.size();
 
+	// The found docid only picks the shard: the erase is by key in that shard's turn, which checks
+	// the version of the document the key names then, not of whatever holds the docid.
+	size_t shard_num = 0;
 	if (n_shards > 1) {
+		engine::docid did = 0;
 		try {
-			auto did = co_await get_docid_term(term);
-			if (did != 0u) {
-				co_await delete_document(did, commit, wal, version);
-				co_return;
-			}
+			did = co_await written_docid_term(term);
 		} catch (const engine::Error& error) {
 			if (!engine::is_missing(error.kind)) { throw; }
 		}
+		shard_num = did != 0u ? (did - 1) % n_shards : id_shard(term, n_shards);  // a hit id's shard, else the id's
 	}
 
-	size_t shard_num = key_placement_hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	co_await lk_shard->delete_document_term(term, commit, wal, version);
+	co_await lk_shard->delete_document_term(term, commit, wal, expected_of(document_ver));
+}
+
+
+task::task<std::pair<size_t, std::uint64_t>>
+DatabaseHandler::least_used_shard()
+{
+	size_t shard_num = 0;
+	std::uint64_t id_high = 0;
+	auto min_doccount = std::numeric_limits<engine::doccount>::max();
+	for (size_t n = 0; n < endpoints.size(); ++n) {
+		lock_shard lk_shard(endpoints[n], flags, turn_token());
+		co_await lk_shard.pin();
+		auto node = lk_shard->node();
+		if (node && node->is_active()) {
+			try {
+				const auto [doccount, high] = co_await lk_shard->written_load();
+				id_high = std::max(id_high, high);
+				if (min_doccount > doccount) {
+					min_doccount = doccount;
+					shard_num = n;
+				}
+			} catch (...) {}
+		}
+	}
+	co_return std::make_pair(shard_num, id_high);
 }
 
 
@@ -1770,27 +1959,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 	size_t n_shards = endpoints.size();
 
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		// Try getting a new ID which can currently be indexed (active node)
-		// Get the least used shard:
-		auto min_doccount = std::numeric_limits<engine::doccount>::max();
-		for (size_t n = 0; n < n_shards; ++n) {
-			auto& endpoint = endpoints[n];
-			lock_shard lk_shard(endpoint, flags, turn_token());
-			co_await lk_shard.pin();
-			auto node = lk_shard->node();
-			if (node && node->is_active()) {
-				try {
-					auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-					if (min_doccount > doccount) {
-						min_doccount = doccount;
-						shard_num = n;
-					}
-				} catch (...) {}
-			}
-		}
-	}
+	const size_t shard_num = n_shards > 1 ? (co_await least_used_shard()).first : 0;
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
@@ -1802,7 +1971,7 @@ DatabaseHandler::add_document(engine::Document&& doc, bool commit, bool wal, boo
 
 
 task::task<engine::WriteResult>
-DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version)
+DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, bool commit, bool wal, bool version, bool must_exist)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
@@ -1813,7 +1982,7 @@ DatabaseHandler::replace_document(engine::docid did, engine::Document&& doc, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags, turn_token());
 	co_await lk_shard.pin();
-	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	auto info = co_await lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version, must_exist);
 	info.did = did;
 	co_return info;
 }
@@ -1830,46 +1999,26 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		assert(term.size() > 1);
-		if (term[0] == 'N') {
-			auto did_serialised = term.substr(1);
-			engine::docid did = sortable_unserialise(did_serialised);
-			if (did == 0u) {
-				// Try getting a new ID which can currently be indexed (active node)
-				// Get the least used shard:
-				auto min_doccount = std::numeric_limits<engine::doccount>::max();
-				for (size_t n = 0; n < n_shards; ++n) {
-					auto& endpoint = endpoints[n];
-					lock_shard lk_shard(endpoint, flags, turn_token());
-					co_await lk_shard.pin();
-					auto node = lk_shard->node();
-					if (node && node->is_active()) {
-						try {
-							auto doccount = (co_await lk_shard->engine_for_read())->doc_count();
-							if (min_doccount > doccount) {
-								min_doccount = doccount;
-								shard_num = n;
-							}
-						} catch (...) {}
-					}
-				}
-			} else {
-				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-			}
-			doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		std::uint64_t floor = 0;
+		if (term == NEW_NUMERIC_KEY) {
+			// A new numeric id goes to the least used of the active shards, which issues it from a bucket it owns
+			// above every shard's counter.
+			std::tie(shard_num, floor) = co_await least_used_shard();
 		} else {
-			shard_num = key_placement_hash(term) % n_shards;
-		}
-
-		try {
-			// Figure out if the term alredy exists (across all shards)
-			auto did = co_await get_docid_term(term);
-			if (did != 0u) {
-				co_return co_await replace_document(did, std::move(doc), commit, wal, version);
+			try {
+				// A document that exists (in any shard) is replaced where it is.
+				auto did = co_await written_docid_term(term);
+				if (did != 0u) {
+					// Written in the shard's turn only while it is still there: else it is placed afresh.
+					co_return co_await replace_document(did, std::move(doc), commit, wal, version, true);
+				}
+			} catch (const engine::Error& error) {
+				if (!engine::is_missing(error.kind)) { throw; }
 			}
-		} catch (const engine::Error& error) {
-			if (!engine::is_missing(error.kind)) { throw; }
+			// A new one goes to the shard its id's bucket names.
+			shard_num = id_shard(term, n_shards);
 		}
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards) + serialise_length(floor));
 	}
 
 	auto& endpoint = endpoints[shard_num];
@@ -1878,21 +2027,6 @@ DatabaseHandler::replace_document_term(const std::string& term, engine::Document
 	auto info = co_await lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
 	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	co_return info;
-}
-
-
-task::task<engine::WriteResult>
-DatabaseHandler::replace_document(std::string_view document_id, engine::Document&& doc, bool commit, bool wal, bool version)
-{
-	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
-
-	auto did = to_docid(document_id);
-	if (did != 0u) {
-		co_return co_await replace_document(did, std::move(doc), commit, wal, version);
-	}
-
-	const auto term_id = co_await get_prefixed_term_id(document_id);
-	co_return co_await replace_document_term(term_id, std::move(doc), commit, wal, version);
 }
 
 
@@ -2123,6 +2257,7 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 		case 'G':
 			co_return Unserialise::MsgPack(FieldType::geo, term_id);
 		case 'N':
+			co_return Unserialise::id((co_await get_schema())->get_slot_field(ID_FIELD_NAME).get_type(), term_id);
 		case 'D':
 		case 'T': {
 			// These three types need further information, get such from the schema.
@@ -2144,9 +2279,10 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
  *
  */
 
-DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, task::budget* budget) :
+DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field, engine::Chores& chores, task::budget* budget) :
 	endpoints(endpoints),
 	flags(flags),
+	chores(chores),
 	echo(echo),
 	comments(comments),
 	first(query_field.offset),
@@ -2178,62 +2314,119 @@ co_catch_http_errors(F work)
 	});
 }
 
+
+// How long a prepare chore runs before it gives its worker back (docs/perf/x7-loop-stalls.md, D5).
+constexpr auto PREPARE_SLICE = std::chrono::milliseconds(1);
+
+
+// One admitted object of a RESTORE stream and what its prepare left.
+struct Admitted {
+	std::size_t idx;
+	MsgPack obj;
+	std::tuple<std::string, engine::Document, MsgPack> prepared;
+	std::exception_ptr error;                      // the prepare's failure: the object's result
+	std::shared_ptr<const MsgPack> changed;        // the schema its prepare left, when it changed the schema
+	int offers = 0;                                // its schema changes refused so far
+};
+
+
+// Whether an object's prepare reads the stored document or updates the schema as it fetches it (the design's D1):
+// it is prepared on the loop, after every earlier object of its stream has applied.
+bool
+reads_stored(const MsgPack& obj)
+{
+	if (!obj.is_map()) {
+		return false;
+	}
+	auto it = obj.find(RESERVED_OP_TYPE);
+	if (it != obj.end() && !(it.value().is_string() && it.value().str_view() == "index")) {
+		return true;
+	}
+	return obj.find(RESERVED_SCRIPT) != obj.end() || obj.find(RESERVED_SCHEMA) != obj.end();
+}
+
+
+// The prepare of a plain `index` object against `schema`, in a chore: DatabaseHandler::prepare once its schema is
+// fetched. `Schema::index` is CPU only here: no script (no call_script), and `seq` is never 0 (no lock_shard).
+std::tuple<std::string, engine::Document, MsgPack>
+prepare_plain(Schema& schema, DatabaseHandler& placement, MsgPack& body, std::size_t seq)
+{
+	const auto document_id = document_id_of(body);
+	take_op_type(body);
+	Data data;
+	inject_data(data, body);
+	auto prepared = engine::sync_wait(schema.index(body, document_id, placement, data, seq));
+	finish_prepared(prepared, data, UNKNOWN_REVISION);
+	return prepared;
+}
+
 }  // namespace
 
 
 task::task<void>
-DocIndexer::index_one(MsgPack&& obj)
+DocIndexer::index(std::vector<MsgPack>& batch)
 {
-	L_CALL("DocIndexer::index_one(<obj>)");
+	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
 
-	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
-		co_return;
+	// The handler the prepare chores place new ids with (read only while they run). On a reactor the writes run in
+	// chores, one child per shard and at most `children` at once; the prepares take the pool's other workers but its
+	// reserve, which flushes never take. With no reactor (the CLI) every write takes the serial path.
+	DatabaseHandler placement(endpoints, flags);
+	auto* host = dynamic_cast<engine::AsioHost*>(engine::Host::current());
+	const bool parallel = host != nullptr && &chores != &engine::inline_chores() && !seams.serial.load(std::memory_order_relaxed);
+	const std::size_t n_shards = endpoints.size();
+	std::size_t threads = 1;
+	if (auto manager = XapiandManager::manager(); manager && manager->database_pool) {
+		threads = manager->database_pool->work_pool().threads();
 	}
+	const std::size_t workers = threads > 1 ? threads - 1 : 1;
+	const std::size_t children = parallel ? std::min(n_shards, std::max<std::size_t>(1, workers / 2)) : 0;
+	const std::size_t width = workers > children ? workers - children : 1;
 
-	if (first) {
-		--first;
-		co_return;
-	}
+	std::vector<Admitted> run;   // the plain objects since the last barrier, in input order
 
-	if (!maxitems) {
-		co_return;
-	}
-	--maxitems;
+	// Admits the stream's next object (offset, limit): its result's index, or none.
+	const auto admit = [this](const MsgPack& obj) -> std::optional<std::size_t> {
+		if (!obj.is_map()) {
+			L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
+			return std::nullopt;
+		}
+		if (first) {
+			--first;
+			return std::nullopt;
+		}
+		if (!maxitems) {
+			return std::nullopt;
+		}
+		--maxitems;
+		const auto idx = _idx++;
+		++_total;
+		if (_results.size() <= idx) {
+			_results.resize(idx + 1, MsgPack::MAP());
+		}
+		return idx;
+	};
 
-	const auto idx = _idx++;
-	++_total;
-	if (_results.size() <= idx) {
-		_results.resize(idx + 1, MsgPack::MAP());
-	}
+	// Prepares an object on the loop, reading the stored document as its prepare needs.
+	const auto prepare_inline = [this](Admitted& one) -> task::task<void> {
+		one.error = nullptr;   // a chore's failure in an earlier round is not this prepare's
+		try {
+			one.prepared = co_await db_handler.prepare_document(one.obj, one.idx + 1);
+		} catch (...) {
+			one.error = std::current_exception();
+		}
+	};
 
-	// Prepare: the document the engine will index, and where it goes.
-	std::tuple<std::string, engine::Document, MsgPack> prepared;
-	auto prepare_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
-		prepared = co_await db_handler.prepare_document(obj, idx + 1);
-	});
-	++_processed;
-	MsgPack result;
-	if (prepare_errors.error_code != HTTP_STATUS_OK) {
-		result = MsgPack{
-			{ RESPONSE_STATUS, static_cast<unsigned>(prepare_errors.error_code) },
-			{ RESPONSE_TYPE, http_status_str(prepare_errors.error_code) },
-			{ RESPONSE_MESSAGE, prepare_errors.error }
-		};
-		_results[idx] = std::move(result);
-		co_return;
-	}
-	++_prepared;
-
-	// Apply: the document goes to its shard, in the shard's turn.
-	auto& term_id = std::get<0>(prepared);
-	auto& doc = std::get<1>(prepared);
-	auto& data_obj = std::get<2>(prepared);
-	if (!term_id.empty()) {
+	// Records a write's outcome, `error` or `info` (its docid in the multi-db): the object's result.
+	const auto record = [this](Admitted& one, std::exception_ptr error, engine::WriteResult info) -> task::task<void> {
+		MsgPack result;
+		auto& term_id = std::get<0>(one.prepared);
+		auto& data_obj = std::get<2>(one.prepared);
 		auto index_errors = co_await co_catch_http_errors([&]() -> task::task<void> {
-			auto info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
-
-			if (term_id == "N\x80") {
+			if (error) {
+				std::rethrow_exception(error);
+			}
+			if (term_id == NEW_NUMERIC_KEY) {
 				result[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
 			} else {
 				auto it_id = data_obj.find(ID_FIELD_NAME);
@@ -2253,7 +2446,6 @@ DocIndexer::index_one(MsgPack&& obj)
 					size_t n_shards = endpoints.size();
 					size_t shard_num = (info.did - 1) % n_shards;
 					result[RESPONSE_xSHARD] = shard_num + 1;
-					// result[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 				}
 			}
 
@@ -2264,31 +2456,485 @@ DocIndexer::index_one(MsgPack&& obj)
 			result[RESPONSE_TYPE] = http_status_str(index_errors.error_code);
 			result[RESPONSE_MESSAGE] = index_errors.error;
 		}
-	} else if (!data_obj.is_undefined()) {
-		result = std::move(data_obj);
-	}
-	_results[idx] = std::move(result);
-}
+		_results[one.idx] = std::move(result);
+	};
 
+	// Records an object's prepare and applies its document in the shard's turn (the serial path): the object's result.
+	const auto apply = [this, &record](Admitted& one) -> task::task<void> {
+		++_processed;
+		MsgPack result;
+		if (one.error) {
+			const auto errors = catch_http_errors([&] {
+				if (one.error) {
+					std::rethrow_exception(one.error);
+				}
+				return 0;
+			});
+			_results[one.idx] = MsgPack{
+				{ RESPONSE_STATUS, static_cast<unsigned>(errors.error_code) },
+				{ RESPONSE_TYPE, http_status_str(errors.error_code) },
+				{ RESPONSE_MESSAGE, errors.error }
+			};
+			co_return;
+		}
+		++_prepared;
 
-task::task<void>
-DocIndexer::index(std::vector<MsgPack>& batch)
-{
-	L_CALL("DocIndexer::index(<{} objects>)", batch.size());
+		auto& term_id = std::get<0>(one.prepared);
+		auto& doc = std::get<1>(one.prepared);
+		auto& data_obj = std::get<2>(one.prepared);
+		if (!term_id.empty()) {
+			std::exception_ptr error;
+			engine::WriteResult info;
+			try {
+				info = co_await db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+			} catch (...) {
+				error = std::current_exception();
+			}
+			co_await record(one, error, info);
+			co_return;
+		}
+		if (!data_obj.is_undefined()) {
+			result = std::move(data_obj);
+		}
+		_results[one.idx] = std::move(result);
+	};
+
+	// An object per slice at most: the request gives its reactor back when its slice is spent.
+	const auto checkpoint = [this]() -> task::task<void> {
+		if (db_handler.budget != nullptr) {
+			co_await db_handler.budget->checkpoint();
+		}
+	};
+
+	const auto apply_serial = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		for (auto i = from; i < to; ++i) {
+			co_await apply(run[i]);
+			co_await checkpoint();
+		}
+	};
+
+	// The writes of [from, to), none a new numeric id of a sharded index, in their shards' turns (fix (c),
+	// docs/perf/x7-loop-stalls.md): placed first, then one sub-run per shard in input order, written in chores by
+	// at most `children` child tasks, each holding one turn at a time.
+	const auto apply_shards = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		// Placement, by find_docid_term's rules: each term is read in the shard its id routes to, then in the others
+		// while not found; a shard's read retries and reopens, and a shard that is not available fails only the terms
+		// no other shard holds. A term whose pin or read failed otherwise (busy, corrupt) takes the serial path after
+		// the join: each its own turn.
+		std::vector<std::string> terms;
+		std::unordered_map<std::string, std::size_t> term_at;
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			if (!one.error && !std::get<0>(one.prepared).empty()) {
+				const auto& term = std::get<0>(one.prepared);
+				if (term_at.emplace(term, terms.size()).second) {
+					terms.push_back(term);
+				}
+			}
+		}
+		std::vector<std::pair<std::size_t, engine::docid>> found(terms.size(), {0, 0});   // shard + 1, its docid
+		std::vector<std::exception_ptr> failed(terms.size());
+		std::vector<bool> serial(terms.size(), false);
+		if (n_shards > 1) {
+			std::exception_ptr unavailable;
+			bool missing = false;   // the lookup met a missing index: the rest are placed afresh, as the serial path
+			// Each shard is asked first for the ids routed to it, then, in a second pass, for the ids not found yet.
+			for (std::size_t step = 0; step < 2 * n_shards && !missing; ++step) {
+				const std::size_t shard = step % n_shards;
+				const bool routed = step < n_shards;
+				std::vector<std::string> ask;
+				std::vector<std::size_t> ask_at;
+				for (std::size_t k = 0; k < terms.size(); ++k) {
+					if (found[k].first == 0 && !failed[k] && !serial[k] && (id_shard(terms[k], n_shards) == shard) == routed) {
+						ask.push_back(terms[k]);
+						ask_at.push_back(k);
+					}
+				}
+				if (ask.empty()) {
+					continue;
+				}
+				try {
+					lock_shard lk_shard(endpoints[shard], flags, db_handler.turn_token());
+					co_await lk_shard.pin();
+					DatabaseHandler::key_reads.fetch_add(ask.size(), std::memory_order_relaxed);
+					for (int t = DB_RETRIES; t >= 0; --t) {
+						try {
+							if (std::size_t busy = shard + 1; seams.busy_placement_shard.compare_exchange_strong(busy, 0)) {
+								throw engine::Error(engine::errc::busy, "Test seam: a placement read times out busy");
+							}
+							const auto dids = co_await lk_shard->written_keys(ask);
+							for (std::size_t m = 0; m < dids.size(); ++m) {
+								if (dids[m] != 0) {
+									found[ask_at[m]] = {shard + 1, dids[m]};
+								}
+							}
+							break;
+						} catch (const engine::Error& error) {
+							if (error.kind == engine::errc::not_available) {
+								unavailable = std::current_exception();
+								break;
+							}
+							lk_shard->retry_read(error, t);
+						}
+						try {
+							co_await lk_shard->reopen();
+						} catch (const engine::Error& error) {
+							if (error.kind != engine::errc::not_available) {
+								throw;
+							}
+							unavailable = std::current_exception();
+							break;
+						}
+					}
+				} catch (const engine::Error& error) {
+					if (!engine::is_missing(error.kind)) {
+						for (auto k : ask_at) {
+							serial[k] = true;
+						}
+					} else {
+						missing = true;
+					}
+				} catch (...) {
+					for (auto k : ask_at) {
+						serial[k] = true;
+					}
+				}
+			}
+			if (unavailable && !missing) {
+				for (std::size_t k = 0; k < terms.size(); ++k) {
+					if (found[k].first == 0 && !serial[k]) {
+						failed[k] = unavailable;
+					}
+				}
+			}
+		}
+
+		// One sub-run per shard, in input order; `slot[j - from]` is an object's write (shard, position), if any.
+		std::vector<std::vector<SliceWrite>> subruns(n_shards);
+		std::vector<std::pair<std::size_t, std::size_t>> slot(to - from, {n_shards, 0});
+		std::vector<std::exception_ptr> placement_error(to - from);
+		std::vector<bool> placement_serial(to - from, false);
+		std::vector<std::unordered_set<std::string>> seen(n_shards);
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			if (one.error || std::get<0>(one.prepared).empty()) {
+				continue;
+			}
+			const auto& term = std::get<0>(one.prepared);
+			const auto k = term_at[term];
+			if (failed[k]) {
+				placement_error[j - from] = failed[k];
+				continue;
+			}
+			if (serial[k]) {
+				placement_serial[j - from] = true;
+				continue;
+			}
+			SliceWrite write;
+			write.idx = j;
+			write.term = term;
+			std::size_t shard = 0;
+			if (found[k].first != 0) {
+				shard = found[k].first - 1;
+				write.shard_did = found[k].second;
+				write.doc = std::move(std::get<1>(one.prepared));
+			} else {
+				write.doc = std::move(std::get<1>(one.prepared));
+				if (n_shards > 1) {
+					// A new one goes to the shard its id's bucket names.
+					shard = id_shard(term, n_shards);
+					write.doc.add_value(DB_SLOT_SHARDS, serialise_length(shard) + serialise_length(n_shards));
+				}
+			}
+			if (!seen[shard].insert(term).second) {
+				stats.repeated_in_subrun.fetch_add(1, std::memory_order_relaxed);
+			}
+			slot[j - from] = {shard, subruns[shard].size()};
+			subruns[shard].push_back(std::move(write));
+		}
+
+		if (seams.after_placement) {
+			co_await seams.after_placement(db_handler);
+		}
+
+		std::vector<std::size_t> order;
+		for (std::size_t shard = 0; shard < n_shards; ++shard) {
+			if (!subruns[shard].empty()) {
+				order.push_back(shard);
+			}
+		}
+		std::size_t next = 0;
+		std::size_t active = 0;
+		const auto child = [&]() -> task::task<void> {
+			while (next < order.size()) {
+				const auto shard = order[next++];
+				auto& writes = subruns[shard];
+				std::unordered_set<std::string> missed;
+				std::size_t at = 0;
+				while (at < writes.size()) {
+					bool counted_in = false;
+					try {
+						lock_shard lk_shard(endpoints[shard], flags, db_handler.turn_token());
+						co_await lk_shard.pin();
+						counted_in = true;
+						++active;
+						if (active > stats.peak_children.load(std::memory_order_relaxed)) {
+							stats.peak_children.store(active, std::memory_order_relaxed);
+						}
+						co_await lk_shard->apply_slice(chores, writes, at, PREPARE_SLICE, missed);
+						if (seams.after_slice) {
+							co_await seams.after_slice(db_handler, writes[at - 1].term, writes[at - 1].missed);
+						}
+						--active;
+						counted_in = false;
+					} catch (...) {
+						if (counted_in) {
+							--active;
+						}
+						// A pin, turn or slice that fails before its next write fails that write alone; the rest retry.
+						const auto error = std::current_exception();
+						const std::size_t failed_writes = 1;
+						if (at >= writes.size()) {
+							if (!writes.back().error) {
+								writes.back().error = error;   // the slice's completion failed after its last write
+							}
+						}
+						for (const auto stop = std::min(writes.size(), at + failed_writes); at < stop; ++at) {
+							writes[at].error = error;
+						}
+					}
+				}
+			}
+		};
+		std::vector<task::task<void>> kids;
+		const auto n_kids = std::min(children, order.size());
+		kids.reserve(n_kids);
+		for (std::size_t c = 0; c < n_kids; ++c) {
+			kids.push_back(engine::counted(*host, child()));   // each child a task of its own: one turn at a time
+		}
+		co_await task::when_all(std::move(kids));
+
+		// Results in input order; a write missed since placement, and every later write of its term (the design
+		// review's B1), and every write of a term whose placement failed, take the serial path after them, in input order.
+		std::vector<std::size_t> deferred;
+		for (auto j = from; j < to; ++j) {
+			auto& one = run[j];
+			const auto [w_shard, w_pos] = slot[j - from];
+			if (placement_error[j - from]) {
+				++_processed;
+				++_prepared;
+				co_await record(one, placement_error[j - from], {});
+			} else if (placement_serial[j - from]) {
+				deferred.push_back(j);
+				continue;
+			} else if (w_shard == n_shards) {
+				co_await apply(one);   // a failed prepare, or an object with nothing to write
+			} else if (auto& write = subruns[w_shard][w_pos]; write.missed) {
+				std::get<1>(one.prepared) = std::move(write.doc);
+				deferred.push_back(j);
+				continue;
+			} else {
+				++_processed;
+				++_prepared;
+				auto info = write.info;
+				info.did = (info.did - 1) * n_shards + w_shard + 1;  // unshard number and shard docid to docid in multi-db
+				co_await record(one, write.error, info);
+			}
+			co_await checkpoint();
+		}
+		for (auto j : deferred) {
+			stats.deferred.fetch_add(1, std::memory_order_relaxed);
+			co_await apply(run[j]);
+			co_await checkpoint();
+		}
+	};
+
+	// The writes of [from, to): in parallel by shard on a reactor, split at each new numeric id of a sharded index
+	// (its shard is the least used, which the earlier writes change), which takes the serial path after a join.
+	const auto apply_range = [&](std::size_t from, std::size_t to) -> task::task<void> {
+		if (!parallel) {
+			co_await apply_serial(from, to);
+			co_return;
+		}
+		stats.children.store(children, std::memory_order_relaxed);
+		if (to - from > stats.largest_range.load(std::memory_order_relaxed)) {
+			stats.largest_range.store(to - from, std::memory_order_relaxed);
+		}
+		const auto new_numeric = [&](std::size_t j) {
+			return n_shards > 1 && !run[j].error && std::get<0>(run[j].prepared) == NEW_NUMERIC_KEY;
+		};
+		auto i = from;
+		while (i < to) {
+			auto end = i;
+			while (end < to && !new_numeric(end)) {
+				++end;
+			}
+			if (end > i) {
+				co_await apply_shards(i, end);
+			}
+			if (end < to) {
+				stats.serial_after_join.fetch_add(1, std::memory_order_relaxed);
+				co_await apply_serial(end, end + 1);
+				++end;
+			}
+			i = end;
+		}
+	};
+
+	// A round of the run (the design's Rounds): chores pull its objects in input order from `next`, each against a
+	// Schema of its own over `snapshot`, until a slice is spent or an object changes the schema.
+	struct Round {
+		std::shared_ptr<const MsgPack> snapshot;
+		std::string origin;
+		std::atomic<std::size_t> next{0};
+		std::atomic<std::size_t> changed{0};   // the first object whose prepare changed the schema
+	};
+
+	// Starts a round at `from` on the current schema; false when the schema has a script, whose objects all read
+	// the stored document, or cannot be read: each object's own prepare then reads it, and its failure is the result.
+	const auto fetch = [&](Round& round, std::size_t from) -> task::task<bool> {
+		std::shared_ptr<Schema> schema;
+		try {
+			schema = co_await db_handler.get_schema();
+		} catch (...) {
+			co_return false;
+		}
+		if (!schema->get_data_script().is_undefined()) {
+			co_return false;
+		}
+		round.snapshot = schema->get_const_schema();
+		round.origin = std::string(schema->get_origin());
+		round.next = from;
+		round.changed = run.size();
+		co_return true;
+	};
+
+	// The round's chores. They touch nothing loop-bound, so they overlap the apply of the objects before them.
+	const auto pull_round = [&](Round& round) -> task::task<void> {
+		const auto pull = [&] {
+			Schema own(round.snapshot, nullptr, round.origin);
+			const auto until = std::chrono::steady_clock::now() + PREPARE_SLICE;
+			const auto count = seams.objects_per_prepare.load(std::memory_order_relaxed);   // a test's fixed range
+			std::size_t taken = 0;
+			for (;;) {
+				const auto j = round.next.fetch_add(1, std::memory_order_relaxed);
+				if (j >= run.size() || j > round.changed.load(std::memory_order_relaxed)) {
+					return;
+				}
+				auto& one = run[j];
+				one.error = nullptr;
+				try {
+					one.prepared = prepare_plain(own, placement, one.obj, one.idx + 1);
+				} catch (...) {
+					one.error = std::current_exception();
+				}
+				one.changed = own.get_modified_schema();
+				if (one.changed) {
+					auto seen = round.changed.load(std::memory_order_relaxed);
+					while (j < seen && !round.changed.compare_exchange_weak(seen, j, std::memory_order_relaxed)) { }
+					return;
+				}
+				if (count != 0 ? ++taken >= count : std::chrono::steady_clock::now() >= until) {
+					return;
+				}
+			}
+		};
+		std::vector<task::task<void>> pulls;
+		pulls.reserve(width);
+		for (std::size_t w = 0; w < width; ++w) {
+			pulls.push_back(chores.run(engine::ChoreClass::flush, pull));
+		}
+		co_await task::when_all(std::move(pulls));
+	};
+
+	// Accepts the round's objects up to its first schema change and offers that change, with no apply in flight (a
+	// task holds one turn at most): changes commit in input order, and every later object is prepared again in the
+	// next round, on the new schema. Returns the end of the accepted objects.
+	const auto accept = [&](Round& round) -> task::task<std::size_t> {
+		auto stop = std::min(round.next.load(), run.size());
+		const auto first_change = round.changed.load();
+		if (first_change < stop) {
+			stop = first_change + 1;
+			auto& one = run[first_change];
+			bool offered = false;
+			try {
+				offered = co_await offer_schema(&db_handler, round.snapshot, one.changed);
+			} catch (...) {
+				one.error = std::current_exception();   // the schema's write failure is this object's result
+				offered = true;
+			}
+			if (!offered) {
+				if (++one.offers <= SCHEMA_RETRIES) {
+					stop = first_change;   // prepared again, on the schema that came first
+				} else {
+					try {
+						THROW(Error, "Cannot update schema while preparing: Too many retries");
+					} catch (...) {
+						one.error = std::current_exception();
+					}
+				}
+			}
+		}
+		co_return stop;
+	};
+
+	// Prepares the run and applies it in input order; each round's chores overlap the apply of the round before.
+	const auto apply_run = [&]() -> task::task<void> {
+		Round round;
+		std::size_t at = 0;
+		std::size_t stop = 0;
+		bool plain = !run.empty();
+		if (plain) {
+			plain = co_await fetch(round, 0);
+		}
+		if (plain) {
+			co_await pull_round(round);
+			stop = co_await accept(round);
+		}
+		while (plain && stop < run.size()) {
+			plain = co_await fetch(round, stop);   // the schema the accepted objects left
+			if (!plain) {
+				break;
+			}
+			co_await task::when_all(apply_range(at, stop), pull_round(round));
+			at = stop;
+			stop = co_await accept(round);
+		}
+		co_await apply_range(at, stop);
+		for (at = stop; at < run.size(); ++at) {   // the schema's script reads each object's stored document
+			co_await prepare_inline(run[at]);
+			co_await apply(run[at]);
+			co_await checkpoint();
+		}
+		run.clear();
+	};
+
+	const auto take = [&](MsgPack&& obj) -> task::task<void> {
+		if (!reads_stored(obj)) {
+			if (auto idx = admit(obj)) {
+				run.push_back(Admitted{*idx, std::move(obj), {}, {}, {}});
+			}
+			co_return;
+		}
+		co_await apply_run();   // D1: a barrier's read sees every earlier object applied
+		if (auto idx = admit(obj)) {
+			Admitted one{*idx, std::move(obj), {}, {}, {}};
+			co_await prepare_inline(one);
+			co_await apply(one);
+			co_await checkpoint();
+		}
+	};
 
 	for (auto& obj : batch) {
 		if (obj.is_array()) {
 			for (auto& o : obj) {
-				co_await index_one(std::move(o));
+				co_await take(std::move(o));
 			}
 		} else {
-			co_await index_one(std::move(obj));
-		}
-		// An object per slice at most: the request gives its reactor back when its slice is spent.
-		if (db_handler.budget != nullptr) {
-			co_await db_handler.budget->checkpoint();
+			co_await take(std::move(obj));
 		}
 	}
+	co_await apply_run();   // the batch's last run applies before the next batch is read
 }
 
 
@@ -2595,6 +3241,17 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 }
 
 
+// The autocommit, armed again while a merge of the index is pending (x-pool D8): the busy index's merges then publish
+// and sync with no write to take its turn.
+static task::task<void>
+autocommit_and_rearm(DatabasePool& pool, Endpoint endpoint)
+{
+	if (co_await autocommit(pool, endpoint)) {
+		XapiandManager::schedule_autocommit(endpoint);
+	}
+}
+
+
 void
 committer_commit(Endpoint endpoint) {
 	// The debouncer's thread only starts the commit: it is a task of the index, and takes its turn.
@@ -2602,5 +3259,5 @@ committer_commit(Endpoint endpoint) {
 	if (!manager || !manager->database_pool) {
 		return;
 	}
-	manager->database_pool->run_detached(autocommit(*manager->database_pool, endpoint));
+	manager->database_pool->run_detached(autocommit_and_rearm(*manager->database_pool, endpoint));
 }

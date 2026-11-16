@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-29) gate 7a blocker L1 and condition C3, branch `phase7a/gate-l1` (from master `Xapiand:3bc11f31f`); workstream gate7a-l1, developer. Round 2 (the remaining refusals) is below.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-29) gate 7a blocker L1 and condition C3, branch `phase7a/gate-l1` (from master `Xapiand:3bc11f31f`); workstream gate7a-l1, developer. Round 2 (the remaining refusals) is below.
 
 # Gate 7a L1 and C3
 

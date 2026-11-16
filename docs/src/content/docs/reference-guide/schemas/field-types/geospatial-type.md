@@ -2,7 +2,7 @@
 title: "Geospatial Datatype"
 ---
 
-Fields of type geo_point accept latitude-longitude pairs, which can be used:
+Fields of type `geospatial` (also spelled `geo`) accept latitude-longitude pairs, which can be used:
 
 * to find geo-points within a polygon, or a certain distance of a central point.
 * to aggregate documents geographically or by distance from a central point.
@@ -32,6 +32,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Geospatial: a point
+---
+
+```js
+pm.test("A point is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("checkin");
+});
+```
+e2e:end -->
+
 ## Circle
 
 Use `_circle`.
@@ -49,6 +64,21 @@ UPDATE /bank/2
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a circle
+---
+
+```js
+pm.test("A circle is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(2);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
 
 The example show circle with radius of **1000 meters**.
 
@@ -78,6 +108,21 @@ UPDATE /bank/3
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Geospatial: a polygon
+---
+
+```js
+pm.test("A polygon is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(3);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
 
 :::hint{.warning}
 _**Concave Polygons**_<br>
@@ -113,9 +158,25 @@ UPDATE /bank/4
 }
 ```
 
-This is the set of coordinates generate for the convex hull for the above example:
+<!-- e2e:begin
+---
+description: Geospatial: a convex hull
+---
 
-| Latitude  | Longitude | Height   |
+```js
+pm.test("A convex hull is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(4);
+  pm.expect(doc).to.have.property("neighborhood");
+});
+```
+e2e:end -->
+
+This is the set of coordinates generated for the convex hull for the above example (points on the
+unit sphere, as Cartesian `x`, `y`, `z`: each row's squares add up to 1):
+
+| x         | y         | z        |
 |----------:|----------:|---------:|
 | -0.166828 | -0.783064 | 0.599148 |
 | -0.261113 | -0.756863 | 0.599148 |
@@ -134,10 +195,14 @@ format. The following shapes are allowed types:
 * POLYGON       - Finds documents inside or with the given polygon.
 * CHULL         - Finds documents inside or with the given convex hull.
 * MULTIPOINT    - Finds documents inside the given vector of points.
-* MULTIPCIRCLE  - Finds documents inside the given vector of circles.
+* MULTICIRCLE   - Finds documents inside the given vector of circles.
 * MULTICONVEX   - Finds documents inside the given vector of convexs.
 * MULTIPOLYGON  - Finds documents inside the given vector of polygons.
 * MULTICHULL    - Finds documents inside the given vector of convexs hull.
+* GEOMETRYCOLLECTION   - A collection of shapes.
+* GEOMETRYINTERSECTION - The intersection of shapes.
+
+A `SRID=<n>;` prefix names the coordinate system.
 
 The following example indexes a point with _latitude_ of **41.50343** and
 _longitude_ of **-74.01042** into a `location` field (the `checkin` field on the
@@ -153,6 +218,21 @@ UPDATE /bank/5
 }
 ```
 
+<!-- e2e:begin
+---
+description: Geospatial: EWKT
+---
+
+```js
+pm.test("An EWKT shape is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(5);
+  pm.expect(doc).to.have.property("location");
+});
+```
+e2e:end -->
+
 :::hint[Caution]{.caution}
 Notice that for points in EWKT expressions, the correct coordinate order is
 `POINT(longitude latitude)`, "longitude" first.
@@ -163,13 +243,13 @@ Notice that for points in EWKT expressions, the correct coordinate order is
 Additionally to the object formats exemplified above, coordinates also accept
 array formats and some text formats.
 
-Here are examples of formats that work:
+Here are the formats that work:
 
-* Text with degrees, minutes, and seconds (DMS): `41°30'12.348"N 74°0'37.512"W`
-* Text with degrees and decimal minutes (DMM): `41 30.2058, -74 0.6252`
-* Text with decimal degrees (DD): `41.50343, -74.01042`
 * Extended Well-Known Text (EWKT): `POINT(-74.01042 41.50343)`
 * Array of longitude and latitude pairs: `[ -74.01042, 41.50343 ]`
+
+A text value is read as EWKT only: the DMS, DMM and DD text forms (`41°30'12.348"N 74°0'37.512"W`,
+`41 30.2058, -74 0.6252`, `41.50343, -74.01042`) are not implemented and answer `400`.
 
 Here are some tips for formatting your coordinates so they work:
 
@@ -179,14 +259,9 @@ Here are some tips for formatting your coordinates so they work:
 * Use _periods_ as decimals, not _commas_.
   - Incorrect: `41,50343, -74,01042`.
   - Correct: `41.50343, -74.01042`.
-* List your latitude coordinates before longitude coordinates.
+* List your longitude coordinates before latitude coordinates, in arrays and in EWKT.
 * Check that the first number in your latitude coordinate is between -90 and 90.
 * Check that the first number in your longitude coordinate is between -180 and 180.
-
-:::hint[Unimplemented Feature!]{.unimplemented}
-DMS, DMM and DD text formats  haven't yet been implemented...
-<br>[Pull requests are welcome!](https://github.com/Kronuz/Xapiand/pulls)
-:::
 
 For example, the following example indexes a point using an array of
 `[ longitude, latitude ]`:
@@ -199,6 +274,21 @@ UPDATE /bank/6
 }
 ```
 
+<!-- e2e:begin
+---
+description: Geospatial: a coordinate pair
+---
+
+```js
+pm.test("A coordinate pair is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(6);
+  pm.expect(doc.checkin).to.deep.equal([-74.01042, 41.50343]);
+});
+```
+e2e:end -->
+
 :::hint[Caution]{.caution}
 Notice that for points in array mode, the correct coordinate order is
 `[ longitude, latitude]`, "longitude" first.
@@ -207,7 +297,7 @@ Notice that for points in array mode, the correct coordinate order is
 ## Distance Units
 Whenever distances need to be specified, e.g. for a radius or altitude, the
 distance unit can be specified as a double number representing distance in
-meters or as a string of the form number and distance unit e.g. "2.72km"
+meters or as a string of the form number and distance unit e.g. "2km" or "272m" (the number is an integer: "2.72km" answers `400`)
 
 ### Supported Units
 

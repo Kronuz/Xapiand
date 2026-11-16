@@ -54,5 +54,6 @@ pm.test("Simple query value is valid", function() {
 e2e:end -->
 
 When a query is executed, the result is a list of documents that match the
-query, together with a **weight**, a **rank** and a **percent** for each which
-indicates how good a match for the query that particular document is.
+query, best match first. With the `comments` query param (or `--comments`) each
+hit also carries `#weight`, `#rank` and `#percent`, which indicate how good a match
+for the query that particular document is.

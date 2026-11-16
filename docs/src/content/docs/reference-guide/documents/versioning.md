@@ -2,16 +2,16 @@
 title: "Versioning"
 ---
 
-Xapiand is asynchronous and concurrent. When documents are created, updated, or
-deleted, several requests can change the same document at once, and they may
-arrive _out of sequence_. Xapiand needs a way of ensuring that an older version of a
-document never overwrites a newer version.
+Xapiand is concurrent. When documents are created or updated, several requests can
+change the same document at once, and a client may write from a copy of the
+document that is already out of date. Xapiand needs a way of telling the client
+that the document changed under it.
 
-To ensure an older version of a document doesn't overwrite a newer version,
-every document has a `_version` number that is incremented whenever a document
-is changed. Xapiand uses this `_version` number to ensure that changes are
-applied in the correct order. If an older version of a document arrives after a
-new version, it can simply be ignored.
+Every document has a `_version` number that is incremented whenever the document
+is written. A write that carries no version always applies, and the last write
+wins. A write that names the version it expects (the `version` query param, or a
+`_version` in the document body) applies only if that is the document's current
+version; otherwise it answers `409 Conflict` and changes nothing.
 
 For example, the following indexing command will create a document and assign
 a version to it:
@@ -24,7 +24,23 @@ PUT /twitter/user/Kronuz
 }
 ```
 
-This is all business as usual, the interesting bit is in the response:
+<!-- e2e:begin
+---
+description: Versioning: a write assigns a version
+---
+
+```js
+pm.test("The write answers the document with its version", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._id).to.equal("Kronuz");
+  pm.expect(pm.response.json()._version).to.be.a("number");
+});
+```
+e2e:end -->
+
+This is all business as usual. The write answers `204 No Content`; with the
+`echo` query param it answers the document, and the interesting bit is its
+`_version`:
 
 ```json
 {
@@ -143,3 +159,172 @@ been incremented to 2:
 
 However, if we were to rerun the same index request, still specifying
 version `1`, Xapiand would respond with a `409 Conflict` HTTP response code.
+The `409` body carries the document's current version as `_version` (`0` when
+there is no document), so a client knows which version to read back.
+
+The version is checked by every write of a document by its ID: `PUT`, `UPDATE`,
+`PATCH`, `UPSERT` and `DELETE` (see [Delete](../delete-api#version)). The check
+runs in the index's write turn, where the write applies, so two writers that
+read the same version never both succeed.
+
+## Creating only when missing
+
+A version of `0` stands for a document that does not exist. `PUT` and `UPSERT`
+with `version=0` create the document only when no document has that ID, and
+answer `409` when one does; `PATCH`, `UPDATE` and `DELETE` with `version=0` on
+a missing document answer `404`, as they do without a version. Any other
+version names a document that must be there, so it answers `409` when the
+document is missing.
+
+```rest
+PUT /versions/doc/1?version=0
+
+{
+  "title": "first"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: version 0 creates a missing document
+---
+
+```js
+pm.test("Version 0 creates the document", function () {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/1?version=0
+
+{
+  "title": "second"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: version 0 is create-only
+---
+
+```js
+pm.test("Version 0 refuses an existing document", function () {
+  pm.response.to.have.status(409);
+});
+pm.test("The 409 body carries the current version", function () {
+  pm.expect(pm.response.json()._version).to.equal(1);
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/1?version=1
+
+{
+  "title": "second"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: the current version applies
+---
+
+```js
+pm.test("The current version applies", function () {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+GET /versions/doc/1
+```
+
+<!-- e2e:begin
+---
+description: Versioning: the version moved to 2
+---
+
+```js
+pm.test("The write moved the version to 2", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._version).to.equal(2);
+  pm.expect(pm.response.json().title).to.equal("second");
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/1?version=1
+
+{
+  "title": "third"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: a stale version
+---
+
+```js
+pm.test("A stale version answers 409", function () {
+  pm.response.to.have.status(409);
+});
+pm.test("The 409 body carries the current version", function () {
+  pm.expect(pm.response.json()._version).to.equal(2);
+});
+```
+e2e:end -->
+
+```rest
+PATCH /versions/doc/2?version=0
+
+[
+  { "op": "add", "path": "/title", "value": "missing" }
+]
+```
+
+<!-- e2e:begin
+---
+description: Versioning: PATCH with version 0 of a missing document
+---
+
+```js
+pm.test("PATCH with version 0 of a missing document answers 404", function () {
+  pm.response.to.have.status(404);
+});
+```
+e2e:end -->
+
+```rest
+PUT /versions/doc/2?version=3
+
+{
+  "title": "missing"
+}
+```
+
+<!-- e2e:begin
+---
+description: Versioning: a version of a missing document
+---
+
+```js
+pm.test("A version other than 0 of a missing document answers 409", function () {
+  pm.response.to.have.status(409);
+});
+pm.test("The 409 body reports no document", function () {
+  pm.expect(pm.response.json()._version).to.equal(0);
+});
+```
+e2e:end -->
+
+Sources: `docs/mechanisms/document-ids-and-versions.md`; `src/database/handler.cc`
+(`update`, `patch`: the early check and the `404`); `src/engine/strata/shard.cc`
+(`check_version`: a missing document has version 0); `src/server/search_views.cc`
+(`on_error` adds `_version` to the `409` body; the `version` query param); `_version`
+in the body is read by `src/database/schema.cc`.

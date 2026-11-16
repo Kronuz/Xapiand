@@ -27,6 +27,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Date: a detected datetime
+---
+
+```js
+pm.test("A datetime string is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("birthday");
+});
+```
+e2e:end -->
+
 ```rest
 UPDATE /bank/1
 
@@ -45,6 +60,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Date: a datetime object
+---
+
+```js
+pm.test("A datetime object is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("birthday");
+});
+```
+e2e:end -->
+
 ## Optimized Range Searches
 
 Data types like date and numeric are often used for range search. Due to the way
@@ -53,7 +83,7 @@ seaching by terms. To improve the performance of the search, Xapiand uses the
 `_accuracy` keyword, which indexes terms for value thresholds which later are
 used during the querying to improve the filtering and searching.
 
-In the above example terms for the day, month and year are generated.
+In the above example terms for the hour, day, month, year, decade and century are generated.
 
 Default accuracy in datetime fields is:
 
@@ -99,6 +129,21 @@ UPDATE /bank/2
 }
 ```
 
+<!-- e2e:begin
+---
+description: Date: date math
+---
+
+```js
+pm.test("A date math value is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(2);
+  pm.expect(doc).to.have.property("birthday");
+});
+```
+e2e:end -->
+
 The above example is indexed as "`2001-05-24`".
 
 ## Parameters
@@ -130,6 +175,21 @@ UPDATE /bank/1
 }
 ```
 
+<!-- e2e:begin
+---
+description: Date: a time
+---
+
+```js
+pm.test("A typed time is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("wakeupTime");
+});
+```
+e2e:end -->
+
 # Time Delta Datatype
 
 For example:
@@ -144,3 +204,18 @@ UPDATE /bank/1
   }
 }
 ```
+
+<!-- e2e:begin
+---
+description: Date: a time delta
+---
+
+```js
+pm.test("A typed time delta is stored", function() {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc._id).to.equal(1);
+  pm.expect(doc).to.have.property("delay");
+});
+```
+e2e:end -->

@@ -64,3 +64,16 @@ pm.test("Default operator values are valid", function() {
 });
 ```
 e2e:end -->
+
+## Other modifiers
+
+The default operator of the words of a text can also be:
+
+- `_near`, `_phrase`: the words as a [near](../near) or [phrase](../phrase) group.
+- `_synonym`: the words are synonyms, and weigh once.
+- `_max`: the weight is the maximum of the words' weights, not the sum.
+
+Choosing `_and` or `_or` also lets the text use the boolean words (`AND`, `OR`, `NOT`, `XOR`,
+`NEAR`, `ADJ`) described in the [query string grammar](../../text-queries#the-query-string-grammar);
+a plain string reads them as words.
+Sources: `src/query_dsl.cc:805-823`.

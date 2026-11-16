@@ -54,6 +54,15 @@ pm.test("Dynamic field name is queryable by name", function() {
 ```
 e2e:end -->
 
+## UUIDs as field names
+
+A key that is a UUID (a name like `a8098c1a-f86e-11da-bd1a-00112444be1e`) is a dynamic name
+without any setting: every such key under an object shares one field specification, called
+`<uuid_field>` in the schema, so an object keyed by UUIDs adds a single field. See
+[UUID Datatype](/Xapiand/reference-guide/schemas/field-types/uuid-type#uuids-as-field-names)
+for how the name is indexed (`_index_uuid_field`).
+Sources: `src/reserved/fields.h:32`, `src/database/schema.cc:5896-5900` (`detect_dynamic`).
+
 When the dynamic names are not a flat set of keys but a nested tree, and you need
 to match them by path (with partial paths, datatype rules, and dedicated query
 operators), that is what

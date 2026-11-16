@@ -1,6 +1,6 @@
 # Road to the single-node release
 
-> Status: CURRENT (2026-11-01). The lead's plan from Phase 7c's state to the first Xapian-free
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-11-01). The lead's plan from Phase 7c's state to the first Xapian-free
 > release (Phase 8 at `rf = 1`), and the strata lane beside it. Owner rulings are in
 > `xapiand-on-strata.md`; Xapiand's own ledgers are in its `docs/status/phase7c*.md` (local master).
 

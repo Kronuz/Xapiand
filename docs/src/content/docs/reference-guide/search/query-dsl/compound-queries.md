@@ -12,12 +12,10 @@ alter their behaviour.
 * [**_Range Searches_**](range-searches)
 * [**_Geospatial Searches_**](geospatial-searches)
 
-<!--
-* `_max`          - Pick the maximum weight of any subquery. This matches the
-                    same documents as a `_or`, but the weight contributed is
-                    the maximum weight from any matching subquery (for `_or`,
-                    it's the sum of the weights from the matching subqueries).
-* `_wildcard`     - Wildcard expansion.
-* `_scale_weight` -
-* `_synonym`      -
- -->
+## Modifiers
+
+`_max` and `_synonym` are modifiers of a text query, not compound clauses: `"field": {"_max": "a b"}`
+takes the maximum weight of the words instead of their sum, and `_synonym` treats the words as
+synonyms (see [Default Operator](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/default-operator)).
+Given a list of queries, `_scale_weight` and `_wildcard` answer `400` ("not a valid query").
+Sources: `src/query_dsl.cc:335-340`, `src/engine/query.cc:101-111`.

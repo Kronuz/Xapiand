@@ -1,3 +1,9 @@
+# Derived from google/benchmark's cmake/AddCXXCompilerFlag.cmake (Apache-2.0,
+# https://github.com/google/benchmark, Copyright Google Inc.).
+# Licensed under the Apache License, Version 2.0; you may obtain a copy at
+# http://www.apache.org/licenses/LICENSE-2.0. The file is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+#
 # - Adds a compiler flag if it is supported by the compiler
 #
 # This function checks that the supplied compiler flag is supported and then

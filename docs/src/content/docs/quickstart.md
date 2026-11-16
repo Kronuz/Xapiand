@@ -2,9 +2,8 @@
 title: "Quick-start"
 ---
 
-This guide will take you through the process of installing Xapiand and
-familiarize you with the concepts that will allow you to use search and
-storage indexes. **DON'T PANIC**, it will take just a few minutes.
+This guide takes you through installing Xapiand, starting a node, and using it
+to index and search documents. It takes a few minutes.
 
 ---
 
@@ -16,6 +15,10 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 # Run from Docker with *very-very-very* verbose output:
 docker run -p 8880:8880 --rm ghcr.io/kronuz/xapiand:latest -vvvv
 ```
+
+The container keeps its data in `/var/db/xapiand`. Mount a volume there
+(`-v xapiand-data:/var/db/xapiand`) to keep the indexes after the container
+stops.
 
 ### Using Homebrew under macOS
 
@@ -37,13 +40,47 @@ requests and will also turn on `pretty`, `human`, `echo` and `comments` options.
 See [Options](/Xapiand/options) for more details.
 :::
 
+### The node
+
+A single node serves the whole REST API over HTTP on port 8880 (`--port` sets
+another). It keeps every index under its data directory (`-D`, `--database`;
+`<prefix>/var/db/xapiand` unless given), and it logs `Node <name> is Ready to
+Rock!` when it is ready to serve. Stop it with `Ctrl-C` (`SIGINT`) or `SIGTERM`:
+it finishes the requests in flight, commits and closes its indexes, and exits
+(see [Stopping the node](/Xapiand/options#stopping-the-node)).
+
+Ask the node about itself:
+
+```rest
+GET /
+```
+
+<!-- e2e:begin
+---
+description: Ask the node about itself
+---
+
+```js
+pm.test("The node is ready", function () {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.name).to.be.a('string');
+  pm.expect(jsonData.server.name).to.equal("Xapiand");
+  pm.expect(jsonData.state).to.equal("READY");
+});
+```
+e2e:end -->
+
+The answer carries the node's `name`, the `server` and `versions` it runs, the
+`options` it was started with, and its `state`.
+
 ---
 
 ## Indexing
 
-Let's try and index some twitter like information. First, let's create a
-twitter user, and add some tweets (the twitter index will be created
-automatically):
+Let's index some twitter like information. In `PUT /twitter/user/Kronuz`, the
+path `twitter/user` names the index and `Kronuz` is the document ID. Writing to
+an index that does not exist creates it, so we create a twitter user and add
+some tweets, each kind in its own index (`twitter/user` and `twitter/tweet`):
 
 ```rest
 PUT /twitter/user/Kronuz
@@ -74,6 +111,65 @@ PUT /twitter/tweet/2
 ```
 
 You can dig a little deeper in the [Data Manipulation](/Xapiand/manipulation) section.
+
+### What a write answers
+
+A node started without `-vvvv` does not echo what it stored: a `PUT` with an ID
+answers `204 No Content` with an empty body.
+
+```rest
+PUT /twitter/user/Quiet
+
+{
+  "name": "Quiet Coder"
+}
+```
+
+<!-- e2e:begin
+---
+description: PUT answers 204 without echo
+params: echo=false
+---
+
+```js
+pm.test("An ID in the URL answers 204 with no body", function () {
+  pm.response.to.have.status(204);
+  pm.expect(pm.response.text()).to.equal("");
+});
+```
+e2e:end -->
+
+A `POST` to the index, which has no ID, answers `201 Created` with the new
+document's path in the `Location` header:
+
+```rest
+POST /twitter/user/
+
+{
+  "name": "Anonymous Coder"
+}
+```
+
+<!-- e2e:begin
+---
+description: POST answers 201 and a Location without echo
+params: echo=false
+---
+
+```js
+pm.test("No ID in the URL answers 201 with a Location", function () {
+  pm.response.to.have.status(201);
+  pm.expect(pm.response.headers.get("Location")).to.match(/^\/twitter\/user\/.+/);
+  pm.expect(pm.response.text()).to.equal("");
+});
+```
+e2e:end -->
+
+With `echo` on, a write answers `200 OK` with the document, its `_id` and its
+`_version`. Turn it on for a node (`--echo`, or `-vvvv`) or per request
+(`?echo`); `?echo=false` turns it off for one request. The examples in this
+documentation run with `echo` on, so the responses they show carry the
+document.
 
 ---
 
@@ -137,7 +233,9 @@ pm.test("Searching document", function() {
 ```
 e2e:end -->
 
-Let's find all the tweets that Kronuz posted:
+A write is visible to the next read once the node has answered it, so a search
+right after the `PUT` finds the document. Let's find all the tweets that Kronuz
+posted:
 
 ```rest
 SEARCH /twitter/tweet/?q=user:Kronuz
@@ -156,6 +254,25 @@ pm.test("Searching results", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.count).to.equal(2);
   pm.expect(jsonData.hits.length).to.equal(2);
+});
+```
+e2e:end -->
+
+The same search with `COUNT` returns only the number of matches:
+
+```rest
+COUNT /twitter/tweet/?q=user:Kronuz
+```
+
+<!-- e2e:begin
+---
+description: COUNT the tweets of Kronuz
+---
+
+```js
+pm.test("COUNT answers the total", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().total).to.equal(2);
 });
 ```
 e2e:end -->

@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # offload-followups (offload-bridge CR2, CR5 leftovers)
 
 Branch `fix/offload-followups` from Xapiand master `55316114d` (local only, never pushed). Follows

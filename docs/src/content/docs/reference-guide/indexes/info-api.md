@@ -21,14 +21,14 @@ e2e:end -->
 :::hint{.warning}
 `INFO /twitter/tweet/1` is not the same as `INFO /twitter/tweet/1/`, the
 former will retrieve information about document `1` inside index `/twitter/tweet/`
-and the later will retrieve information about thewhole index `/twitter/tweet/1/`.
+and the later will retrieve information about the whole index `/twitter/tweet/1/`.
 [Trailing slashes are important](/Xapiand/reference-guide/api#trailing-slashes-are-important).
 :::
 
 The response will include the following information about the index:
 
 * `uuid`          - UUID of the database (shown only for shard databases).
-* `revision`      - Internal document ID (shown only for shard databases).
+* `revision`      - The index's commit revision (shown only for shard databases).
 * `doc_count`     - Documents count.
 * `last_id`       - Last used ID.
 * `doc_del`       - Documents deleted.

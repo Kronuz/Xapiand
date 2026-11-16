@@ -9,10 +9,10 @@ The stats that are returned consist of `_min`, `_max`, `_sum`, `_count` and
 `_avg`, each of which is an aggregation by itself and is detailed in it's own
 aggregation section:
 
-* [Min Aggregation](min-aggregation)
-* [Max Aggregation](max-aggregation)
-* [Sum Aggregation](sum-aggregation)
-* [Count Aggregation](count-aggregation)
+* [Min Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/min-aggregation)
+* [Max Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/max-aggregation)
+* [Sum Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/sum-aggregation)
+* [Count Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/count-aggregation)
 
 ## Structuring
 

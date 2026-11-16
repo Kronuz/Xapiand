@@ -6,13 +6,13 @@ A _multi-value_ metrics aggregation that computes extended statistics over
 numeric values extracted from the aggregated documents.
 
 The `_extended_stats` aggregations is an extended version of the
-[Statistics Aggregation](stats-aggregation), where additional metrics are added
+[Statistics Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/stats-aggregation), where additional metrics are added
 such as `_sum_of_squares`, `_variance`, `_std_deviation` and
 `_std_deviation_bounds`, these are detailed in their corresponding aggregation
 section:
 
-* [Variance Aggregation](variance-aggregation)
-* [Standard Deviation Aggregation](std_deviation-aggregation)
+* [Variance Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/variance-aggregation)
+* [Standard Deviation Aggregation](/Xapiand/reference-guide/search/aggregations/metrics/std_deviation-aggregation)
 
 ## Structuring
 

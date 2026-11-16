@@ -2,7 +2,7 @@
 title: "Wildcard search"
 ---
 
-## Search keywords and text with wilcards
+## Search keywords and text with wildcards
 
 #### Index keywords values
 
@@ -35,14 +35,24 @@ SEARCH /test/querydsl/wildcard/keyword/
 
 ```
 
+A keyword is one term, so a wildcard matches the start of the whole value.
+
 <!-- e2e:begin
 ---
-params: query=field:dynamic%20cate*
+params: query=field:dynamic*
 ---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("The keyword wildcard finds the document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0]['_id']).to.equal('doc');
 });
 ```
 e2e:end -->

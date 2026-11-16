@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Dubalu LLC
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,14 +58,6 @@ class InvalidTextConfigError : public ClientError, public engine::Error {
 public:
 	template<typename... Args>
 	InvalidTextConfigError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::invalid, message) { }
-};
-
-
-// A client error that is also an engine error of one kind.
-class DocVersionConflictError : public ClientError, public engine::Error {
-public:
-	template<typename... Args>
-	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), engine::Error(engine::errc::version_conflict, message) { }
 };
 
 

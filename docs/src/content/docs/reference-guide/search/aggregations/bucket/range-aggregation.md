@@ -26,6 +26,12 @@ The following snippet captures the structure of range aggregations:
 }
 ```
 
+A range is half open, `_from` <= value < `_to`; a missing `_from` or `_to` leaves that end open, and
+`_ranges` is required (`400` otherwise). Ranges may overlap, and a value counts in each range it falls in.
+`_key` must be a string; the default key is `"<from>..<to>"` (`"..<to>"`, `"<from>.."`). The field must
+be numeric, `date`, `datetime`, `time` or `timedelta` (any other type answers `400`). Open ends of an
+`integer` field are narrowed to 64-bit integers, so check the bounds you rely on.
+
 Also supports all other functionality as explained in [Bucket Aggregations](..#structuring).
 
 ### Field

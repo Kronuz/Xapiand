@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-28) SF of strata's fields-and-keys design; nothing supersedes it.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-28) SF of strata's fields-and-keys design; nothing supersedes it.
 
 # strata-fields (SF, phase 7a)
 

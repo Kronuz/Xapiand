@@ -5,7 +5,9 @@ name: CI
 
 on:
   push:
-    branches: [master, xapiand, 'fix/**']
+    branches: [master, xapiand, 'fix/**', 'quest/**', 'quick/**']
+    # campaign records alone don't run CI, so they never cancel a code run
+    paths-ignore: ['.campaign/**']
   pull_request:
   workflow_dispatch:
 
@@ -45,10 +47,15 @@ jobs:
           path: .ccache
           key: ccache-build-test-${{ github.sha }}
           restore-keys: ccache-build-test-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-build-test-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-build-test-
       - name: Build (RelWithDebInfo, tests + asserts on)
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
           ccache -z
@@ -59,16 +66,106 @@ jobs:
       - name: Blocking calls on reactor paths (async_check --strict)
         # Every blocking primitive on a path a reactor reaches is classified in harness/async_allowlist.tsv
         # (docs/design/phase7c.md D14); an unclassified hit, or a stale row, fails the job.
-        run: harness/async_check.sh --strict --extern strata=build/_deps/strata-src
+        run: harness/async_check.sh --strict --extern strata=.deps/strata-src
       - name: No owed blocking calls (async_check --strict --owed)
         # The gate after X6: no hit waits on a decision, so an owed row fails too.
-        run: harness/async_check.sh --strict --owed --extern strata=build/_deps/strata-src
+        run: harness/async_check.sh --strict --owed --extern strata=.deps/strata-src
       - name: Removed options stay removed
         run: harness/removed_options_check.sh build/bin/xapiand
       - name: Unit tests (ctest)
         run: ctest --test-dir build --output-on-failure
       - name: Smoke + load
         run: BIN="$PWD/build/bin/xapiand" harness/run_all.sh smoke load
+
+  sanitizer-tests:
+    name: Unit tests under ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # ctest under each sanitizer, asserts on (D57: sanitizers are CI's job). Debug plus -O1, as in
+    # strata's CI: CMakeLists.txt sets the RelWithDebInfo flags to -O2, and Debug adds no -O level.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ASan + UBSan
+            key: test-asan-ubsan
+            skip: ^test_pool$
+            flags: -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -D_GLIBCXX_ASSERTIONS
+          - name: TSan
+            key: test-tsan
+            # test_lua: gcc-13 TSan segfaults in its own MutexPreLock once Lua _longjmps out of a runaway __lt.
+            skip: ^(test_pool|test_lua)$
+            flags: -fsanitize=thread -fno-omit-frame-pointer
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 1G
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      # die_after_fork=0: test_node's children start threads after fork.
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:die_after_fork=0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk
+        # Debug info for every sanitized test binary needs more than the runner's default free space.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
+      - name: Sanitizer-compatible ASLR
+        # Ubuntu 24.04's 32 random mmap bits break the sanitizer runtimes' shadow memory.
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
+      - name: Install build deps
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++-13 cmake ninja-build pkg-config ccache \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.key }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.key }}-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-${{ matrix.key }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-${{ matrix.key }}-
+      - name: Build (Debug -O1, ${{ matrix.name }}, tests + asserts on)
+        run: |
+          set -eux
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            "-DCMAKE_C_FLAGS=-O1 ${{ matrix.flags }}" \
+            "-DCMAKE_CXX_FLAGS=-O1 ${{ matrix.flags }}" \
+            "-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.flags }}" \
+            "-DCMAKE_SHARED_LINKER_FLAGS=${{ matrix.flags }}" \
+            -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF
+          ccache -z
+          # -j3: sanitizer instrumentation raises peak compile memory.
+          ninja -C build -j3
+          df -h .
+      - name: ccache stats
+        if: always()
+        run: ccache -s
+      - name: Unit tests (ctest) under ${{ matrix.name }}
+        # test_pool runs alone: its sweep case waits for a merge's output to be seen unsynced, a window
+        # the autocommit closes first under parallel sanitizer load (passes alone).
+        run: |
+          ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800 -E '${{ matrix.skip }}'
+          ctest --test-dir build --output-on-failure --timeout 1800 -R '^test_pool$'
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.key }}
+          path: build/Testing/Temporary/LastTest*.log
+          retention-days: 14
+          if-no-files-found: ignore
 
   e2e:
     name: Functional E2E (docs)
@@ -103,10 +200,15 @@ jobs:
           path: .ccache
           key: ccache-e2e-${{ github.sha }}
           restore-keys: ccache-e2e-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-e2e-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-e2e-
       - name: Build (RelWithDebInfo, asserts off)
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DLTO=OFF
           ccache -z
@@ -172,10 +274,15 @@ jobs:
           path: .ccache
           key: ccache-${{ matrix.ccache_key }}-${{ github.sha }}
           restore-keys: ccache-${{ matrix.ccache_key }}-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-${{ matrix.ccache_key }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-${{ matrix.ccache_key }}-
       - name: Build (${{ matrix.name }})
         run: |
           set -eux
-          cmake -GNinja -B build \
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             ${{ matrix.cmake_flag }} -DLTO=OFF
           # -j2: sanitizer instrumentation raises peak compile memory; keep it bounded.

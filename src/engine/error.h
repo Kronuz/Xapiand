@@ -22,8 +22,11 @@
 
 #pragma once
 
+#include <optional>                // for std::optional
 #include <string>                  // for std::string
 #include <utility>                 // for std::move
+
+#include "engine/types.h"          // for rev
 
 namespace engine {
 
@@ -128,6 +131,9 @@ public:
 
 	errc kind;
 
+	// For a version conflict, the document's version when the write was refused: 0 when it did not exist.
+	std::optional<rev> current_version;
+
 protected:
 	void set_texts(std::string description, std::string detail) {
 		description_ = std::move(description);
@@ -139,5 +145,12 @@ private:
 	std::string description_;
 	std::string detail_;
 };
+
+// The error of a write whose expected version is not the document's `current` one (0: the document does not exist).
+inline Error version_conflict(rev current) {
+	Error error(errc::version_conflict, current == 0 ? "Version mismatch: the document does not exist" : "Version mismatch: the current version is " + std::to_string(current));
+	error.current_version = current;
+	return error;
+}
 
 }  // namespace engine

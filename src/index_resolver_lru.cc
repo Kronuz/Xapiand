@@ -434,6 +434,106 @@ IndexResolverLRU::resolve_nodes(const IndexSettings& index_settings)
 }
 
 
+// The settings of an index just read, as the resolver takes them: a missing replica asks to rebuild, no settings at all
+// are the defaults of a new index.
+static void
+initialize_loaded([[maybe_unused]] const std::string& unsharded_normalized_path, IndexSettings& index_settings, bool& rebuild)
+{
+	if (!index_settings.shards.empty()) {
+		for (auto& shard : index_settings.shards) {
+			if (shard.nodes.empty()) {
+				rebuild = true;  // There were missing replicas, rebuild!
+				break;
+			}
+		}
+		L_SHARDS("Node settings for {} loaded", unsharded_normalized_path);
+	} else {
+		index_settings.num_shards = opts.num_shards;
+		index_settings.num_replicas_plus_master = opts.num_replicas + 1;
+		index_settings.modified = true;
+		index_settings.saved = false;
+		L_SHARDS("Node settings for {} initialized", unsharded_normalized_path);
+	}
+}
+
+
+// Places the shards of a new index on nodes, and settles the replicas of all.
+static void
+place_shards(const std::string& unsharded_normalized_path, IndexSettings& index_settings)
+{
+	L_SHARDS("    Configuring {} replicas for {} shards", index_settings.num_replicas_plus_master - 1, index_settings.num_shards);
+
+	std::vector<std::shared_ptr<const Node>> node_nodes;
+	if (index_settings.shards.empty()) {
+		size_t routing_key = jump_consistent_hash(unsharded_normalized_path, Node::total_nodes());
+		index_settings.shards = calculate_shards(routing_key, node_nodes, index_settings.num_shards);
+		assert(!index_settings.shards.empty());
+		index_settings.modified = true;
+		index_settings.saved = false;
+	}
+	settle_replicas(index_settings, node_nodes, index_settings.num_replicas_plus_master);
+}
+
+
+// Puts the settings of an index, and of each of its shards, in the cache.
+void
+IndexResolverLRU::store_settings(const std::string& unsharded_normalized_path, const IndexSettings& index_settings)
+{
+	std::lock_guard<std::mutex> lk(resolve_index_lru_mtx);
+	resolve_index_lru[unsharded_normalized_path] = IndexSettings(
+		index_settings.version,
+		index_settings.loaded,
+		index_settings.saved,
+		index_settings.modified,
+		index_settings.num_shards,
+		index_settings.num_replicas_plus_master,
+		index_settings.shards);
+	size_t shard_num = 0;
+	for (auto& shard : index_settings.shards) {
+		assert(!shard.nodes.empty());
+		auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, ++shard_num);
+		std::vector<IndexSettingsShard> shard_shards;
+		shard_shards.push_back(shard);
+		resolve_index_lru[shard_normalized_path] = IndexSettings(
+			shard.version,
+			index_settings.loaded,
+			index_settings.saved,
+			shard.modified,
+			1,
+			index_settings.num_replicas_plus_master,
+			shard_shards);
+	}
+}
+
+
+// Reads the settings of an index, places a new index's shards, and puts them in the cache, as the call that needs them
+// would, before the flight ends.
+task::task<IndexSettings>
+IndexResolverLRU::load_and_publish(const std::string& unsharded_normalized_path)
+{
+	auto index_settings = co_await load_settings(unsharded_normalized_path);
+	bool rebuild = false;
+	initialize_loaded(unsharded_normalized_path, index_settings, rebuild);
+	if (rebuild || index_settings.shards.empty()) {
+		place_shards(unsharded_normalized_path, index_settings);
+	}
+	store_settings(unsharded_normalized_path, index_settings);
+	co_return index_settings;
+}
+
+
+std::optional<IndexSettings>
+IndexResolverLRU::cached_settings(const std::string& unsharded_normalized_path)
+{
+	std::lock_guard<std::mutex> lk(resolve_index_lru_mtx);
+	auto it = resolve_index_lru.find(unsharded_normalized_path);
+	if (it != resolve_index_lru.end() && !it->second.shards.empty()) {
+		return it->second;
+	}
+	return std::nullopt;
+}
+
+
 task::task<IndexSettings>
 IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool writable, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
@@ -528,24 +628,16 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		if (reload) {
 			index_settings = co_await load_settings(unsharded_normalized_path);   // a reload wants the settings as they are now
 		} else {
-			index_settings = co_await settings_loads.run(unsharded_normalized_path, [&] { return load_settings(unsharded_normalized_path); });
+			if (before_settings_claim) {
+				co_await before_settings_claim();
+			}
+			index_settings = co_await settings_loads.run(
+				unsharded_normalized_path,
+				[&] { return load_and_publish(unsharded_normalized_path); },
+				[&] { return cached_settings(unsharded_normalized_path); });
 		}
 		store_lru = true;
-		if (!index_settings.shards.empty()) {
-			for (auto& shard : index_settings.shards) {
-				if (shard.nodes.empty()) {
-					rebuild = true;  // There were missing replicas, rebuild!
-					break;
-				}
-			}
-			L_SHARDS("Node settings for {} loaded", unsharded_normalized_path);
-		} else {
-			index_settings.num_shards = opts.num_shards;
-			index_settings.num_replicas_plus_master = opts.num_replicas + 1;
-			index_settings.modified = true;
-			index_settings.saved = false;
-			L_SHARDS("Node settings for {} initialized", unsharded_normalized_path);
-		}
+		initialize_loaded(unsharded_normalized_path, index_settings, rebuild);
 	}
 
 	assert(Node::total_nodes());
@@ -619,17 +711,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 	}
 
 	if (rebuild || index_settings.shards.empty()) {
-		L_SHARDS("    Configuring {} replicas for {} shards", index_settings.num_replicas_plus_master - 1, index_settings.num_shards);
-
-		std::vector<std::shared_ptr<const Node>> node_nodes;
-		if (index_settings.shards.empty()) {
-			size_t routing_key = jump_consistent_hash(unsharded_normalized_path, Node::total_nodes());
-			index_settings.shards = calculate_shards(routing_key, node_nodes, index_settings.num_shards);
-			assert(!index_settings.shards.empty());
-			index_settings.modified = true;
-			index_settings.saved = false;
-		}
-		settle_replicas(index_settings, node_nodes, index_settings.num_replicas_plus_master);
+		place_shards(unsharded_normalized_path, index_settings);
 
 		store_lru = true;
 	}
@@ -643,35 +725,9 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 		IndexSettings shard_settings;
 
 		if (store_lru) {
-			lk.lock();
-			resolve_index_lru[unsharded_normalized_path] = IndexSettings(
-				index_settings.version,
-				index_settings.loaded,
-				index_settings.saved,
-				index_settings.modified,
-				index_settings.num_shards,
-				index_settings.num_replicas_plus_master,
-				index_settings.shards);
-			size_t shard_num = 0;
-			for (auto& shard : index_settings.shards) {
-				assert(!shard.nodes.empty());
-				auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, ++shard_num);
-				std::vector<IndexSettingsShard> shard_shards;
-				shard_shards.push_back(shard);
-				resolve_index_lru[shard_normalized_path] = IndexSettings(
-					shard.version,
-					index_settings.loaded,
-					index_settings.saved,
-					shard.modified,
-					1,
-					index_settings.num_replicas_plus_master,
-					shard_shards);
-				if (shard_normalized_path == normalized_path) {
-					shard_settings = resolve_index_lru[shard_normalized_path];
-				}
-			}
-			lk.unlock();
-		} else {
+			store_settings(unsharded_normalized_path, index_settings);
+		}
+		{
 			size_t shard_num = 0;
 			for (auto& shard : index_settings.shards) {
 				assert(!shard.nodes.empty());

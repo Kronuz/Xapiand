@@ -285,12 +285,8 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								query = process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NOT):
-								query = process(engine::Op::AND_NOT, path, {
-									{
-										{ RESERVED_QUERYDSL_MATCH_ALL, {} },
-									},
-									o,
-								}, default_op, wqf, flags, is_leaf);
+								// None of the subqueries: everything but their union.
+								query = engine::Query::combine(engine::Op::AND_NOT, engine::Query::match_all(), process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf));
 								break;
 							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
 								query = process(engine::Op::AND_NOT, path, o, default_op, wqf, flags, is_leaf);
@@ -337,6 +333,10 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MAX):
 								query = process(engine::Op::MAX, path, o, engine::Op::MAX, wqf, flags, true);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_NOT):
+								// A single subquery: the same as a list of one.
+								query = engine::Query::combine(engine::Op::AND_NOT, engine::Query::match_all(), process(engine::Op::OR, path, o, default_op, wqf, flags, is_leaf));
 								break;
 							// Special queries.
 							case _.fhh(RESERVED_QUERYDSL_MATCH_ALL):
@@ -681,7 +681,9 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 			break;
 	}
 
-	auto serialised_term = Serialise::MsgPack(field_spc, obj);
+	// A numeric id's term is its key's bytes (Serialise::id), not its value's.
+	const bool numeric_id = field_spc.prefix() == DOCUMENT_ID_TERM_PREFIX && field_spc.get_ctype() == 'N';
+	auto serialised_term = numeric_id ? Serialise::id(field_spc, obj) : Serialise::MsgPack(field_spc, obj);
 	return get_term_query(field_spc, serialised_term, default_op, wqf, flags);
 }
 
@@ -713,7 +715,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
 				flags |= engine::text::FUZZY;
-			} else if (serialised_term[serialised_term.size() - 2] == '~') {
+			} else if (serialised_term.size() >= 2 && serialised_term[serialised_term.size() - 2] == '~') {
 				int errno_save = 0;
 				fuzzy_edit_distance = strict_stou(&errno_save, serialised_term.substr(serialised_term.size() - 1));
 				if (errno_save != 0) {

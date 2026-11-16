@@ -9,20 +9,21 @@ in a document:
 
 ### String datatypes
 
-* [Text](../field-types/text-type)
-* [Keyword](../field-types/keyword-type)
+* [Text](../field-types/text-type) (`text`, also spelled `string`)
+* [Keyword](../field-types/keyword-type) (`keyword`, also spelled `term`)
 
 ### Numeric datatypes
 
-* [Integer](../field-types/numeric-type)
-* [Positive](../field-types/numeric-type)
-* [Float](../field-types/numeric-type)
+* [Integer](../field-types/numeric-type) (`integer`)
+* [Positive](../field-types/numeric-type) (`positive`)
+* [Float](../field-types/numeric-type) (`floating`, also spelled `float`)
 
 ### Date/Time datatypes
 
-* [Datetime](../field-types/date-type)
-* [Time](../field-types/date-type/#time)
-* [Timedelta](../field-types/date-type/#time-delta)
+* [Date](../field-types/date-type) (`date`)
+* [Datetime](../field-types/date-type) (`datetime`)
+* [Time](../field-types/date-type/#time-datatype) (`time`)
+* [Timedelta](../field-types/date-type/#time-delta-datatype) (`timedelta`)
 
 ### Boolean datatype
 
@@ -30,23 +31,26 @@ in a document:
 
 ## Geospatial datatypes
 
-* [Geospatial](../field-types/geospatial-type)
+* [Geospatial](../field-types/geospatial-type) (`geospatial`, also spelled `geo`)
 
-### UUID datatype
+## UUID datatype
 
 * [UUID](../field-types/uuid-type)
 
 ### Script datatype
 
-* `Script`
+* `script`: the type of a stored [script](/Xapiand/reference-guide/documents/scripting).
 
 ## Complex datatypes
 
 ### Object type
-* `Object`
+* `object`
 
 ### Array type
-* `Array`
+* `array`: written in front of another type, as in `array/integer`.
 
 ### Foreign type
-* `Foreign`
+* `foreign`: written in front of another type, as in `foreign/object`; the
+  [foreign schema](/Xapiand/reference-guide/schemas/foreign-schemas) is the usual use.
+
+Sources: the type names and aliases, `src/database/schema.cc:880-960`.

@@ -1,4 +1,24 @@
 #!/usr/bin/env bash
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 # restore_stream_check.sh BIN: RESTORE as D12 runs it (a streamed body parsed in chores, indexed as tasks). On a fresh
 # node: an NDJSON stream of N documents (default 20000) and a MsgPack stream, a body that arrives chunked (buffered),
 # a stream with a bad line, and a client that leaves mid-stream (what was indexed stays). Every count is read back.
@@ -61,10 +81,16 @@ s = socket.create_connection(('127.0.0.1', int(sys.argv[1])), timeout=30)
 s.sendall(b'RESTORE /left/ HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-ndjson\r\nContent-Length: %d\r\n\r\n' % (len(data) * 4) + data)
 s.close()
 PY
-# The node finishes the documents it had received, then the stream fails and what was indexed is committed.
-have=-1
-for _ in $(seq 60); do sleep 1; now=$(count left); [ "$now" = "$have" ] && break; have=$now; done
-sleep 5   # the closing commit of the documents indexed so far
+# The node finishes the documents it had received, then the stream fails and what was indexed is committed. The restore
+# has ended once the count holds still for STILL consecutive seconds (a loaded host pauses the node for a second or two,
+# and the closing commit follows the last document); only then does the kill -9 below test what was committed.
+STILL=${STILL:-10}; have=-1; still=0
+for _ in $(seq 300); do
+  sleep 1; now=$(count left)
+  if [ "$now" = "$have" ] && [ "$now" -gt 0 ] 2>/dev/null; then still=$((still + 1)); else still=0; have=$now; fi
+  [ $still -ge $STILL ] && break
+done
+[ $still -ge $STILL ] || fail "the restore of a client that left did not end: the count was still moving after 300 s"
 have=$(count left)
 code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "localhost:$PORT/nd/1")
 # The restore stops soon after the client leaves (it does not index the rest of what it had read): fewer than N stay.

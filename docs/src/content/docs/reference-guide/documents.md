@@ -11,7 +11,8 @@ The following are the CRUD APIs available for documents:
 - [Update Document API](update-api)
 - [Store Content API](store-api)
 
-Additionally, there's also an informational API to retrieve details about
-documents:
+Besides them:
 
-- [Information API](info-api)
+- [Scripting](scripting) runs Lua when a document is written.
+- [Versioning](versioning) is the compare-and-set check of a write.
+- The [Information API](info-api) retrieves details about a document.

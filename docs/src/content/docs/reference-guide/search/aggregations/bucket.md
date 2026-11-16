@@ -62,7 +62,10 @@ The following snippet captures the structure of aggregations types for buckets:
 The order of the buckets can be customized by setting a `<sort_body>` in the
 `_sort` setting. By default each bucket type has different ordering (e.g.
 Histogram Aggregation orders its returned buckets by their key ascending).
-It is possible to change this default behaviour as documented below:
+It is possible to change this default behaviour as documented below. `_sort` takes
+`{"_doc_count": "asc"}`, `{"_key": "desc"}`, or a path to a sub-aggregation's result
+(`{"max_balance_count._max": "asc"}`), and the forms `"_doc_count"`, `"_key"` or a path
+alone (ascending) and `{"<path>": {"_order": "asc"}}`; any other order answers `400`.
 
 Ordering the buckets by their document count in an ascending manner:
 
@@ -293,9 +296,10 @@ e2e:end -->
 
 ### Limit
 
-The maximum number of buckets allowed in a single response is not currently
-hard limited, but the default is 10,000 buckets. The `<limit_count>` in the
-`_limit` option is a positive integer number used for changing this default.
+A bucket aggregation returns at most 10,000 buckets by default. The `<limit_count>` in the
+`_limit` option is a positive integer number used for changing this default. Besides it, a
+search holds at most 65,535 live buckets in all the levels of its aggregations, and
+aggregations nest at most 16 levels; past either limit the search answers `400`.
 
 `_terms` and `_values` keep at most about `<shard_size>` buckets while they collect, like
 Elasticsearch's `shard_size`: it defaults to `<limit_count> * 1.5 + 10`, and the
@@ -353,44 +357,26 @@ Response:
   "aggregations": {
     "_doc_count": 1000,
     "balances": {
-      "0.0": {
-        "_doc_count": 55
-      },
-      "1000.0": {
-        "_doc_count": 329
-      },
-      "2000.0": {
-        "_doc_count": 286
-      },
-      "3000.0": {
-        "_doc_count": 294
-      },
-      "4000.0": {
-        "_doc_count": 1
-      },
-      "5000.0": {
-        "_doc_count": 1
-      },
-      "6000.0": {
-        "_doc_count": 4
-      },
-      "7000.0": {
-        "_doc_count": 12
-      },
-      "10000.0": {
-        "_doc_count": 9
-      },
-      "12000.0": {
-        "_doc_count": 1
-      }
+      "0": { "_doc_count": 55 },
+      "1000": { "_doc_count": 329 },
+      "2000": { "_doc_count": 286 },
+      "3000": { "_doc_count": 294 },
+      "4000": { "_doc_count": 1 },
+      "5000": { "_doc_count": 1 },
+      "6000": { "_doc_count": 4 },
+      "7000": { "_doc_count": 12 },
+      "8000": { "_doc_count": 7 },
+      "9000": { "_doc_count": 1 },
+      "10000": { "_doc_count": 9 },
+      "12000": { "_doc_count": 1 }
     }
   }, ...
 ```
 
 ### Minimum Document Count
 
-It is possible to only return terms that match more than a configured number of
-hits using the `_min_doc_count` option:
+It is possible to only return buckets that hold a configured number of documents
+or more using the `_min_doc_count` option (0 is accepted):
 
 ```rest
 SEARCH /bank/
@@ -464,6 +450,9 @@ In some scenarios this can be very wasteful and can hit memory constraints.
 This feature hasn't yet been implemented...
 <br>[Pull requests are welcome!](https://github.com/Kronuz/Xapiand/pulls)
 :::
+
+Today `_missing` is read and ignored: the example below passes only because every
+document has the field.
 
 The `_missing` parameter defines how documents that are missing a value should
 be treated. By default they will be ignored but it is also possible to treat

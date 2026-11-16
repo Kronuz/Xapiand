@@ -1,4 +1,24 @@
 #!/usr/bin/env bash
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 #
 # tls_check.sh BINARY [PORT]
 #
@@ -15,9 +35,9 @@
 set -uo pipefail
 
 BIN="${1:?usage: tls_check.sh BINARY [PORT]}"
-PORT="${2:-18890}"
 HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$HARNESS_DIR/env.sh"
+PORT="${2:-$(free_port)}"
 WORK="${WORK:-$(dirname "$HARNESS_DIR")/.scratch/tls_check}"
 OPENSSL="${OPENSSL:-openssl}"
 rm -rf "$WORK"; mkdir -p "$WORK"
@@ -131,8 +151,11 @@ else fail "raw TLS 1.1 hello: no version reason in the log"; fi
 
 # 5. Renegotiation: s_client renegotiates on a line holding just R.
 reneg() {  # reneg R|'': one TLS 1.2 connection, optionally renegotiating, then a request
+	# Command letters act on the first byte of each read, and the request can arrive in pieces:
+	# one starting "Connection:" would reconnect. Only the renegotiating case keeps them.
+	local letters=; [ -n "$1" ] || letters=-nocommands
 	{ sleep 1; [ -n "$1" ] && { echo R; sleep 1; }; printf 'GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n'; sleep 2; } |
-		"$OPENSSL" s_client -connect "127.0.0.1:$PORT" -tls1_2 -CAfile "$WORK/ec/ca.pem" -servername localhost 2>&1
+		"$OPENSSL" s_client -connect "127.0.0.1:$PORT" -tls1_2 -CAfile "$WORK/ec/ca.pem" -servername localhost $letters 2>&1
 }
 out=$(reneg ""); grep -q "HTTP/1.1 200" <<< "$out" && pass "TLS 1.2 connection without renegotiation served" || fail "TLS 1.2 connection without renegotiation not served"
 out=$(reneg R)

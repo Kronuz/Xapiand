@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X2 developer's ledger (phase 7c step X2: the index registry, the lease, host mode and chores); K1 to K4 and K6 to K7 done, K5 and the reader views are X2b.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-30) the X2 developer's ledger (phase 7c step X2: the index registry, the lease, host mode and chores); K1 to K4 and K6 to K7 done, K5 and the reader views are X2b.
 
 # phase7c X2 (build): the registry and lease, host mode, chores
 

@@ -25,6 +25,8 @@
 
 #include <algorithm>              // for std::move
 #include <cassert>                // for assert
+#include <cmath>                  // for std::floor
+#include <cstdint>                // for std::uint64_t
 #include <optional>                // for std::optional
 #include <unistd.h>                // for unlink
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
@@ -37,7 +39,8 @@
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "engine/chores.h"          // for engine::Chores
-#include "engine/open.h"            // for engine::open_local
+#include "engine/open.h"            // for engine::OpenOptions
+#include "engine/strata/shard.h"    // for engine::strata::borrow
 #include "engine/sync.h"            // for engine::sync_wait
 #include "xapiand_exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "index_resolver_lru.h"   // for IndexSettings
@@ -48,6 +51,7 @@
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
+#include "serialise.h"             // for Serialise::floating
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "xapiand_strings.hh"             // for strings::from_delta, strings::format
 
@@ -81,13 +85,6 @@
 #define DATA_STORAGE_PATH "docdata."
 
 
-// The numbering of a document whose id is new: which shard it lands in, out of how many.
-struct NumericId {
-	size_t shard_num;
-	size_t n_shards;
-};
-
-
 // The version a write requires, as its document asks for it in the version slot.
 static inline std::optional<engine::rev>
 expected_version(const engine::Document& doc)
@@ -100,40 +97,14 @@ expected_version(const engine::Document& doc)
 }
 
 
-// Completes a document the engine is about to write: embeds its numeric id (when it is new)
-// and its new version in the stored data, and clears the shards slot.
+// Completes a document the engine is about to write: embeds its new version in the stored data, compressing the
+// record once, and clears the shards slot.
 static void
-finalise_write(engine::Document& doc, engine::WriteResult& info, const std::optional<NumericId>& numeric)
+finalise_write(engine::Document& doc, engine::WriteResult& info)
 {
 	bool data_modified = false;
 	Data data(doc.get_data());
 	auto data_obj = data.get_obj();
-	if (numeric) {
-		auto did = static_cast<double>((info.did - 1) * numeric->n_shards + numeric->shard_num + 1);  // unshard number and shard docid to docid in multi-db
-		auto did_serialised = sortable_serialise(did);
-		info.term = document_key(did_serialised, 'N');
-		doc.set_key(info.term);
-		doc.add_value(DB_SLOT_ID, did_serialised);
-		// Set id inside serialized object:
-		auto it = data_obj.find(ID_FIELD_NAME);
-		if (it != data_obj.end()) {
-			auto& value = it.value();
-			switch (value.get_type()) {
-				case MsgPack::Type::POSITIVE_INTEGER:
-					value = static_cast<uint64_t>(did);
-					break;
-				case MsgPack::Type::NEGATIVE_INTEGER:
-					value = static_cast<int64_t>(did);
-					break;
-				case MsgPack::Type::FLOAT:
-					value = static_cast<double>(did);
-					break;
-				default:
-					break;
-			}
-			data_modified = true;
-		}
-	}
 	auto it = data_obj.find(VERSION_FIELD_NAME);
 	if (it != data_obj.end()) {
 		auto& value = it.value();
@@ -141,7 +112,8 @@ finalise_write(engine::Document& doc, engine::WriteResult& info, const std::opti
 		data_modified = true;
 	}
 	doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-	if (data_modified) {
+	const auto* main_locator = data.get("");
+	if (data_modified || (main_locator != nullptr && main_locator->type == Locator::Type::inplace)) {   // prepare leaves it raw
 		data.set_obj(data_obj);
 		data.flush();
 		doc.set_data(data.serialise());
@@ -330,19 +302,14 @@ DataStorage::open(std::string_view relative_path)
  * the parts that touch the engine, the blob storage and the WAL
  */
 
-ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint) :
-	Endpoint(endpoint),
-	database_pool(database_pool),
-	refs(0),
-	finished(false),
+ShardEndpoint::ShardEndpoint(DatabasePool& database_pool_, std::string_view path_) :
+	Endpoint(path_),
+	database_pool(database_pool_),
 	revision(0),
-	renew_time(std::chrono::steady_clock::now()),
-	stale_(false),
-	chores(std::make_unique<IndexChores>(*database_pool.work_pool_)),
+	chores(std::make_unique<IndexChores>(*database_pool_.work_pool_)),
 	modified(false),
 	applied_(0),
-	last_flags_(0),
-	opens_(0)
+	last_flags_(0)
 {
 }
 
@@ -350,23 +317,10 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 std::string
 ShardEndpoint::outstanding()
 {
-	if (const auto users = refs.load(); users != 0) {
-		return strings::format("{} references", users);
-	}
 	if (!turn.try_lock()) {
 		return "the turn is held or awaited";
 	}
 	turn.unlock();
-	std::shared_ptr<engine::Shard> eng;
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		eng = engine_;
-	}
-	if (eng) {
-		if (const auto claimed = eng->readers_claimed(); claimed != 0) {
-			return strings::format("{} views are claimed by readers", claimed);
-		}
-	}
 	return {};
 }
 
@@ -387,14 +341,6 @@ ShardEndpoint::wal_writer() const
 }
 
 
-std::shared_ptr<engine::Shard>
-ShardEndpoint::engine_ptr() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return engine_;
-}
-
-
 void
 ShardEndpoint::note_failure(const engine::Error& error) noexcept
 {
@@ -403,10 +349,84 @@ ShardEndpoint::note_failure(const engine::Error& error) noexcept
 		case engine::errc::reopen:
 		case engine::errc::corrupt:
 		case engine::errc::database:
-			mark_stale();
+			stale_.store(true, std::memory_order_release);
 			break;
 		default:
 			break;
+	}
+}
+
+
+// The numeric id a document's stored data names (its _id, an integer from 1 to MAX_NUMERIC_ID), else 0.
+static std::uint64_t
+stored_numeric_id(const engine::Document& doc)
+{
+	Data data(doc.get_data());
+	const auto obj = data.get_obj();
+	const auto it = obj.find(ID_FIELD_NAME);
+	if (it == obj.end()) {
+		return 0;
+	}
+	const auto& value = it.value();
+	switch (value.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return value.u64() <= MAX_NUMERIC_ID ? value.u64() : 0;
+		case MsgPack::Type::FLOAT: {
+			const auto f = value.f64();
+			return f >= 1 && f < 0x1p63 && f == std::floor(f) ? static_cast<std::uint64_t>(f) : 0;  // 0x1p63 is MAX_NUMERIC_ID + 1
+		}
+		default:
+			return 0;
+	}
+}
+
+
+// The largest id a float `_id` holds with every integer below it: 2^53.
+inline constexpr std::uint64_t MAX_FLOAT_ID = std::uint64_t{1} << 53;
+
+// Writes an issued numeric id into a new document: its stored `_id` (in its placeholder's type), its id slot and its
+// key, which is the one a PUT of that id names (an integer's and an equal float's are one), so the log and the stored
+// data carry the id too. The record stays raw for finalise_write to compress once.
+static std::string
+issue_id(engine::Document& doc, std::uint64_t issued)
+{
+	Data data(doc.get_data());
+	auto obj = data.get_obj();
+	if (auto it = obj.find(ID_FIELD_NAME); it != obj.end()) {
+		auto& value = it.value();
+		switch (value.get_type()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				value = issued;
+				break;
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				value = static_cast<int64_t>(issued);
+				break;
+			case MsgPack::Type::FLOAT:
+				if (issued > MAX_FLOAT_ID) {
+					throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
+				}
+				value = static_cast<double>(issued);
+				break;
+			default:
+				break;
+		}
+		data.set_obj(obj, false);
+		data.flush();
+		doc.set_data(data.serialise());
+	}
+	auto key = numeric_key(issued);
+	doc.set_key(key);
+	doc.add_value(DB_SLOT_ID, Serialise::positive(issued));  // the id slot's value, as index_item gives it
+	return key;
+}
+
+
+void
+ShardEndpoint::raise_id_high(std::uint64_t id) noexcept
+{
+	if (id > id_high_) {
+		id_high_ = id;
+		id_high_moved_ = true;
 	}
 }
 
@@ -439,7 +459,9 @@ public:
 	}
 
 	void replace_document(engine::docid did, engine::Document&& doc, bool commit_, bool wal, bool version) override {
+		const auto id = stored_numeric_id(doc);
 		engine::sync_wait(entry_.do_replace(engine_, engine::inline_chores(), flags_, did, std::move(doc), wal, version));
+		entry_.raise_id_high(id);  // a write the last commit missed advances the counter again
 		if (commit_) {
 			commit(wal);
 		}
@@ -475,32 +497,36 @@ public:
 };
 
 
-// Opens the engine and the blob storage and replays the WAL, all in one chore: nobody else is on the
-// index (it is `opening`), so replay holds no turn and its writes run their chores inline. The engine
-// then takes the index's chores.
+// The open's work (open_payload, x-pool D6), in the catalog's open chore with the slot `opening`: nobody else is on
+// the index, so the replay holds no turn and its writes run their chores inline. The engine then takes the index's
+// chores. A throw fails the open, and the catalog destroys this entry, then the index.
 void
-ShardEndpoint::open_index_blocking(int flags)
+ShardEndpoint::open_blocking(prospect::index& index)
 {
-	L_CALL("ShardEndpoint::open_index_blocking(({}))", readable_flags(flags));
+	L_CALL("ShardEndpoint::open_blocking()");
 
-	L_DATABASE("Opening shard {} ({})", repr(to_string()), readable_flags(flags));
+	L_DATABASE("Opening shard {}", repr(to_string()));
 
 	engine::OpenOptions options;
 	options.chores = &engine::inline_chores();
 	options.host = true;
 	options.background = &database_pool.executor();
-	options.buffered_docs_cap = database_pool.buffered_docs_cap_.load(std::memory_order_relaxed);
-	options.readers_per_index = database_pool.readers_per_index_.load(std::memory_order_relaxed);
-	auto opened = engine::sync_wait(engine::open_local(path, true, has_db_create_or_open(flags), options));
-	std::shared_ptr<engine::Shard> eng(std::move(opened.shard));
+	index_ = &index;
+	readers_ = index.reader();
+	engine_ = engine::strata::borrow(index, readers_, path, options);
 
 	{
 		std::lock_guard<std::mutex> lk(mtx);
-		uuid_ = eng->uuid();
+		uuid_ = engine_->uuid();
 	}
-	opens_.fetch_add(1, std::memory_order_relaxed);
-	set_revision(eng->revision());
+	set_revision(engine_->revision());
 	modified.store(false, std::memory_order_relaxed);
+	{
+		// The id counter as the last commit left it; the replay below raises it past the writes that commit missed.
+		const auto stored = engine::sync_wait(engine_->metadata(std::string(ID_HIGH_METADATA)));
+		id_high_ = stored.empty() ? 0 : MsgPack::unserialise(stored).u64();
+		id_high_moved_ = false;
+	}
 
 #ifdef XAPIAND_DATA_STORAGE
 	writable_storage = std::make_unique<DataStorage>(path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS_MODE | STORAGE_SYNC_MODE);
@@ -516,9 +542,9 @@ ShardEndpoint::open_index_blocking(int flags)
 #endif  // XAPIAND_DATA_STORAGE
 
 #if XAPIAND_DATABASE_WAL
-	// A log that is ahead of the committed revision is replayed, whoever opens the index first.
-	if (!has_db_disable_wal(flags)) {
-		ReplayTarget target(*this, *eng, DB_WRITABLE | DB_OPEN);
+	// A log that is ahead of the committed revision is replayed by whoever opens the index: the open holds it.
+	{
+		ReplayTarget target(*this, *engine_, DB_WRITABLE | DB_OPEN);
 		DatabaseWAL wal(&target);
 		if (wal.execute()) {
 			modified.store(true, std::memory_order_relaxed);
@@ -528,115 +554,56 @@ ShardEndpoint::open_index_blocking(int flags)
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
-	eng->use_chores(chores.get());
-	{
-		std::lock_guard<std::mutex> lk(mtx);
-		engine_ = std::move(eng);
-		stale_.store(false, std::memory_order_release);
+	engine_->use_chores(chores.get());
+}
+
+
+ShardEndpoint::InlineEngine::InlineEngine(ShardEndpoint& entry, const char* why) :
+	entry_(entry),
+	blocking_(why)
+{
+	entry_.engine_->use_chores(&engine::inline_chores());
+	engines_inline_.fetch_add(1, std::memory_order_relaxed);
+}
+
+
+ShardEndpoint::InlineEngine::~InlineEngine()
+{
+	entry_.engine_->use_chores(entry_.chores.get());
+	engines_inline_.fetch_sub(1, std::memory_order_relaxed);
+}
+
+
+// The catalog's commit chore (x-pool D7): no pin is held, so the turn is free, and the engine's chores run inline,
+// since this runs in a chore of the pool its group is on.
+void
+ShardEndpoint::commit_blocking()
+{
+	L_CALL("ShardEndpoint::commit_blocking()");
+
+	if (!modified.load()) {
+		// Nothing applied since the last commit: no revision and no WAL line (C25). A finished merge's output is all
+		// the index has to sync, which its commit does without a new revision.
+		if (index_->merge_output_unsynced()) {
+			index_->commit();
+		}
+		return;
 	}
-}
-
-
-task::task<void>
-ShardEndpoint::open_index(int flags)
-{
-	co_await chores->run(engine::ChoreClass::query, [this, flags] { open_index_blocking(flags); });
-}
-
-
-bool
-ShardEndpoint::begin_idle_close(int own_refs)
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	if (state_ != State::open || refs.load() > own_refs) {
-		return false;
-	}
-	state_ = State::closing;
-	closed_ = std::make_shared<task::event>();
-	return true;
-}
-
-
-task::task<void>
-ShardEndpoint::finish_idle_close()
-{
-	co_await close_marked(true);
-}
-
-
-// The close of an entry that is `closing`: the turn (so no operation is mid-call), a commit of what is
-// pending, the close chore, then `empty` and the event that the users who found it closing await.
-task::task<void>
-ShardEndpoint::close_marked(bool commit_)
-{
-	std::exception_ptr error;
-	{
-		// The turn covers the commit and the retirement; the wait for the readers that hold views of the
-		// index happens after it is released, so no reader waits on a turn that waits for it. The entry is
-		// `closing`, so whoever takes the turn next finds it unusable and awaits the close.
-		task::async_mutex::guard guard = co_await turn.lock();
-		auto eng = engine_ptr();
-		try {
-			if (eng) {
-				if (commit_ && modified.load() && !stale_.load()) {
-					const int saved = last_flags_.load();
-					co_await do_commit(*eng, *chores, saved ? saved : (DB_WRITABLE | DB_OPEN), true);
-				}
-				const bool released = co_await eng->begin_close();
-				guard.unlock();
-				if (!released) {
-					co_await eng->finish_close();
-				}
+	const bool locked = turn.try_lock();
+	assert(locked && "the catalog's commit chore runs with no pin, so with no turn held");
+	struct Unlock {
+		ShardEndpoint& entry;
+		bool locked;
+		~Unlock() {
+			if (locked) {
+				entry.turn.unlock();
 			}
-		} catch (...) {
-			error = std::current_exception();
 		}
-#ifdef XAPIAND_DATA_STORAGE
-		writable_storage.reset();
-#endif  // XAPIAND_DATA_STORAGE
-		modified.store(false, std::memory_order_relaxed);
-		std::shared_ptr<task::event> closed;
-		{
-			std::lock_guard<std::mutex> lk(mtx);
-			engine_.reset();
-			state_ = State::empty;
-			stale_.store(false, std::memory_order_release);
-			closed = std::move(closed_);
-		}
-		if (closed) {
-			closed->set();
-		}
-	}
-	if (error) {
-		try {
-			std::rethrow_exception(error);
-		} catch (const engine::Error& exc) {
-			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.description());
-		} catch (const std::exception& exc) {
-			L_WARNING("Closing {} failed: {}", repr(to_string()), exc.what());
-		}
-	}
-}
-
-
-bool
-ShardEndpoint::housekeeping_due() const
-{
-	std::lock_guard<std::mutex> lk(mtx);
-	return state_ == State::open && engine_ && engine_->merges_pending() > 0;
-}
-
-
-task::task<void>
-ShardEndpoint::housekeeping()
-{
-	auto eng = engine_ptr();
-	if (!eng || eng->merges_pending() == 0 || state() != State::open) {
-		co_return;
-	}
-	auto mine = co_await take_turn(DB_OPEN | DB_WRITABLE);
-	eng = engine_ptr();
-	co_await eng->reclaim();
+	} unlock{*this, locked};
+	InlineEngine inline_engine(*this, "the catalog's commit chore runs on a worker");
+	const int saved = last_flags_.load();
+	engine::sync_wait(do_commit(*engine_, engine::inline_chores(), saved ? saved : (DB_WRITABLE | DB_OPEN), true));
+	committed_ = applied_.load();
 }
 
 
@@ -653,7 +620,7 @@ struct ShardEndpoint::CommitFlight {
 
 
 task::task<bool>
-ShardEndpoint::commit(int flags, bool wal_)
+ShardEndpoint::commit(int flags, bool wal_, task::cancel_token cancel)
 {
 	L_CALL("ShardEndpoint::commit(({}), {})", readable_flags(flags), wal_);
 
@@ -680,11 +647,10 @@ ShardEndpoint::commit(int flags, bool wal_)
 		co_return joined->changed;
 	}
 
-	auto turn_ = co_await take_turn(flags);
+	auto turn_ = co_await take_turn(flags, std::move(cancel));
 	if (committed_ >= mine || !modified.load()) {
 		co_return false;  // a commit that ran while this one waited covers it
 	}
-	auto eng = engine_ptr();
 	auto flight = std::make_shared<CommitFlight>();
 	flight->covers = applied_.load();
 	{
@@ -694,7 +660,7 @@ ShardEndpoint::commit(int flags, bool wal_)
 	std::exception_ptr error;
 	bool changed = false;
 	try {
-		changed = co_await do_commit(*eng, *chores, flags, wal_);
+		changed = co_await do_commit(*engine_, *chores, flags, wal_);
 		committed_ = flight->covers;
 	} catch (const engine::Error& exc) {
 		note_failure(exc);
@@ -717,6 +683,24 @@ ShardEndpoint::commit(int flags, bool wal_)
 
 
 task::task<bool>
+ShardEndpoint::settle_merges(int flags)
+{
+	L_CALL("ShardEndpoint::settle_merges(({}))", readable_flags(flags));
+
+	auto turn_ = co_await take_turn(flags);
+	bool pending = false;
+	co_await chores->run(engine::ChoreClass::flush, [this, &pending] {
+		index_->check_in();   // publishes the merges that finished
+		if (index_->merge_output_unsynced()) {
+			index_->commit();   // nothing else is uncommitted: no revision, so no WAL line (C25)
+		}
+		pending = index_->merges_pending() != 0 || index_->merge_output_unsynced();
+	});
+	co_return pending;
+}
+
+
+task::task<bool>
 ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags, [[maybe_unused]] bool wal_)
 {
 	L_CALL("ShardEndpoint::do_commit(({}), {})", readable_flags(flags), wal_);
@@ -731,7 +715,11 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 	co_await storage_commit(chores_);
 #endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
+	if (id_high_moved_) {
+		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialise());  // durable with its documents
+	}
 	co_await eng.commit(engine::Transaction::none);
+	id_high_moved_ = false;
 	modified.store(false, std::memory_order_relaxed);
 	const auto current_revision = eng.revision();
 	if (prior_revision == current_revision) {
@@ -776,7 +764,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 #endif  // XAPIAND_DATA_STORAGE
 
 	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, {}); };
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -815,7 +803,7 @@ ShardEndpoint::do_add(engine::Shard& eng, engine::Chores& chores_, int flags, en
 
 
 task::task<engine::WriteResult>
-ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_)
+ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags, engine::docid shard_did, engine::Document&& doc, [[maybe_unused]] bool wal_, bool version_, bool must_exist)
 {
 	L_CALL("ShardEndpoint::do_replace({}, <doc>, {})", shard_did, wal_);
 
@@ -834,7 +822,8 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 	info.did = shard_did;
 
 	engine::WriteArgs args;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	args.must_exist = must_exist;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	if (version_) {
 		args.expected_version = expected_version(doc);
 	} else {
@@ -845,6 +834,11 @@ ShardEndpoint::do_replace(engine::Shard& eng, engine::Chores& chores_, int flags
 		info = co_await eng.replace(shard_did, doc, args);
 	} catch (const engine::Error& error) {
 		note_failure(error);
+#ifdef XAPIAND_DATA_STORAGE
+		if (!pushed.second.empty()) {
+			doc.set_data(pushed.second);  // a retry elsewhere pushes the blobs again
+		}
+#endif  // XAPIAND_DATA_STORAGE
 		throw;
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
@@ -878,6 +872,24 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
+	std::string key = term;
+	std::uint64_t issued = 0;
+	if (term == NEW_NUMERIC_KEY) {
+		// A new numeric id: issued from the counter, in a bucket this shard owns of the shards the handler placed it in.
+		const auto shards = doc.get_value(DB_SLOT_SHARDS);
+		const char *p = shards.data();
+		const char *p_end = p + shards.size();
+		const size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+		const size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
+		const std::uint64_t floor = p == p_end ? 0 : unserialise_length(&p, p_end);  // the other shards' counters
+		issued = next_auto_id(std::max(id_high_, floor), shard_num, n_shards);
+		if (issued == 0) {
+			throw engine::Error(engine::errc::invalid, "No numeric id is left to issue");
+		}
+		key = issue_id(doc, issued);  // before the blobs' push, whose record the log keeps
+		raise_id_high(issued);  // taken even if the write fails: a retry gets the next one
+	}
+
 #ifdef XAPIAND_DATA_STORAGE
 	auto pushed = co_await storage_push_blobs(chores_, doc.get_data());
 	if (!pushed.first.empty()) {
@@ -893,34 +905,21 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 	} else {
 		doc.add_value(DB_SLOT_VERSION, "");
 	}
-
-	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
+	if (issued != 0 && !args.expected_version) {
+		args.expected_version = 0;  // a counter behind an existing id conflicts, never overwrites
+	}
 
 	engine::WriteResult info;
-	info.term = term;
-	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, std::nullopt); };
+	info.term = key;
+	args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result); };
 	try {
-		if (term[0] == 'N') {
-			assert(term.size() > 1);
-			const char *p = n_shards_ser.data();
-			const char *p_end = p + n_shards_ser.size();
-			size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
-			size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
-			auto did = sortable_unserialise(term.substr(1));
-			if (did == 0u) {
-				// A new numeric id: the shard assigns the document id, and the multi-db id derives from it.
-				args.finalise = [&](engine::Document& document, engine::WriteResult& result) { finalise_write(document, result, NumericId{shard_num, n_shards}); };
-				info = co_await eng.add(doc, args);
-			} else {
-				info = co_await eng.replace((did - 1) / n_shards + 1, doc, args);  // docid in the multi-db to the docid in the shard
-				info.term = term;
-			}
-		} else {
-			info = co_await eng.replace_by_key(term, doc, args);
-		}
+		info = co_await eng.replace_by_key(key, doc, args);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
+	}
+	if (issued == 0) {
+		raise_id_high(numeric_id(key));  // an explicit numeric id advances the counter past it
 	}
 	applied_.fetch_add(1, std::memory_order_relaxed);
 	modified.store(true, std::memory_order_relaxed);
@@ -947,15 +946,14 @@ ShardEndpoint::do_replace_term(engine::Shard& eng, engine::Chores& chores_, int 
 
 
 task::task<void>
-ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine::docid shard_did, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("ShardEndpoint::do_delete({}, {})", shard_did, wal_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 	try {
-		co_await eng.erase(shard_did, true, expected);
+		co_await eng.erase(shard_did, true, expected_);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -976,16 +974,15 @@ ShardEndpoint::do_delete(engine::Shard& eng, [[maybe_unused]] int flags, engine:
 
 
 task::task<void>
-ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_)
+ShardEndpoint::do_delete_term(engine::Shard& eng, [[maybe_unused]] int flags, const std::string& term, [[maybe_unused]] bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("ShardEndpoint::do_delete_term({}, {})", repr(term), wal_);
 
 	RANDOM_ERRORS_DB_THROW(engine::Error, engine::errc::database, "Random Error");
 
-	std::optional<engine::rev> expected;  // TODO: Implement version check (version should have required version)
 	[[maybe_unused]] engine::docid shard_did = 0;
 	try {
-		shard_did = co_await eng.erase_by_key(term, true, expected);
+		shard_did = co_await eng.erase_by_key(term, true, expected_);
 	} catch (const engine::Error& error) {
 		note_failure(error);
 		throw;
@@ -1332,18 +1329,43 @@ ShardEndpoint::storage_read_blocking(std::string_view key)
  *
  */
 
-Shard::Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_)
-	: endpoint(endpoint_),
+Shard::Shard(IndexPin pin, int flags_, task::cancel_token cancel_)
+	: pin_(std::move(pin)),
+	  pool_(pin_.pool()),
+	  path_(pin_->path),
 	  flags(flags_),
 	  cancel(std::move(cancel_))
 {
 }
 
 
+Shard::Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_)
+	: pool_(&pool),
+	  path_(std::move(path)),
+	  missing_(true),
+	  flags(flags_),
+	  cancel(std::move(cancel_))
+{
+}
+
+
+ShardEndpoint&
+Shard::endpoint() const
+{
+	if (!pin_) {
+		if (missing_) {
+			throw engine::Error(engine::errc::not_found, "No such database: " + path_);
+		}
+		throw engine::Error(engine::errc::closed, "Database has been closed");
+	}
+	return pin_.entry();
+}
+
+
 std::shared_ptr<const Node>
 Shard::node() const
 {
-	return endpoint.node();
+	return pin_ ? endpoint().node() : Endpoint(path_).node();
 }
 
 
@@ -1352,24 +1374,28 @@ Shard::release() noexcept
 {
 #if XAPIAND_DATABASE_WAL
 	// A restore writes no log, so the log of what it replaced must not be replayed over it.
-	if (is_restore() && is_writable()) {
+	if (is_restore() && is_writable() && pin_) {
 		try {
-			endpoint.wal_writer().delete_wal(is_synchronous_wal(), endpoint.path);
+			endpoint().wal_writer().delete_wal(is_synchronous_wal(), endpoint().path);
 		} catch (...) {
-			L_EXC("Unable to delete the WAL of {}", repr(endpoint.to_string()));
+			L_EXC("Unable to delete the WAL of {}", repr(endpoint().to_string()));
 		}
 	}
 #endif
+	// A use ends with no map made outside the index's lease (x-pool D12).
+	assert(!pin_ || pin_->index_ == nullptr || pin_->index_->unleased_maps() == 0);
+	if (pin_ && pin_->stale_.load(std::memory_order_acquire)) {
+		pin_.reopen();   // a write found the index unusable: the catalog replaces it once its holders let go
+	}
 }
 
 
 task::task<void>
-Shard::ready()
+Shard::ready(bool use)
 {
-	co_await endpoint.ensure_open(flags);
-	kept_ = endpoint.engine_ptr();
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
+	if (!pin_) {
+		pin_ = co_await pool_->pin(Endpoint(path_), flags, cancel, use);
+		missing_ = false;
 	}
 }
 
@@ -1377,30 +1403,127 @@ Shard::ready()
 engine::Shard&
 Shard::engine()
 {
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
-	}
-	return *kept_;
+	return endpoint().engine();
 }
 
 
 task::task<engine::Shard*>
 Shard::engine_for_read()
 {
-	co_await endpoint.fresh(flags, cancel);
-	kept_ = endpoint.engine_ptr();
-	if (!kept_) {
-		throw engine::Error(engine::errc::closed, "Database has been closed");
+	co_await ready();
+	co_await endpoint().fresh(flags, cancel);
+	co_return &endpoint().engine();
+}
+
+
+task::task<engine::docid>
+Shard::written_key(const std::string& term)
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	co_return co_await endpoint().engine().written_key(term);
+}
+
+
+task::task<std::pair<engine::doccount, std::uint64_t>>
+Shard::written_load()
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	auto& entry = endpoint();
+	co_return std::make_pair(co_await entry.engine().written_count(), entry.id_high_);
+}
+
+
+task::task<std::vector<engine::docid>>
+Shard::written_keys(const std::vector<std::string>& terms)
+{
+	co_await ready();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	auto& eng = endpoint().engine();
+	std::vector<engine::docid> dids;
+	dids.reserve(terms.size());
+	for (const auto& term : terms) {
+		dids.push_back(co_await eng.written_key(term));
 	}
-	co_return kept_.get();
+	co_return dids;
+}
+
+
+task::task<void>
+Shard::apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms)
+{
+	L_CALL("Shard::apply_slice(<{} writes>, {})", writes.size(), at);
+
+	assert(is_writable());
+	assert(is_write_active());
+
+	{
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		auto& entry = endpoint();
+		entry.last_flags_.store(flags, std::memory_order_relaxed);
+		const int write_flags = flags;
+		co_await chores.run(engine::ChoreClass::flush, [&] {
+			ShardEndpoint::InlineEngine inline_engine(entry, "a RESTORE's apply slice writes on a worker in the index's turn");
+			if (DocIndexer::seams.throw_in_slice.exchange(false)) {
+				throw engine::Error(engine::errc::internal, "Test seam: the apply slice throws");
+			}
+			auto& eng = entry.engine();
+			const auto until = std::chrono::steady_clock::now() + slice;
+			const auto first = at;
+			const auto limit = DocIndexer::seams.writes_per_slice.load(std::memory_order_relaxed);   // a test's fixed slice
+			while (at < writes.size()) {
+				auto& write = writes[at++];
+				if (missed_terms.count(write.term) != 0) {
+					write.missed = true;   // a later write of a term whose document left: in input order, after it
+				} else if (const auto& stale_term = DocIndexer::seams.stale_on_term; !stale_term.empty() && write.term.ends_with(stale_term)) {
+					const engine::Error error(engine::errc::reopen, "Test seam: a write marks the index stale");
+					entry.note_failure(error);
+					write.error = std::make_exception_ptr(error);
+				} else if (write.shard_did != 0) {
+					try {
+						write.info = engine::sync_wait(entry.do_replace(eng, engine::inline_chores(), write_flags, write.shard_did, std::move(write.doc), true, false, true));
+					} catch (const engine::Error& error) {
+						if (engine::is_missing(error.kind)) {
+							write.missed = true;   // gone since placement: placed afresh by the caller (B1)
+							missed_terms.insert(write.term);
+						} else {
+							write.error = std::current_exception();
+						}
+					} catch (...) {
+						write.error = std::current_exception();
+					}
+				} else {
+					try {
+						write.info = engine::sync_wait(entry.do_replace_term(eng, engine::inline_chores(), write_flags, write.term, std::move(write.doc), true, false));
+					} catch (...) {
+						write.error = std::current_exception();
+					}
+				}
+				if (write.error && entry.stale_.load(std::memory_order_acquire)) {
+					break;   // the index must be replaced: the later writes reopen it, as one request each would
+				}
+				if (limit != 0 ? at - first >= limit : std::chrono::steady_clock::now() >= until) {
+					break;
+				}
+			}
+		});
+	}
+	co_await finish_write(false, true);
 }
 
 
 task::task<bool>
 Shard::reopen()
 {
-	const bool replaced = endpoint.stale_.load(std::memory_order_acquire) || !kept_;
-	co_await ready();
+	// A reopen may wait for the index's replacement, which waits for its views: a held view could be one.
+	engine::check_no_view_held("an open");
+	const bool held = static_cast<bool>(pin_);
+	const bool replaced = stale_ || !pin_ || pin_->stale_.load(std::memory_order_acquire);
+	if (std::exchange(stale_, false) || (pin_ && pin_->stale_.load(std::memory_order_acquire))) {
+		pin_.reopen();   // the catalog replaces the index once its other holders let go (x-pool D2)
+	}
+	co_await ready(!held);   // the re-pin of a pin handed back is not a use (CT-R31)
 	co_return replaced;
 }
 
@@ -1410,14 +1533,14 @@ Shard::retry_read(const engine::Error& error, int t)
 {
 	switch (engine::read_fate(error.kind)) {
 		case engine::fate::retry_close:
-			if (t == 0) { endpoint.mark_stale(); throw; }
+			if (t == 0) { stale_ = true; throw; }
 			return;
 		case engine::fate::close_retry:
-			endpoint.mark_stale();
+			stale_ = true;
 			if (t == 0) { throw; }
 			return;
 		case engine::fate::close_fail:
-			endpoint.mark_stale();
+			stale_ = true;
 			throw;
 		case engine::fate::fail:
 			throw;
@@ -1438,12 +1561,12 @@ Shard::collect_failure(const engine::Error& error, std::exception_ptr& eptr, siz
 			--valid;
 			return;
 		case engine::fate::close_retry:
-			endpoint.mark_stale();
+			stale_ = true;
 			eptr = std::current_exception();
 			--valid;
 			return;
 		case engine::fate::close_fail:
-			endpoint.mark_stale();
+			stale_ = true;
 			throw;
 		case engine::fate::fail:
 			throw;
@@ -1459,7 +1582,7 @@ Shard::commit(bool wal_)
 	assert(is_writable());
 	assert(is_write_active());
 
-	co_return co_await endpoint.commit(flags, wal_);
+	co_return co_await endpoint().commit(flags, wal_);
 }
 
 
@@ -1467,9 +1590,9 @@ Shard::commit(bool wal_)
 static void
 schedule_autocommit(const Shard& shard)
 {
-	if (shard.is_autocommit_active() && shard.endpoint.is_modified()) {
-		if (!XapiandManager::schedule_autocommit(shard.endpoint)) {
-			committer_commit(Endpoint(shard.endpoint));   // no control loop to wait on (the shutdown began): commit now
+	if (shard.is_autocommit_active() && shard.endpoint().is_modified()) {
+		if (!XapiandManager::schedule_autocommit(shard.endpoint())) {
+			committer_commit(Endpoint(shard.endpoint()));   // no control loop to wait on (the shutdown began): commit now
 		}
 	}
 }
@@ -1492,14 +1615,14 @@ Shard::finish_write(bool commit_, bool wal_)
 		if (error.kind != engine::errc::busy) {
 			throw;
 		}
-		L_WARNING("The commit of a write on {} waited too long for the index and was left to the autocommit", repr(endpoint.to_string()));
+		L_WARNING("The commit of a write on {} waited too long for the index and was left to the autocommit", repr(endpoint().to_string()));
 		schedule_autocommit(*this);
 	}
 }
 
 
 task::task<void>
-Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
@@ -1507,17 +1630,17 @@ Shard::delete_document(engine::docid shard_did, bool commit_, bool wal_, [[maybe
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_delete(*eng, flags, shard_did, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_delete(*eng, flags, shard_did, wal_, expected_);
 	}
 	co_await finish_write(commit_, wal_);
 }
 
 
 task::task<void>
-Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[maybe_unused]] bool version_)
+Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, std::optional<engine::rev> expected_)
 {
 	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
@@ -1525,10 +1648,10 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, [[
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_delete_term(*eng, flags, term, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_delete_term(*eng, flags, term, wal_, expected_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1544,10 +1667,10 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_add(*eng, *endpoint.chores, flags, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_add(*eng, *endpoint().chores, flags, std::move(doc), wal_, version_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1555,7 +1678,7 @@ Shard::add_document(engine::Document&& doc, bool commit_, bool wal_, bool versio
 
 
 task::task<engine::WriteResult>
-Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_)
+Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_, bool wal_, bool version_, bool must_exist)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
@@ -1564,10 +1687,10 @@ Shard::replace_document(engine::docid shard_did, engine::Document&& doc, bool co
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_replace(*eng, *endpoint.chores, flags, shard_did, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_replace(*eng, *endpoint().chores, flags, shard_did, std::move(doc), wal_, version_, must_exist);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1584,10 +1707,10 @@ Shard::replace_document_term(const std::string& term, engine::Document&& doc, bo
 
 	engine::WriteResult info;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		info = co_await endpoint.do_replace_term(*eng, *endpoint.chores, flags, term, std::move(doc), wal_, version_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		info = co_await endpoint().do_replace_term(*eng, *endpoint().chores, flags, term, std::move(doc), wal_, version_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return info;
@@ -1603,10 +1726,10 @@ Shard::add_spelling(const std::string& word, engine::termcount freqinc, bool com
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_add_spelling(*eng, flags, word, freqinc, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_add_spelling(*eng, flags, word, freqinc, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1622,10 +1745,10 @@ Shard::remove_spelling(const std::string& word, engine::termcount freqdec, bool 
 
 	engine::termcount result;
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		result = co_await endpoint.do_remove_spelling(*eng, flags, word, freqdec, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		result = co_await endpoint().do_remove_spelling(*eng, flags, word, freqdec, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 	co_return result;
@@ -1641,10 +1764,10 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	assert(is_write_active());
 
 	{
-		auto turn = co_await endpoint.take_turn(flags, cancel);
-		endpoint.last_flags_.store(flags, std::memory_order_relaxed);
-		auto eng = endpoint.engine_ptr();
-		co_await endpoint.do_set_metadata(*eng, flags, key, value, wal_);
+		auto turn = co_await endpoint().take_turn(flags, cancel);
+		endpoint().last_flags_.store(flags, std::memory_order_relaxed);
+		auto* eng = &endpoint().engine();
+		co_await endpoint().do_set_metadata(*eng, flags, key, value, wal_);
 	}
 	co_await finish_write(commit_, wal_);
 }
@@ -1656,8 +1779,8 @@ Shard::check()
 	L_CALL("Shard::check()");
 
 	co_await ready();
-	auto turn = co_await endpoint.take_turn(flags, cancel);
-	co_return co_await endpoint.engine().check();
+	auto turn = co_await endpoint().take_turn(flags, cancel);
+	co_return co_await endpoint().engine().check();
 }
 
 
@@ -1698,7 +1821,7 @@ Shard::get_metadata(const std::string& key)
 	if (!key.empty() && key[0] == '\x00') {
 		// The locator of a blob: a read of the data storage, in a chore.
 		co_await ready();
-		co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(std::string_view(key)); });
+		co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(std::string_view(key)); });
 		co_return value;
 	}
 #endif  // XAPIAND_DATA_STORAGE
@@ -1753,7 +1876,7 @@ Shard::storage_get_stored(const Locator& locator)
 
 	std::string value;
 	co_await ready();
-	co_await endpoint.chores->run(engine::ChoreClass::query, [&] { value = endpoint.storage_read_blocking(locator); });
+	co_await endpoint().chores->run(engine::ChoreClass::query, [&] { value = endpoint().storage_read_blocking(locator); });
 	co_return value;
 }
 
@@ -1764,7 +1887,7 @@ Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t s
 	L_CALL("Shard::upload_begin()");
 
 	co_await ready();
-	co_return co_await endpoint.upload_begin(chores, std::move(ct_type), size);
+	co_return co_await endpoint().upload_begin(chores, std::move(ct_type), size);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -1772,7 +1895,7 @@ Shard::upload_begin(engine::Chores& chores, std::string ct_type, std::uint64_t s
 std::string
 Shard::to_string() const
 {
-	return endpoint.to_string();
+	return pin_ ? endpoint().to_string() : Endpoint(path_).to_string();
 }
 
 
@@ -1787,23 +1910,26 @@ Shard::__repr__() const
 }
 
 
-// The debounced autocommit of an index: a commit in its own turn, under a chore's pin; nothing when the index
-// is no longer in the registry.
-task::task<void>
+// The debounced autocommit of an index: a commit in its own turn, under a chore's pin, then its merges settled; nothing
+// when the index is not open. A busy index's merges are published and synced here, since no write's turn may come.
+task::task<bool>
 autocommit(DatabasePool& pool, Endpoint endpoint)
 {
 	auto entry = co_await pool.pin_chore(endpoint);
 	if (!entry) {
-		co_return;
+		co_return false;
 	}
 	const auto start = std::chrono::steady_clock::now();
 	std::string error;
+	bool pending = false;
 	try {
 		co_await entry->commit(DB_OPEN | DB_WRITABLE, true);
+		pending = co_await entry->settle_merges(DB_OPEN | DB_WRITABLE);
+	} catch (const engine::Error& exc) {
+		pending = exc.kind == engine::errc::busy;   // the turn did not come: try again later
+		error = exc.description();
 	} catch (const Exception& exc) {
 		error = exc.get_message();
-	} catch (const engine::Error& exc) {
-		error = exc.description();
 	} catch (const std::exception& exc) {
 		error = exc.what();
 	}
@@ -1811,6 +1937,7 @@ autocommit(DatabasePool& pool, Endpoint endpoint)
 	if (error.empty()) {
 		L_DEBUG("Autocommit of {} succeeded after {}", repr(entry->to_string()), strings::from_delta(start, end));
 	} else {
-		L_WARNING("Autocommit of {} falied after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
+		L_WARNING("Autocommit of {} failed after {}: {}", repr(entry->to_string()), strings::from_delta(start, end), error);
 	}
+	co_return pending;
 }

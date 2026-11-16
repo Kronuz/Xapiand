@@ -18,6 +18,9 @@ Hyphenated words are also treated as phrases, as are cases such as filenames
 and email addresses (e.g. `/etc/passwd` or `president@whitehouse.gov`)
 :::
 
+A wildcard, fuzzy word or group inside a phrase is refused with `400`: a phrase is made of
+plain words.
+
 #### Example
 
 In the following example, we will retrieve documents with the exact phrase,

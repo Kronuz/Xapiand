@@ -14,7 +14,7 @@ stored and indexed. For instance, use schemas to define:
 
 Each field has a data type which can be:
 
-* a simple type like `text`, `string`, `keyword`, `datetime`, `float` or `boolean`.
+* a simple type like `text`, `keyword`, `integer`, `positive`, `floating`, `date`, `datetime`, `boolean` or `uuid` (`string` is an alias of `text`, `term` of `keyword`, `float` of `floating`).
 * a sub-type which supports the hierarchical nature of JSON such as `object` or `array`.
 * or a specialised type like `geospatial`.
 
@@ -83,7 +83,7 @@ You can read more about dynamic field names [here](dynamic-field-names).
 Similarly to Dynamic Field Names, Namespaces reuse the field type, but these
 also allow nested field names to be added and searched.
 
-You can read more about namespaces [here](indexing-mode) and
+You can read more about namespaces [here](namespaces) and
 [here](/Xapiand/reference-guide/search/query-dsl/leaf-queries/namespace-queries).
 
 ## [Foreign Schemas](foreign-schemas)

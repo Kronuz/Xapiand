@@ -4,11 +4,12 @@ title: "Scripting"
 
 The scripting functionality lets you run small scripts to compute custom
 expressions: derive a field at index time, normalize a value on write, keep a
-counter, or evaluate a custom score for a query.
+counter.
 
-The scripting language is [Lua](https://www.lua.org/), embedded via
-[sol2](https://github.com/ThePhD/sol2). Scripts run inside the request, with the
-document available as the `_doc` object.
+The scripting language is [Lua](https://www.lua.org/) 5.4, embedded through its C API.
+Scripts run when a document is written (`PUT`, `POST`, `UPDATE`, `PATCH`, `UPSERT`), inside
+the request, with the document available as the `_doc` object. Queries and aggregations
+run no scripts.
 
 For example, this indexes a document and computes a `full_name` field from two
 others in the same request (the `?commit` makes the write immediately visible so
@@ -69,8 +70,9 @@ The long form is an object under the `_lua` key:
 ### Script Caching
 
 All scripts are cached so that they only need to be recompiled when updates
-occur. By default, the cache size is 100 and scripts do not have a time-based
-expiration.
+occur. By default, the cache size is 100 (`--scripts-cache-size`). A cached
+[foreign script](#foreign-scripts) is trusted for one second and then its
+document is read again, so a script that was rewritten takes effect.
 
 :::hint[Prefer Parameters]{.tip}
 The first time Xapiand sees a new script, it compiles it and stores the compiled
@@ -87,7 +89,7 @@ Xapiand adds a few default variables to the running script context:
 |----------------|--------------------------------------------------------------|
 | `_doc`         | Current document.                                            |
 | `_old_doc`     | Old document (in case of updates / deletes).                 |
-| `_method`      | HTTP method that triggered the script.                       |
+| `_method`      | Always the empty string: the node does not fill it in.        |
 
 If you need to pass additional values into a script, pass them as named
 parameters instead of hard-coding them. That way the compiled script stays in

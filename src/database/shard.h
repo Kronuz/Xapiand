@@ -25,9 +25,14 @@
 
 #include "config.h"               // for XAPIAND_DATA_STORAGE
 
+#include <chrono>                 // for std::chrono::nanoseconds
+#include <cstdint>                // for std::uint64_t
 #include <exception>              // for std::exception_ptr
 #include <memory>                 // for std::shared_ptr
+#include <optional>               // for std::optional
 #include <string>                 // for std::string
+#include <unordered_set>          // for std::unordered_set
+#include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
 #include "database/flags.h"       // for DB_*
@@ -50,20 +55,44 @@ class Locator;
 //   ___) | | | | (_| | | | (_| |
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
-// One use of an index: its registry entry and the flags the user asked with. Cheap to make and to drop.
+// One write of a RESTORE's apply slice: replaced at `shard_did` while its document is still there (0: written by
+// `term`). The slice fills `info` or `error`, or sets `missed`.
+struct SliceWrite {
+	std::size_t idx = 0;   // the caller's: the object it belongs to
+	std::string term;
+	engine::docid shard_did = 0;
+	engine::Document doc;
+	engine::WriteResult info;
+	std::exception_ptr error;
+	bool missed = false;
+};
+
+
+// One use of an index: its pin and the flags the user asked with. Cheap to make and to drop.
 // Every operation that can wait is a task, so the callers decide where it runs; a write takes the
 // index's turn and holds it for its apply, its revision update and its WAL line, nothing longer.
 class Shard {
-	std::shared_ptr<engine::Shard> kept_;  // the engine of the last ready(): a replacement cannot free it under a call
+	IndexPin pin_;
+	DatabasePool* pool_;
+	std::string path_;
+	bool stale_ = false;  // a failure asked for a fresh index: reopen() hands the pin back and pins again
+	bool missing_ = false;  // its index was missing at the pin: a use with no pin is not_found, not `closed`
 
 public:
-	ShardEndpoint& endpoint;
 	int flags;
 	// The request's token: this use's turn waits (a write's, a read's refresh) end when it is requested. Empty for
 	// work that is not cancelled, such as an admitted write (docs/design/phase7c.md D3).
 	task::cancel_token cancel;
 
-	Shard(ShardEndpoint& endpoint_, int flags_, task::cancel_token cancel_ = {});
+	// `pin` is the use's pin (lock_shard's, taken before any view, x-pool D4).
+	Shard(IndexPin pin, int flags_, task::cancel_token cancel_ = {});
+
+	// A use with no pin yet (its index was missing when it pinned): ready() pins it, or raises not_found again.
+	Shard(DatabasePool& pool, std::string path, int flags_, task::cancel_token cancel_ = {});
+
+	// The index's entry, under the pin; raises not_found while the index is missing, `closed` while a reopen left
+	// the use with no pin.
+	ShardEndpoint& endpoint() const;
 
 	bool is_local() const {
 		return true;
@@ -98,22 +127,31 @@ public:
 	// The end of the use: a restore that finishes deletes the log it did not write.
 	void release() noexcept;
 
-	// Opens the index when need be (a missing one is created when the flags say so) and keeps its engine.
-	task::task<void> ready();
+	// Pins the index again when a reopen gave the pin back (a missing one is created when the flags say so).
+	task::task<void> ready(bool use = true);   // `use` false: a re-pin within the request, not a use (CT-R31)
 
-	// The engine ready() kept; raises `closed` before one was.
+	// The engine of the pinned index; raises `closed` with no pin.
 	engine::Shard& engine();
 
 	// ready(), then a refresh if something was applied since the last one, so the caller reads it.
 	task::task<engine::Shard*> engine_for_read();
 
+	// Where a write places a document: the engine's written reads (the id holding a key term, 0 for none, and the
+	// live documents) as the writes left them, in the index's turn, refreshing nothing (docs/mechanisms/placement.md).
+	task::task<engine::docid> written_key(const std::string& term);
+	// The live documents as the writes left them, and the shard's id counter (docs/design/one-id.md), in one turn.
+	task::task<std::pair<engine::doccount, std::uint64_t>> written_load();
+	// written_key() of each term, in one turn.
+	task::task<std::vector<engine::docid>> written_keys(const std::vector<std::string>& terms);
+
 	// The engine's integrity check of the index, in its turn (a missing index is opened, or created by the flags).
 	task::task<engine::CheckResult> check();
 
-	// Replaces an engine a failure marked stale; true when this call opened a new one.
+	// Hands the pin back when a failure marked the use stale, so the catalog replaces the index, and pins again;
+	// true when the use had no usable pin.
 	task::task<bool> reopen();
 
-	// Called from a catch block of a read ladder: marks the entry as the failure demands and rethrows when
+	// Called from a catch block of a read ladder: marks the use stale as the failure demands and rethrows when
 	// it is final or not a failure of the shard; otherwise the caller reopens.
 	void retry_read(const engine::Error& error, int t);
 
@@ -128,12 +166,20 @@ public:
 	// Commits what is applied; a commit that covers this caller's writes and is already in flight is joined.
 	task::task<bool> commit(bool wal_ = true);
 
-	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	// A delete with an expected version removes the document only while it has that version (0: it does not exist).
+	task::task<void> delete_document(engine::docid shard_did, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
+	task::task<void> delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, std::optional<engine::rev> expected_ = std::nullopt);
 
 	task::task<engine::WriteResult> add_document(engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
-	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	task::task<engine::WriteResult> replace_document(engine::docid shard_did, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true, bool must_exist = false);
 	task::task<engine::WriteResult> replace_document_term(const std::string& term, engine::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+
+	// A RESTORE's writes to this shard (docs/perf/x7-loop-stalls.md, fix (c)): in one turn, a chore of `chores`
+	// applies writes[at, ...) in input order for about `slice`, with the engine's chores inline, and leaves `at` where
+	// it stopped (after a write that failed and marked the index stale: it is replaced before the next). A write
+	// whose document left since placement is missed, and so is every later write of its term (`missed_terms`, kept
+	// across slices): the caller places them afresh, in input order.
+	task::task<void> apply_slice(engine::Chores& chores, std::vector<SliceWrite>& writes, std::size_t& at, std::chrono::nanoseconds slice, std::unordered_set<std::string>& missed_terms);
 
 	task::task<void> add_spelling(const std::string& word, engine::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	task::task<engine::termcount> remove_spelling(const std::string& word, engine::termcount freqdec, bool commit_ = false, bool wal_ = true);
@@ -158,5 +204,6 @@ public:
 };
 
 
-// The debounced autocommit of an index: a commit in its own turn.
-task::task<void> autocommit(DatabasePool& pool, Endpoint endpoint);
+// The debounced autocommit of an index: a commit in its own turn, then its merges settled in another. True when a
+// merge is still pending, so the caller arms the autocommit again (x-pool D8).
+task::task<bool> autocommit(DatabasePool& pool, Endpoint endpoint);

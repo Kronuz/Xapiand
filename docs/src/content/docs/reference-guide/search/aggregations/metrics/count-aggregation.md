@@ -30,7 +30,8 @@ returned count.
 
 Assuming the data consists of documents representing bank accounts, as shown in
 the sample dataset of [Data Exploration](/Xapiand/exploration#sample-dataset)
-section, computing the number of cities with accounts in the state of Indiana:
+section, computing the number of city values of the accounts in the state of Indiana (one per account,
+not the number of distinct cities):
 
 ```rest
 SEARCH /bank/

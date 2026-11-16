@@ -2,8 +2,10 @@
 title: "Variance Aggregation"
 ---
 
-A _single-value_ metrics aggregation that computes the variance of
-numeric values that are extracted from the aggregated documents.
+A _single-value_ metrics aggregation that computes the sample variance (the sum of squares
+about the mean divided by `n - 1`, where Elasticsearch's is the population variance) of
+numeric values that are extracted from the aggregated documents. The variance of fewer than
+two values divides by zero.
 
 ## Structuring
 

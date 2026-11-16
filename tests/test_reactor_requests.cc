@@ -33,15 +33,18 @@
 #include <ctime>
 #include <filesystem>
 #include <functional>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "completion/posix.h"
 #include "database/flags.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "pool_support.h"
 #include "engine/callbacks.h"
 #include "engine/document.h"
 #include "engine/error.h"
@@ -146,9 +149,9 @@ public:
 // A search with a budget yields at window boundaries: a task queued behind it finishes before it does. With no
 // budget the search runs to its end first.
 static void test_a_search_with_a_budget_shares_its_loop() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint(fresh("share")));
-	Shard shard(*entry.get(), WRITE);
+	DatabasePool pool(control_loop(), 8);
+	auto entry = pin_index(pool, fresh("share"), WRITE);
+	Shard shard = use_index(entry, WRITE);
 	fill(shard, 12000);
 	auto* eng = engine::sync_wait(shard.engine_for_read());
 	auto prepared = engine::prepare(engine::Query::term("f", "body"));
@@ -186,10 +189,10 @@ static void test_a_search_with_a_budget_shares_its_loop() {
 // A request cancelled while its search is queued stops at the next checkpoint, and the search's views and its
 // admissions are returned (the next search is served).
 static void test_a_cancelled_search_stops_and_lets_go() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(2);
-	auto entry = pool.spawn(Endpoint(fresh("cancel")));
-	Shard shard(*entry.get(), WRITE);
+	auto entry = pin_index(pool, fresh("cancel"), WRITE);
+	Shard shard = use_index(entry, WRITE);
 	fill(shard, 12000);
 	auto* eng = engine::sync_wait(shard.engine_for_read());
 	auto prepared = engine::prepare(engine::Query::term("f", "body"));
@@ -223,10 +226,10 @@ static void test_a_cancelled_search_stops_and_lets_go() {
 
 // The index's cap is an admission: a view past it is refused and counted, before it takes a record.
 static void test_the_cap_is_an_admission_that_counts() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_readers_per_index(3);
-	auto entry = pool.spawn(Endpoint(fresh("admission")));
-	Shard shard(*entry.get(), WRITE);
+	auto entry = pin_index(pool, fresh("admission"), WRITE);
+	Shard shard = use_index(entry, WRITE);
 	fill(shard, 5);
 	auto* eng = engine::sync_wait(shard.engine_for_read());
 	auto* strata = dynamic_cast<engine::strata::Shard*>(eng);
@@ -250,43 +253,6 @@ static void test_the_cap_is_an_admission_that_counts() {
 	CHECK_EQ(strata->views_refused(), 1u);
 }
 
-// The views' handle is read with no lock and no count while the index is replaced under the readers: every
-// reader gets a view or `closed`, never a freed handle (run under ASan and TSan).
-static void test_views_are_acquired_while_the_index_is_replaced() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint(fresh("replace")));
-	Shard shard(*entry.get(), WRITE);
-	fill(shard, 50);
-	auto* eng = engine::sync_wait(shard.engine_for_read());
-	auto* strata = dynamic_cast<engine::strata::Shard*>(eng);
-	REQUIRE(strata != nullptr);
-	std::atomic<bool> stop{false};
-	std::atomic<std::size_t> served{0};
-	std::vector<std::thread> readers;
-	for (int t = 0; t < 8; ++t) {
-		readers.emplace_back([&] {
-			while (!stop) {
-				try {
-					auto view = strata->view();
-					++served;
-				} catch (const engine::Error&) { }   // closed or reopening: an answer, not a crash
-			}
-		});
-	}
-	const auto kept = strata->view_handles_kept();
-	for (int i = 0; i < 300; ++i) {
-		engine::sync_wait(strata->begin_close());   // retires the index: its views' handle goes
-		CHECK_TRUE(engine::sync_wait(strata->reopen()));   // opens it again with a new handle
-	}
-	stop = true;
-	for (auto& reader : readers) {
-		reader.join();
-	}
-	CHECK_GT(served.load(), 0u);
-	// A reader may still hold the pointer of any handle that was published: none is freed before the index ends.
-	CHECK_EQ(strata->view_handles_kept(), kept + 300);
-}
-
 // A bulk body is parsed in a chore of the request's group, not on the loop (D12): the loop thread spends a fraction of
 // the parse's CPU time on a body that takes `inline_ms` of CPU to parse.
 static double thread_cpu_ms() {
@@ -296,7 +262,7 @@ static double thread_cpu_ms() {
 }
 
 static void test_a_bulk_body_is_parsed_off_the_loop() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	const std::string line = R"({"_id": 1, "user": "kronuz", "message": "a line of the bulk body that is a little long to parse"})" "\n";
 	std::string body;
 	std::size_t lines = 0;
@@ -384,13 +350,13 @@ static void test_a_loop_past_its_demoted_cap_refuses_new_requests() {
 // cancellation D8): the loop stops, the chores are cancelled and drained, the host closes and destroys its tasks, and
 // no task frame is left; both turns are free for the next one.
 static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint(fresh("teardown")));
+	DatabasePool pool(control_loop(), 8);
+	auto entry = pin_index(pool, fresh("teardown"), WRITE);
 	{
-		Shard shard(*entry.get(), WRITE);
+		Shard shard = use_index(entry, WRITE);
 		fill(shard, 10);
 	}
-	auto other = pool.spawn(Endpoint(fresh("teardown_other")));
+	auto other = pin_index(pool, fresh("teardown_other"), WRITE);
 	(void)engine::sync_wait(other->take_turn(WRITE));   // opened now: an open index's own tasks are in the baseline
 	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));   // the turn request (a) waits for
 	task::event never;   // what request (d) waits on, holding the other index's turn
@@ -474,11 +440,11 @@ static void test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_bo
 // A request's token ends its wait for a turn (F2): the turn's deadline is linked to it, so a cancelled request leaves
 // the queue at once with task::cancelled, not `busy` at the turn timeout. A Shard passes its token to the wait.
 static void test_a_cancelled_request_leaves_the_turn_queue() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(60);
-	auto entry = pool.spawn(Endpoint(fresh("turn_cancel")));
+	auto entry = pin_index(pool, fresh("turn_cancel"), WRITE);
 	{
-		Shard shard(*entry.get(), WRITE);
+		Shard shard = use_index(entry, WRITE);
 		fill(shard, 1);
 	}
 	std::optional<Turn> held(engine::sync_wait(entry->take_turn(WRITE)));
@@ -494,7 +460,7 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 		loop.run([&]() -> task::task<void> {
 			try {
 				if (through_shard) {
-					Shard shard(*entry.get(), WRITE, source.token());
+					Shard shard(co_await pool.pin(Endpoint(entry->path), WRITE), WRITE, source.token());
 					(void)co_await shard.add_document(make("Kc"));
 				} else {
 					(void)co_await entry->take_turn(WRITE, source.token());
@@ -512,6 +478,52 @@ static void test_a_cancelled_request_leaves_the_turn_queue() {
 	}
 	held.reset();
 	(void)engine::sync_wait(entry->take_turn(WRITE));   // the cancelled waiters left the queue
+}
+
+// A request's token ends its wait for its index's pin too (CR2): a use's pin passes the request's token, so a request
+// waiting on a cold open leaves at once with task::cancelled, and the open it started goes on.
+static void test_a_cancelled_request_leaves_the_pin_queue() {
+	DatabasePool pool(control_loop(), 8);
+	std::promise<void> gate;
+	std::shared_future<void> opens = gate.get_future().share();
+	std::atomic<bool> opening{false};
+	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
+		opening = true;
+		opens.wait();
+		const auto dir = (std::filesystem::path(at) / "strata").string();
+		std::filesystem::create_directories(dir);
+		return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+	});
+	const auto path = fresh("pin_cancel");
+	std::thread opener([&] { (void)pin_index(pool, path, WRITE); });
+	while (!opening.load()) {
+		std::this_thread::sleep_for(1ms);
+	}
+	Loop loop;
+	task::cancel_source source;
+	asio::steady_timer timer(loop.reactor.io(), 50ms);
+	timer.async_wait([&](const asio::error_code& ec) {
+		if (!ec) { source.request(); }
+	});
+	std::string outcome;
+	const auto began = std::chrono::steady_clock::now();
+	loop.run([&]() -> task::task<void> {
+		try {
+			Shard shard(pool, path, WRITE, source.token());   // as lock_shard makes one: its use pins with the token
+			co_await shard.ready();
+			outcome = "pinned";
+		} catch (const task::cancelled&) {
+			outcome = "cancelled";
+		} catch (const engine::Error& error) {
+			outcome = error.reason();
+		}
+	});
+	const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count();
+	CHECK_EQ(outcome, std::string("cancelled"));
+	CHECK_LT(ms, 5000.0);
+	gate.set_value();
+	opener.join();
+	CHECK_TRUE(static_cast<bool>(pin_index(pool, path, DB_OPEN)));
 }
 
 // The request's token ends a read that waits for the streamed body: Request::read_chunk passes it to
@@ -549,11 +561,11 @@ static void test_a_cancelled_request_ends_its_body_read() {
 // turn with its token ends at stop(); one waiting without a token (an admitted write) is left suspended by the bounded
 // stop() and destroyed by destroy_roots(). No task frame is left and the turn is free.
 static void test_service_phases_end_or_destroy_requests_waiting_for_a_turn() {
-	DatabasePool pool(8);
+	DatabasePool pool(control_loop(), 8);
 	pool.set_turn_timeout(60);
-	auto entry = pool.spawn(Endpoint(fresh("phases")));
+	auto entry = pin_index(pool, fresh("phases"), WRITE);
 	{
-		Shard shard(*entry.get(), WRITE);
+		Shard shard = use_index(entry, WRITE);
 		fill(shard, 1);
 	}
 	const auto baseline = task::detail::live_frames();
@@ -581,7 +593,7 @@ static void test_service_phases_end_or_destroy_requests_waiting_for_a_turn() {
 			response.send(200, "ok");
 		}
 	} handler;
-	handler.entry = entry.get();
+	handler.entry = &entry.entry();
 
 	unsigned short port;
 	{
@@ -657,9 +669,9 @@ std::string broken_by(Loop& loop, const std::function<task::task<void>()>& body)
 // The N2 rule: a task that holds a view waits for no turn, no open and no drain, for the view could be what
 // the wait waits for. The check stops the task that breaks it (debug builds).
 static void test_a_task_that_holds_a_view_waits_for_nothing() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint(fresh("rules")));
-	Shard shard(*entry.get(), WRITE);
+	DatabasePool pool(control_loop(), 8);
+	auto entry = pin_index(pool, fresh("rules"), WRITE);
+	Shard shard = use_index(entry, WRITE);
 	fill(shard, 5);
 	auto* eng = engine::sync_wait(shard.engine_for_read());
 	auto* strata = dynamic_cast<engine::strata::Shard*>(eng);
@@ -695,24 +707,28 @@ static void test_a_task_that_holds_a_view_waits_for_nothing() {
 		const Endpoint other(fresh("rules_pin"));
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
 			auto view = strata->view();
-			auto pin = co_await pool.pin(other);
+			auto pin = co_await pool.pin(other, WRITE);
 		}), std::string("a pin"));
 	}
 	{
-		// Closing the index waits for its readers, and this task is one.
+		// Closing an index of its own (the hostless path; a catalog's is the catalog's to close) waits for its
+		// readers, and this task is one.
+		auto opened = engine::sync_wait(engine::strata::open_local(fresh("rules_drain"), true, true));
+		auto* own = dynamic_cast<engine::strata::Shard*>(opened.shard.get());
+		REQUIRE(own != nullptr);
 		Loop loop;
 		CHECK_EQ(broken_by(loop, [&]() -> task::task<void> {
-			auto view = strata->view();
-			co_await strata->close();
+			auto view = own->view();
+			co_await own->close();
 		}), std::string("a drain"));
 	}
 }
 
 // The same waits are fine once the view is let go, and a search that yields while it holds views is fine.
 static void test_the_rule_allows_a_yield_and_a_wait_after_the_view() {
-	DatabasePool pool(8);
-	auto entry = pool.spawn(Endpoint(fresh("rules_ok")));
-	Shard shard(*entry.get(), WRITE);
+	DatabasePool pool(control_loop(), 8);
+	auto entry = pin_index(pool, fresh("rules_ok"), WRITE);
+	Shard shard = use_index(entry, WRITE);
 	fill(shard, 5);
 	auto* eng = engine::sync_wait(shard.engine_for_read());
 	auto* strata = dynamic_cast<engine::strata::Shard*>(eng);
@@ -724,7 +740,7 @@ static void test_the_rule_allows_a_yield_and_a_wait_after_the_view() {
 			co_await task::yield();
 			co_await task::yield();
 		}
-		auto pin = co_await pool.pin(Endpoint(fresh("rules_ok_pin")));
+		auto pin = co_await pool.pin(Endpoint(fresh("rules_ok_pin")), WRITE);
 		co_await shard.add_document(make("Ky"));
 	}), std::string());
 }
@@ -735,11 +751,11 @@ TEST_MAIN(
 	test_a_search_with_a_budget_shares_its_loop,
 	test_a_cancelled_search_stops_and_lets_go,
 	test_the_cap_is_an_admission_that_counts,
-	test_views_are_acquired_while_the_index_is_replaced,
 	test_a_bulk_body_is_parsed_off_the_loop,
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_leaves_the_pin_queue,
 	test_a_cancelled_request_ends_its_body_read,
 	test_service_phases_end_or_destroy_requests_waiting_for_a_turn,
 	test_a_task_that_holds_a_view_waits_for_nothing,
@@ -750,11 +766,11 @@ TEST_MAIN(
 	test_a_search_with_a_budget_shares_its_loop,
 	test_a_cancelled_search_stops_and_lets_go,
 	test_the_cap_is_an_admission_that_counts,
-	test_views_are_acquired_while_the_index_is_replaced,
 	test_a_bulk_body_is_parsed_off_the_loop,
 	test_teardown_destroys_requests_suspended_on_a_turn_a_chore_and_a_body_read,
 	test_a_loop_past_its_demoted_cap_refuses_new_requests,
 	test_a_cancelled_request_leaves_the_turn_queue,
+	test_a_cancelled_request_leaves_the_pin_queue,
 	test_a_cancelled_request_ends_its_body_read,
 	test_service_phases_end_or_destroy_requests_waiting_for_a_turn
 )

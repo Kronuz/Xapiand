@@ -1,4 +1,24 @@
 #!/usr/bin/env bash
+# Copyright © 2026 Germán Méndez Bravo (Kronuz)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 #
 # run_all.sh -- the one command that exercises Xapiand top to bottom.
 #
@@ -29,7 +49,7 @@ HARNESS_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$HARNESS_DIR/env.sh"
 REPO="$(dirname "$HARNESS_DIR")"
 BIN="${BIN:-$REPO/build/bin/xapiand}"
-PORT="${PORT:-8899}"
+PORT="${PORT:-$(free_port)}"
 
 DEFAULT_LAYERS="smoke e2e tls recovery load stress bench"
 LAYERS="${*:-$DEFAULT_LAYERS}"
@@ -37,7 +57,11 @@ LAYERS="${*:-$DEFAULT_LAYERS}"
 PASS=(); FAIL=(); SKIP=()
 pass() { PASS+=("$1"); echo "  ✅ $1"; }
 fail() { FAIL+=("$1"); echo "  ❌ $1"; }
-skip() { SKIP+=("$1: $2"); echo "  ⏭️  $1 (skipped: $2)"; }
+# RUN_ALL_STRICT=1 (gate checks): a layer that cannot run fails instead of passing as skipped.
+skip() {
+	if [ "${RUN_ALL_STRICT:-0}" = 1 ]; then fail "$1 (cannot run: $2)"; return; fi
+	SKIP+=("$1: $2"); echo "  ⏭️  $1 (skipped: $2)"
+}
 
 if [ ! -x "$BIN" ]; then
 	echo "missing binary: $BIN"
@@ -113,10 +137,18 @@ run_e2e() {
 	# demos). The gate (e2e_assert.py) is GREEN only when EVERY documented assertion
 	# passes and every request is covered -- no baseline, no allowlist, no skips. So
 	# this runs anywhere (incl. CI) straight from the docs.
-	local out="/tmp/xa_e2e_ours.json"
-	local cap rep
-	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)"
+	# A fresh report per run: grading a file an earlier run left would pass without testing anything.
+	local dir out cap rep rc=0
+	dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_e2e.XXXXXX")"; out="$dir/ours.json"
+	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)" || rc=$?
+	if [ "$rc" -ne 0 ] || [ ! -s "$out" ]; then
+		fail "e2e (capture failed, exit $rc)"
+		printf '%s\n' "$cap" | tail -8
+		rm -rf "$dir"
+		return
+	fi
 	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"
+	rm -rf "$dir"
 	if printf '%s\n' "$rep" | grep -q '^GREEN'; then
 		pass "e2e"
 	else
@@ -144,7 +176,7 @@ run_tls() {
 	local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_tls.XXXXXX")"
 	"$HARNESS_DIR/tls_certs.sh" "$dir/certs" > /dev/null
 	local out="$dir/e2e.json" rep
-	PORT=18880 COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
+	COLL="$dir/coll.json" SCHEME=https CA="$dir/certs/ca.pem" \
 		XAPIAND_FLAGS="--tls-cert $dir/certs/server.pem --tls-key $dir/certs/server.key" \
 		"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" "$dir/data" > "$dir/capture.log" 2>&1
 	rep="$("$PY" "$HARNESS_DIR/e2e_assert.py" "$out" 2>&1)"

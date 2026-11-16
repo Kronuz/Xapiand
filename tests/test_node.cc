@@ -27,17 +27,28 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
 #include <cstring>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
+#include <numeric>
+#include <optional>
+#include <random>
 #include <string>
 #include <thread>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 #include <signal.h>
@@ -50,12 +61,19 @@
 #include "database/data.h"
 #include "database/flags.h"
 #include "database/handler.h"
+#include "database/lock.h"
+#include "engine/query.h"
 #include "database/pool.h"
 #include "database/schemas_lru.h"
 #include "database/shard.h"
+#include "database/utils.h"
+#include "pool_support.h"
 #include "endpoint.h"
 #include "logger.h"
+#include "serialise.h"
+#include "sortable_serialise.h"
 #include "engine/chores.h"
+#include "engine/host.h"
 #include "engine/document.h"
 #include "engine/error.h"
 #include "engine/sync.h"
@@ -63,6 +81,7 @@
 #include "index_resolver_lru.h"
 #include "manager.h"
 #include "opts.h"
+#include "rapidjson/document.h"
 #include "reactor_lag.h"
 #include "task.hh"
 #include "traceback.h"
@@ -71,8 +90,13 @@
 using namespace std::chrono_literals;
 
 struct PoolTestAccess {
-	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) { entry.chores = std::move(chores); }
+	static void set_chores(ShardEndpoint& entry, std::unique_ptr<engine::Chores> chores) {
+		entry.chores = std::move(chores);
+		entry.engine_->use_chores(entry.chores.get());
+	}
 	static std::unique_ptr<engine::Chores> take_chores(ShardEndpoint& entry) { return std::move(entry.chores); }
+	static prospect::index& index(ShardEndpoint& entry) { return *entry.index_; }
+	static engine::Shard& engine(ShardEndpoint& entry) { return *entry.engine_; }
 };
 
 namespace {
@@ -124,10 +148,14 @@ private:
 // Holds an index's turn from a thread of its own until released.
 class HoldTurn {
 public:
-	HoldTurn(ShardEndpoint& entry, int flags) {
+	// With wait false it only queues for the turn; held() says when it has it.
+	HoldTurn(ShardEndpoint& entry, int flags, bool wait = true) {
 		thread_ = std::thread([this, &entry, flags] { engine::sync_wait(hold(entry, flags)); });
-		eventually([this] { return held_.load(); });
+		if (wait) {
+			eventually([this] { return held_.load(); });
+		}
 	}
+	bool held() const { return held_.load(); }
 	~HoldTurn() { release(); }
 	void release() {
 		release_.set();
@@ -145,6 +173,170 @@ private:
 
 	std::atomic<bool> held_{false};
 	task::event release_;
+	std::thread thread_;
+};
+
+// A host of one thread that tells when it has run out of work. A task started on it that stops with the host idle
+// is waiting on a held turn, whose lock it queued in that same step; tasks started one after another, each once the
+// host is idle, queue on a turn in that order.
+class ParkHost final : public engine::Host {
+public:
+	template <typename T>
+	class Job {
+	public:
+		bool done() const { return state_->done.load(); }
+		// Waits for the task to end; returns its value or rethrows its exception.
+		T get() {
+			CHECK(eventually([this] { return done(); }, 30s));
+			if (state_->error) {
+				std::rethrow_exception(state_->error);
+			}
+			if constexpr (!std::is_void_v<T>) {
+				return std::move(*state_->value);
+			}
+		}
+
+	private:
+		friend class ParkHost;
+		struct State {
+			std::atomic<bool> done{false};
+			std::exception_ptr error;
+			std::optional<std::conditional_t<std::is_void_v<T>, std::monostate, T>> value;
+		};
+		std::shared_ptr<State> state_ = std::make_shared<State>();
+	};
+
+	ParkHost() : thread_([this] { loop(); }) { }
+	~ParkHost() override {
+		{
+			std::lock_guard<std::mutex> lk(m_);
+			stop_ = true;
+		}
+		cv_.notify_one();
+		thread_.join();
+	}
+
+	void post(std::coroutine_handle<> h) override { push({h, nullptr, nullptr}); }
+	void post_call(void (*fn)(void*), void* arg) override { push({{}, fn, arg}); }
+
+	// True when nothing is left to run here (timers apart).
+	bool idle() const {
+		std::lock_guard<std::mutex> lk(m_);
+		return idle_;
+	}
+
+	template <typename T>
+	Job<T> start(task::task<T> t) {
+		Job<T> job;
+		auto state = job.state_;
+		if constexpr (std::is_void_v<T>) {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [state](std::exception_ptr e) {
+				state->error = e;
+				state->done = true;
+			});
+		} else {
+			task::spawn(task::scheduler_ref::of(*this), std::move(t), [state](std::exception_ptr e, std::optional<T> v) {
+				state->error = e;
+				state->value = std::move(v);
+				state->done = true;
+			});
+		}
+		return job;
+	}
+
+protected:
+	std::unique_ptr<Timer> arm(std::chrono::steady_clock::time_point at, std::unique_ptr<TimerNode> node) override {
+		std::lock_guard<std::mutex> lk(m_);
+		const auto id = ++last_id_;
+		timers_.push_back({at, id, std::move(node)});
+		cv_.notify_one();
+		return std::make_unique<Armed>(*this, id);
+	}
+
+private:
+	struct Ready {
+		std::coroutine_handle<> h;
+		void (*fn)(void*);
+		void* arg;
+	};
+	struct Entry {
+		std::chrono::steady_clock::time_point at;
+		std::uint64_t id;
+		std::unique_ptr<TimerNode> node;
+	};
+	class Armed final : public Timer {
+	public:
+		Armed(ParkHost& owner, std::uint64_t id) : owner_(owner), id_(id) { }
+		~Armed() override {
+			std::unique_ptr<TimerNode> dropped;
+			std::lock_guard<std::mutex> lk(owner_.m_);
+			const auto it = std::find_if(owner_.timers_.begin(), owner_.timers_.end(), [this](const Entry& e) { return e.id == id_; });
+			if (it != owner_.timers_.end()) {
+				dropped = std::move(it->node);
+				owner_.timers_.erase(it);
+			}
+		}
+
+	private:
+		ParkHost& owner_;
+		std::uint64_t id_;
+	};
+
+	void push(Ready ready) {
+		std::lock_guard<std::mutex> lk(m_);
+		ready_.push_back(ready);
+		idle_ = false;
+		cv_.notify_one();
+	}
+
+	void loop() {
+		Host::bind_thread(this);
+		std::unique_lock<std::mutex> lk(m_);
+		for (;;) {
+			if (!ready_.empty()) {
+				const auto next = ready_.front();
+				ready_.pop_front();
+				lk.unlock();
+				{
+					task::running_on scope(task::scheduler_ref::of(*this));
+					if (next.fn != nullptr) {
+						next.fn(next.arg);
+					} else {
+						next.h.resume();
+					}
+				}
+				lk.lock();
+				continue;
+			}
+			if (stop_) {
+				return;
+			}
+			idle_ = true;
+			if (!timers_.empty()) {
+				const auto next = std::min_element(timers_.begin(), timers_.end(), [](const Entry& a, const Entry& b) { return a.at < b.at; });
+				if (next->at <= std::chrono::steady_clock::now()) {
+					auto node = std::move(next->node);
+					timers_.erase(next);
+					lk.unlock();
+					node->fire();
+					node.reset();
+					lk.lock();
+					continue;
+				}
+				cv_.wait_until(lk, next->at);
+				continue;
+			}
+			cv_.wait(lk);
+		}
+	}
+
+	mutable std::mutex m_;
+	std::condition_variable cv_;
+	std::deque<Ready> ready_;
+	std::vector<Entry> timers_;
+	std::uint64_t last_id_ = 0;
+	bool idle_ = false;
+	bool stop_ = false;
 	std::thread thread_;
 };
 
@@ -204,11 +396,29 @@ engine::Document make(const std::string& key) {
 	return doc;
 }
 
+// A TCP port the OS has just handed out, so test runs at the same time on one host never share one.
+int free_port() {
+	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	socklen_t len = sizeof(addr);
+	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
+		std::fprintf(stderr, "FAIL: no free port\n");
+		std::exit(1);
+	}
+	::close(fd);
+	return ntohs(addr.sin_port);
+}
+
+// The port of the test process's node.
+const int node_port = free_port();
+
 // The node of the test process: a manager whose control loop runs on its own thread, serving on a port of its own,
 // in a data directory of its own.
 class RunningNode {
 public:
-	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = "18781", bool keep = false) {
+	explicit RunningNode(const std::string& name = "node_test_data", const std::string& port = std::to_string(node_port), bool keep = false) {
 		// What main() installs: a node takes SIGUSR2 to collect the threads' call stacks.
 		::signal(SIGPIPE, SIG_IGN);
 		struct sigaction sa;
@@ -263,9 +473,16 @@ public:
 
 	bool ready() const { return ready_; }
 
-	// Whether run() ended (the node stopped itself), and the status the process would end with.
+	// Whether run() ended (the node stopped itself).
 	bool exited() const { return exited_.load(); }
-	int exit_code() const { return exit_code_.load(); }
+
+	// Joins the control loop's thread once run() ended, and gives the status the process ends with.
+	int join() {
+		if (thread_.joinable()) {
+			thread_.join();
+		}
+		return exit_code_.load();
+	}
 
 private:
 	std::thread thread_;
@@ -292,16 +509,16 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	Watchdog watchdog("one schema load");
 	constexpr int N = 6;
 	const auto endpoints = endpoints_of("schema_once");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
 	// A write applied and not yet refreshed: a read of the index takes its turn to refresh first.
-	Shard shard(*entry.get(), WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));
 	const auto loads_before = manager()->schemas->loads();
 	std::atomic<int> done{0};
 	std::vector<std::shared_ptr<const MsgPack>> got(N);
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&, i] {
 				DatabaseHandler handler(endpoints, DB_OPEN);
@@ -328,19 +545,70 @@ static void test_concurrent_first_uses_of_a_schema_load_it_once() {
 	}
 }
 
+// A first use that missed the cache and is paused before it claims the load, while the other calls load the schema and
+// finish, loads nothing when it resumes: the load it missed has put the schema in the cache. `gated` is the seam that
+// holds the first call to reach it.
+static void a_call_paused_before_its_claim_loads_nothing(const char* name, const char* index, bool metadata) {
+	Watchdog watchdog(name);
+	constexpr int N = 6;
+	const auto endpoints = endpoints_of(index);
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	auto seam = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = seam;
+	std::atomic<int> done{0};
+	std::vector<std::shared_ptr<const MsgPack>> got(N);
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&, i] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			auto result = engine::sync_wait(schemas.get(&handler, nullptr));
+			got[i] = std::get<0>(result);
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(schemas.loads() - loads_before, 2u);              // the metadata read and the foreign schema: once each
+	CHECK_EQ(done.load(), N - 1);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	(metadata ? schemas.before_metadata_claim : schemas.before_foreign_claim) = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(schemas.loads() - loads_before, 2u);   // and the paused call loaded neither
+	for (int i = 1; i < N; ++i) {
+		CHECK(got[i] == got[0]);
+	}
+}
+
+static void test_a_call_paused_before_claiming_the_foreign_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the foreign claim", "schema_paused_foreign", false);
+}
+
+static void test_a_call_paused_before_claiming_the_metadata_load_loads_nothing() {
+	a_call_paused_before_its_claim_loads_nothing("paused before the metadata claim", "schema_paused_metadata", true);
+}
+
 // The same for the settings of an index: the resolver reads them once.
 static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	Watchdog watchdog("one settings load");
 	constexpr int N = 6;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("settings_once_marker")));   // so that a read of the index takes its turn
 	const auto loads_before = manager()->index_settings_resolver->loads();
 	std::atomic<int> done{0};
 	std::vector<std::thread> threads;
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		for (int i = 0; i < N; ++i) {
 			threads.emplace_back([&] {
 				auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_once"));
@@ -357,6 +625,40 @@ static void test_concurrent_first_uses_of_index_settings_load_them_once() {
 	}
 	CHECK_EQ(done.load(), N);
 	CHECK_EQ(manager()->index_settings_resolver->loads() - loads_before, 1u);
+}
+
+// The same for the settings of an index: a call paused after it missed the cache and before it claims the read loads
+// nothing when it resumes, the read that ended meanwhile having put the settings in the cache.
+static void test_a_call_paused_before_claiming_the_settings_load_loads_nothing() {
+	Watchdog watchdog("paused before the settings claim");
+	constexpr int N = 6;
+	auto& resolver = *manager()->index_settings_resolver;
+	const auto loads_before = resolver.loads();
+	std::atomic<int> arrivals{0};
+	task::event gate;
+	resolver.before_settings_claim = [&]() -> task::task<void> {
+		if (arrivals++ == 0) {
+			co_await gate;
+		}
+	};
+	std::atomic<int> done{0};
+	std::vector<std::thread> threads;
+	for (int i = 0; i < N; ++i) {
+		threads.emplace_back([&] {
+			auto settings = engine::sync_wait(XapiandManager::resolve_index_settings("settings_paused"));
+			(void)settings;
+			++done;
+		});
+	}
+	CHECK(eventually([&] { return done.load() == N - 1; }, 20s));   // every call but the paused one has finished
+	CHECK_EQ(resolver.loads() - loads_before, 1u);
+	gate.set();
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	resolver.before_settings_claim = nullptr;
+	CHECK_EQ(done.load(), N);
+	CHECK_EQ(resolver.loads() - loads_before, 1u);   // the paused call read nothing
 }
 
 // Late uses are served from the cache and load nothing.
@@ -429,11 +731,11 @@ static void test_the_control_loop_is_free_during_a_slow_commit() {
 	Watchdog watchdog("slow commit");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_commit");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	auto gate = std::make_unique<GateChores>(A::take_chores(*entry.get()));
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	auto gate = std::make_unique<GateChores>(A::take_chores(entry.entry()));
 	auto* raw = gate.get();
-	A::set_chores(*entry.get(), std::move(gate));
-	Shard shard(*entry.get(), WRITE);
+	A::set_chores(entry.entry(), std::move(gate));
+	Shard shard = use_index(entry, WRITE);
 	engine::sync_wait(shard.ready());
 	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit
 	raw->arm();                                           // and the commit it starts waits for release()
@@ -459,14 +761,14 @@ static void test_the_control_loop_is_free_during_a_schema_load() {
 	Watchdog watchdog("slow schema load");
 	Pulse pulse;
 	const auto endpoints = endpoints_of("slow_schema");
-	auto entry = manager()->database_pool->spawn(endpoints[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("K1")));   // applied and not refreshed: the schema read takes the turn
 	std::atomic<bool> loaded{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](const Endpoints& endpoints, std::atomic<bool>& loaded) -> task::task<void> {
 			DatabaseHandler handler(endpoints, DB_OPEN);
 			co_await manager()->schemas->get(&handler, nullptr);
@@ -514,14 +816,14 @@ static int connect_to(int port) {
 }
 
 // One request on a connection of its own; the whole response (the server closes after it).
-static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "") {
+static std::string http_call(int port, const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
 	const int fd = connect_to(port);
 	if (fd < 0) {
 		return "";
 	}
 	timeval timeout{10, 0};
 	::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-	const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+	const auto request = method + " " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: " + content_type + "\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
 	::send(fd, request.data(), request.size(), 0);
 	std::string response;
 	char buf[4096];
@@ -533,7 +835,7 @@ static std::string http_call(int port, const std::string& method, const std::str
 	return response;
 }
 
-static constexpr int abandon_port = 18782;
+static const int abandon_port = free_port();
 static constexpr int acked_writes = 5;
 
 struct AbandonSpec {
@@ -555,8 +857,8 @@ struct AbandonSpec {
 		std::_Exit(2);
 	}
 	manager()->shutdown_write_bound = spec.bound;
-	auto entry = manager()->database_pool->spawn(endpoints_of("abandon")[0]);
-	HoldTurn hold(*entry.get(), WRITE);
+	auto entry = pin_index(*manager()->database_pool, endpoints_of("abandon")[0].path, WRITE);
+	HoldTurn hold(entry.entry(), WRITE);
 
 	if (spec.request) {
 		const int fd = connect_to(abandon_port);
@@ -589,13 +891,14 @@ struct AbandonSpec {
 	if (spec.release_after.count() != 0) {
 		std::this_thread::sleep_for(spec.release_after);
 		hold.release();
-		entry.reset();   // the registry closes the index only once nobody refers to it
+		entry.release();   // the catalog closes the index only once nobody pins it
 		if (!eventually([&] { return node.exited(); }, 60s)) {
 			std::_Exit(7);
 		}
+		const int code = node.join();
 		Logging::finish();
 		Logging::join();
-		std::_Exit(node.exit_code());
+		std::_Exit(code);
 	}
 	std::this_thread::sleep_for(60s);   // the shutdown ends the process
 	std::_Exit(5);
@@ -699,6 +1002,23 @@ static long long stop_ms(const std::string& log) {
 	return exiting_ms - std::stoll(log.substr(at + 12));
 }
 
+// A line of the report that names the abandoned index's key and its one pin held ("'<path>/abandon' (state, 1 pin, pinned)").
+static bool names_the_abandoned_index(const std::string& log) {
+	std::size_t at = 0;
+	while (at < log.size()) {
+		auto end = log.find('\n', at);
+		if (end == std::string::npos) {
+			end = log.size();
+		}
+		const auto line = log.substr(at, end - at);
+		if (line.find("abandon' (") != std::string::npos && line.find(", 1 pin, pinned)") != std::string::npos) {
+			return true;
+		}
+		at = end + 1;
+	}
+	return false;
+}
+
 // The shutdown abandons what it cannot finish in its bound and exits 75 (EX_TEMPFAIL). Every write acknowledged
 // before it is there after a restart of the data directory. The stop is one bound long, not one for the service and
 // another for the registry. The bound is under the reserve, so the HTTP stop gets the shortest grace and ends the
@@ -718,7 +1038,7 @@ static void test_a_shutdown_abandons_what_it_cannot_finish_within_its_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}   // one bound (and the log flush), where two bounds took more than twice the bound
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(names_the_abandoned_index(log));   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the HTTP stop ended in its grace: the write was destroyed, not abandoned
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 
@@ -772,6 +1092,89 @@ static void test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has
 	}
 }
 
+// ---- a write whose client half-closes after its body ----
+
+static const int half_close_port = free_port();
+
+// The child: a PUT that waits for a held turn while its client half-closes (the server reads its EOF, which requests
+// the request's token), then the turn is let go. The write is admitted, so it completes and is answered.
+[[noreturn]] static void half_closed_put_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	int code = 0;
+	{
+		RunningNode node("node_half_close_data", std::to_string(half_close_port));
+		if (!node.ready()) {
+			std::_Exit(2);
+		}
+		std::optional<IndexPin> entry(pin_index(*manager()->database_pool, endpoints_of("half_closed")[0].path, WRITE));
+		std::optional<HoldTurn> hold(std::in_place, entry->entry(), WRITE);
+		const int fd = connect_to(half_close_port);
+		if (fd < 0) {
+			std::_Exit(3);
+		}
+		const char* request = "PUT /half_closed/1?commit HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 21\r\n\r\n{\"marker\":\"half-way\"}";
+		::send(fd, request, std::strlen(request), 0);
+		::shutdown(fd, SHUT_WR);   // the body is whole; the client sends nothing more
+		if (!eventually([] { return manager()->http_service->reactor(0).gate().inflight.load() == 1; })) {
+			std::_Exit(4);
+		}
+		std::this_thread::sleep_for(300ms);   // the server has read the EOF while the write waits for its turn
+		hold.reset();
+		entry.reset();
+		timeval timeout{10, 0};
+		::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+		std::string response;
+		char buf[4096];
+		ssize_t n;
+		while ((n = ::recv(fd, buf, sizeof(buf), 0)) > 0) {
+			response.append(buf, static_cast<std::size_t>(n));
+		}
+		::close(fd);
+		if (response.rfind("HTTP/1.1 204", 0) != 0) {
+			std::fprintf(stderr, "HALF-CLOSED PUT answered: %s\n", response.substr(0, 80).c_str());
+			code = 5;
+		}
+	}   // the node stops
+	Logging::finish();
+	Logging::join();
+	std::_Exit(code);
+}
+
+// The restart: the half-closed write is there.
+[[noreturn]] static void half_closed_restart_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_half_close_data", std::to_string(half_close_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	const auto response = http_call(half_close_port, "GET", "/half_closed/1");
+	if (response.rfind("HTTP/1.1 200", 0) != 0 || response.find("half-way") == std::string::npos) {
+		std::fprintf(stderr, "MISSING the half-closed write: %s\n", response.substr(0, 80).c_str());
+		std::_Exit(10);
+	}
+	std::_Exit(0);
+}
+
+// A PUT whose client half-closes after its body completes durably (T9): the EOF cancels reads, not an admitted write.
+static void test_a_put_whose_client_half_closes_completes_durably() {
+	const auto result = run_child([&] { half_closed_put_child("node_half_close.log"); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 0);
+	if (result.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close.log").c_str());
+	}
+	const auto restart = run_child([&] { half_closed_restart_child("node_half_close_restart.log"); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close_restart.log").c_str());
+	}
+}
+
 // The service stops at once; the registry cannot close an index whose turn a thread holds, and its close ends at the
 // bound like the rest of the stop (it used to wait without a limit).
 static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
@@ -789,7 +1192,7 @@ static void test_a_registry_that_cannot_close_ends_the_stop_at_the_bound() {
 		std::fprintf(stderr, "%s\n", log.c_str());   // the timeline of the stop
 	}
 	CHECK(log.find("Shutdown abandoned the indexes that are still in use") != std::string::npos);
-	CHECK(log.find("turn held") != std::string::npos);
+	CHECK(names_the_abandoned_index(log));   // the turn is held under a pin, which the catalog names
 	CHECK(log.find("unfinished item") == std::string::npos);   // the service itself stopped
 	CHECK(log.find("Exiting with unfinished writes abandoned") != std::string::npos);
 }
@@ -855,21 +1258,23 @@ static void test_a_second_signal_ends_the_shutdowns_wait() {
 	std::freopen(log_path, "w", stderr);
 	std::setvbuf(stderr, nullptr, _IONBF, 0);   // freopen to a file leaves stderr buffered, and abort() does not flush it
 	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	const int port = free_port();
 	const int taken = ::socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in addr{};
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(18783);
+	addr.sin_port = htons(static_cast<std::uint16_t>(port));
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	if (::bind(taken, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(taken, 8) != 0) {
 		std::_Exit(2);
 	}
-	RunningNode node("node_taken_data", "18783");
+	RunningNode node("node_taken_data", std::to_string(port));
 	if (!eventually([&] { return node.exited(); }, 20s)) {
 		std::_Exit(5);   // still up, serving nothing
 	}
+	const int code = node.join();
 	Logging::finish();
 	Logging::join();
-	std::_Exit(node.exit_code());
+	std::_Exit(code);
 }
 
 static void test_a_node_on_a_taken_port_ends_the_process() {
@@ -890,14 +1295,14 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 	Watchdog watchdog("slow settings load");
 	Pulse pulse;
 	const auto reserved = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint(".xapiand/indexes"), true));
-	auto entry = manager()->database_pool->spawn(reserved[0]);
-	Shard shard(*entry.get(), WRITE_QUIET);
+	auto entry = pin_index(*manager()->database_pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
 	engine::sync_wait(shard.add_document(make("slow_settings_marker")));   // so that a read of the index takes its turn
 	std::atomic<bool> resolved{false};
 	std::atomic<int> sentinels{0};
 	const auto before = manager()->control_lag().snapshot();
 	{
-		HoldTurn hold(*entry.get(), WRITE);
+		HoldTurn hold(entry.entry(), WRITE);
 		manager()->spawn_control([](std::atomic<bool>& resolved) -> task::task<void> {
 			co_await XapiandManager::resolve_index_settings("slow_settings");
 			resolved = true;
@@ -923,6 +1328,1712 @@ static void test_the_control_loop_is_free_during_a_settings_load() {
 }
 
 
+// A search over several indexes skips one that does not exist (a list or a pattern may name it): its pin's not_found
+// comes at the use, inside the read, where the batch skips it, not at lock_shard's pin.
+static void test_a_search_batch_skips_a_missing_index() {
+	Watchdog watchdog("a search batch skips a missing index");
+	auto endpoints = endpoints_of("batch_present");
+	{
+		auto entry = pin_index(*manager()->database_pool, endpoints[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
+		engine::sync_wait(shard.add_document(make("K1")));
+		engine::sync_wait(shard.commit());
+	}
+	const auto missing = endpoints_of("batch_missing");
+	endpoints.add(missing[0]);
+	DatabaseHandler handler(endpoints, DB_OPEN);
+	const auto result = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));   // its batches
+	CHECK_EQ(result.hits.size(), 1u);
+	CHECK_FALSE(std::filesystem::exists(missing[0].path));
+}
+
+
+// A write that may not create its index, to an index that does not exist, is not_found (a 404), as a read of it
+// is: its use has no pin, and that use names the missing index rather than a closed one.
+static void test_a_write_to_a_missing_index_is_not_found() {
+	Watchdog watchdog("a write to a missing index is not_found");
+	const auto endpoints = endpoints_of("write_missing");
+	DatabaseHandler handler(endpoints, DB_OPEN | DB_WRITABLE);
+	engine::errc kind = engine::errc::internal;
+	try {
+		engine::sync_wait(handler.set_metadata(std::string("foo"), std::string("bar")));
+	} catch (const engine::Error& error) {
+		kind = error.kind;
+	}
+	CHECK(kind == engine::errc::not_found);
+	CHECK_FALSE(std::filesystem::exists(endpoints[0].path));
+}
+
+
+// A search that names one index twice pins it once and searches it at both positions: a second pin of a key in one
+// request would wait for itself while its index is replaced. The read waits for the held turn with every pin taken.
+static void test_a_search_batch_pins_a_repeated_index_once() {
+	Watchdog watchdog("a search batch pins a repeated index once");
+	auto& pool = *manager()->database_pool;
+	auto endpoints = endpoints_of("batch_repeated");
+	const std::string key = endpoints[0].path;
+	auto entry = pin_index(pool, key, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));
+	engine::sync_wait(shard.commit());
+	const auto once = engine::sync_wait(DatabaseHandler(endpoints, DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	Endpoint again = endpoints[0];
+	again.node_name += "_again";
+	endpoints.add(again);
+	REQUIRE(endpoints.size() == 2u);
+	const auto pins = [&] {
+		for (const auto& slot : pool.catalog().snapshot()) {
+			if (slot.key == key) {
+				return slot.pins;
+			}
+		}
+		return std::uint64_t{0};
+	};
+	const auto before = pins();
+	engine::sync_wait(shard.add_document(make("K2")));   // applied, not refreshed: the search's read takes the turn
+	std::size_t twice = 0;
+	{
+		HoldTurn hold(entry.entry(), WRITE_QUIET);
+		std::thread search([&] {
+			DatabaseHandler handler(endpoints, DB_OPEN);
+			twice = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body"))).hits.size();
+		});
+		CHECK(eventually([&] { return pins() > before; }, 3s));
+		std::this_thread::sleep_for(200ms);   // a second pin would come before the read, which waits for the turn
+		CHECK_EQ(pins(), before + 1);
+		hold.release();
+		search.join();
+	}
+	const auto after = engine::sync_wait(DatabaseHandler(endpoints_of("batch_repeated"), DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	CHECK_EQ(once, 1u);
+	CHECK_EQ(twice, 2 * after);
+}
+
+
+// A search's batch waits for its indexes with the request's token (its budget's): a cancelled search stops waiting.
+// Here its read waits for a turn another task holds.
+static void test_a_cancelled_search_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled search stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_search");
+	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: the search's read takes the turn
+	HoldTurn hold(entry.entry(), WRITE_QUIET);
+	task::cancel_source cancel;
+	task::budget budget(std::chrono::milliseconds(10), cancel.token());
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread search([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		handler.budget = &budget;
+		try {
+			engine::sync_wait(handler.get_mset(engine::Query::term("f", "body")));
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	CHECK(eventually([&] { return ended.load(); }, 3s));
+	hold.release();
+	search.join();
+	CHECK_TRUE(cancelled.load());
+}
+
+
+// A request's lock_shard waits for its index with the request's token: a cancelled request stops waiting with
+// task::cancelled. Here the index is being replaced, which waits for the pin still held.
+static void test_a_cancelled_request_stops_waiting_for_its_index() {
+	Watchdog watchdog("a cancelled request stops waiting");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("cancelled_request");
+	std::optional<IndexPin> holder(pin_index(pool, endpoints[0].path, WRITE_QUIET));
+	pin_index(pool, endpoints[0].path, WRITE_QUIET).reopen();   // the replace waits for the holder
+	task::cancel_source cancel;
+	std::atomic<bool> ended{false}, cancelled{false};
+	std::thread request([&] {
+		lock_shard lk_shard(endpoints[0], WRITE_QUIET, cancel.token());
+		try {
+			engine::sync_wait(lk_shard.pin());
+		} catch (const task::cancelled&) {
+			cancelled = true;
+		}
+		ended = true;
+	});
+	std::this_thread::sleep_for(100ms);
+	CHECK_FALSE(ended.load());
+	cancel.request();
+	request.join();
+	CHECK_TRUE(cancelled.load());
+	holder.reset();
+	CHECK(static_cast<bool>(pin_index(pool, endpoints[0].path, WRITE_QUIET)));
+}
+
+
+// An autocommit whose turn does not come is armed again (x-pool D8): the write it could not commit is committed once
+// the turn is let go, with no other write to schedule it.
+static void test_a_busy_autocommit_comes_back_for_its_write() {
+	Watchdog watchdog("busy autocommit");
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of("busy_autocommit");
+	auto entry = pin_index(pool, endpoints[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE);
+	engine::sync_wait(shard.ready());
+	pool.set_turn_timeout(0.1);
+	engine::sync_wait(shard.add_document(make("K1")));   // schedules the autocommit (200 ms)
+	{
+		HoldTurn hold(entry.entry(), WRITE);
+		std::this_thread::sleep_for(700ms);   // its commit times out with busy, at least twice
+		CHECK(entry->is_modified());
+	}
+	CHECK(eventually([&] { return !entry->is_modified(); }, 3s));
+	pool.set_turn_timeout(DB_TIMEOUT);
+}
+
+// ---- writes over HTTP: document ids and expected versions ----
+
+// A response of the test's node: its status and its JSON body (undefined when it has none).
+struct Reply {
+	int status = 0;
+	MsgPack body;
+};
+
+static Reply call(const std::string& method, const std::string& path, const std::string& body = "", const std::string& content_type = "application/json") {
+	const auto response = http_call(node_port, method, path, body, content_type);
+	Reply reply;
+	if (response.size() < 12 || response.rfind("HTTP/1.1 ", 0) != 0) {
+		return reply;
+	}
+	reply.status = std::atoi(response.c_str() + 9);
+	const auto end = response.find("\r\n\r\n");
+	if (end == std::string::npos) {
+		return reply;
+	}
+	auto payload = response.substr(end + 4);
+	if (response.substr(0, end).find("chunked") != std::string::npos) {
+		std::string joined;
+		for (std::size_t pos = 0;;) {
+			const auto eol = payload.find("\r\n", pos);
+			const auto size = eol == std::string::npos ? 0 : std::stoul(payload.substr(pos, eol - pos), nullptr, 16);
+			if (size == 0) {
+				break;
+			}
+			joined.append(payload, eol + 2, size);
+			pos = eol + 2 + size + 2;
+		}
+		payload = std::move(joined);
+	}
+	if (!payload.empty()) {
+		try {
+			rapidjson::Document rdoc;
+			json_load(rdoc, payload);
+			reply.body = MsgPack(rdoc);
+		} catch (...) { }
+	}
+	return reply;
+}
+
+static bool success(const Reply& reply) {
+	return reply.status >= 200 && reply.status < 300;
+}
+
+// A field of a reply's body; undefined when there is none.
+static MsgPack field_of(const Reply& reply, std::string_view name) {
+	if (!reply.body.is_map()) {
+		return MsgPack();
+	}
+	const auto it = reply.body.find(name);
+	return it == reply.body.end() ? MsgPack() : it.value();
+}
+
+// A field of a reply's body as text: a number as its digits, a string as it is; "" when there is none.
+static std::string text_of(const Reply& reply, std::string_view name) {
+	const auto value = field_of(reply, name);
+	return value.is_string() ? value.str() : value.is_undefined() ? std::string() : value.to_string();
+}
+
+// The `_version` of a reply's body; -1 when it has none.
+static long long version_of(const Reply& reply) {
+	const auto value = field_of(reply, "_version");
+	return value.is_number() ? value.as_i64() : -1;
+}
+
+// The `n` of each hit of a search, in order.
+static std::vector<std::string> hits_of(const Reply& reply) {
+	std::vector<std::string> ns;
+	const auto hits = field_of(reply, "hits");
+	if (hits.is_array()) {
+		for (const auto& hit : hits) {
+			const auto it = hit.find("n");
+			ns.push_back(it == hit.end() ? std::string() : it.value().str());
+		}
+	}
+	return ns;
+}
+
+// The shard counts the id and version cases run at: one shard, and more than one, where a key's shard is chosen
+// before its turn.
+constexpr int shard_counts[] = {1, 2};
+
+// Creates the index `name` with `shards` shards and no replicas, and `schema` (a JSON object) when given.
+static void create_index(const std::string& name, int shards, const std::string& schema = "") {
+	const auto settings = R"({"_settings":{"number_of_shards":)" + std::to_string(shards) + R"(,"number_of_replicas":0})";
+	CHECK(success(call("PUT", "/" + name + "/", settings + (schema.empty() ? "" : R"(,"_schema":)" + schema) + "}")));
+	CHECK_EQ(static_cast<int>(endpoints_of(name).size()), shards);
+}
+
+// Holds the turn of every shard of an index from threads of their own until released.
+class HoldEveryShard {
+public:
+	explicit HoldEveryShard(const std::string& name) {
+		for (const auto& endpoint : endpoints_of(name)) {
+			pins_.push_back(pin_index(*manager()->database_pool, endpoint.path, WRITE));
+		}
+		for (auto& pin : pins_) {
+			holds_.push_back(std::make_unique<HoldTurn>(pin.entry(), WRITE));
+		}
+	}
+	void release() { holds_.clear(); }
+
+private:
+	std::vector<IndexPin> pins_;
+	std::vector<std::unique_ptr<HoldTurn>> holds_;
+};
+
+static std::size_t requests_inflight() {
+	return manager()->http_service->reactor(0).gate().inflight.load();
+}
+
+// Ids round trip through PUT, GET, SEARCH and DELETE, each touching only its own document: `ids` in the index at
+// `path`, whose first id sets the type of its ids, each written once with its `n` the id's text; `literal` is an id
+// as a JSON value. With `numbered`, a POST then adds a document whose id the shard issues, which takes none of them.
+static void ids_round_trip(const std::string& path, const std::vector<std::string>& ids, std::string (*literal)(const std::string&), bool numbered) {
+	for (const auto& id : ids) {
+		CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":")" + id + R"("})").status, 204);
+	}
+	auto all = ids;
+	if (numbered) {
+		const auto posted = call("POST", path + "?commit&echo", R"({"n":"new"})");
+		CHECK(success(posted));
+		const auto id = text_of(posted, "_id");
+		CHECK(field_of(posted, "_id").is_integer());
+		CHECK(std::find(ids.begin(), ids.end(), id) == ids.end());
+		CHECK_EQ(version_of(posted), 1);
+		all.push_back(id);
+	}
+	const auto n_of = [&](std::size_t i) { return i < ids.size() ? ids[i] : std::string("new"); };
+	for (std::size_t i = 0; i < all.size(); ++i) {
+		const auto got = call("GET", path + all[i]);
+		CHECK_EQ(got.status, 200);
+		CHECK_EQ(text_of(got, "n"), n_of(i));
+		if (text_of(got, "_id") != all[i]) {
+			std::fprintf(stderr, "  %s%s: GET gives _id %s\n", path.c_str(), all[i].c_str(), text_of(got, "_id").c_str());
+		}
+		CHECK_EQ(text_of(got, "_id"), all[i]);
+		CHECK_EQ(version_of(got), 1);   // written once: no other write landed on it
+		const auto found = call("SEARCH", path + "?volatile", R"({"_query":{"_id":)" + literal(all[i]) + "}}");
+		CHECK_EQ(found.status, 200);
+		CHECK(hits_of(found) == std::vector<std::string>{n_of(i)});
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), all.size());
+	for (std::size_t i = 0; i < all.size(); ++i) {
+		CHECK_EQ(call("DELETE", path + all[i] + "?commit").status, 204);
+		CHECK_EQ(call("GET", path + all[i]).status, 404);
+		for (std::size_t j = i + 1; j < all.size(); ++j) {
+			CHECK_EQ(text_of(call("GET", path + all[j]), "n"), n_of(j));
+		}
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), 0u);
+}
+
+static std::string number(const std::string& id) { return id; }
+static std::string quoted(const std::string& id) { return "\"" + id + "\""; }
+
+// A document id 0 is the document 0, not a new id. Negative, the largest, and those beside them are stored as
+// themselves too, and a keyword id "0" or "00" is its own. An id above the docids, such as 2^62, still leaves new
+// ids to issue after it.
+static void test_document_ids_are_themselves() {
+	Watchdog watchdog("document ids are themselves", 240s);
+	for (const int shards : shard_counts) {
+		const auto at = "_s" + std::to_string(shards);
+		create_index("ids_int" + at, shards);
+		ids_round_trip("/ids_int" + at + "/", {"-1", "0", "1", "2", "4294967000", "4294967297", "4611686018427387904"}, number, true);   // -1 first: the ids are integers
+		create_index("ids_pos" + at, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		ids_round_trip("/ids_pos" + at + "/", {"0", "1", "18446744073709551615"}, number, true);
+		create_index("ids_kw" + at, shards);
+		ids_round_trip("/ids_kw" + at + "/", {"a", "0", "00", "-1"}, quoted, false);   // a first: the ids are keywords
+
+		// A new id is issued above every numeric id the shards hold: one shard issues the next after it; more shards
+		// put it in the least used one, which issues it from a bucket it owns.
+		const auto seq = "/ids_seq" + at + "/";
+		create_index("ids_seq" + at, shards);
+		CHECK_EQ(call("PUT", seq + "2?commit", R"({"n":"2"})").status, 204);
+		const auto posted = call("POST", seq + "?commit&echo", R"({"n":"new"})");
+		CHECK(success(posted));
+		if (shards == 1) {
+			CHECK_EQ(text_of(posted, "_id"), "3");
+		} else {
+			CHECK(field_of(posted, "_id").is_integer());
+			CHECK_NE(text_of(posted, "_id"), "2");
+		}
+		CHECK_EQ(text_of(call("GET", seq + "2"), "n"), "2");
+		CHECK_EQ(version_of(call("GET", seq + "2")), 1);
+
+		// A body's id 0 is an id too (a RESTORE line), not a new one; an id false is none, so each such document gets
+		// its own new id, the one an index without an id type gives (a UUID), not false.
+		const auto restore = "/ids_restore" + at + "/";
+		create_index("ids_restore" + at, shards);
+		CHECK(success(call("RESTORE", restore + "?commit", "{\"_id\":1,\"n\":\"1\"}\n{\"_id\":0,\"n\":\"0\"}\n", "application/x-ndjson")));
+		for (const std::string id : {"0", "1"}) {
+			const auto got = call("GET", restore + id);
+			CHECK_EQ(text_of(got, "n"), id);
+			CHECK_EQ(version_of(got), 1);
+		}
+		const auto unnamed = "/ids_false" + at + "/";
+		create_index("ids_false" + at, shards);
+		CHECK(success(call("RESTORE", unnamed + "?commit", "{\"_id\":false,\"n\":\"f\"}\n{\"_id\":false,\"n\":\"g\"}\n", "application/x-ndjson")));
+		const auto found = call("SEARCH", unnamed + "?volatile", R"({"_limit":5})");
+		CHECK_EQ(field_of(found, "total").as_u64(), 2u);   // two new ids: false names no document for the second to replace
+		std::map<std::string, std::string> generated;   // id -> n
+		const auto hits = field_of(found, "hits");
+		if (hits.is_array()) {
+			for (const auto& hit : hits) {
+				const auto id = hit.find("_id");
+				const auto n = hit.find("n");
+				if (id != hit.end() && id.value().is_string() && n != hit.end() && n.value().is_string()) {
+					generated[id.value().str()] = n.value().str();
+				}
+			}
+		}
+		CHECK_EQ(generated.size(), 2u);
+		for (const auto& [id, n] : generated) {
+			CHECK_TRUE(id.size() > 5);   // a UUID, not false's text ("false", "f", "0") or empty
+			CHECK_TRUE(n == "f" || n == "g");
+			CHECK_EQ(text_of(call("GET", unnamed + id), "n"), n);
+		}
+		CHECK_FALSE(success(call("GET", unnamed + "false")));
+	}
+}
+
+// The body of a write of `v` by each method: a JSON patch for PATCH, the document for the others.
+static std::string write_body(const std::string& method, int v) {
+	if (method == "PATCH") {
+		return R"([{"op":"replace","path":"/v","value":)" + std::to_string(v) + "}]";
+	}
+	return method == "DELETE" ? std::string() : R"({"v":)" + std::to_string(v) + "}";
+}
+
+// `?version=N` is a precondition of every write: applied only while the document's version is N (0: no document),
+// else a 409 that says the current version in `_version` and changes nothing. A missing document has version 0 for
+// every method (Elasticsearch's if_seq_no); with the precondition held the method does what it does without one.
+static void a_version_is_a_precondition_of_every_write_at(int shards) {
+	const auto index = "versions_s" + std::to_string(shards);
+	create_index(index, shards);
+	for (const std::string method : {"PUT", "PATCH", "UPDATE", "UPSERT", "DELETE"}) {
+		const auto path = "/" + index + "/" + method;
+		CHECK_EQ(call("PUT", path + "?commit", R"({"v":1})").status, 204);
+		CHECK_EQ(call("PUT", path + "?commit", R"({"v":2})").status, 204);
+		for (const auto stale : {1, 0, 3}) {
+			const auto refused = call(method, path + "?commit&version=" + std::to_string(stale), write_body(method, 9));
+			CHECK_EQ(refused.status, 409);
+			CHECK_EQ(version_of(refused), 2);
+			const auto kept = call("GET", path);
+			CHECK_EQ(text_of(kept, "v"), "2");
+			CHECK_EQ(version_of(kept), 2);
+		}
+		CHECK(success(call(method, path + "?commit&version=2", write_body(method, 3))));
+		const auto applied = call("GET", path);
+		if (method == "DELETE") {
+			CHECK_EQ(applied.status, 404);
+		} else {
+			CHECK_EQ(text_of(applied, "v"), "3");
+			CHECK_EQ(version_of(applied), 3);
+		}
+
+		const auto missing = "/" + index + "/missing_" + method;
+		const auto refused = call(method, missing + "?commit&version=1", write_body(method, 4));
+		CHECK_EQ(refused.status, 409);
+		CHECK_EQ(version_of(refused), 0);
+		CHECK_EQ(call("GET", missing).status, 404);
+		const auto absent = call(method, missing + "?commit&version=0", write_body(method, 5));
+		if (method == "PUT" || method == "UPSERT") {
+			CHECK(success(absent));
+			const auto created = call("GET", missing);
+			CHECK_EQ(text_of(created, "v"), "5");
+			CHECK_EQ(version_of(created), 1);
+		} else {
+			CHECK_EQ(absent.status, 404);
+			CHECK_EQ(call("GET", missing).status, 404);
+		}
+	}
+}
+
+static void test_a_version_is_a_precondition_of_every_write() {
+	Watchdog watchdog("a version is a precondition of every write", 240s);
+	for (const int shards : shard_counts) {
+		a_version_is_a_precondition_of_every_write_at(shards);
+	}
+}
+
+// Writers that expect one version: exactly one is applied and the others are 409 with the version that one left.
+// The turn of every shard of the index is held until every writer waits on one (placement's look takes each shard's,
+// the write its own), so all are in flight before any applies (the interleaving the check in the turn is for).
+static void writers_expecting_one_version_apply_once_at(int shards) {
+	constexpr int writers = 6;
+	const auto index = "race_s" + std::to_string(shards);
+	create_index(index, shards);
+	for (const std::string method : {"PUT", "PATCH", "UPDATE", "UPSERT", "DELETE"}) {
+		const auto path = "/" + index + "/" + method;
+		CHECK_EQ(call("PUT", path + "?commit", R"({"v":-1})").status, 204);
+		std::vector<Reply> replies(writers);
+		std::vector<std::thread> threads;
+		{
+			HoldEveryShard hold(index);
+			for (int i = 0; i < writers; ++i) {
+				threads.emplace_back([&, i] { replies[i] = call(method, path + "?commit&version=1", write_body(method == "UPSERT" ? "UPDATE" : method, i)); });
+			}
+			CHECK(eventually([] { return requests_inflight() == writers; }));
+			std::this_thread::sleep_for(200ms);   // each waits on a turn: its placement look's or its write's
+			hold.release();
+		}
+		for (auto& thread : threads) {
+			thread.join();
+		}
+		int won = -1, wins = 0, conflicts = 0;
+		for (int i = 0; i < writers; ++i) {
+			if (success(replies[i])) {
+				won = i;
+				++wins;
+			} else if (replies[i].status == 409) {
+				++conflicts;
+				CHECK_EQ(version_of(replies[i]), method == "DELETE" ? 0 : 2);
+			}
+		}
+		CHECK_EQ(wins, 1);
+		CHECK_EQ(conflicts, writers - 1);
+		const auto got = call("GET", path);
+		if (method == "DELETE") {
+			CHECK_EQ(got.status, 404);
+		} else {
+			CHECK_EQ(text_of(got, "v"), std::to_string(won));
+			CHECK_EQ(version_of(got), 2);
+		}
+	}
+}
+
+static void test_writers_expecting_one_version_apply_once() {
+	Watchdog watchdog("writers expecting one version apply once", 240s);
+	for (const int shards : shard_counts) {
+		writers_expecting_one_version_apply_once_at(shards);
+	}
+}
+
+// A versioned DELETE checks the document its key names, in the turn: between its lookup and its turn the document is
+// deleted and its docid taken by a new id, and the DELETE is refused (the keyed document is gone) and leaves that one.
+static void test_a_versioned_delete_checks_the_document_its_key_names() {
+	Watchdog watchdog("a versioned delete checks the document its key names", 120s);
+	for (const int shards : shard_counts) {
+		const auto index = "reuse_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "-1?commit", R"({"v":"minus"})").status, 204);
+		const auto docid = field_of(call("INFO", path + "-1"), "docid");
+		CHECK(docid.is_number());
+		if (!docid.is_number()) {
+			continue;
+		}
+		const auto other = std::to_string(docid.as_i64());   // a new id that names the docid -1 frees
+		CHECK_EQ(call("GET", path + other).status, 404);
+		Reply deleted, put, versioned;
+		std::thread t1, t2, t3;
+		{
+			HoldEveryShard hold(index);
+			t1 = std::thread([&] { deleted = call("DELETE", path + "-1?commit"); });
+			CHECK(eventually([] { return requests_inflight() == 1; }));
+			std::this_thread::sleep_for(200ms);
+			t2 = std::thread([&] { put = call("PUT", path + other + "?commit", R"({"v":"other"})"); });
+			CHECK(eventually([] { return requests_inflight() == 2; }));
+			std::this_thread::sleep_for(200ms);
+			t3 = std::thread([&] { versioned = call("DELETE", path + "-1?commit&version=1"); });
+			CHECK(eventually([] { return requests_inflight() == 3; }));
+			std::this_thread::sleep_for(200ms);   // the versioned DELETE waits on a turn: its placement look's or its erase's
+			hold.release();
+		}
+		t1.join();
+		t2.join();
+		t3.join();
+		CHECK_EQ(deleted.status, 204);
+		CHECK_EQ(put.status, 204);
+		CHECK_EQ(versioned.status, 409);
+		CHECK_EQ(version_of(versioned), 0);
+		const auto kept = call("GET", path + other);
+		CHECK_EQ(kept.status, 200);
+		CHECK_EQ(text_of(kept, "v"), "other");
+		CHECK_EQ(version_of(kept), 1);
+	}
+}
+
+// ---- placement: where a write puts a document, read without flushing the shards ----
+
+// The segments a shard's index holds now (its seg-<id>.sx files) and the highest id among them, which counts the
+// segments it wrote: a merge's output takes a new id too.
+struct SegmentFiles {
+	int count = 0;
+	std::uint64_t highest = 0;
+};
+
+static SegmentFiles segment_files(const Endpoint& endpoint) {
+	auto dir = std::filesystem::path(endpoint.path) / "strata";
+	if (dir.is_relative()) {
+		dir = std::filesystem::path(Endpoint::cwd) / dir;
+	}
+	CHECK(std::filesystem::is_directory(dir));
+	SegmentFiles files;
+	std::error_code ec;
+	for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+		const auto name = entry.path().filename().string();
+		if (name.rfind("seg-", 0) != 0 || !name.ends_with(".sx")) {
+			continue;
+		}
+		++files.count;
+		files.highest = std::max<std::uint64_t>(files.highest, std::stoull(name.substr(4)));
+	}
+	return files;
+}
+
+// A RESTORE of 1,000 documents into 5 shards writes a few segments per shard: placing each document reads the
+// shards as their writes left them, so it flushes none of them (one segment per document when it did). With ids,
+// and without (each document gets a new id, placed by its hash).
+static void test_a_restore_into_shards_writes_a_few_segments() {
+	Watchdog watchdog("a restore into shards writes a few segments", 240s);
+	for (const bool ids : {true, false}) {
+		const std::string index = ids ? "restore_ids_s5" : "restore_new_s5";
+		create_index(index, 5);
+		std::string body;
+		for (int i = 1; i <= 1000; ++i) {
+			body += (ids ? R"({"_id":)" + std::to_string(i) + "," : std::string("{")) + R"("n":")" + std::to_string(i) + "\"}\n";
+		}
+		CHECK(success(call("RESTORE", "/" + index + "/?commit", body, "application/x-ndjson")));
+		for (const auto& endpoint : endpoints_of(index)) {
+			const auto files = segment_files(endpoint);
+			std::fprintf(stderr, "  %s %s: %d segments, highest id %llu\n", index.c_str(), endpoint.path.c_str(), files.count, static_cast<unsigned long long>(files.highest));
+			CHECK_GE(files.count, 1);
+			CHECK_LE(files.highest, 3u);
+		}
+		CHECK_EQ(field_of(call("SEARCH", "/" + index + "/?volatile", R"({"_limit":1})"), "total").as_u64(), 1000u);
+	}
+}
+
+// A document on another shard than its id's hash names (where an earlier rule placed it) is written again on the
+// shard that holds it, while its write there is still buffered and after a commit, by a PUT and by a RESTORE line:
+// placement's look in every shard sees what each shard's writes left, flushed or not.
+static void test_an_existing_id_written_again_lands_on_its_shard() {
+	Watchdog watchdog("an existing id written again lands on its shard", 120s);
+	constexpr std::size_t shards = 5;
+	const std::string index = "placed_s5";
+	const auto path = "/" + index + "/";
+	create_index(index, shards);
+	CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+	const auto endpoints = endpoints_of(index);
+	DatabaseHandler db(endpoints, WRITE);
+	const auto holds = [&](std::size_t shard, const std::string& term) {
+		try {
+			return engine::sync_wait(DatabaseHandler(Endpoints(endpoints[shard]), DB_OPEN).get_docid_term(term)) != 0;
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+			return false;
+		}
+	};
+	for (int i = 0; i < 8; ++i) {
+		const bool flushed = i % 2 == 1;
+		const bool restored = i / 2 % 2 == 1;
+		const auto id = "k" + std::to_string(i);
+		auto obj = MsgPack{{"_id", id}, {"n", "first"}};
+		auto prepared = engine::sync_wait(db.prepare_document(obj, 0));
+		const auto term = std::get<0>(prepared);
+		const std::size_t hashed = id_shard(term, shards);
+		const std::size_t held = (hashed + 1 + static_cast<std::size_t>(i) % (shards - 1)) % shards;   // any shard but the hash's
+		{
+			auto pin = pin_index(*manager()->database_pool, endpoints[held].path, WRITE_QUIET);
+			auto shard = use_index(pin, WRITE_QUIET);
+			engine::sync_wait(shard.replace_document_term(term, std::move(std::get<1>(prepared)), flushed, false));
+			CHECK_EQ(pin.entry().engine().dirty(), !flushed);   // buffered until a commit or a read refreshes it
+		}
+		if (restored) {
+			CHECK(success(call("RESTORE", path, R"({"_id":")" + id + R"(","n":"again"})" "\n", "application/x-ndjson")));
+		} else {
+			CHECK_EQ(call("PUT", path + id, R"({"n":"again"})").status, 204);
+		}
+		for (std::size_t s = 0; s < shards; ++s) {
+			CHECK_EQ(holds(s, term), s == held);
+		}
+		const auto got = call("GET", path + id);
+		CHECK_EQ(text_of(got, "n"), "again");
+		CHECK_EQ(version_of(got), 2);
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 9u);
+}
+
+// An id seated off its hash shard (where an earlier placement rule put it) in a new index of 5 shards, and direct
+// writes of it on one shard, for the races of a write whose lookup found it there.
+struct OffHashId {
+	static constexpr std::size_t shards = 5;
+	std::string path;
+	Endpoints endpoints;
+	std::string id;
+	std::string term;
+	std::size_t hashed = 0;
+	std::size_t off = 0;
+
+	OffHashId(const std::string& index, std::string id_) : path("/" + index + "/"), id(std::move(id_)) {
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+		endpoints = endpoints_of(index);
+		term = std::get<0>(prepare("first"));
+		hashed = id_shard(term, shards);
+		off = hashed == 1 ? 2 : 1;   // not the hash's, and not shard 0, which a request's schema reads
+		seat(off, "first");
+		CHECK(holds(off));
+		CHECK_FALSE(holds(hashed));
+	}
+
+	// The id's document with `n`, prepared for a write.
+	std::tuple<std::string, engine::Document, MsgPack> prepare(const std::string& n) const {
+		auto obj = MsgPack{{"_id", id}, {"n", n}};
+		return engine::sync_wait(DatabaseHandler(endpoints, WRITE).prepare_document(obj, 0));
+	}
+
+	// Writes the id's document with `n` on `shard` by its key, committed: its shard docid.
+	engine::docid seat(std::size_t shard, const std::string& n) const {
+		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
+		auto use = use_index(pin, WRITE_QUIET);
+		return engine::sync_wait(use.replace_document_term(term, std::move(std::get<1>(prepare(n))), true, false)).did;
+	}
+
+	// Erases the id on `shard` by its key, in one turn of that shard.
+	void erase(std::size_t shard) const {
+		auto pin = pin_index(*manager()->database_pool, endpoints[shard].path, WRITE_QUIET);
+		auto use = use_index(pin, WRITE_QUIET);
+		engine::sync_wait(use.delete_document_term(term, false, false));
+	}
+
+	bool holds(std::size_t shard) const {
+		try {
+			return engine::sync_wait(DatabaseHandler(Endpoints(endpoints[shard]), DB_OPEN).get_docid_term(term)) != 0;
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+			return false;
+		}
+	}
+};
+
+// A replace with must_exist writes the keyed document only while it is at the docid: a docid that holds another
+// document, or none since the key was erased, answers doc_not_found and creates nothing; with an expected version
+// the write is checked as one to no document first (version_conflict); at its docid it is replaced.
+static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
+	Watchdog watchdog("a replace that must exist writes only where the key is");
+	const OffHashId x("must_exist_s5", "x");
+	auto pin = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(pin, WRITE_QUIET);
+	// The write's failure, or none.
+	const auto replace = [&](engine::docid did, bool must_exist, std::optional<engine::rev> expected = std::nullopt) -> std::optional<engine::errc> {
+		auto doc = std::get<1>(x.prepare("again"));
+		if (expected) {
+			doc.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(*expected)));
+		}
+		try {
+			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));
+		} catch (const engine::Error& error) {
+			return error.kind;
+		}
+		return std::nullopt;
+	};
+	const auto did = engine::sync_wait(use.written_key(x.term));
+	CHECK(did != 0);
+	CHECK(replace(did + 1, true) == engine::errc::doc_not_found);
+	CHECK(replace(did + 1, false) == engine::errc::invalid);   // without it: the key belongs to another document
+	CHECK(replace(did, true) == std::nullopt);
+	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), did);
+	x.erase(x.off);
+	CHECK(replace(did, true, 2) == engine::errc::version_conflict);
+	CHECK(replace(did, true) == engine::errc::doc_not_found);
+	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), engine::docid(0));
+	CHECK(replace(did, false) == std::nullopt);   // without it: created at the docid
+}
+
+// An off-hash id written by a PUT whose lookup found it while a DELETE and a PUT of another request come between its
+// lookup and its write must not end on two shards. The shard's turn is a FIFO queue, so held turns order the three:
+// DELETE's lookup, a hold, the PUT's lookup, and a second hold queued while the first is held; releasing the first
+// runs the PUT's lookup (it finds the id) and then the DELETE's erase, and the second hold stops the PUT's write
+// behind them. The new PUT (its lookup missed, so it is placed on the hash shard) is the write the test makes there,
+// and the stale write is let go last.
+static void test_a_stale_write_does_not_put_an_id_on_two_shards() {
+	Watchdog watchdog("a stale write does not put an id on two shards", 120s);
+	const OffHashId x("twice_s5", "twice");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	Reply deleted, put;
+	std::atomic<bool> delete_replied{false};
+	auto first = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	std::thread t_delete([&] {
+		deleted = call("DELETE", x.path + x.id + "?commit");
+		delete_replied = true;
+	});
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(200ms);   // the DELETE's lookup waits on the turn
+	auto second = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);
+	std::thread t_put([&] { put = call("PUT", x.path + x.id, R"({"n":"stale"})"); });
+	CHECK(eventually([] { return requests_inflight() == 2; }));
+	std::this_thread::sleep_for(200ms);   // the PUT's lookup waits behind the second hold
+	first->release();   // the DELETE's lookup runs and queues its erase; the second hold has the turn
+	CHECK(eventually([&] { return second->held(); }));
+	auto third = std::make_unique<HoldTurn>(entry.entry(), WRITE, false);
+	std::this_thread::sleep_for(100ms);   // queued behind the PUT's lookup and the DELETE's erase
+	second->release();   // the PUT's lookup finds the id; the DELETE's erase runs; the third hold has the turn
+	CHECK(eventually([&] { return third->held(); }));
+	// The DELETE's ?commit waits for a turn of its own behind the third hold, so it replies only once that is
+	// released: joined before, the client's 10 s read timeout ended it with no reply (status 0).
+	std::this_thread::sleep_for(200ms);
+	CHECK_FALSE(delete_replied.load());
+	x.seat(x.hashed, "new");   // the new PUT's write: its lookup missed, so it goes to the hash shard
+	third->release();   // the stale write and the DELETE's commit run
+	t_delete.join();
+	t_put.join();
+	CHECK_EQ(deleted.status, 204);
+	CHECK_EQ(put.status, 204);
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	CHECK_EQ(text_of(call("GET", x.path + x.id), "n"), "stale");
+	CHECK_EQ(field_of(call("SEARCH", x.path + "?volatile", R"({"_limit":5})"), "total").as_u64(), 2u);
+}
+
+// A replace by term on an index of shards finds an off-hash id and writes it by docid in a later turn: erased between
+// the two, the write places the document afresh on its hash shard instead of putting it back where it was found.
+// Both run on a host that says when it is idle: the lookup parks on a held turn, the erase queues behind it, and
+// releasing the turn runs the lookup (it finds the id), then the erase, and the write queues behind that.
+static void test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh() {
+	Watchdog watchdog("a replace by term of an id erased since its lookup places it afresh", 120s);
+	const OffHashId x("afresh_s5", "afresh");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	auto erasing = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(erasing, WRITE_QUIET);
+	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	ParkHost host;
+	DatabaseHandler db(x.endpoints, WRITE_QUIET);
+	auto prepared = x.prepare("stale");
+	auto replace = host.start(db.replace_document_term(x.term, std::move(std::get<1>(prepared)), true));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(replace.done());   // the lookup waits on the turn
+	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(erase.done());   // the erase waits behind the lookup
+	hold->release();
+	erase.get();
+	const auto info = replace.get();
+	CHECK_EQ((info.did - 1) % OffHashId::shards, x.hashed);
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	CHECK_EQ(text_of(call("GET", x.path + x.id), "n"), "stale");
+}
+
+// A PATCH reads an off-hash id and writes it by docid expecting the version it read: erased since, and another
+// document of the id written on its hash shard at that same version, the write is a version conflict, so the PATCH
+// reads again and patches the new document, never the old content over it. The off shard is refreshed, so the
+// PATCH's read takes no turn; on a host that says when it is idle, the erase parks on the held turn and the PATCH,
+// which reads and then parks on its write's turn, queues behind it.
+static void test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document() {
+	Watchdog watchdog("a patch of an id erased since its read patches the new document", 120s);
+	const OffHashId x("repatch_s5", "repatch");
+	auto entry = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE);
+	CHECK_FALSE(entry.entry().engine().dirty());
+	auto erasing = pin_index(*manager()->database_pool, x.endpoints[x.off].path, WRITE_QUIET);
+	auto use = use_index(erasing, WRITE_QUIET);
+	auto hold = std::make_unique<HoldTurn>(entry.entry(), WRITE);
+	ParkHost host;
+	auto erase = host.start(use.delete_document_term(x.term, false, false));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(erase.done());   // the erase waits on the turn
+	DatabaseHandler db(x.endpoints, WRITE);
+	const MsgPack id(x.id);   // a string, not the one-element array that braces make
+	rapidjson::Document rdoc;
+	json_load(rdoc, R"([{"op":"add","path":"/p","value":"patched"}])");
+	const MsgPack patches(rdoc);
+	auto patch = host.start(db.patch(id, UNKNOWN_REVISION, false, patches, true));
+	CHECK(eventually([&] { return host.idle(); }));
+	CHECK_FALSE(patch.done());   // the PATCH read the old document; its write waits behind the erase
+	x.seat(x.hashed, "new");   // version 1, as the old one
+	hold->release();
+	erase.get();
+	patch.get();
+	CHECK(x.holds(x.hashed));
+	CHECK_FALSE(x.holds(x.off));
+	const auto got = call("GET", x.path + x.id);
+	CHECK_EQ(text_of(got, "n"), "new");
+	CHECK_EQ(text_of(got, "p"), "patched");
+	CHECK_EQ(version_of(got), 2);
+}
+
+// New numeric ids in a burst, none committed, spread over the 5 shards: the least used shard counts the documents
+// each shard holds buffered, not only those it flushed (with the flushed ones alone, every one went to shard 0).
+static void test_new_numeric_ids_spread_over_the_shards_while_buffered() {
+	Watchdog watchdog("new numeric ids spread over the shards while buffered", 120s);
+	constexpr int shards = 5;
+	const std::string index = "spread_s5";
+	const auto path = "/" + index + "/";
+	create_index(index, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+	std::vector<std::string> ids;
+	for (int i = 0; i < 4 * shards; ++i) {
+		const auto posted = call("POST", path + "?echo", R"({"n":"p"})");
+		CHECK(success(posted));
+		ids.push_back(text_of(posted, "_id"));
+	}
+	std::vector<int> per(shards, 0);
+	for (const auto& id : ids) {
+		const auto docid = field_of(call("INFO", path + id), "docid");
+		CHECK(docid.is_number());
+		if (docid.is_number()) {
+			++per[static_cast<std::size_t>((docid.as_i64() - 1) % shards)];
+		}
+	}
+	std::fprintf(stderr, "  %s per shard: %d %d %d %d %d\n", index.c_str(), per[0], per[1], per[2], per[3], per[4]);
+	const auto [fewest, most] = std::minmax_element(per.begin(), per.end());
+	CHECK_LE(*most - *fewest, 1);
+	CHECK_EQ(std::accumulate(per.begin(), per.end(), 0), 4 * shards);
+}
+
+// ---- one id (docs/design/one-id.md): ids route by bucket, the shards issue numeric ids, docids stay dense ----
+
+// The shard whose index holds the document with this key, by a lookup in each; shards.size() when none does.
+static std::size_t holder_of(const Endpoints& endpoints, const std::string& term) {
+	std::size_t holder = endpoints.size();
+	for (std::size_t s = 0; s < endpoints.size(); ++s) {
+		try {
+			if (engine::sync_wait(DatabaseHandler(Endpoints(endpoints[s]), DB_OPEN).get_docid_term(term)) != 0) {
+				CHECK_EQ(holder, endpoints.size());   // on one shard only
+				holder = s;
+			}
+		} catch (const engine::Error& error) {
+			CHECK(engine::is_missing(error.kind));
+		}
+	}
+	return holder;
+}
+
+// Replaces every shard's open index by a fresh open of what its last commit left, as a restart does.
+static void reopen_index(const std::string& index) {
+	const auto before = manager()->database_pool->catalog().stats().replaces;
+	const auto endpoints = endpoints_of(index);
+	for (const auto& endpoint : endpoints) {
+		pin_index(*manager()->database_pool, endpoint.path, WRITE).reopen();
+	}
+	CHECK(eventually([&] { return manager()->database_pool->catalog().stats().replaces >= before + endpoints.size(); }));
+}
+
+// POSTs a document with `n` and answers its new id (0 when the write failed).
+static std::uint64_t post(const std::string& path, const std::string& n) {
+	const auto posted = call("POST", path + "?commit&echo", R"({"n":")" + n + R"("})");
+	CHECK(success(posted));
+	const auto id = field_of(posted, "_id");
+	return id.is_number() ? id.u64() : 0;
+}
+
+// Every segment file of a shard's index: its docids kind (strata docids.hh: 0 contiguous, 1 monotone, 2 permuted),
+// documents and docid bounds, read from its footer and table of contents (strata format.hh).
+struct SegmentDocids {
+	int kind = -1;
+	std::uint64_t count = 0;
+	std::uint64_t min = 0;
+	std::uint64_t max = 0;
+};
+
+static std::vector<SegmentDocids> segment_docids(const Endpoint& endpoint) {
+	auto dir = std::filesystem::path(endpoint.path) / "strata";
+	if (dir.is_relative()) {
+		dir = std::filesystem::path(Endpoint::cwd) / dir;
+	}
+	const auto u16 = [](const std::string& b, std::size_t at) { std::uint16_t v; std::memcpy(&v, b.data() + at, 2); return v; };
+	const auto u32 = [](const std::string& b, std::size_t at) { std::uint32_t v; std::memcpy(&v, b.data() + at, 4); return v; };
+	const auto u64 = [](const std::string& b, std::size_t at) { std::uint64_t v; std::memcpy(&v, b.data() + at, 8); return v; };
+	std::vector<SegmentDocids> segments;
+	std::error_code ec;
+	for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+		const auto name = entry.path().filename().string();
+		if (name.rfind("seg-", 0) != 0 || !name.ends_with(".sx")) {
+			continue;
+		}
+		std::FILE* f = std::fopen(entry.path().c_str(), "rb");
+		if (f == nullptr) {
+			continue;   // merged away and removed since the listing
+		}
+		std::string b;
+		char chunk[65536];
+		for (std::size_t got; (got = std::fread(chunk, 1, sizeof chunk, f)) > 0;) {
+			b.append(chunk, got);
+		}
+		std::fclose(f);
+		constexpr std::size_t footer = 56;
+		if (b.size() < 36 + footer) {
+			continue;
+		}
+		const auto at = b.size() - footer;   // toc offset u64, toc length u64, crc u32, count u32, min u64, max u64
+		SegmentDocids seg;
+		seg.count = u32(b, at + 20);
+		seg.min = u64(b, at + 24);
+		seg.max = u64(b, at + 32);
+		const auto toc = static_cast<std::size_t>(u64(b, at));
+		const auto sections = u32(b, toc);
+		for (std::size_t i = 0, p = toc + 4; i < sections; ++i) {
+			const auto kind = u16(b, p);
+			const auto shift = u16(b, p + 2);
+			const auto offset = u64(b, p + 4);
+			const auto length = u64(b, p + 12);
+			p += 24 + 4 * ((length + (std::uint64_t{1} << shift) - 1) >> shift);
+			if (kind == 7) {   // the docids section
+				seg.kind = static_cast<unsigned char>(b[offset]);
+			}
+		}
+		segments.push_back(seg);
+	}
+	CHECK_FALSE(ec);
+	return segments;
+}
+
+// Merges all the segments of a shard's index into one, in docid order, and commits it. The shard's own commit takes
+// its pending writes into a segment the merge takes, and keeps the engine's revision: a commit of the index itself
+// would leave it behind, and the next commit of the shard would find two revisions where it made one.
+static void merge_all(const Endpoint& endpoint) {
+	auto pin = pin_index(*manager()->database_pool, endpoint.path, WRITE_QUIET);
+	engine::sync_wait(use_index(pin, WRITE_QUIET).commit());
+	auto turn = engine::sync_wait(pin->take_turn(WRITE_QUIET));
+	auto& index = A::index(pin.entry());
+	std::vector<std::uint64_t> ids;
+	for (const auto& segment : index.segments()) {
+		ids.push_back(segment.id);
+	}
+	if (ids.size() > 1) {
+		index.merge(ids);
+	}
+	index.commit();   // the merge's output alone: no new revision
+	CHECK_EQ(A::engine(pin.entry()).revision(), index.manifest().revision);
+}
+
+// A RESTORE of ids 1..N and PUTs of explicit ids far above them (the T4/T5 mix's 11,000,001 and up) leave every
+// shard's docids dense: after a merge of all its segments, it holds its documents in one contiguous segment
+// (docids kind 0). Docids named by ids put the far ones millions apart, and the merged segment was monotone.
+static void test_far_ids_keep_the_docids_dense() {
+	Watchdog watchdog("far ids keep the docids dense", 240s);
+	for (const int shards : {1, 3}) {
+		const auto index = "dense_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		std::vector<std::uint64_t> ids;
+		std::string body;
+		for (std::uint64_t id = 1; id <= 300; ++id) {
+			body += R"({"_id":)" + std::to_string(id) + R"(,"n":"base"})" "\n";
+			ids.push_back(id);
+		}
+		CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+		for (std::uint64_t id = 11000001; id <= 11000030; ++id) {
+			CHECK_EQ(call("PUT", path + std::to_string(id) + (id == 11000030 ? "?commit" : ""), R"({"n":"far"})").status, 204);
+			ids.push_back(id);
+		}
+		const auto endpoints = endpoints_of(index);
+		std::vector<std::uint64_t> per(endpoints.size(), 0);
+		for (const auto id : ids) {
+			++per[id_shard(numeric_key(id), endpoints.size())];
+		}
+		for (std::size_t s = 0; s < endpoints.size(); ++s) {
+			merge_all(endpoints[s]);
+			bool merged = false;
+			for (const auto& seg : segment_docids(endpoints[s])) {
+				std::fprintf(stderr, "  %s shard %zu: kind %d, %llu docs, docids %llu-%llu\n", index.c_str(), s, seg.kind,
+					static_cast<unsigned long long>(seg.count), static_cast<unsigned long long>(seg.min), static_cast<unsigned long long>(seg.max));
+				CHECK_EQ(seg.kind, 0);
+				CHECK_EQ(seg.max - seg.min + 1, seg.count);
+				merged = merged || seg.count == per[s];
+			}
+			CHECK(merged);   // one segment holds every document of the shard
+		}
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), ids.size());
+		CHECK_EQ(text_of(call("GET", path + "11000030"), "n"), "far");
+	}
+}
+
+// New numeric ids keep their stride and never collide with explicit ones: one shard numbers 1, 2, then above an
+// explicit 10, and above every id after a reopen (the counter persists with the commit); over 3 shards, a shard
+// that takes every new id issues only ids of the buckets it owns (stride 3 below 1024), above the others' ids.
+static void test_new_numeric_ids_keep_their_stride_across_a_reopen() {
+	Watchdog watchdog("new numeric ids keep their stride across a reopen", 240s);
+	{
+		const std::string index = "stride_s1";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		std::map<std::uint64_t, std::string> written;
+		written[post(path, "a")] = "a";
+		written[post(path, "b")] = "b";
+		CHECK_EQ(call("PUT", path + "10?commit", R"({"n":"ten"})").status, 204);
+		written[10] = "ten";
+		written[post(path, "c")] = "c";
+		reopen_index(index);
+		written[post(path, "d")] = "d";
+		CHECK_EQ(call("PUT", path + "20?commit", R"({"n":"twenty"})").status, 204);
+		written[20] = "twenty";
+		written[post(path, "e")] = "e";
+		const std::map<std::uint64_t, std::string> expected{{1, "a"}, {2, "b"}, {10, "ten"}, {11, "c"}, {12, "d"}, {20, "twenty"}, {21, "e"}};
+		CHECK_TRUE(written == expected);
+		for (const auto& [id, n] : expected) {
+			const auto got = call("GET", path + std::to_string(id));
+			CHECK_EQ(text_of(got, "n"), n);
+			CHECK_EQ(text_of(got, "_id"), std::to_string(id));
+			CHECK_EQ(version_of(got), 1);   // written once: no new id landed on it
+		}
+	}
+	{
+		const std::string index = "stride_s3";
+		const auto path = "/" + index + "/";
+		create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+		for (const int id : {2, 3, 5, 6, 8, 9}) {   // buckets 1, 2, 4, 5, 7, 8: shards 1 and 2, three each
+			CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"x"})").status, 204);
+		}
+		const auto endpoints = endpoints_of(index);
+		std::vector<std::uint64_t> got;
+		for (int i = 0; i < 3; ++i) {
+			got.push_back(post(path, "new"));   // shard 0 is the least used for all three
+		}
+		CHECK_TRUE((got == std::vector<std::uint64_t>{10, 13, 16}));   // above 9, buckets 9, 12 and 15
+		for (const auto id : got) {
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), 0u);
+		}
+		reopen_index(index);
+		const auto after = post(path, "after");
+		CHECK_EQ(after, 19u);   // shard 0 again (three each, the first is taken), above 16: bucket 18
+		CHECK_EQ(holder_of(endpoints, numeric_key(after)), 0u);
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 10u);
+	}
+	// The ids a shard of 3 issues next, across the wrap of the buckets: 1,021 is bucket 1,020 (shard 0), 1,022 and
+	// 1,023 buckets 1,021 and 1,022 (shards 1 and 2), 1,024 bucket 1,023 (shard 0), 1,025 bucket 0 (shard 0) again.
+	CHECK_EQ(next_auto_id(1020, 0, 3), 1021u);
+	CHECK_EQ(next_auto_id(1021, 0, 3), 1024u);
+	CHECK_EQ(next_auto_id(1024, 0, 3), 1025u);
+	CHECK_EQ(next_auto_id(1020, 2, 3), 1023u);
+	CHECK_EQ(next_auto_id(1023, 2, 3), 1027u);
+	CHECK_EQ(next_auto_id(7, 0, 1), 8u);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
+}
+
+// A lookup by id reads the shard the id routes to first: over 3 shards a GET of an existing id reads one key in one
+// shard and a RESTORE's placement of existing ids one key each; a miss reads every shard (an id written under an
+// earlier rule can sit off its routed shard).
+static void test_a_lookup_by_id_reads_one_shard() {
+	Watchdog watchdog("a lookup by id reads one shard", 120s);
+	const std::string index = "lookup_s3";
+	const auto path = "/" + index + "/";
+	create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+	for (int id = 1; id <= 6; ++id) {
+		CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"x"})").status, 204);
+	}
+	for (const int id : {1, 2, 3, 4, 5, 6, 100}) {
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK_EQ(call("GET", path + std::to_string(id)).status, id == 100 ? 404 : 200);
+		CHECK_EQ(DatabaseHandler::key_reads.load() - before, id == 100 ? 3u : 1u);
+	}
+	std::string body;
+	for (int id = 101; id <= 130; ++id) {
+		body += R"({"_id":)" + std::to_string(id) + R"(,"n":"r"})" "\n";
+	}
+	for (const auto [round, expected] : {std::pair{1, 90u}, std::pair{2, 30u}}) {   // new ids miss, then they hit
+		const auto before = DatabaseHandler::key_reads.load();
+		CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+		const auto reads = DatabaseHandler::key_reads.load() - before;
+		std::fprintf(stderr, "  RESTORE %d of 30 ids over 3 shards read %llu keys\n", round, static_cast<unsigned long long>(reads));
+		CHECK_EQ(reads, expected);
+	}
+	CHECK_EQ(version_of(call("GET", path + "130")), 2);
+	// A new numeric id is issued in its shard's turn: the POST looks no key up in any shard.
+	const auto before_post = DatabaseHandler::key_reads.load();
+	CHECK(success(call("POST", path + "?commit", R"({"n":"p"})")));
+	CHECK_EQ(DatabaseHandler::key_reads.load() - before_post, 0u);
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 37u);
+}
+
+// ---- exact id keys (docs/design/exact-id-keys.md): a numeric id's key is its number, exactly ----
+
+// Each id answers with its own document by GET and by a term search on `_id`, and the index holds `count`.
+static void ids_are_their_own(const std::string& path, const std::vector<std::string>& ids, std::size_t count) {
+	for (const auto& id : ids) {
+		const auto got = call("GET", path + id);
+		CHECK_EQ(got.status, 200);
+		CHECK_EQ(text_of(got, "n"), id);
+		CHECK_EQ(text_of(got, "_id"), id);
+		const auto found = call("SEARCH", path + "?volatile", R"({"_query":{"_id":)" + id + "}}");
+		CHECK_EQ(found.status, 200);
+		CHECK(hits_of(found) == std::vector<std::string>{id});
+	}
+	CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), count);
+}
+
+// Pairs of ids whose keys were one under the codec that kept 2^32 integers exact (2^32 + 1's key named 2^32 + 2^24)
+// stay separate documents through PUT, GET, a term search on `_id`, DELETE and RESTORE, across reopens, over 1 and
+// 3 shards, in an index whose ids are integers and in one whose ids are positive.
+static void test_ids_that_shared_a_key_are_separate_documents() {
+	Watchdog watchdog("ids that shared a key are separate documents", 240s);
+	const std::vector<std::pair<std::string, std::string>> integers{
+		{"4294967297", "4311744512"},               // 2^32 + 1 and 2^32 + 2^24
+		{"1099511627779", "1099561959424"},         // 2^40 + 3 and 2^40 + 3 * 2^24
+		{"9007199254740991", "9007199254740993"},   // 2^53 - 1 and 2^53 + 1
+	};
+	auto positives = integers;
+	positives.emplace_back("9223372036854775808", "18446744073709551615");   // 2^63 and 2^64 - 1
+	for (const int shards : {1, 3}) {
+		for (const bool positive : {false, true}) {
+			const auto index = std::string(positive ? "exact_pos" : "exact_int") + "_s" + std::to_string(shards);
+			const auto path = "/" + index + "/";
+			create_index(index, shards, positive ? R"({"_type":"object","_id":{"_type":"positive"}})" : "");
+			const auto& pairs = positive ? positives : integers;
+			std::vector<std::string> ids;
+			for (const auto& [a, b] : pairs) {
+				ids.push_back(a);
+				ids.push_back(b);
+			}
+			for (const auto& id : ids) {
+				CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":")" + id + R"("})").status, 204);
+			}
+			for (const auto& id : ids) {
+				CHECK_EQ(version_of(call("GET", path + id)), 1);   // written once: no other PUT landed on it
+			}
+			ids_are_their_own(path, ids, ids.size());
+			reopen_index(index);
+			ids_are_their_own(path, ids, ids.size());
+
+			// Deleting one of each pair leaves the other; a RESTORE brings it back as itself.
+			std::string body;
+			for (const auto& [a, b] : pairs) {
+				CHECK_EQ(call("DELETE", path + a + "?commit").status, 204);
+				CHECK_EQ(call("GET", path + a).status, 404);
+				CHECK_EQ(text_of(call("GET", path + b), "n"), b);
+				body += R"({"_id":)" + a + R"(,"n":")" + a + R"("})" "\n";
+			}
+			CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":20})"), "total").as_u64(), pairs.size());
+			CHECK(success(call("RESTORE", path + "?commit", body, "application/x-ndjson")));
+			ids_are_their_own(path, ids, ids.size());
+			reopen_index(index);
+			ids_are_their_own(path, ids, ids.size());
+			for (const auto& [a, b] : pairs) {
+				CHECK_EQ(version_of(call("GET", path + b)), 1);   // neither the DELETE nor the RESTORE touched it
+			}
+		}
+	}
+
+	// The keys themselves: one per integer, an integer's and an equal float's are one, and each reads back as itself.
+	required_spc_t floating;
+	floating.set_type(FieldType::floating);
+	for (const auto& [a, b] : positives) {
+		const auto ka = numeric_key(std::stoull(a));
+		const auto kb = numeric_key(std::stoull(b));
+		CHECK_NE(ka, kb);
+		CHECK_TRUE(ka.size() <= 11 && kb.size() <= 11);   // 'N' and at most sortable::max_size bytes
+		CHECK_EQ(Unserialise::id(std::string_view(ka).substr(1)).value_or(0), std::stoull(a));
+		CHECK_EQ(Unserialise::id(std::string_view(kb).substr(1)).value_or(0), std::stoull(b));
+	}
+	// Keys order as their numbers, byte by byte, over the ids above and their neighbours.
+	const std::vector<std::uint64_t> ascending{1, 1023, (std::uint64_t{1} << 32) - 1, 4294967296, 4294967297, 4311744512, 1099511627779,
+		1099561959424, 9007199254740991, 9007199254740992, 9007199254740993, 9223372036854775807u, 9223372036854775808u, 18446744073709551615u};
+	for (std::size_t i = 1; i < ascending.size(); ++i) {
+		CHECK_TRUE(numeric_key(ascending[i - 1]) < numeric_key(ascending[i]));
+	}
+	CHECK_EQ(document_key(Serialise::id(floating, MsgPack(1099511627776.0)), 'N'), numeric_key(std::uint64_t{1} << 40));
+	CHECK_FALSE(Unserialise::id(Serialise::id(floating, MsgPack(1.5))).has_value());
+}
+
+// Automatic ids pass 2^32: a counter at 2^32 - 1 issues 2^32 and on, each in the shard owning its bucket (D85), across
+// a reopen. The counter's bound is MAX_NUMERIC_ID = 2^63 - 1, the largest id an integer `_id` holds: an id there
+// leaves none to issue, while one above it (2^63, positive ids) is placed by hash and leaves the counter alone.
+static void test_new_numeric_ids_pass_two_to_the_thirty_two() {
+	Watchdog watchdog("new numeric ids pass 2^32", 240s);
+	constexpr std::uint64_t two32 = std::uint64_t{1} << 32;
+	CHECK_EQ(MAX_NUMERIC_ID, (std::uint64_t{1} << 63) - 1);
+	{
+		const std::string index = "past32_s1";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(two32 - 1) + "?commit", R"({"n":"high"})").status, 204);
+		CHECK_EQ(post(path, "a"), two32);
+		CHECK_EQ(post(path, "b"), two32 + 1);
+		reopen_index(index);
+		CHECK_EQ(post(path, "c"), two32 + 2);
+		for (const auto& [id, n] : std::map<std::uint64_t, std::string>{{two32 - 1, "high"}, {two32, "a"}, {two32 + 1, "b"}, {two32 + 2, "c"}}) {
+			const auto got = call("GET", path + std::to_string(id));
+			CHECK_EQ(text_of(got, "n"), n);
+			CHECK_EQ(version_of(got), 1);
+		}
+	}
+	{
+		const std::string index = "past32_s3";
+		const auto path = "/" + index + "/";
+		create_index(index, 3, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(two32 - 1) + "?commit", R"({"n":"high"})").status, 204);   // bucket 1022, shard 2
+		const auto endpoints = endpoints_of(index);
+		std::uint64_t last = two32 - 1;
+		for (int i = 0; i < 6; ++i) {
+			const auto id = post(path, "new");
+			CHECK(id > last);
+			last = id;
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), bucket_shard((id - 1) % ID_BUCKETS, 3));
+		}
+		reopen_index(index);
+		const auto after = post(path, "after");
+		CHECK(after > last);
+		CHECK_EQ(holder_of(endpoints, numeric_key(after)), bucket_shard((after - 1) % ID_BUCKETS, 3));
+		CHECK_EQ(field_of(call("SEARCH", path + "?volatile", R"({"_limit":1})"), "total").as_u64(), 8u);
+	}
+	{
+		const std::string index = "past32_cap";
+		const auto path = "/" + index + "/";
+		create_index(index, 1, R"({"_type":"object","_id":{"_type":"positive"}})");
+		CHECK_EQ(call("PUT", path + std::to_string(MAX_NUMERIC_ID - 1) + "?commit", R"({"n":"x"})").status, 204);
+		CHECK_EQ(call("PUT", path + "9223372036854775808?commit", R"({"n":"y"})").status, 204);   // 2^63: by hash
+		CHECK_EQ(post(path, "last"), MAX_NUMERIC_ID);
+		CHECK_FALSE(success(call("POST", path + "?commit", R"({"n":"none"})")));
+		CHECK_EQ(text_of(call("GET", path + std::to_string(MAX_NUMERIC_ID)), "n"), "last");
+		CHECK_EQ(text_of(call("GET", path + "9223372036854775808"), "n"), "y");
+	}
+
+	// Each shard of 3 issues the next id of its own buckets after 2^32 - 1 (bucket 1,022): 2^32 is bucket 1,023
+	// (shard 0), 2^32 + 1 bucket 0 (shard 0), 2^32 + 2 bucket 1 (shard 1), 2^32 + 3 bucket 2 (shard 2).
+	CHECK_EQ(next_auto_id(two32 - 1, 0, 3), two32);
+	CHECK_EQ(next_auto_id(two32, 0, 3), two32 + 1);
+	CHECK_EQ(next_auto_id(two32 - 1, 1, 3), two32 + 2);
+	CHECK_EQ(next_auto_id(two32 - 1, 2, 3), two32 + 3);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID - 1, 0, 1), MAX_NUMERIC_ID);
+	CHECK_EQ(next_auto_id(MAX_NUMERIC_ID, 0, 1), 0u);
+
+	// An id's key names it again up to MAX_NUMERIC_ID; past it, or not an integer from 1, it routes by hash.
+	for (const std::uint64_t id : {std::uint64_t{1}, two32 - 1, two32, two32 + 1, (std::uint64_t{1} << 53) + 1, MAX_NUMERIC_ID}) {
+		CHECK_EQ(numeric_id(numeric_key(id)), id);
+		CHECK_EQ(id_bucket(numeric_key(id)), static_cast<std::size_t>((id - 1) % ID_BUCKETS));
+	}
+	CHECK_EQ(numeric_id(numeric_key(MAX_NUMERIC_ID + 1)), 0u);
+	CHECK_EQ(numeric_id(numeric_key(0)), 0u);
+}
+
+// Ids route by bucket, never by shard count (D85): an explicit numeric id N lands in the shard owning bucket
+// (N - 1) % 1024 and a keyword id in the one its hash's bucket names, and every new numeric id lives in the shard
+// owning its bucket, ascending across the shards, over 1, 3 and 5 shards.
+static void test_ids_route_by_bucket() {
+	Watchdog watchdog("ids route by bucket", 240s);
+	for (const int shards : {1, 3, 5}) {
+		const auto index = "buckets_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		const auto endpoints = endpoints_of(index);
+		std::uint64_t last = 0;
+		for (int i = 0; i < 2 * shards; ++i) {
+			const auto id = post(path, "new");
+			CHECK_EQ(id, last + 1);   // the shards fill in turn, each above the others
+			last = id;
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), static_cast<std::size_t>(i % shards));
+		}
+		const std::uint64_t explicit_ids[] = {1023, 1024, 1025, 2049, 3000, 4096, 11000001, 11000002, 11000003};
+		for (const auto id : explicit_ids) {
+			CHECK_EQ(call("PUT", path + std::to_string(id) + "?commit", R"({"n":"explicit"})").status, 204);
+			const auto bucket = (id - 1) % 1024;
+			CHECK_EQ(id_bucket(numeric_key(id)), bucket);
+			CHECK_EQ(holder_of(endpoints, numeric_key(id)), static_cast<std::size_t>(bucket % static_cast<std::uint64_t>(shards)));
+		}
+		const auto above = post(path, "above");
+		CHECK(above > 11000003u);
+		CHECK_EQ(holder_of(endpoints, numeric_key(above)), bucket_shard((above - 1) % 1024, static_cast<std::size_t>(shards)));
+	}
+	for (const int shards : {1, 3, 5}) {
+		const auto index = "buckets_kw_s" + std::to_string(shards);
+		const auto path = "/" + index + "/";
+		create_index(index, shards);
+		CHECK_EQ(call("PUT", path + "seed?commit", R"({"n":"seed"})").status, 204);   // the ids are keywords
+		const auto endpoints = endpoints_of(index);
+		DatabaseHandler db(endpoints, WRITE);
+		for (const std::string id : {"a", "b", "c", "zeta", "1025"}) {
+			CHECK_EQ(call("PUT", path + id + "?commit", R"({"n":"kw"})").status, 204);
+			auto obj = MsgPack{{"_id", id}, {"n", "kw"}};
+			const auto term = std::get<0>(engine::sync_wait(db.prepare_document(obj, 0)));
+			CHECK_EQ(holder_of(endpoints, term), static_cast<std::size_t>(key_placement_hash(term) % 1024 % static_cast<std::uint64_t>(shards)));
+		}
+	}
+}
+
+// A DUMP and RESTORE into a fresh index keeps every id: explicit numbers, new numeric ids and keywords come back
+// with the same `_id` and body, and the next new id of the restored index is above every restored numeric id,
+// after a reopen too.
+static void test_a_dump_and_restore_keeps_every_id() {
+	Watchdog watchdog("a dump and restore keeps every id", 240s);
+	for (const int shards : {1, 3}) {
+		const auto at = "_s" + std::to_string(shards);
+		const auto round_trip = [&](const std::string& source, const std::string& target) {
+			const auto dumped = call("DUMP", "/" + source + "/");
+			CHECK_EQ(dumped.status, 200);
+			CHECK(dumped.body.is_array());
+			std::string lines;
+			std::map<std::string, std::string> bodies;   // _id -> n
+			if (dumped.body.is_array()) {
+				for (const auto& obj : dumped.body) {
+					lines += obj.to_string() + "\n";
+					bodies[obj.at(std::string_view("_id")).to_string()] = obj.at(std::string_view("n")).str();
+				}
+			}
+			create_index(target, shards);
+			CHECK(success(call("RESTORE", "/" + target + "/?commit", lines, "application/x-ndjson")));
+			for (const auto& [id, n] : bodies) {
+				const auto key = id.size() > 1 && id.front() == '"' ? id.substr(1, id.size() - 2) : id;
+				const auto got = call("GET", "/" + target + "/" + key);
+				CHECK_EQ(got.status, 200);
+				CHECK_EQ(field_of(got, "_id").to_string(), id);
+				CHECK_EQ(text_of(got, "n"), n);
+			}
+			CHECK_EQ(field_of(call("SEARCH", "/" + target + "/?volatile", R"({"_limit":1})"), "total").as_u64(), bodies.size());
+			return bodies.size();
+		};
+
+		const auto numbers = "dump_num" + at;
+		create_index(numbers, shards, R"({"_type":"object","_id":{"_type":"positive"}})");
+		for (const int id : {5, 7, 1000}) {
+			CHECK_EQ(call("PUT", "/" + numbers + "/" + std::to_string(id) + "?commit", R"({"n":"explicit )" + std::to_string(id) + "\"}").status, 204);
+		}
+		std::uint64_t highest = 1000;
+		for (int i = 0; i < 3; ++i) {
+			highest = std::max(highest, post("/" + numbers + "/", "auto " + std::to_string(i)));
+		}
+		CHECK(highest > 1000u);   // 1,001 to 1,003 on one shard
+		CHECK_EQ(round_trip(numbers, "restored_num" + at), 6u);
+		const auto restored = "/restored_num" + at + "/";
+		const auto next = post(restored, "next");
+		CHECK(next > highest);
+		reopen_index("restored_num" + at);
+		const auto after = post(restored, "after");
+		CHECK(after > next);
+		if (shards == 1) {
+			CHECK_EQ(highest, 1003u);
+			CHECK_EQ(next, 1004u);
+			CHECK_EQ(after, 1005u);
+		}
+
+		const auto keywords = "dump_kw" + at;
+		create_index(keywords, shards);
+		for (const std::string id : {"a", "b", "zeta"}) {
+			CHECK_EQ(call("PUT", "/" + keywords + "/" + id + "?commit", R"({"n":"kw )" + id + "\"}").status, 204);
+		}
+		CHECK_EQ(round_trip(keywords, "restored_kw" + at), 3u);
+	}
+}
+
+// Writers on few documents, each writing the version it read (PUT and PATCH, with ?version), against the sequential
+// model: a write that is applied lands at the version after the one it expected, per document every version from 2
+// to its last is won by exactly one write, a refused write saw an older version than the one it is told, and the
+// document holds the write that won its last version.
+static void versioned_writers_match_a_sequential_model_at(int shards) {
+	const auto index = "model_s" + std::to_string(shards);
+	create_index(index, shards);
+	constexpr int keys = 2;
+	constexpr int threads_n = 4;
+	constexpr int wins_wanted = 12;   // per thread
+	for (int k = 0; k < keys; ++k) {
+		CHECK_EQ(call("PUT", "/" + index + "/" + std::to_string(k) + "?commit", R"({"v":-1})").status, 204);
+	}
+	struct Win {
+		int key;
+		long long seen;   // the version the write expected
+		long long version;
+		int value;
+	};
+	std::vector<std::vector<Win>> wins(threads_n);
+	std::vector<int> refused(threads_n, 0), unexpected(threads_n, 0);
+	std::vector<std::thread> threads;
+	for (int t = 0; t < threads_n; ++t) {
+		threads.emplace_back([&, t] {
+			std::mt19937 random(static_cast<unsigned>(t) * 7919u + 1u);
+			for (int attempt = 0; static_cast<int>(wins[t].size()) < wins_wanted && attempt < 50 * wins_wanted; ++attempt) {
+				const int k = static_cast<int>(random() % keys);
+				const auto path = "/" + index + "/" + std::to_string(k);
+				const auto seen = version_of(call("GET", path + "?volatile"));
+				const int value = t * 1000 + attempt;
+				const std::string method = attempt % 2 == 0 ? "PUT" : "PATCH";
+				const auto reply = call(method, path + "?echo&version=" + std::to_string(seen), write_body(method, value));
+				if (success(reply)) {
+					wins[t].push_back({k, seen, version_of(reply), value});
+				} else if (reply.status == 409 && version_of(reply) > seen) {
+					++refused[t];
+				} else {
+					++unexpected[t];
+				}
+			}
+		});
+	}
+	for (auto& thread : threads) {
+		thread.join();
+	}
+	for (int t = 0; t < threads_n; ++t) {
+		CHECK_EQ(static_cast<int>(wins[t].size()), wins_wanted);
+		CHECK_EQ(unexpected[t], 0);
+	}
+	for (int k = 0; k < keys; ++k) {
+		std::map<long long, int> by_version;   // version -> value, each won once
+		std::size_t won = 0;
+		for (const auto& thread_wins : wins) {
+			for (const auto& win : thread_wins) {
+				if (win.key == k) {
+					++won;
+					by_version.emplace(win.version, win.value);
+					CHECK_EQ(win.version, win.seen + 1);   // applied at the version after the one it expected
+				}
+			}
+		}
+		CHECK_EQ(by_version.size(), won);
+		const auto got = call("GET", "/" + index + "/" + std::to_string(k) + "?volatile");
+		CHECK_EQ(version_of(got), static_cast<long long>(won) + 1);
+		if (!by_version.empty()) {
+			CHECK_EQ(by_version.begin()->first, 2);
+			CHECK_EQ(by_version.rbegin()->first, static_cast<long long>(won) + 1);
+			CHECK_EQ(text_of(got, "v"), std::to_string(by_version.rbegin()->second));
+		}
+	}
+	int total_refused = 0;
+	for (const auto r : refused) {
+		total_refused += r;
+	}
+	std::fprintf(stderr, "  model at %d shards: %d writes won, %d refused\n", shards, threads_n * wins_wanted, total_refused);   // what the contention reached
+}
+
+static void test_versioned_writers_match_a_sequential_model() {
+	Watchdog watchdog("versioned writers match a sequential model", 600s);
+	for (const int shards : shard_counts) {
+		versioned_writers_match_a_sequential_model_at(shards);
+	}
+}
+
+
+// ---- cancellation and overload in /:metrics ----
+
+// A series of the node's /:metrics; -1 when it is not there.
+static double metric(const std::string& name) {
+	const auto text = http_call(node_port, "GET", "/:metrics");
+	std::size_t at = 0;
+	while (at < text.size()) {
+		auto end = text.find('\n', at);
+		if (end == std::string::npos) {
+			end = text.size();
+		}
+		const auto line = text.substr(at, end - at);
+		if (line.rfind(name, 0) == 0 && line.size() > name.size() && (line[name.size()] == '{' || line[name.size()] == ' ')) {
+			return std::strtod(line.c_str() + line.rfind(' ') + 1, nullptr);
+		}
+		at = end + 1;
+	}
+	return -1;
+}
+
+// A search on `index` whose client leaves while it waits for the index's turn frees its reactor at once (T9): the
+// client's EOF requests its token, its turn wait ends, and its admission is let go while the turn is still held. The
+// cancel is counted in /:metrics. With `cached`, a search first loads the schema, so the wait is the search's own;
+// without, it is the schema's first load.
+static void client_leaves_a_search(const std::string& index, bool cached) {
+	create_index(index, 1);
+	if (cached) {
+		CHECK(success(call("SEARCH", "/" + index + "/?volatile", "{}")));
+	}
+	auto& pool = *manager()->database_pool;
+	const auto endpoints = endpoints_of(index);
+	auto entry = pin_index(pool, endpoints[0].path, WRITE_QUIET);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("K1")));   // applied, not refreshed: a read takes the turn
+	const auto before = metric("xapiand_http_requests_cancelled");
+	CHECK_GE(before, 0.0);
+	HoldTurn hold(entry.entry(), WRITE_QUIET);
+	const int fd = connect_to(node_port);
+	CHECK_GE(fd, 0);
+	const std::string request = "SEARCH /" + index + "/?volatile HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+	::send(fd, request.data(), request.size(), 0);
+	CHECK(eventually([] { return requests_inflight() == 1; }));
+	std::this_thread::sleep_for(200ms);
+	CHECK_EQ(requests_inflight(), 1u);   // the search waits for the held turn
+	const auto left = std::chrono::steady_clock::now();
+	::close(fd);
+	CHECK(eventually([] { return requests_inflight() == 0; }, 2s));
+	const auto freed = std::chrono::steady_clock::now() - left;
+	std::fprintf(stderr, "  the reactor let the search go %lld us after its client left\n", static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(freed).count()));
+	CHECK_EQ(metric("xapiand_http_requests_cancelled"), before + 1);
+	hold.release();
+}
+
+static void test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted() {
+	Watchdog watchdog("a search whose client leaves", 60s);
+	client_leaves_a_search("left_search", true);
+}
+
+// The schema's first load reads the metadata with the search's budget, so its turn wait ends with the token too.
+static void test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled() {
+	Watchdog watchdog("a search whose client leaves in its first schema load", 60s);
+	client_leaves_a_search("left_cold_search", false);
+}
+
+// Both admission peaks rise under load and /:metrics shows them (T8): writers that wait for a held turn fill the
+// reactor's gate, and a script's slices wait demoted while other requests arrive.
+static void test_the_admission_peaks_rise_under_load() {
+	Watchdog watchdog("the admission peaks rise under load", 120s);
+	create_index("peaks", 1);
+	constexpr std::size_t writers = 8;
+	std::vector<std::thread> threads;
+	{
+		HoldEveryShard hold("peaks");
+		for (std::size_t i = 0; i < writers; ++i) {
+			threads.emplace_back([i] { call("PUT", "/peaks/" + std::to_string(i), R"({"v":1})"); });
+		}
+		CHECK(eventually([] { return requests_inflight() == writers; }));
+		hold.release();
+	}
+	for (auto& t : threads) {
+		t.join();
+	}
+	CHECK_GE(metric("xapiand_admission_inflight_peak"), static_cast<double>(writers));
+
+	// A script's slices wait demoted between its yields; scrapes admitted meanwhile find them.
+	std::atomic<bool> scripted{false};
+	std::thread scraper([&] {
+		while (!scripted.load() && metric("xapiand_scheduler_demoted_peak") < 1) {
+			std::this_thread::sleep_for(2ms);
+		}
+	});
+	for (int i = 0; i < 5 && metric("xapiand_scheduler_demoted_peak") < 1; ++i) {
+		const auto put = call("PUT", "/peaks/100", R"({"_script":"local n = 0; for i = 1, 10000000 do n = n + i end; _doc.n = n"})");
+		CHECK(success(put));
+		if (!success(put)) {
+			std::fprintf(stderr, "  the script's PUT answered %d: %s\n", put.status, put.body.to_string().c_str());
+		}
+	}
+	scripted = true;
+	scraper.join();
+	CHECK_GE(metric("xapiand_scheduler_demoted_peak"), 1.0);
+}
+
+// HEAD answers with the status and headers a GET would, and no body (RFC 9110 9.3.2), a miss included; OPTIONS lists
+// the verbs the node routes, and none it does not (STORE).
+static void test_head_has_no_body_and_options_lists_the_routed_verbs() {
+	Watchdog watchdog("head has no body and options lists the routed verbs");
+	CHECK(http_call(node_port, "PUT", "/head_idx/1", "{\"a\":\"b\"}").rfind("HTTP/1.1 2", 0) == 0);
+	const auto body_of = [](const std::string& response) {
+		const auto end = response.find("\r\n\r\n");
+		return end == std::string::npos ? std::string("<no head>") : response.substr(end + 4);
+	};
+	const auto miss = http_call(node_port, "HEAD", "/head_idx/2");
+	CHECK(miss.rfind("HTTP/1.1 404", 0) == 0);
+	CHECK_EQ(body_of(miss), std::string());
+	const auto hit = http_call(node_port, "HEAD", "/head_idx/1");
+	CHECK(hit.rfind("HTTP/1.1 200", 0) == 0);
+	CHECK_EQ(body_of(hit), std::string());
+
+	const auto options = http_call(node_port, "OPTIONS", "/");
+	const auto at = options.find("Allow: ");
+	CHECK(at != std::string::npos);
+	const auto allow = options.substr(at, options.find("\r\n", at) - at);
+	CHECK(allow.find(" STORE") == std::string::npos);   // RESTORE is a verb of its own
+	for (const char* verb : {"GET", "POST", "PUT", "PATCH", "UPDATE", "UPSERT", "DELETE", "HEAD", "OPTIONS", "SEARCH", "COUNT", "INFO", "COMMIT", "DUMP", "RESTORE", "CHECK", "FLUSH", "QUIT"}) {
+		CHECK(allow.find(std::string(" ") + verb) != std::string::npos);
+	}
+}
+
+
+// A new index created with number_of_replicas below and above the default gets exactly the replicas asked: its shards
+// are placed with the default count first and placed again when the settings ask for another. The node knows two more
+// nodes for it; this runs last, as they stay known.
+static void test_a_new_index_gets_the_replicas_asked_below_and_above_the_default() {
+	Watchdog watchdog("replicas of a new index");
+	for (const char* name : {"replicas_extra_1", "replicas_extra_2"}) {
+		Node node;
+		node.name(name);
+		node.host("127.0.0.1");
+		node.http_port = 1;
+		Node::touch_node(node, true);
+	}
+	CHECK_EQ(Node::total_nodes(), 3u);
+	const auto saved_replicas = opts.num_replicas;
+	opts.num_replicas = 1;   // the default: a master and one replica
+	auto replicas_of = [](const std::string& path, const std::optional<int>& asked) {
+		std::optional<MsgPack> settings;
+		if (asked) {
+			settings = MsgPack({{ "_settings", MsgPack({{ "number_of_shards", static_cast<int>(opts.num_shards) }, { "number_of_replicas", *asked }}) }});
+		}
+		auto result = engine::sync_wait(XapiandManager::resolve_index_settings(path, false, settings ? &*settings : nullptr));
+		std::vector<size_t> sizes;
+		for (const auto& shard : result.shards) {
+			sizes.push_back(shard.nodes.size());
+		}
+		return sizes;
+	};
+	const auto by_default = replicas_of("replicas_default", std::nullopt);   // opts.num_shards shards, a master and one replica each
+	CHECK_EQ(by_default.size(), opts.num_shards);
+	CHECK(std::all_of(by_default.begin(), by_default.end(), [](size_t n) { return n == 2; }));
+	// The shards asked are the default's, so only the replica count asks for other placement.
+	auto all_have = [&](const std::vector<size_t>& sizes, size_t n) {
+		return sizes.size() == opts.num_shards && std::all_of(sizes.begin(), sizes.end(), [n](size_t size) { return size == n; });
+	};
+	CHECK(all_have(replicas_of("replicas_below", 0), 1));   // a master only
+	CHECK(all_have(replicas_of("replicas_equal", 1), 2));
+	CHECK(all_have(replicas_of("replicas_above", 2), 3));   // a master and two replicas
+	opts.num_replicas = saved_replicas;
+}
+
+
+// A first use that missed the cache claims the metadata load after the flight ended and before the
+// leader's caller stored the schema; only the flight's publication can serve it.
+static void test_a_claim_between_flight_end_and_store_is_served_by_the_publication() {
+	Watchdog watchdog("publish before the flight ends");
+	const auto endpoints = endpoints_of("schema_publish_before_end");
+	auto& schemas = *manager()->schemas;
+	const auto loads_before = schemas.loads();
+	std::atomic<int> claims{0};
+	std::atomic<int> afters{0};
+	std::atomic<bool> b_paused{false};
+	std::atomic<bool> a_after{false};
+	std::atomic<bool> b_done{false};
+	task::event gate_b;
+	task::event gate_a;
+	schemas.before_metadata_claim = [&]() -> task::task<void> {
+		if (claims++ == 0) {
+			b_paused = true;
+			co_await gate_b;
+		}
+	};
+	schemas.after_metadata_flight = [&]() -> task::task<void> {
+		if (afters++ == 0) {
+			a_after = true;
+			co_await gate_a;
+		}
+	};
+	std::shared_ptr<const MsgPack> got_a;
+	std::shared_ptr<const MsgPack> got_b;
+	std::thread b([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_b = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+		b_done = true;
+	});
+	CHECK(eventually([&] { return b_paused.load(); }, 20s));
+	std::thread a([&] {
+		DatabaseHandler handler(endpoints, DB_OPEN);
+		got_a = std::get<0>(engine::sync_wait(schemas.get(&handler, nullptr)));
+	});
+	CHECK(eventually([&] { return a_after.load(); }, 20s));   // a's flight has ended; a has not stored
+	gate_b.set();
+	CHECK(eventually([&] { return b_done.load(); }, 20s));
+	gate_a.set();
+	a.join();
+	b.join();
+	schemas.before_metadata_claim = nullptr;
+	schemas.after_metadata_flight = nullptr;
+	const auto loads = schemas.loads() - loads_before;
+	CHECK_EQ(loads, 2u);
+	CHECK(got_a == got_b);
+}
+
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -940,6 +3051,7 @@ int main(int argc, char** argv) {
 		{"test_the_http_grace_follows_the_time_left_in_the_budget", test_the_http_grace_follows_the_time_left_in_the_budget},
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
+		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},
 	};
 	for (const auto& f : forked) {
 		if (std::getenv("SKIP_FORKED") != nullptr || !wanted(f.name)) {
@@ -963,13 +3075,47 @@ int main(int argc, char** argv) {
 		void (*fn)();
 	};
 	const Case cases[] = {
+		{"test_a_claim_between_flight_end_and_store_is_served_by_the_publication", test_a_claim_between_flight_end_and_store_is_served_by_the_publication},
 		{"test_concurrent_first_uses_of_a_schema_load_it_once", test_concurrent_first_uses_of_a_schema_load_it_once},
+		{"test_a_call_paused_before_claiming_the_foreign_load_loads_nothing", test_a_call_paused_before_claiming_the_foreign_load_loads_nothing},
+		{"test_a_call_paused_before_claiming_the_metadata_load_loads_nothing", test_a_call_paused_before_claiming_the_metadata_load_loads_nothing},
 		{"test_concurrent_first_uses_of_index_settings_load_them_once", test_concurrent_first_uses_of_index_settings_load_them_once},
+		{"test_a_call_paused_before_claiming_the_settings_load_loads_nothing", test_a_call_paused_before_claiming_the_settings_load_loads_nothing},
 		{"test_a_cached_schema_is_not_loaded_again", test_a_cached_schema_is_not_loaded_again},
 		{"test_the_housekeeping_ticks_on_the_control_loop", test_the_housekeeping_ticks_on_the_control_loop},
 		{"test_the_control_loop_is_free_during_a_slow_commit", test_the_control_loop_is_free_during_a_slow_commit},
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
+		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
+		{"test_a_write_to_a_missing_index_is_not_found", test_a_write_to_a_missing_index_is_not_found},
+		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
+		{"test_a_cancelled_request_stops_waiting_for_its_index", test_a_cancelled_request_stops_waiting_for_its_index},
+		{"test_a_cancelled_search_stops_waiting_for_its_index", test_a_cancelled_search_stops_waiting_for_its_index},
+		{"test_a_busy_autocommit_comes_back_for_its_write", test_a_busy_autocommit_comes_back_for_its_write},
+		{"test_document_ids_are_themselves", test_document_ids_are_themselves},
+		{"test_a_version_is_a_precondition_of_every_write", test_a_version_is_a_precondition_of_every_write},
+		{"test_writers_expecting_one_version_apply_once", test_writers_expecting_one_version_apply_once},
+		{"test_a_versioned_delete_checks_the_document_its_key_names", test_a_versioned_delete_checks_the_document_its_key_names},
+		{"test_versioned_writers_match_a_sequential_model", test_versioned_writers_match_a_sequential_model},
+		{"test_a_restore_into_shards_writes_a_few_segments", test_a_restore_into_shards_writes_a_few_segments},
+		{"test_an_existing_id_written_again_lands_on_its_shard", test_an_existing_id_written_again_lands_on_its_shard},
+		{"test_a_replace_that_must_exist_writes_only_where_the_key_is", test_a_replace_that_must_exist_writes_only_where_the_key_is},
+		{"test_a_stale_write_does_not_put_an_id_on_two_shards", test_a_stale_write_does_not_put_an_id_on_two_shards},
+		{"test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh", test_a_replace_by_term_of_an_id_erased_since_its_lookup_places_it_afresh},
+		{"test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document", test_a_patch_of_an_id_erased_since_its_read_patches_the_new_document},
+		{"test_new_numeric_ids_spread_over_the_shards_while_buffered", test_new_numeric_ids_spread_over_the_shards_while_buffered},
+		{"test_far_ids_keep_the_docids_dense", test_far_ids_keep_the_docids_dense},
+		{"test_new_numeric_ids_keep_their_stride_across_a_reopen", test_new_numeric_ids_keep_their_stride_across_a_reopen},
+		{"test_a_lookup_by_id_reads_one_shard", test_a_lookup_by_id_reads_one_shard},
+		{"test_ids_that_shared_a_key_are_separate_documents", test_ids_that_shared_a_key_are_separate_documents},
+		{"test_new_numeric_ids_pass_two_to_the_thirty_two", test_new_numeric_ids_pass_two_to_the_thirty_two},
+		{"test_ids_route_by_bucket", test_ids_route_by_bucket},
+		{"test_a_dump_and_restore_keeps_every_id", test_a_dump_and_restore_keeps_every_id},
+		{"test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted", test_a_search_whose_client_leaves_frees_its_reactor_and_is_counted},
+		{"test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled", test_a_search_whose_client_leaves_in_its_first_schema_load_is_cancelled},
+		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
+		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
+		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
 	};
 	for (const auto& c : cases) {
 		if (!wanted(c.name)) {

@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # seam-write (phase 0.5, bulk-index recovery)
 
 Branch `phase0.5/seam-write` from Xapiand master `8170a3ef6`. Local only, not pushed.

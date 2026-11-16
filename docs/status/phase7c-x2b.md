@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X2b developer's ledger (phase 7c step X2b: the handler, views and schema callers as tasks, and the reader views); reviewed (approve with conditions), the architect's ruling R1 to R4 folded in, not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-30) the X2b developer's ledger (phase 7c step X2b: the handler, views and schema callers as tasks, and the reader views); reviewed (approve with conditions), the architect's ruling R1 to R4 folded in, not pushed.
 
 # phase7c X2b (build): handlers and views as tasks, reader views
 

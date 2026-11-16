@@ -4,8 +4,11 @@ title: "Metrics Aggregations"
 
 The aggregations in this family compute metrics based on values extracted in one
 way or another from the documents that are being aggregated. The values are
-typically extracted from the fields of the document (using the field data), but
-can also be generated using scripts.
+extracted from the fields of the document (`_field`); a metric has no script form.
+
+`_min`, `_max`, `_sum`, `_avg`, `_variance`, `_std_deviation`, `_stats`, `_extended_stats`, `_median`
+and `_mode` take fields of type `positive`, `integer`, `floating`, `date`, `datetime`, `time` or
+`timedelta` (any other type answers `400`, "<type> type is not supported"); `_count` takes every type.
 
 Numeric metrics aggregations are a special type of metrics aggregation which
 output numeric values. Some aggregations output a single numeric metric

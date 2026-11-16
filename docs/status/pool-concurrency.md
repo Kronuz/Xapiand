@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # pool-concurrency (CR8)
 
 Branch `fix/pool-concurrency` from Xapiand master `c625977e7`, worktree

@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # engine-core (X2, phase 0.5)
 
 Branch `phase0.5/engine-core` from Xapiand master `5cce4860d`. Design:

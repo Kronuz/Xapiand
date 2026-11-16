@@ -1,0 +1,226 @@
+{
+ "B1": {},
+ "B2": {},
+ "t1": {
+  "t1.cpu_s_per_1000_docs": {
+   "anchor": "E",
+   "near": []
+  },
+  "t1.docs_per_sec": {
+   "anchor": "E",
+   "near": []
+  },
+  "t1.peak_memory_bytes": {
+   "anchor": "X",
+   "near": []
+  },
+  "t3.t1.bytes_per_doc": {
+   "anchor": "E",
+   "near": [
+    "X"
+   ]
+  }
+ },
+ "t2": {
+  "t2.cpu_s_per_1000_docs": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t2.docs_per_sec": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t2.peak_memory_bytes": {
+   "anchor": "X",
+   "near": []
+  },
+  "t3.t2.bytes_per_doc": {
+   "anchor": "X",
+   "near": []
+  }
+ },
+ "t4a": {
+  "t11.idle_memory_current": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.and/count.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.and/search.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.or/count.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.or/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.phrase/count.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.phrase/search.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.server_cpu_us_per_query": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.term/count.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.term/search.geomean_ms": {
+   "anchor": "X",
+   "near": []
+  }
+ },
+ "t4b": {
+  "t11.idle_memory_current": {
+   "anchor": "X",
+   "near": []
+  },
+  "t4.agg_histogram/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.agg_stats/search.geomean_ms": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t4.agg_terms/search.geomean_ms": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t4.range_size/count.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.range_size/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.range_time/count.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.range_time/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.server_cpu_us_per_query": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.sort_size/count.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.sort_size/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.sort_time/count.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.sort_time/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.term_range/count.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  },
+  "t4.term_range/search.geomean_ms": {
+   "anchor": "E",
+   "near": []
+  }
+ },
+ "t5a": {
+  "t5.phrase.cpu_us_per_query": {
+   "anchor": "X",
+   "near": []
+  },
+  "t5.phrase.rate": {
+   "anchor": "X",
+   "near": []
+  },
+  "t5.term.cpu_us_per_query": {
+   "anchor": "X",
+   "near": []
+  },
+  "t5.term.rate": {
+   "anchor": "X",
+   "near": []
+  }
+ },
+ "t5b": {
+  "t5.agg_histogram.cpu_us_per_query": {
+   "anchor": "E",
+   "near": []
+  },
+  "t5.agg_histogram.rate": {
+   "anchor": "E",
+   "near": []
+  },
+  "t5.term_range.cpu_us_per_query": {
+   "anchor": "E",
+   "near": []
+  },
+  "t5.term_range.rate": {
+   "anchor": "E",
+   "near": []
+  }
+ },
+ "t6": {
+  "t6.search_p50_us": {
+   "anchor": "E",
+   "near": []
+  },
+  "t6.search_p99_us": {
+   "anchor": "E",
+   "near": []
+  },
+  "t6.visibility_lag_p99_us": {
+   "anchor": "X",
+   "near": []
+  },
+  "t6.write_ack_p99_us": {
+   "anchor": "Q",
+   "near": []
+  }
+ },
+ "t7": {
+  "t7.crash_restart_to_ready_s": {
+   "anchor": "Q",
+   "near": []
+  }
+ },
+ "t7-t4a": {
+  "t7.clean_first_search_ms": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t7.clean_start_to_first_answer_s": {
+   "anchor": "X",
+   "near": []
+  }
+ },
+ "t7-t4b": {
+  "t7.clean_first_search_ms": {
+   "anchor": "Q",
+   "near": []
+  },
+  "t7.clean_start_to_first_answer_s": {
+   "anchor": "X",
+   "near": []
+  }
+ }
+}

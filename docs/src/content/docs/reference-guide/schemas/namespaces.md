@@ -58,8 +58,10 @@ pm.test("Namespaces results", function() {
 ```
 e2e:end -->
 
-By default every level of the path is also indexed on its own, so a shallower,
-partial path matches as well (this is the behaviour the next section controls):
+A path that stops short does not match: `style.clothing` is not the full path to
+`khakis` (the field is `style.clothing.pants`), so this query finds nothing. What a
+namespace does keep is the intermediate levels it can skip: with partial paths (on by
+default, see below) `style.footwear` reaches `style.clothing.footwear`.
 
 ```rest
 SEARCH /bank/
@@ -93,9 +95,10 @@ for the full set of ways to match namespaced paths.
 
 ## Partial Paths
 
-By default namespaced fields keep information for each level in the path. This
-behaviour can be modified by setting `_partial_paths` to `false`, when creating
-a field schema:
+By default a namespace (`_namespace: true`) keeps the information to match a path
+that skips levels. This behaviour can be modified by setting `_partial_paths` to
+`false`, when creating a field schema. A partial path is limited to 10 levels, and a
+deeper path answers `400` (`src/database/schema.h:123`):
 
 ```rest
 UPDATE /bank/1

@@ -73,3 +73,17 @@ pm.test("Range Searches values are valid", function() {
 });
 ```
 e2e:end -->
+
+## Open ranges and terms-only fields
+
+A `_range` with neither `_from` nor `_to` matches every document that has the field. Ranges
+work on numbers, dates, times and (by their text order) strings.
+
+A field indexed with terms only (`_index: field_terms`, see
+[Indexing Mode](/Xapiand/reference-guide/schemas/indexing-mode)) has no values to check a range
+against, so the range is answered by the field's [accuracy](/Xapiand/reference-guide/schemas/accuracy)
+terms: a closed range returns the documents of the buckets it covers (which can be wider than the
+range by less than the finest bucket), and a range that is open at one end, or wider than the
+terms can cover, answers `400`.
+Sources: `src/multivalue/range.cc:362-364,412-428`, `src/query_dsl.cc:453`,
+`docs/mechanisms/numeric-range-terms.md`.

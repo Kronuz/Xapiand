@@ -315,6 +315,19 @@ Note removing content doesn't actually remove the blob from the volume, it
 just removes the "link" to it from the document.
 :::
 
+## Large Blobs
+
+A body of up to 16 MiB is buffered like any other write. A `PUT` or `POST` whose
+`Content-Type` is a stored type (not JSON, YAML or MessagePack) and whose
+`Content-Length` is past 16 MiB is streamed to the data storage as it arrives, so
+the node does not hold it in memory; a stored blob can be as large as 4 GiB less a
+kilobyte. The request must carry its `Content-Length`. Any other request whose body is
+past 16 MiB answers `413 Payload Too Large`.
+
+Sources: `src/server/search_service.h:50` (the 16 MiB cap),
+`src/server/search_views.cc:3094-3106` (when a body streams), `:3180-3185` (`413`) and
+`src/database/pool.h:157` (`STORED_UPLOAD_LIMIT`).
+
 ---
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf)

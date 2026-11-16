@@ -4,10 +4,13 @@ title: "Wildcard Query"
 
 Matches documents that have fields matching a wildcard expression. Supported
 wildcards are `*`, which matches any character sequence (including the empty
-one), and `?`, which matches any single character. Note that this query can be
-slow, as it needs to iterate over many terms. In order to prevent extremely
-slow wildcard queries, a wildcard term should not start with one of the
-wildcards `*` or `?`.
+one), and `?`, which matches any single character. A `*` at the end of a word is a prefix
+match. A `*` or `?` inside a word, or a `?` anywhere, is a pattern and needs the `_wildcard`
+modifier; a `?` that ends the word stays a literal character. Note that this query can be
+slow, as it needs to iterate over many terms, and it is not capped: the number of terms
+it expands to has no limit. A wildcard term that starts with one of the wildcards `*` or
+`?` is not refused, but it has no literal prefix and scans the whole term dictionary, so
+avoid it.
 
 This allows for prefix matches, matching any number of trailing characters, so,
 for instance, `"wildc*"` would match _**wildc**ard_, _**wildc**arded_,

@@ -10,13 +10,15 @@ document counts once for each distinct value. An analysed `text` field has no st
 count, so aggregating on one answers `400`.
 
 :::hint[Performance]{.caution}
-Whenever is possible, prefer [Values Aggregation](../values-aggregation) to this type as
-it's more efficient.
+`_terms` and [Values Aggregation](../values-aggregation) read the same stored values and cost the
+same. The differences: `_terms` takes the type from the field's data, and refuses `text` fields and
+fields with no values (`400`); a `keyword` keeps its case (`"Red"` and `"red"` are two buckets) and a
+numeric field returns its values, not the accuracy terms; a `geospatial` field answers `400`.
 :::
 
 ## Structuring
 
-The following snippet captures the structure of range aggregations:
+The following snippet captures the structure of terms aggregations:
 
 ```json
 "<aggregation_name>": {

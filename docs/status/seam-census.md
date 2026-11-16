@@ -1,3 +1,5 @@
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning.
+
 # seam-census (phase 0.5: census on the native document, amendment A-T5)
 
 Branch `phase0.5/seam-census` from `phase0.5/seam-write` (Xapiand:879cd301a), with Xapiand master (Xapiand:829a67308) merged.

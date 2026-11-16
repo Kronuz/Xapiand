@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); built, proved and reviewed (approve with conditions, `docs/reviews/phase7c-x3-code.md`); the review's fixes are in; not pushed.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-30) the X3 developer's ledger (phase 7c step X3: views on the reactors as coroutine handlers); built, proved and reviewed (approve with conditions, `docs/reviews/phase7c-x3-code.md`); the review's fixes are in; not pushed.
 
 # phase7c X3 (build): views on the reactors
 

@@ -13,32 +13,41 @@ It features:
   * You can find the source code for Xapiand at [GitHub]
 
 ##### HTTP RESTful API:
-  * Document oriented.
-  * No need for upfront schema definition.
+  * Document oriented, in JSON, YAML or MessagePack.
+  * No need for upfront schema definition: field types are detected, or declared in a schema.
+  * HTTPS with `--tls-cert` and `--tls-key`. The API has no authentication.
 
 ##### Lightweight Engine:
-  * Small footprint with very low memory usage.
+  * One process: the server, the search engine and the storage, with no separate services.
+  * Runs as a single node.
 
 ##### Search Server:
   * Built on top of [strata] indexes.
+  * Full-text queries with stemming and stop words in many languages, fuzzy, partial and wildcard terms.
+  * One search can span many indexes, by list, wildcard or `_all`.
 
 ##### Storage Server:
   * Each index also offers storage of files: à la Facebook's Haystack <sup>[1](#footnote-1)</sup>.
+  * A stored blob uploads as a stream, past the 16 MiB limit of a buffered body.
 
 ##### Support for query Aggregations:
   * Metrics aggregations.
   * Bucket aggregations.
 
-##### Multi Tenant with Multi Types:
-  * Support for more than one index.
-  * Support for different types, one per index.
+##### Scripting:
+  * Lua scripts update documents, with bounds on the instructions, the work and the memory each call uses.
+
+##### Multi Tenant:
+  * Support for more than one index, and indexes nest (`twitter` and `twitter/user`).
   * Index level configuration:
     * Schema.
+    * Number of shards.
 
 ##### Efficient and Scalable architecture:
-  * (Near) Real Time Search.
+  * Reads see every write the node has answered.
   * Event driven asynchronous architecture using the Asio-based [reactor](https://github.com/Kronuz/reactor) library.
   * Written in modern C++.
+  * Prometheus metrics at `/:metrics`.
 
 ##### Geo-spatial support:
   * Uses the Hierarchical Triangular Mesh <sup>[2](#footnote-2)</sup> for indexing.
@@ -47,6 +56,7 @@ It features:
 
 ##### Sharding:
   * Each index splits into shards on a single node (`number_of_shards`).
+  * A write-ahead log recovers the writes of a crash.
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf)
 

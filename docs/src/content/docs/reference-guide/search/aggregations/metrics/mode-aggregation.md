@@ -10,9 +10,12 @@ words, it is the value that is most likely to be sampled. <sup>[1](#footnote-1)<
 
 | Type              | Description                                                         | Example                     | Result |
 |-------------------|---------------------------------------------------------------------|:---------------------------:|:------:|
-| Mean (or !verage) | Sum of values of a data set divided by number of values             | (1+2+2+3+4+7+9) / 7         | 4      |
+| Mean (or Average) | Sum of values of a data set divided by number of values             | (1+2+2+3+4+7+9) / 7         | 4      |
 | Median            | Middle value separating the greater and lesser halves of a data set | 1, 2, 2, **3**, 4, 7, 9     | 3      |
 | Mode              | Most frequent value in a data set                                   | 1, **2**, **2**, 3, 4, 7, 9 | 2      |
+
+The aggregation takes `{"_mode": {"_field": "<field_name>"}}`. When several values tie, the smallest
+wins. It keeps one counter per distinct value in memory.
 
 ```rest
 SEARCH /bank/

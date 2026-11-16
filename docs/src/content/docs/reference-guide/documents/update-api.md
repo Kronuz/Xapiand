@@ -2,15 +2,15 @@
 title: "Update Document API"
 ---
 
-The _Update API_ allows to delete a document based on the existent content of
+The _Update API_ allows to update a document based on the existent content of
 a document. The operation gets the current document from the index, merges the
 new data with the data in the current document, optionally it can also run a
 script, and indexes back the result. It internally and automatically uses
 versioning to make sure this operation is atomic.
 
-If the document does not already exist, Xapiand will return 404 by default.
-This can be changed by passing `upsert` as a query param, in this event, the
-body of the request will be added as a new document, the exact same way as the
+If the document does not already exist, `UPDATE` answers `404 Not Found`. The
+`UPSERT` method does the same as `UPDATE` and, when the document does not exist,
+adds the body of the request as a new document, the exact same way as the
 [Index API](../index-api) does it, just with the little extra overhead of trying
 to retrieve the current document first.
 
@@ -28,23 +28,9 @@ PUT /twitter/tweet/1
 }
 ```
 
-The result of the above index operation is:
-
-```json
-{
-  "user": "Kronuz",
-  "post_date": "2019-03-22T14:35:26",
-  "message": "Trying out Xapiand",
-  "likes": 0,
-  "hashtags": [
-    "#xapiand"
-  ],
-  "_id": 1,
-  "_version": 1,
-  "#docid": 1,
-  "#shard": 1
-}
-```
+The result of the above index operation is a `204 No Content` HTTP response code. As
+with every write, the `echo` query param makes the operation answer the stored
+document, with its `_id` and `_version`.
 
 :::hint{.warning}
 `PUT /twitter/tweet/1` is not the same as `PUT /twitter/tweet/1/`, the former
@@ -67,7 +53,7 @@ UPDATE /twitter/tweet/1
 }
 ```
 
-As expected, the result of the merge operation is:
+The stored document is now:
 
 ```json
 {
@@ -80,9 +66,7 @@ As expected, the result of the merge operation is:
   ],
   "title": "Xapiand Rocks!",
   "_id": 1,
-  "_version": 12,
-  "#docid": 1,
-  "#shard": 1
+  "_version": 2
 }
 ```
 
@@ -90,6 +74,123 @@ As expected, the result of the merge operation is:
 To fully replace the existing document, the [Index API](../index-api) should be
 used instead.
 :::
+
+## Patching and upserting
+
+`PATCH` applies a [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902) (an array
+of `add`, `remove`, `replace`, `move`, `copy` and `test` operations) to the
+document instead of merging a body:
+
+```rest
+PUT /updateapi/doc/1
+
+{
+  "user": "Kronuz",
+  "likes": 0
+}
+```
+
+<!-- e2e:begin
+---
+description: Update: the document to patch
+---
+
+```js
+pm.test("The document is written at version 1", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json()._version).to.equal(1);
+});
+```
+e2e:end -->
+
+```rest
+PATCH /updateapi/doc/1
+
+[
+  { "op": "replace", "path": "/likes", "value": 5 },
+  { "op": "add", "path": "/title", "value": "Patched" }
+]
+```
+
+<!-- e2e:begin
+---
+description: Update: PATCH answers the patched document with echo
+---
+
+```js
+pm.test("PATCH with echo answers the patched document", function () {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json().likes).to.equal(5);
+});
+```
+e2e:end -->
+
+Like every write, `PATCH` answers `204 No Content`, and with the `echo` query
+param `200 OK` with the patched document. Reading it back:
+
+```rest
+GET /updateapi/doc/1
+```
+
+<!-- e2e:begin
+---
+description: Update: PATCH applied a JSON Patch
+---
+
+```js
+pm.test("The patch was applied", function () {
+  pm.response.to.be.success;
+  var doc = pm.response.json();
+  pm.expect(doc.likes).to.equal(5);
+  pm.expect(doc.title).to.equal("Patched");
+  pm.expect(doc.user).to.equal("Kronuz");
+  pm.expect(doc._version).to.equal(2);
+});
+```
+e2e:end -->
+
+`UPDATE` of a missing document answers `404`, and `UPSERT` creates it:
+
+```rest
+UPDATE /updateapi/doc/2
+
+{
+  "user": "Jane"
+}
+```
+
+<!-- e2e:begin
+---
+description: Update: UPDATE of a missing document
+---
+
+```js
+pm.test("UPDATE of a missing document answers 404", function () {
+  pm.response.to.have.status(404);
+});
+```
+e2e:end -->
+
+```rest
+UPSERT /updateapi/doc/2
+
+{
+  "user": "Jane"
+}
+```
+
+<!-- e2e:begin
+---
+description: Update: UPSERT creates the document
+---
+
+```js
+pm.test("UPSERT creates the missing document", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().user).to.equal("Jane");
+});
+```
+e2e:end -->
 
 ## Scripting
 
@@ -169,8 +270,8 @@ and the scripting language.
 
 ## Commit
 
-By passing `commit` query param to the request, you can ensure the operation
-returns once the document changes have been committed to the primary shard.
+By passing the `commit` query param to the request, you can ensure the operation
+returns once the document changes have been committed to disk.
 
 :::hint{.caution}
 Try limiting the use of `commit` as it will hit performance.
@@ -178,7 +279,10 @@ Try limiting the use of `commit` as it will hit performance.
 
 ## Optimistic Concurrency Control
 
-Delete operations can be made optional and only be performed if the last
+Update operations can be made conditional and only be performed if the last
 current document version matches the passed `version` in the query param. If a
 mismatch is detected, the operation will result in a `409 Conflict` HTTP response
 code. See [Versioning](../versioning) for more details.
+
+Sources: the verbs, `src/server/search_views.cc:1000-1060` and the route table
+`:575-579`; `src/database/handler.cc:603-660` (`PATCH`) and `:1087-1102`.

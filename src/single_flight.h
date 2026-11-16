@@ -25,6 +25,10 @@
 // One load per key at a time (docs/design/phase7c.md D11): the first caller of run(key, load) runs the
 // load, the others await its result. The map's lock guards an O(1) lookup or erase and is never held
 // across the load or a wait.
+//
+// A caller that missed its cache and then found no flight may have missed a flight that ended in between.
+// So a leader first asks the caller's probe whether the cache holds the value now, and a load publishes
+// its value into that cache before it returns: the flight a probe follows has ended only after the publication.
 
 #include <atomic>                  // for std::atomic
 #include <cstdint>                 // for std::uint64_t
@@ -82,6 +86,13 @@ public:
 	template <typename Load>
 	task::task<Value> run(Key key, Load load)
 	{
+		return run(std::move(key), std::move(load), [] { return std::optional<Value>(); });
+	}
+
+	// The same, where a leader takes probe()'s value, when it has one, instead of loading (not a load).
+	template <typename Load, typename Probe>
+	task::task<Value> run(Key key, Load load, Probe probe)
+	{
 		for (;;) {
 			std::shared_ptr<Flight> flight;
 			bool leader = false;
@@ -96,10 +107,13 @@ public:
 			}
 
 			if (leader) {
-				loads_.fetch_add(1, std::memory_order_relaxed);
 				Lead lead{*this, key, flight};
 				try {
-					flight->value = co_await load();
+					flight->value = probe();
+					if (!flight->value) {
+						loads_.fetch_add(1, std::memory_order_relaxed);
+						flight->value = co_await load();
+					}
 				} catch (...) {
 					flight->error = std::current_exception();
 				}

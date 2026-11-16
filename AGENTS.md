@@ -3,6 +3,10 @@
 Orientation for anyone (human or AI) making changes here. Read
 [ARCHITECTURE.md](ARCHITECTURE.md) first for the *what*; this file is the *how*.
 
+## Current campaign
+
+The plan, quests and their evidence are in `.campaign/xapiand/`, run by the `campaign` skill; quests in strata and the other libraries live there too. `campaign map` shows the whole campaign, `campaign status` what each quest still needs. `docs/status/` here and in strata holds the earlier skill's ledgers, kept as history for their results and reasoning.
+
 ## First, the big split: own code vs. libraries
 
 `src/` is Xapiand's own code. Everything that used to be vendored (msgpack-c, fmt, RapidJSON,

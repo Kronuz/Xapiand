@@ -24,6 +24,8 @@
 #include "serialise.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <cstdint>                                    // for int64_t, uint64_t
+#include <limits>                                     // for std::numeric_limits
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view
 
@@ -42,6 +44,7 @@
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
+#include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
 #include "utype.hh"                                   // for toUType
 
@@ -802,7 +805,8 @@ Serialise::guess_type(const class MsgPack& field_value)
 			return FieldType::integer;
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return FieldType::positive;
+			// The value picks the type, not its encoding: msgpack sends 5 unsigned and JSON signed.
+			return field_value.u64() > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ? FieldType::positive : FieldType::integer;
 
 		case MsgPack::Type::FLOAT:
 			return FieldType::floating;
@@ -926,15 +930,94 @@ Serialise::guess_type(const class MsgPack& field_value)
 }
 
 
+std::string
+Serialise::id(const required_spc_t& spc_id, const class MsgPack& document_id)
+{
+	const auto type = spc_id.get_type();
+	switch (type) {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating: {
+			const auto value = Cast::cast(type, document_id.is_map() ? Cast::cast(document_id) : document_id);
+			switch (type) {
+				case FieldType::integer:
+					return sortable::encode(value.i64());
+				case FieldType::positive:
+					return sortable::encode(value.u64());
+				default:
+					return sortable::encode(value.f64());
+			}
+		}
+		default:
+			return serialise(spc_id, document_id);
+	}
+}
+
+
+std::string
+Serialise::id(std::uint64_t document_id)
+{
+	return sortable::encode(document_id);
+}
+
+
+std::pair<FieldType, std::string>
+Serialise::guess_id(const class MsgPack& document_id)
+{
+	auto guessed = guess_serialise(document_id);
+	switch (guessed.first) {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating: {
+			required_spc_t spc_id;
+			spc_id.set_type(guessed.first);
+			guessed.second = id(spc_id, document_id);
+			break;
+		}
+		default:
+			break;
+	}
+	return guessed;
+}
+
+
+std::optional<std::uint64_t>
+Unserialise::id(std::string_view serialised_id)
+{
+	const auto number = sortable::decode(serialised_id);
+	return number ? number->to_uint64() : std::nullopt;
+}
+
+
+MsgPack
+Unserialise::id(FieldType field_type, std::string_view serialised_id)
+{
+	const auto number = sortable::decode(serialised_id);
+	if (!number) {
+		THROW(SerialisationError, "Invalid numeric id: {}", repr(serialised_id));
+	}
+	switch (field_type) {
+		case FieldType::integer:
+			return number->to_int64().value_or(number->saturate_int64());
+		case FieldType::positive:
+			return number->to_uint64().value_or(number->saturate_uint64());
+		default:
+			return number->to_double();
+	}
+}
+
+
 std::pair<FieldType, std::string>
 Serialise::guess_serialise(const class MsgPack& field_value)
 {
 	switch (field_value.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			if (guess_type(field_value) == FieldType::positive) {
+				return std::make_pair(FieldType::positive, positive(field_value.u64()));
+			}
+			[[fallthrough]];
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return std::make_pair(FieldType::integer, integer(field_value.i64()));
-
-		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::make_pair(FieldType::positive, positive(field_value.u64()));
 
 		case MsgPack::Type::FLOAT:
 			return std::make_pair(FieldType::floating, floating(field_value.f64()));

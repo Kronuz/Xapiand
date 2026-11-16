@@ -177,6 +177,9 @@ public:
 
 	std::string serialise() const;
 
+	// How many records this process has zstd-compressed (tests count a write's compressions).
+	static std::uint64_t compressions() noexcept;
+
 	bool operator==(const Locator& other) const noexcept;
 
 	bool operator!=(const Locator& other) const noexcept;
@@ -258,7 +261,8 @@ public:
 
 	MsgPack get_obj() const;
 
-	void set_obj(const MsgPack& object);
+	// Sets the main object; `compress` false keeps it raw for a later writer to compress once.
+	void set_obj(const MsgPack& object, bool compress = true);
 
 	std::pair<const Locator*, const Accept*> get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type = {}) const;
 };

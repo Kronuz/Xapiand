@@ -2,7 +2,8 @@
 title: "Standard Deviation Aggregation"
 ---
 
-A _single-value_ metrics aggregation that computes the standard deviation of
+A _single-value_ metrics aggregation that computes the sample standard deviation (the square
+root of the sample variance, which divides by `n - 1`) of
 numeric values that are extracted from the aggregated documents.
 
 ## Structuring

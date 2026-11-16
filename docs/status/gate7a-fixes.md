@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-10-28) gate 7a fix round, branch `phase7a/gate-fixes` (from `phase7a/gate`, base master 9fa890ecc); workstream gate7a-fixes, developer.
+> Status: HISTORY (2026-11-08): superseded by Xapiand's `.campaign/xapiand/` (`campaign map`); kept for its results and reasoning. Was: (2026-10-28) gate 7a fix round, branch `phase7a/gate-fixes` (from `phase7a/gate`, base master 9fa890ecc); workstream gate7a-fixes, developer.
 
 # Gate 7a fixes
 

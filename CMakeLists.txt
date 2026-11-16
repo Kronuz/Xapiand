@@ -417,7 +417,6 @@ endif ()
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
 set (XAPIAND_DATA_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand")
 
 
@@ -453,29 +452,29 @@ endif ()
 
 include(FetchContent)
 
-# compressors: the commit strata pins, for its stored blocks' one-shot LZ4 and zstd block codecs
-# (declared first, so it wins over the older pins of the libraries that also use compressors).
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5c5412871af96294ea617aebee2d1f99820d74c8)
-# Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use, declared
-# before them: FetchContent keeps the first declaration of a name, so these are the pins that count.
+# Every pin below is the newest commit any fetched library pins (harness/pins_check.py compares the
+# resolved trees). A library that pins an older one is bumped in its own repository.
+# compressors: the LZ4 and zstd block codecs of the stored blocks, and the deflate codec.
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 5566260a30bbd2d77d5cfa890bfe33f503a2add6)
+# Shared libraries that fetched libraries (msgpack, strata, completion, ...) also use.
 FetchContent_Declare(allocators  GIT_REPOSITORY https://github.com/Kronuz/allocators.git  GIT_TAG 07de45d180f23e2552b9504a6b4d506651594d1e)
 FetchContent_Declare(atomic_shared_ptr GIT_REPOSITORY https://github.com/Kronuz/atomic-shared-ptr.git GIT_TAG 9af0aa765fea19b4c7d05d6663ad3a7bff7c5530)
-FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 57613ed349bb4fa273806b78341a53f676089505)
-FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG a24942eabaad0b1c8e0b3404b4ae5a10b624b4c3)
-FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG 653fb34844e63517da14659cc8f063643bf4a085)
-FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG e040c2b383a1a19147cfcb0d14947d38d098e534)
-FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG 87450b43c6ff113a321e06d811d9b7a4857c9351)
-FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 46561fad9f26f9b2b613568fe1a3dbcb016d4aba)
-FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
+FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 25decb57ef5869e4677c42bf9a00ea25b58d35c0)
+FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG 6b223e2ed87fc398b4320c85d78a08a8fcb66a32)
+FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG a7202ada8d27e7eb2d4713fbfd3b43eaa347fc91)
+FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG f8b93484f0a7cdc6e411f5e3907fb9dbe5def900)
+FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG d2eb8955d92be7229b371d493d4bab7b148c4d9b)
+FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 7eaa8f9d3cfc373ff25d620672a6f6f83b94ce3f)
+FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG d3eaf328cd011ba045325467e09f00b520d55f4d)
 FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 05f91deaf86cddf33839d5a4de60ffb3ce73bed0)
-FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 1be38483a333d13544fbf6b0937409295c8ea3e0)
-FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 94df6e5e1cadebbba45cd1f5fbb679407550be56)  # track tip
+FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 6799a6e8a1741367bda269546d3f3999d0f1d80f)
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 76a400be217eec6043510d5a812e368eb1898153)  # track tip
 
 # Third-party header-only deps (rapidjson, cppcodec, cli11) are DECLARED up-front,
 # before any of our libraries that transitively FetchContent them (msgpack pulls
-# rapidjson; logger / http_log pull cppcodec). FetchContent is first-declaration-wins
-# (the same reason as for any library declared before the one that fetches it), so these details --
-# crucially SOURCE_SUBDIR=do-not-configure -- govern the one shared copy and guarantee
+# rapidjson; logger / http_log pull cppcodec). FetchContent keeps whichever declaration of a
+# name comes first, so these details -- crucially SOURCE_SUBDIR=do-not-configure -- govern
+# the one shared copy and guarantee
 # their ancient CMakeLists never run. CMake 4.x rejects their pre-3.5
 # cmake_minimum_required outright (and rapidjson's would also build a bundled gtest),
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
@@ -484,16 +483,18 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1d82461008c897ab004652d5c43e60ccfa7012cb)
-FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 40af1a2089df42a3a622e6c3cd539b1e0f0da73f)
+FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 4b669b6c065e209f503e5f3ec839a0634dd13edf)
+FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG d48a28e50a915f772f254a6641cda100029bb31f)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG df0ebc885c3e72e139a35dd4e34f5c731f02b4bd)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception)
+# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
-# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
+# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
 	"${constexpr_phf_SOURCE_DIR}"
@@ -502,6 +503,7 @@ include_directories(
 	"${errno_names_SOURCE_DIR}"
 	"${base_x_SOURCE_DIR}"
 	"${located_exception_SOURCE_DIR}"
+	"${sortable_SOURCE_DIR}"
 )
 
 # located-exception ships exception.h + exception.cc (the base: BaseException,
@@ -533,7 +535,7 @@ include_directories("${traceback_SOURCE_DIR}")
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG eb4751a33ed492961cb125df68e526264ba1f18b)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 63e03a5deca9c91f08755d900c61885dd5e75822)  # threadpool main: WorkPool, WorkGroup, on_idle, block_guard
 FetchContent_MakeAvailable(threadpool)
 include_directories("${threadpool_SOURCE_DIR}")
 add_compile_definitions(
@@ -547,7 +549,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + xapiand_colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 1e5ccc9c6dfc62611751dae2143467ef00305fc3)  # track tip
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG d57e8fc051097d84500b4036b85daadd00c00b14)  # track tip
 FetchContent_MakeAvailable(scheduler)
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
@@ -558,7 +560,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 2356791b1bc668bb23a27f0d14eb6d4105963ee1)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG f61d8df44ee524c49820ad42e630042103d3fb92)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
@@ -589,8 +591,8 @@ FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.gi
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
-	STORAGE_IO_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_io.h"
-	STORAGE_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_trace.h"
+	STORAGE_IO_HEADER="xapiand_storage_io.h"
+	STORAGE_TRACE_HEADER="xapiand_storage_trace.h"
 )
 
 # server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
@@ -609,8 +611,8 @@ FetchContent_Declare(io GIT_REPOSITORY https://github.com/Kronuz/io.git GIT_TAG 
 FetchContent_MakeAvailable(io)
 include_directories("${io_SOURCE_DIR}")
 add_compile_definitions(
-	IO_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_trace.h"
-	IO_RANDOM_ERRORS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_random_errors.h"
+	IO_TRACE_HEADER="xapiand_io_trace.h"
+	IO_RANDOM_ERRORS_HEADER="xapiand_io_random_errors.h"
 )
 
 # fs: the filesystem helpers (Kronuz/fs), extracted from Xapiand. Same shape as io: only
@@ -621,7 +623,7 @@ add_compile_definitions(
 FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG c002235cf3734d58e33abeb6b8b8b809928f3bae)
 FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
-add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
+add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 
 # system: process/system resource introspection (Kronuz/system), extracted from Xapiand.
 # Same shape as io/fs: only the headers go on the include path; system.cc + memory_stats.cc
@@ -631,7 +633,7 @@ add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_tr
 FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 20ffc71647228fb042da9fdd002dd1b8388a8b06)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
-add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
+add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
 
 # cuuid: condensed UUID value + binary wire codec (Kronuz/cuuid), extracted from
 # Xapiand. Same shape as io/fs/system: only the headers go on the include path;
@@ -642,9 +644,9 @@ FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GI
 FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
-	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
-	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_engine.h"
-	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
+	CUUID_TRACE_HEADER="xapiand_cuuid_trace.h"
+	CUUID_EXCEPTION_HEADER="exception_engine.h"
+	CUUID_NODE_HEADER="xapiand_cuuid_node.h"
 )
 
 # msgpack: bundled msgpack-c fork + MsgPack COW value + xchange adaptors +
@@ -653,14 +655,13 @@ add_compile_definitions(
 # keep working; msgpack_patcher.cc is compiled into XAPIAND_OBJ below so its
 # exceptions bind to Xapiand's real hierarchy. The vendored msgpack/exception.hpp
 # still includes "exception.h" directly; src/ is first on the include path, so
-# Xapiand's wrapper wins here.
-# hashes is declared before msgpack, which also declares it: the first declaration wins, and strata needs
-# the commit with wordwise::hash32.
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG e3bf5b6167775f26dd14f89f210f687b0253241b)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 4a1a97ca16bebe93f1e6c8aeb35fbac086f66817)
+# Xapiand's wrapper is the one found.
+# hashes: the commit with wordwise::hash32, which strata needs.
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 03ab2d69f7e1b0af6039733e0e06cc1e0118a45e)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
-add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(MSGPACK_EXCEPTION_HEADER="xapiand_exception.h")
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -733,7 +734,7 @@ FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.
 FetchContent_MakeAvailable(unicode snowball analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
-# host, whatever engine runs the query. It pins analysis itself; the pin above is declared first and wins.
+# host, whatever engine runs the query.
 FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG f554cd3ac53aec755c9f6fc5190060a15466a37e)
 FetchContent_MakeAvailable(queryparser)
 
@@ -753,8 +754,8 @@ add_definitions(-DASIO_STANDALONE)
 # task: C++20 coroutine tasks. The engine seam returns task::task<T> from every operation
 # that can block on I/O (docs/design/xapiand-on-strata.md D13). Header-only. The loops' tasks run through
 # task_asio.hh (engine/host_asio.h, docs/design/phase7c.md D2); task::asio, which reactor links, uses the
-# Asio above. A chore resumes its awaiter with asio_scheduler::post(), the one thread-safe entry, never
-# post_demoted() (C10).
+# Asio above. A chore resumes its awaiter through the reference it captured: post() for a light request,
+# post_heavy() for a heavy one, both thread-safe (docs/design/loop-scheduling.md D2).
 set(TASK_ASIO ON CACHE BOOL "" FORCE)
 # Counts live task frames (task::detail::live_frames), which the teardown tests check; set for every target, since
 # it changes task's inline functions. Off by default: it adds an atomic add per frame.
@@ -762,15 +763,14 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG d0807866aaace4bf916273a4bc0bee63f541978f)  # task main C3: cancellation, inline resume, roots and the four teardown phases
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
 FetchContent_MakeAvailable(task)
 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
-# strata and the libraries strata links (the pins above win where the same library is declared).
-# strata: declared here so the commit with defer_io and work_pool_executor wins over the one prospect pins.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 3f564dc5b7e84325d0425d8c6344ab76b5667057)  # strata deps: drop-threadpool (threadpool without ThreadPool, task b406766)
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG bd782248009a994c677aef44827f3138f824529e)  # prospect drop-threadpool
+# strata and the libraries strata links.
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -813,7 +813,7 @@ include_directories(
 # state machine lives in http_parser.cc, compiled into XAPIAND_OBJ below (the
 # "logger way"), so we Populate + put the headers on the path here. This unifies
 # the parser with Kronuz/http, whose HttpConnection uses the same fork.
-FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG c27615d24d40a2becfb42d40c5060a9803d6a75c)
+FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG fcdad32fa8d8950da2dc3c237f3f91ad1b5eb211)
 FetchContent_MakeAvailable(http_parser)
 include_directories("${http_parser_SOURCE_DIR}")
 
@@ -823,9 +823,8 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-# reactor is declared before http so this pin wins over its (first declaration wins).
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2fd30c80284a4224c1c6476fa5fb4ee3137a66be)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 73cfa02035a7da5edd229b2bbd838f2fdaaa72be)  # http main: BodyStream::read as a task (H2), affinity against the loop thread
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG eb08b59e6aa2086a1ebaac665b8475f32e80d230)  # http main: q-values parsed without libc
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
@@ -837,7 +836,7 @@ include_directories("${http_lib_SOURCE_DIR}")
 # include path, which is all http_log.h needs.
 FetchContent_Declare(http_log
   GIT_REPOSITORY https://github.com/Kronuz/http-log.git
-  GIT_TAG        616c80ab82a98501cf350db3bcf8ad47f236b775  # http-log phase/task-h1: AccessLog::handle on task, http H2 pin
+  GIT_TAG        4e4b79f565b1c6c38948b98cd4c1af6cdc1cf054  # http-log main
   SOURCE_SUBDIR  do-not-configure)
 FetchContent_MakeAvailable(http_log)
 include_directories("${http_log_SOURCE_DIR}")
@@ -868,7 +867,7 @@ include_directories("${datetime_SOURCE_DIR}")
 # Header-only ones just need their dir on the include path; the compiled ones
 # (md5/sha256/random/allocators/cartesian) are linked as targets by XAPIAND_OBJ below.
 FetchContent_Declare(md5         GIT_REPOSITORY https://github.com/Kronuz/md5.git         GIT_TAG 945987c5224b48c90cf0e3a3dbb5ebe5beadef5b)
-FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG f4a3463310853ebc26133acd3a793a7019ce3000)
+FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG f24692f0e8375d7069fa28f692305801f351de9e)
 FetchContent_Declare(epoch       GIT_REPOSITORY https://github.com/Kronuz/epoch.git       GIT_TAG de7efdf6a10bcf5983264c8e0d1a53b1969e0bd5)
 FetchContent_Declare(nanosleep   GIT_REPOSITORY https://github.com/Kronuz/nanosleep.git   GIT_TAG 974680bbd4f1ed4e253737ce8d9196d60d86c8a1)
 FetchContent_Declare(cartesian   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git   GIT_TAG 05cab81fe803532613e05fba65a37a8c14268cf7)
@@ -950,7 +949,7 @@ foreach(dep stash uinteger_t radix_router)
 	endif ()
 	include_directories("${${dep}_SOURCE_DIR}")
 endforeach ()
-add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
 # zstd: the storage library's codec-in-header dispatch references the Zstandard
 # backend (compressor_zstd.{h,cc}), so zstd must be available now even though
@@ -1032,7 +1031,7 @@ if(LUA)
 	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
 	FetchContent_Declare(lua
-		URL "${XAPIAND_LUA_URL}"
+		URL ${XAPIAND_LUA_URL}
 		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
 		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
@@ -1276,6 +1275,18 @@ target_link_libraries(strata_check PRIVATE
 	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 )
 
+# Times Shard::view() per call at 1 and 8 threads on one index (docs/perf/shard-view.md).
+# Built on request: cmake --build build --target xapiand_bench_shard_view  ->  build/bin/xapiand_bench_shard_view
+add_executable(xapiand_bench_shard_view EXCLUDE_FROM_ALL
+	"${PROJECT_SOURCE_DIR}/tests/bench_shard_view.cc"
+	"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
+)
+target_link_libraries(xapiand_bench_shard_view PRIVATE
+	XAPIAND_PACKAGE_OBJ XAPIAND_OBJ BOOLEAN_PARSER_OBJ LZ4_OBJ prometheus-cpp::core YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
+	${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
+)
+
 
 ########################################################################
 # Copy data files (stopwords, mime types) from source to build directory
@@ -1304,6 +1315,10 @@ install(FILES ${CMAKE_SOURCE_DIR}/mime.types DESTINATION ${XAPIAND_DATA_PATH})
 
 # Manual page generation
 install(FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)
+
+# License and notices, carried by every package built from the install tree
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE ${CMAKE_SOURCE_DIR}/NOTICE ${CMAKE_SOURCE_DIR}/THIRD-PARTY-NOTICES
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/xapiand)
 
 # Install binary
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
@@ -1851,6 +1866,10 @@ message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAK
 
 if (BUILD_TESTS)
 	enable_testing()
+	add_test(NAME test_config_relocatable COMMAND ${CMAKE_COMMAND}
+		-DTEMPLATE=${PROJECT_SOURCE_DIR}/config.h.in
+		-DWORK=${PROJECT_BINARY_DIR}/tests/config-relocatable
+		-P ${PROJECT_SOURCE_DIR}/tests/check_config_relocatable.cmake)
 	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 endif ()
 
@@ -1878,7 +1897,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node lua metric_serialise quarantine root_routes)
+		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -2029,6 +2048,8 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
 			)
+			target_compile_definitions(${PROJECT_TEST} PRIVATE
+				FIXTURES_PATH="${PROJECT_SOURCE_DIR}/oldtests")
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ
