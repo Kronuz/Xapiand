@@ -1,6 +1,6 @@
 # metrics-fd-count: journal
 
-State: waiting on jobs 261116-081527-017d42 261116-083135-f2643d 261116-083148-c3780d 261116-083142-1bc561 261116-083142-e4f744 261116-082207-28c2d6
+State: waiting on jobs 261116-113507-762c60 261116-113507-c6d2dc
 Quest: .campaign/xapiand/quests/metrics-fd-count.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,10 +14,13 @@ system:a5dc407 (branch quest/xapiand/metrics-fd-count, ~/code/Kronuz/system, wor
 adds tests/test_manager_fd_count.cc and harness/metrics_scrape_{probe.py,build.sh,ab.sh,reactor_lag.patch};
 Xapiand:1324fb278 repins system. Jobs: before build 261116-081527-017d42 (-> ~/.scratch/fd-ab/before), after build
 261116-083135-f2643d (-> ~/.scratch/fd-ab/after), A2 strict ABBA x3 261116-083148-c3780d (after both), build-test
-261116-083142-1bc561, e2e 261116-083142-e4f744, A1 mutant 261116-082207-28c2d6 (system:a5dc407 with the listing
+261116-113507-762c60, e2e 261116-113507-c6d2dc, A1 mutant 261116-082207-28c2d6 (system:a5dc407 with the listing
 counting its own dirfd; must fail). docs/mechanisms/metrics.md is drafted with a RESULTS placeholder.
 
 ## Next
+
+0. Master merged (no conflict; logger/workpool pins kept, system a5dc407). A2 numbers are in docs/mechanisms/metrics.md
+   (69-94 ms to 0.67-1.18 ms; turns over 3 ms 41-67 to 0-36, run beside ~10 light holds). Wait for the verify jobs and CI.
 
 1. When the jobs finish: read A2's log (`campaign job log 261116-083148-c3780d`), put the numbers in
    docs/mechanisms/metrics.md (replace RESULTS) and the Result below; confirm the Xapiand CI on 1324fb278 is green.
@@ -36,9 +39,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test tests/test_manager_fd_count.cc (and system test/test.cc): build-test 261116-083142-1bc561; mutant (listing counts its own dirfd) 261116-082207-28c2d6 |
+| A1 | test tests/test_manager_fd_count.cc (and system test/test.cc): build-test 261116-113507-762c60; mutant (listing counts its own dirfd) 261116-082207-28c2d6 |
 | A2 | 261116-083148-c3780d (strict ABBA x3, spin probe over 3 ms; builds 261116-081527-017d42 before, 261116-083135-f2643d after) |
-| A3 | e2e 261116-083142-e4f744 |
+| A3 | e2e 261116-113507-c6d2dc |
 
 ## Result
 
