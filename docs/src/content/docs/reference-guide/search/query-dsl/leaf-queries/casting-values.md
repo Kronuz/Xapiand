@@ -35,7 +35,9 @@ pm.test("Casting Values results", function() {
 e2e:end -->
 
 In the above example cast `2221.82` to integer (the fraction is truncated, giving `2221`), which later is internally
-converted to `2221.0` (as the "balance" field is a float).
+converted to `2221.0` (as the "balance" field is a float). A cast is the one way to convert a value: without it, a value
+must already be exactly of the field's type (see [Exact Values](/Xapiand/reference-guide/schemas/field-types/numeric-type#exact-values)).
+A cast truncates a fraction but never wraps: a value outside the type's range, such as `{"_positive": -1}`, answers `400`.
 
 The following example will convert the integer `84535` to text `"84535"`:
 
@@ -133,4 +135,4 @@ pm.test("_date is not a cast word", function() {
 ```
 e2e:end -->
 
-Sources: `src/query_dsl.cc:255-276,278-386`, `src/reserved/types.h:28-53`; the truncation, `src/cast.cc:156-164`.
+Sources: `QueryDSL::process` in `src/query_dsl.cc`, `src/reserved/types.h:28-53`; the truncation and the range checks, `Cast::integer` and `Cast::positive` in `src/cast.cc`.
