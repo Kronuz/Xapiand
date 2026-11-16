@@ -1,21 +1,26 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs 261116-113249-880538 261116-113252-d65b43 (vararg A/B); A5 CI 43940511521 43940511755
+State: round 5, security review fixes (S1-S4, trivial-call cost) at 309df5cf1, master merged (87bc48324); waiting on jobs
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Round 4 (11:35). The TSan HANG was TSan slowness: fuzz_lua 60 1 passes at master's src (14c2ac) and at the head
-(929a79). Under TSan the vararg chain to the work cap takes 6,525 ms alone and 19,828 ms for three interleaved, and
-fuzz_lua runs it 7 times under one 60 s alarm. Plain build: 253 / 838 ms (c035c3).
-Is the head slower than master on that work-capped path? Strict A/B, test_lua x5, each printing the vararg and
-trivial-call times: master's src plus only the timing test (local branch probe/lua-memory-bound-master-vararg,
-449030e0c) 880538 vs head d65b43.
-A5: rows branch quest/xapiand/lua-memory-bound-rows = merge of this branch (6d024683d) and platform-rows
-(978b707a3) at 38c81f547, pushed; the push ran arm64 43940511521, FreeBSD 43940511755, CI 43940511723.
-Dropped: the local 2-reactor T10 row (6970f9 and e87a30 failed at master lua_bounds.py's port+1 foreign node,
-fixed on platform-rows; its loops answered 204). A4 at node level does not reproduce on macOS (master b19ec0:
-all 204); the unit mutant ce0a1e is A4's fails-without.
+Round 5 (12:30). Review .campaign/xapiand/reviews/lua-memory-bound-security.md (CHANGES at fa6136633), fixes in
+309df5cf1:
+- S1: local Processor keeps no params (handler passes them per call; N2 gone); foreign keeps the stored doc's params
+  serialized, charged in resident_bytes. Test `test_a_cached_script_keeps_no_call_params`.
+- S2: a collect of the cached state trims the thread's cache; collect runs whole cycles until one frees < 1 KiB (each
+  halves a grown string table, max 16). Tests `test_a_call_leaves_its_string_table_as_it_was`,
+  `test_calls_keep_a_threads_cached_scripts_within_the_budget` (32 x 700k strings).
+- S3: overlap of a script > 16 KiB waits (task::async_mutex) for the cached state; <= 16 KiB compiles its own.
+  Test `test_overlapping_calls_of_a_large_script_take_turns`.
+- S4: collect first sets a fresh live table (registry ref) at the head of allgc, so sweeptolive stops at once and the
+  sweep frees ~51k objects a LUA_GCSTEP. Cancel: collect continues in its own 200 us slices (N3, N4).
+  Test `test_the_after_call_collection_frees_in_slices` (>= 8 slices after the build; prints the longest).
+- Lead's trivial-call finding: collect only when the call grew the state >= 64 KiB; cache charges that allowance.
+Jobs: test_lua at head 261116-122901-b5da7b; fails-at-fa mutant (new tests on fa's code, branch
+probe/lua-memory-bound-s1s4-at-fa f0a2301ec) 261116-122927-714fb5 (must exit 1 with FAILs in the 5 new tests).
+Next: reviewer probe reruns, strict trivial-call timing, rows branch rebuild (A5, FreeBSD flood p99), verify.
 
 ## Blocked on
 
@@ -69,3 +74,14 @@ peak concurrency, and the cache would have to count and trim states inside a scr
    refusal would run an uncharged, uninterruptible full GC of up to 64 MiB: a reactor stall a script could
    repeat. Out of scope; noted for the lead.
 4. Compilation stays unmetered (X4-N5, pre-existing); its bytes count against the cache once settled.
+5. S3: waiting only for scripts over 16 KiB, not for every script. Waiting always is simpler but serializes every
+   script's calls on a reactor (D10's interleaving; `test_the_calls_really_interleaved`), so one long call of a
+   schema script would hold every other write of that index on its reactor. Up to 16 KiB a compile is about 1 ms at
+   worst (table constructor: 53 ms/MiB, R5), above that the stall grows with the script, so those calls queue.
+6. S4: sliced on the reactor (a live table at the head of allgc), not off-loop. The lgc.c patch (reviewer's (a)) is
+   outside the file set; off-loop needs the host's WorkPool inside src/lua (unit tests and the CLI have none, so
+   tests and the reviewer's probes would exercise a different path). The sweep's CPU is the call's own, sliced like
+   the call. Revisit off-loop if FreeBSD's flood p99 stays over 100 ms and master's does not.
+7. The after-call collect runs only when a call grew its state >= 64 KiB (lead, trivial call 7.6 -> 12.3 us). 64 KiB
+   is 1/1024 of the cap, so leftover garbage takes at most that from the next call; the cache charges it, keeping 100
+   ordinary scripts under 9 MiB.
