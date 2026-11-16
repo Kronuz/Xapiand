@@ -4734,20 +4734,52 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-design",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-16T15:03:57",
+          "ci_skipped": "owner-approved 2026-11-16: cpp-libraries nightly red since d36a131, before this quest; docs-only change",
+          "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+          "criteria": {
+            "A1": "`docs/design/faultlab.md` F7 (\"Public API. One table, everything a test touches\"), F5 (\"Detent's four variants\"), F4, F6; rows for crash points, sector tearing, namespace durability, ordering epochs, media, ENOSPC, short writes",
+            "A2": "`docs/design/faultlab.md` F8 (\"virtual void preallocate(std::uint64_t offset, std::uint64_t length);\"), F9 (\"Sync: always durable (pending the owner's ruling)\")",
+            "A3": "`docs/design/faultlab.md` F10 (\"Size against the 475 lines of test_relay_mirror_crash.cc\")",
+            "A4": "`docs/design/faultlab.md` F11 (\"One seeded scenario line\"), F12 (\"One JSON-line event log\"), F13 (\"One checker: Xapiand's history.py moves to faultlab\"), F14 (\"netlab (Linux, root or a user namespace)\"), F15 (\"What runs where\")",
+            "A5": "`docs/design/faultlab.md` F16 (\"callers first, the original deleted last, no shim\") and \"Migration order\" steps 0-10 with sizes",
+            "A6": "`docs/design/faultlab.md` \"Questions for Detent's lead (answered)\" (QD1, QD2, QD3)"
+          },
+          "evidence": [
+            {
+              "cmd": "test -s docs/design/faultlab.md",
+              "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-145941-40df1d",
+              "level": "light",
+              "seconds": 0.9,
+              "state": "done",
+              "what": "faultlab-design check doc at 727e417a84a3"
+            }
+          ],
+          "final": true,
+          "from": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+          "reason": "",
+          "tested": "727e417a84a39597a7ce185d97eb28381b3a2b6f"
+        }
+      ],
       "lenses": [
         "design"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
-      "updated": "2026-11-16T15:03:53",
-      "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
+      "updated": "2026-11-16T15:03:59",
+      "worktree": ""
     },
     "field-table": {
       "accepted": {},
