@@ -16021,6 +16021,62 @@
       "title": "Hardware SHA-256 kernels (CL-10)",
       "updated": "2026-11-08T15:41:20"
     },
+    "shard-rpc": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/cluster/fuzz_rpc.sh 60",
+          "later": true,
+          "level": "light",
+          "minutes": 70,
+          "name": "fuzz"
+        }
+      ],
+      "consumes": [
+        "consensus:rpc-lane"
+      ],
+      "files": [
+        "src/cluster/rpc*",
+        "tests/cluster/test_rpc*",
+        "tests/cluster/fuzz_rpc*",
+        "docs/mechanisms/shard-rpc.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "xapiand:shard-rpc"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "The node-to-node shard service",
+      "updated": "2026-11-15T23:05:13"
+    },
     "shared-reader-core": {
       "accepted": {},
       "after": [],
