@@ -19071,18 +19071,60 @@
         "docs/src/content/docs/reference-guide/**",
         "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T13:38:23",
+          "commit": "1235d7658b3b2646b948190b89ede0c6a90e0f47",
+          "criteria": {
+            "A1": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092513-8e8db4, 261116-102322-382d53, 261116-102340-55981a, 261116-102345-c19625",
+            "A2": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092516-7d49d2, 261116-102327-00286b, 261116-102340-55981a",
+            "A3": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092519-a7c977, 261116-102331-08b7c8, 261116-102345-c19625",
+            "A4": "261116-102318-c7cf29 (passed at 64213e8b5099; only merges from main since); fails without: 261116-092523-55e91e, 261116-102336-f2cb97",
+            "A5": "261116-102352-9b6620 (passed at 64213e8b5099; only merges from main since), 261116-102352-d620da (passed at 64213e8b5099; only merges from main since)",
+            "A6": "`docs/src/content/docs/changelog.md` [Unreleased] Changed, first entry"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-102352-9b6620",
+              "level": "light",
+              "seconds": 441.0,
+              "state": "done",
+              "what": "strict-values check build-test at 8440e071e427"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "8440e071e427a21680b9c1174a1ddbab95f845cd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-102352-d620da",
+              "level": "light",
+              "seconds": 294.1,
+              "state": "done",
+              "what": "strict-values check e2e at 8440e071e427"
+            }
+          ],
+          "final": true,
+          "from": "0b7c2f632f4420e35fbfff57e51e25681dede4f9",
+          "reason": "",
+          "tested": "21d68ff08df1a934fe97642e83b4f57b01ad1260"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "One strict rule for values, ids and searches",
-      "updated": "2026-11-16T13:21:40",
+      "updated": "2026-11-16T13:38:31",
       "worktree": "../Xapiand-wt/xapiand/strict-values"
     },
     "sync-at-first-commit": {
