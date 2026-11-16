@@ -2,7 +2,7 @@
 """restore_stall_probe: what a RESTORE stream does to a trivial GET and to the reactor loop, with the loop sampled.
 
 Starts a node (--processors 1 by default), loads --docs `accounts`, then runs 20 s phases: idle (no traffic), trivial, trivial2 (A/A), restore (the trivial stream
-plus a RESTORE client), trivial3 (A/A); the restore phase's RESTOREs are 5,000-document chunks into another index. `--sample` runs macOS `sample` on the node for the restore phase. With
+plus a RESTORE client in a process of its own), trivial3 (A/A); the restore phase's RESTOREs are 5,000-document chunks into another index. `--sample` runs macOS `sample` on the node for the restore phase. With
 `--spin US` the node runs the patched reactor_lag.h (harness/restore_stall_reactor_lag.patch, env XAPIAND_LAG_SPIN):
 a sleep-free loop-iteration probe that logs every gap over US and signals the loop thread for a stack while it is
 stalled; the lines (SPIN, STALL) are in <workdir>/node.log.
@@ -58,7 +58,7 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
         conn = await pool.get()
         try:
             status, _ = await conn.request("GET", args.path.format(id=doc_id), timeout=60)
-            if status != 200:
+            if status != 200 and not args.any_status:
                 errors[0] += 1
             elif sched - t0 >= args.warmup:
                 lat.append(int((loop.time() - sched) * 1e6))
@@ -86,23 +86,34 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
     restored = [0.0, 0]
 
     async def restore_client() -> None:
-        conn = sl.Conn(node.host, node.port)
-        rows = sl.load_rows()
-        first = 1
+        # In a process of its own: building and sending a 5,000-document body stalls a Python loop for 10-20 ms, which
+        # the trivial GETs' latency would otherwise count.
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            os.path.abspath(__file__),
+            "--restore-client",
+            f"{node.host}:{node.port}",
+            str(time.time() + (end_at - loop.time())),
+            stdout=asyncio.subprocess.PIPE,
+        )
+        out, _ = await proc.communicate()
+        done = json.loads(out)
+        restored[0] += done["secs"]
+        restored[1] += done["docs"]
+        errors[0] += done["errors"]
+
+    client_lag: list[int] = []
+
+    async def ticker() -> None:
+        """The client's own loop lag: how late a 1 ms sleep wakes (the GET latency includes it)."""
         while loop.time() < end_at:
             t = loop.time()
-            status, _ = await conn.request(
-                "RESTORE", "/restore-target/?commit", sl.restore_body(rows, first, 5000), sl.NDJSON_CT, timeout=300
-            )
-            if status >= 300:
-                errors[0] += 1
-            restored[0] += loop.time() - t
-            restored[1] += 5000
-            first += 5000
-        await conn.close()
+            await asyncio.sleep(0.001)
+            if t - t0 >= args.warmup:
+                client_lag.append(int((loop.time() - t - 0.001) * 1e6))
 
     cpu0 = node.cpu_s()
-    jobs = [generator()]
+    jobs = [generator(), ticker()]
     if restore:
         jobs.append(restore_client())
     await asyncio.gather(*jobs)
@@ -112,6 +123,7 @@ async def phase(node: sl.Node, ctl: sl.Conn, name: str, args: argparse.Namespace
     out = {
         "phase": name,
         "trivial": summary(lat),
+        "client_lag": summary(client_lag),
         "restored_docs": restored[1],
         "restore_docs_per_s": round(restored[1] / restored[0], 0) if restored[0] else None,
         "errors": errors[0],
@@ -207,7 +219,31 @@ async def amain(args: argparse.Namespace) -> int:
     return 0
 
 
+async def restore_main(target: str, until: float) -> int:
+    """The RESTORE client: 5,000-document chunks back to back into another index until `until` (wall clock)."""
+    host, port = target.rsplit(":", 1)
+    conn = sl.Conn(host, int(port))
+    rows = sl.load_rows()
+    done = {"docs": 0, "secs": 0.0, "errors": 0}
+    first = 1
+    while time.time() < until:
+        t = time.perf_counter()
+        status, _ = await conn.request(
+            "RESTORE", "/restore-target/?commit", sl.restore_body(rows, first, 5000), sl.NDJSON_CT, timeout=300
+        )
+        if status >= 300:
+            done["errors"] += 1
+        done["secs"] += time.perf_counter() - t
+        done["docs"] += 5000
+        first += 5000
+    await conn.close()
+    print(json.dumps(done), flush=True)
+    return 0
+
+
 def main() -> int:
+    if len(sys.argv) == 4 and sys.argv[1] == "--restore-client":
+        return asyncio.run(restore_main(sys.argv[2], float(sys.argv[3])))
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", required=True)
     ap.add_argument("--target", default="127.0.0.1:18330")
@@ -219,7 +255,10 @@ def main() -> int:
     ap.add_argument("--warmup", type=float, default=2.0)
     ap.add_argument("--rate", type=float, default=200.0)
     ap.add_argument("--conns", type=int, default=16)
-    ap.add_argument("--path", default="/accounts/{id}", help="the trivial GET's path; `/` reads no document")
+    ap.add_argument(
+        "--path", default="/accounts/{id}", help="the trivial GET's path; `/:none` touches no index (a 400)"
+    )
+    ap.add_argument("--any-status", action="store_true", help="time every response, not only a 200")
     ap.add_argument("--phases", default="trivial,trivial2,restore,trivial3")
     ap.add_argument("--sample", action="store_true")
     ap.add_argument(
