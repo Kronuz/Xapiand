@@ -27,7 +27,7 @@
 . "$(dirname "$0")/env.sh"
 REL=$1; ASAN=$2; OUT=$3
 H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
-ALLOW=${GATE7C_ALLOW:-main,unnamed,Xapiand:W,Xapiand:LOG,Xapiand:WL,Xapiand:FS}
+ALLOW=${GATE7C_ALLOW:-main,unnamed,Xapiand:MAIN,reactor,Xapiand:W,Xapiand:LOG,Xapiand:WL,Xapiand:FS}
 mkdir -p "$OUT"; printf 'row\tgating\trc\tseconds\n' >"$OUT/rows.tsv"; failed=0
 
 row() {  # row NAME gate|info CMD...; GATE7C_ROWS="a b" runs only the rows it names
@@ -54,6 +54,10 @@ for p in out["phases"]:
         print(p["name"], "census", json.dumps(threads), "total", c.get("total"), "reactors", out["meta"]["reactors"])
         if not threads: bad.append("no census")
         bad += [f"offender {t}" for t in threads if t not in allow]
+        if threads.get("Xapiand:MAIN", 0) > 1: bad.append(f"{threads['Xapiand:MAIN']} Xapiand:MAIN threads, want 1")
+        # reactor-<i> names each loop thread (the census strips the index): one per reactor
+        if sys.platform != "darwin" and threads.get("reactor", 0) != out["meta"]["reactors"]:
+            bad.append(f"reactor {threads.get('reactor', 0)} != reactors {out['meta']['reactors']}")
         if sys.platform == "darwin" and threads.get("unnamed", 0) != out["meta"]["reactors"]:
             bad.append(f"unnamed {threads.get('unnamed', 0)} != reactors {out['meta']['reactors']}")
     elif p["name"].startswith("overload"):
