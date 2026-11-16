@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""restore_stall_probe: what a RESTORE stream does to a trivial GET and to the reactor loop, with the loop sampled.
+
+Starts a node (--processors 1 by default), loads --docs `accounts`, then runs 20 s phases through
+harness/reactor_offload_probe.py's `phase`: idle (no traffic), trivial, trivial2 (A/A), restore (the trivial stream
+plus a RESTORE client), trivial3 (A/A). `--sample` runs macOS `sample` on the node for the restore phase. With
+`--spin US` the node runs the patched reactor_lag.h (harness/restore_stall_reactor_lag.patch, env XAPIAND_LAG_SPIN):
+a sleep-free loop-iteration probe that logs every gap over US and signals the loop thread for a stack while it is
+stalled; the lines (SPIN, STALL) are in <workdir>/node.log.
+
+  quiet strict NAME 30 "what" -- harness/restore_stall_probe.py --bin BIN --docs 20000 --sample --spin 4000
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import shutil
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import reactor_offload_probe as rp  # noqa: E402
+import stall_load as sl  # noqa: E402
+
+
+_scrape = sl.scrape
+
+
+async def scrape_logged(conn: sl.Conn) -> dict:
+    # Each scrape's start and end on the steady clock (the node's SPIN/STALL lines carry the same clock's at_ns).
+    t0 = time.monotonic_ns()
+    out = await _scrape(conn)
+    print(json.dumps({"scrape": [t0, time.monotonic_ns()]}), flush=True)
+    return out
+
+
+sl.scrape = scrape_logged
+
+
+async def idle(node: sl.Node, ctl: sl.Conn, secs: float) -> dict:
+    before = await sl.scrape(ctl)
+    await asyncio.sleep(secs)
+    after = await sl.scrape(ctl)
+    lag = sl.lag_delta(before, after)
+    out = {"phase": "idle", "secs": secs, "lag_us": {k: {x: v[x] for x in ("wakes", "p50_us", "p99_us", "p999_us", "max_us_window")} for k, v in lag.items()}}
+    print(json.dumps(out), flush=True)
+    return out
+
+
+async def amain(args: argparse.Namespace) -> int:
+    if args.spin:
+        os.environ["XAPIAND_LAG_SPIN"] = str(args.spin)
+    ns = argparse.Namespace(target=args.target, bin=args.bin, workdir=args.workdir, processors=args.processors, index_size="")
+    node = sl.Node(ns)
+    results = []
+    try:
+        rows = sl.load_rows()
+        t = await sl.load_accounts(node.host, node.port, rows, args.docs)
+        await sl.settle_merges(node, "accounts")
+        ctl = sl.Conn(node.host, node.port)
+        print(json.dumps({"loaded_docs": args.docs, "load_s": round(t, 1), "pid": node.pid}), flush=True)
+        results.append(await idle(node, ctl, args.idle_secs))
+        for name in args.phases.split(","):
+            if name == "restore":
+                sampler = None
+                if args.sample:
+                    sample_s = max(5, int(args.secs) - 4)
+                    await asyncio.sleep(0)
+                    sampler = await asyncio.create_subprocess_exec(
+                        "sample", str(node.pid), str(sample_s), "1", "-file", os.path.join(args.workdir, "restore.sample.txt"),
+                        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+                    )
+                results.append(await rp.phase(node, ctl, "restore", args, True, 0, restore=True))
+                if sampler:
+                    await sampler.wait()
+            else:
+                results.append(await rp.phase(node, ctl, name, args, True, 0))
+        if args.out:
+            with open(args.out, "w") as fh:
+                json.dump(results, fh, indent=1)
+    finally:
+        os.makedirs(args.keep, exist_ok=True)
+        for f in ("node.log", "restore.sample.txt"):
+            if os.path.exists(os.path.join(args.workdir, f)):
+                shutil.copy(os.path.join(args.workdir, f), os.path.join(args.keep, f))
+        node.stop()
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--bin", required=True)
+    ap.add_argument("--target", default="127.0.0.1:18330")
+    ap.add_argument("--workdir", default=os.path.join(sl.REPO, ".scratch", "restore_stall"))
+    ap.add_argument("--processors", type=int, default=1)
+    ap.add_argument("--docs", type=int, default=20_000)
+    ap.add_argument("--secs", type=float, default=20.0)
+    ap.add_argument("--idle-secs", type=float, default=20.0)
+    ap.add_argument("--warmup", type=float, default=2.0)
+    ap.add_argument("--rate", type=float, default=200.0)
+    ap.add_argument("--conns", type=int, default=16)
+    ap.add_argument("--phases", default="trivial,trivial2,restore,trivial3")
+    ap.add_argument("--sample", action="store_true")
+    ap.add_argument("--spin", type=int, default=0, help="XAPIAND_LAG_SPIN threshold in us (patched reactor_lag.h)")
+    ap.add_argument("--keep", default=os.path.join(sl.REPO, ".scratch", "restore_stall_out"), help="where node.log and the sample go")
+    ap.add_argument("--out")
+    return asyncio.run(amain(ap.parse_args()))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
