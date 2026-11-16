@@ -16799,7 +16799,8 @@
         "docs/mechanisms/third-party-notices.md",
         "docs/src/content/docs/copyright.md",
         "docs/dev/extraction-ledger.md",
-        "docs/design/exact-id-keys.md"
+        "docs/design/exact-id-keys.md",
+        "contrib/javascript/cuuid/**"
       ],
       "history": [
         {
@@ -17013,7 +17014,7 @@
       "risk": "critical",
       "status": "active",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-15T23:44:56",
+      "updated": "2026-11-16T03:54:28",
       "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
     },
     "sortable-followups": {
