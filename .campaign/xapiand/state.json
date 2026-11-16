@@ -4653,6 +4653,8 @@
     "faultlab-design": {
       "accepted": {},
       "after": [],
+      "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+      "branch": "quest/xapiand/faultlab-design",
       "checks": [
         {
           "cmd": "test -s docs/design/faultlab.md",
@@ -4665,6 +4667,7 @@
       "files": [
         "docs/design/faultlab.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-design",
       "landed": [],
       "lenses": [
         "correctness"
@@ -4674,9 +4677,10 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
-      "updated": "2026-11-16T14:23:19"
+      "updated": "2026-11-16T14:23:23",
+      "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
     },
     "field-table": {
       "accepted": {},
