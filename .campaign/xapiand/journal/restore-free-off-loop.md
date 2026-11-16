@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-084546-66f6bc 261116-084548-54a3f4 261116-084550-4e8f42 261116-084554-997d0d
+State: waiting on jobs 261116-084546-66f6bc 261116-084548-54a3f4 261116-084550-4e8f42 261116-084554-997d0d 261116-095950-a9b23d 261116-095955-dfb9cc
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,15 +27,13 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
    rs-abba2, rs-spin: `python3 harness/restore_stall_verdict.py DIR...`.
 2. Put the A/B table in the note's Fix section (the "is pending; its table goes here" line of
    docs/perf/restore-stall.md) and update its Limits and Reproduce, commit (A4).
-3. If the lead widens the set (msg-49/50): commit the test from .scratch/test_loop_yield.draft.cc,
-   job it, plus a --fails-without job with master's handler.{h,cc}.
+3. Test committed (Xapiand:6e31d4d65): head job 261116-095950-a9b23d, mutant (master's
+   handler.{h,cc}) 261116-095955-dfb9cc, slot rfo-test.
 
 ## Blocked on
 
-msg-49/msg-50 to the lead: the deterministic test needs tests/test_loop_yield.cc, outside the file
-set. Drafted and run locally both ways (.scratch/test_loop_yield.draft.cc): the indexer of 2,000
-objects frees 4 blocks on head, 6,003 with master's _results (CHECK_LT 200 fails). Default if
-unanswered: not in the branch, the reason recorded.
+Nothing. msg-49 and msg-50 answered by the lead: tests/test_loop_yield.cc added to the file set;
+the delete-count test is committed (Xapiand:6e31d4d65) and jobbed.
 
 ## Evidence
 
@@ -47,7 +45,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | 261116-084546-66f6bc, 261116-084548-54a3f4 (ABBA p99), 261116-084550-4e8f42 (spin turns): queued |
 | A2 | 261116-084546-66f6bc, 261116-084548-54a3f4: queued |
-| A3 | 261116-084552-9a4f9d (64 of 64 RESTORE responses byte-identical, base vs head); e2e 261116-084554-c40c01 passed; build-test 261116-084554-997d0d running; test_loop_yield and test_node passed locally |
+| A3 | test_a_restores_results_are_freed_as_one_buffer: head 261116-095950-a9b23d, --fails-without 261116-095955-dfb9cc (local: 4 blocks on head, 6,003 with master's handler); 261116-084552-9a4f9d (64 of 64 RESTORE responses byte-identical, base vs head); e2e 261116-084554-c40c01 passed; build-test 261116-084554-997d0d running; test_loop_yield and test_node passed locally |
 | A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" (A/B table pending) |
 
 ## Result
@@ -56,8 +54,8 @@ DocIndexer's results are one packed MessagePack buffer plus (offset, size) per o
 (src/database/handler.{h,cc}); results() builds the response array once. Before, each result was a
 MsgPack whose zone mallocs 8 KB eagerly: 5,000 x 8 KB freed in ~DocIndexer's one turn. Responses
 byte-identical (A3 job). Timing numbers pending the strict jobs; note docs/perf/restore-stall.md.
-Leaves open: the msgpack library's eager 8 KB first chunk costs every MsgPack value everywhere
-(input objects, Admitted); a lazy or small first chunk in Kronuz/msgpack is the general fix.
+The msgpack library's eager 8 KB first chunk (every MsgPack value) is the lead's hunt.md row,
+not this quest's.
 
 ## Rulings I made
 
