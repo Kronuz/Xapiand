@@ -19304,8 +19304,7 @@
         "src/aggregations/**",
         "tests/test_serialise*.cc",
         "tests/test_strict*.cc",
-        "harness/strict_*",
-        "docs/src/content/docs/reference/**"
+        "harness/strict_*"
       ],
       "landed": [],
       "lenses": [],
@@ -19316,7 +19315,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:22:02",
+      "updated": "2026-11-16T15:22:10",
       "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {
