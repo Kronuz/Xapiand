@@ -146,7 +146,7 @@ two durability mechanisms and two recovery paths.
 the schema version, then proposes one command:
 
 ```
-op, id, expected version, schema version, engine::Document::serialise() bytes (wal.cc:972), blobs
+op, id, expected version, schema version, engine::Document::serialize() bytes (wal.cc:972), blobs
 ```
 
 Every voter applies it in log order: the strata write, then the blobs pushed into its own
@@ -291,7 +291,7 @@ two identities, two sets of ports and two flow controls.
   differently. Counts and aggregations are logical and exact under any choice.
 - prospect computes statistics from its snapshot today (`searcher.hh:104-151`), so it gains a
   supplied-statistics input.
-- Aggregations merge through `serialise_results` and `merge_results`.
+- Aggregations merge through `serialize_results` and `merge_results`.
 - Each request carries a deadline. A shard that misses it is retried once on another replica with
   the statistics already gathered (the residue above, for that shard only); a second miss is
   reported in `_shards.failed` and the result is marked partial.

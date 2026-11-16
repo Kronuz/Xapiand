@@ -67,10 +67,6 @@ public:
 	SerializationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
-// The name cuuid's exception seam (CUUID_EXCEPTION_HEADER) throws.
-using SerialisationError = SerializationError;
-
-
 class CastError : public ClientError {
 public:
 	template<typename... Args>

@@ -277,7 +277,7 @@ DatabaseWAL::to_string_document(std::string_view serialized_document, bool unser
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
+	auto obj = main_locator != nullptr ? MsgPack::unserialize(main_locator->data()) : MsgPack();
 	for (auto& locator : data) {
 		switch (locator.type) {
 			case Locator::Type::inplace:
@@ -316,7 +316,7 @@ DatabaseWAL::to_string_metadata(std::string_view serialized_metadata, bool unser
 		return MsgPack(serialized_metadata);
 	}
 
-	return MsgPack::unserialise(serialized_metadata);
+	return MsgPack::unserialize(serialized_metadata);
 }
 
 

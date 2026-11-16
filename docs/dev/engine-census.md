@@ -122,7 +122,7 @@ counts of the seam call.
 | `data()` | 1035 | host reads (262 requests) |
 | `term_details()`, `values()` | 27, 27 | host (`INFO` of a document) |
 | `did()` | 5 | host (`DUMP`) |
-| `version()`, `serialise()` | 0 | never called by the suite |
+| `version()`, `serialize()` | 0 | never called by the suite |
 
 ### Shard operations (requests using each)
 
@@ -150,7 +150,7 @@ count above.
 | Group | Proposed change | Evidence |
 |---|---|---|
 | A. Lifecycle | none; add that `reopen` (13 requests) and `stats` (3) are used, transactions and `metadata_keys` are not | shard table |
-| B. Documents | `replace_by_key` and `replace` (by docid) are both needed (85 and 121 requests); `add` once; delete by docid or key once or twice. **G2 term lists are needed** (`term_details`, 27 requests, `INFO`); G1 `values()` too. `version()` and `serialise()` of a view are unused by the suite (the WAL reads `Document::serialise`) | shard and DocView tables |
+| B. Documents | `replace_by_key` and `replace` (by docid) are both needed (85 and 121 requests); `add` once; delete by docid or key once or twice. **G2 term lists are needed** (`term_details`, 27 requests, `INFO`); G1 `values()` too. `version()` and `serialize()` of a view are unused by the suite (the WAL reads `Document::serialize`) | shard and DocView tables |
 | B/D5. Key prefix | The key prefix is `Q`, not `_id.`. A numeric id field puts its accuracy terms under the key prefix (T5 fails on 2 documents), so strata's keyed index must either accept more than one `Q` term, or the handler must stop giving the id field accuracy terms, or the prefix must be longer (`QK`, `QN` plus a delimiter) **Resolved by A-T5** (see "T5 after amendment A-T5"): the accuracy terms lead with `A`, so one `Q` term per document | T5 table |
 | C. Values | `value(slot)` is the hot facility: 34446 calls, 98% from spies and key makers. No typed slots seen | DocView table |
 | D. Queries | G9 `queryparser` is certain (39 requests, 61 text nodes; flags PHRASE, LOVEHATE, FUZZY, partial expansion on all; WILDCARD 4, PARTIAL 3, BOOLEAN 1). **G3 shrinks**: ELITE_SET is used (2 requests), XOR, MAX and SCALE_WEIGHT never, SYNONYM only as the combiner of expansions, AND_NOT never as a node (negation lives in the text parser). **G8**: wildcard 2 requests, edit distance 1, partial 3; all three are exercised, `WILDCARD_SINGLE`/`MULTI` and CJK flags are not. NEAR, PHRASE, AND_MAYBE, FILTER once or more as nodes | Queries table |

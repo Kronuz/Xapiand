@@ -31,7 +31,7 @@ The msgpack library behaves correctly here. The bug was in how Xapiand typed int
 
 The value now picks the type, whatever its encoding:
 
-- `Serialise::guess_type` and `Serialise::guess_serialise` (`src/serialise.cc`, also used for `_id`) give
+- `Serialize::guess_type` and `Serialize::guess_serialize` (`src/serialize.cc`, also used for `_id`) give
   `integer` to any integer that fits int64 and `positive` only beyond it. Strings already followed this rule
   (try int64, then uint64).
 - `guess_concrete_type` uses that rule for both msgpack integer types. A field that already has an integer type

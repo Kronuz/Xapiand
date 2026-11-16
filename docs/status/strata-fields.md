@@ -13,13 +13,13 @@
   2. Key shape: the host's `_id` is one field declared with role `key`; the key bytes are the id's type character plus its encoded id
      (`K`+keyword, `N`+sortable number), no `Q`; a query on the `_id` field is a key leaf because of the field's role. One small host
      helper (`document_key`, `field_term`, `query_field`, `key_placement_hash` in `database/utils.{h,cc}`) carries key bytes through
-     `replace_by_key`, `erase_by_key`, `find`, `WriteResult.term` and `unserialise_term_id`; no forwarding shims. The Xapian engine spells the
+     `replace_by_key`, `erase_by_key`, `find`, `WriteResult.term` and `unserialize_term_id`; no forwarding shims. The Xapian engine spells the
      key field's terms with a leading `Q` internally (`engine/xapian/legacy_terms.h`), so its index is byte-identical.
 - Design amendment (for the lead to copy into the design): **A-SF1.** At the seam the id field is `engine::KEY_FIELD` ("_id"). A document names
   its key with `set_key(key)` (key = type character + encoded id); terms the host adds under `KEY_FIELD` are the key's, hold no postings, and their
   wdf counts in the document's length (D5's id-term length). `Query::term|wildcard(KEY_FIELD, key bytes)` is a key leaf / key scan. Placement of a
   multi-shard index still hashes `"Q" + key` (`key_placement_hash`) so a shard keeps its documents. D6's "without a type character" is not kept:
-  `WriteResult.term` round-trips the type through `unserialise_term_id`, and two id types with equal bytes stay two keys.
+  `WriteResult.term` round-trips the type through `unserialize_term_id`, and two id types with equal bytes stay two keys.
 - Decisions taken here (flag any the lead wants otherwise):
   1. `Query::field(name)` (a wildcard with an empty pattern) on strata takes every field of the shard whose name starts with `name` (the
      Xapian reading, `field: "*"` over an object reaches nested fields); the schema walk X6 suggested is not built. Any other node matches

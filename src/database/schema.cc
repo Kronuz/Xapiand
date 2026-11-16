@@ -2710,10 +2710,10 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
 
 	// Mint ids with the v6 codec by default; --legacy-ids pins pure v1. Encode through the
-	// version-nibble dispatch so a v6 id gets its compact wire (UUID::serialise() alone would
+	// version-nibble dispatch so a v6 id gets its compact wire (UUID::serialize() alone would
 	// fall back to the full form for a version-6 value).
 	const auto mint = [](bool compact) {
-		return cuuid::serialise(cuuid::generate(opts.legacy_ids ? cuuid::Codec::v1 : cuuid::Codec::v6, compact));
+		return cuuid::serialize(cuuid::generate(opts.legacy_ids ? cuuid::Codec::v1 : cuuid::Codec::v6, compact));
 	};
 
 	L_INDEX(">>> Index schema {} from: " + DIM_GREY + "{}", document_id.to_string(), object.to_string());

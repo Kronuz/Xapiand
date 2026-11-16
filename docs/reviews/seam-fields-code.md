@@ -62,7 +62,7 @@ census counter loses its single sample only because the engine-visible argument 
 
 `probe_refs.cc 0`, ASan+UBSan, both engines: 5000 refs kept across `Document` move construction and move assignment onto a
 live document (`field()` returns the same ids, string_view keys in `field_ids_` stay valid because the deque keeps its
-nodes); a ref held while 100000 more fields are declared; kind widening; serialise then unserialise. Clean.
+nodes); a ref held while 100000 more fields are declared; kind widening; serialize then unserialize. Clean.
 
 Out of contract (ref used on the wrong document): `probe_refs.cc 1` (a ref from a 5000-field document on a document with
 0 fields) and `probe_refs.cc 2` (default `FieldRef{}` on an empty document) fault in `deque::operator[]` (null base,

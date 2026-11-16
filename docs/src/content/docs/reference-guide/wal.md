@@ -89,7 +89,7 @@ An entry is one of:
 | `COMMIT` | none |
 
 The log carries no spelling or synonym entries: nothing writes them. The query param
-`raw` leaves the documents in their serialised form.
+`raw` leaves the documents in their serialized form.
 
 `WAL` reads one shard's log, so it answers `400` ("This operation can only be executed on
 a single shard") for an index of more than one shard, and for a list of indexes

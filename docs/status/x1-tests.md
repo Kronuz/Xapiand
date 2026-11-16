@@ -19,7 +19,7 @@ The ENGINE_CENSUS variant of test_engine_census and the FUZZ-only libFuzzer targ
 | Xapiand:31b20ddd8 | pin-test directory name and census field names (found by the first full ctest) |
 
 ctest: 25 of 25 passed. Checks per test (the `OK: N checks passed` line): test_string 1, test_debounce_or_run 18,
-test_range_terms 321553, test_fieldparser 32, test_serialise_list 24, test_endpoint 16, test_serialise 9,
+test_range_terms 321553, test_fieldparser 32, test_serialize_list 24, test_endpoint 16, test_serialize 9,
 test_generate_terms 50, test_geospatial 5, test_engine_document 7734, test_engine_fields 20863, test_engine_census
 0 (census is off by default: it prints "census is off"), test_engine_query 16454, test_engine_sort 40851,
 test_engine_read 217, test_engine_search_strata 472571, test_engine_callbacks 80763, test_engine_error 131,
@@ -49,19 +49,19 @@ DocView over a map).
 
 | Test | Coverage it carried | What stands in for it |
 |---|---|---|
-| test_engine_document: test_matches_xapian | built the same serialised bytes as the Xapian calls | test_matches_model: random calls against a model of terms, values and data, plus the serialise/unserialise round trip |
+| test_engine_document: test_matches_xapian | built the same serialized bytes as the Xapian calls | test_matches_model: random calls against a model of terms, values and data, plus the serialize/unserialize round trip |
 | test_engine_document: test_classify, test_translation | Xapian exception to errc kind classification, `rethrow_translated` | test_engine_error: test_translation of `strata::rethrow_translated` for std exceptions (no per-Xapian-class table) |
 | test_engine_document: test_view, test_word_breaks | Xapian make_view; ICU word-break term generator | none (ICU and the adapter are gone) |
 | test_engine_error: test_accessor_table, test_translation_passes_others | one row per Xapian exception: kind and the three texts | none (strata has its own `rethrow_translated` test above) |
 | test_engine_error: test_view_throws_engine_errors | every DocView method throws errc::closed after `database()->close()` | none; the fenced and cancel tests in test_engine_strata cover the strata analogue (errc::database) |
 | test_engine_error: test_http_answers_unchanged | the old Xapian-typed HTTP dispatch as an oracle | test_http_answers: a table of status and text for each errc kind and the client-error classes, from http_utils.h |
-| test_engine_error: test_double_bytes_unchanged | `engine::serialise_double` equal to `::serialise_double` | test_double_bytes: re-pinned to the plain little-endian IEEE form, with literals |
+| test_engine_error: test_double_bytes_unchanged | `engine::serialize_double` equal to `::serialise_double` | test_double_bytes: re-pinned to the plain little-endian IEEE form, with literals |
 | test_engine_fields: test_xapian_terms_are_joined, test_marker_and_joined_ambiguity, key_field joins, word-break fields | field+term joined byte for byte into Xapian terms | test_field_terms_match_model, test_marker_and_field_boundary, test_key_field (strata keeps field and term apart) |
 | test_engine_fields: query-node descriptions | `to_xapian(Query)` description equals the hand-built Xapian query | test_query_nodes: the node fields (field, str, wqf, pos, limits, flags, distance) |
 | test_engine_query: test_random_trees | the seam simplifies like Xapian over 2000 random trees | test_emptiness: a table of operator by operand emptiness |
 | test_engine_query: test_text | `parse_text` against Xapian::QueryParser descriptions | test_text here finds the documents a text names on a shard; test_text.cc checks the recorded decisions |
 | test_engine_query: test_adapter_bounds | PostingSourceAdapter reports max weight, term-frequency bounds | none (the adapter is gone); ranking by the source's weight is in test_posting_source |
-| test_engine_query: registry and remote-protocol parts of the sources, key makers, spies and source ownership | serialise to a Xapian registry and back, NetworkError on garbage | the same objects rebuilt through `unserialise`, `engine::Error` on garbage, live-count checks on searches |
+| test_engine_query: registry and remote-protocol parts of the sources, key makers, spies and source ownership | serialize to a Xapian registry and back, NetworkError on garbage | the same objects rebuilt through `unserialize`, `engine::Error` on garbage, live-count checks on searches |
 | test_engine_callbacks: every Xapian side | ranking, weights and estimates equal Xapian's | the model of the corpus (documents, estimate, spy contents, sort orders) and the weights of a search over shards equal to those of one shard holding every document; the exact weights stay in test_engine_search_strata's BM25 model |
 | test_engine_sort: adapter and registry parts | KeyMakerAdapter/MatchSpyAdapter/registry ownership | test_callback_ownership counts live callbacks across searches over one and three shards |
 | test_engine_read: test_views_do_not_leak, test_native | `xapian::live_views()` counter, `native<T>()` | the scan-resume test stays; no live-view counter exists on strata, so view leaks are covered only by the ASan run |
@@ -76,7 +76,7 @@ DocView over a map).
 
 1. src/engine/strata (document and shard): `Document::field("")` is accepted by the builder, but a shard write with
    an empty field name fails with `errc::invalid` ("The index rejected the operation"), and
-   `Document::unserialise` of such a document fails with `errc::syntax` ("field name"). The builder should refuse
+   `Document::unserialize` of such a document fails with `errc::syntax` ("field name"). The builder should refuse
    it when the field is declared, or the shard should accept it. Not patched; tests avoid empty field names where
    they write or round-trip.
 

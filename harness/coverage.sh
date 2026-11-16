@@ -100,8 +100,8 @@ data = json.load(open(f"{out}/coverage.json"))["data"][0]["files"]
 # AREAS: (name, target lines %, target branches %, path prefixes); the first area a file matches takes it. The targets are
 # TESTING.md's Coverage table.
 AREAS = [
-    ("decoders, parsers, serialisation", 98, 95, ["src/engine/strata/document.cc", "src/engine/strata/pattern.cc", "src/engine/codec.cc",
-                                                  "src/field_parser.cc", "src/serialise.cc", "src/y2j/"]),
+    ("decoders, parsers, serialization", 98, 95, ["src/engine/strata/document.cc", "src/engine/strata/pattern.cc", "src/engine/codec.cc",
+                                                  "src/field_parser.cc", "src/serialize.cc", "src/y2j/"]),
     ("collectors, scorers, counting", 95, 90, ["src/engine/strata/search.cc", "src/engine/strata/expand.cc", "src/engine/search.cc"]),
     ("engine: strata", 90, 80, ["src/engine/strata/"]),
     ("engine: seam", 90, 80, ["src/engine/"]),

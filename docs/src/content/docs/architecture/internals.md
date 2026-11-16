@@ -34,7 +34,7 @@ service and the stop.
 | Aggregations | `src/aggregations/` |
 | Sorting, ranges and geospatial terms | `src/multivalue/` |
 | Geospatial shapes | `src/geospatial/` (the shapes; the mesh is the htm library) |
-| Value encoding | `src/serialise*.{cc,h}`, `src/cast.*`, `src/length.*` |
+| Value encoding | `src/serialize*.{cc,h}`, `src/cast.*`, `src/length.*` |
 | Lua scripts | `src/script.*`, `src/lua/` |
 | Metrics | `src/metrics.*`, `XapiandManager::server_metrics_impl` |
 | Command-line options | `src/opts.*` |
@@ -54,7 +54,7 @@ document in the engine's own form (`engine::Document`), the query tree
 work (`engine::Host`, `engine::Chores`). `src/engine/strata/` implements it over a
 prospect index. A document is built in strata's form from the start: the schema
 calls the document's `add_term`, `add_value` and `set_data`, the shard applies
-that object, and the log serialises the same one, so nothing is converted on the
+that object, and the log serializes the same one, so nothing is converted on the
 way.
 
 The index registry and its entries are the one place outside `src/engine/` that
@@ -121,9 +121,9 @@ These look safe to "clean up" and are not:
   would make every write to its index wait for it.
 - **Trixel ids encode the mesh path, 2 bits per level, big-endian.** That is why a
   region on the sphere maps to contiguous integer ranges. Changing how an id is
-  built or serialised breaks geospatial indexing silently (the
-  [htm](https://github.com/Kronuz/htm) library, `Serialise::trixel_id` in
-  `src/serialise.cc`).
+  built or serialized breaks geospatial indexing silently (the
+  [htm](https://github.com/Kronuz/htm) library, `Serialize::trixel_id` in
+  `src/serialize.cc`).
 - **An index path is well-formed UTF-8 with no control bytes, NUL or backslash**
   (`src/index_path.h`). The system calls that act on a path read it as a C string,
   and the storage layer cannot round-trip the rest.

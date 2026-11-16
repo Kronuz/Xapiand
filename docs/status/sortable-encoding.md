@@ -8,7 +8,7 @@
 
 ## Done
 
-1. Callers read (26 direct calls in 9 files, the `Serialise::` users, the Python client's exports); the four places where integer, positive and floating meet in one order recorded with file:line.
+1. Callers read (26 direct calls in 9 files, the `Serialize::` users, the Python client's exports); the four places where integer, positive and floating meet in one order recorded with file:line.
 2. Size study on real data (`docs/design/sortable-encoding/sizes.py`, output `sizes.txt`): 430,166 numbers, variable 4.25 B per value; fixed 8 B is 1.88x per value, 1.26x per distinct value, 1.32x per distinct term. Byte counts only, no hold.
 3. Draft: D1-D8, T1-T10, Q1-Q3, three first steps. Adopts `Kronuz/sortable`'s bytes (sortable:67b2a90); the Python client port and its cross-language test (T3) added at the lead's request.
 

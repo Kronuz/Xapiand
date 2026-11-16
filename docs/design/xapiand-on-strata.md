@@ -62,7 +62,7 @@ files**, 125 of them in `remote_protocol_views.cc`. Nothing was compiled or run.
 | Group | What Xapiand uses | Call sites (files) |
 |---|---|---|
 | A. Open, commit, replication | `WritableDatabase`/`Database` open, create, `Remote::open[_writable]` (`shard.cc:342,455`); `DB_NO_SYNC` (`shard.cc:79`); commit and transactions (`shard.cc:806-813,881,899,917`); `reopen` (`shard.cc:554`); `get_revision` 40 and `get_uuid` 31 (8 to 10 files); `get_lastdocid` 6, `get_doccount` 7; `Database::check` (`handler.cc:284`); `DB_*` flags (`flags.h:29-62`); `Xapian::rev` 109 refs in 18 files; whole-database copy for replicas (`replication_protocol_views.cc`, 6 refs, `db()` 8 sites) | 52 `->db()` sites in 9 files; 248 `catch (const Xapian::...)` lines in 13 files; 49 `DB_RETRIES` lines |
-| B. Documents, terms, metadata | `Document` 260 refs in 19 files; `add_term`/`add_boolean_term`/`add_posting` 44 (`schema.cc`, `generate_terms.cc`, `shard.cc`); `add_value` 14; `set_data` 11; `get_data` 26; `termlist_begin` 5, `values_begin` 3, `positionlist_begin` 3 (`handler.cc:2665-2890`); writes per docid and per unique term (`shard.cc:924,1026,1228,1353,1493`) returning `DocumentInfo` {did, version, term}; version check-and-set written five times (`shard.cc:958,1067,1279,1400,1556-1620`) with a `"V"+did+version` boolean term and a slot value; `postlist_begin(term)` 7 (`handler.cc:1587`); metadata get, set, keys 54 refs in 10 files (`shard.cc:1945-2052`); WAL stores `Document::serialise()` (`wal.cc:1057`, read back `:288,558`; also `handler.cc:2487`) | see left |
+| B. Documents, terms, metadata | `Document` 260 refs in 19 files; `add_term`/`add_boolean_term`/`add_posting` 44 (`schema.cc`, `generate_terms.cc`, `shard.cc`); `add_value` 14; `set_data` 11; `get_data` 26; `termlist_begin` 5, `values_begin` 3, `positionlist_begin` 3 (`handler.cc:2665-2890`); writes per docid and per unique term (`shard.cc:924,1026,1228,1353,1493`) returning `DocumentInfo` {did, version, term}; version check-and-set written five times (`shard.cc:958,1067,1279,1400,1556-1620`) with a `"V"+did+version` boolean term and a slot value; `postlist_begin(term)` 7 (`handler.cc:1587`); metadata get, set, keys 54 refs in 10 files (`shard.cc:1945-2052`); WAL stores `Document::serialize()` (`wal.cc:1057`, read back `:288,558`; also `handler.cc:2487`) | see left |
 | C. Values and slots | Slots are `xxh32` of prefix and type, reserved 0 to 20 (`utils.h:41-57`, `utils.cc:59-67`); `get_value` 60 (15 files); `BAD_VALUENO` 16; values are `sortable_serialise` strings or `StringList` blobs, one per slot | |
 | D. Queries, parser | `Query` 260 refs in 12 files; nodes: term(wqf,pos), match-all, match-nothing, AND, OR, AND_NOT, XOR, AND_MAYBE, FILTER, SCALE_WEIGHT, ELITE_SET, NEAR, PHRASE, SYNONYM, MAX, WILDCARD, EDIT_DISTANCE, and a posting-source leaf (`query_dsl.cc:273-336,736-772`); `QueryParser` 52 refs, used for every `text` field (`query_dsl.cc:831-877`): `set_default_op`, `set_stopper`, `set_stemmer`, `set_stemming_strategy`, `set_max_expansion`, `parse_query`; flags set: BOOLEAN, PHRASE, LOVEHATE, FUZZY, WILDCARD, WILDCARD_SINGLE, WILDCARD_MULTI, PARTIAL, CJK_NGRAM, WORD_BREAKS (the other flags appear only in a debug printer, `:74-89`). No `add_prefix`, no spelling flag set | |
 | E. Enquire, MSet, ranking | `Enquire` 8 refs: `set_query`, `set_collapse_key` (BAD unless the `collapse` URL param, `handler.cc:1159-1166`), `set_cutoff(0,0)`, `set_docid_order(ASC)`, `set_sort_by_key_then_relevance`, `add_matchspy`, `prepare_mset` (fork), `get_mset(first,maxitems,check_at_least)`, `get_eset` (`handler.cc:1276-1300`); several shards are one `Database` via `add_database` (`handler.cc:1267`); `MSet`: `size`, `get_matches_estimated` (`search_views.cc:1979-1980,2110`), iteration, and `get_rank`/`get_weight`/`get_percent` only under `comments` (`:2023-2024`); default BM25, no `set_weighting_scheme` outside the remote server; `RSet`/`ExpandDecider` 12 refs for `nearest` and `fuzzy` | |
@@ -115,7 +115,7 @@ class Document {                          // built by Schema, engine neutral, ow
   void add_value(valueno, std::string);   void set_data(std::string);
   void set_key(std::string term);         // the id term, explicit (D5)
   std::optional<rev> expected_version;
-  std::string serialise() const;  static Document unserialise(std::string_view);   // WAL (D10)
+  std::string serialize() const;  static Document unserialize(std::string_view);   // WAL (D10)
 };
 class DocView {                           // lazy read of one stored document
   virtual std::string data() const = 0;   virtual std::string value(valueno) const = 0;
@@ -161,7 +161,7 @@ Typed slots arrive as new seam nodes (native range, typed sort component) with
 `declare_slot`; phase-4 D3's rejection rules apply to declared slots only. Blocks P1 (Q2).
 
 **D4. Callbacks stay callbacks.** `PostingSource`, `KeyMaker`, and `MatchSpy` are abstract
-bases with the virtuals of today's classes, including `name/serialise/unserialise/clone`. The
+bases with the virtuals of today's classes, including `name/serialize/unserialize/clone`. The
 Xapian implementation wraps them in Xapian's bases and keeps the `Registry` entries, so the
 remote server works unchanged; strata calls them in-process, and the 7b shard RPC reuses the
 serialized form. Aggregations, key makers, and ranges read a `DocView`, not a `Document`.
@@ -170,7 +170,7 @@ exhaustive visitor (G4, G5, G6). This is not a second mechanism in strata: the c
 are the seam, and each native replacement removes its callback.
 
 `PostingSource` is a value-slot filter (amended at X3, 2026-10-26): `slot`, `accept`, `weight`,
-`max_weight`, name, clone and serialise, not a general `next/skip_to/check` cursor. Every source
+`max_weight`, name, clone and serialize, not a general `next/skip_to/check` cursor. Every source
 Xapiand has filters one value slot; strata runs it as a column scan, and `skip_to`/`check` as a
 docid lookup then `accept`. `accept`, `weight` and `clone` are const and thread-safe, and `accept`
 rejects an undecodable value. A cursor-style source, if one is needed, is a new base.
@@ -223,8 +223,8 @@ environment override lets the harness run the suite on either engine. A strata i
 which never raises `reopen`. `exception_xapian.h` is rewritten over the kinds.
 
 **D10. WAL payload is opaque per engine.** The line keeps `(revision, type, payload)`
-(`wal.cc:1057`); the payload is `Document::serialise()` and replay is
-`Document::unserialise()`. Since an index has one engine, no tag is needed, and the `_wal`
+(`wal.cc:1057`); the payload is `Document::serialize()` and replay is
+`Document::unserialize()`. Since an index has one engine, no tag is needed, and the `_wal`
 endpoint (`wal.cc:288`) asks the engine to describe a payload. Old Xapian WAL lines stay
 readable by the Xapian implementation because it keeps Xapian's own serialization.
 Revision equality at replay (`wal.cc:519`) maps to the manifest revision, which bumps once per

@@ -42,7 +42,7 @@ deleted at the end). Probes are in its `.scratch/`.
 5. Single builder (focus item 3): `MultipleValueRange::getQuery` has one caller, `src/query_dsl.cc:898`; the string form of a range
    (`parse_range`) and a remote shard's query both go through `QueryDSL::get_in_query`. No other caller of
    `GenerateTerms::numeric`; no stale copy of the old walk (`Tree`, `get_query` remain only for the geo and datetime users). I did
-   not read `remote_protocol_views.cc` (GPL, off limits); the remote side receives the serialised query, which is generic
+   not read `remote_protocol_views.cc` (GPL, off limits); the remote side receives the serialized query, which is generic
    `FILTER(source, terms)`.
 
 ## Findings
@@ -113,7 +113,7 @@ Independent of the terms (these are open-ended queries, so no term filter is bui
 2147483650 and 2147483651), `_to: 2147483649` also returns 2147483650 and 2147483651; `[2147483649, 2147483650]` returns nothing.
 Integers at 2^31 and above, at least up to 2^43, and negative integers near -2^43 to -2^62, are compared inexactly by the slot
 (8 of 517 closed ranges differ from numeric truth for `n` in my corpus, 51 counting the ends, and 15 for dates around 1900).
-`sortable_serialise` is a black box to me; the symptom is the slot's serialised order for integers, not the term code. The
+`sortable_serialise` is a black box to me; the symptom is the slot's serialized order for integers, not the term code. The
 developer's corpus (`2**k + d` for k up to 40, ranges drawn from the same values) does not reach it, so the headline "0 wrong of
 797" is true for that corpus and is not a statement about integers in general. Worth a separate item: it is the same kind of
 silent loss at a different layer.

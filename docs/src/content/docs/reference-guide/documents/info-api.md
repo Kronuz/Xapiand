@@ -54,6 +54,6 @@ document:
   with the volume, offset and size of a stored one; sizes are humanized with
   `human=true`).
 * `values`     - Object containing all values stored by the document.
-* `raw_data`   - The serialised document data, with the `raw` query param.
+* `raw_data`   - The serialized document data, with the `raw` query param.
 
 Sources: `src/database/handler.cc:1915-1985`, `src/server/search_views.cc:1243-1250`.

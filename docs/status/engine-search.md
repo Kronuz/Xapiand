@@ -49,12 +49,12 @@ Other Xapian types that cross the seam outside the remote and replication code, 
 Done when:
 
 1. `engine::Shard` has `stats`, `find_key`, `get`, `scan`, `metadata`, `metadata_keys` (each a task, D13),
-   `engine::xapian::check(path)`, and `native<T>()`; `DocView` has `values`, `term_details` and `serialise`.
+   `engine::xapian::check(path)`, and `native<T>()`; `DocView` has `values`, `term_details` and `serialize`.
    The Xapian implementation of each is a thin call, tested against Xapian itself.
 2. `Shard::engine()` opens or reopens and refuses a closed shard, as `db()` did. `Shard::get_docid_term`,
    `get_document` (now a `DocView`), `get_metadata` and `get_metadata_keys` read through the engine.
 3. The dump endpoints (`dump_documents`, both forms), the database info (`get_database_info`), the document
-   info (`Document::get_terms`, `get_values`, `get_value`, `get_data`, `serialise`, `hash`), `check`,
+   info (`Document::get_terms`, `get_values`, `get_value`, `get_data`, `serialize`, `hash`), `check`,
    `get_docid_term`, and every `get_uuid`/`get_revision`/`get_doccount` caller use the seam. `Shard::db()`
    remains only for `match` and the remote server.
 4. `harness/seam_check.sh` exists, fails when a file outside the allowlist names `Xapian::` or a Xapian
@@ -100,7 +100,7 @@ DocVersionConflict 2, QueryParser 1. By shape (what the code does):
 
 | Shape | Sites | Where |
 |---|---|---|
-| A. Read retry ladder: Modified/Opening/Timeout/Network retry (close on the last), Closed closes then retries, DatabaseError closes and throws; then `reopen()` | 13 | handler.cc 807 865 2432 2484 2536 2585 2655 2709 2823, shard.cc 1686 1728, handler.cc 1541 (the match ladder, plus QueryParser/Serialisation to `ClientError` 400) |
+| A. Read retry ladder: Modified/Opening/Timeout/Network retry (close on the last), Closed closes then retries, DatabaseError closes and throws; then `reopen()` | 13 | handler.cc 807 865 2432 2484 2536 2585 2655 2709 2823, shard.cc 1686 1728, handler.cc 1541 (the match ladder, plus QueryParser/Serialization to `ClientError` 400) |
 | A'. Same without the Modified arm (Modified falls into DatabaseError: close, throw) | 6 | handler.cc 1345 1387 1433 1939 (collect-and-continue: store `eptr`, `--valid`), shard.cc 1783 1827 (metadata reads) |
 | B. Missing is data: swallow DocNotFound and/or DatabaseNotFound | 20 | handler.cc 303 452 513 565 992 1011 1244 1622 1735, schemas_lru.cc 278 343 517 526 623 632, manager.cc 720 867, index_resolver_lru.cc 458, search_views.cc 1307 1354 (rethrow unless `is_root`) 1978 2111 |
 | C. Missing becomes a client error | 2 | lua/processor.cc 253 (400 "Foreign script ..."), http_utils.h |
@@ -125,7 +125,7 @@ Other files that still name Xapian, with what is left in each after the catches 
 | Spellings `Xapian::rev` 108, `docid` 74, `termcount` 19, `doccount` 5, `valueno` 2 | handler.cc/h, shard.h/cc, wal.cc/h, pool.cc/h, schemas_lru.cc/h, index_resolver_lru.h, discovery.cc/h, search_views.cc, main.cc | `engine::rev/docid/...` (already in `engine/types.h`); sed |
 | Include `xapian.h` only for those types | lock.h, manager.h, schema.h (a comment), node.cc, wal.h, ... | delete the include; `engine/types.h` |
 | `Xapian::TermGenerator` (cjk_words under `USE_ICU`), `Stopper`, `Stem` | generate_terms.cc 16, stopper.cc/h 6, snowball_stem.h 7 | `src/engine/xapian/text.{h,cc}` (`index_text_word_breaks`), `stopper`/`snowball_stem` Xapian halves move there; `getStopWords` (MIT) stays |
-| `xapian/common/serialise-double.h` (GPL header) | length.h (unused include), metric_serialise.h | length.h: drop; metric_serialise.h: `engine::serialise_double` (exists in `engine/codec.h`) |
+| `xapian/common/serialise-double.h` (GPL header) | length.h (unused include), metric_serialize.h | length.h: drop; metric_serialize.h: `engine::serialize_double` (exists in `engine/codec.h`) |
 | `Xapian::major_version()` banner | main.cc 752 | `engine::xapian::version()` string |
 | `exception_xapian.h` | 17 | see 4 |
 | the wrapper `src/xapian.h` | 34 | move to `src/engine/xapian/xapian.h`; the remote files' include line changes (the lead's script) |
@@ -141,7 +141,7 @@ the tree, which is the floor the ledger already named.
 The 13 kinds of `engine::errc` already cover every Xapian type; X4a/X4b built `Failure<Kind, XapianType>` for each. One
 addition and one cut:
 
-1. Add `errc::syntax`: a query or serialised input the engine cannot parse; HTTP 400. Needed because `Xapian::QueryParserError`
+1. Add `errc::syntax`: a query or serialized input the engine cannot parse; HTTP 400. Needed because `Xapian::QueryParserError`
    (client error 400 today, via handler.cc 1541) and `Xapian::InvalidArgument/InvalidOperation` (500 today) are both
    `invalid`; merging them would turn today's 500s into 400s. `exception_xapian.h QueryParserError` and the translation of
    `Xapian::QueryParserError` (today passed through raw by `rethrow_translated`) become `syntax`.
@@ -164,7 +164,7 @@ addition and one cut:
 | DocNotFound | doc_not_found | no; missing-is-data in B | 404 |
 | DocVersionConflict | version_conflict | no (the write ladders retry it) | 409 |
 | InvalidArgument/Operation | invalid | no | 500 (400 when also a `ClientError`) |
-| QueryParser, Serialisation (Xapian's) | syntax | no | 400 |
+| QueryParser, Serialization (Xapian's) | syntax | no | 400 |
 | anything else | internal | no | 500, description |
 
 Policy lives in `engine/error.h`, not in each file: `constexpr bool is_missing(errc)` (doc_not_found, not_found) for B,
@@ -180,10 +180,10 @@ The exact-preserving alternative is a `modified` parameter on `retry_read`; I wi
 #### 3. N6: DocView exceptions
 
 Recommendation: yes. Every `DocView` method (`did`, `data`, `value`, `version`, `terms`, `values`, `term_details`,
-`serialise`) catches `(...)` and calls `rethrow_translated()`, as every `Shard` method already does; `doc_view.h` states
+`serialize`) catches `(...)` and calls `rethrow_translated()`, as every `Shard` method already does; `doc_view.h` states
 "throws `engine::Error` only". The view holds a lazy `Xapian::Document`, so `data()`/`value()` can still hit the database
 (a remote shard, or a block overwritten under the snapshot) after `get()` returned: Modified, Network, Timeout. The retry
-ladders call `doc->serialise()` inside the `try` (handler.cc 2432 and the rest of A), so without this a raw Xapian
+ladders call `doc->serialize()` inside the `try` (handler.cc 2432 and the rest of A), so without this a raw Xapian
 exception would slip past `catch (const engine::Error&)`. `Shard::scan` already translates sink exceptions; a sink that
 throws a non-Xapian exception passes through unchanged. Zero cost on the happy path. The ladders recognise a retryable
 kind through `read_fate(e.kind)`, nothing else. Test: a view over a document whose database is closed/modified under it
@@ -211,10 +211,10 @@ status first. `Datetime`/`Cartesian`/`Missing` arms are untouched. Proof in phas
 #### 5. Steps (phase 2), each building under ASan+UBSan
 
 1. `engine/error.h`: `syntax`, `description`/`detail`, `is_missing`, `read_fate`; `Failure` fills them; `rethrow_translated`
-   adds QueryParser/Serialisation and the residual `Xapian::Error`; `DocView` translation (N6); tests.
+   adds QueryParser/Serialization and the residual `Xapian::Error`; `DocView` translation (N6); tests.
 2. `Shard::retry_read`; migrate shape A/A' (19 sites) and D; ladders become 1 catch each.
 3. Shapes B/C/F, `http_utils.h`, `main.cc` hooks, the raw throws (`Xapian::DocNotFoundError` x8 to `engine::Error`
-   `doc_not_found`), `exception_xapian.h` loses its Xapian bases (keeps `ClientError` and the `Error` mixin; `SerialisationError`,
+   `doc_not_found`), `exception_xapian.h` loses its Xapian bases (keeps `ClientError` and the `Error` mixin; `SerializationError`,
    `CastError`, `InternalError` become `ClientError` only: nothing catches their Xapian bases).
 4. Spellings and includes (sed), `serialise-double`, `engine::xapian::version()`, text analysis, `xapian.h` move, replication
    catches; `seam_check.sh --update`. The GPL file: a counting `perl` script for the lead (the `xapian.h` include line, and
@@ -231,11 +231,11 @@ All six criteria ticked; evidence in "Proof (X4a)".
   length, positions), `find_key`, `get` (a `DocView`), `scan(from, sink)`, `metadata`, `metadata_keys`, the
   cheap `doc_count()`, and `native<T>()` (throws `std::bad_cast` for another engine). `engine::xapian::check`
   returns `{errors, failure}` as values, so the check endpoint's body keeps Xapian's description text.
-- `DocView` gained `values`, `term_details` (term, wdf, frequency, positions) and `serialise`.
+- `DocView` gained `values`, `term_details` (term, wdf, frequency, positions) and `serialize`.
 - `Shard::engine()` replaces `db()` for the opened-or-reopen-or-closed rule. `get_docid_term`,
   `get_metadata`, `get_metadata_keys` and the new `get_view` read through it. `Shard::get_document` (Xapian
   `Document`) stays only for the remote server, with `db()`.
-- Migrated: `dump_documents` (both), `get_database_info`, `check`, `get_docid_term`, `Document::{serialise,
+- Migrated: `dump_documents` (both), `get_database_info`, `check`, `get_docid_term`, `Document::{serialize,
   get_value, get_data, get_terms, get_values, hash}` (the document info endpoint), and every
   `get_uuid`/`get_revision`/`get_doccount` caller (storage headers, WAL, pool, discovery, replication service
   and views, schema.cc, handler add_document).
@@ -250,7 +250,7 @@ Builds: ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, x86_64, `.scratch/build-asan` (
 `quiet light`, -j4. Baseline binary: the step 2 head (`xapiand-base`, answers identical to master).
 
 1. Unit tests: 16 of 16 under ASan+UBSan; `test_engine_read` 591 checks compare every read with Xapian itself
-   (stats, keys, documents, values, terms with frequency and positions, serialisation, scans from 9 starts,
+   (stats, keys, documents, values, terms with frequency and positions, serialization, scans from 9 starts,
    metadata with NUL bytes, check on a good and a missing path, `native<>`), a view that outlives its shard,
    and a throwing scan sink.
 2. Docs E2E: 339 requests, 576 of 576 assertions GREEN; `e2e_diff` against the baseline capture GREEN;
@@ -265,7 +265,7 @@ Builds: ASan+UBSan, RelWithDebInfo, `-DLTO=OFF`, x86_64, `.scratch/build-asan` (
 6. ASan/UBSan reports in the node logs of the E2E and corpus runs: only the `lz4.c` and `rapidjson` lines the
    baseline also prints; none in `src/engine`, `shard.cc`, `handler.cc`.
 7. Revert checks, adapters (`.scratch/mutants4.py`): 12 of 12 caught by `test_engine_read` (stats bounds
-   swapped, find_key missing answer, scan start, value slot, positions, term frequency, serialise, one
+   swapped, find_key missing answer, scan start, value slot, positions, term frequency, serialize, one
    metadata key, check text, doc count, wrong document (aborts), metadata cut at NUL). Integration
    (`.scratch/mutants4i.py`, judged by the read corpus): 6 of 6 caught (doc_del, value slot, positions,
    get_docid_term, get_metadata, dump start). The first run of the corpus missed doc_del (no 1-shard index)
@@ -377,7 +377,7 @@ the write guard; D2 as proposed except the floor items below.
 
 - `engine/error.h`: `syntax`, `description()`, `detail()`, `is_missing`, `fate` and `read_fate`. `Failure` fills the texts from
   the Xapian original; `rethrow_translated` adds `QueryParser` (syntax) and `Other` (internal) and leaves any
-  `std::exception` alone (Xapiand's `SerialisationError` is a `ClientError` and a Xapian type and must stay a 400).
+  `std::exception` alone (Xapiand's `SerializationError` is a `ClientError` and a Xapian type and must stay a 400).
 - `DocView`: the eight methods translate (`guarded`); `prepare` translates the query text.
 - `Shard::retry_read` (13 read ladders and `get_docid_term`, `get_view`, both metadata reads) and `Shard::collect_failure`
   (the four fan-outs: metadata keys, get/set metadata, commit). 20 missing-is-data catches, the NotAvailable catches, the
@@ -385,10 +385,10 @@ the write guard; D2 as proposed except the floor items below.
   manager.h/lock.h/manager.cc/search_views.cc raw throws are `engine::Error`.
 - Spellings: `Xapian::rev/docid/termcount/doccount/valueno` are `engine::` in every MIT file; `src/xapian.h` is
   `src/engine/xapian/xapian.h`; `Xapian::major_version()` is `engine::xapian::version()`; `serialise-double.h` is
-  `engine::serialise_double`; word-break text (`TermGenerator`), `Stopper` and `Stem` live in `src/engine/xapian/{text,
+  `engine::serialize_double`; word-break text (`TermGenerator`), `Stopper` and `Stem` live in `src/engine/xapian/{text,
   stopper,snowball_stem}`; `src/stopper.*` keeps only the MIT stop-word list.
 - `exception_xapian.h`: `DocVersionConflictError` and `QueryParserError` are `ClientError` plus `engine::Error` (no Xapian
-  base); `CastError` is a `ClientError`. `SerialisationError`, `NetworkError` and `InvalidArgumentError` keep their Xapian
+  base); `CastError` is a `ClientError`. `SerializationError`, `NetworkError` and `InvalidArgumentError` keep their Xapian
   base (see floor).
 - New: `tests/test_engine_error.cc` (243 checks), `test_failure_policy` in `tests/test_pool.cc`, `harness/seam_allowlist.txt`
   (7 files, 156 lines, from 38 files, 622 lines).
@@ -408,10 +408,10 @@ ladder needs fault injection (`XAPIAND_RANDOM_ERRORS`, off in this build), which
 ### Floor of the seam allowlist (differs from the ruling)
 
 `remote_protocol_views.cc` 125, `.h` 5, `remote_protocol_service.h` 1 as ruled; `replication_protocol_views.cc` 6, not 1: it
-serialises any `Xapian::Error` it catches to the peer with the GPL `serialise_error`, so its four catches and its include
+serializes any `Xapian::Error` it catches to the peer with the GPL `serialize_error`, so its four catches and its include
 stay (its `NotAvailable` catch and its two throws moved). Also kept: `shard.cc` 6 and `shard.h` 4 (the remote server calls
 `add_document`, `replace_document` and `replace_document_term` with `Xapian::Document`; I found it only when the build broke,
-by match-only tokens), and `exception_xapian.h` 11 (`SerialisationError`, `NetworkError` and `InvalidArgumentError` stay
+by match-only tokens), and `exception_xapian.h` 11 (`SerializationError`, `NetworkError` and `InvalidArgumentError` stay
 Xapian-derived: the remote and replication servers catch `Xapian::Error` to answer a malformed message and the remote server
 throws `NetworkError` x5 and `InvalidArgumentError` x7; the first cut dropped the last one, review C2). No `xapian.h` include line in the remote .cc needed a change (it reaches the header through
 `remote_protocol_views.h`), so there is no script for the lead.
@@ -419,7 +419,7 @@ throws `NetworkError` x5 and `InvalidArgumentError` x7; the first cut dropped th
 ### Changes in behaviour
 
 1. D1 above (stale snapshot on exhausted retries in the read fan-outs and a close in `get_docid_term`/`get_view`).
-2. `engine::unserialise_double` throws `engine::Error(invalid)` on bad bytes where `metric_serialise.h` threw
+2. `engine::unserialize_double` throws `engine::Error(invalid)` on bad bytes where `metric_serialize.h` threw
    `Xapian::SerialisationError`; only malformed remote bytes reach it. The wire bytes are the same function.
 3. Raw `engine::Error` throws that were Xapian types carry the reason as the 500 text (`manager.h`, `lock.h`, manager.cc's
    endpoint checks, search_views' "Endpoint node not available"); the `NetworkError` mixin and the stem-language error keep
@@ -443,7 +443,7 @@ Builds: ASan+UBSan, `.scratch/build-asan`, `quiet light`, -j4, at Xapiand:01d8b6
    `cluster_range.sh 2` GREEN, 30 checks, the 12 saved bodies identical to the X4b run (`cl3-new` vs `cl3-x4c`).
 3. The corpora caught my own bug: a regex pass moved four case-closing braces past their `break` in handler.cc (stored blobs
    stopped being pushed; `qread` showed 462 differences and a 500 "Bad file descriptor"); a second run showed
-   `SerialisationError` answering 500 (`qdiff`), which became the `std::exception` pass-through in `rethrow_translated`.
+   `SerializationError` answering 500 (`qdiff`), which became the `std::exception` pass-through in `rethrow_translated`.
    Both fixed in Xapiand:94c212d24 and both rows now covered by tests or the corpora.
 4. Mutants (`.scratch/x4c/mutants6.py`, each rebuilt and judged by the unit tests): 30 of 30 caught: 8 HTTP kinds (404, 409,
    reopen, 503/504, 504/502, `detail`, ClientError 400, 500 body), 15 translations (each Xapian type thrown as another
@@ -475,9 +475,9 @@ Xapiand:84e7e00f9. Builds ASan+UBSan, `.scratch/build-asan`, `quiet light`, -j4.
    are byte-identical to the baseline except those 3 answers. The reviewer's probe: 242 answers, exactly 10 differ, all
    500 to 400, base had 10 x 500.
 2. C2: `InvalidArgumentError` has its Xapian base and initialiser back. `test_engine_error` has `static_assert(is_base_of_v<
-   Xapian::Error, T>)` for `InvalidArgumentError`, `NetworkError`, `SerialisationError` (the three Xapiand types the remote
-   and replication servers throw or serialise; found from the MIT side and from `git grep -o` tokens on the remote file:
-   `THROW(InvalidArgumentError` 7, `THROW(NetworkError` 5, and `length.h` throws `SerialisationError`) and for
+   Xapian::Error, T>)` for `InvalidArgumentError`, `NetworkError`, `SerializationError` (the three Xapiand types the remote
+   and replication servers throw or serialize; found from the MIT side and from `git grep -o` tokens on the remote file:
+   `THROW(InvalidArgumentError` 7, `THROW(NetworkError` 5, and `length.h` throws `SerializationError`) and for
    `engine::xapian::InvalidArgument` (the replication views' throw). The raw-socket probe `p2_remote.py` answers byte for
    byte as the baseline (`diff p2-base.out p2-fix.out` empty). `seam_allowlist.txt`: `exception_xapian.h` 11.
 3. N1: `engine::xapian::Shard` is not `final`, so `test_pool` stands in an engine whose `find_key` fails
@@ -495,7 +495,7 @@ Xapiand:84e7e00f9. Builds ASan+UBSan, `.scratch/build-asan`, `quiet light`, -j4.
 7. `cluster_range.sh 2`: GREEN, 30 checks, 0 failures; the 12 saved bodies are identical to the X4c run (`cl3-x4c` vs `cl3-x4cfix`).
 
 Follow-ups left as they were: N2 (`invalid` in the metadata ladders also covers `InvalidOperation`), N3
-(`unserialise_double` on malformed bytes), N4 (log text for a raw Xapian error), N6 (`invalid` is one kind for a caller's
+(`unserialize_double` on malformed bytes), N4 (log text for a raw Xapian error), N6 (`invalid` is one kind for a caller's
 mistake and an internal breach; for the architect).
 
 ## Next

@@ -54,7 +54,7 @@ at the database call, which is now inside the shard's write section (`lock_shard
 threads. A `sample` of the node (60000-doc load) shows `Schema::index` inclusive falling 3669 to 1807 and
 `GlassWritableDatabase::replace_document` 4956 to 3053 while `to_xapian` adds 1613: cost moved from the
 parallel part to the per-shard serial part, and the document is built twice (engine then Xapian, plus again
-in `Document::serialise` for the WAL, on the WAL thread). Profiles: `.scratch/bisect05/prof-*.txt` in the
+in `Document::serialize` for the WAL, on the WAL thread). Profiles: `.scratch/bisect05/prof-*.txt` in the
 main checkout.
 
 ## Experiments (3)

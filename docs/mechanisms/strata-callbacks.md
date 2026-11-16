@@ -74,14 +74,14 @@ SearchRequest         sorter  -> key per match (memcmp), then weight, then docid
     reads doc values; a document stores each distinct value once, so no dedupe is needed. The Xapian engine
     returns the same buckets. An analysed `text` field, or a field indexed without values (`_index` without
     `field_values`), has no stored values to count: it reads index terms, which the strata engine refuses.
-10. **No term lists (R-P2).** `DocView::terms`, `term_details` and `serialise` raise `errc::syntax` ("keeps no
+10. **No term lists (R-P2).** `DocView::terms`, `term_details` and `serialize` raise `errc::syntax` ("keeps no
     term lists"), a 400 over HTTP: the `_terms` aggregation over a text field, and a document's `:info` (which
     lists its terms), fail with it.
     `_terms` and `_values` over a geo field are refused (400): a geo value is a range list, not a countable value.
     Both aggregations keep at most about `shard_size` buckets while collecting (`BucketAggregation::_prune`,
     default `_limit * 1.5 + 10` as Elasticsearch's, `_shard_size` raises it): past twice that many they drop the
     buckets that rank last in the aggregation's own order (counts for an order by a sub-aggregation), and
-    `serialise_results` sends the best `shard_size`. Below the cap the buckets are exact; past it a dropped value that
+    `serialize_results` sends the best `shard_size`. Below the cap the buckets are exact; past it a dropped value that
     returns restarts its count, so counts can fall short, as Elasticsearch documents. The strata engine's one spy sees
     every shard, so its cap holds across them.
 11. **Append chains.** `Query::append(op, accumulated, next)` is `next` when the accumulated query is empty by

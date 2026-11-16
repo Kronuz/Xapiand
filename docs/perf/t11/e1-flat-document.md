@@ -24,8 +24,8 @@ walk with string compares, a node allocation, and the destructor frees every nod
 A field held as a vector of terms in arrival order with an open-addressing table over cached hashes (linear scan up
 to 8 terms), found from the host's field id with a name check, should remove the tree walks, the per-node allocation
 and the destructor's pointer chasing. `fill` keeps the field order by name (the index sees fields as before); terms go
-in arrival order, which prospect does not depend on (`valid_field` sorts its own copy). `serialise` keeps the format
-(version 3) and writes terms in arrival order; it needs no sort because `unserialise` accepts any order.
+in arrival order, which prospect does not depend on (`valid_field` sorts its own copy). `serialize` keeps the format
+(version 3) and writes terms in arrival order; it needs no sort because `unserialize` accepts any order.
 
 ## Procedure
 

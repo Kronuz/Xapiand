@@ -19,7 +19,7 @@ below); `OUTDIR/coverage-files.txt` has every file. A line left uncovered is lis
 
 | Code | Lines | Branches | Files (`AREAS` in `harness/coverage.sh`) |
 |---|---|---|---|
-| Decoders, parsers, format | >= 98% | >= 95% | `engine/strata/document.cc`, `engine/strata/pattern.cc`, `engine/codec.cc`, `field_parser.cc`, `serialise.cc`, `y2j/` |
+| Decoders, parsers, format | >= 98% | >= 95% | `engine/strata/document.cc`, `engine/strata/pattern.cc`, `engine/codec.cc`, `field_parser.cc`, `serialize.cc`, `y2j/` |
 | Scorers, collectors, counting | >= 95% | >= 90% | `engine/strata/search.cc`, `engine/strata/expand.cc`, `engine/search.cc` |
 | Everything else | >= 90% | >= 80% | the rest of `src/`, one row per directory |
 

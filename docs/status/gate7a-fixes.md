@@ -22,7 +22,7 @@ assertions with no refusals. It is 562 of 566, the four being the one window-PHR
 
 The host still shows `doc_len_lower` as `-lower` (an unsigned wrap), as it does for Xapian. The similar-documents search
 (`nearest`, `fuzzy`) keeps its own direct use of Xapian's elite set inside the Xapian engine; it is not the operator.
-`DocView::serialise()` stays (the strata message now says it does not serialise a stored document).
+`DocView::serialize()` stays (the strata message now says it does not serialize a stored document).
 
 ## Proof (Release, one binary for both engines)
 

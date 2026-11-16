@@ -26,8 +26,8 @@ still exists for reads; E2E and WAL recovery unchanged.
   neutral `Document` (same semantics as the Xapian calls it replaces), `DocView`, `WriteResult`.
 - `src/engine/xapian/convert.{h,cc}`: `to_xapian`/`from_xapian` for documents and write results,
   `classify_current`/`translate_current` (Xapian exceptions to `errc`; `Xapian::Error` is not
-  polymorphic, so classification is a rethrow-and-catch ladder), `make_view`, and `Document::serialise`
-  / `unserialise` through Xapian's own format (old WAL lines stay readable). Static asserts pin the
+  polymorphic, so classification is a rethrow-and-catch ladder), `make_view`, and `Document::serialize`
+  / `unserialize` through Xapian's own format (old WAL lines stay readable). Static asserts pin the
   seam's types and open actions to Xapian's.
 - Migrated: `schema.{h,cc}` (no `Xapian::` left in schema.cc), `generate_terms.{h,cc}` document side
   (the `USE_ICU` word-break path generates into a Xapian document and merges), `handler.{h,cc}`
@@ -35,7 +35,7 @@ still exists for reads; E2E and WAL recovery unchanged.
   database call; the Xapian-typed overloads stay because the Xapian remote server calls them, confirmed
   by `nm` on its object), `wal.{h,cc}`, `utils.{h,cc}`, `flags.h`.
 - Tests: `tests/test_engine_document.cc` (840 checks): 200 random call sequences against a Xapian
-  document compare serialised bytes and the read-back; classification table; `DocView`; word-break merge.
+  document compare serialized bytes and the read-back; classification table; `DocView`; word-break merge.
 - Commits: `7eae6786c` (seam, types, errors, Document, DocView, write-path migration).
 
 ## Proof (half A)
