@@ -7189,6 +7189,7 @@
         "src/opts.*",
         "src/script*",
         "harness/lua_mem*",
+        "harness/async_allowlist.tsv",
         "tests/test_lua*.cc",
         "docs/mechanisms/lua*.md"
       ],
@@ -7203,7 +7204,7 @@
       "risk": "high",
       "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T11:37:02",
+      "updated": "2026-11-16T13:34:56",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
