@@ -50,15 +50,15 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | the `e2e` check (`campaign brief` table); `docs/public/assets/Lenna.*` removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history docs (`docs/status/license-audit.md`, `docs/dev/docs-site-audit.md`, `docs/gates/phase7a.md`, `docs/status/phase7c-gate-prep.md`, `.campaign/`), no code, harness, postman or other doc references the files; store-api lengths and SHA-256 digests match `sample.*` (checked); INFO sizes in the example corrected to 154.3, 154.7 and 8.7 KiB |
-| A2 | `ARCHITECTURE.md:609-614` (the licensing note), `README.md:124-129`, `AGENTS.md:42,104`: no GPL claim left; `src/sortable_serialise.*` is gone from master (sortable-encoding landed) |
-| A3 | [decision] Blocked on 1; prepared `docs/discussions/LICENSE`, `docs/discussions/README.md` |
-| A4 | [decision] Blocked on 2 and 3; `mime.types` regenerated; stopwords compared (ledger A17) |
-| A5 | [decision] Blocked on 4; `docs/public/assets/generator.py` tables rewritten |
-| A6 | [decision] Blocked on 5 |
-| A7 | the `no-xapian` check; locally `git grep -n -E 'Xapian::|xapian/|"xapian\.h"|<xapian' -- src contrib CMakeLists.txt` prints nothing; `pack.h` has no include of that name in `src/` or the build |
-| A8 | `docs/status/license-audit.md`: RapidJSON row (unmodified upstream, one compile definition `RAPIDJSON_PARSE_DEFAULT_FLAGS`), Lua row (the owner's patch), ledger "license closure" |
-| A9 | the `build-test` check and job 261116-152739-cb18f2 (install stages the three notice files) |
+| A1 | the e2e check (jobs 261116-152727-4477fa); `docs/public/assets/Lenna.jpg` is removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history documents and `.campaign/`, no code, harness or doc example; the store-api lengths and digests match `docs/public/assets/sample.png` (checked); example sizes corrected |
+| A2 | `ARCHITECTURE.md` licensing note, `README.md` license section and `AGENTS.md` carry no GPL claim; the sortable-encoding quest already landed on master, so this branch does not touch them (verified by `git grep -i gpl` on the three files, no hit) |
+| A3 | [decision] Blocked on 1 (owner); prepared `docs/discussions/LICENSE` |
+| A4 | [decision] Blocked on 2 and 3 (owner); `mime.types` regenerated, stopword comparison in `docs/status/license-audit.md` |
+| A5 | [decision] Blocked on 4 (owner); `docs/public/assets/generator.py` tables rewritten |
+| A6 | [decision] Blocked on 5 (owner) |
+| A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
+| A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
+| A9 | the build-test check (job 261116-152727-9c07ec) and install job 261116-152739-cb18f2 |
 
 ## Result
 
