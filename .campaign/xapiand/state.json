@@ -4650,6 +4650,34 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-design": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "test -s docs/design/faultlab.md",
+          "level": "light",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/faultlab.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
+      "risk": "high",
+      "status": "planned",
+      "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
+      "updated": "2026-11-16T14:23:19"
+    },
     "field-table": {
       "accepted": {},
       "after": [],
