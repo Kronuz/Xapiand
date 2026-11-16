@@ -40,12 +40,14 @@
 #include "phf.hh"                                 // for phf
 #include "phonetic.h"                             // for SoundexEnglish, SoundexFrench...
 #include "serialise_list.h"                       // for StringList, ...
+#include "sortable.hh"                             // for sortable::max_finite, sortable::min_finite
 #include "strict_stox.hh"                         // for strict_stoull
 #include "string_metric.h"                        // for Jaccard, Jaro, ..., Serialisable* wrappers, DoubleMetaphone
 
 
-const std::string MAX_CMPVALUE(Serialise::floating(DBL_MAX));
-const std::string MIN_CMPVALUE(Serialise::floating(-DBL_MAX));
+// A missing value's key: after (or before) every finite number, below +inf (or above -inf).
+const std::string MAX_CMPVALUE(sortable::max_finite);
+const std::string MIN_CMPVALUE(sortable::min_finite);
 
 const std::string SERIALISED_ZERO(Serialise::floating(0));
 const std::string SERIALISED_ONE(Serialise::floating(1));

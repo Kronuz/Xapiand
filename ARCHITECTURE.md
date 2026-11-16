@@ -41,7 +41,7 @@ utility, wire-format, HTTP-parser, compression, and metrics bundles are pulled b
 | Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` loops; each request is a task on its loop, and device work is a chore on one `WorkPool`. No libev. |
 | Search / query | `src/query_dsl.*`, `src/aggregations/`, `src/multivalue/`, `src/engine/` | JSON/MsgPack DSL and a boolean string language, both compiling to engine queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
-| Serialization | `src/serialise*.{cc,h}`, `src/sortable_serialise.*`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
+| Serialization | `src/serialise*.{cc,h}`, `Kronuz/sortable`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
 | Logging | `src/log.h`, `src/logger_fwd.h`, `src/colors.h`, `Kronuz/logger`, `Kronuz/traceback` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
 | Utility layer | top-level `src/*.hh` / `*.h` | Dozens of small, mostly self-contained headers (data structures, concurrency, metaprogramming, string tools). |
 
@@ -331,16 +331,15 @@ OR-of-terms candidate filter precedes an exact range re-check ranked by angular
 distance. The serialized trixel ids are **big-endian on purpose** so their byte
 order matches their integer order.
 
-### Serialization (`src/sortable_serialise.*`, `src/serialise*.{cc,h}`, `Kronuz/msgpack`)
+### Serialization (`src/serialise*.{cc,h}`, `Kronuz/sortable`, `Kronuz/msgpack`)
 
-The linchpin is `sortable_serialise` (`sortable_serialise.cc:43`): it maps a
-`long double` to a byte string whose `memcmp` order matches numeric order, so
-value-range queries and slot-based sorting work directly on serialized
-bytes. (It's Olly Betts' Xapian routine, extended here to `long double`; it stays
-until the value encoding is replaced.) For
-negatives the mantissa is negated rather than bit-flipped, which saves trailing
-bytes while still reversing order — and the header comment documents the bit
-layout unusually completely. Length/varint encoding comes in two flavors
+The linchpin is [`Kronuz/sortable`](https://github.com/Kronuz/sortable): every
+number Xapiand sorts, ranges or looks up by term, `int64`, `uint64` and `double`
+alike, becomes 1 to 10 bytes whose `memcmp` order is the exact numeric order across
+types (5, `5u` and 5.0 are one encoding), so value-range queries and slot-based
+sorting work directly on the stored bytes. `Serialise::` and `Unserialise::` are its
+only callers; `docs/mechanisms/value-encoding.md` describes the bytes and the
+rules for NaN, -0.0 and open bounds. Length/varint encoding comes in two flavors
 (`length.*`), and `serialise_list.h` is a tidy CRTP design that stores a single
 element bare (no magic byte, no length prefix) for the overwhelmingly common
 cardinality-1 field. The former in-tree MsgPack keystone now lives in
@@ -407,7 +406,6 @@ licensing notes**, see [extraction.md](docs/design/extraction.md).
 | **Intrusive LRU + TTL** | `lru.h` | Easy | High | Policy-callback eviction (LRU/LFU-ish/TTL) over `unordered_map`, pure STL. |
 | **String-distance kit** | `metrics/` | Easy | High | CRTP base + Levenshtein, Jaro, Jaro–Winkler, Jaccard, Sørensen–Dice, LCS, soundex-metric. Only the serialise helpers couple to the project. |
 | **Multilingual soundex** | `phonetic/` | Easy | High | English/French/German/Spanish phonetic encoders. Spanish/French coverage is rare in OSS. (Spanish has a real bug, below.) |
-| **Order-preserving float encoding** | `sortable_serialise.*` | Easy | High | Two files, only `<cmath>`/`<cstring>`. Useful for any KV/LSM store. *GPL (Xapian origin)* — unlike the MIT geo code. |
 | **Callable introspection** | `callable_traits.hh` | Easy | High | Full C++17 callable traits (functions/pointers/functors, all qualifiers). Drop-in. |
 | **Strict numeric parsing** | `strict_stox.hh` | Easy | High | `std::sto*` that actually rejects trailing garbage and overflow, throwing and nothrow variants. |
 | **constexpr string/hash toolbox** | `static_string.hh`, `hashes.hh`, `chars.hh` | Easy–Moderate | High | Compile-time strings, xxHash/FNV/djb2 + UDLs for string-switch, table-driven char classification. |
@@ -576,9 +574,6 @@ The tasteful bits, for anyone reading for pleasure:
 - **Throw-site exception backtraces** via `__cxa_throw` interposition
   (`traceback.cc:497`) — the stack from where it was thrown, not where it was
   caught.
-- **`sortable_serialise`'s negate-don't-flip** choice for negatives
-  (`sortable_serialise.cc:161`) — reverses sort order while saving trailing
-  bytes, and the comment explains exactly why.
 - **The `Counter` fake output iterator** (`basic_string_metric.h:146`) — counts
   a `set_intersection` without materializing it; allocation-free Jaccard/Dice.
 - **WAL revision slot array** (`wal.h:63`) — O(1) seek to any revision with no
@@ -613,9 +608,7 @@ history is discoverable and a feature can be revived from the exact commit if ne
 
 ## Licensing note
 
-Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC). However,
-`sortable_serialise.*` is Olly Betts' Xapian routine and stays **GPL** until the value
-encoding is replaced. If you extract a component to reuse elsewhere, check its
-provenance first: the geospatial code, the utility headers, the logging system, and the
-storage engine are Xapiand's own MIT code, but `sortable_serialise` is not, and the
-combined binary is bound by it.
+Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC),
+and so is every file in this tree. Its dependencies keep their own licenses, listed in
+`THIRD-PARTY-NOTICES`; `src/length.{cc,h}` derive from Xapian under Olly Betts' MIT grant.
+If you extract a component to reuse elsewhere, check its provenance there first.

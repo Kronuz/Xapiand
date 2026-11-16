@@ -39,7 +39,7 @@ designs in `docs/design/`, their architect reviews in `docs/reviews/`, and devel
 | Query languages | `src/query_dsl.*` (JSON/MsgPack); the string parser is the [boolean-parser](https://github.com/Kronuz/boolean-parser) library |
 | Aggregations | `src/aggregations/` |
 | Geospatial | `src/geospatial/`, `src/multivalue/geospatialrange.*` |
-| Value encoding | `src/sortable_serialise.*`, `src/serialise*.{cc,h}`, `src/length.*` |
+| Value encoding | `src/serialise*.{cc,h}` over [sortable](https://github.com/Kronuz/sortable), `src/length.*` |
 | Logging | `src/log.h` (category switches); the logger is the [logger](https://github.com/Kronuz/logger) library |
 | Scripting | `src/lua/`, `src/script.*` |
 | Small utilities | top-level `src/*.hh` / `*.h` (see the table in ARCHITECTURE.md) |
@@ -101,7 +101,8 @@ E2E above, load, soak/stress, benchmarks, and the
   done with compile-time perfect-hash tables (`phf::make_phf`), not if-ladders.
   Add a keyword by extending both the hash table and its `switch`.
 - **Serialization is order-sensitive.** Values stored for range/sort use
-  `sortable_serialise` (memcmp order == numeric order). If you change how a value
+  the `sortable` codec through `Serialise::` (memcmp order == exact numeric order,
+  across integer and floating types). If you change how a value
   is encoded, you change its sort/range semantics — tread carefully and keep the
   encoding monotonic.
 - **Splash banner font.** The ASCII wordmark in `banner()` (`src/main.cc`) is
@@ -147,8 +148,7 @@ E2E above, load, soak/stress, benchmarks, and the
   three places: the reserved vocabulary (`src/reserved/`), the schema/serialise
   layer, and the perfect-hash dispatch. Grep an existing one end-to-end first.
 - If you extract a utility to its own repo (the `base-x` / `uinteger_t` /
-  `fantasyname` pattern), check the licensing note in ARCHITECTURE.md —
-  `sortable_serialise` is GPL (Xapian origin), the rest is MIT.
+  `fantasyname` pattern), check the licensing note in ARCHITECTURE.md.
 - There's no substitute for flipping on the relevant `L_*` category and watching
   the logs; the instrumentation is already there.
 

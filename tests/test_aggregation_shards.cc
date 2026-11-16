@@ -148,7 +148,7 @@ engine::Document make_document(const Row& row) {
 	if (!row.scores.empty()) {
 		std::vector<std::string> values;
 		for (auto x : row.scores) {
-			values.push_back(Serialise::floating(static_cast<long double>(x)));
+			values.push_back(Serialise::floating(static_cast<double>(x)));
 		}
 		doc.add_value(SCORE, multi(values));
 	}

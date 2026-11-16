@@ -24,6 +24,7 @@
 #include "serialise.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <cmath>                                      // for std::isnan
 #include <cstdint>                                    // for int64_t, uint64_t
 #include <limits>                                     // for std::numeric_limits
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
@@ -229,7 +230,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		case FieldType::positive:
 			return positive(field_value.u64());
 		case FieldType::floating:
-			return floating(field_value.f64());
+			return floating(FieldType::floating, field_value.f64());
 		case FieldType::date:
 		case FieldType::datetime:
 			return datetime(field_value);
@@ -383,8 +384,11 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 
 
 std::string
-Serialise::floating(FieldType field_type, long double field_value)
+Serialise::floating(FieldType field_type, double field_value)
 {
+	if (std::isnan(field_value)) {
+		THROW(SerialisationError, "Type: {} cannot store NaN", enum_name(field_type));
+	}
 	switch (field_type) {
 		case FieldType::date:
 		case FieldType::datetime:
@@ -418,9 +422,8 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::timedelta:
 			return timedelta(field_value);
 		case FieldType::floating:
-			return floating(field_value);
 		case FieldType::integer:
-			return integer(field_value);
+			return integer(field_value);  // exact: one number has one encoding whatever its type
 		default:
 			THROW(SerialisationError, "Type: {} is not a integer [{}]", enum_name(field_type), field_value);
 	}
@@ -435,13 +438,16 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::datetime:
 			return timestamp(field_value);
 		case FieldType::floating:
-			return floating(field_value);
+			return positive(field_value);  // exact: one number has one encoding whatever its type
 		case FieldType::time:
 			return time(field_value);
 		case FieldType::timedelta:
 			return timedelta(field_value);
 		case FieldType::integer:
-			return integer(field_value);
+			if (field_value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+				THROW(SerialisationError, "Type: {} is out of range [{}]", enum_name(field_type), field_value);
+			}
+			return integer(static_cast<int64_t>(field_value));
 		case FieldType::positive:
 			return positive(field_value);
 		default:
@@ -592,7 +598,11 @@ std::string
 Serialise::floating(std::string_view field_value)
 {
 	try {
-		return floating(strict_stold(field_value));
+		const double value = strict_stod(field_value);
+		if (std::isnan(value)) {
+			THROW(SerialisationError, "Float cannot be NaN: {}", repr(field_value));
+		}
+		return floating(value);
 	} catch (const std::invalid_argument& exc) {
 		RETHROW(SerialisationError, "Invalid float format: {}", repr(field_value));
 	} catch (const std::out_of_range& exc) {
@@ -862,7 +872,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 			// Try like FLOAT
 			{
 				int errno_save;
-				strict_stold(&errno_save, str_value);
+				strict_stod(&errno_save, str_value);
 				if (errno_save == 0) {
 					return FieldType::floating;
 				}
@@ -941,11 +951,11 @@ Serialise::id(const required_spc_t& spc_id, const class MsgPack& document_id)
 			const auto value = Cast::cast(type, document_id.is_map() ? Cast::cast(document_id) : document_id);
 			switch (type) {
 				case FieldType::integer:
-					return sortable::encode(value.i64());
+					return integer(value.i64());
 				case FieldType::positive:
-					return sortable::encode(value.u64());
+					return positive(value.u64());
 				default:
-					return sortable::encode(value.f64());
+					return floating(FieldType::floating, value.f64());
 			}
 		}
 		default:
@@ -957,7 +967,7 @@ Serialise::id(const required_spc_t& spc_id, const class MsgPack& document_id)
 std::string
 Serialise::id(std::uint64_t document_id)
 {
-	return sortable::encode(document_id);
+	return positive(document_id);
 }
 
 
@@ -1020,7 +1030,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 			return std::make_pair(FieldType::integer, integer(field_value.i64()));
 
 		case MsgPack::Type::FLOAT:
-			return std::make_pair(FieldType::floating, floating(field_value.f64()));
+			return std::make_pair(FieldType::floating, floating(FieldType::floating, field_value.f64()));
 
 		case MsgPack::Type::BOOLEAN:
 			return std::make_pair(FieldType::boolean, boolean(field_value.boolean()));
@@ -1117,7 +1127,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 					case Cast::HashType::POSITIVE:
 						return std::make_pair(FieldType::positive, positive(Cast::positive(it.value())));
 					case Cast::HashType::FLOAT:
-						return std::make_pair(FieldType::floating, floating(Cast::floating(it.value())));
+						return std::make_pair(FieldType::floating, floating(FieldType::floating, Cast::floating(it.value())));
 					case Cast::HashType::BOOLEAN:
 						return std::make_pair(FieldType::boolean, boolean(Cast::boolean(it.value())));
 					case Cast::HashType::KEYWORD:
@@ -1165,7 +1175,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 	class MsgPack result;
 	switch (field_type) {
 		case FieldType::floating:
-			result = static_cast<double>(floating(serialised_val));
+			result = floating(serialised_val);
 			break;
 		case FieldType::integer:
 			result = integer(serialised_val);
@@ -1212,6 +1222,23 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 	}
 
 	return result;
+}
+
+
+void
+Unserialise::invalid_number(std::string_view serialised_number)
+{
+	THROW(SerialisationError, "Not a serialised number: {}", repr(serialised_number));
+}
+
+
+sortable::number
+Unserialise::number(std::string_view serialised_number)
+{
+	if (const auto value = sortable::decode(serialised_number)) {
+		return *value;
+	}
+	invalid_number(serialised_number);
 }
 
 

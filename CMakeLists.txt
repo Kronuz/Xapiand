@@ -1921,6 +1921,10 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
+		# test_serialise reads the pinned sortable's vectors and its exact comparator (design T1).
+		target_include_directories(${PROJECT_NAME}_test_serialise PRIVATE "${sortable_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_test_serialise PRIVATE SORTABLE_TEST_DIR="${sortable_SOURCE_DIR}/test")
+
 		# The pinned sortable codec's order proof, and the Python client's bytes against its C++ (design T1, T3).
 		add_executable(sortable_property "${sortable_SOURCE_DIR}/test/property.cc")
 		target_include_directories(sortable_property PRIVATE "${sortable_SOURCE_DIR}/test")

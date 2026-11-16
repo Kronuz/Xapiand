@@ -27,6 +27,7 @@
 
 #include <string>                   // for std::string
 #include <string_view>              // for std::string_view
+#include <cmath>                    // for std::round
 #include <cstdint>                  // for std::uint64_t, std::int64_t, std::uint32_t, std::uint8_t
 #include <optional>                 // for std::optional
 #include <utility>                  // for std::pair
@@ -36,7 +37,7 @@
 #include "cartesian.h"              // for Cartesian
 #include "htm.h"         // for range_t
 #include "msgpack.h"                // for MsgPack
-#include "sortable_serialise.h"     // for sortable_serialise, sortable_unserialise
+#include "sortable.hh"              // for sortable::encode, sortable::to_double, sortable::decode
 #include "hashes.hh"                // for fnv1ah32
 
 
@@ -124,7 +125,7 @@ namespace Serialise {
 	 * Serialise field_value according to field_type.
 	 */
 
-	std::string floating(FieldType field_type, long double field_value);
+	std::string floating(FieldType field_type, double field_value);
 	std::string integer(FieldType field_type, std::int64_t field_value);
 	std::string positive(FieldType field_type, std::uint64_t field_value);
 	std::string boolean(FieldType field_type, bool field_value);
@@ -138,7 +139,7 @@ namespace Serialise {
 	std::string datetime(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
-		return sortable_serialise(std::round(field_value * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS);
+		return sortable::encode(std::round(field_value * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS);
 	}
 
 	// Serialise value like datetime and fill tm.
@@ -169,27 +170,28 @@ namespace Serialise {
 	// Serialise field_value like float.
 	std::string floating(std::string_view field_value);
 
-	inline std::string floating(long double field_value) {
-		return sortable_serialise(field_value);
+	// Total: -0.0 is 0 and NaN is one value; the entry points for user values refuse NaN (D4).
+	inline std::string floating(double field_value) {
+		return sortable::encode(field_value);
 	}
 
 	// Serialise field_value like integer.
 	std::string integer(std::string_view field_value);
 
 	inline std::string integer(std::int64_t field_value) {
-		return sortable_serialise(field_value);
+		return sortable::encode(field_value);
 	}
 
 	// Serialise field_value like positive integer.
 	std::string positive(std::string_view field_value);
 
 	inline std::string positive(std::uint64_t field_value) {
-		return sortable_serialise(field_value);
+		return sortable::encode(field_value);
 	}
 
 	// A document version's bytes in DB_SLOT_VERSION, the slot the `_version` field (positive) sorts and ranges.
 	inline std::string version(std::uint64_t document_version) {
-		return sortable_serialise(static_cast<double>(document_version));
+		return sortable::encode(document_version);
 	}
 
 	// Serialise field_value like UUID.
@@ -265,7 +267,7 @@ namespace Serialise {
 		return boolean(val);
 	}
 
-	inline std::string serialise(long double val) {
+	inline std::string serialise(double val) {
 		return floating(val);
 	}
 
@@ -292,9 +294,20 @@ namespace Unserialise {
 	// Unserialise a serialised datetime.
 	std::string datetime(std::string_view serialised_date);
 
+	// Raises SerialisationError naming bytes that are not a serialised number.
+	[[noreturn]] void invalid_number(std::string_view serialised_number);
+
+	// Unserialise a serialised float: stored bytes, read without the canonical checks (design D2).
+	inline double floating(std::string_view serialised_float) {
+		if (const auto value = sortable::to_double(serialised_float)) {
+			return *value;
+		}
+		invalid_number(serialised_float);
+	}
+
 	// Unserialise a serialised datetime returns the timestamp.
 	inline double timestamp(std::string_view serialised_timestamp) {
-		return sortable_unserialise(serialised_timestamp);
+		return floating(serialised_timestamp);
 	}
 
 	// Unserialise a serialised time.
@@ -309,38 +322,32 @@ namespace Unserialise {
 	// Unserialise a serialised timedelta and returns the timestamp.
 	double timedelta_d(std::string_view serialised_time);
 
-	// Unserialise a serialised float.
-	inline long double floating(std::string_view serialised_float) {
-		return sortable_unserialise(serialised_float);
-	}
+	// The number serialised_number names, checked strictly (sortable::decode), else SerialisationError.
+	sortable::number number(std::string_view serialised_number);
 
-	// Bytes that are not a serialised number can decode out of range: saturate (NaN is 0).
-	inline std::int64_t clamp_int64(long double v) noexcept {
-		if (v != v) return 0;
-		if (v <= -9223372036854775808.0L) return INT64_MIN;
-		if (v >= 9223372036854775808.0L) return INT64_MAX;
-		return static_cast<std::int64_t>(v);
-	}
-
-	inline std::uint64_t clamp_uint64(long double v) noexcept {
-		if (!(v > 0)) return 0;
-		if (v >= 18446744073709551616.0L) return UINT64_MAX;
-		return static_cast<std::uint64_t>(v);
-	}
-
-	// Unserialise a serialised integer.
+	// Unserialise a serialised integer; a fraction truncates toward zero and a value out of range saturates
+	// (a slot shared by integer and floating fields holds both).
 	inline std::int64_t integer(std::string_view serialised_integer) {
-		return clamp_int64(sortable_unserialise(serialised_integer));
+		if (const auto value = sortable::to_int64(serialised_integer)) {
+			return *value;
+		}
+		return number(serialised_integer).saturate_int64();
 	}
 
-	// Unserialise a serialised positive.
+	// Unserialise a serialised positive, truncating and saturating like integer().
 	inline std::uint64_t positive(std::string_view serialised_positive) {
-		return clamp_uint64(sortable_unserialise(serialised_positive));
+		if (const auto value = sortable::to_uint64(serialised_positive)) {
+			return *value;
+		}
+		return number(serialised_positive).saturate_uint64();
 	}
 
 	// A document version from its DB_SLOT_VERSION bytes (Serialise::version).
 	inline std::uint64_t version(std::string_view serialised_version) {
-		return static_cast<std::uint64_t>(sortable_unserialise(serialised_version));
+		if (const auto value = sortable::to_uint64(serialised_version)) {
+			return *value;
+		}
+		invalid_number(serialised_version);
 	}
 
 	// Unserialise a serialised boolean.

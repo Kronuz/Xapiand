@@ -23,7 +23,6 @@
 from .hashes import jump_consistent_hash
 from .serialise import serialise_length, unserialise_length, serialise_string, \
     unserialise_string, serialise_char, unserialise_char
-from .sortable import sortable_serialise, sortable_unserialise
 from .client import NamespacedClient, make_url, query_params, SKIP_IN_PATH
 
 __all__ = [
@@ -34,8 +33,6 @@ __all__ = [
     'unserialise_string',
     'serialise_char',
     'unserialise_char',
-    'sortable_serialise',
-    'sortable_unserialise',
     'NamespacedClient',
     'make_url',
     'query_params',

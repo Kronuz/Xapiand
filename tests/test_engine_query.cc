@@ -1327,7 +1327,7 @@ static void test_range_aggregation_open_bounds() {
 		check_ranges<double>("f", FLT_SLOT, values, {
 			{ F{ none, 0.0 }, F{ 0.0, none } },
 			{ F{ none, -2.5 } }, { F{ -2.5, none } }, { F{ none, none } }, { F{ -3.0, 1.5 } }, { F{ 1.5, 3.0 } },
-		}, [](double v) { return Serialise::floating(static_cast<long double>(v)); });
+		}, [](double v) { return Serialise::floating(v); });
 		const std::vector<double> times = { -1.0e9, -1.0, 0.0, 1.5e9, 4.0e9 };
 		check_ranges<double>("d", DATE_SLOT, times, {
 			{ F{ none, 0.0 }, F{ 0.0, none } },

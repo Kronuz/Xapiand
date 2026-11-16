@@ -331,11 +331,6 @@ static void test_key_maker_unserialise_garbage() {
 // A stored value that does not decode makes the key throw the error Xapiand reports to the client;
 // it never terminates the process or reads past the value.
 static void test_key_maker_corrupt_values() {
-#ifndef NDEBUG
-	// sortable_unserialise asserts on bytes that are not a serialised number, so the random-bytes run needs NDEBUG.
-	std::fprintf(stderr, "  SKIP test_key_maker_corrupt_values: asserts are on\n");
-	return;
-#endif
 	Lcg rng{13};
 	std::vector<std::pair<std::string, std::unique_ptr<Multi_MultiValueKeyMaker>>> makers;
 	auto add = [&](const char* name, auto&& fill) {
@@ -610,11 +605,6 @@ static void test_aggregation_spy_garbage() {
 
 // Stored values that do not decode make the spy throw the error Xapiand reports; the process lives.
 static void test_aggregation_spy_corrupt_values() {
-#ifndef NDEBUG
-	// sortable_unserialise asserts on bytes that are not a serialised number, so the random-bytes run needs NDEBUG.
-	std::fprintf(stderr, "  SKIP test_aggregation_spy_corrupt_values: asserts are on\n");
-	return;
-#endif
 	Lcg rng{19};
 	auto schema = make_schema();
 	int seen = 0, thrown = 0;
@@ -644,10 +634,10 @@ static void test_aggregation_spy_corrupt_values() {
 // Bytes that decode out of range saturate instead of converting with undefined behaviour, and
 // stored extremes key without overflow.
 static void test_unserialise_saturates() {
-	CHECK_EQ(Unserialise::integer(Serialise::floating(1e30L)), INT64_MAX);
-	CHECK_EQ(Unserialise::integer(Serialise::floating(-1e30L)), INT64_MIN);
-	CHECK_EQ(Unserialise::positive(Serialise::floating(-1.75L)), 0U);
-	CHECK_EQ(Unserialise::positive(Serialise::floating(1e30L)), UINT64_MAX);
+	CHECK_EQ(Unserialise::integer(Serialise::floating(1e30)), INT64_MAX);
+	CHECK_EQ(Unserialise::integer(Serialise::floating(-1e30)), INT64_MIN);
+	CHECK_EQ(Unserialise::positive(Serialise::floating(-1.75)), 0U);
+	CHECK_EQ(Unserialise::positive(Serialise::floating(1e30)), UINT64_MAX);
 	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MIN)), INT64_MIN);
 	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MAX)), INT64_MAX);
 	CHECK_EQ(Unserialise::positive(Serialise::positive(UINT64_MAX)), UINT64_MAX);

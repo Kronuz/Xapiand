@@ -24,6 +24,7 @@
 #pragma once
 
 #include <cstdint>                                // for uint64_t
+#include <limits>                                 // for std::numeric_limits
 #include <stddef.h>                               // for size_t
 #include <string>                                 // for string
 #include <sys/types.h>                            // for uint64_t, int64_t
@@ -64,6 +65,20 @@ doc_field(engine::Document& doc, std::string_view field_prefix, char field_type,
 
 
 namespace GenerateTerms {
+	// The integer a double's accuracy terms are generated for: truncated toward zero, saturating at T's limits.
+	template <typename T>
+	constexpr T truncate(double d) noexcept {
+		constexpr double lowest = static_cast<double>(std::numeric_limits<T>::min());
+		constexpr double highest = static_cast<double>(std::numeric_limits<T>::max());  // 2^63 or 2^64: first out of range
+		if (!(d > lowest)) {
+			return std::numeric_limits<T>::min();
+		}
+		if (d >= highest) {
+			return std::numeric_limits<T>::max();
+		}
+		return static_cast<T>(d);
+	}
+
 	/*
 	 * Add generated terms by accuracy for field or global values in doc.
 	 */
