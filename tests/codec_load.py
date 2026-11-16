@@ -24,7 +24,7 @@
 Runs each build on a fresh data directory, interleaved old, new, new, old, ... for ROUNDS rounds (default 3), and per run:
 
   restore  RESTORE of the accounts corpus repeated 10 times and the frozen 20,000-file corpus, documents per second
-  size     bytes of the data directory once it stops changing after the commit
+  size     bytes of the data directory after a clean stop (every index closed and committed)
   sort     searches sorted on a number or a datetime, per second, 8 clients for 15 seconds
   range    numeric and datetime range searches, per second, 8 clients for 15 seconds
 
@@ -135,16 +135,8 @@ def throughput(mix: list[tuple[str, str]]) -> float:
     return sum(done) / (time.monotonic() - begin)
 
 
-def settled_bytes(path: str) -> int:
-    """The data directory's size once two readings a second apart agree."""
-    last = -1
-    for _ in range(60):
-        size = sum(os.path.getsize(os.path.join(d, f)) for d, _, names in os.walk(path) for f in names)
-        if size == last:
-            return size
-        last = size
-        time.sleep(1)
-    return last
+def dir_bytes(path: str) -> int:
+    return sum(os.path.getsize(os.path.join(d, f)) for d, _, names in os.walk(path) for f in names)
 
 
 def run(binary: str, data: dict[str, str], mixes: dict[str, list[tuple[str, str]]]) -> dict[str, float]:
@@ -171,11 +163,12 @@ def run(binary: str, data: dict[str, str], mixes: dict[str, list[tuple[str, str]
             status, body = call("RESTORE", f"/{index}/?commit", text, "application/x-ndjson")
             assert status in (200, 201, 204), (binary, index, status, body)
         restore = docs / (time.monotonic() - begin)
-        size = settled_bytes(data_dir)
-        return {"restore": restore, "size": size, **{name: throughput(mix) for name, mix in mixes.items()}}
+        rates = {name: throughput(mix) for name, mix in mixes.items()}
     finally:
         node.terminate()
         node.wait()
+    # A clean stop closes and commits every index, so the size does not depend on when it is read.
+    return {"restore": restore, "size": dir_bytes(data_dir), **rates}
 
 
 def main() -> None:
