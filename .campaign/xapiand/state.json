@@ -323,6 +323,41 @@
       "closed": "src/query_dsl.cc added to exact-id-keys's file set",
       "id": "msg-46",
       "text": "exact-id-keys: the _id term search builds its term in src/query_dsl.cc (get_regular_query -> Serialise::MsgPack -> field_term in src/database/utils.cc), both outside the quest's file set. Serialise::MsgPack itself can't change for _id because range.cc uses it for the _id value slot (values stay old). Request: add src/query_dsl.cc to the file set (one branch: an _id field with a numeric type serialises via the new id codec). Default if no answer: I edit query_dsl.cc minimally and record it under Rulings."
+    },
+    {
+      "at": "2026-11-16T08:23:55",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-49",
+      "text": "restore-free-off-loop: a deterministic regression test is possible but needs a file outside the set. Cause found: every MsgPack owns a msgpack::zone that mallocs an 8,200-byte chunk eagerly, so _results (one MsgPack per object) is 5,000 x 8 KB blocks freed in ~DocIndexer. Fix in progress: results packed into one buffer. Test: in tests/test_loop_yield.cc (its in-process node), run DocIndexer::index on the test thread and count this thread's operator-delete calls across the indexer's destruction: >= N on master (one Body per result), a handful with the fix. Deterministic, no timing. Request: add tests/test_loop_yield.cc to this quest's file set (alternative: a new tests/test_restore_results.cc needs one word in CMakeLists.txt's test list and would duplicate RunningNode). Default if no answer: I record it under Blocked on and land without the test."
+    },
+    {
+      "at": "2026-11-16T09:15:17",
+      "by": "restore-free-off-loop",
+      "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
+      "id": "msg-50",
+      "text": "restore-free-off-loop (re msg-49): the deterministic test works. Drafted in tests/test_loop_yield.cc (kept out of the branch, file set): run DocIndexer::index on the test thread over 2,000 objects, count that thread's operator-delete calls across indexer.reset(). Head: 4 blocks; master's _results: 6,003 blocks (3 per result) -> CHECK_LT(n, 200) fails. Local runs, both ways. Widen the file set to tests/test_loop_yield.cc and I commit it with a --fails-without job."
+    },
+    {
+      "at": "2026-11-16T12:12:51",
+      "by": "campaign detent",
+      "closed": "noted: group-core is planned behind detent:journal-driver; it consumes the contract after Detent lands it",
+      "id": "msg-51",
+      "text": "detent:journal-driver started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-15T22:41:44",
+      "by": "drivers-task-wheel",
+      "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
+      "id": "msg-47",
+      "text": "detent drivers-task-wheel (async-drivers quest 1, build plan row 1) asks your review of the task diff, A5: git -C /Users/kronuz/code/Kronuz/task-wt/detent/drivers-task-wheel diff main..627aca3 (task, 14 files). What changes for Xapiand: (1) new task::blocking_scheduler in task.hh, your engine::BlockingScheduler with the wheel (X3): thread-safe post/post_call wake drive(done[, may_wait]); timers on a Kronuz/wheel on steady_clock, armed/cancelled/expired on the driving thread; it sleeps only toward an armed timer and returns false at once on a lost wake (R3), so your run() becomes drive() plus your own stall policy; no roots; deadlines on it are made and destroyed on the driving thread (asio_scheduler keeps any-thread). (2) inline_scheduler gains a same-thread post_call (D8's hop in the simulator). (3) asio_scheduler arm/cancel are allowed on teardown's thread once closed (Y1: a group's entry unlinks in place after destroy_roots). (4) ARCHITECTURE.md 'Timers on the wheel' states D4's list (X7, Y7): engine::Host timers move next (AsioHost::arm, BlockingScheduler::arm), call sites unchanged; reactor/http steady_timers stay, LagProbe off for good; logger not loop-bound. engine::Host's own start_timer is unaffected. Please reply APPROVE or findings to quest drivers-task-wheel (campaign message detent:drivers-task-wheel ...)."
+    },
+    {
+      "at": "2026-11-15T23:11:48",
+      "by": "drivers-task-wheel",
+      "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
+      "id": "msg-48",
+      "text": "drivers-task-wheel: msg-1 (your A5 review of task:627aca3) is fixed in task:a30bb0f on quest/detent/drivers-task-wheel. X1: drive(done, may_wait) sleeps with no deadline when nothing is armed and may_wait() holds; drive(done) defaults to 'a timer is armed' (lost-wake cases unchanged). ARCHITECTURE.md 'Schedulers' maps your BlockingScheduler::drive(done) to drive([&]{return done;}, []{return true;}) inside HostScope, post_demoted as post. Test blocking_test wakes-unarmed (post/post_call at 20 ms; 5,000 rounds with the post around the sleep decision, TSan), mutant unarmed-returns kills it. X4 static drop_timer (no call into a dead inline/blocking scheduler; test late, ASan mutant). X5 asio arm after close now asserts; cancel keeps the allowance (control closed-arm). X7 blocking arm/cancel assert runs_here() (control offthread-cancel). X8 fixed: each drive pass runs what was queued when it began, then expires (test starve). Jobs queued at a30bb0f; please re-check A5."
     }
   ],
   "quests": {
@@ -2200,14 +2235,15 @@
       ],
       "milestone": "",
       "needs": [
-        "cluster-harness"
+        "cluster-harness",
+        "faultlab-design"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-16T12:28:26"
+      "updated": "2026-11-16T14:23:56"
     },
     "cold-tier-item5": {
       "accepted": {},
@@ -4628,6 +4664,122 @@
       "status": "landed",
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
+    },
+    "faultlab-design": {
+      "accepted": {
+        "design": {
+          "at": "2026-11-16T15:03:53",
+          "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+          "blobs": {
+            "docs/design/faultlab.md": "100644:b3841798384840a1bb0bbbda8153fea56f72962a"
+          },
+          "by": "review",
+          "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+          "criteria": "81beb3b7f5f3556b",
+          "diffs": {
+            "docs/design/faultlab.md": "59211b25e1aa6d99"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e028e190495b7c3f46dc1e7fda517c76f1934752",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+      "branch": "quest/xapiand/faultlab-design",
+      "checks": [
+        {
+          "cmd": "test -s docs/design/faultlab.md",
+          "level": "light",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/faultlab.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-16T15:03:28",
+          "reason": "owner-approved 2026-11-16 override: docs-only design quest; design reviewed and APPROVED at 727e417 by our reviewer and Detent's",
+          "risk": [
+            "high",
+            "low"
+          ],
+          "voided": [
+            "design"
+          ],
+          "weakened": [
+            "risk high -> low"
+          ]
+        },
+        {
+          "at": "2026-11-16T15:03:51",
+          "lenses": [
+            [
+              "correctness",
+              "design"
+            ],
+            [
+              "design"
+            ]
+          ],
+          "reason": "owner-approved 2026-11-16: docs-only design quest; design lens APPROVE at 727e417 plus Detent's APPROVE",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-16T15:03:57",
+          "ci_skipped": "owner-approved 2026-11-16: cpp-libraries nightly red since d36a131, before this quest; docs-only change",
+          "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+          "criteria": {
+            "A1": "`docs/design/faultlab.md` F7 (\"Public API. One table, everything a test touches\"), F5 (\"Detent's four variants\"), F4, F6; rows for crash points, sector tearing, namespace durability, ordering epochs, media, ENOSPC, short writes",
+            "A2": "`docs/design/faultlab.md` F8 (\"virtual void preallocate(std::uint64_t offset, std::uint64_t length);\"), F9 (\"Sync: always durable (pending the owner's ruling)\")",
+            "A3": "`docs/design/faultlab.md` F10 (\"Size against the 475 lines of test_relay_mirror_crash.cc\")",
+            "A4": "`docs/design/faultlab.md` F11 (\"One seeded scenario line\"), F12 (\"One JSON-line event log\"), F13 (\"One checker: Xapiand's history.py moves to faultlab\"), F14 (\"netlab (Linux, root or a user namespace)\"), F15 (\"What runs where\")",
+            "A5": "`docs/design/faultlab.md` F16 (\"callers first, the original deleted last, no shim\") and \"Migration order\" steps 0-10 with sizes",
+            "A6": "`docs/design/faultlab.md` \"Questions for Detent's lead (answered)\" (QD1, QD2, QD3)"
+          },
+          "evidence": [
+            {
+              "cmd": "test -s docs/design/faultlab.md",
+              "commit": "727e417a84a39597a7ce185d97eb28381b3a2b6f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-145941-40df1d",
+              "level": "light",
+              "seconds": 0.9,
+              "state": "done",
+              "what": "faultlab-design check doc at 727e417a84a3"
+            }
+          ],
+          "final": true,
+          "from": "d36a131601c01ecf6214d3afd4954470dfb4c23a",
+          "reason": "",
+          "tested": "727e417a84a39597a7ce185d97eb28381b3a2b6f"
+        }
+      ],
+      "lenses": [
+        "design"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/cpp-libraries",
+      "risk": "low",
+      "status": "landed",
+      "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
+      "updated": "2026-11-16T15:03:59",
+      "worktree": ""
     },
     "field-table": {
       "accepted": {},
@@ -7171,7 +7323,159 @@
       "worktree": ""
     },
     "lua-memory-bound": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T15:08:27",
+          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "blobs": {
+            "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
+            "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
+            "harness/async_allowlist.tsv": "100644:98709b125fb741313c99dfb6b4832a8187cfb657",
+            "harness/lua_mem.sh": "100755:870b917f2521ce9530b5b41db4e125743f03c480",
+            "harness/lua_mem_same.py": "100755:2a89557fdd2cd1560ca813a2ce5b41505d336af2",
+            "harness/lua_mem_seq.py": "100755:06c30a98a7c65ef097183f7c6cd503daadc7960d",
+            "src/lua/processor.cc": "100644:cdb739f2acf79216e94e54664f1ec339efae3c36",
+            "src/lua/processor.h": "100644:79db358a4eda276d20569cc7e32031108c9a7c44",
+            "src/opts.cc": "100644:a14120752aeb42ef348cf4303feda81b0f8edbf4",
+            "src/opts.h": "100644:a16ec6d9fe2a46cb29645fd2de0683f6ad950508",
+            "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
+          },
+          "by": "review",
+          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
+          "criteria": "125f23c275731226",
+          "diffs": {
+            "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
+            "docs/mechanisms/lua-memory.md": "51593a74bd065914",
+            "harness/async_allowlist.tsv": "8432e2b3a7ff1da0",
+            "harness/lua_mem.sh": "47b5792558890a80",
+            "harness/lua_mem_same.py": "0e272bc2cecc9481",
+            "harness/lua_mem_seq.py": "d480c3afd335b414",
+            "src/lua/processor.cc": "468137ef326afd08",
+            "src/lua/processor.h": "5beddab0d9f1f53c",
+            "src/opts.cc": "bd011c580ca00521",
+            "src/opts.h": "7b32839a61ad6f88",
+            "tests/test_lua.cc": "4fdaa874af8f855e"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0887480ff8999603c462d5f1e312a4e1eed520e1",
+          "reviewed": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
+          "verdict": "APPROVE"
+        },
+        "security": {
+          "at": "2026-11-16T15:08:56",
+          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "blobs": {
+            "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
+            "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
+            "harness/async_allowlist.tsv": "100644:98709b125fb741313c99dfb6b4832a8187cfb657",
+            "harness/lua_mem.sh": "100755:870b917f2521ce9530b5b41db4e125743f03c480",
+            "harness/lua_mem_same.py": "100755:2a89557fdd2cd1560ca813a2ce5b41505d336af2",
+            "harness/lua_mem_seq.py": "100755:06c30a98a7c65ef097183f7c6cd503daadc7960d",
+            "src/lua/processor.cc": "100644:cdb739f2acf79216e94e54664f1ec339efae3c36",
+            "src/lua/processor.h": "100644:79db358a4eda276d20569cc7e32031108c9a7c44",
+            "src/opts.cc": "100644:a14120752aeb42ef348cf4303feda81b0f8edbf4",
+            "src/opts.h": "100644:a16ec6d9fe2a46cb29645fd2de0683f6ad950508",
+            "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
+          },
+          "by": "review",
+          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
+          "criteria": "125f23c275731226",
+          "diffs": {
+            "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
+            "docs/mechanisms/lua-memory.md": "51593a74bd065914",
+            "harness/async_allowlist.tsv": "8432e2b3a7ff1da0",
+            "harness/lua_mem.sh": "47b5792558890a80",
+            "harness/lua_mem_same.py": "0e272bc2cecc9481",
+            "harness/lua_mem_seq.py": "d480c3afd335b414",
+            "src/lua/processor.cc": "468137ef326afd08",
+            "src/lua/processor.h": "5beddab0d9f1f53c",
+            "src/opts.cc": "bd011c580ca00521",
+            "src/opts.h": "7b32839a61ad6f88",
+            "tests/test_lua.cc": "4fdaa874af8f855e"
+          },
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "S2": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "S3": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "S4": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "harness/async_allowlist.tsv"
+            ],
+            "reason": "harness/async_allowlist.tsv only drops a stale allowlist row (Xapiand:2aa1a1ca5); it adds no mechanism, and the async check passes"
+          },
+          "note": "",
+          "review": "777c478af4edd5a3dd7380ebfe4b3690f176d3c7",
+          "reviewed": "fa613663367f70279e5988113f0d0136423aa30e",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "5800937cfd4d68ba4aa6d7779086bb5812067978",
       "branch": "quest/xapiand/lua-memory-bound",
@@ -7195,7 +7499,8 @@
       ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "correctness",
+        "security"
       ],
       "milestone": "Phase 8",
       "needs": [],
@@ -7204,7 +7509,7 @@
       "risk": "high",
       "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T13:34:56",
+      "updated": "2026-11-16T15:08:56",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
@@ -11611,16 +11916,54 @@
         "CMakeLists.txt",
         "harness/metrics_scrape_*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T14:53:25",
+          "commit": "f920f9042216f40cc88c1df745aae9def9dd8cc4",
+          "criteria": {
+            "A1": "261116-130908-3189de (the build-test check), 261116-130908-3189de (passed at c8f942934634; only merges from main since), 261116-130909-79ebc8 (passed at c8f942934634; only merges from main since), 261116-130853-906011 (passed at c8f942934634; only merges from main since); fails without: 261116-142201-a98983",
+            "A2": "261116-130901-9a8ee3 (passed at c8f942934634; only merges from main since)",
+            "A3": "261116-130909-79ebc8 (the e2e check), 261116-130908-3189de (passed at c8f942934634; only merges from main since), 261116-130909-79ebc8 (passed at c8f942934634; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "55f87de5cb24cf52e557a51085ae7cd3438ad460",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-130908-3189de",
+              "level": "light",
+              "seconds": 328.0,
+              "state": "done",
+              "what": "metrics-fd-count check build-test at 55f87de5cb24"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "55f87de5cb24cf52e557a51085ae7cd3438ad460",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-130909-79ebc8",
+              "level": "light",
+              "seconds": 189.2,
+              "state": "done",
+              "what": "metrics-fd-count check e2e at 55f87de5cb24"
+            }
+          ],
+          "final": true,
+          "from": "8a40038dcf54edf3af3adff947e1e1a0b403fbd9",
+          "reason": "",
+          "tested": "21274139f100d4fa4dc525dfb73c63eb403aaaf6"
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T11:34:15",
+      "updated": "2026-11-16T14:53:25",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
