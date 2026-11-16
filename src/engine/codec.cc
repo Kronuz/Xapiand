@@ -29,7 +29,7 @@
 
 
 std::string
-engine::serialise_double(double value)
+engine::serialize_double(double value)
 {
 	std::uint64_t bits;
 	std::memcpy(&bits, &value, sizeof bits);
@@ -42,10 +42,10 @@ engine::serialise_double(double value)
 
 
 double
-engine::unserialise_double(const char** p, const char* end)
+engine::unserialize_double(const char** p, const char* end)
 {
 	if (end - *p < 8) {
-		throw engine::Error(engine::errc::invalid, "Bad serialised double: too short");
+		throw engine::Error(engine::errc::invalid, "Bad serialized double: too short");
 	}
 	std::uint64_t bits = 0;
 	for (std::size_t i = 0; i < sizeof bits; ++i) {

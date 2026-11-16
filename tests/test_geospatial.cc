@@ -22,7 +22,7 @@
  */
 
 // Unit tests for the geospatial HTM machinery: a geometry expands to trixels, and
-// EWKT serialise/parse is stable. Revived from the retired oldtests geospatial
+// EWKT serialize/parse is stable. Revived from the retired oldtests geospatial
 // suite, keeping the robust structural checks (non-empty trixels, EWKT round-trip,
 // trixel<->range consistency) rather than pinning exact trixel names / range bytes.
 

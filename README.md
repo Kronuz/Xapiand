@@ -125,9 +125,8 @@ suite ([testing.md](docs/dev/testing.md)).
 
 [MIT](LICENSE) — Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC.
 
-Note that `src/sortable_serialise.*` carries Xapian's license (GPL) until the
-value encoding is replaced; see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note)
-before reusing code from this tree.
+Dependencies keep their own licenses, listed in [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES);
+see [ARCHITECTURE.md](ARCHITECTURE.md#licensing-note) before reusing code from this tree.
 
 [ci-image]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml/badge.svg
 [ci-url]: https://github.com/Kronuz/Xapiand/actions/workflows/ci.yml

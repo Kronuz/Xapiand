@@ -160,9 +160,9 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	bool validate_uuid;
 
-	MsgPack to_string_document(std::string_view document, bool unserialised);
-	MsgPack to_string_metadata(std::string_view document, bool unserialised);
-	MsgPack to_string_line(std::string_view line, bool unserialised);
+	MsgPack to_string_document(std::string_view document, bool unserialized);
+	MsgPack to_string_metadata(std::string_view document, bool unserialized);
+	MsgPack to_string_line(std::string_view line, bool unserialized);
 	uint32_t highest_valid_slot();
 
 	bool open(std::string_view path, int flags, bool commit_eof = false) {
@@ -194,7 +194,7 @@ public:
 	bool execute_line(std::string_view line, bool wal_);
 	void write_line(const UUID& uuid, engine::rev revision, Type type, std::string_view data);
 
-	MsgPack to_string(engine::rev start_revision, engine::rev end_revision, bool unserialised);
+	MsgPack to_string(engine::rev start_revision, engine::rev end_revision, bool unserialized);
 
 	std::pair<engine::rev, uint32_t> locate_revision(engine::rev revision);
 	iterator find(engine::rev revision);

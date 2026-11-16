@@ -25,7 +25,6 @@
 
 #include <string_view>           // for std::string_view
 
-#include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
 #include "enum.h"                // for ENUM_CLASS
 #include "reserved/schema.h"     // for RESERVED_LUA
@@ -82,7 +81,7 @@ namespace Cast {
 	MsgPack cast(FieldType type, const MsgPack& obj);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
-	long double floating(const MsgPack& obj);
+	double floating(const MsgPack& obj);
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	std::string uuid(const MsgPack& obj);

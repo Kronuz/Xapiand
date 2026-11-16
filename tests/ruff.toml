@@ -1,0 +1,2 @@
+# Ruff for the Python checks CTest and the quest jobs run.
+line-length = 120

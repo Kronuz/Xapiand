@@ -25,8 +25,8 @@
 
 // The string-metric algorithms now come from the standalone string-similarity
 // library (github.com/Kronuz/string-similarity), whose headers sit flat at its
-// root (no metrics/ prefix). The serialise()/unserialise() persistence the
-// library drops is re-attached below via metric_serialise.h (the Serialisable*
+// root (no metrics/ prefix). The serialize()/unserialize() persistence the
+// library drops is re-attached below via metric_serialize.h (the Serializable*
 // wrappers), and double_metaphone.h adds the Double Metaphone encoder selectable
 // for PhoneticMetric alongside the soundex family.
 #include "basic_string_metric.h"
@@ -39,5 +39,5 @@
 #include "sorensen_dice.h"
 #include "phonetic_metric.h"
 
-#include "metric_serialise.h"
+#include "metric_serialize.h"
 #include "double_metaphone.h"

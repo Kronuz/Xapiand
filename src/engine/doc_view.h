@@ -50,8 +50,8 @@ public:
 	// Every value, in slot order.
 	virtual void values(const ValueSink& sink) const = 0;
 
-	// The document in the form `engine::Document::unserialise` and the log read back.
-	virtual std::string serialise() const = 0;
+	// The document in the form `engine::Document::unserialize` and the log read back.
+	virtual std::string serialize() const = 0;
 };
 
 }  // namespace engine

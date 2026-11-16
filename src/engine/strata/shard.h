@@ -77,7 +77,7 @@ struct DeclaredField {
 // handles of a shard in this process share it through a Handle.
 class Shard final : public engine::Shard {
 public:
-	// With options.host the shard serves a host that serialises its writers: a write does no I/O of its
+	// With options.host the shard serves a host that serializes its writers: a write does no I/O of its
 	// own and the device work of every call is a chore of options.chores.
 	Shard(std::unique_ptr<Handle> handle, bool writable, const OpenOptions& options = {});
 	~Shard() override;

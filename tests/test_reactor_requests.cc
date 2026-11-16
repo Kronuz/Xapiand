@@ -136,9 +136,9 @@ public:
 	void see(const engine::DocView&, double) override { ++seen; }
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<CountingSpy>(); }
 	std::string name() const override { return "CountingSpy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<CountingSpy>(); }
-	std::string serialise_results() const override { return ""; }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return std::make_unique<CountingSpy>(); }
+	std::string serialize_results() const override { return ""; }
 	void merge_results(std::string_view) override { }
 	std::string description() const override { return "CountingSpy"; }
 };

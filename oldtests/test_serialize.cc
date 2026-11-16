@@ -21,10 +21,10 @@
  * THE SOFTWARE.
  */
 
-#include "test_serialise.h"
+#include "test_serialize.h"
 
 #include "datetime.h"
-#include "serialise.h"
+#include "serialize.h"
 #include "utils.h"
 
 
@@ -103,8 +103,8 @@ const std::vector<test_date_t> test_timestamp_date({
 });
 
 
-const std::vector<test_date_t> test_unserialisedate({
-	// Date to be serialised.				 Expected datetime after unserialise.
+const std::vector<test_date_t> test_unserializedate({
+	// Date to be serialized.				 Expected datetime after unserialize.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.8"      },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24"        },
 	{ "2010/10/10",                          "2010-10-10T00:00:00"        },
@@ -122,7 +122,7 @@ const std::vector<test_date_t> test_unserialisedate({
 
 
 const std::vector<test_cartesian_t> test_seri_cartesian({
-	// Cartesian.                                             Expected serialise Cartesian.
+	// Cartesian.                                             Expected serialize Cartesian.
 	{ Cartesian( 0.925602814,  0.336891873,  0.172520422),    "\\xaea'\\xfe\\x8bJ#\\xe1\\x81~\\x07\\xe6"                  },
 	{ Cartesian( 0.837915107,  0.224518676,  0.497483301),    "\\xa9'%\\xe3\\x84\\x97v\\x14\\x94\\xdc\\x92%"              },
 	{ Cartesian( 0.665250371,  0.384082481,  0.640251974),    "\\x9e\\xdc~C\\x8e\\x1a61\\x9d_\\x0cF"                      },
@@ -138,7 +138,7 @@ const std::vector<test_cartesian_t> test_seri_cartesian({
 
 
 const std::vector<test_range_t> test_seri_ranges({
-	// Range                                          Expected serialise range.
+	// Range                                          Expected serialize range.
 	{ range_t(15061110277275648, 15061247716229119),  "5\\x82\\x00\\x00\\x00\\x00\\x005\\x82\\x1f\\xff\\xff\\xff\\xff" },
 	{ range_t(15628458277208064, 15628526996684799),  "7\\x86\\x00\\x00\\x00\\x00\\x007\\x86\\x0f\\xff\\xff\\xff\\xff" },
 	{ range_t(15635605102788608, 15635673822265343),  "7\\x8c\\x80\\x00\\x00\\x00\\x007\\x8c\\x8f\\xff\\xff\\xff\\xff" },
@@ -148,7 +148,7 @@ const std::vector<test_range_t> test_seri_ranges({
 
 
 const std::vector<test_uuid_t> test_seri_uuids({
-	// UUID                                     Expected serialised uuid.                                                                 Expected unserialise uuid
+	// UUID                                     Expected serialized uuid.                                                                 Expected unserialize uuid
 	// Full:
 	{ "5759b016-10c0-4526-a981-47d6d19f6fb4",   "\\x01WY\\xb0\\x16\\x10\\xc0E&\\xa9\\x81G\\xd6\\xd1\\x9fo\\xb4",                          "5759b016-10c0-4526-a981-47d6d19f6fb4" },
 	{ "e8b13d1b-665f-4f4c-aa83-76fa782b030a",   "\\x01\\xe8\\xb1=\\x1bf_OL\\xaa\\x83v\\xfax+\\x03\\n",                                    "e8b13d1b-665f-4f4c-aa83-76fa782b030a" },
@@ -225,9 +225,9 @@ int test_datetotimestamp() {
 		} catch (const std::exception &exc) {
 			timestamp = "";
 		}
-		if (timestamp != test.serialised) {
+		if (timestamp != test.serialized) {
 			++cont;
-			L_ERR("ERROR: Serialise::datetime is not working.\n\t  Result: {}\n\tExpected: {}", timestamp, test.serialised);
+			L_ERR("ERROR: Serialize::datetime is not working.\n\t  Result: {}\n\tExpected: {}", timestamp, test.serialized);
 		}
 	}
 
@@ -241,152 +241,152 @@ int test_datetotimestamp() {
 }
 
 
-int test_unserialise_date() {
+int test_unserialize_date() {
 	INIT_LOG
 	int cont = 0;
-	for (const auto& test : test_unserialisedate) {
-		const auto serialised = Serialise::datetime(test.datetime);
-		const auto datetime = Unserialise::datetime(serialised);
-		if (datetime != test.serialised) {
+	for (const auto& test : test_unserializedate) {
+		const auto serialized = Serialize::datetime(test.datetime);
+		const auto datetime = Unserialize::datetime(serialized);
+		if (datetime != test.serialized) {
 			++cont;
-			L_ERR("ERROR: Unserialise::datetime is not working.\n\t  Result: {}\n\tExpected: {}", datetime, test.serialised);
+			L_ERR("ERROR: Unserialize::datetime is not working.\n\t  Result: {}\n\tExpected: {}", datetime, test.serialized);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing unserialise datetime is correct!");
+		L_DEBUG("Testing unserialize datetime is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing unserialise datetime has mistakes.");
+		L_ERR("ERROR: Testing unserialize datetime has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_serialise_cartesian() {
+int test_serialize_cartesian() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_cartesian) {
-		const auto serialised = repr(Serialise::cartesian(test.cartesian), true, false);
-		if (serialised != test.serialised) {
+		const auto serialized = repr(Serialize::cartesian(test.cartesian), true, false);
+		if (serialized != test.serialized) {
 			++cont;
-			L_ERR("ERROR: Serialise::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", serialised, test.serialised);
+			L_ERR("ERROR: Serialize::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", serialized, test.serialized);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing serialise Cartesian is correct!");
+		L_DEBUG("Testing serialize Cartesian is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing serialise Cartesian has mistakes.");
+		L_ERR("ERROR: Testing serialize Cartesian has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_unserialise_cartesian() {
+int test_unserialize_cartesian() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_cartesian) {
-		const auto serialised = Serialise::cartesian(test.cartesian);
-		const auto cartesian = Unserialise::cartesian(serialised);
+		const auto serialized = Serialize::cartesian(test.cartesian);
+		const auto cartesian = Unserialize::cartesian(serialized);
 		if (cartesian != test.cartesian) {
 			++cont;
-			L_ERR("ERROR: Unserialise::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", cartesian.to_string(), test.cartesian.to_string());
+			L_ERR("ERROR: Unserialize::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", cartesian.to_string(), test.cartesian.to_string());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing unserialise Cartesian is correct!");
+		L_DEBUG("Testing unserialize Cartesian is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing unserialise Cartesian has mistakes.");
+		L_ERR("ERROR: Testing unserialize Cartesian has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_serialise_range() {
+int test_serialize_range() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_ranges) {
-		const auto serialised = repr(Serialise::range(test.range), true, false);
-		if (serialised != test.serialised) {
+		const auto serialized = repr(Serialize::range(test.range), true, false);
+		if (serialized != test.serialized) {
 			++cont;
-			L_ERR("ERROR: Serialise::range is not working.\n\t  Result: {}\n\tExpected: {}", serialised, test.serialised);
+			L_ERR("ERROR: Serialize::range is not working.\n\t  Result: {}\n\tExpected: {}", serialized, test.serialized);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing serialise range_t is correct!");
+		L_DEBUG("Testing serialize range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing serialise range_t has mistakes.");
+		L_ERR("ERROR: Testing serialize range_t has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_unserialise_range() {
+int test_unserialize_range() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_ranges) {
-		const auto serialised = Serialise::range(test.range);
-		const auto range = Unserialise::range(serialised);
+		const auto serialized = Serialize::range(test.range);
+		const auto range = Unserialize::range(serialized);
 		if (range != test.range) {
 			++cont;
-			L_ERR("ERROR: Unserialise::range is not working.\n\t  Result: {}\n\tExpected: {}", range.to_string(), test.range.to_string());
+			L_ERR("ERROR: Unserialize::range is not working.\n\t  Result: {}\n\tExpected: {}", range.to_string(), test.range.to_string());
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing unserialise range_t is correct!");
+		L_DEBUG("Testing unserialize range_t is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing unserialise range_t has mistakes.");
+		L_ERR("ERROR: Testing unserialize range_t has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_serialise_uuid() {
+int test_serialize_uuid() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_uuids) {
-		const auto serialised = repr(Serialise::uuid(test.uuid), true, false);
-		if (serialised != test.serialised) {
+		const auto serialized = repr(Serialize::uuid(test.uuid), true, false);
+		if (serialized != test.serialized) {
 			++cont;
-			L_ERR("ERROR: Serialise::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, serialised, test.serialised);
+			L_ERR("ERROR: Serialize::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, serialized, test.serialized);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing serialise uuid is correct!");
+		L_DEBUG("Testing serialize uuid is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing serialise uuid has mistakes.");
+		L_ERR("ERROR: Testing serialize uuid has mistakes.");
 		RETURN(1);
 	}
 }
 
 
-int test_unserialise_uuid() {
+int test_unserialize_uuid() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_seri_uuids) {
-		const auto serialised = Serialise::uuid(test.uuid);
-		const auto uuid = Unserialise::uuid(serialised);
-		if (uuid != test.unserialised) {
+		const auto serialized = Serialize::uuid(test.uuid);
+		const auto uuid = Unserialize::uuid(serialized);
+		if (uuid != test.unserialized) {
 			++cont;
-			L_ERR("ERROR: Unserialise::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, uuid, test.unserialised);
+			L_ERR("ERROR: Unserialize::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, uuid, test.unserialized);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing unserialise uuid is correct!");
+		L_DEBUG("Testing unserialize uuid is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing unserialise uuid has mistakes.");
+		L_ERR("ERROR: Testing unserialize uuid has mistakes.");
 		RETURN(1);
 	}
 }

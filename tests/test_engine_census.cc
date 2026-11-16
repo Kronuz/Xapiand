@@ -73,8 +73,8 @@ public:
 	double max_weight() const override { return 2; }
 	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<Source>(); }
 	std::string name() const override { return "TestSource"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view) const override { return std::make_unique<Source>(); }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view) const override { return std::make_unique<Source>(); }
 	std::string description() const override { return "TestSource"; }
 };
 
@@ -83,8 +83,8 @@ public:
 	std::string key(const engine::DocView& doc) const override { return doc.value(21); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(); }
 	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(); }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view) const override { return std::make_unique<SlotKey>(); }
 };
 
 class Spy final : public engine::MatchSpy {
@@ -92,9 +92,9 @@ public:
 	void see(const engine::DocView& doc, double) override { (void)doc.did(); (void)doc.data(); }
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<Spy>(); }
 	std::string name() const override { return "Spy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<Spy>(); }
-	std::string serialise_results() const override { return ""; }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return std::make_unique<Spy>(); }
+	std::string serialize_results() const override { return ""; }
 	void merge_results(std::string_view) override { }
 	std::string description() const override { return "Spy"; }
 };

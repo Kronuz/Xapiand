@@ -25,7 +25,7 @@
 
 // The index registry (docs/design/x-pool.md). DatabasePool is one strata catalog over the indexes of this
 // process, keyed by path; its payload, ShardEndpoint, is the entry of one index: its engine shard over the
-// catalog's index, the turn that serialises every write on it, and the WorkGroup its device work runs in. The
+// catalog's index, the turn that serializes every write on it, and the WorkGroup its device work runs in. The
 // catalog opens, wakes, replaces and closes; a request names an index only through an IndexPin. Nothing in it
 // makes a thread wait for another: a pin is awaited as a task, and a turn is an async mutex with a deadline.
 

@@ -24,7 +24,7 @@
 from __future__ import absolute_import, division
 
 __all__ = ['UUID', 'uuid', 'uuid1', 'uuid3', 'uuid4', 'uuid5',
-           'unserialise', 'encode', 'decode', 'encode_uuid', 'decode_uuid',
+           'unserialize', 'encode', 'decode', 'encode_uuid', 'decode_uuid',
            'NAMESPACE_DNS', 'NAMESPACE_URL', 'NAMESPACE_OID', 'NAMESPACE_X500']
 
 import uuid as _uuid
@@ -91,26 +91,26 @@ CODEC_V1 = 1
 CODEC_V6 = 6
 
 
-def unserialise(serialised, codec=CODEC_V6):
+def unserialize(serialized, codec=CODEC_V6):
     uuids = []
-    while serialised:
-        uuid, length = UUID._unserialise(serialised, codec)
+    while serialized:
+        uuid, length = UUID._unserialize(serialized, codec)
         uuids.append(uuid)
-        serialised = serialised[length:]
+        serialized = serialized[length:]
     return uuids
 
 
-def encode(serialised, encoding='encoded', codec=CODEC_V6):
-    if isinstance(serialised, bytes):
+def encode(serialized, encoding='encoded', codec=CODEC_V6):
+    if isinstance(serialized, bytes):
         if encoding == 'guid':
-            return ';'.join('{%s}' % u for u in unserialise(serialised, codec))
+            return ';'.join('{%s}' % u for u in unserialize(serialized, codec))
         elif encoding == 'urn':
-            return 'urn:uuid:' + ';'.join(str(u) for u in unserialise(serialised, codec))
+            return 'urn:uuid:' + ';'.join(str(u) for u in unserialize(serialized, codec))
         elif encoding == 'encoded':
-            if serialised[0] != 1 and ((serialised[-1] & 1) or (len(serialised) >= 6 and serialised[-6] & 2)):
-                return '~' + UUID.ENCODER.encode(serialised)
-        return ';'.join(str(u) for u in unserialise(serialised, codec))
-    raise ValueError("Invalid serialised UUID: %r" % serialised)
+            if serialized[0] != 1 and ((serialized[-1] & 1) or (len(serialized) >= 6 and serialized[-6] & 2)):
+                return '~' + UUID.ENCODER.encode(serialized)
+        return ';'.join(str(u) for u in unserialize(serialized, codec))
+    raise ValueError("Invalid serialized UUID: %r" % serialized)
 
 
 def decode(encoded):
@@ -123,8 +123,8 @@ def decode(encoded):
             if encoded:
                 encoded = encoded.split(';')
     if isinstance(encoded, (list, tuple)):
-        serialised = b''.join(UUID._decode(u) for u in encoded)
-        return serialised
+        serialized = b''.join(UUID._decode(u) for u in encoded)
+        return serialized
     raise ValueError("Invalid encoded UUID: %r" % encoded)
 
 
@@ -137,7 +137,7 @@ def encode_uuid(uuid):
 
 
 def decode_uuid(code):
-    return UUID.unserialise(decode(code))
+    return UUID.unserialize(decode(code))
 
 
 class UUID(_uuid.UUID):
@@ -168,8 +168,8 @@ class UUID(_uuid.UUID):
     UUID_TIME_YEAR = 0x00011f0241243c00
     UUID_TIME_INITIAL = UUID_TIME_EPOCH + (2016 - 1970) * UUID_TIME_YEAR
 
-    UUID_MIN_SERIALISED_LENGTH = 2
-    UUID_MAX_SERIALISED_LENGTH = 17
+    UUID_MIN_SERIALIZED_LENGTH = 2
+    UUID_MAX_SERIALIZED_LENGTH = 17
     UUID_LENGTH = 36
 
     TIME_BITS = 60
@@ -222,7 +222,7 @@ class UUID(_uuid.UUID):
 
     def __eq__(self, other):
         # This used to subclass str, so a UUID compared equal to its own canonical
-        # hex string; keep that so unserialise(...) == ['xxxxxxxx-...'] still holds.
+        # hex string; keep that so unserialize(...) == ['xxxxxxxx-...'] still holds.
         if isinstance(other, _uuid.UUID):
             return self.int == other.int
         if isinstance(other, str):
@@ -273,16 +273,16 @@ class UUID(_uuid.UUID):
         return _uuid.UUID(hex=hex, bytes=bytes, bytes_le=bytes_le, fields=fields, int=int, version=version)
 
     @classmethod
-    def _is_serialised(cls, serialised, count=None):
-        while serialised:
+    def _is_serialized(cls, serialized, count=None):
+        while serialized:
             if count is not None:
                 if not count:
                     return False
                 count -= 1
-            size = len(serialised)
+            size = len(serialized)
             if size < 2:
                 return False
-            byte0 = serialised[0]
+            byte0 = serialized[0]
             if byte0 == 1:
                 length = 17
             else:
@@ -294,32 +294,32 @@ class UUID(_uuid.UUID):
                         break
             if size < length:
                 return False
-            serialised = serialised[length:]
+            serialized = serialized[length:]
         return True
 
     @classmethod
     def _decode(cls, encoded, count=None):
         if len(encoded) >= 7 and encoded[0] == '~':
-            serialised = cls.ENCODER.decode(encoded)
-            if cls._is_serialised(serialised, count):
-                return serialised
+            serialized = cls.ENCODER.decode(encoded)
+            if cls._is_serialized(serialized, count):
+                return serialized
         u = cls(_uuid.UUID(encoded))
-        return u.serialise()
+        return u.serialize()
 
     @classmethod
     def _decode_uuid(cls, encoded, count=None):
         if len(encoded) >= 7 and encoded[0] == '~':
-            serialised = cls.ENCODER.decode(encoded)
-            if cls._is_serialised(serialised, count):
-                return cls.unserialise(serialised)
+            serialized = cls.ENCODER.decode(encoded)
+            if cls._is_serialized(serialized, count):
+                return cls.unserialize(serialized)
         u = _uuid.UUID(encoded)
         return u
 
     @classmethod
-    def _unserialise_condensed(cls, serialised, codec=CODEC_V6):
-        size = len(serialised)
+    def _unserialize_condensed(cls, serialized, codec=CODEC_V6):
+        size = len(serialized)
         length = size
-        byte0 = serialised[0]
+        byte0 = serialized[0]
         q = bool(byte0 & 0xf0)
         for i in range(13):
             if cls.VL[i][q][0] == (byte0 & cls.VL[i][q][1]):
@@ -328,7 +328,7 @@ class UUID(_uuid.UUID):
         if size < length:
             raise ValueError("Bad encoded uuid")
 
-        list_bytes_ = list(bytearray(serialised[:length]))
+        list_bytes_ = list(bytearray(serialized[:length]))
         byte0 &= ~cls.VL[i][q][1]
         list_bytes_[0] = byte0
 
@@ -374,20 +374,20 @@ class UUID(_uuid.UUID):
         return cls(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node)), length
 
     @classmethod
-    def _unserialise_full(cls, serialised):
-        if len(serialised) < 17:
-            raise ValueError("Bad encoded uuid %s" % repr(serialised))
-        return cls(bytes=serialised[1:17]), 17
+    def _unserialize_full(cls, serialized):
+        if len(serialized) < 17:
+            raise ValueError("Bad encoded uuid %s" % repr(serialized))
+        return cls(bytes=serialized[1:17]), 17
 
     @classmethod
-    def _unserialise(cls, serialised, codec=CODEC_V6):
-        if serialised is None or len(serialised) < 2:
-            raise ValueError("Bad encoded uuid %s" % repr(serialised))
+    def _unserialize(cls, serialized, codec=CODEC_V6):
+        if serialized is None or len(serialized) < 2:
+            raise ValueError("Bad encoded uuid %s" % repr(serialized))
 
-        if (serialised and serialised[0] == 1):
-            return cls._unserialise_full(serialised)
+        if (serialized and serialized[0] == 1):
+            return cls._unserialize_full(serialized)
         else:
-            return cls._unserialise_condensed(serialised, codec)
+            return cls._unserialize_condensed(serialized, codec)
 
     @classmethod
     def _calculate_node(cls, time, clock, salt, expand=_expand_mt):
@@ -476,25 +476,25 @@ class UUID(_uuid.UUID):
             meat |= node
             meat <<= cls.COMPACTED_BITS
 
-        serialised = []
-        while meat or len(serialised) < 4:
-            serialised.append(meat & 0xff)
+        serialized = []
+        while meat or len(serialized) < 4:
+            serialized.append(meat & 0xff)
             meat >>= 8
-        length = len(serialised) - 4
-        if serialised[-1] & cls.VL[length][0][1]:
-            if serialised[-1] & cls.VL[length][1][1]:
-                serialised.append(cls.VL[length + 1][0][0])
+        length = len(serialized) - 4
+        if serialized[-1] & cls.VL[length][0][1]:
+            if serialized[-1] & cls.VL[length][1][1]:
+                serialized.append(cls.VL[length + 1][0][0])
             else:
-                serialised[-1] |= cls.VL[length][1][0]
+                serialized[-1] |= cls.VL[length][1][0]
         else:
-            serialised[-1] |= cls.VL[length][0][0]
-        serialised = bytes(bytearray(reversed(serialised)))
+            serialized[-1] |= cls.VL[length][0][0]
+        serialized = bytes(bytearray(reversed(serialized)))
         if compacted_time:
             compacted_time = ((compacted_time << cls.CLOCK_BITS) + cls.UUID_TIME_INITIAL) & cls.TIME_MASK
-        return serialised, compacted_node, compacted_time, compacted_clock
+        return serialized, compacted_node, compacted_time, compacted_clock
 
     @classmethod
-    def _serialise(cls, self):
+    def _serialize(cls, self):
         # Encode-side dispatch by the version nibble: v1 uses the mt expander, v6 the splitmix
         # expander with UUIDv6 field order; anything else falls back to the full 17-byte form.
         variant = self.bytes[8] & 0xc0
@@ -527,20 +527,20 @@ class UUID(_uuid.UUID):
         return cls(bytes=cls._to_v6_bytes(time, clock, node))
 
     @classmethod
-    def unserialise(cls, serialised, codec=CODEC_V6):
-        uuid, length = cls._unserialise(serialised, codec)
-        if length > len(serialised):
-            raise ValueError("Invalid serialised uuid %s" % serialised)
+    def unserialize(cls, serialized, codec=CODEC_V6):
+        uuid, length = cls._unserialize(serialized, codec)
+        if length > len(serialized):
+            raise ValueError("Invalid serialized uuid %s" % serialized)
         return uuid
 
-    def serialise(self):
-        if '_serialised' not in self.__dict__:
-            self.__dict__['_serialised'], self.__dict__['_compacted_node'], self.__dict__['_compacted_time'], self.__dict__['_compacted_clock'] = self._serialise(self)
-        return self.__dict__['_serialised']
+    def serialize(self):
+        if '_serialized' not in self.__dict__:
+            self.__dict__['_serialized'], self.__dict__['_compacted_node'], self.__dict__['_compacted_time'], self.__dict__['_compacted_clock'] = self._serialize(self)
+        return self.__dict__['_serialized']
 
     def compact_crush(self):
         if '_compacted_node' not in self.__dict__:
-            self.serialise()
+            self.serialize()
         node = self.__dict__['_compacted_node']
         if node is not None:
             time = self.__dict__['_compacted_time']
@@ -554,7 +554,7 @@ class UUID(_uuid.UUID):
             return self.__class__(fields=(time_low, time_mid, time_hi_version, clock_seq_hi_variant, clock_seq_low, node))
 
     def encode(self, encoding='encoded'):
-        return encode(self.serialise(), encoding)
+        return encode(self.serialize(), encoding)
 
     def data(self):
         num = 0
@@ -581,7 +581,7 @@ class UUID(_uuid.UUID):
 
     def iscompact(self):
         if '_compacted_node' not in self.__dict__:
-            self.serialise()
+            self.serialize()
         return self.__dict__['_compacted_node'] == self.node
 
 
@@ -652,24 +652,24 @@ if __name__ == '__main__':
 
     ################################################
 
-    for i, (str_uuid, expected, expected_encoded, expected_serialised) in enumerate(uuids):
+    for i, (str_uuid, expected, expected_encoded, expected_serialized) in enumerate(uuids):
         try:
-            serialised = decode(str_uuid)
+            serialized = decode(str_uuid)
 
-            result = unserialise(serialised)
+            result = unserialize(serialized)
             if result != expected:
                 errors += 1
-                print("Error in unserialise:\n\tResult: %s\n\tExpected: %s" % (result, expected))
+                print("Error in unserialize:\n\tResult: %s\n\tExpected: %s" % (result, expected))
 
-            result_encoded = repr(encode(serialised))
+            result_encoded = repr(encode(serialized))
             if result_encoded != expected_encoded:
                 errors += 1
-                print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_encoded, expected_encoded))
+                print("Error in serialize: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_encoded, expected_encoded))
 
-            result_seriaised = repr(serialised.decode('latin-1'))
-            if result_seriaised != expected_serialised:
+            result_seriaised = repr(serialized.decode('latin-1'))
+            if result_seriaised != expected_serialized:
                 errors += 1
-                print("Error in serialise: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_seriaised, expected_serialised))
+                print("Error in serialize: %s\n\tResult: %s\n\tExpected: %s" % (str_uuid, result_seriaised, expected_serialized))
         except ValueError as e:
             errors += 1
             print(e)

@@ -489,8 +489,8 @@ FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-c
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
-FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+# sortable: the exact number codec (docs/design/sortable-encoding.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG 2fad5a281098b55cfac266af92ac13ce665cfa0f)
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
@@ -630,7 +630,7 @@ add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 # are compiled into XAPIAND_OBJ below (io/strings deps already on the path, so its own CMake
 # is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
 # Xapiand's real logger (+ error::name/description).
-FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 20ffc71647228fb042da9fdd002dd1b8388a8b06)
+FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 563880aa1303673dfc8b9bd3cb5ad39bd6f652b8)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
@@ -640,7 +640,7 @@ add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
 # uuid.cc is compiled into XAPIAND_OBJ below so its trace/exception/node seams point
 # back at Xapiand's logger, exception hierarchy, and Node registry. Its endian and
 # char-classify dependencies are populated below and are on XAPIAND_OBJ's include path.
-FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG 4f878ed66364e4939a681504439a9994fb1ae34f)
+FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG dad68f8c22b8ed171902dd14de5466d6ef332cd2)
 FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
@@ -657,8 +657,8 @@ add_compile_definitions(
 # still includes "exception.h" directly; src/ is first on the include path, so
 # Xapiand's wrapper is the one found.
 # hashes: the commit with wordwise::hash32, which strata needs.
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 03ab2d69f7e1b0af6039733e0e06cc1e0118a45e)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 423c8cc1da989cfa9692250567911d288b49092e)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 1e9aaaf4ac5bfefa97c51d6f5884c1f3b61f80a5)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="xapiand_exception.h")
@@ -766,11 +766,14 @@ endif ()
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
 FetchContent_MakeAvailable(task)
 
+# varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
+FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git GIT_TAG 4dd60a8f199c52f98af2e784d4097cc86f243eb1)
+
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -823,7 +826,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 886131ba2f61d748cb046b3b4c6171253f04550a)  # reactor main step R (task sessions, owned scheduler, phased teardown)
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG eb08b59e6aa2086a1ebaac665b8475f32e80d230)  # http main: q-values parsed without libc
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
@@ -856,7 +859,7 @@ include_directories("${reactor_SOURCE_DIR}")
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
 # Xapiand as src/datetime_msgpack.{h,cc}. datetime.cc uses strict_stox, already
 # on the path.
-FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG 5dd9155c2e0f925c745984e099925e05084372dd)
+FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG b5d46a8796a80169f71c0535602a5a9a8714e688)
 FetchContent_MakeAvailable(datetime)
 include_directories("${datetime_SOURCE_DIR}")
 
@@ -887,9 +890,9 @@ if(TRACKED_MEM)
 endif()
 
 # soundex: the language Soundex encoders (english/french/german/spanish). The
-# library is the pure algorithm; the serialise()/unserialise() persistence Xapiand
+# library is the pure algorithm; the serialize()/unserialize() persistence Xapiand
 # needs is re-attached Xapiand-side in src/metrics/soundex_metric.h
-# (SerialisableSoundex), so it stays out of the library. Depends on strings
+# (SerializableSoundex), so it stays out of the library. Depends on strings
 # (already on the path); header-only, so it just goes on the include path.
 FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG 3fd0402a6d169f1b9944e3037d5e1d691dc5e85e)
 FetchContent_MakeAvailable(soundex)
@@ -899,15 +902,15 @@ include_directories("${soundex_SOURCE_DIR}")
 # Jaro-Winkler, Jaccard, Sorensen-Dice, LCSubstr, LCSubsequence, and the
 # encoder-agnostic PhoneticMetric). Header-only, headers flat at the repo root.
 # Like soundex, the library is the pure algorithms and deliberately drops the
-# serialise()/unserialise() persistence (that pulled length.h + GPL
-# serialise-double); Xapiand re-attaches it Xapiand-side via the thin Serialisable*
-# subclasses in src/metric_serialise.h, pulled in by src/string_metric.h. Depends
+# serialize()/unserialize() persistence (that pulled length.h + GPL
+# serialize-double); Xapiand re-attaches it Xapiand-side via the thin Serializable*
+# subclasses in src/metric_serialize.h, pulled in by src/string_metric.h. Depends
 # on strings + soundex (both already on the path); just goes on the include path.
 # double-metaphone: the Double Metaphone phonetic encoder, a selectable encoder
 # alongside the soundex family for PhoneticMetric. Its one out-of-line file
 # (double_metaphone.cc) compiles as part of Xapiand below (the cartesian/htm way),
 # and its header goes on the include path.
-FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG 594e6d69ec46dadcf989ac8989dd1f18c4ffc40f)
+FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG a5f50a6987741ae823c3dcf0e5180d3539625f45)
 FetchContent_Declare(double_metaphone  GIT_REPOSITORY https://github.com/Kronuz/double-metaphone.git  GIT_TAG b3191c4db0d7446dd2711f4aaaea7dbcc737ca3c)
 foreach(dep string_similarity double_metaphone)
 	FetchContent_MakeAvailable(${dep})
@@ -1004,8 +1007,9 @@ include_directories(
 # NaN/Inf -- relaxed JSON the REST API (and every doc example) relies on. De-vendoring
 # to upstream rapidjson dropped that, so bare doc.Parse() started rejecting it. Restore
 # it globally to match the prior behavior. (Caught by the docs E2E suite: dozens of
-# PUT/SEARCH bodies with trailing commas or // comments were 400ing.)
-add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag)")
+# PUT/SEARCH bodies with trailing commas or // comments were 400ing.) Full precision makes a
+# JSON decimal the nearest double, the value strict_stod gives its text (docs/design/sortable-encoding.md D6).
+add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag|kParseFullPrecisionFlag)")
 
 # prometheus-cpp: use upstream core only. Xapiand keeps its application-specific
 # metric catalog in src/metrics.*.
@@ -1897,7 +1901,7 @@ if (BUILD_TESTS)
 		# Unit tests that exercise Xapiand code: link the object libraries the way
 		# a real component does. Revived from oldtests/ one module at a time as they
 		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialise_list endpoint serialise generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialise quarantine root_routes aggregation_shards)
+		foreach (VAR_TEST fieldparser serialize_list endpoint serialize generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialize quarantine root_routes aggregation_shards)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1920,6 +1924,22 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
+
+		# test_serialize reads the pinned sortable's vectors and its exact comparator (design T1).
+		target_include_directories(${PROJECT_NAME}_test_serialize PRIVATE "${sortable_SOURCE_DIR}/test")
+		target_compile_definitions(${PROJECT_NAME}_test_serialize PRIVATE SORTABLE_TEST_DIR="${sortable_SOURCE_DIR}/test")
+
+		# The pinned sortable codec's order proof, and the Python client's bytes against its C++ (design T1, T3).
+		add_executable(sortable_property "${sortable_SOURCE_DIR}/test/property.cc")
+		target_include_directories(sortable_property PRIVATE "${sortable_SOURCE_DIR}/test")
+		add_test(NAME sortable_property COMMAND sortable_property)
+		add_executable(sortable_cli "${sortable_SOURCE_DIR}/tools/cli.cc")
+		find_package(Python3 3.10 COMPONENTS Interpreter REQUIRED)
+		add_test(NAME sortable_xlang COMMAND ${Python3_EXECUTABLE} -I "${PROJECT_SOURCE_DIR}/tests/sortable_xlang.py"
+			"${sortable_SOURCE_DIR}" $<TARGET_FILE:sortable_cli>)
+		add_dependencies(check sortable_property sortable_cli)
 
 		# The Lua limits patch applies to the pinned tarball and yields the tree that was built.
 		if (LUA)
@@ -2040,7 +2060,7 @@ if (BUILD_TESTS)
 		### OLD:
 		foreach (VAR_TEST
 			endpoint fieldparser generate_terms geospatial
-			patcher serialise serialise_list
+			patcher serialize serialize_list
 		)
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}

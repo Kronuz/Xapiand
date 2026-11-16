@@ -530,7 +530,7 @@ the format conflict with that:
 
 Two smaller points:
 
-1. The record's payload is `serialise_strings({ct_type, raw})` (`shard.cc:1257`), so the
+1. The record's payload is `serialize_strings({ct_type, raw})` (`shard.cc:1257`), so the
    streamed path must write the same length-prefixed framing.
 2. A crash between the upload's last chunk and the document's apply leaves an orphan volume.
    After restart, `get_volumes_range(...).second` (`shard.cc:1254`) opens the highest volume,
@@ -667,7 +667,7 @@ These block landing, not starting:
   handler (shared refcounted state, or an unlink under the mutex's lock plus a referenced timer
   handler). ASan and TSan tests cover both orders of `lock_until_probe` (F18).
 - R9 (blocks L6's landing and X3's streamed uploads): streamed records are uncompressed, their
-  size is capped below 4 GiB with a 413, they use the `serialise_strings` framing, and orphan
+  size is capped below 4 GiB with a 413, they use the `serialize_strings` framing, and orphan
   volumes are handled at open (F19).
 
 ### Conditions

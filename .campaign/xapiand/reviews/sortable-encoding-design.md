@@ -162,3 +162,60 @@ Notes for other designs, outside this quest:
 - I did not reread the sortable CI runs (42717337992, 42737478382), the superseded sortable-codec design
   or its review, or `legacy_probe.cc`. D1's case stands without them.
 - I did not open any GPL file, the GPL Python module, or any Xapian source.
+
+## Re-check (3f95a5edd)
+
+Commit: 3f95a5edd
+Verdict: APPROVE
+Date: 2026-11-15
+
+I re-read only the D87 revision (`git diff 3f95a5edd~1..3f95a5edd -- docs/design/sortable-encoding.md`;
+`docs/design/sortable-encoding/` is unchanged) and, for F2, the step-1 commit 49deb7184 (`CMakeLists.txt`
+and `tests/sortable_xlang.py`). Clean room kept: no GPL file, GPL Python module, Xapian source or
+strata-oracle opened. No new probe job: each claim was settled by the note, the step-1 code or an
+existing job record.
+
+What each claim comes to:
+
+1. **F1, F8, F9, F10 obsolete: agreed.** D8 now says "no format marker, no compatibility", per D87 (PLAN.md:272,
+   "No format marker or compatibility code before release"). With no `_format`, there is no crash window
+   (F1), adoption rule (F8), listing encoding (F9) or registry refusal message (F10). T8 is now the speed
+   gate. Limit 1 states the silent misread in both directions and attributes it to D87.
+2. **F2: answered.** At 49deb7184, `CMakeLists.txt` adds `sortable_property` built from
+   `${sortable_SOURCE_DIR}/test/property.cc` and `sortable_xlang`. That test builds `sortable_cli` from
+   `${sortable_SOURCE_DIR}/tools/cli.cc` and runs `tests/sortable_xlang.py` under `BUILD_TESTS`, which
+   `ci.yml` (ctest, lines 75-76 and the sanitizer matrix, whose skips do not touch either test) and
+   `freebsd.yml:50` run on every push. The script reads the fetched source's `test/vectors.txt` and
+   `test/reject.txt`, never a copy, and asserts their full sha256. It loads the shipped
+   `contrib/python/xapiand-py/xapiand/sortable.py` by path. It checks every vector, 10^6 seeded encodes
+   against the CLI and 1.54M decodes, with log-uniform integer magnitudes. Job 261115-224157-3d7604 (exit 0
+   at 49deb7184, sortable:915b014) prints `seed 611: 113491 vectors, 1000000 random encodes, 1541467 decodes
+   ... C++ and Python agree`. A3's "fails without" mutant jobs exist (`campaign status`). Whether it is
+   green on every CI platform is A9's evidence, not a design question.
+3. **F4 to F7, F11, F12: folded in.**
+   - F4: D6 makes an absent bound ±inf for every numeric type. T6 adds negative fractions, the
+     integer/floating wide search, open bounds with ±inf and NaN bounds answering 400.
+   - F5 and F6: T5's geo set and frozen ndjson with a digest.
+   - F7: T7's `du` on the branch first, with the disk delta in dollars.
+   - F11: T1 states 3x10^6 random values. sortable:915b014 `test/property.cc:316-320` uses seed 20261027,
+     overridable with `SORTABLE_SEED`, and prints it.
+   - F12: T3's log-uniform magnitudes, also in the script's `random_value`.
+4. **F3: half folded.** D6 now parses with strict_stod and drops the `long double` overloads, which is the
+   fix. But T6 does not name the near-midpoint decimal string (`9007199254740993.0000001` as a value and as a
+   bound) that would catch a regression. Without it, no row fails if a strtold path returns.
+5. **No silent misread beyond what D87 accepted, with one wording gap.** Stored values decode with the
+   trusted conversions (D2's speed paragraph), so pre-switch bytes read back as wrong numbers with no error.
+   D87 accepts that, and D8 and Limit 1 tell the user to delete and re-create each index or dump and restore
+   it; dumps are typed MsgPack. Ids already switched at Xapiand:73fbcb48d (`src/serialise.cc:944-960` at
+   3f95a5edd); no `N\x80` literal is left. The gap is the registry. `.xapiand/indexes` is an index too,
+   holding schemas with `DB_SLOT_VERSION` values (`database/schemas_lru.cc:120-124` falls back to
+   `Unserialise::version` on the slot). The per-index remedy does not reach it. F13.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F1 | no | defect | Obsolete: D87 removed the marker. | note D8, PLAN.md:272 | none |
+| F2 | no | gap | Answered: T1 and T3 are CTests over the fetched library's fixtures with sha256 checks, run by CI on every push. | 49deb7184 `CMakeLists.txt:1924-1932`, `tests/sortable_xlang.py`; job 261115-224157-3d7604 | none |
+| F3 | no | gap | D6 fixed; T6 has no near-midpoint decimal string, so no row catches a return of the double rounding. | note T6 row | Add `9007199254740993.0000001` as a string value and a string bound to T6 (`tests/numeric_range_check.py`), and expect 2^53 + 2. |
+| F4-F7, F11, F12 | no | gap | Folded in as asked. | note D6, T1, T3, T5-T7 | none |
+| F8, F9, F10 | no | gap | Obsolete with the marker. | note D8 | none |
+| F13 | no | gap | The pre-switch remedy is per index ("deleted and re-created, or dumped and restored"). The registry `.xapiand/indexes`, whose schema documents' version slots are read with the new codec, is a pre-switch index that the API does not re-create. A developer following the changelog index by index keeps it. Accepted silent behaviour under D87, but the documentation does not tell the user how to recover. | `database/schemas_lru.cc:120-124`; note D8, Limit 1, step 3's changelog item | In the changelog (A11) and `value-encoding.md`, say it per data directory: a data directory written before the switch is replaced. Dump each index with the old build, start the new build on an empty data directory, and restore. |

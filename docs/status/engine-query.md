@@ -31,7 +31,7 @@ Done when:
 3. A test guards the translation shapes it names: leaves, binary and list operators (which translate
    to the same query, so the seam does not rely on keeping them apart), windows, expansions and their
    limit kinds, wildcard pattern flags, text, append chains, emptiness over random trees; and each
-   adapter: match path, registry, serialisation error, weight and termfreq bounds, source ownership.
+   adapter: match path, registry, serialization error, weight and termfreq bounds, source ownership.
 4. The `Query` producers are migrated: `query_dsl`, `range` (three sources), `geospatialrange`,
    `generate_terms` (query side), and the index-path query in `search_views.cc`. They name no
    `Xapian::Query`, `Xapian::termcount`, `Xapian::QueryParser` or `Xapian::ValuePostingSource`.
@@ -68,7 +68,7 @@ Done when (each ticked with its evidence in "Proof (step 2)"):
 - CR6: `get_mset` translates the query once; the ESet rsets for `nearest` and `fuzzy` reuse the
   `Xapian::Query` (`get_rset(const Xapian::Query&)`, `match`).
 - CR7: the `KeyMaker` and `MatchSpy` signatures are exercised by their real users now; no change was needed
-  to the `DocView` shape. `see` and `key` may throw `SerialisationError` on a stored value that does not
+  to the `DocView` shape. `see` and `key` may throw `SerializationError` on a stored value that does not
   decode (contract in `callbacks.h`).
 
 ## Decisions
@@ -86,7 +86,7 @@ Done when (each ticked with its evidence in "Proof (step 2)"):
    and strategy, expansion limits). Flags and strategies are the seam's own constants; the Xapian
    implementation maps them, so no Xapian flag value leaks into `query_dsl`.
 4. `PostingSource` is the filter contract: a slot, `accept(value)`, `weight(value)`, `max_weight()`, and
-   name, clone, serialise, unserialise. All three sources in Xapiand are value-slot filters, and the
+   name, clone, serialize, unserialize. All three sources in Xapiand are value-slot filters, and the
    Xapian adapter keeps `Xapian::ValuePostingSource`'s own iteration, so next, skip_to and check behave
    exactly as before. D4 describes the base as "the virtuals of today's classes" (next, skip_to, check,
    weight); the general cursor has no user in Xapiand and is left out until one exists. See Open
@@ -108,9 +108,9 @@ Done when (each ticked with its evidence in "Proof (step 2)"):
   `multivalue/generate_terms.{h,cc}` query side, `server/search_views.cc` (the index-path query),
   `database/handler.{h,cc}` (`get_mset`, `get_rset`), `database/schema.h` (`getQueryParserStemStrategy`
   returns `engine::Stem`), `server/remote_protocol_views.cc` (four registrations).
-- Found by the garbage-bytes test: `SerialiseList::size()` was `noexcept` but decodes lazily, so a
-  malformed serialised value terminated the process (a remote peer could send one in a source or a
-  stored value could carry one). It is no longer `noexcept`; the existing `catch (SerialisationError)`
+- Found by the garbage-bytes test: `SerializeList::size()` was `noexcept` but decodes lazily, so a
+  malformed serialized value terminated the process (a remote peer could send one in a source or a
+  stored value could carry one). It is no longer `noexcept`; the existing `catch (SerializationError)`
   sites now see it. Pre-existing on master.
 
 ## Proof (step 1)
@@ -123,7 +123,7 @@ Baseline is master `201414347` built the same way (ASan+UBSan, RelWithDebInfo, `
    limit on a database; 2000 random trees agree with Xapian on description and `empty()`; `append`; 16
    text cases against `Xapian::QueryParser` set up as `query_dsl` set it up; the posting source through
    every match path and through a `Registry`; Xapiand's three real range sources by name through a
-   registry; key maker and spy; 16000 garbage and mutated serialisations).
+   registry; key maker and spy; 16000 garbage and mutated serializations).
 2. Docs E2E (`.scratch/e2e.sh`): base 339 requests, 576 of 576 assertions GREEN; final 339 requests,
    576 of 576, `e2e_assert` GREEN, `e2e_diff` against the base GREEN with 0 status differences.
    `bodydiff` over 339 bodies: 2 differ, both volatile (a generated id, the metrics page).
@@ -161,7 +161,7 @@ the unit test for the limits covers it.
 
 Remote registration: with `--replicas 0`, removing the `MultipleValueRange` registration makes the range
 checks fail (2 of 4: counts -1); restored, they pass. The garbage-bytes test aborted the process on the
-first input before the `size()` fix (an uncaught `SerialisationError`), and passes after.
+first input before the `size()` fix (an uncaught `SerializationError`), and passes after.
 
 Not done: a libFuzzer target (Apple clang ships no libFuzzer, and the sanitizers instrument the whole
 tree; the mutational test in `test_engine_query` is the fuzzing here), TSan, Linux and FreeBSD builds,
@@ -184,7 +184,7 @@ and a benchmark.
    bound included). The adapter now overrides `reset` and sets both after the base call, so
    `matches_lower_bound` can no longer exceed the real count and `get_max_possible` is the source's
    bound. Only bounds change; the 301-answer corpus is still byte-identical.
-3. CR3: slot, start and end are read into named locals in order in the three `unserialise` functions.
+3. CR3: slot, start and end are read into named locals in order in the three `unserialize` functions.
    No test can fail on this host (clang evaluates left to right); a reversed read (mutant) fails
    `test_registered_sources` (2 checks).
 4. CR4: `to_xapian` folds a chain of appends in a loop (the same Xapian tree), and `~QueryNode` frees
@@ -214,7 +214,7 @@ Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tre
 
 1. Migration: `Xapian::` and xapian includes in the eight files (aggregations, bucket, metrics, keymaker,
    .h and .cc): 205 lines on master, 2 now (both the `exception_xapian.h` include, X4's). Seam metric
-   (`.scratch/seam.sh`): master 46 files / 889 lines, now 38 / 704. Double serialisation goes through
+   (`.scratch/seam.sh`): master 46 files / 889 lines, now 38 / 704. Double serialization goes through
    `engine/codec.h` (implemented in `engine/xapian/codec.cc` by Xapian's own functions, so the shard-to-shard
    wire form is unchanged; the only GPL include of the migrated files moved there). `DocView::terms` now
    skips to the prefix and stops after it.
@@ -227,7 +227,7 @@ Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tre
    min_doc_count; histogram, date_histogram, range, date_range, filter; nested buckets up to three deep;
    error specs) times 4 queries, each also with hits; 516 aggregation answers are 200. 0 AddressSanitizer
    reports. One pre-existing UBSan line remains in both binaries (a `long double` max converted to
-   `long long` in a `std::pair`, from an aggregation over no values); the other (`serialise.h:296`, below)
+   `long long` in a `std::pair`, from an aggregation over no values); the other (`serialize.h:296`, below)
    is gone.
 4. Two nodes with `--replicas 0` (`.scratch/cluster_range.sh 2`): GREEN with the new checks: `_sort` `-v` over
    a range (20..10), `v` over all 30, `-v` with offset, `[t, -v]`; aggregations terms (five buckets of six),
@@ -237,32 +237,32 @@ Baseline: the step 1 head binary (`engine-query/.scratch/xapiand-final`; the tre
    (`.scratch/remote_mutants.sh`, outputs `rm-nokeymaker.out`, `rm-nospy.out`).
 6. Unit tests, 15 of 15 under ASan+UBSan. New `test_engine_sort` (28144 checks): sort by integer (every
    reference, forward and reversed, multi-valued, missing values) against a hand-computed order, by float,
-   by text, reversed, two keys; key maker clone, serialise round trip and registry rebuild; 20000 garbage and
-   mutated serialisations (engine error or a key maker, nothing else); 44000 corrupt stored values over 11
-   key kinds (a key or `SerialisationError`); the aggregation spy against hand-computed stats and buckets,
-   two halves merged into the whole (directly, through the serialised results, and through the adapter), a
-   registry rebuild; garbage spy serialisations and results; corrupt stored values; `DocView::terms`
+   by text, reversed, two keys; key maker clone, serialize round trip and registry rebuild; 20000 garbage and
+   mutated serializations (engine error or a key maker, nothing else); 44000 corrupt stored values over 11
+   key kinds (a key or `SerializationError`); the aggregation spy against hand-computed stats and buckets,
+   two halves merged into the whole (directly, through the serialized results, and through the adapter), a
+   registry rebuild; garbage spy serializations and results; corrupt stored values; `DocView::terms`
    against the full list for 12 prefixes; saturating decoders; ownership with live counters for every
    adapter handed to Xapian: borrowed (the way `match` hands them over), owning, `clone()`, registered
-   prototypes and the copies the registry rebuilds, and malformed serialisations.
+   prototypes and the copies the registry rebuilds, and malformed serializations.
 7. Found by those tests, fixed in the same commit:
    a. `register_key_maker` leaked the adapter: Xapian owns a registered key maker only through
       `release()`; the count of live key makers stayed at 2 after the registry died (the step 1 helper, used
       by tests only). Master's own call used `release()`.
    b. `Aggregation::merge_results` indexed `_sub_aggs[name]` for a name from the wire; an unknown name made a
       null entry and the next line dereferenced it (SEGV in ASan). A remote peer could send one. It throws
-      `SerialisationError` now.
-   c. `Unserialise::integer` and `positive` converted an out-of-range `long double` (bytes that are not a
-      number) to an integer, undefined behaviour (UBSan at `serialise.h:296`, `:301`); they saturate.
+      `SerializationError` now.
+   c. `Unserialize::integer` and `positive` converted an out-of-range `long double` (bytes that are not a
+      number) to an integer, undefined behaviour (UBSan at `serialize.h:296`, `:301`); they saturate.
    d. `IntegerKey` subtracted `int64` with signed overflow on stored extremes (`INT64_MIN - 5`); the distance
       saturates now (C3, Proof 12).
-   e. An unknown name in a serialised key maker threw with an unformatted `"{} not implemented"`; it names the
+   e. An unknown name in a serialized key maker threw with an unformatted `"{} not implemented"`; it names the
       key and all parse failures are `engine::Error(invalid)`.
 8. Revert checks (`.scratch/mutants3.py`, output `mutants3.out`): key maker adapter returns no key (12
    checks fail); spy adapter drops `see` (6); drops `merge_results` (1, after the adapter-merge check was
    added; it survived the first test); `register_key_maker` without `release()` (2); `DocView::terms` prefix
-   off by one (6); `merge_results` trusts the aggregation name (abort); `SerialisationError` escapes the key
-   maker's `unserialise` (17458); key maker takes the wrong end of a value list (9); aggregation does not
+   off by one (6); `merge_results` trusts the aggregation name (abort); `SerializationError` escapes the key
+   maker's `unserialize` (17458); key maker takes the wrong end of a value list (9); aggregation does not
    count documents (1); spy `clone()` returns an empty adapter (abort); signed subtraction restored (S10; caught
    by the extremes order test since C3); decoders without the clamp (1 check, 3 UBSan lines).
 9. CR6: one translation per search. With a temporary `fprintf` in `get_mset`/`get_rset`, one
@@ -278,11 +278,11 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 (`.scratch/remote_registration.sh`); the lead committed the same edit as Xapiand:635bff800.
 
 10. C1: the ledger follows Xapiand:635bff800 (criterion 2 ticked, Blocked on cleared).
-11. C2: `engine::unserialise_double` (`engine/xapian/codec.cc`) maps `Xapian::SerialisationError` to
+11. C2: `engine::unserialize_double` (`engine/xapian/codec.cc`) maps `Xapian::SerialisationError` to
     `engine::Error(errc::invalid)`, the kind the codec contract names. The garbage test's seed has a float and a
-    date key now, and the aggregation merge test accepts only `SerialisationError` and `engine::Error(invalid)`.
+    date key now, and the aggregation merge test accepts only `SerializationError` and `engine::Error(invalid)`.
     Revert (`git checkout HEAD` of `codec.cc`): 7 of 40805 checks fail (6 in the key maker garbage test, and
-    the aggregation test throws `SerialisationError: Bad encoded double`). `probe_sort kmfuzz 300000`: 0
+    the aggregation test throws `SerializationError: Bad encoded double`). `probe_sort kmfuzz 300000`: 0
     `Xapian::SerialisationError` (296771 `NetworkError` from the registry, 3229 accepted; the 1309 moved from
     the unmapped type). `probe_sort aggfuzz 100000`: 0 Xapian errors, 876 `engine::Error(invalid)`.
 12. C3: `isub` saturates (`__builtin_sub_overflow`, `INT64_MIN`/`INT64_MAX` by direction) and `iabs` maps
@@ -311,7 +311,7 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 ## Commits
 
 - Xapiand:801f16f5c Add engine::Query and the callback bases, and migrate the query producers
-- Xapiand:868af2635 Test the engine query seam hard, and keep SerialiseList::size() from aborting
+- Xapiand:868af2635 Test the engine query seam hard, and keep SerializeList::size() from aborting
 - Xapiand:c281e9618 Record the commits of engine-query step 1 in the ledger
 - Xapiand:a0926598b Review engine query (code review)
 - Xapiand:db0be79ad Fix the engine query review findings CR1 to CR5
@@ -326,7 +326,7 @@ local edit that built and ran the node and cluster used `sed` on those two exact
 
 1. The re-check of C1 to C3.
 2. X4 moves the `Xapian::Query` boundary in `get_mset`/`match` (the ESet terms for nearest and fuzzy,
-   `Enquire`) behind `engine::search`, and error kinds for `QueryParserError` and `SerialisationError`.
+   `Enquire`) behind `engine::search`, and error kinds for `QueryParserError` and `SerializationError`.
 3. A neutral double codec for `engine/codec.h` (today it forwards to Xapian's, to keep the wire form).
 
 ## Open questions

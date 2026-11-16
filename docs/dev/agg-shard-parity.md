@@ -6,7 +6,7 @@ and deletes that leave one of the five shards empty. It runs each aggregation re
 compares the answer to the one-shard answer, bucket by bucket and in order, in three ways:
 
 1. One spy over all the shards (`engine::search` over the shard set): what the server does.
-2. One spy per shard, the partials merged from `serialise_results` bytes (the remote-shard path).
+2. One spy per shard, the partials merged from `serialize_results` bytes (the remote-shard path).
 3. One spy per shard, the partials merged as objects.
 
 Integer and string values are compared exactly; floating values to one part in 1e9 (the corpus makes sums exact, so
@@ -39,16 +39,16 @@ true one, that the top 3 keys are the hot ones in order, and that their counts a
 ## Finding: merged partials lost their bucket order
 
 A bucket orders by `slot` (its numeric key) and `idx` (its range position), set only while collecting
-(`BucketAggregation::aggregate`). `serialise_results` did not send them and both `merge_results` overloads built
+(`BucketAggregation::aggregate`). `serialize_results` did not send them and both `merge_results` overloads built
 new buckets without them, so a merged bucket sorted by its key string (-15 before -17, 10 before 5) and ranges
 in no order. Every `_values`, `_terms`, `_histogram` and `_range` over a numeric field, and everything nested in
 one, differed between the merge paths and the one-spy path; metrics and keyword buckets did not.
 
-The fix: `serialise_results` sends each bucket's `slot` (a long double as two doubles that add up to it) and
+The fix: `serialize_results` sends each bucket's `slot` (a long double as two doubles that add up to it) and
 `idx`, and both `merge_results` overloads set them on a bucket they create.
 
 The bug was latent. Nothing in the server merges partials: `DatabaseHandler::get_mset` gives the engine one
-borrowed spy and the strata engine's spy sees every shard. Only the `MatchSpy` merge API (`serialise_results`,
+borrowed spy and the strata engine's spy sees every shard. Only the `MatchSpy` merge API (`serialize_results`,
 `merge_results`) carried it, for a remote-shard or cross-node merge.
 
 ## Running it

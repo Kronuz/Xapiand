@@ -128,8 +128,8 @@ public:
 	std::string key(const engine::DocView& doc) const override { return doc.value(slot_); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<SlotKey>(slot_); }
 	std::string name() const override { return "SlotKey"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view) const override { return std::make_unique<SlotKey>(slot_); }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view) const override { return std::make_unique<SlotKey>(slot_); }
 
 private:
 	engine::valueno slot_;
@@ -146,9 +146,9 @@ public:
 	}
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<RecordingSpy>(); }
 	std::string name() const override { return "RecordingSpy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<RecordingSpy>(); }
-	std::string serialise_results() const override { return ""; }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return std::make_unique<RecordingSpy>(); }
+	std::string serialize_results() const override { return ""; }
 	void merge_results(std::string_view) override { }
 	std::string description() const override { return "RecordingSpy"; }
 };

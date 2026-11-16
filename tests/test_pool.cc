@@ -418,9 +418,9 @@ public:
 	}
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<BlockingSpy>(); }
 	std::string name() const override { return "BlockingSpy"; }
-	std::string serialise() const override { return ""; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view) const override { return std::make_unique<BlockingSpy>(); }
-	std::string serialise_results() const override { return ""; }
+	std::string serialize() const override { return ""; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view) const override { return std::make_unique<BlockingSpy>(); }
+	std::string serialize_results() const override { return ""; }
 	void merge_results(std::string_view) override { }
 	std::string description() const override { return "BlockingSpy"; }
 };
@@ -828,7 +828,7 @@ void test_blob_io_runs_in_chores() {
 	data.update(ct_type_t("application/octet-stream"), -1, 0, 0, std::string("blobbytes"));
 	data.flush();
 	auto doc = make("Kblob", "");
-	doc.set_data(data.serialise());
+	doc.set_data(data.serialize());
 	const auto flushes = counting.count(engine::ChoreClass::flush);
 	const auto written = engine::sync_wait(shard.add_document(std::move(doc)));
 	CHECK_GT(counting.count(engine::ChoreClass::flush), flushes);  // the blob was pushed in a chore
@@ -886,12 +886,12 @@ void test_the_wal_order_is_the_apply_order() {
 		const std::string line = *it;
 		const char* p = line.data();
 		const char* p_end = p + line.size();
-		(void)unserialise_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+		(void)unserialize_length(&p, p_end);  // the revision
+		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
 		if (type == DatabaseWAL::Type::REPLACE_DOCUMENT) {
 			const auto data = decompress_lz4(std::string_view(p, p_end - p));
 			const char* q = data.data();
-			logged.push_back(static_cast<engine::docid>(unserialise_length(&q, q + data.size())));
+			logged.push_back(static_cast<engine::docid>(unserialize_length(&q, q + data.size())));
 		}
 	}
 	CHECK_EQ(logged.size(), static_cast<std::size_t>(threads_n * per_thread));
@@ -1783,7 +1783,7 @@ engine::Document numbered(std::uint64_t id, const std::string& n) {
 	Data data;
 	data.set_obj(MsgPack({{"_id", id}, {"n", n}}));
 	data.flush();
-	doc.set_data(data.serialise());
+	doc.set_data(data.serialize());
 	return doc;
 }
 
@@ -1898,8 +1898,8 @@ void test_the_commit_chore_logs_nothing_when_nothing_was_applied() {
 		const std::string line = *it;
 		const char* p = line.data();
 		const char* p_end = p + line.size();
-		(void)unserialise_length(&p, p_end);  // the revision
-		const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+		(void)unserialize_length(&p, p_end);  // the revision
+		const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
 		commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
 		replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
 	}
@@ -2234,8 +2234,8 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 			const std::string line = *it;
 			const char* p = line.data();
 			const char* p_end = p + line.size();
-			(void)unserialise_length(&p, p_end);  // the revision
-			const auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&p, p_end));
+			(void)unserialize_length(&p, p_end);  // the revision
+			const auto type = static_cast<DatabaseWAL::Type>(unserialize_length(&p, p_end));
 			commits += type == DatabaseWAL::Type::COMMIT ? 1 : 0;
 			replaces += type == DatabaseWAL::Type::REPLACE_DOCUMENT ? 1 : 0;
 		}

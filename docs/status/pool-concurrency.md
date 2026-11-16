@@ -77,7 +77,7 @@ restores. Logs in `.scratch/test_pool-M*.log`.
   `DatabasePool::cleanup` from `flush_view`, in round 1, 4 runs of 4 (`.scratch/uaf-master-run*.log`).
 - Root cause 1: `DatabasePool::cleanup` (`pool.cc:1096-1150`) walks the LRU with `trim_and`, whose
   iterator already points at the next node, and its callback drops `mtx` to clear the endpoint.
-  Another cleanup evicts and frees that next node meanwhile. Fix: `cleanup_mtx` serialises
+  Another cleanup evicts and frees that next node meanwhile. Fix: `cleanup_mtx` serializes
   cleanups (the only runtime evictors; `clear()` runs at shutdown).
 - With 1 fixed, the hunt reached round 16 and hit `SEGV pool.cc:184` (`_writable_checkout`'s
   predicate dereferencing a null `writable`), and the unit test hit a heap-use-after-free in

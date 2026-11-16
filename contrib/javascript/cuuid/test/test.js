@@ -50,15 +50,15 @@ test('cuuid', function() {
 		const str_uuid = uuid[0];
 		const expected = uuid[1];
 		const expected_encoded = uuid[2];
-		const expected_serialised = uuid[3];
+		const expected_serialized = uuid[3];
 
-		const serialised = UUID.decode(str_uuid);
-		const result = UUID.unserialise(serialised, UUID.CODEC_V1);
+		const serialized = UUID.decode(str_uuid);
+		const result = UUID.unserialize(serialized, UUID.CODEC_V1);
 		assert.deepEqual(result, expected);
 
-		const result_encoded = UUID.encode(serialised, 'encoded', UUID.CODEC_V1);
+		const result_encoded = UUID.encode(serialized, 'encoded', UUID.CODEC_V1);
 		assert.equal(result_encoded, expected_encoded);
-		assert.equal(repr.repr(serialised), expected_serialised);
+		assert.equal(repr.repr(serialized), expected_serialized);
 	});
 });
 
@@ -78,16 +78,16 @@ test('cuuid v6', function() {
 			wire += String.fromCharCode(parseInt(wireHex.substr(i, 2), 16));
 		}
 		// encode: canonical -> UUID -> condensed wire (version-nibble dispatch -> v6)
-		const enc = new UUID.UUID(canon).serialise();
+		const enc = new UUID.UUID(canon).serialize();
 		let encHex = '';
 		for (let i = 0; i < enc.length; i++) encHex += enc.charCodeAt(i).toString(16).padStart(2, '0');
 		assert.equal(encHex, wireHex);
 		// decode: condensed wire -> canonical (v6 codec, the default)
-		assert.equal(UUID.UUID.unserialise(wire, UUID.CODEC_V6), canon);
+		assert.equal(UUID.UUID.unserialize(wire, UUID.CODEC_V6), canon);
 	});
 	// a freshly minted v6 id is version 6 and round-trips
 	const minted = UUID.UUID.new_v6();
 	const u = new UUID.UUID(minted);
 	assert.equal(u.get_version(), 6);
-	assert.equal(UUID.UUID.unserialise(u.serialise(), UUID.CODEC_V6), minted);
+	assert.equal(UUID.UUID.unserialize(u.serialize(), UUID.CODEC_V6), minted);
 });

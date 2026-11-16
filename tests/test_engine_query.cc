@@ -53,8 +53,8 @@
 #include "msgpack.h"
 #include "multivalue/range.h"
 #include "query_dsl.h"
-#include "serialise.h"
-#include "serialise_list.h"
+#include "serialize.h"
+#include "serialize_list.h"
 
 namespace {
 
@@ -215,14 +215,14 @@ static void test_registered_sources() {
 	}
 	engine::sync_wait(shard->commit(engine::Transaction::none));
 
-	// The sources are built from their serialised form: their constructors are private to range.cc.
-	auto serialised = [](std::initializer_list<std::string> parts) {
+	// The sources are built from their serialized form: their constructors are private to range.cc.
+	auto serialized = [](std::initializer_list<std::string> parts) {
 		std::vector<std::string> data(parts);
-		return StringList::serialise(data.begin(), data.end());
+		return StringList::serialize(data.begin(), data.end());
 	};
-	auto range = [&](std::string from, std::string to) { return MultipleValueRange{}.unserialise(serialised({ serialise_length(5), from, to })); };
-	auto ge = [&](std::string from) { return MultipleValueGE{}.unserialise(serialised({ serialise_length(5), from })); };
-	auto le = [&](std::string to) { return MultipleValueLE{}.unserialise(serialised({ serialise_length(5), to })); };
+	auto range = [&](std::string from, std::string to) { return MultipleValueRange{}.unserialize(serialized({ serialize_length(5), from, to })); };
+	auto ge = [&](std::string from) { return MultipleValueGE{}.unserialize(serialized({ serialize_length(5), from })); };
+	auto le = [&](std::string to) { return MultipleValueLE{}.unserialize(serialized({ serialize_length(5), to })); };
 	const std::vector<std::pair<Query, std::set<engine::docid>>> cases = {
 		{ Query::source(range("015", "018")), { 6, 7, 8, 9 } },
 		{ Query::source(ge("028")), { 19, 20, 21 } },
@@ -234,19 +234,19 @@ static void test_registered_sources() {
 	}
 }
 
-// Bytes a source never wrote: random, and valid serialisations with a few bytes flipped, cut or
+// Bytes a source never wrote: random, and valid serializations with a few bytes flipped, cut or
 // extended. Each source must either rebuild or raise the engine's invalid error, and never
 // anything else.
-static void test_unserialise_garbage() {
-	auto serialised = [](std::initializer_list<std::string> parts) {
+static void test_unserialize_garbage() {
+	auto serialized = [](std::initializer_list<std::string> parts) {
 		std::vector<std::string> data(parts);
-		return StringList::serialise(data.begin(), data.end());
+		return StringList::serialize(data.begin(), data.end());
 	};
 	const std::vector<std::pair<const engine::PostingSource*, std::string>> seeds = {
-		{ new MultipleValueRange{}, serialised({ serialise_length(5), "015", "018" }) },
-		{ new MultipleValueGE{}, serialised({ serialise_length(5), "015" }) },
-		{ new MultipleValueLE{}, serialised({ serialise_length(5), "015" }) },
-		{ new GeoSpatialRange{}, serialised({ serialise_length(7), Serialise::ranges_centroids({ range_t(1, 9), range_t(20, 30) }, { Cartesian(1, 0, 0) }) }) },
+		{ new MultipleValueRange{}, serialized({ serialize_length(5), "015", "018" }) },
+		{ new MultipleValueGE{}, serialized({ serialize_length(5), "015" }) },
+		{ new MultipleValueLE{}, serialized({ serialize_length(5), "015" }) },
+		{ new GeoSpatialRange{}, serialized({ serialize_length(7), Serialize::ranges_centroids({ range_t(1, 9), range_t(20, 30) }, { Cartesian(1, 0, 0) }) }) },
 	};
 	Lcg rng{777};
 	std::size_t rebuilt = 0, rejected = 0;
@@ -276,11 +276,11 @@ static void test_unserialise_garbage() {
 					break;
 			}
 			try {
-				auto rebuilt_source = source->unserialise(bytes);
+				auto rebuilt_source = source->unserialize(bytes);
 				CHECK_TRUE(rebuilt_source != nullptr);
-				// What rebuilt is usable: it describes and serialises without raising.
+				// What rebuilt is usable: it describes and serializes without raising.
 				(void)rebuilt_source->description();
-				(void)rebuilt_source->serialise();
+				(void)rebuilt_source->serialize();
 				++rebuilt;
 			} catch (const engine::Error& exc) {
 				CHECK_TRUE(exc.kind == engine::errc::invalid);
@@ -386,15 +386,15 @@ public:
 	double max_weight() const override { return 100; }
 	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<Between>(lo_, hi_); }
 	std::string name() const override { return "Between"; }
-	std::string serialise() const override { return std::to_string(lo_) + "," + std::to_string(hi_); }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view s) const override {
+	std::string serialize() const override { return std::to_string(lo_) + "," + std::to_string(hi_); }
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view s) const override {
 		auto comma = s.find(',');
 		if (comma == std::string_view::npos) {
-			throw engine::Error(engine::errc::invalid, "Bad serialised Between");
+			throw engine::Error(engine::errc::invalid, "Bad serialized Between");
 		}
 		return std::make_unique<Between>(std::stoi(std::string(s.substr(0, comma))), std::stoi(std::string(s.substr(comma + 1))));
 	}
-	std::string description() const override { return "Between " + serialise(); }
+	std::string description() const override { return "Between " + serialize(); }
 
 private:
 	int lo_ = 0, hi_ = 0;
@@ -412,10 +412,10 @@ public:
 	}
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<ByValue>(); }
 	std::string name() const override { return "ByValue"; }
-	std::string serialise() const override { return "v"; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view s) const override {
+	std::string serialize() const override { return "v"; }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view s) const override {
 		if (s != "v") {
-			throw engine::Error(engine::errc::invalid, "Bad serialised ByValue");
+			throw engine::Error(engine::errc::invalid, "Bad serialized ByValue");
 		}
 		return std::make_unique<ByValue>();
 	}
@@ -431,14 +431,14 @@ public:
 	}
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<Collect>(); }
 	std::string name() const override { return "Collect"; }
-	std::string serialise() const override { return "c"; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view s) const override {
+	std::string serialize() const override { return "c"; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view s) const override {
 		if (s != "c") {
-			throw engine::Error(engine::errc::invalid, "Bad serialised Collect");
+			throw engine::Error(engine::errc::invalid, "Bad serialized Collect");
 		}
 		return std::make_unique<Collect>();
 	}
-	std::string serialise_results() const override {
+	std::string serialize_results() const override {
 		std::string result;
 		for (auto did : seen) {
 			result += std::to_string(did) + ",";
@@ -495,9 +495,9 @@ static void test_posting_source() {
 	// The weight is the source's: the highest value ranks first.
 	CHECK_EQ(dids.front(), 6U);
 
-	// A malformed serialisation is an invalid argument; a good one rebuilds the source.
-	CHECK_THROW(Between().unserialise("bad"), engine::Error);
-	CHECK_EQ(Between().unserialise("3,6")->description(), "Between 3,6");
+	// A malformed serialization is an invalid argument; a good one rebuilds the source.
+	CHECK_THROW(Between().unserialize("bad"), engine::Error);
+	CHECK_EQ(Between().unserialize("3,6")->description(), "Between 3,6");
 	CHECK_EQ(Between().name(), "Between");
 	CHECK_EQ(Between().description(), "Between 0,0");
 }
@@ -511,9 +511,9 @@ static void test_key_maker() {
 	CHECK_EQ(dids.front(), 9U);
 	CHECK_EQ(dids.back(), 10U);
 
-	auto rebuilt = sorter.unserialise("v");
+	auto rebuilt = sorter.unserialize("v");
 	CHECK_TRUE(ranked(*db, Query::term("f", "t"), rebuilt.get()) == dids);
-	CHECK_THROW(sorter.unserialise("x"), engine::Error);
+	CHECK_THROW(sorter.unserialize("x"), engine::Error);
 }
 
 static void test_match_spy() {
@@ -525,15 +525,15 @@ static void test_match_spy() {
 	CHECK_EQ(collect.data, "d1d2d3d4d5d6d7d8d9d10");
 	CHECK_TRUE(collect.total_weight > 0);
 
-	// Results of other shards merge through the serialised form.
-	auto remote = collect.unserialise("c");
+	// Results of other shards merge through the serialized form.
+	auto remote = collect.unserialize("c");
 	auto remote_dids = ranked(*db, Query::combine(Op::AND, Query::term("f", "t"), Query::source(std::make_unique<Between>(9, 10))), nullptr, remote.get());
 	CHECK_EQ(remote_dids.size(), 2u);
 	Collect merged;
-	merged.merge_results(remote->serialise_results());
+	merged.merge_results(remote->serialize_results());
 	CHECK_EQ(merged.seen.size(), remote_dids.size());
 	CHECK_TRUE((merged.seen == std::set<engine::docid>{ 9, 10 }));
-	CHECK_THROW(collect.unserialise("x"), engine::Error);
+	CHECK_THROW(collect.unserialize("x"), engine::Error);
 }
 
 namespace {
@@ -552,8 +552,8 @@ public:
 	double weight(std::string_view) const override { return 1.0; }
 	std::unique_ptr<engine::PostingSource> clone() const override { return std::make_unique<Counted>(); }
 	std::string name() const override { return "Counted"; }
-	std::string serialise() const override { return "c"; }
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view) const override { return std::make_unique<Counted>(); }
+	std::string serialize() const override { return "c"; }
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view) const override { return std::make_unique<Counted>(); }
 	std::string description() const override { return "Counted"; }
 };
 
@@ -881,15 +881,15 @@ static void test_chain_cap() {
 
 // A stored value that does not decode is not accepted; it must never stop the process.
 static void test_corrupt_stored_value() {
-	auto serialised = [](std::initializer_list<std::string> parts) {
+	auto serialized = [](std::initializer_list<std::string> parts) {
 		std::vector<std::string> data(parts);
-		return StringList::serialise(data.begin(), data.end());
+		return StringList::serialize(data.begin(), data.end());
 	};
 	std::vector<std::unique_ptr<engine::PostingSource>> sources;
-	sources.push_back(MultipleValueRange{}.unserialise(serialised({ serialise_length(5), "a", "z" })));
-	sources.push_back(MultipleValueGE{}.unserialise(serialised({ serialise_length(5), "a" })));
-	sources.push_back(MultipleValueLE{}.unserialise(serialised({ serialise_length(5), "z" })));
-	sources.push_back(GeoSpatialRange{}.unserialise(serialised({ serialise_length(5), Serialise::ranges_centroids({ range_t(1, 9), range_t(20, 30) }, { Cartesian(1, 0, 0) }) })));
+	sources.push_back(MultipleValueRange{}.unserialize(serialized({ serialize_length(5), "a", "z" })));
+	sources.push_back(MultipleValueGE{}.unserialize(serialized({ serialize_length(5), "a" })));
+	sources.push_back(MultipleValueLE{}.unserialize(serialized({ serialize_length(5), "z" })));
+	sources.push_back(GeoSpatialRange{}.unserialize(serialized({ serialize_length(5), Serialize::ranges_centroids({ range_t(1, 9), range_t(20, 30) }, { Cartesian(1, 0, 0) }) })));
 
 	const std::string garbage_values[] = { "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", "\x7f", std::string("\x05" "ab", 3), std::string("\x01\x00", 2) };
 	for (const auto& source : sources) {
@@ -916,11 +916,11 @@ static void test_corrupt_stored_value() {
 		engine::Document doc;
 		doc.add_term(doc.field("f"), "t");
 		std::vector<std::string> one = { std::string(1, static_cast<char>('b' + i)) };
-		doc.add_value(5, i == 2 ? garbage_values[2] : StringList::serialise(one.begin(), one.end()));
+		doc.add_value(5, i == 2 ? garbage_values[2] : StringList::serialize(one.begin(), one.end()));
 		testsupport::add_keyed(*shard, doc, "K" + std::to_string(i));
 	}
 	engine::sync_wait(shard->commit(engine::Transaction::none));
-	auto found = run(*shard, Query::source(MultipleValueGE{}.unserialise(serialised({ serialise_length(5), "a" }))));
+	auto found = run(*shard, Query::source(MultipleValueGE{}.unserialize(serialized({ serialize_length(5), "a" }))));
 	CHECK_TRUE((found == std::set<engine::docid>{ 1, 2, 4, 5 }));
 }
 
@@ -1099,13 +1099,13 @@ std::map<std::string, std::int64_t> brute_counts(const std::vector<Rng<T>>& rang
 	return counts;
 }
 
-// The buckets a range aggregation over `field` makes, one document per serialised value.
-std::map<std::string, std::int64_t> range_counts(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialised) {
+// The buckets a range aggregation over `field` makes, one document per serialized value.
+std::map<std::string, std::int64_t> range_counts(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialized) {
 	const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", ranges } } } } } } } });
 	AggregationMatchSpy spy(config, range_schema());
-	for (const auto& value : serialised) {
+	for (const auto& value : serialized) {
 		const std::vector<std::string> one = { value };
-		const testsupport::MapView view({ { slot, StringList::serialise(one.begin(), one.end()) } });
+		const testsupport::MapView view({ { slot, StringList::serialize(one.begin(), one.end()) } });
 		spy.see(view, 1.0);
 	}
 	std::map<std::string, std::int64_t> counts;
@@ -1116,12 +1116,12 @@ std::map<std::string, std::int64_t> range_counts(const char* field, const MsgPac
 }
 
 // The keys of the buckets a range aggregation makes, in the order the aggregation returns them under `sort`.
-std::vector<std::string> range_order(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialised, const MsgPack& sort) {
+std::vector<std::string> range_order(const char* field, const MsgPack& ranges, engine::valueno slot, const std::vector<std::string>& serialized, const MsgPack& sort) {
 	const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", ranges }, { "_sort", sort } } } } } } } });
 	AggregationMatchSpy spy(config, range_schema());
-	for (const auto& value : serialised) {
+	for (const auto& value : serialized) {
 		const std::vector<std::string> one = { value };
-		const testsupport::MapView view({ { slot, StringList::serialise(one.begin(), one.end()) } });
+		const testsupport::MapView view({ { slot, StringList::serialize(one.begin(), one.end()) } });
 		spy.see(view, 1.0);
 	}
 	std::vector<std::string> keys;
@@ -1131,14 +1131,14 @@ std::vector<std::string> range_order(const char* field, const MsgPack& ranges, e
 	return keys;
 }
 
-template <typename T, typename Serialiser>
-void check_ranges(const char* field, engine::valueno slot, const std::vector<T>& values, const std::vector<std::vector<Rng<T>>>& requests, Serialiser serialise) {
-	std::vector<std::string> serialised;
+template <typename T, typename Serializer>
+void check_ranges(const char* field, engine::valueno slot, const std::vector<T>& values, const std::vector<std::vector<Rng<T>>>& requests, Serializer serialize) {
+	std::vector<std::string> serialized;
 	for (const auto value : values) {
-		serialised.push_back(serialise(value));
+		serialized.push_back(serialize(value));
 	}
 	for (const auto& request : requests) {
-		const auto got = range_counts(field, ranges_of(request), slot, serialised);
+		const auto got = range_counts(field, ranges_of(request), slot, serialized);
 		const auto want = brute_counts(request, values);
 		if (got != want) {
 			std::fprintf(stderr, "  FAIL: ranges over %s differ from the filter:", field);
@@ -1171,7 +1171,7 @@ static void test_range_aggregation_open_bounds() {
 		{ I{ -big, big } }, { I{ lo, hi } },
 		{ I{ none, big }, I{ big, none } },
 		{ I{ none, -5 }, I{ -5, 3 }, I{ 3, none } },
-	}, [](std::int64_t v) { return Serialise::integer(v); });
+	}, [](std::int64_t v) { return Serialize::integer(v); });
 
 	// The case of the audit, with its default keys.
 	{
@@ -1182,20 +1182,20 @@ static void test_range_aggregation_open_bounds() {
 		from["_from"] = 0;
 		list.push_back(to);
 		list.push_back(from);
-		std::vector<std::string> serialised;
+		std::vector<std::string> serialized;
 		for (auto v : values) {
-			serialised.push_back(Serialise::integer(v));
+			serialized.push_back(Serialize::integer(v));
 		}
-		const auto got = range_counts("i", list, INT_SLOT, serialised);
+		const auto got = range_counts("i", list, INT_SLOT, serialized);
 		CHECK_EQ(got, (std::map<std::string, std::int64_t>{ { "..10", 2 }, { "0..", 3 } }));
 	}
 
 	// A bound beyond int64, or fractional, is placed exactly: past the values it is open or empty.
 	{
 		const std::vector<std::int64_t> values = { lo, -5, 0, 3, 10, hi };
-		std::vector<std::string> serialised;
+		std::vector<std::string> serialized;
 		for (auto v : values) {
-			serialised.push_back(Serialise::integer(v));
+			serialized.push_back(Serialize::integer(v));
 		}
 		const auto count = [&](std::optional<MsgPack> from, std::optional<MsgPack> to) {
 			MsgPack range = MsgPack::MAP();
@@ -1208,7 +1208,7 @@ static void test_range_aggregation_open_bounds() {
 			}
 			MsgPack list = MsgPack::ARRAY();
 			list.push_back(range);
-			const auto got = range_counts("i", list, INT_SLOT, serialised);
+			const auto got = range_counts("i", list, INT_SLOT, serialized);
 			return got.empty() ? std::int64_t(0) : got.at("r");
 		};
 		const MsgPack past_max(std::uint64_t(1) << 63), huge(1e30), neg_huge(-1e30);
@@ -1233,11 +1233,11 @@ static void test_range_aggregation_open_bounds() {
 			{ U{ none, 0 } }, { U{ 0, none } }, { U{ none, none } },
 			{ U{ ubig, none } }, { U{ none, ubig } }, { U{ ubigger, none } },
 			{ U{ 3, ubig } },
-		}, [](std::uint64_t v) { return Serialise::positive(v); });
+		}, [](std::uint64_t v) { return Serialize::positive(v); });
 
-		std::vector<std::string> serialised;
+		std::vector<std::string> serialized;
 		for (auto v : values) {
-			serialised.push_back(Serialise::positive(v));
+			serialized.push_back(Serialize::positive(v));
 		}
 		MsgPack below = MsgPack::MAP(), within = MsgPack::MAP(), empty = MsgPack::MAP();
 		below["_key"] = MsgPack("below");
@@ -1251,7 +1251,7 @@ static void test_range_aggregation_open_bounds() {
 		list.push_back(below);
 		list.push_back(within);
 		list.push_back(empty);
-		const auto got = range_counts("p", list, POS_SLOT, serialised);
+		const auto got = range_counts("p", list, POS_SLOT, serialized);
 		CHECK_EQ(got, (std::map<std::string, std::int64_t>{ { "below", 5 }, { "within", 2 } }));
 	}
 
@@ -1270,32 +1270,32 @@ static void test_range_aggregation_open_bounds() {
 		};
 		using Counts = std::map<std::string, std::int64_t>;
 		const std::vector<std::int64_t> ints = { 1, 3, 5 };
-		std::vector<std::string> serialised;
+		std::vector<std::string> serialized;
 		for (auto v : ints) {
-			serialised.push_back(Serialise::integer(v));
+			serialized.push_back(Serialize::integer(v));
 		}
 		MsgPack list = MsgPack::ARRAY();
 		list.push_back(bound("_from", MsgPack(2.5)));
 		list.push_back(bound("_from", MsgPack(3)));
-		CHECK_EQ(range_counts("i", list, INT_SLOT, serialised), (Counts{ { "2.5..", 2 }, { "3..", 2 } }));
+		CHECK_EQ(range_counts("i", list, INT_SLOT, serialized), (Counts{ { "2.5..", 2 }, { "3..", 2 } }));
 
 		const std::vector<std::uint64_t> naturals = { 1, 3, 5 };
-		serialised.clear();
+		serialized.clear();
 		for (auto v : naturals) {
-			serialised.push_back(Serialise::positive(v));
+			serialized.push_back(Serialize::positive(v));
 		}
 		list = MsgPack::ARRAY();
 		list.push_back(both(MsgPack(-5), MsgPack(4)));
 		list.push_back(bound("_to", MsgPack(4)));
-		CHECK_EQ(range_counts("p", list, POS_SLOT, serialised), (Counts{ { "-5..4", 2 }, { "..4", 2 } }));
+		CHECK_EQ(range_counts("p", list, POS_SLOT, serialized), (Counts{ { "-5..4", 2 }, { "..4", 2 } }));
 	}
 
 	// Sorted by key, an open lower bound comes first (below every bound), last when descending.
 	{
 		const std::vector<std::int64_t> values = { -100, -20, 0, 7 };
-		std::vector<std::string> serialised;
+		std::vector<std::string> serialized;
 		for (auto v : values) {
-			serialised.push_back(Serialise::integer(v));
+			serialized.push_back(Serialize::integer(v));
 		}
 		const auto range = [](const char* key, std::optional<int> from, std::optional<int> to) {
 			MsgPack r = MsgPack::MAP();
@@ -1314,7 +1314,7 @@ static void test_range_aggregation_open_bounds() {
 		list.push_back(range("open", none, -50));
 		list.push_back(range("neg", -50, -10));
 		const auto order = [&](const char* direction) {
-			return range_order("i", list, INT_SLOT, serialised, MsgPack({ { "_key", direction } }));
+			return range_order("i", list, INT_SLOT, serialized, MsgPack({ { "_key", direction } }));
 		};
 		CHECK_EQ(order("asc"), (std::vector<std::string>{ "open", "neg", "mid", "high" }));
 		CHECK_EQ(order("desc"), (std::vector<std::string>{ "high", "mid", "neg", "open" }));
@@ -1327,12 +1327,12 @@ static void test_range_aggregation_open_bounds() {
 		check_ranges<double>("f", FLT_SLOT, values, {
 			{ F{ none, 0.0 }, F{ 0.0, none } },
 			{ F{ none, -2.5 } }, { F{ -2.5, none } }, { F{ none, none } }, { F{ -3.0, 1.5 } }, { F{ 1.5, 3.0 } },
-		}, [](double v) { return Serialise::floating(static_cast<long double>(v)); });
+		}, [](double v) { return Serialize::floating(v); });
 		const std::vector<double> times = { -1.0e9, -1.0, 0.0, 1.5e9, 4.0e9 };
 		check_ranges<double>("d", DATE_SLOT, times, {
 			{ F{ none, 0.0 }, F{ 0.0, none } },
 			{ F{ none, -1.0 } }, { F{ -1.0, none } }, { F{ none, none } }, { F{ -1.0e9, 1.5e9 } },
-		}, [](double v) { return Serialise::timestamp(v); });
+		}, [](double v) { return Serialize::timestamp(v); });
 	}
 }
 
@@ -1352,7 +1352,7 @@ static void test_range_aggregation_open_bounds() {
 GUARDED(test_leaves_and_ops)
 GUARDED(test_emptiness)
 GUARDED(test_registered_sources)
-GUARDED(test_unserialise_garbage)
+GUARDED(test_unserialize_garbage)
 GUARDED(test_expansions)
 GUARDED(test_expansion_limits)
 GUARDED(test_append)
@@ -1372,4 +1372,4 @@ GUARDED(test_dsl_not_is_none_of)
 GUARDED(test_dsl_one_character_keyword_is_a_term)
 GUARDED(test_range_aggregation_open_bounds)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialise_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_dsl_one_character_keyword_is_a_term_guarded, test_range_aggregation_open_bounds_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialize_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_dsl_one_character_keyword_is_a_term_guarded, test_range_aggregation_open_bounds_guarded)

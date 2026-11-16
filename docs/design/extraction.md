@@ -73,8 +73,8 @@ A short, mechanical decoupling each, following the toolkit above.
 |---|---|---|---|---|---|
 | **term-color** | `ansi_color.hh`, `colors.h`, `color_tools.hh` | Compile-time truecolor+256+16 ANSI escapes, graceful downgrade, `hsv2rgb` | Easy | High | Split the `L_*` logging shortcuts out of `colors.h`; inline `ESC`; `strings::format`→`fmt`. |
 | **constexpr-strings** | `static_string.hh`, `hashes.hh`, `chars.hh`, `strict_stox.hh` | Compile-time strings, xxHash/FNV/djb2 + string-switch UDLs, table-driven char classification, strict numeric parsing | Easy–Mod | High | Bundle as one "compile-time string toolkit"; swap `THROW` for std exceptions in `strict_stox`. |
-| **string-metrics** | `metrics/` (+ `string_metric.h`) | CRTP string-distance kit: Levenshtein, Jaro, Jaro–Winkler, Jaccard, Sørensen–Dice, LCS, soundex-metric | Easy | High | Drop the 3 serialise helpers in `basic_string_metric.h`. |
-| **phonetic** | `phonetic/` | Multilingual soundex (EN/FR/DE/ES) | Easy | High | Same serialise-helper cut; **fix the Spanish first-letter bug** (`spanish_soundex.h:113`). Could merge into string-metrics. |
+| **string-metrics** | `metrics/` (+ `string_metric.h`) | CRTP string-distance kit: Levenshtein, Jaro, Jaro–Winkler, Jaccard, Sørensen–Dice, LCS, soundex-metric | Easy | High | Drop the 3 serialize helpers in `basic_string_metric.h`. |
+| **phonetic** | `phonetic/` | Multilingual soundex (EN/FR/DE/ES) | Easy | High | Same serialize-helper cut; **fix the Spanish first-letter bug** (`spanish_soundex.h:113`). Could merge into string-metrics. |
 | **memory-stats** | `memory_stats.*` | Portable RAM/swap/disk/inode + per-proc RSS/VSZ | Easy | High | Swap ~10 `L_*`/`error::*` calls for a callback or `fprintf`. Bundle into **sysinfo** with `system.*`. |
 | **lz4-stream** | `compressor_lz4.*` | LZ4 block-streaming wrappers (file + data, ring-buffered) | Easy | High | Depends only on vendored lz4 + `io`; note the unused-digest bug (wire up the XXH32 it already computes). |
 | **urlcodec** | `url_parser.*` (the `urldecode` + `QueryParser` half) | Configurable percent-decoder + zero-copy query-string parser | Easy–Mod | High | Inline the ~10-line `hexdec`; **leave `PathParser`** (Xapiand URL dialect). |
@@ -159,7 +159,7 @@ Carry these notices on extraction; most of the tree is Dubalu LLC MIT.
 Domain glue or too-coupled / too-thin to package:
 
 - **Schema & query glue:** `cast.*`, `script.*`, `reserved/*`, `query_dsl.*`,
-  `aggregations/*`, `multivalue/*`, `database/*`, `serialise*` (Xapiand schema model).
+  `aggregations/*`, `multivalue/*`, `database/*`, `serialize*` (Xapiand schema model).
 - **Cluster/transport:** `server/discovery.*`, `server/*_protocol*`, `manager.*`,
   `node.*`, `endpoint.*` (a good *reference* Raft-over-UDP, but not a library).
 - **Vendored or vendored-glue:** `metrics.*` (your metric catalog over upstream

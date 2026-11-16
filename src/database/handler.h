@@ -80,7 +80,7 @@ inline constexpr std::size_t ID_BUCKETS = 1024;
 inline constexpr std::string_view ID_HIGH_METADATA = "_id_high";
 
 // The largest numeric id with a bucket, the counter's bound: the largest integer every integer id type stores (an
-// integer field's `_id` is an int64). The numeric key names every int64 and uint64 exactly (Serialise::id).
+// integer field's `_id` is an int64). The numeric key names every int64 and uint64 exactly (Serialize::id).
 inline constexpr std::uint64_t MAX_NUMERIC_ID = (std::uint64_t{1} << 63) - 1;
 
 // The integer id a numeric key names, from 1 to MAX_NUMERIC_ID, else 0 (0, -1, 1.5 or 2^63 are placed by hash).
@@ -197,7 +197,7 @@ public:
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
-	task::task<MsgPack> repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialised);
+	task::task<MsgPack> repr_wal(engine::rev start_revision, engine::rev end_revision, bool unserialized);
 #endif
 
 	task::task<MsgPack> check();
@@ -296,7 +296,7 @@ public:
 	task::task<bool> commit(bool wal = true);
 	task::task<void> reopen();
 
-	task::task<MsgPack> unserialise_term_id(std::string_view term_id);
+	task::task<MsgPack> unserialize_term_id(std::string_view term_id);
 };
 
 
@@ -414,7 +414,7 @@ public:
 	engine::docid get_docid();
 	task::task<bool> validate();
 
-	task::task<std::string> serialise();
+	task::task<std::string> serialize();
 	task::task<std::string> get_value(engine::valueno slot);
 	task::task<std::string> get_data();
 	task::task<MsgPack> get_values();

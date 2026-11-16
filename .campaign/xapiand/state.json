@@ -1812,6 +1812,253 @@
       "title": "Phase 8b's closing benchmark, run once and published",
       "updated": "2026-11-08T15:40:13"
     },
+    "cluster-api": {
+      "accepted": {},
+      "after": [
+        "distributed-search"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        }
+      ],
+      "consumes": [
+        "xapiand:shard-map",
+        "strata:placement-repair"
+      ],
+      "files": [
+        "src/server/search_views.cc",
+        "src/index_resolver_lru.cc",
+        "tests/cluster/test_api*",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/installation.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/faq.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/tutorials/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 7b",
+      "needs": [
+        "placement-repair",
+        "shard-groups",
+        "sortable-encoding"
+      ],
+      "provides": [
+        "xapiand:cluster-routes"
+      ],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Settings, health, :info, docs, changelog",
+      "updated": "2026-11-15T23:05:44"
+    },
+    "cluster-gate": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        }
+      ],
+      "consumes": [
+        "xapiand:shard-map",
+        "xapiand:search-fanout",
+        "xapiand:cluster-routes"
+      ],
+      "files": [
+        "docs/gates/cluster-release.md",
+        "harness/cluster/gate*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "cluster-harness",
+        "group-sim",
+        "distributed-search",
+        "cluster-api",
+        "cluster-migration"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "critical",
+      "status": "planned",
+      "title": "The release's cluster gate",
+      "updated": "2026-11-15T23:05:48"
+    },
+    "cluster-harness": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/cluster/**",
+        "tools/vm/cluster.sh"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "xapiand:cluster-harness"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Multi-process and VM cluster harness",
+      "updated": "2026-11-15T23:04:35"
+    },
+    "cluster-membership": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-transport"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:placement-records",
+        "xapiand:shard-rpc"
+      ],
+      "files": [
+        "src/cluster/node*",
+        "src/cluster/membership*",
+        "tests/cluster/test_node*",
+        "tests/cluster/test_membership*",
+        "harness/cluster/membership*",
+        "docs/mechanisms/cluster-membership.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "placement-root",
+        "shard-rpc"
+      ],
+      "provides": [
+        "xapiand:node-directory"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Node identity, --join, certificates, keepalives, /:nodes",
+      "updated": "2026-11-15T23:05:23"
+    },
+    "cluster-migration": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        }
+      ],
+      "consumes": [
+        "strata:placement-repair",
+        "xapiand:shard-map"
+      ],
+      "files": [
+        "harness/cluster/migration*",
+        "docs/src/content/docs/upgrade.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "placement-repair",
+        "shard-groups"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "One node to a cluster and back, without loss",
+      "updated": "2026-11-15T23:05:39"
+    },
     "cold-tier-item5": {
       "accepted": {},
       "after": [],
@@ -2521,6 +2768,63 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "consensus-rpc-lane": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-transport",
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "later": true,
+          "level": "light",
+          "minutes": 70,
+          "name": "fuzz"
+        }
+      ],
+      "consumes": [
+        "consensus:transport"
+      ],
+      "files": [
+        "include/consensus/transport/**",
+        "test/transport/rpc*",
+        "fuzz/rpc*",
+        "docs/mechanisms/rpc-lane.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "consensus:rpc-lane"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "A request lane on the host transport, streamed bodies",
+      "updated": "2026-11-15T23:04:46"
+    },
     "core-lifecycle-tests": {
       "accepted": {},
       "after": [],
@@ -3152,6 +3456,84 @@
       "title": "Xapiand declares only the libraries it includes",
       "updated": "2026-11-10T04:36:25",
       "worktree": ""
+    },
+    "distributed-search": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+          "level": "none",
+          "minutes": 5,
+          "name": "no-walk"
+        }
+      ],
+      "consumes": [
+        "prospect:supplied-stats",
+        "xapiand:shard-rpc",
+        "strata:placement-records"
+      ],
+      "files": [
+        "src/engine/search.*",
+        "src/engine/strata/search.*",
+        "src/database/handler.cc",
+        "src/server/search_views.cc",
+        "src/index_pattern.*",
+        "src/walk_gate.h",
+        "tests/test_index_pattern.cc",
+        "tests/fuzz_index_pattern.cc",
+        "tests/fuzz_index_expand.cc",
+        "tests/cluster/test_search*",
+        "harness/cluster/search*",
+        "docs/mechanisms/distributed-search.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "prospect-supplied-stats",
+        "shard-groups"
+      ],
+      "provides": [
+        "xapiand:search-fanout"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Fan-out, exact statistics, merged aggregations, patterns from the root",
+      "updated": "2026-11-15T23:05:33"
     },
     "docs-site-audit": {
       "accepted": {},
@@ -4368,7 +4750,8 @@
     "format-freeze": {
       "accepted": {},
       "after": [
-        "sortable-encoding"
+        "sortable-encoding",
+        "cluster-gate"
       ],
       "checks": [
         {
@@ -4496,7 +4879,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The freeze-readiness review before the first release",
-      "updated": "2026-11-09T04:14:26"
+      "updated": "2026-11-15T23:05:52"
     },
     "format13": {
       "accepted": {},
@@ -5001,6 +5384,185 @@
       "updated": "2026-11-09T19:10:05",
       "worktree": ""
     },
+    "group-core": {
+      "accepted": {},
+      "after": [
+        "detent:journal-driver",
+        "detent:consensus-driver",
+        "detent:consensus-quiescence"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R group_crash",
+          "level": "light",
+          "minutes": 60,
+          "name": "crash"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        }
+      ],
+      "consumes": [
+        "consensus:driver",
+        "journal:driver"
+      ],
+      "files": [
+        "include/strata/group/**",
+        "test/group/**",
+        "CMakeLists.txt",
+        "docs/mechanisms/replication-group.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [],
+      "provides": [
+        "strata:group",
+        "strata:checkpoint-bundle"
+      ],
+      "repo": "../strata",
+      "risk": "critical",
+      "status": "planned",
+      "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
+      "updated": "2026-11-15T23:04:50"
+    },
+    "group-install": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R group_install_crash",
+          "level": "light",
+          "minutes": 60,
+          "name": "crash"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+          "later": true,
+          "level": "light",
+          "minutes": 240,
+          "name": "asan-macos"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "consensus:snapshot-channel"
+      ],
+      "files": [
+        "include/strata/group/**",
+        "test/group/**",
+        "docs/mechanisms/replication-group.md",
+        "docs/mechanisms/group-install.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:group-install"
+      ],
+      "repo": "../strata",
+      "risk": "critical",
+      "status": "planned",
+      "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
+      "updated": "2026-11-15T23:04:55"
+    },
+    "group-sim": {
+      "accepted": {},
+      "after": [
+        "group-install"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group"
+      ],
+      "files": [
+        "sim/**",
+        "docs/gates/phase-3r.md",
+        "docs/mechanisms/simulator.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Phase 3R gate rows in the simulator",
+      "updated": "2026-11-15T23:04:59"
+    },
     "hashes-cl-1": {
       "accepted": {},
       "after": [],
@@ -5468,6 +6030,107 @@
       "status": "landed",
       "title": "Reopen installed segments from target files",
       "updated": "2026-11-08T15:39:30"
+    },
+    "journal-replaces-wal": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 60,
+          "name": "crash"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "! git grep -n DatabaseWAL -- src",
+          "level": "none",
+          "minutes": 5,
+          "name": "no-wal"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "strata:checkpoint-bundle",
+        "xapiand:cluster-harness"
+      ],
+      "files": [
+        "src/database/shard.*",
+        "src/database/wal.*",
+        "src/database/handler.*",
+        "src/database/pool.*",
+        "src/database/flags.h",
+        "src/xapiand_fsyncher.h",
+        "src/xapiand_storage_io.h",
+        "src/manager.*",
+        "src/opts.*",
+        "src/server/search_views.cc",
+        "CMakeLists.txt",
+        "tests/test_wal_replay.cc",
+        "tests/test_pool.cc",
+        "tests/test_engine_error.cc",
+        "tests/test_reactor_requests.cc",
+        "tests/test_wide_search.cc",
+        "tests/test_group_*.cc",
+        "harness/wal_recovery_check.sh",
+        "harness/wal_replay_check.sh",
+        "harness/wal_replay_agg_check.sh",
+        "harness/power_loss_check.sh",
+        "harness/blob_crash_check.sh",
+        "harness/profile_bulk.sh",
+        "harness/run_all.sh",
+        "harness/README.md",
+        "harness/async_allowlist.tsv",
+        "harness/async_check.py",
+        "harness/removed_options_check.sh",
+        "harness/test_gate_tools.py",
+        "docs/mechanisms/journal-durability.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "cluster-harness",
+        "group-core"
+      ],
+      "provides": [
+        "xapiand:command",
+        "xapiand:chunked-command",
+        "xapiand:volume-file-set",
+        "xapiand:restore-batch",
+        "xapiand:ack-read-levels"
+      ],
+      "repo": ".",
+      "risk": "critical",
+      "status": "planned",
+      "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
+      "updated": "2026-11-15T23:05:08"
     },
     "key-field": {
       "accepted": {},
@@ -13202,6 +13865,108 @@
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
     },
+    "placement-repair": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group-install",
+        "strata:placement-records"
+      ],
+      "files": [
+        "include/strata/placement/**",
+        "test/placement/**",
+        "bench/placement/**",
+        "docs/mechanisms/placement-repair.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "group-install",
+        "placement-root"
+      ],
+      "provides": [
+        "strata:placement-repair"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Re-replication, drain, leader balance, rf change, root install",
+      "updated": "2026-11-15T23:05:18"
+    },
+    "placement-root": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group"
+      ],
+      "files": [
+        "include/strata/placement/**",
+        "test/placement/**",
+        "bench/placement/**",
+        "docs/mechanisms/placement-root.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:placement-records"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "The root authority as a strata group: nodes and namespace records",
+      "updated": "2026-11-15T23:05:03"
+    },
     "placement-without-flush": {
       "accepted": {
         "correctness": {
@@ -13364,9 +14129,14 @@
       "consumes": [],
       "files": [
         ".github/workflows/**",
-        "harness/**",
         "docs/dev/freebsd.md",
-        "docs/dev/platforms.md"
+        "docs/dev/platforms.md",
+        "harness/e2e_capture.sh",
+        "harness/gate7c_rows.sh",
+        "harness/lua_bounds.py",
+        "harness/thread_census.sh",
+        "harness/thread_stacks.sh",
+        "harness/run_all.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -13377,7 +14147,7 @@
       "risk": "normal",
       "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-15T22:25:14",
+      "updated": "2026-11-16T05:13:02",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
@@ -14305,6 +15075,116 @@
       "status": "landed",
       "title": "Counted-union pruning and required-optional block skipping",
       "updated": "2026-11-08T15:40:50"
+    },
+    "prospect-supplied-stats": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T00:39:01",
+          "base": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+          "blobs": {
+            "CMakeLists.txt": "100644:ded0cf79882d3bdcc1d5bcee2fcd24d82e48e124",
+            "docs/mechanisms/supplied-statistics.md": "100644:5d58f4381689d9577bfca4538b2c588b976c18eb",
+            "include/prospect/searcher.hh": "100644:9d8c2d7bff0fc7d1308e2554125afc05a1d8b709",
+            "test/stats_ab.sh": "100755:f6d9789880f5162e91bd059aeb2034cfdfafe788",
+            "test/stats_ab_build.sh": "100755:7f5e1ad9fb71262080fe650619b11879b94e51fa",
+            "test/stats_mutants.py": "100755:b391a3d1afcb6fd92ca8645dec38a853c757041f",
+            "test/stats_test.cc": "100644:82ea5aa8302345fa5e9e86e2b8ec64f00b9841fd"
+          },
+          "by": "review",
+          "commit": "2202030d297797929985eddabcafef336d43ce65",
+          "criteria": "fa9198fbb0e3ad5d",
+          "diffs": {
+            "CMakeLists.txt": "d50a3e81fe47f486",
+            "docs/mechanisms/supplied-statistics.md": "5695555461f7e036",
+            "include/prospect/searcher.hh": "1e22341f8c22b814",
+            "test/stats_ab.sh": "a3f7fc9e3ba54901",
+            "test/stats_ab_build.sh": "ed20d726cfdddc54",
+            "test/stats_mutants.py": "d0f893d9828027c8",
+            "test/stats_test.cc": "8a7427d0bf118195"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9f191e33f57b8422e935669e38b165764b985c11",
+          "reviewed": "2202030d297797929985eddabcafef336d43ce65",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+      "branch": "quest/xapiand/prospect-supplied-stats",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/searcher.hh",
+        "src/search*",
+        "test/stats*",
+        "docs/mechanisms/supplied-statistics.md",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-16T01:09:42",
+          "commit": "2202030d297797929985eddabcafef336d43ce65",
+          "criteria": {
+            "A1": "261115-232146-62bd5a, 261116-010626-4141d8",
+            "A2": "261116-010626-4141d8; fails without: 261115-232149-29b412, 261116-004953-d3a74c",
+            "A3": "261115-232155-edc5bb, 261115-232211-560561",
+            "A4": "`docs/mechanisms/supplied-statistics.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2202030d297797929985eddabcafef336d43ce65",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261115-232155-edc5bb",
+              "level": "light",
+              "seconds": 431.7,
+              "state": "done",
+              "what": "prospect-supplied-stats check build-test at 2202030d2977"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "2202030d297797929985eddabcafef336d43ce65",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+          "reason": "",
+          "tested": "2202030d297797929985eddabcafef336d43ce65"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [
+        "prospect:supplied-stats"
+      ],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Weights from supplied statistics",
+      "updated": "2026-11-16T01:09:58",
+      "worktree": ""
     },
     "prospect-values-bytes": {
       "accepted": {},
@@ -15530,6 +16410,196 @@
       "title": "Field-aware engine seam",
       "updated": "2026-11-08T13:25:26"
     },
+    "serialize-repin": {
+      "accepted": {},
+      "after": [],
+      "base": "68e847c8edd704cee9a96ca1621334d7f0da725a",
+      "branch": "quest/xapiand/serialize-repin",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "src/**",
+        "tests/**",
+        "contrib/**",
+        "TESTING.md",
+        "harness/async_allowlist.tsv",
+        "harness/async_check.py",
+        "harness/coverage.sh",
+        "harness/test_gate_tools.py",
+        "docs/design/cluster-release.md",
+        "docs/design/exact-id-keys.md",
+        "docs/design/extraction.md",
+        "docs/design/loop-scheduling.md",
+        "docs/design/phase7c.md",
+        "docs/design/sortable-encoding.md",
+        "docs/design/xapiand-on-strata.md",
+        "docs/dev/agg-shard-parity.md",
+        "docs/dev/docs-site-audit.md",
+        "docs/dev/engine-census.md",
+        "docs/dev/extraction-backlog.md",
+        "docs/dev/extraction-ledger.md",
+        "docs/dev/github-triage.md",
+        "docs/dev/restore-integers.md",
+        "docs/dev/testing.md",
+        "docs/dev/value-compare.md",
+        "docs/gates/phase7a.md",
+        "docs/mechanisms/cancellation.md",
+        "docs/mechanisms/document-ids-and-versions.md",
+        "docs/mechanisms/engine-write-path.md",
+        "docs/mechanisms/seam-fields.md",
+        "docs/mechanisms/strata-callbacks.md",
+        "docs/mechanisms/strata-engine.md",
+        "docs/perf/gate05-index.md",
+        "docs/perf/t11-barriers/raw/grid1/A_1.json",
+        "docs/perf/t11/e1-flat-document.md",
+        "docs/perf/t11/e4-document-arena.md",
+        "docs/perf/t11/e5-document-term-table.md",
+        "docs/perf/x7-loop-stalls.md",
+        "docs/reviews/engine-core.md",
+        "docs/reviews/engine-offload-architect.md",
+        "docs/reviews/engine-query-2-code.md",
+        "docs/reviews/engine-query-code.md",
+        "docs/reviews/engine-search-x4a-code.md",
+        "docs/reviews/engine-search-x4b-code.md",
+        "docs/reviews/engine-search-x4c-code.md",
+        "docs/reviews/numeric-range-code.md",
+        "docs/reviews/offload-bridge-code.md",
+        "docs/reviews/phase7c-design.md",
+        "docs/reviews/phase7c-x2b-code.md",
+        "docs/reviews/phase7c-x4-security.md",
+        "docs/reviews/seam-fields-code.md",
+        "docs/reviews/seam-write-code.md",
+        "docs/reviews/strata-engine-callbacks-code.md",
+        "docs/reviews/strata-engine-text-security.md",
+        "docs/reviews/strata-engine-write-code.md",
+        "docs/reviews/x1-delete-xapian-code.md",
+        "docs/src/content/docs/architecture/internals.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/reference-guide/documents/info-api.md",
+        "docs/src/content/docs/reference-guide/wal.md",
+        "docs/src/content/docs/tests/coverage.md",
+        "docs/status/alpha10-builds.md",
+        "docs/status/engine-core.md",
+        "docs/status/engine-query.md",
+        "docs/status/engine-search.md",
+        "docs/status/gate7a-fixes.md",
+        "docs/status/license-audit.md",
+        "docs/status/phase7c.md",
+        "docs/status/pins-2026-11.md",
+        "docs/status/pool-concurrency.md",
+        "docs/status/road-to-release.md",
+        "docs/status/sortable-encoding.md",
+        "docs/status/strata-engine-callbacks.md",
+        "docs/status/strata-engine-write.md",
+        "docs/status/strata-fields.md",
+        "docs/status/x1-delete-xapian.md",
+        "docs/status/x1-tests.md",
+        "docs/status/xapiand-on-strata.md",
+        "oldtests/**",
+        "docs_to_postman.py"
+      ],
+      "history": [
+        {
+          "at": "2026-11-16T03:54:41",
+          "checks": [
+            [
+              {
+                "cmd": "campaign-check build-test",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "replaces the placeholder build-test command written at creation with the project's real build-test and e2e commands; no work or review exists yet",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-16T08:05:51",
+          "commit": "c65cc23804a5247676b8ae9ac6d421b455244439",
+          "criteria": {
+            "A1": "build-test 261116-064759-26b223 at 5b8e4589b; CI 43889549864, FreeBSD 43889549933",
+            "A2": "261116-064804-6644f0",
+            "A3": "e2e 261116-064759-a1e3d1",
+            "A4": "261116-064804-511a73; fails without: 261116-052354-4dcdf7, 261116-064804-835cd1"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "5b8e4589bd627837fdfe64b3cd35a3205a7eacf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-064759-26b223",
+              "level": "light",
+              "seconds": 945.5,
+              "state": "done",
+              "what": "serialize-repin check build-test at 5b8e4589bd62"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "5b8e4589bd627837fdfe64b3cd35a3205a7eacf1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-064759-a1e3d1",
+              "level": "light",
+              "seconds": 333.4,
+              "state": "done",
+              "what": "serialize-repin check e2e at 5b8e4589bd62"
+            }
+          ],
+          "final": true,
+          "from": "771af67dc6ddff51143c2aa9f309fb6d817182a2",
+          "reason": "",
+          "tested": "d273b620307bcc51f480a91cb8be24ed4cef8bd0"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [
+        "sortable-encoding"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "Repin the renamed libraries and finish serialize in Xapiand",
+      "updated": "2026-11-16T08:06:35",
+      "worktree": ""
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
@@ -15560,6 +16630,141 @@
       "status": "landed",
       "title": "Hardware SHA-256 kernels (CL-10)",
       "updated": "2026-11-08T15:41:20"
+    },
+    "shard-groups": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-fetch-macos"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group-install",
+        "strata:placement-records",
+        "xapiand:shard-rpc",
+        "xapiand:node-directory",
+        "xapiand:command"
+      ],
+      "files": [
+        "src/index_resolver_lru.*",
+        "src/database/pool.*",
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/cluster/**",
+        "src/opts.*",
+        "src/manager.*",
+        "tests/cluster/**",
+        "harness/cluster/groups*",
+        "harness/cluster/upload*",
+        "docs/mechanisms/shard-groups.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness",
+        "design"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "cluster-harness",
+        "group-install",
+        "journal-replaces-wal",
+        "shard-rpc",
+        "cluster-membership"
+      ],
+      "provides": [
+        "xapiand:shard-map"
+      ],
+      "repo": ".",
+      "risk": "critical",
+      "status": "planned",
+      "title": "Shards across nodes: routing, members, replicas, linearizable reads",
+      "updated": "2026-11-15T23:05:29"
+    },
+    "shard-rpc": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/cluster/fuzz_rpc.sh 60",
+          "later": true,
+          "level": "light",
+          "minutes": 70,
+          "name": "fuzz"
+        }
+      ],
+      "consumes": [
+        "consensus:rpc-lane"
+      ],
+      "files": [
+        "src/cluster/rpc*",
+        "tests/cluster/test_rpc*",
+        "tests/cluster/fuzz_rpc*",
+        "docs/mechanisms/shard-rpc.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "xapiand:shard-rpc"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "The node-to-node shard service",
+      "updated": "2026-11-15T23:05:13"
     },
     "shared-reader-core": {
       "accepted": {},
@@ -15624,7 +16829,362 @@
       "updated": "2026-11-08T15:39:29"
     },
     "sortable-encoding": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T05:11:36",
+          "base": "5e99c5e70a2787be1d56987562a85a9ce8350d5c",
+          "blobs": {
+            "AGENTS.md": "100644:a6c1e50afe8056097288b3bfd8781cde3877c500",
+            "ARCHITECTURE.md": "100644:f577aa14e78e99ffc3725981636464df2fb8f3b8",
+            "CMakeLists.txt": "100644:39201ca1b44692b14d1a419fd225ce42cdee0dfc",
+            "NOTICE": "100644:b523d9856a95779f568baa1c5b143eea4eb603cc",
+            "README.md": "100644:1beb0c2a8210d213b078c370f478a1805c0eb590",
+            "THIRD-PARTY-NOTICES": "100644:e3e5c344a2db30d8d438ca5d562fc5a3ea57920f",
+            "cmake/generate_third_party_notices.py": "100644:4a3c752695357a3604b18f92ae8afb105d03dbf1",
+            "contrib/javascript/cuuid/package.json": "100644:d28d165020be19995cc97e07a490d4909be9b468",
+            "contrib/javascript/cuuid/src/index.js": "100644:a9c2ff7b690ebda8d7c3d6882b0cee5f8aa6f1b6",
+            "contrib/javascript/cuuid/test/test.js": "100644:23973a5ae9eeb27875de72b12c7cadb1273c9e1a",
+            "contrib/python/cuuid/__init__.py": "100644:bc701d3688cf2dec323d994c98f2889cf40bf023",
+            "contrib/python/xapiand-py/docs/sortable.md": "100644:d4b289f4fbb4903763bdb96e04e92e10f4df8db6",
+            "contrib/python/xapiand-py/pyrefly.toml": "100644:2572ebc2a83f6d9cffd92e7b6059294c4096ef6f",
+            "contrib/python/xapiand-py/tests/bench_sortable.py": "100644:18f02eb05c45c4bd8f8e6b1016e394f757b66955",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "100644:dddf40ee11aea34029f0a0693c896bd417c7cd1d",
+            "contrib/python/xapiand-py/xapiand/utils/__init__.py": "100644:d54b323e636b049bc553dd5b5e45cf81dd2e8954",
+            "contrib/python/xapiand-py/xapiand/utils/serialize.py": "100644:cecf7ef53172d7aa6b36e44919d168a01887b7bb",
+            "contrib/python/xapiand-py/xapiand/utils/sortable.py": "deleted",
+            "docs/design/exact-id-keys.md": "100644:b0da25a54eeac87519ea694e207db619cb393eb2",
+            "docs/design/sortable-encoding.md": "100644:f830a25a27e2ca681282acdb7eea33df2849b5ab",
+            "docs/design/sortable-encoding/files.ndjson.gz": "100644:d7a5d05973bf64c619e26e7920e9dc5d311fbdfe",
+            "docs/design/sortable-encoding/sizes.py": "100644:47f2cd1a95fb304745a1134c677941fdb52ba9c3",
+            "docs/design/sortable-encoding/sizes.txt": "100644:7ee821230ad61d0ff90ce2bf2093a0f3ef7adf4d",
+            "docs/dev/extraction-ledger.md": "100644:817a3ffdd3d65838ff80814270a3c1470fe72b6b",
+            "docs/mechanisms/third-party-notices.md": "100644:09b39740c0cb77cc7fe6e53cfe94d814773487b4",
+            "docs/mechanisms/value-encoding.md": "100644:079a1ee47b26771c8e364797062fd8d0f7e35ca2",
+            "docs/src/content/docs/changelog.md": "100644:3efd1bf2582bf8d4726445bd78ab0abf6132f827",
+            "docs/src/content/docs/copyright.md": "100644:76521089d70f815020f8e9c474381695ddc4634a",
+            "docs/status/sortable-encoding.md": "100644:9910e69e997aa3210310f3f4a58ab64d3b84600b",
+            "src/aggregations/aggregations.cc": "100644:a8f52e7074df35f9d489a528951e02973c25dbcf",
+            "src/aggregations/aggregations.h": "100644:6f195e10018c7db3b786fd27bac7be084c9b238b",
+            "src/aggregations/bucket.cc": "100644:4d4aa30b805fe9405ae159ff50c413c4bc3327e5",
+            "src/aggregations/bucket.h": "100644:a005a19234ae14796745741c39f6eb2914173030",
+            "src/aggregations/metrics.h": "100644:c1e5c988897f2b0a34795a2c319382ce14803a31",
+            "src/cast.cc": "100644:2cb0c2bbf323294821feab3e23818e98371f160c",
+            "src/cast.h": "100644:ce123f9f1ffcbb6bd44ba76bae218cf9748817df",
+            "src/database/data.cc": "100644:9261645327c84d46708ffd473e64dfb5bcbdc53a",
+            "src/database/data.h": "100644:1768c5cdd63d88a504ece2d40845232b66fdaf36",
+            "src/database/handler.cc": "100644:9db8c4b8ab95debc61fee80dd8be0cd9ef8a4d93",
+            "src/database/handler.h": "100644:83ec3c1367fe1bad14cd8e9bdd31e4044e24a6a1",
+            "src/database/pool.h": "100644:f26ff97a4ebc3fbffb9e59bf138ff575642abeeb",
+            "src/database/schema.cc": "100644:3e2dd30056ae6044722a58db11c86d1ba080990f",
+            "src/database/schemas_lru.cc": "100644:6d85dabb0286f928c6836d5078cf52fd0425d241",
+            "src/database/shard.cc": "100644:3ed4071721c5085c155a5819d6570995aa55193d",
+            "src/database/utils.cc": "100644:770eee75a1902c9473c853f93d6f4ce2ebffee1b",
+            "src/database/utils.h": "100644:faea42dcd14a46bed490805586595d00f74f606d",
+            "src/database/wal.cc": "100644:a8fc36eb6c2bdb70b89a528378034e6b1a8479d0",
+            "src/database/wal.h": "100644:a690d5ebaee95eeddd6ac6e6c987875294a355b8",
+            "src/endpoint.cc": "100644:b017a0603f9053e7f13ea372b71ef31eecf776d4",
+            "src/engine/callbacks.h": "100644:690c023eb1ef4008bb2b70fcf1833d7c24a3a6ed",
+            "src/engine/codec.cc": "100644:99730cf48a19f9fd879052e8834a8530b81e876d",
+            "src/engine/codec.h": "100644:ee6c002c5cf6f22ee50bc1f9c65ff5aaabfbb2d4",
+            "src/engine/doc_view.h": "100644:31159f10a32eb7c8e82236dbea862353af933ddb",
+            "src/engine/document.cc": "100644:8a406c4a7c73c67738232747a53c569ee217e199",
+            "src/engine/document.h": "100644:7a17c996efcc55d3ee4a65f63a1e103575666240",
+            "src/engine/error.h": "100644:b8c3357db74c1c5ac4b7bb4a5da10331e8ea62da",
+            "src/engine/shard.h": "100644:43e540c78dabaaa5e088658efbf71619c9b9d061",
+            "src/engine/strata/doc_view.cc": "100644:8a80a8a4e468c11412d1590cf147d52328ed7465",
+            "src/engine/strata/doc_view.h": "100644:efc1987fecdf0d3b490487e441fcc30179ff0b7e",
+            "src/engine/strata/document.cc": "100644:062ed947a7da77cebb2be67a4438c4d854bc7d2e",
+            "src/engine/strata/document.h": "100644:9328bc44d19fdc69877bc04f14c0b4c5b512429a",
+            "src/engine/strata/shard.cc": "100644:9e9a279320a89f0c0c9e2c7fad86e295a16dc084",
+            "src/engine/strata/shard.h": "100644:d99d32dc5c2bd8637ca69855587b135f4ab4da07",
+            "src/exception_engine.h": "100644:de4fb1d238a0d7e4443b56d87fffb54dcc7279f8",
+            "src/index_resolver_lru.cc": "100644:cab05ed8db850595d033fe386fcd41e829bc74a6",
+            "src/length.cc": "100644:b6ffcfb963bde4b8e513fda3df89ef5e9e1c0a1f",
+            "src/length.h": "100644:2d0fcc26d409bf2faac624af7c0b44287018379a",
+            "src/manager.cc": "100644:95ed2358761e52326328b1d659eca16b9eae6f8e",
+            "src/manager.h": "100644:a313f1afea8b9b6e662da2b136749b907dd71423",
+            "src/metric_serialize.h": "100644:48aee0697328defa33622faa9a204e8650425005",
+            "src/metrics.cc": "100644:18923a75a2615445f457de73f2e9f678c60f47d3",
+            "src/metrics.h": "100644:649cfc47458ed445090f7ae6173bb7632bf7fee0",
+            "src/multivalue/generate_terms.cc": "100644:9ba1dc09d68c084d03709cb110b9426af483d863",
+            "src/multivalue/generate_terms.h": "100644:8ba8ad9f9a88a12e335d776d9a3ee46c313d38b2",
+            "src/multivalue/geospatialrange.cc": "100644:070043b1c71df634bf7fb1b09c2e52b5d6aa0fe8",
+            "src/multivalue/geospatialrange.h": "100644:32000261a29efed9036b9b3caebf776434c6d807",
+            "src/multivalue/keymaker.cc": "100644:3e6afbeab93840e0416ca6d506098dc05044cd33",
+            "src/multivalue/keymaker.h": "100644:0e05d824606dc95716e69abc7ca0fd289da715d6",
+            "src/multivalue/range.cc": "100644:4ac834bd3f7e0f069bdf6602a034aad043541cba",
+            "src/multivalue/range.h": "100644:7d15b632c34344374dc262ed1250aae7cb4badeb",
+            "src/node.cc": "100644:5a0e9bdf6fbf7185ac2cecb8bbd68d7e816deb95",
+            "src/phonetic.h": "100644:e4b312f2830dff8da30eb4e29b647d0397efc0ce",
+            "src/query_dsl.cc": "100644:d9dcb4a199bf18c11f33f0a1601b0f5e93e39dd1",
+            "src/query_dsl.h": "100644:9b88d4cf8199a8257bee1fc8e7a1f71597b66a15",
+            "src/script.cc": "100644:823e0cd0cde7b4be3ce2ad79d944dd84d1609877",
+            "src/serialize.cc": "100644:cd6b1c98e77037db583fde3cd64daa381beee266",
+            "src/serialize.h": "100644:fd70267cbc6e3e89e09ff7ee572a72f7f98a5bc0",
+            "src/serialize_list.h": "100644:c2a18a8947bdfdf23ccafb0c15abaca2c4d29ae1",
+            "src/server/search_views.cc": "100644:59d40cd28638bdc51637c311201c81ef27f12ed3",
+            "src/sortable_serialise.cc": "deleted",
+            "src/sortable_serialise.h": "deleted",
+            "src/string_metric.h": "100644:ee9eb977afc7c3f3337b1734909f344c489e15b1",
+            "tests/bench_number_codec.cc": "100644:8f58c440b5b4c32c6653652c035365e5dce34d4c",
+            "tests/bench_number_codec.cmake": "100644:f7489a6bcfcac8e889dbbe54109c5e6191351d0f",
+            "tests/codec_load.py": "100755:81a156a9095708b54be085e7e26703cae5957792",
+            "tests/engine_support.h": "100644:3b77b91f856143fbf5da241ae561a39b193923a6",
+            "tests/exact_id_mutants.sh": "100755:1a705eaca6eefd981256db612e8e42ff754ba6f8",
+            "tests/fuzz_strata_document.cc": "100644:66cda3cd602a7e10ad9b2c8ff84e38fcc1d02ec0",
+            "tests/numeric_range_check.py": "100755:4b7208b50b14eed5a45743ca72488cd7c4f1dba6",
+            "tests/pyrefly.toml": "100644:27a9742b77bcb284d2227c1bb952d84dec60be11",
+            "tests/ruff.toml": "100644:bbd79e1e6de3b4cd5e18aa43d44e13c9a92ee2bb",
+            "tests/sort_range_identity.py": "100755:be03c6457563b74bb1b14267fefdd6ac56ea291d",
+            "tests/sortable_xlang.py": "100644:133ebfa95b4804a0808eedbfcbbf9e30f252d762",
+            "tests/sortable_xlang_mutants.sh": "100755:42784557111f6b643b029c274e3e006ff9355d6e",
+            "tests/test_aggregation_shards.cc": "100644:687353ce22f5a8df492a22cc837743ef38d62b90",
+            "tests/test_engine_callbacks.cc": "100644:955bfd4d503e1df4f1f0df52121061ec32edb313",
+            "tests/test_engine_census.cc": "100644:4165ba8e5dc61248c593dc9b2d5b9c594a89887e",
+            "tests/test_engine_document.cc": "100644:da515970f96f80a4c76133e27574718120d0e8d0",
+            "tests/test_engine_error.cc": "100644:79ef9a083acbc724585a58b9509dd033cebbc3cf",
+            "tests/test_engine_fields.cc": "100644:28792ca476fc370ca70b82dc2cf4f582c759931c",
+            "tests/test_engine_host.cc": "100644:970706e2a24c779f6ec44df8fb3df5f88c086f38",
+            "tests/test_engine_query.cc": "100644:971d6958ba3e5f46f7803f6db721103198e40b70",
+            "tests/test_engine_search_strata.cc": "100644:41c8b33dc1b0e52aa71226b345002a4d6d7c1a59",
+            "tests/test_engine_sort.cc": "100644:a5e79dab639b13ec91269f8bbe85ee0a5ed24a9a",
+            "tests/test_engine_strata.cc": "100644:31cf6db09dd5da1e9b6848102e150f737c75efa2",
+            "tests/test_generate_terms.cc": "100644:6fbde9f859122a2f2f3c8cc2f7038dbda77064ff",
+            "tests/test_geospatial.cc": "100644:01521c2c5758febd492559bbf0d8163ab8a4d823",
+            "tests/test_metric_serialize.cc": "100644:ff819c0cd3c24a1f3181747e46781b6f3d137bc7",
+            "tests/test_node.cc": "100644:485295c581ad389af5fe85f7c209b343cc36a51e",
+            "tests/test_pool.cc": "100644:de958d51b54da20d0b5b092fae847a3d9bf5ea98",
+            "tests/test_reactor_requests.cc": "100644:9088037c6fe6fcedc5e15fb78a57e7b3f96d18dc",
+            "tests/test_serialise.cc": "deleted",
+            "tests/test_serialize.cc": "100644:2d3c454ad0ba8479766f2ce3f8f85b08a1a41e08",
+            "tests/test_serialize_list.cc": "100644:0d321e458d944c931a8614faf375e630b63933ca",
+            "tests/test_wal_replay.cc": "100644:d2b9c6a518ecd18d875ee15c013373634379009b",
+            "tests/test_wide_search.cc": "100644:2dba9afca580cd87024de06badbc1f047228a838"
+          },
+          "by": "review",
+          "commit": "22c3efd1e51c495a1e045a93019dc4b2e0ee1715",
+          "criteria": "e4adace5e919454d",
+          "diffs": {
+            "": "e42315e4320878f5",
+            "AGENTS.md": "fd9945560de2413e",
+            "ARCHITECTURE.md": "a0d49174fb209210",
+            "CMakeLists.txt": "b5daab2c4c0872b3",
+            "NOTICE": "f76c5844539fcd53",
+            "README.md": "7da0029b3103ce00",
+            "THIRD-PARTY-NOTICES": "8bca624a4d730204",
+            "cmake/generate_third_party_notices.py": "121c16ad0b5a7a68",
+            "contrib/javascript/cuuid/package.json": "cd4faf87603e5813",
+            "contrib/javascript/cuuid/src/index.js": "bb7d5c0f1ed2715a",
+            "contrib/javascript/cuuid/test/test.js": "1b100a617c5ac480",
+            "contrib/python/cuuid/__init__.py": "162974ebc421b725",
+            "contrib/python/xapiand-py/docs/sortable.md": "05d531c41e84cff1",
+            "contrib/python/xapiand-py/pyrefly.toml": "59b321e5e8d71e2c",
+            "contrib/python/xapiand-py/tests/bench_sortable.py": "757263485091dd49",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "daf870cfa80bf01e",
+            "contrib/python/xapiand-py/xapiand/utils/__init__.py": "885dd522a25f20cb",
+            "contrib/python/xapiand-py/xapiand/utils/serialize.py": "02b2d10e5acdfb5e",
+            "contrib/python/xapiand-py/xapiand/utils/sortable.py": "f16adca1ebf7d621",
+            "docs/design/exact-id-keys.md": "35e86ffa8e40d6e6",
+            "docs/design/sortable-encoding.md": "0d7cb789c29f5a93",
+            "docs/design/sortable-encoding/sizes.py": "a9b677fb29b7cec2",
+            "docs/design/sortable-encoding/sizes.txt": "1a431db53af6bdb2",
+            "docs/dev/extraction-ledger.md": "c0e5cd77be51dd23",
+            "docs/mechanisms/third-party-notices.md": "8292eada299516a2",
+            "docs/mechanisms/value-encoding.md": "f74b3814d95e2e2a",
+            "docs/src/content/docs/changelog.md": "6efd27b6eb27b30d",
+            "docs/src/content/docs/copyright.md": "531ed4b7f1df9686",
+            "docs/status/sortable-encoding.md": "43c48a516528bfc1",
+            "src/aggregations/aggregations.cc": "687c099cce027e27",
+            "src/aggregations/aggregations.h": "f0f51f0e2ca2fc4e",
+            "src/aggregations/bucket.cc": "65dc744aa7aedc7a",
+            "src/aggregations/bucket.h": "5a569a158e24de74",
+            "src/aggregations/metrics.h": "dbc8db547dc88d42",
+            "src/cast.cc": "4e4037e80d4d510a",
+            "src/cast.h": "3b273d8f4e62ef98",
+            "src/database/data.cc": "6010a0bc07f1e1b4",
+            "src/database/data.h": "c569a9a47e087376",
+            "src/database/handler.cc": "646064549a200f67",
+            "src/database/handler.h": "91f64909c3681d85",
+            "src/database/pool.h": "a2dcd2d2283de199",
+            "src/database/schema.cc": "69b9c6198e3fc37e",
+            "src/database/schemas_lru.cc": "068cc42e28429a94",
+            "src/database/shard.cc": "24017364c75716a9",
+            "src/database/utils.cc": "01fcb10bd1def31e",
+            "src/database/utils.h": "8620decd62305030",
+            "src/database/wal.cc": "da1e89da5b7ba2c0",
+            "src/database/wal.h": "642033a22358ae58",
+            "src/endpoint.cc": "f6ecd9f71d1a3598",
+            "src/engine/callbacks.h": "e2b3ddc91a6fb127",
+            "src/engine/codec.cc": "44523c9b0ec474fa",
+            "src/engine/codec.h": "2f67088fbff50f7d",
+            "src/engine/doc_view.h": "cf8a1f3c00a426e4",
+            "src/engine/document.cc": "ad2d18dab9982f6b",
+            "src/engine/document.h": "2e3197d0eafafa2f",
+            "src/engine/error.h": "4735b6c84e1c3c52",
+            "src/engine/shard.h": "dd051a608d302951",
+            "src/engine/strata/doc_view.cc": "a847f409e7b4f322",
+            "src/engine/strata/doc_view.h": "de7daa187b1feb29",
+            "src/engine/strata/document.cc": "5e006e67aba7a1f9",
+            "src/engine/strata/document.h": "d16ee6c8e1780a97",
+            "src/engine/strata/shard.cc": "4a456041e9823031",
+            "src/engine/strata/shard.h": "f756d56ec5f8fa75",
+            "src/exception_engine.h": "211b62014ca7926d",
+            "src/index_resolver_lru.cc": "05254aabea0b9b65",
+            "src/length.cc": "ba3b7839eeeb2f2e",
+            "src/length.h": "a28b169fdbb1ffbb",
+            "src/manager.cc": "31dc509a4bc22053",
+            "src/manager.h": "a7d0bc3c3f1b2ee7",
+            "src/metric_serialize.h": "f295da04396b6826",
+            "src/metrics.cc": "29cb8cada0582393",
+            "src/metrics.h": "869d1ff4e4b77e6d",
+            "src/multivalue/generate_terms.cc": "8009b88d7993fdcd",
+            "src/multivalue/generate_terms.h": "0b0bd52acfbb1ea9",
+            "src/multivalue/geospatialrange.cc": "849c34c7f426823e",
+            "src/multivalue/geospatialrange.h": "de3fda5103cee365",
+            "src/multivalue/keymaker.cc": "66d824dbe59e1463",
+            "src/multivalue/keymaker.h": "90db4e9f6c77a602",
+            "src/multivalue/range.cc": "6fc0395fd7a15ea6",
+            "src/multivalue/range.h": "b1f5d7d563ccf376",
+            "src/node.cc": "afd5f595fb7669a4",
+            "src/phonetic.h": "b18a36e07f5cf982",
+            "src/query_dsl.cc": "6755885f296fb976",
+            "src/query_dsl.h": "be2865ac4c027d06",
+            "src/script.cc": "bdce3cf1acbe8083",
+            "src/serialize.cc": "1deb19729bdff6ca",
+            "src/serialize.h": "6284d01096d6f1bd",
+            "src/serialize_list.h": "ebe0336b32e6520a",
+            "src/server/search_views.cc": "feb70f1a21ee9249",
+            "src/sortable_serialise.cc": "bed5fd695e944b75",
+            "src/sortable_serialise.h": "63be2d08dcc1659e",
+            "src/string_metric.h": "986e21d4cc7ccc33",
+            "tests/bench_number_codec.cc": "15e55f61d45f67e7",
+            "tests/bench_number_codec.cmake": "e94c35fda13cc936",
+            "tests/codec_load.py": "f12b451bf1e79618",
+            "tests/engine_support.h": "ab0d3f67bd6a5e88",
+            "tests/exact_id_mutants.sh": "7193ea3094c93ce0",
+            "tests/fuzz_strata_document.cc": "503b7390e91afeba",
+            "tests/numeric_range_check.py": "76c1a1ad94b988dc",
+            "tests/pyrefly.toml": "329ce186ab6364de",
+            "tests/ruff.toml": "242486c64497ab90",
+            "tests/sort_range_identity.py": "c0c571c5bff049dc",
+            "tests/sortable_xlang.py": "03b88b23b953be38",
+            "tests/sortable_xlang_mutants.sh": "b1348f21da1ea3fd",
+            "tests/test_aggregation_shards.cc": "db0ee07e70d2d492",
+            "tests/test_engine_callbacks.cc": "223cd3fd0a84fa00",
+            "tests/test_engine_census.cc": "34a69453da6100c1",
+            "tests/test_engine_document.cc": "d21fcdb1f0fa7c53",
+            "tests/test_engine_error.cc": "fc27981ded616c24",
+            "tests/test_engine_fields.cc": "f465c5e11d7e0458",
+            "tests/test_engine_host.cc": "8589f780e57678d5",
+            "tests/test_engine_query.cc": "7706b83bde4c32ef",
+            "tests/test_engine_search_strata.cc": "bc87d5d6eb297fca",
+            "tests/test_engine_sort.cc": "36dbe4404ab6aa05",
+            "tests/test_engine_strata.cc": "533edc516eefd8d2",
+            "tests/test_generate_terms.cc": "af961521834e2f90",
+            "tests/test_geospatial.cc": "cf1798152a458724",
+            "tests/test_metric_serialize.cc": "f6a60458468c0cf1",
+            "tests/test_node.cc": "0b1a201735c7159e",
+            "tests/test_pool.cc": "add49d63e59f6c25",
+            "tests/test_reactor_requests.cc": "3b7b12fe6b7e7d5a",
+            "tests/test_serialise.cc": "2e544c17c6e6f29e",
+            "tests/test_serialize.cc": "efc30a49c886bf44",
+            "tests/test_serialize_list.cc": "8a308151371d7a17",
+            "tests/test_wal_replay.cc": "005b2549be5a3b29",
+            "tests/test_wide_search.cc": "3380587407af7748"
+          },
+          "findings": {
+            "P1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >cfg.log 2>&1 && cmake --build build -j4 --target xapiand >build.log 2>&1 || { tail -30 cfg.log build.log; exit 2; }; PORT=18988 /usr/local/bin/python3 /Users/kronuz/.scratch/sortenc/probe_text_bounds.py build/bin/xapiand 18988'",
+                  "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-042137-a9c947",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "C1: reviewer's probe_text_bounds.py (P1) against the fixed commit's build"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "932233f9afd08e8d457c5ee74bc9df8c5c2f0960",
+          "reviewed": "4d31b411d190fbb69e2d1532e8d8080d11660345",
+          "verdict": "CHANGES"
+        },
+        "design": {
+          "at": "2026-11-15T23:01:19",
+          "base": "cd9c216b54824a17810ccf157de9354021753641",
+          "blobs": {
+            "CMakeLists.txt": "100644:3d3f2f028d5b3826704699e3841df7e40fe242c5",
+            "contrib/python/xapiand-py/docs/sortable.md": "100644:d4b289f4fbb4903763bdb96e04e92e10f4df8db6",
+            "contrib/python/xapiand-py/pyrefly.toml": "100644:2572ebc2a83f6d9cffd92e7b6059294c4096ef6f",
+            "contrib/python/xapiand-py/tests/bench_sortable.py": "100644:18f02eb05c45c4bd8f8e6b1016e394f757b66955",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "100644:dddf40ee11aea34029f0a0693c896bd417c7cd1d",
+            "docs/design/sortable-encoding.md": "100644:98e64efe51f5c7643fb957051346ed3d9606622e",
+            "docs/design/sortable-encoding/sizes.py": "100644:47f2cd1a95fb304745a1134c677941fdb52ba9c3",
+            "docs/design/sortable-encoding/sizes.txt": "100644:7ee821230ad61d0ff90ce2bf2093a0f3ef7adf4d",
+            "docs/status/sortable-encoding.md": "100644:9910e69e997aa3210310f3f4a58ab64d3b84600b",
+            "src/cast.h": "100644:863df3ae485ddbd9fd8b5afa901a07a44eebeb06",
+            "src/database/handler.cc": "100644:b39ea750f42ff5d34705ed013737d44c6bb7fa36",
+            "src/database/schemas_lru.cc": "100644:443bd1444447b95431c891b6d5038458f4395147",
+            "src/database/shard.cc": "100644:eccfbb05bb0e3a17c38bb6ae56db235272d54a0f",
+            "src/database/utils.h": "100644:3cf8ca48bb14611331525c1b6a93d4172f37b059",
+            "src/engine/strata/shard.cc": "100644:b80893badb7a97cb68ca1ce62ff22e53e3bc1e72",
+            "src/index_resolver_lru.cc": "100644:1ab1ac462a68f343f582a22a3c74895d71ac35e9",
+            "src/serialise.cc": "100644:d549928eb3772b7a1d988d186aca7650e28653b2",
+            "src/serialise.h": "100644:bac56fb7c5068f44286918db22d37c13dbbf88b6",
+            "src/server/search_views.cc": "100644:71a3c21566e22f4f806c46b0443a4442589b2b63",
+            "tests/numeric_range_check.py": "100755:5b987cd15c4d8d56a8720834ee6e8a26b3b0cf3a",
+            "tests/pyrefly.toml": "100644:27a9742b77bcb284d2227c1bb952d84dec60be11",
+            "tests/ruff.toml": "100644:bbd79e1e6de3b4cd5e18aa43d44e13c9a92ee2bb",
+            "tests/sortable_xlang.py": "100644:133ebfa95b4804a0808eedbfcbbf9e30f252d762",
+            "tests/sortable_xlang_mutants.sh": "100755:42784557111f6b643b029c274e3e006ff9355d6e",
+            "tests/test_engine_strata.cc": "100644:19017139c237fac7296bea75d8e9b693e73dbfdf",
+            "tests/test_node.cc": "100644:e7376f664ef8cd9b051433a3541420bbcf0f2e9b"
+          },
+          "by": "review",
+          "commit": "fc50888313182070521dd7f2f28c9bea502832ae",
+          "criteria": "e4adace5e919454d",
+          "diffs": {
+            "CMakeLists.txt": "61dc32fb9b7e8e11",
+            "contrib/python/xapiand-py/docs/sortable.md": "05d531c41e84cff1",
+            "contrib/python/xapiand-py/pyrefly.toml": "59b321e5e8d71e2c",
+            "contrib/python/xapiand-py/tests/bench_sortable.py": "757263485091dd49",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "daf870cfa80bf01e",
+            "docs/design/sortable-encoding.md": "418d440c920e9ad9",
+            "docs/design/sortable-encoding/sizes.py": "a9b677fb29b7cec2",
+            "docs/design/sortable-encoding/sizes.txt": "1a431db53af6bdb2",
+            "docs/status/sortable-encoding.md": "43c48a516528bfc1",
+            "src/cast.h": "38e744c2a4fd6f25",
+            "src/database/handler.cc": "a82399869fb0eea0",
+            "src/database/schemas_lru.cc": "7ad625d73f5a93e5",
+            "src/database/shard.cc": "eefac4aea3ae0557",
+            "src/database/utils.h": "4a40128f9f8a9f78",
+            "src/engine/strata/shard.cc": "1441dd8ad4b39493",
+            "src/index_resolver_lru.cc": "02e16325fc5b2e54",
+            "src/serialise.cc": "64e8b4de031e5e6c",
+            "src/serialise.h": "2a150382719db644",
+            "src/server/search_views.cc": "0a8d63c821160e24",
+            "tests/numeric_range_check.py": "3548d5fb28a995d8",
+            "tests/pyrefly.toml": "329ce186ab6364de",
+            "tests/ruff.toml": "242486c64497ab90",
+            "tests/sortable_xlang.py": "03b88b23b953be38",
+            "tests/sortable_xlang_mutants.sh": "b1348f21da1ea3fd",
+            "tests/test_engine_strata.cc": "eb1762d21c6c760f",
+            "tests/test_node.cc": "242cdf2cc007020b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e53583b2ff1d754909dc0f4b86e4f282a1e17dbe",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "sortable-proof",
         "x7-gate"
@@ -15679,7 +17239,15 @@
         "docs/design/sortable-encoding/**",
         "docs/status/sortable-encoding.md",
         "docs/mechanisms/value-encoding.md",
-        "docs/src/content/docs/changelog.md"
+        "docs/src/content/docs/changelog.md",
+        "NOTICE",
+        "THIRD-PARTY-NOTICES",
+        "cmake/generate_third_party_notices.py",
+        "docs/mechanisms/third-party-notices.md",
+        "docs/src/content/docs/copyright.md",
+        "docs/dev/extraction-ledger.md",
+        "docs/design/exact-id-keys.md",
+        "contrib/javascript/cuuid/**"
       ],
       "history": [
         {
@@ -15879,11 +17447,79 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T05:12:16",
+          "commit": "658e4c6f4c7d963a83ec8127f70f4b1ed52294b5",
+          "criteria": {
+            "A1": "D87 (PLAN.md decision row, owner 2026-11-13)",
+            "A10": "`docs/mechanisms/value-encoding.md`",
+            "A11": "`docs/src/content/docs/changelog.md`",
+            "A12": "261116-042128-29afcc",
+            "A2": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7",
+            "A3": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7; fails without: 261115-224339-653d9d, 261115-224809-f01fd9",
+            "A4": "261116-042129-1e9af0",
+            "A5": "261116-042128-885821, 261116-042137-a9c947; fails without: 261115-232755-9ae906, 261116-015759-0b2751",
+            "A6": "261116-042253-9e3c64",
+            "A7": "261116-042250-335a75, 261116-042253-9e3c64",
+            "A8": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7",
+            "A9": "261116-042126-a82cc5, 261116-042126-6ee9e4, 261116-042126-e622f7"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-a82cc5",
+              "level": "light",
+              "seconds": 867.3,
+              "state": "done",
+              "what": "sortable-encoding check build-test at 7700cb179224"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-6ee9e4",
+              "level": "light",
+              "seconds": 742.2,
+              "state": "done",
+              "what": "sortable-encoding check e2e at 7700cb179224"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "5c7b973c35d5384c37410a494daecb9f214f748f",
+              "state": "done"
+            },
+            {
+              "cmd": "! git grep -n sortable_serialise -- src contrib",
+              "commit": "7700cb17922404aac2f957380da51850fb8ffee7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-042126-e622f7",
+              "level": "none",
+              "seconds": 1.3,
+              "state": "done",
+              "what": "sortable-encoding check no-gpl at 7700cb179224"
+            }
+          ],
+          "final": true,
+          "from": "6c01c85f3d336e72e9d7bec6ea82fb600c0988d1",
+          "later": [
+            "261116-051216-49bc03"
+          ],
+          "reason": "",
+          "tested": "5c7b973c35d5384c37410a494daecb9f214f748f"
+        }
+      ],
       "lenses": [
         "correctness",
         "design"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -15891,10 +17527,10 @@
       ],
       "repo": ".",
       "risk": "critical",
-      "status": "active",
+      "status": "landed",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-15T22:27:51",
-      "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
+      "updated": "2026-11-16T05:12:22",
+      "worktree": ""
     },
     "sortable-followups": {
       "accepted": {},

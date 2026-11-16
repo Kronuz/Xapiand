@@ -31,16 +31,16 @@
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
 #include "database/schema.h"                         // for FieldType
-#include "exception_engine.h"                         // for SerialisationError
+#include "exception_engine.h"                         // for SerializationError
 #include "xapiand_exception.h"                               // for ClientError, MSG_ClientError
 #include "hashes.hh"                                // for fnv1ah64
-#include "length.h"                                  // for serialise_length and unserialise_length
+#include "length.h"                                  // for serialize_length and unserialize_length
 #include "log.h"                                     // for L_DATABASE
 #include "opts.h"                                    // for opts
 #include "rapidjson/document.h"                      // for Document, GenericDocument
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
-#include "serialise.h"                               // for Serialise
+#include "serialize.h"                               // for Serialize
 #include "xapiand_strings.hh"                                // for strings::format (was transitive via the old storage.h)
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 #include "y2j/y2j.h"                                 // for y2j::yamlParseBytes
@@ -65,12 +65,12 @@ std::string flat_term(std::string_view term, std::string_view field_prefix, char
 }
 
 
-std::string document_key(std::string_view serialised_id, char field_type)
+std::string document_key(std::string_view serialized_id, char field_type)
 {
 	std::string result;
-	result.reserve(serialised_id.size() + 1);
+	result.reserve(serialized_id.size() + 1);
 	result.push_back(field_type);
-	result.append(serialised_id);
+	result.append(serialized_id);
 	return result;
 }
 
@@ -114,7 +114,7 @@ engine::valueno get_slot(std::string_view field_prefix, char field_type)
 std::string get_prefix(unsigned long long field_number)
 {
 #ifdef XAPIAND_HASHED_PREFIXES
-	return serialise_length(field_number);
+	return serialize_length(field_number);
 #else
 	return strings::format("<{:x}>.", field_number);
 #endif
@@ -125,7 +125,7 @@ std::string get_prefix(std::string_view field_name)
 {
 #ifdef XAPIAND_HASHED_PREFIXES
 	// Mask 0x1fffff for maximum length prefix of 4.
-	return serialise_length(xxh32::hash(field_name) & 0x1fffff);
+	return serialize_length(xxh32::hash(field_name) & 0x1fffff);
 #else
 	return strings::format("{}.", field_name);
 #endif
@@ -140,7 +140,7 @@ std::string_view acc_term_prefix(std::string_view field_prefix)
 
 std::string normalize_uuid(std::string_view uuid)
 {
-	return Unserialise::uuid(Serialise::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
+	return Unserialize::uuid(Serialize::uuid(uuid), static_cast<UUIDRepr>(opts.uuid_repr));
 }
 
 

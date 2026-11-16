@@ -264,20 +264,20 @@ DatabaseWAL::execute()
 
 
 MsgPack
-DatabaseWAL::to_string_document(std::string_view serialised_document, bool unserialised)
+DatabaseWAL::to_string_document(std::string_view serialized_document, bool unserialized)
 {
-	L_CALL("DatabaseWAL::to_string_document(<serialised_document>)");
+	L_CALL("DatabaseWAL::to_string_document(<serialized_document>)");
 
-	if (!unserialised) {
-		return MsgPack(serialised_document);
+	if (!unserialized) {
+		return MsgPack(serialized_document);
 	}
 
 	// The dump endpoints read a log without opening its shard, so the engine is the one the files are.
-	auto doc = engine::Document::unserialise(serialised_document);
+	auto doc = engine::Document::unserialize(serialized_document);
 
 	auto data = Data(doc.get_data());
 	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
+	auto obj = main_locator != nullptr ? MsgPack::unserialize(main_locator->data()) : MsgPack();
 	for (auto& locator : data) {
 		switch (locator.type) {
 			case Locator::Type::inplace:
@@ -308,21 +308,21 @@ DatabaseWAL::to_string_document(std::string_view serialised_document, bool unser
 
 
 MsgPack
-DatabaseWAL::to_string_metadata(std::string_view serialised_metadata, bool unserialised)
+DatabaseWAL::to_string_metadata(std::string_view serialized_metadata, bool unserialized)
 {
-	L_CALL("DatabaseWAL::to_string_metadata(<serialised_document>)");
+	L_CALL("DatabaseWAL::to_string_metadata(<serialized_document>)");
 
-	if (!unserialised) {
-		return MsgPack(serialised_metadata);
+	if (!unserialized) {
+		return MsgPack(serialized_metadata);
 	}
 
-	return MsgPack::unserialise(serialised_metadata);
+	return MsgPack::unserialize(serialized_metadata);
 }
 
 
 
 MsgPack
-DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
+DatabaseWAL::to_string_line(std::string_view line, bool unserialized)
 {
 	L_CALL("DatabaseWAL::to_string_line(<line>)");
 
@@ -331,9 +331,9 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 
 	MsgPack repr;
 
-	repr["revision"] = unserialise_length(&p, p_end);
+	repr["revision"] = unserialize_length(&p, p_end);
 
-	auto type = static_cast<Type>(unserialise_length(&p, p_end));
+	auto type = static_cast<Type>(unserialize_length(&p, p_end));
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
 
@@ -348,28 +348,28 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 			break;
 		case Type::REPLACE_DOCUMENT:
 			repr["op"] = "REPLACE_DOCUMENT";
-			repr["docid"] = unserialise_length(&p, p_end);
-			repr["document"] = to_string_document(std::string_view(p, p_end - p), unserialised);
+			repr["docid"] = unserialize_length(&p, p_end);
+			repr["document"] = to_string_document(std::string_view(p, p_end - p), unserialized);
 			break;
 		case Type::DELETE_DOCUMENT:
 			repr["op"] = "DELETE_DOCUMENT";
-			repr["docid"] = unserialise_length(&p, p_end);
+			repr["docid"] = unserialize_length(&p, p_end);
 			break;
 		case Type::SET_METADATA:
 			repr["op"] = "SET_METADATA";
-			size = unserialise_length_and_check(&p, p_end);
+			size = unserialize_length_and_check(&p, p_end);
 			repr["key"] = std::string(p, size);
-			repr["data"] = to_string_metadata(std::string_view(p + size, p_end - p - size), unserialised);
+			repr["data"] = to_string_metadata(std::string_view(p + size, p_end - p - size), unserialized);
 			break;
 		case Type::ADD_SPELLING:
 			repr["op"] = "ADD_SPELLING";
 			repr["term"] = std::string(p, p_end - p);
-			repr["freq"] = unserialise_length(&p, p_end);
+			repr["freq"] = unserialize_length(&p, p_end);
 			break;
 		case Type::REMOVE_SPELLING:
 			repr["op"] = "REMOVE_SPELLING";
 			repr["term"] = std::string(p, p_end - p);
-			repr["freq"] = unserialise_length(&p, p_end);
+			repr["freq"] = unserialize_length(&p, p_end);
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
@@ -380,9 +380,9 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 
 
 MsgPack
-DatabaseWAL::to_string(engine::rev start_revision, engine::rev end_revision, bool unserialised)
+DatabaseWAL::to_string(engine::rev start_revision, engine::rev end_revision, bool unserialized)
 {
-	L_CALL("DatabaseWAL::to_string({}, {}, {})", start_revision, end_revision, unserialised);
+	L_CALL("DatabaseWAL::to_string({}, {}, {})", start_revision, end_revision, unserialized);
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, start_revision, end_revision);
 
@@ -464,7 +464,7 @@ DatabaseWAL::to_string(engine::rev start_revision, engine::rev end_revision, boo
 		try {
 			while (true) {
 				std::string line = read(end_off);
-				result.push_back(to_string_line(line, unserialised));
+				result.push_back(to_string_line(line, unserialized));
 			}
 		} catch (const StorageEOF& exc) { }
 	}
@@ -509,8 +509,8 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_)
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
-	auto revision = unserialise_length(&p, p_end);
-	auto type = static_cast<Type>(unserialise_length(&p, p_end));
+	auto revision = unserialize_length(&p, p_end);
+	auto type = static_cast<Type>(unserialize_length(&p, p_end));
 
 	L_DATABASE_WAL("EXECUTE LINE: {} ({})", revision, enum_name(type));
 
@@ -541,12 +541,12 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_)
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
-			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
+			did = static_cast<engine::docid>(unserialize_length(&p, p_end));
 			document = std::string(p, p_end - p);
-			_shard->replace_document(did, engine::Document::unserialise(document), false, wal_, false);
+			_shard->replace_document(did, engine::Document::unserialize(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
-			did = static_cast<engine::docid>(unserialise_length(&p, p_end));
+			did = static_cast<engine::docid>(unserialize_length(&p, p_end));
 			try {
 				_shard->delete_document(did, false, wal_, false);
 			} catch (const engine::Error& error) {
@@ -557,15 +557,15 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_)
 			}
 			break;
 		case Type::SET_METADATA:
-			size = unserialise_length_and_check(&p, p_end);
+			size = unserialize_length_and_check(&p, p_end);
 			_shard->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
-			freq = static_cast<engine::termcount>(unserialise_length(&p, p_end));
+			freq = static_cast<engine::termcount>(unserialize_length(&p, p_end));
 			_shard->add_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		case Type::REMOVE_SPELLING:
-			freq = static_cast<engine::termcount>(unserialise_length(&p, p_end));
+			freq = static_cast<engine::termcount>(unserialize_length(&p, p_end));
 			_shard->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		default:
@@ -587,8 +587,8 @@ DatabaseWAL::write_line(const UUID& uuid, engine::rev revision, Type type, std::
 	_revision = revision;
 
 	std::string line;
-	line.append(serialise_length(revision));
-	line.append(serialise_length(toUType(type)));
+	line.append(serialize_length(revision));
+	line.append(serialize_length(toUType(type)));
 	line.append(compress_lz4(data));
 
 	L_DATABASE_WAL("{} on {}: '{}'", enum_name(type), base_path, repr(line, quote));
@@ -932,7 +932,7 @@ DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 
 	L_DATABASE_NOW(start);
 
-	auto line = serialise_length(freq);  // freqdec
+	auto line = serialize_length(freq);  // freqdec
 	line.append(term_word_val);  // word
 	L_DATABASE("write_remove_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
@@ -968,8 +968,8 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 
 	L_DATABASE_NOW(start);
 
-	auto line = serialise_length(did);
-	line.append(doc->serialise());
+	auto line = serialize_length(did);
+	line.append(doc->serialize());
 	L_DATABASE("write_replace_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
@@ -987,7 +987,7 @@ DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 
 	L_DATABASE_NOW(start);
 
-	auto line = serialise_length(did);
+	auto line = serialize_length(did);
 	L_DATABASE("write_delete_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
 	auto& wal = thread.get(path);
@@ -1005,7 +1005,7 @@ DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 
 	L_DATABASE_NOW(start);
 
-	auto line = serialise_string(key);
+	auto line = serialize_string(key);
 	line.append(term_word_val);  // val
 	L_DATABASE("write_set_metadata {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
@@ -1024,7 +1024,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 
 	L_DATABASE_NOW(start);
 
-	auto line = serialise_length(freq);  // freqinc
+	auto line = serialize_length(freq);  // freqinc
 	line.append(term_word_val);  // word
 	L_DATABASE("write_add_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 

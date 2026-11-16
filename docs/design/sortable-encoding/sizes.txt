@@ -1,0 +1,20 @@
+# sizes.py, 2026-11-03, macOS x86_64, Python 3.15.2, sortable:67b2a90 tools/model.py, Xapiand:432299ed0 assets;
+# FILES_ROOT ~/code/Kronuz (first 200000 files of a sorted walk), GIT_ROOT ~/code/Kronuz (git log --all of each repo, *-wt skipped).
+# Byte counts only, no timing, no hold.
+
+| Set | Kind | Values | Distinct | Value B | Distinct value B | Distinct terms | Term B | Max B |
+|---|---|---|---|---|---|---|---|---|
+| accounts._id | int | 1000 | 1000 | 2.23 | 2.23 | 1017 | 2.22 | 3 |
+| accounts.accountNumber | int | 1000 | 1000 | 3.74 | 3.74 | 2647 | 3.37 | 4 |
+| accounts.age | int | 1000 | 28 | 1.95 | 1.96 | 34 | 1.79 | 2 |
+| accounts.balance | float | 1000 | 999 | 7.82 | 7.82 | 1082 | 7.40 | 8 |
+| cities._id | int | 1000 | 1000 | 2.23 | 2.23 | 1017 | 2.22 | 3 |
+| cities.population | int | 1000 | 993 | 3.11 | 3.11 | 1999 | 3.06 | 4 |
+| cities coordinates as floating | float | 2000 | 2000 | 7.94 | 7.94 | 2013 | 7.90 | 8 |
+| file sizes (bytes) | int | 200000 | 14829 | 2.18 | 2.95 | 19963 | 3.05 | 5 |
+| file mtimes (datetime, us) | datetime | 200000 | 72033 | 6.23 | 7.58 | 72489 | 7.56 | 8 |
+| git commit times (datetime, s) | datetime | 22166 | 19500 | 4.99 | 4.99 | 26324 | 4.89 | 5 |
+
+values: 430166 items, variable 1828714 B (4.25 B each); fixed 8: 3441328 B (1.88x the variable bytes); fixed 10: 4301660 B (2.35x)
+distinct values: 113382 items, variable 722218 B (6.37 B each); fixed 8: 907056 B (1.26x the variable bytes); fixed 10: 1133820 B (1.57x)
+distinct terms: 128585 items, variable 781431 B (6.08 B each); fixed 8: 1028680 B (1.32x the variable bytes); fixed 10: 1285850 B (1.65x)

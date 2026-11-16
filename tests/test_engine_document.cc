@@ -21,7 +21,7 @@
  */
 
 // Unit tests for the engine seam's Document: the calls build the terms, values and data they
-// describe (checked against a model), and the serialised form reads back as the same document.
+// describe (checked against a model), and the serialized form reads back as the same document.
 
 #include "test_harness.h"
 
@@ -44,7 +44,7 @@ const StrataDocument& strata_of(const engine::Document& doc) {
 }
 
 bool same(const engine::Document& a, const engine::Document& b) {
-	return a.serialise() == b.serialise();
+	return a.serialize() == b.serialize();
 }
 
 // The within-document frequency of a term of the field "f", 0 when the document has no such term.
@@ -79,7 +79,7 @@ static void test_values() {
 	CHECK_EQ(doc.get_value(5), "y");
 	doc.add_value(5, "");  // removes
 	CHECK_EQ(doc.get_value(5), "");
-	CHECK_TRUE(doc.serialise() == engine::Document().serialise());
+	CHECK_TRUE(doc.serialize() == engine::Document().serialize());
 }
 
 static void test_terms() {
@@ -103,7 +103,7 @@ static void test_terms() {
 	CHECK_TRUE((positions == std::vector<engine::termpos>{3, 7}));
 }
 
-// Random calls against a model of what they mean; then the serialised form reads back the same.
+// Random calls against a model of what they mean; then the serialized form reads back the same.
 static void test_matches_model() {
 	struct Term {
 		engine::termcount wdf = 0;
@@ -165,10 +165,10 @@ static void test_matches_model() {
 		check(doc);
 
 		// And back: the stored form reads as the same document.
-		const auto bytes = doc.serialise();
-		const auto back = engine::Document::unserialise(bytes);
+		const auto bytes = doc.serialize();
+		const auto back = engine::Document::unserialize(bytes);
 		check(back);
-		CHECK_EQ(back.serialise(), bytes);
+		CHECK_EQ(back.serialize(), bytes);
 		CHECK_TRUE(same(back, doc));
 	}
 }

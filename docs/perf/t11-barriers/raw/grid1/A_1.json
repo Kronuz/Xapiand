@@ -60,7 +60,7 @@
       5
      ],
      [
-      "serialise_document(Xapian::Document const&)",
+      "serialize_document(Xapian::Document const&)",
       1
      ],
      [

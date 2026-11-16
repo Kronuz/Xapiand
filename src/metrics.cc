@@ -368,7 +368,7 @@ Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 
 
 std::string
-Metrics::serialise()
+Metrics::serialize()
 {
 	xapiand_admission_inflight_peak.Set(static_cast<double>(admission_inflight_peak.load(std::memory_order_relaxed)));
 	xapiand_scheduler_demoted_peak.Set(static_cast<double>(scheduler_demoted_peak.load(std::memory_order_relaxed)));

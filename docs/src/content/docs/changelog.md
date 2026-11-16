@@ -22,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **Numbers sort and range in exact numeric order, ids and values alike.** Every number Xapiand sorts, ranges or
+  looks up by term (field values, numeric document ids, versions) is encoded by the MIT [sortable](https://github.com/Kronuz/sortable)
+  codec: 1 to 10 bytes whose byte order is the exact numeric order across integer, positive and floating fields. Integers above
+  2^53 (snowflake ids, nanosecond times), negative fractions, float bounds on integer fields and one field typed integer in one
+  index and floating in another answer exactly, and 5, `5u` and 5.0 are one value. A NaN value or range bound, and an integer of
+  2^63 or more for an integer field, answer `400`; -0.0 indexes as 0; a decimal sent as a JSON number, a string or a range bound is
+  its nearest double; an absent range bound includes the infinities. The bytes on disk change and nothing reads the earlier ones:
+  re-create each index, or dump every index with the earlier build, start this one on an empty data directory and restore the dumps
+  (the `.xapiand/indexes` registry is written in the earlier bytes too, so the old data directory cannot be reused). The GPL
+  `sortable_serialise` is gone, and so are the Python client's `sortable_serialise` and `sortable_unserialise`: its
+  `xapiand.sortable` module has `encode` and `decode`.
 - **The node's own work runs on its control loop.** The minute housekeeping (idle closes, merges to publish), the debounced autocommit of a write that asked for no commit,
   the signal reader and the node setup are tasks of the control loop that wait on timers and events; the cleanup thread and the committer threads are gone.
   Autocommit times are as before (a commit 1 s after the last write, 3 s while writes continue, and by 8 to 10 s after the first).
@@ -37,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A shutdown waits at most 35 s after the clients are done, in all.** The HTTP service, the autocommits and the closing of every index share that bound. Past it the node logs what it abandoned (the requests in flight per loop, and the indexes
   whose turn is held or that are still in use), flushes the write-ahead logs and exits with status 75; an index that cannot close within the bound (a hung disk, for instance) ends the stop the same way, where
   the wait for it used to have no limit. A second `SIGINT` or `SIGTERM` ends the wait at once. The steps are logged in order
-  (`Stop 1` to `Stop 5`). A write that was answered with a 2xx is in the log. See [Stopping the node](/Xapiand/options#stopping-the-node).
+  (`Stop 1` to `Stop 5`). A write that was answered with a 2xx is in the log when the node stops. See [Stopping the node](/Xapiand/options#stopping-the-node).
 - **A node that cannot set itself up exits.** A taken port, or any failure while the servers start, is logged and ends the process with status 70 (it used to log "Servers listening",
   fail on the bind, and stay up serving nothing).
 - **A Lua script runs in slices, in its own environment, with bounds.** A script yields its event loop every 10,000 instructions
@@ -440,7 +451,7 @@ Astro/Starlight.
 
 ### Removed
 - **GoogleTest**: the unit tests run on a dependency-free harness and the legacy test
-  tree was pruned (many suites revived: serialise, endpoint, fieldparser, geospatial
+  tree was pruned (many suites revived: serialize, endpoint, fieldparser, geospatial
   HTM, and more).
 
 ---

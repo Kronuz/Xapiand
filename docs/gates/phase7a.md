@@ -20,7 +20,7 @@ after this one are the first run on `9fa890ecc`, kept as history.
 | T7 bodies | Every difference listed and justified | 5 of 335 bodies differ (listed below), all justified. Hit order, scores, `total` and `count` identical on all 92 responses with hits (`search_order_diff.py`) | PASS |
 | T8 crash recovery | Same document set as Xapian after `kill -9`; strata digest check passes | A: 50 PUTs without a commit, `kill -9`: both engines recover the same 50 documents, every `n` right, the restart logs the WAL replay. B: sequential PUTs, `kill -9` after 4 s: Xapian recovered 6063 of 6063 acknowledged writes, strata 4592 of 4592; none lost, none duplicated, all intact. The strata check (`index::check`) passes on all 5 shards right after each kill and after each restart and second kill (4 runs of 5 shards) | PASS |
 | T9 migration | `_dump` on one engine, `_restore` on the other, both ways, equal dump | bank, 1000 documents. Xapian to strata: the two dumps are identical. Strata back to Xapian: identical ignoring `_version`; 5 of 1000 documents differ in `_version` (2 instead of 1), and the same 5 differ when the Xapian dump is restored on Xapian (control), so it is the Xapian restore, not strata (D4, cause and alpha.9 control in "D4: why `_version` is 2"). Engine on disk checked: 5 glass shards on the Xapian node, 5 strata on the strata node | PASS with a note (D4) |
-| Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialise, text and the rest) | PASS |
+| Unit tests | All pass | `ctest`: 28 of 28 pass (engine_document, engine_fields, engine_census, engine_query, engine_sort, engine_shard, engine_read, engine_search, engine_search_strata, engine_callbacks, engine_error, engine_replay, engine_strata, wal_replay, pool, blocking_guard, offload_followups, serialize, text and the rest) | PASS |
 | T11 replacement wins | Engine share per document at most half of Xapian's, CPU and critical path | Two holds of five interleaved rounds (xapian, strata, ...), ten pairs. Critical path: 0.213x (0.0170 against 0.0799 ms per document; pairs 0.20 to 0.23). CPU on the gate's estimator (smoke CPU per document times the engine rows' share of the profile): 0.515x (0.1969 against 0.3822 ms; pairs 0.48 to 0.57, 4 of 10 at or under 0.5; hold 1 0.522, hold 2 0.508). CPU from the profile's own sample count: 0.461x (0.1945 against 0.4219 ms; pairs 0.42 to 0.54; hold 1 0.478, hold 2 0.444) | FAIL on CPU by 3% on the gate's estimator (critical path PASS); the sample-count estimator is under 0.5. The lead decides. Corrected (gate review F1): the estimator counted device-flush wait as CPU; on CPU the row is 0.414x, PASS (see the closing run, "What moved") |
 
 ### T11 detail
@@ -326,8 +326,8 @@ on every text query and BOOLEAN only for the AND and OR operators.
 Traced and settled on 2026-10-29 (workstream gate7a-l2). Settled "pre-existing", with the cause; fixed on the Xapian engine adapter.
 
 Cause. The Xapian adapter keeps a document's version twice: the value slot `DB_SLOT_VERSION` and a boolean term under the prefix `V`,
-`"V" + serialise_length(docid) + sortable_serialise(version)` (`stamp`, `src/engine/xapian/shard.cc:61-66`, at `Xapiand:3bc11f31f`). To find the stored version of
-a document it scanned every term that begins with `"V" + serialise_length(docid)` (`stored_version`, `src/engine/xapian/shard.cc:79-93`,
+`"V" + serialize_length(docid) + sortable_serialise(version)` (`stamp`, `src/engine/xapian/shard.cc:61-66`, at `Xapiand:3bc11f31f`). To find the stored version of
+a document it scanned every term that begins with `"V" + serialize_length(docid)` (`stored_version`, `src/engine/xapian/shard.cc:79-93`,
 before the fix). The schema indexes a record's own `_version` field under the same prefix (`DOCUMENT_VERSION_TERM_PREFIX` is `"V"`,
 `src/database/utils.h:65`, `Schema::set_default_spc_version`, `src/database/schema.cc:9198-9207`), as `"V" + "N" + sortable_serialise(v)`
 (the `N` is the numeric type marker), the same bytes as the version term of the document at docid 78 when its version is `v`. A dump record carries `_version`, and `RESTORE` indexes the body as it is
@@ -351,7 +351,7 @@ Evidence (probes in `.scratch/probes/`, `c4_bisect.sh`, `c4_predict.sh`, kept in
 - The ids are consecutive because ids map to shard-local docids by `(id - 1) / shards + 1`, so ids 386 to 390 are docid 78 of the five shards.
 
 Control. The pre-seam binary, `v1.0.0-alpha.9` (`Xapiand:6961bb98c`, built Release in its own worktree; the same prefix scan lives in
-`src/database/shard.cc` there, `ver_prefix = "V" + serialise_length(info.did)`), restoring the same dump gives the same result: one shard
+`src/database/shard.cc` there, `ver_prefix = "V" + serialize_length(info.did)`), restoring the same dump gives the same result: one shard
 bumps id 78, three bump 232 to 234, five bump 386 to 390 (5 of 1000 with `_version` 2), none with ids 1 to 380. The behavior predates the
 engine seam; strata keeps the version in its own record and is right (version 1 everywhere). Impact: any `RESTORE` or `PUT` whose body
 carries `_version` writes the document at shard-local docid 78 with the wrong version on the Xapian engine, which is the migration case

@@ -46,8 +46,8 @@
 #include "exception_engine.h"
 #include "msgpack.h"
 #include "multivalue/keymaker.h"
-#include "serialise.h"
-#include "serialise_list.h"
+#include "serialize.h"
+#include "serialize_list.h"
 
 namespace {
 
@@ -66,7 +66,7 @@ struct Lcg {
 };
 
 std::string multi(const std::vector<std::string>& values) {
-	return StringList::serialise(values.begin(), values.end());
+	return StringList::serialize(values.begin(), values.end());
 }
 
 // Orders by the slot-1 text and counts its live instances.
@@ -81,10 +81,10 @@ public:
 	std::string key(const engine::DocView& doc) const override { return doc.value(1); }
 	std::unique_ptr<engine::KeyMaker> clone() const override { return std::make_unique<CountedKey>(); }
 	std::string name() const override { return "CountedKey"; }
-	std::string serialise() const override { return "k"; }
-	std::unique_ptr<engine::KeyMaker> unserialise(std::string_view s) const override {
+	std::string serialize() const override { return "k"; }
+	std::unique_ptr<engine::KeyMaker> unserialize(std::string_view s) const override {
 		if (s != "k") {
-			throw engine::Error(engine::errc::invalid, "Bad serialised CountedKey");
+			throw engine::Error(engine::errc::invalid, "Bad serialized CountedKey");
 		}
 		return std::make_unique<CountedKey>();
 	}
@@ -103,14 +103,14 @@ public:
 	void see(const engine::DocView&, double) override { ++seen; }
 	std::unique_ptr<engine::MatchSpy> clone() const override { return std::make_unique<CountedSpy>(); }
 	std::string name() const override { return "CountedSpy"; }
-	std::string serialise() const override { return "s"; }
-	std::unique_ptr<engine::MatchSpy> unserialise(std::string_view s) const override {
+	std::string serialize() const override { return "s"; }
+	std::unique_ptr<engine::MatchSpy> unserialize(std::string_view s) const override {
 		if (s != "s") {
-			throw engine::Error(engine::errc::invalid, "Bad serialised CountedSpy");
+			throw engine::Error(engine::errc::invalid, "Bad serialized CountedSpy");
 		}
 		return std::make_unique<CountedSpy>();
 	}
-	std::string serialise_results() const override { return std::to_string(seen); }
+	std::string serialize_results() const override { return std::to_string(seen); }
 	void merge_results(std::string_view s) override { seen += std::stoi(std::string(s)); }
 	std::string description() const override { return "CountedSpy"; }
 };
@@ -152,11 +152,11 @@ std::unique_ptr<engine::Shard> make_db(const std::vector<Row>& rows, const char*
 		if (!row.ints.empty()) {
 			std::vector<std::string> values;
 			for (auto v : row.ints) {
-				values.push_back(Serialise::integer(v));
+				values.push_back(Serialize::integer(v));
 			}
 			doc.add_value(INTS, multi(values));
 		}
-		doc.add_value(REAL, Serialise::floating(row.real));
+		doc.add_value(REAL, Serialize::floating(row.real));
 		doc.add_value(TEXT, row.text);
 		doc.set_data("d");
 		testsupport::add_keyed(*shard, doc, "K" + std::to_string(++n));
@@ -235,11 +235,11 @@ static void test_sort_float_text_and_pairs() {
 	}));
 
 	Multi_MultiValueKeyMaker by_text;
-	by_text.add_serialise(TEXT, false);
+	by_text.add_serialize(TEXT, false);
 	CHECK_EQ(sorted(*db, &by_text), order_by(rows.size(), [&](std::size_t i) { return rows[i].text; }));
 
 	Multi_MultiValueKeyMaker reversed_text;
-	reversed_text.add_serialise(TEXT, true);
+	reversed_text.add_serialize(TEXT, true);
 	auto forward = sorted(*db, &by_text);
 	std::reverse(forward.begin(), forward.end());
 	CHECK_EQ(sorted(*db, &reversed_text), forward);
@@ -247,7 +247,7 @@ static void test_sort_float_text_and_pairs() {
 	// The first key decides; the second, descending, breaks its ties.
 	Multi_MultiValueKeyMaker pair;
 	pair.add_integer(INTS, false, 100);
-	pair.add_serialise(TEXT, true);
+	pair.add_serialize(TEXT, true);
 	CHECK_EQ(sorted(*db, &pair), order_by(rows.size(), [&](std::size_t i) {
 		std::string complement;
 		for (unsigned char ch : rows[i].text) {
@@ -257,7 +257,7 @@ static void test_sort_float_text_and_pairs() {
 	}));
 }
 
-// The key maker rebuilds by name from its serialised form and keys the same, whole or cloned.
+// The key maker rebuilds by name from its serialized form and keys the same, whole or cloned.
 static void test_key_maker_round_trip() {
 	const auto rows = make_rows();
 	auto db = make_db(rows);
@@ -269,19 +269,19 @@ static void test_key_maker_round_trip() {
 	maker.add_string_levenshtein(TEXT, false, "b4", true);
 	maker.add_positive(REAL, false, 9u);
 	maker.add_date(REAL, false, 1.0);
-	maker.add_serialise(TEXT, false);
+	maker.add_serialize(TEXT, false);
 	const auto expected = sorted(*db, &maker);
 
 	auto copy = maker.clone();
 	CHECK_EQ(sorted(*db, copy.get()), expected);
 
-	auto rebuilt = Multi_MultiValueKeyMaker().unserialise(maker.serialise());
-	CHECK_EQ(rebuilt->serialise(), maker.serialise());
+	auto rebuilt = Multi_MultiValueKeyMaker().unserialize(maker.serialize());
+	CHECK_EQ(rebuilt->serialize(), maker.serialize());
 	CHECK_EQ(sorted(*db, rebuilt.get()), expected);
 }
 
-// Bytes that are not a serialised key maker are an engine error, never a crash.
-static void test_key_maker_unserialise_garbage() {
+// Bytes that are not a serialized key maker are an engine error, never a crash.
+static void test_key_maker_unserialize_garbage() {
 	Lcg rng{11};
 	Multi_MultiValueKeyMaker valid;
 	valid.add_integer(1, true, 3);
@@ -289,7 +289,7 @@ static void test_key_maker_unserialise_garbage() {
 	valid.add_string_jaro(3, false, "abc", false);
 	valid.add_float(4, false, 1.5);
 	valid.add_date(5, true, 1e9);
-	const auto good = valid.serialise();
+	const auto good = valid.serialize();
 	Multi_MultiValueKeyMaker prototype;
 
 	int rejected = 0;
@@ -314,7 +314,7 @@ static void test_key_maker_unserialise_garbage() {
 				break;
 		}
 		try {
-			auto made = prototype.unserialise(bytes);
+			auto made = prototype.unserialize(bytes);
 			CHECK_TRUE(made != nullptr);
 			++accepted;
 		} catch (const engine::Error& exc) {
@@ -331,11 +331,6 @@ static void test_key_maker_unserialise_garbage() {
 // A stored value that does not decode makes the key throw the error Xapiand reports to the client;
 // it never terminates the process or reads past the value.
 static void test_key_maker_corrupt_values() {
-#ifndef NDEBUG
-	// sortable_unserialise asserts on bytes that are not a serialised number, so the random-bytes run needs NDEBUG.
-	std::fprintf(stderr, "  SKIP test_key_maker_corrupt_values: asserts are on\n");
-	return;
-#endif
 	Lcg rng{13};
 	std::vector<std::pair<std::string, std::unique_ptr<Multi_MultiValueKeyMaker>>> makers;
 	auto add = [&](const char* name, auto&& fill) {
@@ -343,7 +338,7 @@ static void test_key_maker_corrupt_values() {
 		fill(*maker);
 		makers.emplace_back(name, std::move(maker));
 	};
-	add("serialise", [](auto& m) { m.add_serialise(1, false); });
+	add("serialize", [](auto& m) { m.add_serialize(1, false); });
 	add("float", [](auto& m) { m.add_float(1, false, 1.5); });
 	add("integer", [](auto& m) { m.add_integer(1, false, 5); });
 	add("integer-reverse", [](auto& m) { m.add_integer(1, true, 5); });
@@ -367,7 +362,7 @@ static void test_key_maker_corrupt_values() {
 			try {
 				(void)entry.second->key(view);
 				++decoded;
-			} catch (const SerialisationError&) {
+			} catch (const SerializationError&) {
 				++thrown;
 			} catch (...) {
 				std::fprintf(stderr, "  FAIL %s: unexpected exception\n", entry.first.c_str());
@@ -407,7 +402,7 @@ static void test_callback_ownership() {
 		CHECK_EQ(CountedSpy::live, 1);
 		CHECK_EQ(spy.seen, static_cast<int>(20 * 4 * rows.size()));
 
-		// Cloned and rebuilt from the serialised form, the copies are the caller's to free.
+		// Cloned and rebuilt from the serialized form, the copies are the caller's to free.
 		{
 			auto key_clone = key.clone();
 			auto spy_clone = spy.clone();
@@ -415,16 +410,16 @@ static void test_callback_ownership() {
 			CHECK_EQ(CountedSpy::live, 2);
 			CHECK_EQ(sorted(*db, key_clone.get(), spy_clone.get()).size(), rows.size());
 			for (int i = 0; i < 20; ++i) {
-				auto rebuilt_key = key.unserialise("k");
-				auto rebuilt_spy = spy.unserialise("s");
+				auto rebuilt_key = key.unserialize("k");
+				auto rebuilt_spy = spy.unserialize("s");
 				CHECK_EQ(CountedKey::live, 3);
 				CHECK_EQ(CountedSpy::live, 3);
 				CHECK_EQ(sorted(*db, rebuilt_key.get(), rebuilt_spy.get()).size(), rows.size());
 			}
-			// A malformed serialisation leaks nothing.
+			// A malformed serialization leaks nothing.
 			for (int i = 0; i < 20; ++i) {
-				CHECK_THROW(key.unserialise("bad"), engine::Error);
-				CHECK_THROW(spy.unserialise("bad"), engine::Error);
+				CHECK_THROW(key.unserialize("bad"), engine::Error);
+				CHECK_THROW(spy.unserialize("bad"), engine::Error);
 			}
 			CHECK_EQ(CountedKey::live, 2);
 			CHECK_EQ(CountedSpy::live, 2);
@@ -465,7 +460,7 @@ std::unique_ptr<engine::Shard> make_agg_db(const std::vector<Row>& rows, std::si
 		if (!rows[i].ints.empty()) {
 			std::vector<std::string> values;
 			for (auto n : rows[i].ints) {
-				values.push_back(Serialise::integer(n));
+				values.push_back(Serialize::integer(n));
 			}
 			doc.add_value(1001, multi(values));
 		}
@@ -498,7 +493,7 @@ std::string run_spy(engine::Shard& db, engine::MatchSpy& spy) {
 }  // namespace
 
 // The aggregation spy computes what the values say, merges the results of two halves into the
-// result of the whole, and rebuilds by name from its serialised form.
+// result of the whole, and rebuilds by name from its serialized form.
 static void test_aggregation_spy() {
 	const auto rows = make_rows();
 	auto schema = make_schema();
@@ -532,34 +527,34 @@ static void test_aggregation_spy() {
 	}
 	CHECK_EQ(got_max, name_max);
 
-	// Two halves, merged through the serialised results, are the whole.
+	// Two halves, merged through the serialized results, are the whole.
 	auto first_db = make_agg_db(rows, 0, 6, "engine_sort_agg_first");
 	auto second_db = make_agg_db(rows, 6, rows.size(), "engine_sort_agg_second");
 	AggregationMatchSpy first(config, schema), second(config, schema);
 	run_spy(*first_db, first);
 	run_spy(*second_db, second);
-	first.merge_results(second.serialise_results());
+	first.merge_results(second.serialize_results());
 	CHECK_TRUE(same_aggregations(first.get_aggregation(), result));
 
-	// A spy rebuilt by name from the serialised one sees the same and merges back into the whole.
-	auto remote = AggregationMatchSpy().unserialise(whole.serialise());
+	// A spy rebuilt by name from the serialized one sees the same and merges back into the whole.
+	auto remote = AggregationMatchSpy().unserialize(whole.serialize());
 	CHECK_EQ(sorted(*whole_db, nullptr, remote.get()).size(), rows.size());
 	AggregationMatchSpy merged(config, schema);
-	merged.merge_results(remote->serialise_results());
+	merged.merge_results(remote->serialize_results());
 	CHECK_TRUE(same_aggregations(merged.get_aggregation(), result));
 
 	auto copy = whole.clone();
 	CHECK_EQ(copy->name(), "AggregationMatchSpy");
-	CHECK_EQ(copy->serialise(), whole.serialise());
+	CHECK_EQ(copy->serialize(), whole.serialize());
 }
 
-// Bytes that are not a serialised spy or serialised results are an error, never a crash.
+// Bytes that are not a serialized spy or serialized results are an error, never a crash.
 static void test_aggregation_spy_garbage() {
 	Lcg rng{17};
 	auto schema = make_schema();
 	AggregationMatchSpy valid(aggs_config(), schema);
-	const auto good = valid.serialise();
-	const auto good_results = valid.serialise_results();
+	const auto good = valid.serialize();
+	const auto good_results = valid.serialize_results();
 	AggregationMatchSpy prototype;
 
 	int rejected = 0, accepted = 0;
@@ -575,7 +570,7 @@ static void test_aggregation_spy_garbage() {
 			bytes.resize(1 + rng.next(static_cast<std::uint32_t>(bytes.size())));
 		}
 		try {
-			CHECK_TRUE(prototype.unserialise(bytes) != nullptr);
+			CHECK_TRUE(prototype.unserialize(bytes) != nullptr);
 			++accepted;
 		} catch (const engine::Error& exc) {
 			CHECK_EQ(exc.kind, engine::errc::invalid);
@@ -599,7 +594,7 @@ static void test_aggregation_spy_garbage() {
 		AggregationMatchSpy target(aggs_config(), schema);
 		try {
 			target.merge_results(bytes);
-		} catch (const SerialisationError&) {
+		} catch (const SerializationError&) {
 		} catch (const engine::Error& exc) {
 			CHECK_EQ(exc.kind, engine::errc::invalid);
 		} catch (const std::exception&) {
@@ -610,11 +605,6 @@ static void test_aggregation_spy_garbage() {
 
 // Stored values that do not decode make the spy throw the error Xapiand reports; the process lives.
 static void test_aggregation_spy_corrupt_values() {
-#ifndef NDEBUG
-	// sortable_unserialise asserts on bytes that are not a serialised number, so the random-bytes run needs NDEBUG.
-	std::fprintf(stderr, "  SKIP test_aggregation_spy_corrupt_values: asserts are on\n");
-	return;
-#endif
 	Lcg rng{19};
 	auto schema = make_schema();
 	int seen = 0, thrown = 0;
@@ -631,7 +621,7 @@ static void test_aggregation_spy_corrupt_values() {
 		try {
 			spy.see(view, 1.0);
 			++seen;
-		} catch (const SerialisationError&) {
+		} catch (const SerializationError&) {
 			++thrown;
 		} catch (const std::exception&) {
 			++thrown;
@@ -643,19 +633,19 @@ static void test_aggregation_spy_corrupt_values() {
 
 // Bytes that decode out of range saturate instead of converting with undefined behaviour, and
 // stored extremes key without overflow.
-static void test_unserialise_saturates() {
-	CHECK_EQ(Unserialise::integer(Serialise::floating(1e30L)), INT64_MAX);
-	CHECK_EQ(Unserialise::integer(Serialise::floating(-1e30L)), INT64_MIN);
-	CHECK_EQ(Unserialise::positive(Serialise::floating(-1.75L)), 0U);
-	CHECK_EQ(Unserialise::positive(Serialise::floating(1e30L)), UINT64_MAX);
-	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MIN)), INT64_MIN);
-	CHECK_EQ(Unserialise::integer(Serialise::integer(INT64_MAX)), INT64_MAX);
-	CHECK_EQ(Unserialise::positive(Serialise::positive(UINT64_MAX)), UINT64_MAX);
+static void test_unserialize_saturates() {
+	CHECK_EQ(Unserialize::integer(Serialize::floating(1e30)), INT64_MAX);
+	CHECK_EQ(Unserialize::integer(Serialize::floating(-1e30)), INT64_MIN);
+	CHECK_EQ(Unserialize::positive(Serialize::floating(-1.75)), 0U);
+	CHECK_EQ(Unserialize::positive(Serialize::floating(1e30)), UINT64_MAX);
+	CHECK_EQ(Unserialize::integer(Serialize::integer(INT64_MIN)), INT64_MIN);
+	CHECK_EQ(Unserialize::integer(Serialize::integer(INT64_MAX)), INT64_MAX);
+	CHECK_EQ(Unserialize::positive(Serialize::positive(UINT64_MAX)), UINT64_MAX);
 
-	const MapView view({ { 1, Serialise::integer(INT64_MIN) } });
+	const MapView view({ { 1, Serialize::integer(INT64_MIN) } });
 	Multi_MultiValueKeyMaker maker;
 	maker.add_integer(1, false, 5);
-	CHECK_EQ(maker.key(view), Serialise::integer(INT64_MAX));
+	CHECK_EQ(maker.key(view), Serialize::integer(INT64_MAX));
 }
 
 // Distances of 2^63 or more saturate and sort as the farthest, for single and paired values, in both
@@ -677,13 +667,13 @@ static void test_sort_integer_extremes() {
 					std::vector<std::string> vs;
 					__int128 best = reverse ? 0 : (static_cast<__int128>(1) << 100);
 					for (auto n : d.v) {
-						vs.push_back(Serialise::integer(n));
+						vs.push_back(Serialize::integer(n));
 						__int128 x = static_cast<__int128>(n) - ref;
 						if (x < 0) x = -x;
 						best = reverse ? std::max(best, x) : std::min(best, x);
 					}
 					d.dist = std::min<__int128>(best, INT64_MAX);
-					d.key = maker.key(MapView({ { 1, StringList::serialise(vs.begin(), vs.end()) } }));
+					d.key = maker.key(MapView({ { 1, StringList::serialize(vs.begin(), vs.end()) } }));
 					docs.push_back(std::move(d));
 				}
 			}
@@ -706,7 +696,7 @@ namespace {
 MsgPack see_document(const MsgPack& config, const std::vector<std::int64_t>& ages, const std::vector<std::string>& names) {
 	std::vector<std::string> values;
 	for (auto n : ages) {
-		values.push_back(Serialise::integer(n));
+		values.push_back(Serialize::integer(n));
 	}
 	const MapView view({ { 1001, multi(values) }, { 1002, multi(names) } });
 	AggregationMatchSpy spy(config, make_schema());
@@ -799,10 +789,10 @@ GUARDED(test_sort_integer)
 GUARDED(test_sort_float_text_and_pairs)
 GUARDED(test_key_maker_round_trip)
 GUARDED(test_sort_integer_extremes)
-GUARDED(test_key_maker_unserialise_garbage)
+GUARDED(test_key_maker_unserialize_garbage)
 GUARDED(test_key_maker_corrupt_values)
 GUARDED(test_callback_ownership)
-GUARDED(test_unserialise_saturates)
+GUARDED(test_unserialize_saturates)
 GUARDED(test_aggregation_spy)
 GUARDED(test_aggregation_spy_garbage)
 GUARDED(test_aggregation_spy_corrupt_values)
@@ -810,4 +800,4 @@ GUARDED(test_aggregation_bucket_budget)
 GUARDED(test_aggregation_depth_cap)
 GUARDED(test_aggregation_multivalued_counts_each_bucket)
 
-TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialise_garbage_guarded, test_key_maker_corrupt_values_guarded, test_callback_ownership_guarded, test_unserialise_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)
+TEST_MAIN(test_sort_integer_guarded, test_sort_integer_extremes_guarded, test_sort_float_text_and_pairs_guarded, test_key_maker_round_trip_guarded, test_key_maker_unserialize_garbage_guarded, test_key_maker_corrupt_values_guarded, test_callback_ownership_guarded, test_unserialize_saturates_guarded, test_aggregation_spy_guarded, test_aggregation_spy_garbage_guarded, test_aggregation_spy_corrupt_values_guarded, test_aggregation_bucket_budget_guarded, test_aggregation_depth_cap_guarded, test_aggregation_multivalued_counts_each_bucket_guarded)

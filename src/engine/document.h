@@ -87,7 +87,7 @@ public:
 		virtual std::string get_value(valueno slot) const = 0;
 		virtual void set_data(std::string data) = 0;
 		virtual std::string get_data() const = 0;
-		virtual std::string serialise() const = 0;
+		virtual std::string serialize() const = 0;
 
 #ifdef ENGINE_CENSUS
 		// Calls visit(term, wdf, positions) for each term in term order; the number of values set.
@@ -149,10 +149,10 @@ public:
 	const Native& native() const noexcept { return *native_; }
 
 	// The stored form of a document, as the write-ahead log keeps it. Defined by the engine.
-	std::string serialise() const {
-		return native_->serialise();
+	std::string serialize() const {
+		return native_->serialize();
 	}
-	static Document unserialise(std::string_view serialised);
+	static Document unserialize(std::string_view serialized);
 
 private:
 	// The field a ref names; a ref from another document, or a default one on an empty document, is

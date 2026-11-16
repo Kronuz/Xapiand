@@ -23,7 +23,7 @@ work. Build first:
 | Layer | Tool | What it proves | Needs |
 | --- | --- | --- | --- |
 | **smoke** | `run_all.sh smoke` | a single node indexes and searches at all | nothing |
-| **unit** | `ctest` | C++ units (parsers, serialise, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
+| **unit** | `ctest` | C++ units (parsers, serialize, wal, query, ...) in isolation | `-DBUILD_TESTS=ON` + GTest |
 | **functional E2E** | `run_all.sh e2e` | the whole documented HTTP API still behaves (doc-embedded assertions) | `newman` |
 | **TLS** | `run_all.sh tls` | the E2E suite over HTTPS, and every TLS refusal names its reason (`tls_check.sh`) | a `-DTLS=ON` build, `newman` 6 |
 | **recovery** | `wal_recovery_check.sh` | WAL crash recovery: uncommitted writes survive a `kill -9` via open-time replay | nothing |
@@ -51,7 +51,7 @@ harness/run_all.sh smoke
 ## Unit tests (ctest)
 
 C++ unit tests live in `tests/` (active) and `oldtests/` (a large legacy GTest
-suite: `boolparser`, `compressor`, `serialise`, `wal`, `query`, `geospatial`,
+suite: `boolparser`, `compressor`, `serialize`, `wal`, `query`, `geospatial`,
 `msgpack`, `url_parser`, ...). They're only built when you configure with
 `-DBUILD_TESTS=ON`, which needs GoogleTest:
 

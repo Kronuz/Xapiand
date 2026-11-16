@@ -15,21 +15,21 @@ slot and the version slot keep the value codec until sortable-encoding replaces 
 
 ## Where an id key is built or read
 
-Every id key is built by `Serialise::id` (`src/serialise.cc`) and read by `Unserialise::id`. The value codec is
+Every id key is built by `Serialize::id` (`src/serialize.cc`) and read by `Unserialize::id`. The value codec is
 never called for an id key.
 
 | Place | What it does | Encoding |
 |---|---|---|
-| `Serialise::id(spc_id, id)` | The bytes after the type character of an id of the field's type | integer, positive, floating: `sortable::encode` of the id cast to the type (int64, uint64, double); others: `Serialise::serialise` as before |
-| `Serialise::id(N)` | The bytes of the integer id N | `sortable::encode(uint64 N)`, equal to the above for an integer, positive or integral floating N |
-| `Serialise::guess_id(id)` | Type and bytes of an id in an index whose id type is not set | `guess_serialise`'s type; a numeric one takes `Serialise::id`'s bytes |
-| `Unserialise::id(bytes)` | The integer a numeric id's bytes name | `sortable::decode`, then `to_uint64`: none for a fraction, a negative or bytes encode never writes |
-| `Schema::index` (`src/database/schema.cc`) | The key of a written document (PUT, POST with an id, RESTORE, bulk, streamed upload) | `Serialise::id`, or `guess_id` for an untyped index |
-| `DatabaseHandler::get_prefixed_term_id` (`src/database/handler.cc`) | The key of every lookup by id: GET, DELETE, PATCH, UPDATE, UPSERT, versioned writes, a RESTORE's placement | `Serialise::id`, or `guess_id` for an untyped index |
-| `numeric_key(N)` (`handler.cc`) | The key a PUT of the integer N names | `N` + `Serialise::id(N)` |
+| `Serialize::id(spc_id, id)` | The bytes after the type character of an id of the field's type | integer, positive, floating: `sortable::encode` of the id cast to the type (int64, uint64, double); others: `Serialize::serialize` as before |
+| `Serialize::id(N)` | The bytes of the integer id N | `sortable::encode(uint64 N)`, equal to the above for an integer, positive or integral floating N |
+| `Serialize::guess_id(id)` | Type and bytes of an id in an index whose id type is not set | `guess_serialize`'s type; a numeric one takes `Serialize::id`'s bytes |
+| `Unserialize::id(bytes)` | The integer a numeric id's bytes name | `sortable::decode`, then `to_uint64`: none for a fraction, a negative or bytes encode never writes |
+| `Schema::index` (`src/database/schema.cc`) | The key of a written document (PUT, POST with an id, RESTORE, bulk, streamed upload) | `Serialize::id`, or `guess_id` for an untyped index |
+| `DatabaseHandler::get_prefixed_term_id` (`src/database/handler.cc`) | The key of every lookup by id: GET, DELETE, PATCH, UPDATE, UPSERT, versioned writes, a RESTORE's placement | `Serialize::id`, or `guess_id` for an untyped index |
+| `numeric_key(N)` (`handler.cc`) | The key a PUT of the integer N names | `N` + `Serialize::id(N)` |
 | `issue_id` (`src/database/shard.cc`) | The key of an issued automatic id | `numeric_key(issued)` for every placeholder type: an integer's and an equal float's key are one |
-| `QueryDSL::get_regular_query` (`src/query_dsl.cc`) | A term search on a numeric `_id` | `Serialise::id`, so it builds the term a PUT builds |
-| `numeric_id(key)` (`handler.cc`) | The integer a key names, for its bucket (`id_bucket`) and the counter (`raise_id_high`) | `Unserialise::id`, kept from 1 to `MAX_NUMERIC_ID`, else 0 |
+| `QueryDSL::get_regular_query` (`src/query_dsl.cc`) | A term search on a numeric `_id` | `Serialize::id`, so it builds the term a PUT builds |
+| `numeric_id(key)` (`handler.cc`) | The integer a key names, for its bucket (`id_bucket`) and the counter (`raise_id_high`) | `Unserialize::id`, kept from 1 to `MAX_NUMERIC_ID`, else 0 |
 
 `stored_numeric_id` (`shard.cc`), which raises the counter on the log's replay, reads the stored `_id` and not
 the key. `key_placement_hash` hashes the key bytes as before, for ids that do not route by number.
@@ -47,8 +47,8 @@ did before.
 
 - `test_ids_that_shared_a_key_are_separate_documents` (`tests/test_node.cc`): 4294967297 and 4311744512, 2^40 + 3
   and 2^40 + 3 * 2^24, 2^53 - 1 and 2^53 + 1, 2^63 and 2^64 - 1 stay separate through PUT, GET, a term search on
-  `_id`, DELETE and RESTORE, across reopens, over 1 and 3 shards. `tests/exact_id_mutants.sh old-codec` puts the
-  value codec back for keys and the test fails; `query-old-codec` does it for the term search alone.
+  `_id`, DELETE and RESTORE, across reopens, over 1 and 3 shards. Ids and values share one codec
+  (`docs/mechanisms/value-encoding.md`), so no mutant puts different bytes back for keys alone.
 - `test_new_numeric_ids_pass_two_to_the_thirty_two`: a counter at 2^32 - 1 issues 2^32 and on, in the shard owning
   each id's bucket, across a reopen; the cap is 2^63 - 1. `exact_id_mutants.sh cap-2-32` makes it fail.
 

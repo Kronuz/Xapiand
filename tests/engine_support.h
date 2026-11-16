@@ -107,7 +107,7 @@ public:
 			sink(slot, value);
 		}
 	}
-	std::string serialise() const override { return {}; }
+	std::string serialize() const override { return {}; }
 
 private:
 	std::map<engine::valueno, std::string> values_;

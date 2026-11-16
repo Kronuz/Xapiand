@@ -60,7 +60,6 @@ from dataclasses import dataclass, field
 NEVER_OPEN: tuple[str, ...] = (
     r"^src/xapian/",
     r"^src/engine/xapian/",
-    r"^src/sortable_serialise\.",
     r"^src/server/remote_protocol_",
     r"^src/server/replication_protocol_",
 )

@@ -50,7 +50,7 @@
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
-#include "exception_engine.h"               // for Exception, SerialisationError
+#include "exception_engine.h"               // for Exception, SerializationError
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
@@ -80,7 +80,7 @@
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "reserved/schema.h"                // for RESERVED_SCHEMA
 #include "response.h"                       // for RESPONSE_*
-#include "serialise.h"                      // for Serialise::boolean
+#include "serialize.h"                      // for Serialize::boolean
 #include "xapiand_strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
 
@@ -966,7 +966,7 @@ write_document_view(Request& request)
 		auto it = response_obj.find(ID_FIELD_NAME);
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
-				auto document_id_obj = co_await db_handler.unserialise_term_id(info.term);
+				auto document_id_obj = co_await db_handler.unserialize_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
@@ -974,7 +974,7 @@ write_document_view(Request& request)
 			}
 		} else {
 			if (it == response_obj.end()) {
-				response_obj[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+				response_obj[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
 			}
 		}
 
@@ -998,7 +998,7 @@ write_document_view(Request& request)
 		if (document_id.empty()) {
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
-				auto document_id_obj = co_await db_handler.unserialise_term_id(info.term);
+				auto document_id_obj = co_await db_handler.unserialize_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 			} else {
 				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, it.value().as_str());
@@ -1066,7 +1066,7 @@ update_document_view(Request& request)
 		Document document(info.did, &db_handler);
 
 		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
-			response_obj[ID_FIELD_NAME] = co_await db_handler.unserialise_term_id(info.term);
+			response_obj[ID_FIELD_NAME] = co_await db_handler.unserialize_term_id(info.term);
 		}
 
 		response_obj[VERSION_FIELD_NAME] = info.version;
@@ -1133,7 +1133,7 @@ retrieve_metadata_view(Request& request)
 		for (auto& _key : co_await db_handler.get_metadata_keys()) {
 			auto metadata = co_await db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
-				response_obj[_key] = MsgPack::unserialise(metadata);
+				response_obj[_key] = MsgPack::unserialize(metadata);
 			}
 		}
 	} else {
@@ -1141,7 +1141,7 @@ retrieve_metadata_view(Request& request)
 		if (metadata.empty()) {
 			throw engine::Error(engine::errc::doc_not_found, "Metadata not found");
 		} else {
-			response_obj = MsgPack::unserialise(metadata);
+			response_obj = MsgPack::unserialize(metadata);
 		}
 	}
 
@@ -1196,7 +1196,7 @@ write_metadata_view(Request& request)
 		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
 	}
 
-	co_await db_handler.set_metadata(key, decoded_body.serialise());
+	co_await db_handler.set_metadata(key, decoded_body.serialize());
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1790,8 +1790,8 @@ wal_view(Request& request)
 	DatabaseHandler db_handler(request.endpoints);
 
 	request.query_parser.rewind();
-	bool unserialised = request.query_parser.next("raw") == -1;
-	auto obj = co_await db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialised);
+	bool unserialized = request.query_parser.next("raw") == -1;
+	auto obj = co_await db_handler.repr_wal(0, std::numeric_limits<engine::rev>::max(), unserialized);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1891,7 +1891,7 @@ retrieve_document_view(Request& request)
 		}
 
 		// Locator doesn't have a content type, serialize and return as document
-		auto obj = MsgPack::unserialise(locator.data());
+		auto obj = MsgPack::unserialize(locator.data());
 
 		// Detailed info about the document:
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
@@ -1901,7 +1901,7 @@ retrieve_document_view(Request& request)
 		if (obj.find(VERSION_FIELD_NAME) == obj.end()) {
 			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
+				obj[VERSION_FIELD_NAME] = Unserialize::version(version);
 			}
 		}
 
@@ -1929,7 +1929,7 @@ retrieve_document_view(Request& request)
 		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::lz4_compressed_stored || locator.type == Locator::Type::zstd_compressed_stored) {
 			if (request.response_blob.empty()) {
 				auto stored = co_await db_handler.storage_get_stored(locator, did);
-				request.response_blob = unserialise_string_at(STORED_BLOB, stored);
+				request.response_blob = unserialize_string_at(STORED_BLOB, stored);
 			}
 		}
 #endif
@@ -2044,7 +2044,7 @@ search_view(Request& request)
 		if (main_locator != nullptr) {
 			auto locator_data = main_locator->data();
 			if (!locator_data.empty()) {
-				hit_obj = MsgPack::unserialise(locator_data);
+				hit_obj = MsgPack::unserialize(locator_data);
 			}
 		}
 
@@ -2056,7 +2056,7 @@ search_view(Request& request)
 		if (hit_obj.find(VERSION_FIELD_NAME) == hit_obj.end()) {
 			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				hit_obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
+				hit_obj[VERSION_FIELD_NAME] = Unserialize::version(version);
 			}
 		}
 
@@ -2222,7 +2222,7 @@ url_resolve(Request& request)
 	if (request.query_parser.next("pretty") != -1) {
 		if (request.query_parser.len != 0u) {
 			try {
-				pretty = Serialise::boolean(request.query_parser.get()) == "t";
+				pretty = Serialize::boolean(request.query_parser.get()) == "t";
 				request.indented = pretty ? DEFAULT_INDENTATION : -1;
 			} catch (const Exception&) { }
 		} else {
@@ -2241,7 +2241,7 @@ url_resolve(Request& request)
 	if (request.query_parser.next("human") != -1) {
 		if (request.query_parser.len != 0u) {
 			try {
-				request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+				request.human = Serialize::boolean(request.query_parser.get()) == "t" ? true : false;
 			} catch (const Exception&) { }
 		} else {
 			request.human = true;
@@ -2255,7 +2255,7 @@ url_resolve(Request& request)
 	if (request.query_parser.next("echo") != -1) {
 		if (request.query_parser.len != 0u) {
 			try {
-				request.echo = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+				request.echo = Serialize::boolean(request.query_parser.get()) == "t" ? true : false;
 			} catch (const Exception&) { }
 		} else {
 			request.echo = true;
@@ -2269,7 +2269,7 @@ url_resolve(Request& request)
 	if (request.query_parser.next("comments") != -1) {
 		if (request.query_parser.len != 0u) {
 			try {
-				request.comments = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+				request.comments = Serialize::boolean(request.query_parser.get()) == "t" ? true : false;
 			} catch (const Exception&) { }
 		} else {
 			request.comments = true;
@@ -2386,7 +2386,7 @@ query_field_maker(Request& request, int flags)
 			query_field.commit = true;
 			if (request.query_parser.len != 0u) {
 				try {
-					query_field.commit = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.commit = Serialize::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
@@ -2403,7 +2403,7 @@ query_field_maker(Request& request, int flags)
 			query_field.primary = true;
 			if (request.query_parser.len != 0u) {
 				try {
-					query_field.primary = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.primary = Serialize::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
@@ -2438,7 +2438,7 @@ query_field_maker(Request& request, int flags)
 			query_field.spelling = true;
 			if (request.query_parser.len != 0u) {
 				try {
-					query_field.spelling = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.spelling = Serialize::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
@@ -2448,7 +2448,7 @@ query_field_maker(Request& request, int flags)
 			query_field.synonyms = true;
 			if (request.query_parser.len != 0u) {
 				try {
-					query_field.synonyms = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.synonyms = Serialize::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
@@ -2477,7 +2477,7 @@ query_field_maker(Request& request, int flags)
 
 		request.query_parser.rewind();
 		if (request.query_parser.next("icase") != -1) {
-			query_field.icase = Serialise::boolean(request.query_parser.get()) == "t";
+			query_field.icase = Serialize::boolean(request.query_parser.get()) == "t";
 		}
 
 		request.query_parser.rewind();
@@ -2653,10 +2653,10 @@ serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, boo
 		return std::make_pair(obj.to_string(indent), x_yaml_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == msgpack_type) {
-		return std::make_pair(obj.serialise(), msgpack_type.to_string() + "; charset=utf-8");
+		return std::make_pair(obj.serialize(), msgpack_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == x_msgpack_type) {
-		return std::make_pair(obj.serialise(), x_msgpack_type.to_string() + "; charset=utf-8");
+		return std::make_pair(obj.serialize(), x_msgpack_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == html_type) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
@@ -2674,7 +2674,7 @@ serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, boo
 		array:
 			{{ val1 }}, {{ val2 }}, ...
 	}*/
-	THROW(SerialisationError, "Type is not serializable");
+	THROW(SerializationError, "Type is not serializable");
 }
 
 
@@ -2700,7 +2700,7 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 	try {
 		auto result = serialize_response(obj, resolved_ct_type, request.indented, (int)status >= 400);
 		emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second);
-	} catch (const SerialisationError& exc) {
+	} catch (const SerializationError& exc) {
 		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
 			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location);
 		} else {

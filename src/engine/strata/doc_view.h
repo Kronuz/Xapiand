@@ -46,7 +46,7 @@ public:
 	std::string value(valueno slot) const override;
 	rev version() const override;
 	void values(const ValueSink& sink) const override;
-	std::string serialise() const override;
+	std::string serialize() const override;
 
 private:
 	docid id_;
@@ -66,7 +66,7 @@ public:
 	std::string value(valueno slot) const override;
 	rev version() const override { return version_; }
 	void values(const ValueSink& sink) const override;
-	std::string serialise() const override;
+	std::string serialize() const override;
 
 private:
 	docid id_;

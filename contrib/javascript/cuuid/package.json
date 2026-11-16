@@ -1,7 +1,7 @@
 {
     "name": "uuidfield",
     "version": "1.0.0",
-    "description": "Dubalu generate and serialise uuid",
+    "description": "Dubalu generate and serialize uuid",
     "author": "Dubalu",
     "license": "MIT",
     "main": "src/index.js",

@@ -533,7 +533,7 @@ Kronuz/reactor. Done criteria:
 the `XAPIAN_OBJ` target and engine selection, the remote and replication services (`src/server/`
 `remote_protocol_*`, `replication_protocol_*`, by `git rm`, unopened), their options (D15), the Xapian-only
 tests (`test_wal_replay_xapian`, `CMakeLists.txt:2217`), and the Xapian-only inventory sites (A 3, B 6).
-`sortable_serialise` stays: strata paths use it (`engine/strata/shard.cc`, `serialise.cc`), and Phase 8
+`sortable_serialise` stays: strata paths use it (`engine/strata/shard.cc`, `serialize.cc`), and Phase 8
 removes it. `DataStorage` stays (D9). Done criteria:
 
 - The lead confirms that the final Xapian-only release branch (`xapiand`) exists before X1 lands.

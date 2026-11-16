@@ -24,6 +24,7 @@
 #pragma once
 
 #include <cstdint>                                // for uint64_t
+#include <limits>                                 // for std::numeric_limits
 #include <stddef.h>                               // for size_t
 #include <string>                                 // for string
 #include <sys/types.h>                            // for uint64_t, int64_t
@@ -34,13 +35,13 @@
 #include "database/utils.h"                       // for field_name, flat_term
 #include "engine/document.h"                       // for engine::Document
 #include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
-#include "serialise.h"                            // for serialise
+#include "serialize.h"                            // for serialize
 #include "engine/query.h"                         // for engine::Query, Op
 
 
 constexpr size_t MAX_TERMS_LEVEL        = 256;
 constexpr size_t MAX_TERMS              = 128;
-constexpr size_t MAX_SERIALISE_LENGTH   = 18;
+constexpr size_t MAX_SERIALIZE_LENGTH   = 18;
 
 
 extern const char ctype_date;
@@ -50,7 +51,7 @@ extern const char ctype_integer;
 
 // Returns the upper bound's length given the prefix's length, number of unions and union's length.
 inline constexpr size_t get_upper_bound(size_t length_prefix, size_t number_unions, size_t length_union) noexcept {
-	auto max_length_term = length_prefix + MAX_SERIALISE_LENGTH;
+	auto max_length_term = length_prefix + MAX_SERIALIZE_LENGTH;
 	return (max_length_term + length_union) * number_unions + max_length_term;
 }
 
@@ -64,6 +65,20 @@ doc_field(engine::Document& doc, std::string_view field_prefix, char field_type,
 
 
 namespace GenerateTerms {
+	// The integer a double's accuracy terms are generated for: truncated toward zero, saturating at T's limits.
+	template <typename T>
+	constexpr T truncate(double d) noexcept {
+		constexpr double lowest = static_cast<double>(std::numeric_limits<T>::min());
+		constexpr double highest = static_cast<double>(std::numeric_limits<T>::max());  // 2^63 or 2^64: first out of range
+		if (!(d > lowest)) {
+			return std::numeric_limits<T>::min();
+		}
+		if (d >= highest) {
+			return std::numeric_limits<T>::max();
+		}
+		return static_cast<T>(d);
+	}
+
 	/*
 	 * Add generated terms by accuracy for field or global values in doc.
 	 */

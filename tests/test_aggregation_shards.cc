@@ -22,7 +22,7 @@
 
 // One corpus indexed into 1, 2 and 5 shards, with deletes, answers every aggregation kind Xapiand serves
 // with the same values: through one spy over all the shards (the search path), through per-shard spies
-// merged from their serialised results (the remote path) and merged as objects. The kinds, and what
+// merged from their serialized results (the remote path) and merged as objects. The kinds, and what
 // differs by design, are in docs/dev/agg-shard-parity.md.
 //
 // AGG_PARITY_DROP_SHARD=k leaves shard k out of every n-shard run (the mutant that proves the test sees it).
@@ -50,8 +50,8 @@
 #include "engine/search.h"
 #include "engine_support.h"
 #include "msgpack.h"
-#include "serialise.h"
-#include "serialise_list.h"
+#include "serialize.h"
+#include "serialize_list.h"
 
 namespace {
 
@@ -132,7 +132,7 @@ std::shared_ptr<Schema> make_schema() {
 }
 
 std::string multi(const std::vector<std::string>& values) {
-	return StringList::serialise(values.begin(), values.end());
+	return StringList::serialize(values.begin(), values.end());
 }
 
 engine::Document make_document(const Row& row) {
@@ -141,14 +141,14 @@ engine::Document make_document(const Row& row) {
 	if (!row.ages.empty()) {
 		std::vector<std::string> values;
 		for (auto n : row.ages) {
-			values.push_back(Serialise::integer(n));
+			values.push_back(Serialize::integer(n));
 		}
 		doc.add_value(AGE, multi(values));
 	}
 	if (!row.scores.empty()) {
 		std::vector<std::string> values;
 		for (auto x : row.scores) {
-			values.push_back(Serialise::floating(static_cast<long double>(x)));
+			values.push_back(Serialize::floating(static_cast<double>(x)));
 		}
 		doc.add_value(SCORE, multi(values));
 	}
@@ -220,7 +220,7 @@ MsgPack by_one_spy(const Layout& layout, const MsgPack& config, const std::share
 	return spy.get_aggregation();
 }
 
-// A spy per shard, their serialised results merged (`as_bytes`) or merged as objects.
+// A spy per shard, their serialized results merged (`as_bytes`) or merged as objects.
 MsgPack by_merge(const Layout& layout, const MsgPack& config, const std::shared_ptr<Schema>& schema, bool as_bytes) {
 	AggregationMatchSpy merged(config, schema);
 	for (std::size_t s = 0; s < layout.n; ++s) {
@@ -230,7 +230,7 @@ MsgPack by_merge(const Layout& layout, const MsgPack& config, const std::shared_
 		AggregationMatchSpy part(config, schema);
 		search_all({ layout.shards[s].get() }, part);
 		if (as_bytes) {
-			merged.merge_results(part.serialise_results());
+			merged.merge_results(part.serialize_results());
 		} else {
 			merged.merge_results(part);
 		}

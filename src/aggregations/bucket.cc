@@ -30,7 +30,7 @@
 #include "aggregations.h"                         // for Aggregation
 #include "database/schema.h"                      // for Schema, required_spc_t
 #include "basic_string_metric.h"                  // for Counter
-#include "serialise.h"                            // for Serialise::MsgPack
+#include "serialize.h"                            // for Serialize::MsgPack
 
 
 FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
@@ -67,11 +67,11 @@ FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view na
 		std::set<std::string> s_values;
 		if (values.is_array()) {
 			for (const auto& value : values) {
-				s_values.insert(Serialise::MsgPack(field_spc, value));
+				s_values.insert(Serialize::MsgPack(field_spc, value));
 			}
 			func = &FilterAggregation::check_multiple;
 		} else {
-			s_values.insert(Serialise::MsgPack(field_spc, values));
+			s_values.insert(Serialize::MsgPack(field_spc, values));
 			func = &FilterAggregation::check_single;
 		}
 		_filters.emplace_back(field_spc.slot, std::move(s_values));
@@ -94,9 +94,9 @@ FilterAggregation::get_result() const
 
 
 std::string
-FilterAggregation::serialise_results() const
+FilterAggregation::serialize_results() const
 {
-	return _agg.serialise_results();
+	return _agg.serialize_results();
 }
 
 
@@ -126,7 +126,7 @@ FilterAggregation::check_single(const engine::DocView& doc)
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
 		auto doc_value = doc.value(filter.first);
-		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
+		StringList::unserialize(doc_value, std::inserter(values, values.begin()));
 		if (values.find(*filter.second.begin()) != values.end()) {
 			return _agg(doc);
 		}
@@ -140,7 +140,7 @@ FilterAggregation::check_multiple(const engine::DocView& doc)
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
 		auto doc_value = doc.value(filter.first);
-		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
+		StringList::unserialize(doc_value, std::inserter(values, values.begin()));
 		Counter c;
 		std::set_intersection(values.begin(), values.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));
 		if (c.count != 0u) {

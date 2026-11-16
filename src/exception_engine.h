@@ -61,12 +61,11 @@ public:
 };
 
 
-class SerialisationError : public ClientError {
+class SerializationError : public ClientError {
 public:
 	template<typename... Args>
-	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+	SerializationError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
-
 
 class CastError : public ClientError {
 public:

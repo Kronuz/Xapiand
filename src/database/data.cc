@@ -25,8 +25,8 @@
 
 #include <atomic>                                 // for std::atomic
 
-#include "exception_engine.h"                     // for SerialisationError
-#include "length.h"                               // for serialise_length()
+#include "exception_engine.h"                     // for SerializationError
+#include "length.h"                               // for serialize_length()
 #include "msgpack.h"                              // for MsgPack
 #include "xapiand_strings.hh"                             // for string::*
 #include "utype.hh"                               // for toUType
@@ -243,11 +243,11 @@ Locator::data() const
 
 
 Locator
-Locator::unserialise(std::string_view locator_str)
+Locator::unserialize(std::string_view locator_str)
 {
 	const char *p = locator_str.data();
 	const char *p_end = p + locator_str.size();
-	auto length = unserialise_length_and_check(&p, p_end);
+	auto length = unserialize_length_and_check(&p, p_end);
 	Locator locator(ct_type_t(std::string_view(p, length)));
 	p += length;
 	locator.type = static_cast<Type>(*p++);
@@ -261,26 +261,26 @@ Locator::unserialise(std::string_view locator_str)
 		case Type::stored:
 		case Type::lz4_compressed_stored:
 		case Type::zstd_compressed_stored:
-			locator.volume = unserialise_length(&p, p_end);
-			locator.offset = unserialise_length(&p, p_end);
-			locator.size = unserialise_length(&p, p_end);
+			locator.volume = unserialize_length(&p, p_end);
+			locator.offset = unserialize_length(&p, p_end);
+			locator.size = unserialize_length(&p, p_end);
 			locator.raw = std::string_view(p, p_end - p);
 			break;
 		default:
-			THROW(SerialisationError, "Bad encoded data locator: Unknown type");
+			THROW(SerializationError, "Bad encoded data locator: Unknown type");
 	}
 	return locator;
 }
 
 
 std::string
-Locator::serialise() const
+Locator::serialize() const
 {
 	if (size == 0) {
 		return "";
 	}
 	std::string result;
-	result.append(serialise_string(ct_type.to_string()));
+	result.append(serialize_string(ct_type.to_string()));
 	result.push_back(toUType(type));
 	switch (type) {
 		case Type::inplace:
@@ -290,15 +290,15 @@ Locator::serialise() const
 		case Type::stored:
 		case Type::lz4_compressed_stored:
 		case Type::zstd_compressed_stored:
-			result.append(serialise_length(volume));
-			result.append(serialise_length(offset));
-			result.append(serialise_length(size));
+			result.append(serialize_length(volume));
+			result.append(serialize_length(offset));
+			result.append(serialize_length(size));
 			break;
 		default:
-			THROW(SerialisationError, "Bad data locator: Unknown type");
+			THROW(SerializationError, "Bad data locator: Unknown type");
 	}
 	result.append(raw);
-	result.insert(0, serialise_length(result.size()));
+	result.insert(0, serialize_length(result.size()));
 	return result;
 }
 
@@ -325,28 +325,28 @@ Locator::operator<(const Locator& other) const noexcept
 
 
 void
-Data::feed(std::string&& new_serialised, std::string&& new_version)
+Data::feed(std::string&& new_serialized, std::string&& new_version)
 {
 	version = std::move(new_version);
-	serialised = std::move(new_serialised);
+	serialized = std::move(new_serialized);
 	locators.clear();
-	if (serialised.size() < 6) {
+	if (serialized.size() < 6) {
 		return;
 	}
-	const char *p = serialised.data();
-	const char *p_end = p + serialised.size();
+	const char *p = serialized.data();
+	const char *p_end = p + serialized.size();
 	if (*p++ != DATABASE_DATA_HEADER_MAGIC) {
 		return;
 	}
 	while (p < p_end) {
 		try {
-			auto length = unserialise_length_and_check(&p, p_end);
+			auto length = unserialize_length_and_check(&p, p_end);
 			if (!length) {
 				break;
 			}
-			locators.emplace_back(Locator::unserialise(std::string_view(p, length)));
+			locators.emplace_back(Locator::unserialize(std::string_view(p, length)));
 			p += length;
-		} catch (const SerialisationError& exc) {
+		} catch (const SerializationError& exc) {
 			locators.clear();
 			return;
 		}
@@ -400,13 +400,13 @@ Data::flush(const std::vector<Locator>& ops)
 	// Now replace old locators and serialize
 	locators = new_locators;
 
-	serialised.clear();
-	serialised.push_back(DATABASE_DATA_HEADER_MAGIC);
+	serialized.clear();
+	serialized.push_back(DATABASE_DATA_HEADER_MAGIC);
 	for (auto& locator : locators) {
-		serialised.append(locator.serialise());
+		serialized.append(locator.serialize());
 	}
-	serialised.push_back('\0');
-	serialised.push_back(DATABASE_DATA_FOOTER_MAGIC);
+	serialized.push_back('\0');
+	serialized.push_back(DATABASE_DATA_FOOTER_MAGIC);
 }
 
 
@@ -416,30 +416,30 @@ Data::Data()
 }
 
 
-Data::Data(std::string&& serialised)
+Data::Data(std::string&& serialized)
 {
-	feed(std::move(serialised), std::string());
+	feed(std::move(serialized), std::string());
 }
 
 
-Data::Data(std::string&& serialised, std::string&& version)
+Data::Data(std::string&& serialized, std::string&& version)
 {
-	feed(std::move(serialised), std::move(version));
+	feed(std::move(serialized), std::move(version));
 }
 
 
 Data::Data(Data&& other)
 {
-	feed(std::move(other.serialised), std::move(other.version));
+	feed(std::move(other.serialized), std::move(other.version));
 	pending = std::move(other.pending);
 }
 
 
 Data::Data(const Data& other)
 {
-	auto new_serialised = other.serialised;
+	auto new_serialized = other.serialized;
 	auto new_version = other.version;
-	feed(std::move(new_serialised), std::move(new_version));
+	feed(std::move(new_serialized), std::move(new_version));
 	flush(other.pending);
 }
 
@@ -447,7 +447,7 @@ Data::Data(const Data& other)
 Data&
 Data::operator=(Data&& other)
 {
-	feed(std::move(other.serialised), std::move(other.version));
+	feed(std::move(other.serialized), std::move(other.version));
 	pending = std::move(other.pending);
 	return *this;
 }
@@ -456,9 +456,9 @@ Data::operator=(Data&& other)
 Data&
 Data::operator=(const Data& other)
 {
-	auto new_serialised = other.serialised;
+	auto new_serialized = other.serialized;
 	auto new_version = other.version;
-	feed(std::move(new_serialised), std::move(new_version));
+	feed(std::move(new_serialized), std::move(new_version));
 	flush(other.pending);
 	return *this;
 }
@@ -473,20 +473,20 @@ Data::flush()
 
 
 const std::string&
-Data::serialise() const
+Data::serialize() const
 {
-	if (serialised == DATABASE_DATA_EMPTY || serialised == DATABASE_DATA_MAP || serialised == DATABASE_DATA_UNDEFINED) {
+	if (serialized == DATABASE_DATA_EMPTY || serialized == DATABASE_DATA_MAP || serialized == DATABASE_DATA_UNDEFINED) {
 		static const std::string empty;
 		return empty;
 	}
-	return serialised;
+	return serialized;
 }
 
 
 bool
 Data::operator==(const Data& other) const noexcept
 {
-	return serialise() == other.serialise();
+	return serialize() == other.serialize();
 }
 
 
@@ -554,7 +554,7 @@ MsgPack
 Data::get_obj() const
 {
 	auto main_locator = get("");
-	return main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
+	return main_locator != nullptr ? MsgPack::unserialize(main_locator->data()) : MsgPack::MAP();
 }
 
 
@@ -565,7 +565,7 @@ Data::set_obj(const MsgPack& object, bool compress)
 	if (!compress) {
 		locator.type = Locator::Type::inplace;
 	}
-	locator.data(object.serialise());
+	locator.data(object.serialize());
 }
 
 

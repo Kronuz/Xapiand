@@ -86,7 +86,7 @@ public:
 	double max_weight() const override { return geo_weight_from_angle(0.0); }
 	std::unique_ptr<engine::PostingSource> clone() const override;
 	std::string name() const override;
-	std::string serialise() const override;
-	std::unique_ptr<engine::PostingSource> unserialise(std::string_view serialised) const override;
+	std::string serialize() const override;
+	std::unique_ptr<engine::PostingSource> unserialize(std::string_view serialized) const override;
 	std::string description() const override;
 };

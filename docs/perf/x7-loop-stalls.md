@@ -44,7 +44,7 @@ Where the loop's time goes (head, arm 2; arms 3 and 6 in parentheses), as shares
 | Work on the loop | Share | Note |
 |---|---:|---|
 | `engine::strata::Shard::replace` (the shard's turn) | 45.1% (54.0, 52.8) | of which `finalise_write` 34.3% (44.2, 43.6) |
-| `finalise_write`: decompress the record, set `_version`, recompress | 34.3% | `Data::get_obj` 6.2% (zstd decompress 4.2%), `Data::set_obj` 19.2% (zstd compress 16.2%), `MsgPack::serialise` 2.5% |
+| `finalise_write`: decompress the record, set `_version`, recompress | 34.3% | `Data::get_obj` 6.2% (zstd decompress 4.2%), `Data::set_obj` 19.2% (zstd compress 16.2%), `MsgPack::serialize` 2.5% |
 | `Schema::index` (fields, terms) | 29.3% (23.3, 23.2) | `GenerateTerms::text` 10.6% |
 | strata apply (`apply_settling`, `basic_index::apply`) | 5.4% (4.0, 4.3) | |
 | `DatabaseHandler::prepare` (outside `Schema::index`) | 5.2% (3.4, 2.9) | compresses the record once: 2.7% |
@@ -154,7 +154,7 @@ prepare") and makes D12's "RESTORE batches are prepared in parse-ahead chores" t
 
 **What moves.** The CPU of preparing a plain object: its id and `_data`, all of `Schema::index` (fields, terms,
 values, and the shard of a new uuid id, `seq % n_shards` checked with `Endpoint::is_active()`, an atomic read; a new
-numeric id takes `NEW_NUMERIC_KEY` and the shard numbers it in its turn, D8), and the record serialised raw. The one
+numeric id takes `NEW_NUMERIC_KEY` and the shard numbers it in its turn, D8), and the record serialized raw. The one
 compress stays in `finalise_write`, in the shard's turn (fix (b)). It runs as `flush` chores on the one host
 `WorkPool`; no thread or pool is added.
 
