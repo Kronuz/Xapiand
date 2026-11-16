@@ -3936,7 +3936,52 @@
       "updated": "2026-11-08T13:25:14"
     },
     "exact-id-keys": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-15T22:25:21",
+          "base": "70612e7ce6d0d7224049cddca54ce691c5bce61f",
+          "blobs": {
+            "CMakeLists.txt": "100644:b5e88ec27dcd2a998b86d1ba248d88d220625603",
+            "docs/design/exact-id-keys.md": "100644:2a2da950697c866150f085cf3dc0f537ea08c8d6",
+            "docs/mechanisms/document-ids-and-versions.md": "100644:22f4857c2fe48ea6925631acc12dbe9b776e056a",
+            "docs/src/content/docs/changelog.md": "100644:4bac9399c37e3202a07ad2d7cd354970a7d09a9a",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "100644:346f9c70a088b87d053d1b1348efb837027285f7",
+            "src/database/handler.cc": "100644:58b2c9a6bd19df0b914f1c2322f961b36c7eed7b",
+            "src/database/handler.h": "100644:8c92ca199d1799acc778779dd32c33664c36c0ad",
+            "src/database/schema.cc": "100644:63939781e9e413bcc8f9af912b5f2876a2657d26",
+            "src/database/shard.cc": "100644:cc09b880f556e83e5a5f1b9bd6b522189f5e054c",
+            "src/query_dsl.cc": "100644:919bafe5a5cc95d09fe35ad9f0bb4bcf30802333",
+            "src/serialise.cc": "100644:391add54253c551413621e4c67fd0de932391d23",
+            "src/serialise.h": "100644:625cffa5971af66992720d198d9fdca2ce55ee04",
+            "tests/exact_id_mutants.sh": "100755:5d8c40fe71dfaf9b647cd4921ad38fa74e84832b",
+            "tests/test_node.cc": "100644:8158eb5d86b86431f48d7221ecd2547bb214d1b9"
+          },
+          "by": "review",
+          "commit": "1d073c52f59486a470e5323202a5f604a10f89b7",
+          "criteria": "c6c8fbaaeb920eea",
+          "diffs": {
+            "CMakeLists.txt": "3e622dcc6f5a7157",
+            "docs/design/exact-id-keys.md": "7cf3f905f3b53303",
+            "docs/mechanisms/document-ids-and-versions.md": "c6a511e39043c47a",
+            "docs/src/content/docs/changelog.md": "f32903e83a545439",
+            "docs/src/content/docs/reference-guide/documents/index-api.md": "5a8fa893c8fba1bd",
+            "src/database/handler.cc": "8dac334b59bf4e39",
+            "src/database/handler.h": "bb323b4134e72c61",
+            "src/database/schema.cc": "1580c225f1a8355f",
+            "src/database/shard.cc": "7f433dca94728aa5",
+            "src/query_dsl.cc": "cc658d801d7828c2",
+            "src/serialise.cc": "64d4ba584f35c546",
+            "src/serialise.h": "8bb707595544830e",
+            "tests/exact_id_mutants.sh": "0361de47fb537858",
+            "tests/test_node.cc": "06ed5cbf890e5638"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e6e06c8335f9d50f171fed1801615a7043064cc0",
+          "reviewed": "1d073c52f59486a470e5323202a5f604a10f89b7",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b37b42b0498ac975bafda90470806c960455e6ee",
       "branch": "quest/xapiand/exact-id-keys",
@@ -3977,10 +4022,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-15T22:25:26",
+          "commit": "73fbcb48d0e5daaa27e37cf52a938df19d4d4a0a",
+          "criteria": {
+            "A1": "261115-210614-d6a201, 261115-210629-01840c; fails without: 261113-133032-02c164, 261113-142246-dbceae, 261115-210632-ca9170",
+            "A2": "261115-210614-d6a201, 261115-210635-274f76; fails without: 261113-133428-019e80, 261113-142303-cc6119, 261115-210639-ed1c27",
+            "A3": "`docs/design/exact-id-keys.md`",
+            "A4": "261115-210614-d6a201"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "68f26a25ef320450d4d28afa8d80bc2b5c208ecd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261115-210614-d6a201",
+              "level": "light",
+              "seconds": 1189.2,
+              "state": "done",
+              "what": "exact-id-keys check suite at 68f26a25ef32"
+            }
+          ],
+          "final": true,
+          "from": "635f9ac8467d964e3e89f4d8c8f9fce8a2bf74e6",
+          "reason": "",
+          "tested": "1d073c52f59486a470e5323202a5f604a10f89b7"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -3988,10 +4062,10 @@
       ],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:29:24",
-      "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
+      "updated": "2026-11-15T22:25:28",
+      "worktree": ""
     },
     "f14-step1": {
       "accepted": {},
@@ -13277,6 +13351,8 @@
     "platform-rows": {
       "accepted": {},
       "after": [],
+      "base": "5b3c89d71edd53ed9f3a2330033439718965e3d5",
+      "branch": "quest/xapiand/platform-rows",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -13299,9 +13375,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-13T20:23:36"
+      "updated": "2026-11-15T22:25:14",
+      "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
       "accepted": {},
@@ -15552,6 +15629,8 @@
         "sortable-proof",
         "x7-gate"
       ],
+      "base": "432299ed08977dace1b36f124058e321c6bd015f",
+      "branch": "quest/xapiand/sortable-encoding",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -15591,7 +15670,6 @@
       "files": [
         "src/**",
         "tests/**",
-        "harness/**",
         "contrib/python/**",
         "CMakeLists.txt",
         "ARCHITECTURE.md",
@@ -15813,9 +15891,10 @@
       ],
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "active",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-09T15:34:35"
+      "updated": "2026-11-15T22:27:51",
+      "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
     },
     "sortable-followups": {
       "accepted": {},

@@ -2878,7 +2878,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			// Get early term ID when possible
 			switch (id_type) {
 				case FieldType::empty: {
-					const auto type_ser = Serialise::guess_serialise(document_id);
+					const auto type_ser = Serialise::guess_id(document_id);
 					id_type = type_ser.first;
 					if (id_type == FieldType::text) {
 						id_type = FieldType::keyword;
@@ -2898,7 +2898,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::text:
 				case FieldType::keyword:
 					document_id = Cast::cast(id_type, document_id);
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					unprefixed_term_id = Serialise::id(spc_id, document_id);
 					break;
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);

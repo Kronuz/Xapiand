@@ -465,7 +465,7 @@ FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/en
 FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG f8b93484f0a7cdc6e411f5e3907fb9dbe5def900)
 FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG d2eb8955d92be7229b371d493d4bab7b148c4d9b)
 FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 7eaa8f9d3cfc373ff25d620672a6f6f83b94ce3f)
-FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 1f9190ca19bbb5291456c54f3ff34982e0083113)
+FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG d3eaf328cd011ba045325467e09f00b520d55f4d)
 FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG 05f91deaf86cddf33839d5a4de60ffb3ce73bed0)
 FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG 6799a6e8a1741367bda269546d3f3999d0f1d80f)
 FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 76a400be217eec6043510d5a812e368eb1898153)  # track tip
@@ -489,10 +489,12 @@ FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-c
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG cfe571a744b7bbf39d1a5992506b19c6cfce0b4b)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
-FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception)
+# sortable: the exact number codec of numeric id keys (docs/design/exact-id-keys.md).
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG ac13b7723235b940b92bbc5a457b79ee7c49275d)
+FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
-# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
+# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh", "sortable.hh"), so put their source dirs
 # on the global include path now that the vendored copies are gone.
 include_directories(
 	"${constexpr_phf_SOURCE_DIR}"
@@ -501,6 +503,7 @@ include_directories(
 	"${errno_names_SOURCE_DIR}"
 	"${base_x_SOURCE_DIR}"
 	"${located_exception_SOURCE_DIR}"
+	"${sortable_SOURCE_DIR}"
 )
 
 # located-exception ships exception.h + exception.cc (the base: BaseException,
@@ -821,7 +824,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
 FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
-FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG 09b644d23f6518c4112812e83c2711058e99ea78)  # http main: a heavy waiter resumes through its scheduler (http-lane)
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG eb08b59e6aa2086a1ebaac665b8475f32e80d230)  # http main: q-values parsed without libc
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
 
