@@ -1,6 +1,6 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs 07dd8f b680b7 f6a627 5bec4c 5553a1 1a8295 0cce84 8e97be 9b0137; CI 43960602513 43960602117 43960601961 43960601777 43960604601 43960604607
+State: waiting on jobs b680b7 f6a627 5bec4c 5553a1 1a8295 0cce84 8e97be 9b0137; CI 43960602513 43960602117 43960601961 43960601777 43960604601 43960604607
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -58,7 +58,8 @@ Round 6 (13:30), lead's results of round 5. Passed: TSan b53087, ASan e730e7, R5
    (the flood script is a 1 MiB string and a work-capped find, so not the collect's memory). Suspect: each
    overlapping call of the small flood script compiles a state of its own. Waiting for the control 43960604601 at
    the same base before acting.
-Round 6 jobs at ff85dcd34: test_lua 07dd8f, suite b680b7; confirm per finding:
+Round 6 jobs at ff85dcd34: test_lua 07dd8f PASS (971 checks; 27 slices, longest 9.34 ms; trivial 14.3 us on a light
+hold beside other jobs, strict figure is 006cb7's), suite b680b7; confirm per finding:
 - S1: R3 in f6a627 (probes.inc), test `test_a_cached_script_keeps_no_call_params` (07dd8f; fails at fa: 714fb5).
 - S2: R1/R2 in f6a627 and 5bec4c (probes2), tests `..._string_table_...`, `..._within_the_budget` (07dd8f; 714fb5).
 - S3: R5 5553a1 (round 5: 8c6c1d passed), test `test_overlapping_calls_of_a_large_script_take_turns`.
