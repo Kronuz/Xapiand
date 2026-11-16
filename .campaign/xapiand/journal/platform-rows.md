@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: working
+State: waiting on CI runs 43817110685 (FreeBSD) 43817110777 (arm64) at Xapiand:2c972efe5
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Pushed 2c972efe5: freebsd.yml gains an ASan+UBSan build and gate7c_rows.sh as nobody; new arm64.yml (ubuntu-24.04-arm) builds, ctest, ASan, rows. Waiting on the two runs.
 
 ## Next
 
-1. <step>
+1. Read run results; fix harness/workflow failures in file set; source failures go to the lead (sortable-encoding owns src/**) or become a named quest (A3).
+2. Add green run links to docs/dev/freebsd.md and new docs/dev/platforms.md (A1, A2); fill Evidence.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
