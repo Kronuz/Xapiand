@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI runs 43834602347 (FreeBSD) 43834602759 (arm64)
+State: waiting on CI runs 43840819520 (FreeBSD) 43840819547 (arm64)
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,7 +19,7 @@ PRODUCT FINDING P2 (FreeBSD only, suspected): valid requests are closed without 
 - t10_lua (Release): 2 of 4 library-call loops answer 400 not 204 ([400, 204, 204, 400]); related or a Lua library difference on FreeBSD, unconfirmed.
 Evidence: run 43834602347 job log (assert block and tracebacks). Not harness: the same rows pass on arm64 Linux. The node's own log was not printed; the job now prints xe2e_node.log's tail. The cause is for the lead (src/) once that log shows it.
 
-Pushed; re-runs below.
+Pushed; re-runs FreeBSD 43840819520, arm64 43840819547.
 
 ## Next
 
