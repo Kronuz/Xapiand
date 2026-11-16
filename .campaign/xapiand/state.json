@@ -6727,7 +6727,10 @@
       ],
       "consumes": [],
       "files": [
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "src/xapiand_threadpool_trace.h",
+        "src/xapiand_workpool_trace.h",
+        "docs/dev/extraction-backlog.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6738,7 +6741,7 @@
       "risk": "low",
       "status": "active",
       "title": "Repin logger 6e7ab9e and fetch workpool by its name",
-      "updated": "2026-11-16T08:07:40",
+      "updated": "2026-11-16T08:10:12",
       "worktree": "../Xapiand-wt/xapiand/logger-workpool-repin"
     },
     "loop-scheduling": {
