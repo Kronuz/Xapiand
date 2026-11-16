@@ -1,12 +1,15 @@
 # sortable-encoding: journal
 
-State: working
+State: waiting on jobs 261115-224734-3b43cf 261115-224734-8ff56e 261115-225548-6cc0f3
 Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
 
 Steps 1 and 2 done (no byte change); their checks are running. `tests/numeric_range_check.py` (T6, A5)
-written, being debugged against a pre-switch binary.
+written (Xapiand:6e8bd448f). A debug run on a pre-switch binary (one-id-rel slot, Xapiand:1f5b791d2) shows
+the old failures it targets: range 189 wrong of 788, sort 6 of 8, intbound 4 of 11, wide 1 of 7 (a 6.5
+bound truncated on the integer-typed index), NaN bound and NaN value accepted. Baseline job
+261115-225548-6cc0f3 records it on the step-2 build (exit 1 expected).
 
 1. Step 1, Xapiand:49deb7184: CTests `sortable_property` (T1, from `${sortable_SOURCE_DIR}/test/property.cc`)
    and `sortable_xlang` (T3: `tests/sortable_xlang.py` against `sortable_cli` from `tools/cli.cc`); the port
@@ -46,7 +49,7 @@ Step 3 on the design reviewer's confirmation of the D87 revision. Steps 1 and 2 
 | Criterion | Evidence |
 |---|---|
 | A1 | D87 (PLAN.md decision row, owner 2026-11-13) |
-| A3 | 261115-224157-3d7604 (pass at 49deb7184: 113,491 vectors, 10^6 random, 1,541,467 decodes); mutants killed: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 (queued). rule-8 261115-224330-733fc7 survived: equivalent (rule 8 is implied by rule 9, as sortable's note says) |
+| A3 | 261115-224157-3d7604 (pass at 49deb7184: 113,491 vectors, 10^6 random, 1,541,467 decodes; brief says "ran other code" after later commits, rerun at the final head); mutants killed: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 (`decode 0200: python i -2^63, C++ reject`). rule-8 261115-224330-733fc7 survived: equivalent (rule 8 is implied by rule 9, as sortable's note says) |
 
 Jobs at step 2 (8a7da1f4a): build-test 261115-224734-3b43cf, e2e 261115-224734-8ff56e (running);
 no-gpl 261115-224735-2ae37e failed as expected (the GPL files go in step 3).
