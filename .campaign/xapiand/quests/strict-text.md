@@ -1,31 +1,28 @@
-# strict-text: Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)
+# strict-text: Numeric text and _term aggregations read exactly
 
 Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status strict-text`.
+is in `state.json`: `campaign status strict-text`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The two non-blocking findings of the strict-values correctness review close D92's last gaps:
+numeric text reads as strictly as JSON numbers, and the `_term` filter aggregation reads values
+through `Serialize::exact` like searches do.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 Numeric text on an integer, positive or float field refuses hex (`"0x10"`) and a leading `+`
+  (`"+12"`) with a 400 naming the field, value and type, as JSON input does (review C5); a test
+  that fails on master proves it, with a `--fails-without` job.
+- A2 The `_term` filter aggregation accepts `12.0` on an integer field and refuses `12.5`, exactly
+  as a search does (review C6, R1); a test that fails on master, with a `--fails-without` job.
+- A3 The suite passes (the build-test check), and the e2e strict cases from strict-values still
+  pass.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead (D92): strict everywhere with a 400; explicit casts are the only conversion.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
