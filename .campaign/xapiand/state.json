@@ -4022,10 +4022,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-15T22:25:26",
+          "commit": "73fbcb48d0e5daaa27e37cf52a938df19d4d4a0a",
+          "criteria": {
+            "A1": "261115-210614-d6a201, 261115-210629-01840c; fails without: 261113-133032-02c164, 261113-142246-dbceae, 261115-210632-ca9170",
+            "A2": "261115-210614-d6a201, 261115-210635-274f76; fails without: 261113-133428-019e80, 261113-142303-cc6119, 261115-210639-ed1c27",
+            "A3": "`docs/design/exact-id-keys.md`",
+            "A4": "261115-210614-d6a201"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "68f26a25ef320450d4d28afa8d80bc2b5c208ecd",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261115-210614-d6a201",
+              "level": "light",
+              "seconds": 1189.2,
+              "state": "done",
+              "what": "exact-id-keys check suite at 68f26a25ef32"
+            }
+          ],
+          "final": true,
+          "from": "635f9ac8467d964e3e89f4d8c8f9fce8a2bf74e6",
+          "reason": "",
+          "tested": "1d073c52f59486a470e5323202a5f604a10f89b7"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [
@@ -4033,10 +4062,10 @@
       ],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-15T22:25:21",
-      "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
+      "updated": "2026-11-15T22:25:28",
+      "worktree": ""
     },
     "f14-step1": {
       "accepted": {},
