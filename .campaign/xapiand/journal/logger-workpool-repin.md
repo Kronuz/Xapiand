@@ -1,6 +1,6 @@
 # logger-workpool-repin: journal
 
-State: waiting on jobs 261116-080905-f910ab 261116-080906-dbeaea (A1, A2) and the A3 job (below)
+State: waiting on jobs 261116-080905-f910ab 261116-080906-dbeaea (A1, A2) 261116-080951-7fad0e (A3)
 Quest: .campaign/xapiand/quests/logger-workpool-repin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,7 +29,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | build-test 261116-080905-f910ab |
 | A2 | e2e 261116-080906-dbeaea |
-| A3 | A3JOB (Detent's A2 job 261116-051232-7ae5c2 ran logger's own workpool pin 640c66b, not Xapiand's 406d2f3, so not cited) |
+| A3 | 261116-080951-7fad0e (Detent's A2 job 261116-051232-7ae5c2 ran logger's own workpool pin 640c66b, not Xapiand's 406d2f3, so not cited) |
 
 ## Result
 
