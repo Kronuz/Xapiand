@@ -200,7 +200,7 @@ one lane per class (`work_pool.hh:1110-1128`), so classes do not queue behind ea
 | Class | Chores | Why |
 |---|---|---|
 | `query` | read-your-writes refresh, open, blob read | A request waits on it; the reserve worker (`reserve = 1`, `:673`) keeps one free for them (C8.1, C8.3) |
-| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead, RESTORE prepare | Throughput work; parse-ahead and RESTORE prepare in the RESTORE's own group, so DRR splits service with the index's group (C8.1); a prepare chore runs about 1 ms |
+| `flush` | commit, close, check, a flush owed by a write, blob write, parse-ahead, RESTORE prepare, RESTORE writes: a shard's writes in its turn, engine chores inline (x7-loop-fix-c) | Throughput work; parse-ahead and RESTORE prepare in the RESTORE's own group, so DRR splits service with the index's group (C8.1); a prepare chore runs about 1 ms |
 | `merge` | merges, reclaim deletes (strata's executor binds here) | Background; at most `merge_cap` workers |
 
 Aging (C8.2, threadpool L2): a merge lane that has waited longer than 100 ms (an estimate) takes the
@@ -362,11 +362,15 @@ boundary and every 4,096 ordinals of the exhaustive loop (`shards.hh:237`, L4); 
 inside those slices. Dump scans check every 64 documents. A buffered body has a cap (16 MiB, an
 estimate), which http enforces at headers complete from `Content-Length`, or as bytes arrive.
 Above it, a `stored` upload streams (D9), RESTORE streams as today, and anything else gets 413.
-Documents above 64 KiB (an estimate) are decoded in chores. A RESTORE batch is parsed in parse-ahead chores and
-its plain `index` objects are prepared (fields, terms, raw record) in `flush` chores of the RESTORE's group, each about
-1 ms, in input order with schema changes committed in input order; an object that reads the stored document (patch,
-update, merge, a script, `_schema`) is prepared on the reactor after every earlier object applied, and every apply
-stays in the shard's turn (`docs/perf/x7-loop-stalls.md`, the RESTORE chore design).
+Documents above 64 KiB (an estimate) are decoded in chores. A RESTORE batch is parsed in parse-ahead chores. A
+RESTORE prepares its plain objects (fields, terms, raw record) in `flush` chores of its own group, which leave the
+pool's reserve free, and writes them in flush chores of that group: a range's writes are placed in one turn per shard,
+and a child task per shard, at most W = min(sub-runs, max(1, (threads - 1) / 2)) at once, holds that shard's turn
+while each chore writes a slice of about 1 ms with the engine's chores inline. Its loop places, joins and records
+results; a new numeric id, and a write whose document left since placement with every later write of its id, take the
+serial path after the join, in input order. Schema changes commit in input order, and an object that reads the stored
+document (patch, update, merge, a script, `_schema`) is prepared on the reactor after every earlier object applied
+(`docs/perf/x7-loop-stalls.md`, fix (c); `src/database/handler.cc` `DocIndexer::index`).
 
 **D13. The control plane is coroutines on its loop.** `control_offload` and the control reactor's
 worker are deleted (`manager.cc:156`, `:467-488`). Node setup, `load_nodes`, `new_leader` and the
@@ -454,7 +458,7 @@ clients. Light is open loop at a fixed rate: GET by id and single-term searches 
 | **T5** light-query p99 | Under heavy load ≤ 2x its unloaded p99 + 1 ms (PLAN `:645-647`), and below the pre-7c baseline; a same-index run (RESTORE into `accounts`) reported as Q6's cost | `stall_load.py`, `unloaded` then `loaded`, then `--restore-into accounts` |
 | **T6** reactor faults | Major faults on reactor threads per 1,000 queries ≤ 1 at 2x RAM: reported at 7c, gated at Phase 6 (owner) | Linux gate VM, `getrusage(RUSAGE_THREAD)` per loop, `stall_load.py --index-size 2xram` |
 | **T7** concurrency and shutdown | 0 TSan and 0 ASan reports; the final dump equals the model; a SIGTERM at 300 s exits 0 with every acknowledged write durable | `engine_mixed_load.py BIN OUT --engine strata --secs 600 --term-at 300` on TSan and on ASan builds |
-| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 4` and `--overload heavy 4` (4x the saturating rate, K3); `test_readers_cap` |
+| **T8** overload | A light and a heavy overload each give a non-zero 503 count; 503s come within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run (an estimate); a 16-record index registry gives 503s, not errors | `stall_load.py --overload light 1.25` and `--overload heavy 1.25`: 1.25x the in-flight cap in requests held at headers-complete, bodies withheld until the excess is refused (K3); `test_readers_cap` |
 | **T9** cancellation | A read whose client disconnects frees its reactor within one slice, and the cancel counter rises; a write whose client half-closes completes and is durable | Functional tests: a heavy search disconnected after 50 ms; a PUT then `shutdown(SHUT_WR)` |
 | **T10** Lua bounds | Two calls interleaved on one script keep their own `_doc`; an infinite loop ends at the instruction cap; one inside a `table.sort` comparator ends at the non-yieldable bound; an exponential pattern, a quadratic plain `find`, a pattern with a long literal run or class, a vararg chain, a loop of library calls over a large string, a swallowed bound (a to-be-closed handler), an allocation past the cap and a single library call or pattern past `max_call_work` each end; a result past its byte or value budget answers 413; a foreign script and a local one of the same name never swap; all 4xx; T4 holds with four looping scripts, and with four looping library calls; with 16 clients each re-sending a request whose script makes one worst-case call, a light GET's p99 stays near the cap's 20 ms plus the host's own | Unit tests (the review's `lua_yield_probe` cases among them) plus `stall_load.py --lua-loop 4` |
 | **T11** replaced layer wins by a lot | Dispatch cost per light request is at most half the offload hop's, in CPU and in wall; parity fails (owner, 2026-10-27) | `harness/profile_light.sh` on both binaries at concurrency 1: CPU from frames, wall from K6's timestamps |
@@ -503,7 +507,10 @@ Kronuz/reactor. Done criteria:
   - light latency is measured from each request's scheduled send time, and the achieved and
     target rates are printed and asserted within 5%;
   - `--saturate` finds the saturating light rate by doubling the rate until p99 exceeds 10x the
-    unloaded p99, then bisecting, and `--overload light|heavy N` uses it;
+    unloaded p99, then bisecting;
+  - `--overload light|heavy F` holds F x the in-flight cap in light or heavy searches, each head sent
+    and its body withheld until the round's 503s show the cap refused the excess (an open-loop rate
+    puts rate x latency in flight, which a fast host keeps far under the cap);
   - every phase writes light p50, p99 and p99.9, lag deltas per loop, 503 and error counts,
     in-flight and demoted peaks, segment count, merge backlog and phase times as JSON;
   - `--lua-loop` and `--index-size` are present (later steps fill them);

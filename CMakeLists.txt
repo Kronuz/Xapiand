@@ -417,7 +417,6 @@ endif ()
 
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
-set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
 set (XAPIAND_DATA_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand")
 
 
@@ -592,8 +591,8 @@ FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.gi
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
 add_compile_definitions(
-	STORAGE_IO_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_io.h"
-	STORAGE_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_trace.h"
+	STORAGE_IO_HEADER="xapiand_storage_io.h"
+	STORAGE_TRACE_HEADER="xapiand_storage_trace.h"
 )
 
 # server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
@@ -612,8 +611,8 @@ FetchContent_Declare(io GIT_REPOSITORY https://github.com/Kronuz/io.git GIT_TAG 
 FetchContent_MakeAvailable(io)
 include_directories("${io_SOURCE_DIR}")
 add_compile_definitions(
-	IO_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_trace.h"
-	IO_RANDOM_ERRORS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_random_errors.h"
+	IO_TRACE_HEADER="xapiand_io_trace.h"
+	IO_RANDOM_ERRORS_HEADER="xapiand_io_random_errors.h"
 )
 
 # fs: the filesystem helpers (Kronuz/fs), extracted from Xapiand. Same shape as io: only
@@ -624,7 +623,7 @@ add_compile_definitions(
 FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG c002235cf3734d58e33abeb6b8b8b809928f3bae)
 FetchContent_MakeAvailable(fs)
 include_directories("${fs_SOURCE_DIR}")
-add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
+add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 
 # system: process/system resource introspection (Kronuz/system), extracted from Xapiand.
 # Same shape as io/fs: only the headers go on the include path; system.cc + memory_stats.cc
@@ -634,7 +633,7 @@ add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_tr
 FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 20ffc71647228fb042da9fdd002dd1b8388a8b06)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
-add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
+add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
 
 # cuuid: condensed UUID value + binary wire codec (Kronuz/cuuid), extracted from
 # Xapiand. Same shape as io/fs/system: only the headers go on the include path;
@@ -645,9 +644,9 @@ FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GI
 FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
-	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
-	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_engine.h"
-	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
+	CUUID_TRACE_HEADER="xapiand_cuuid_trace.h"
+	CUUID_EXCEPTION_HEADER="exception_engine.h"
+	CUUID_NODE_HEADER="xapiand_cuuid_node.h"
 )
 
 # msgpack: bundled msgpack-c fork + MsgPack COW value + xchange adaptors +
@@ -662,7 +661,7 @@ FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashe
 FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
-add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(MSGPACK_EXCEPTION_HEADER="xapiand_exception.h")
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -770,7 +769,7 @@ FetchContent_MakeAvailable(task)
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 86fe7c476c64b86219350a999ee88467bf86269c)  # strata main: lazy segments by default, one device flush per open, unpin-after-kick
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -950,7 +949,7 @@ foreach(dep stash uinteger_t radix_router)
 	endif ()
 	include_directories("${${dep}_SOURCE_DIR}")
 endforeach ()
-add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")
+add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
 # zstd: the storage library's codec-in-header dispatch references the Zstandard
 # backend (compressor_zstd.{h,cc}), so zstd must be available now even though
@@ -1867,6 +1866,10 @@ message(STATUS "Compile flags: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_CMAK
 
 if (BUILD_TESTS)
 	enable_testing()
+	add_test(NAME test_config_relocatable COMMAND ${CMAKE_COMMAND}
+		-DTEMPLATE=${PROJECT_SOURCE_DIR}/config.h.in
+		-DWORK=${PROJECT_BINARY_DIR}/tests/config-relocatable
+		-P ${PROJECT_SOURCE_DIR}/tests/check_config_relocatable.cmake)
 	add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 endif ()
 
@@ -2045,6 +2048,8 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
 			)
+			target_compile_definitions(${PROJECT_TEST} PRIVATE
+				FIXTURES_PATH="${PROJECT_SOURCE_DIR}/oldtests")
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ

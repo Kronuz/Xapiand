@@ -295,6 +295,34 @@
       "closed": "FYI: Xapiand does not use consensus yet; Detent fixes core.h (D92)",
       "id": "msg-43",
       "text": "Detent found a pre-existing consensus Core livelock: an append round trip past rpc_timeout is re-sent, superseding the in-flight append, and the late response is dropped as unmatched; under ~5 ms of CPU per executor cycle (rpc_timeout 40 ms) nothing commits in 4 s. Detent quest consensus-late-append (D92) will fix it in core.h. If Xapiand runs consensus with a tight rpc_timeout on loaded loops, you may be exposed; no action needed from you, FYI and a heads-up the Core changes."
+    },
+    {
+      "at": "2026-11-12T19:58:58",
+      "by": "detent-lead",
+      "closed": "obsolete: agent-campaign:1dbe3a5..c74c179 (suite=CMD default gate, SKILL.md text) is on main and installed since 11-10",
+      "id": "msg-42",
+      "text": "Detent lead on msg-19 (lighter tools at agent-campaign:c74c179): go, with the owner's approval. 1) Add the SKILL.md sentence for `campaign config suite=CMD` yourself in the same push (replace the 'Direct path first' sentence about gate checks so it names suite=CMD as the default gate for new quests). 2) Land both in one push and bump dotfiles; tell me the commit and I re-accept the four acceptances on async-drivers-design, dense-pages and namespace-s5-1 that read void once. My local agent-campaign:e71fe6d and c8c8727 (job-slot fix, git -C rule in agent definitions) are still unpushed: rebase them onto yours or tell me and I will."
+    },
+    {
+      "at": "2026-11-13T07:28:07",
+      "by": "one-id",
+      "closed": "one-id landed with pool.h in its set (Xapiand:46edfb23e)",
+      "id": "msg-44",
+      "text": "one-id needs src/database/pool.h added to its file set: ShardEndpoint (declared there, not in shard.h) gets one member, the shard's id counter (high-water + dirty bit), loaded in open_blocking and persisted in do_commit (both in shard.cc). The alternative home, the engine adapter, needs src/engine/strata/shard.h, also outside the set. Proceeding with the pool.h member; say so if you want it elsewhere."
+    },
+    {
+      "at": "2026-11-13T07:41:21",
+      "by": "one-id",
+      "closed": "one-id landed with the mechanisms note in its set (Xapiand:46edfb23e)",
+      "id": "msg-45",
+      "text": "one-id also edits docs/mechanisms/document-ids-and-versions.md (outside its file set): it is the how-it-works note for ids, and it described new_did and the NumericId path that one-id removes. Please add it with src/database/pool.h (msg-44)."
+    },
+    {
+      "at": "2026-11-13T13:19:30",
+      "by": "exact-id-keys",
+      "closed": "src/query_dsl.cc added to exact-id-keys's file set",
+      "id": "msg-46",
+      "text": "exact-id-keys: the _id term search builds its term in src/query_dsl.cc (get_regular_query -> Serialise::MsgPack -> field_term in src/database/utils.cc), both outside the quest's file set. Serialise::MsgPack itself can't change for _id because range.cc uses it for the _id value slot (values stay old). Request: add src/query_dsl.cc to the file set (one branch: an _id field with a numeric type serialises via the new id codec). Default if no answer: I edit query_dsl.cc minimally and record it under Rulings."
     }
   ],
   "quests": {
@@ -1147,6 +1175,37 @@
       "status": "landed",
       "title": "Instrument engine seam usage",
       "updated": "2026-11-08T13:25:15"
+    },
+    "cheap-reopen": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/pool.*",
+        "src/engine/strata/**",
+        "docs/design/cheap-reopen.md",
+        "tests/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Reopening an evicted index costs near a cached open",
+      "updated": "2026-11-13T16:18:29"
     },
     "ci-quest-branches": {
       "accepted": {},
@@ -2551,6 +2610,34 @@
       "title": "Quick-tier key-value RocksDB comparison",
       "updated": "2026-11-08T15:39:20"
     },
+    "coverage-areas": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/**",
+        "harness/**",
+        "docs/dev/coverage.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "The six areas below 7c's coverage target reach it",
+      "updated": "2026-11-13T20:23:35"
+    },
     "cr1-fix": {
       "accepted": {},
       "after": [],
@@ -3850,6 +3937,8 @@
     "exact-id-keys": {
       "accepted": {},
       "after": [],
+      "base": "b37b42b0498ac975bafda90470806c960455e6ee",
+      "branch": "quest/xapiand/exact-id-keys",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -3866,11 +3955,26 @@
         "src/database/pool.h",
         "src/serialise.*",
         "src/engine/strata/*.cc",
+        "src/query_dsl.cc",
         "tests/**",
         "CMakeLists.txt",
         "docs/design/exact-id-keys.md",
         "docs/mechanisms/document-ids-and-versions.md",
         "docs/src/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-13T13:29:24",
+          "reason": "owner 11-13: land the id codec as a quick fix (~100 lines, formats open until release); proof is a failing-without test, suite and CI",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [
@@ -3882,10 +3986,11 @@
         "xapiand:id-terms"
       ],
       "repo": ".",
-      "risk": "high",
-      "status": "planned",
+      "risk": "normal",
+      "status": "active",
       "title": "Numeric ids are exact keys up to the integer range",
-      "updated": "2026-11-13T13:15:04"
+      "updated": "2026-11-13T13:29:24",
+      "worktree": "../Xapiand-wt/xapiand/exact-id-keys"
     },
     "f14-step1": {
       "accepted": {},
@@ -4039,8 +4144,35 @@
       "updated": "2026-11-08T15:39:28"
     },
     "flush-within-budget": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T19:39:03",
+          "base": "397c02d578cc495813426757d5022e14d88d506a",
+          "blobs": {
+            "docs/perf/flush-spill.md": "100644:849d364814c699106f4064df2fd379dd972c0708",
+            "include/strata/core/index.hh": "100644:c4a8a9d8e38b0c4a9af8a68a617f619c71c3a3ac",
+            "include/strata/core/section_io.hh": "100644:b6634d18f4da2656c6710828453b4c8ac5cc28e9",
+            "test/index_test.cc": "100644:f4b9aa32d6bb73b08242d5246f1db362619de69c"
+          },
+          "by": "review",
+          "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "criteria": "58f22ad5ff3c98b5",
+          "diffs": {
+            "docs/perf/flush-spill.md": "d3a7a8b66eac15a6",
+            "include/strata/core/index.hh": "e4c04d189ceaca2d",
+            "include/strata/core/section_io.hh": "4b7def4dfe278403",
+            "test/index_test.cc": "ab0e5b08f20fc1dd"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dc10c0f578c6aa839fd28a01c3db255886da5b36",
+          "reviewed": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
+      "base": "397c02d578cc495813426757d5022e14d88d506a",
+      "branch": "quest/xapiand/flush-within-budget",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4056,18 +4188,49 @@
         "test/index_test.cc",
         "docs/perf/**"
       ],
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-13T19:39:16",
+          "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+          "criteria": {
+            "A1": "261113-182303-c8b3af",
+            "A2": "261113-182306-1d133e",
+            "A3": "261113-182306-1d133e",
+            "A4": "261113-182306-1d133e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ecd11e7421e1dab0eb3104584eedcbbb418891b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-182306-1d133e",
+              "level": "light",
+              "seconds": 435.2,
+              "state": "done",
+              "what": "flush-within-budget check suite at ecd11e7421e1"
+            }
+          ],
+          "final": true,
+          "from": "397c02d578cc495813426757d5022e14d88d506a",
+          "reason": "",
+          "tested": "ecd11e7421e1dab0eb3104584eedcbbb418891b0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "landed",
       "title": "Indexing stays within its memory budget through the flush",
-      "updated": "2026-11-11T05:09:59"
+      "updated": "2026-11-13T19:39:20",
+      "worktree": ""
     },
     "flushmem": {
       "accepted": {},
@@ -5619,6 +5782,39 @@
       "title": "An MIT source and binary release",
       "updated": "2026-11-08T22:56:37"
     },
+    "light-share": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/*",
+        "src/database/pool.*",
+        "src/manager.*",
+        "harness/**",
+        "tests/**",
+        "docs/design/light-share.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Light requests keep their bound under heavy load",
+      "updated": "2026-11-13T20:23:33"
+    },
     "linux-sanitizers": {
       "accepted": {},
       "after": [],
@@ -6008,6 +6204,39 @@
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
       "updated": "2026-11-12T12:17:10",
       "worktree": ""
+    },
+    "lua-memory-bound": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/lua*",
+        "src/opts.*",
+        "src/script*",
+        "harness/**",
+        "tests/**",
+        "docs/src/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Lua memory has a node-wide bound below host RAM",
+      "updated": "2026-11-13T20:10:35"
     },
     "manifest-log": {
       "accepted": {
@@ -11059,7 +11288,7 @@
       "risk": "low",
       "status": "dropped",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-12T08:26:23",
+      "updated": "2026-11-13T21:25:02",
       "worktree": ""
     },
     "open-one-flush": {
@@ -13044,6 +13273,35 @@
       "updated": "2026-11-10T21:41:42",
       "worktree": ""
     },
+    "platform-rows": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        ".github/workflows/**",
+        "harness/**",
+        "docs/dev/freebsd.md",
+        "docs/dev/platforms.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "7c's rows pass on FreeBSD and arm64 in CI",
+      "updated": "2026-11-13T20:23:36"
+    },
     "pool-concurrency": {
       "accepted": {},
       "after": [],
@@ -13074,6 +13332,37 @@
       "status": "landed",
       "title": "Pool cleanup and wakeup fixes",
       "updated": "2026-11-08T13:25:08"
+    },
+    "pool-from-memory": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/opts.*",
+        "src/main.cc",
+        "src/database/pool.*",
+        "tests/**",
+        "docs/src/**",
+        "harness/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "The open-index pool is sized from memory, not a fixed 200",
+      "updated": "2026-11-13T16:18:27"
     },
     "pool-sweep-wait": {
       "accepted": {},
@@ -14148,7 +14437,7 @@
       "risk": "high",
       "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-12T08:26:54",
+      "updated": "2026-11-13T21:25:04",
       "worktree": ""
     },
     "reclaim-backlog": {
@@ -17901,6 +18190,39 @@
       "updated": "2026-11-09T11:44:42",
       "worktree": ""
     },
+    "wide-search-loop": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/*",
+        "src/query_dsl.cc",
+        "src/server/*",
+        "harness/**",
+        "tests/**",
+        "docs/design/wide-search-loop.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 8",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "A wide search never stalls the HTTP loops, alone or concurrent",
+      "updated": "2026-11-13T20:10:34"
+    },
     "write-buffer": {
       "accepted": {},
       "after": [],
@@ -18991,7 +19313,202 @@
       "worktree": ""
     },
     "x7-gate": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-13T20:26:55",
+          "base": "7251f1f7b109a4e64ae8f977d3186ce01d4184fb",
+          "blobs": {
+            "docs/design/phase7c.md": "100644:7c76cae40d3b19c6d5914ab1963a0cb8e4923a93",
+            "docs/gates/phase7c.md": "100644:1736836728ef980513bd87f9385ef0d1543548a0",
+            "harness/README.md": "100644:04e9cf659efc7bf47c25baafb89488e91a3d058b",
+            "harness/gate7c_rows.sh": "100755:2dd731b4bbd9fea80084ac93fd82673064fb6909",
+            "harness/lua_bounds.py": "100644:9e9101eb285760f0af42f1aca0643f943f23a4af",
+            "harness/stall_load.py": "100755:391dc10cd1422d5688fcdcb927edf0f6de35fff9",
+            "harness/test_gate_tools.py": "100755:8527ddebfdcc83377c5325f667973a8e1e236ddf",
+            "harness/wide_search_check.py": "100755:a97248d9f792daa7b869c1716419d2a7f9f5a42f"
+          },
+          "by": "review",
+          "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+          "criteria": "62caa4aed3ac4515",
+          "diffs": {
+            "docs/design/phase7c.md": "7017e0b4206ec762",
+            "docs/gates/phase7c.md": "709e38be184e3b56",
+            "harness/README.md": "13921d73e39d4b69",
+            "harness/gate7c_rows.sh": "f25c78ada3954771",
+            "harness/lua_bounds.py": "1419671961f165da",
+            "harness/stall_load.py": "d7e35fd68ba36afd",
+            "harness/test_gate_tools.py": "bbc334521da5d452",
+            "harness/wide_search_check.py": "da36af3ba2125b1d"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" && mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-rel -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=OFF -DLTO=OFF && cmake --build build-rel -j4 --target xapiand strata_check && cmake -S . -B build-asan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-asan -j4 && cmake --build build-asan -j4 --target strata_check || exit 2; (cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest -j3 --output-on-failure) >\"$JOB_OUT/ctest-asan.log\" 2>&1; c=$?; tail -5 \"$JOB_OUT/ctest-asan.log\"; harness/gate7c_rows.sh \"$PWD/build-rel/bin/xapiand\" \"$PWD/build-asan/bin/xapiand\" \"$JOB_OUT/rows\"; r=$?; echo \"ctest-asan rc=$c rows rc=$r\"; [ \"$c\" = 0 ] && [ \"$r\" = 0 ]'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164955-f95555",
+                  "level": "light",
+                  "seconds": 2880.4,
+                  "state": "done",
+                  "what": "x7-gate functional rows at the merged head (strata 397c02d5): Release + ASan/UBSan builds, ASan ctest, every gate7c_rows.sh row"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cat > \"$JOB_OUT/pairs.py\" <<'\"'\"'PYEOF'\"'\"'\n# pairs.py DIR GLOB KEY...: files NAME-<i>-<arm>.json in ABBA order; per key each arm'\"'\"'s values, cur/pre per adjacent pair.\nimport glob, json, os, re, statistics as st, sys\nd, pat, keys = sys.argv[1], sys.argv[2], sys.argv[3:]\nrows = sorted((int(m[1]), m[2], json.load(open(f))) for f in glob.glob(os.path.join(d, pat)) if (m := re.search(r\"-(\\d+)-(\\w+)\\.json$\", f)))\ndef get(o, k):\n    for p in k.split(\".\"):\n        o = o[int(p)] if isinstance(o, list) else o.get(p) if isinstance(o, dict) else None\n    return o\narms = sorted({a for _, a, _ in rows})\nfor k in keys:\n    seq = [(a, get(o, k)) for _, a, o in rows]\n    per = {a: [v for b, v in seq if b == a and v is not None] for a in arms}\n    print(k, {a: per[a] for a in arms}, {a: st.median(per[a]) for a in arms if per[a]})\n    if len(arms) == 2:\n        base, new = (\"pre\", \"cur\") if \"pre\" in arms else (arms[0], arms[1])\n        rs = []\n        for i in range(0, len(seq) - 1, 2):\n            x = dict(seq[i : i + 2])\n            if x.get(base) and x.get(new) is not None:\n                rs.append(x[new] / x[base])\n        if rs:\n            print(f\"  {new}/{base} per pair {[round(r, 3) for r in rs]}: median {st.median(rs):.3f}, range {min(rs):.3f}-{max(rs):.3f}\")\nPYEOF\nwrap() { printf '\"'\"'#!/bin/sh\\nXAPIAND_ENGINE=strata exec \"%s\" --solo \"$@\"\\n'\"'\"' \"$PWD/$1/bin/xapiand\" > \"$JOB_OUT/$2\"; chmod +x \"$JOB_OUT/$2\"; }\nstamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\nCUR=\"$PWD/build-cur/bin/xapiand\"; wrap build-pre pre.sh; wrap build-pre-hop pre-hop.sh\necho \"commit $(git rev-parse --short HEAD), $(sysctl -n hw.ncpu) CPUs, $(sysctl -n machdep.cpu.brand_string)\"\n# T4 and T5: ABBA arms at 20,000 accounts, light open loop at 200/s, 20 s phases, heavy 4 x reactors; then T5'\"'\"'s same-index run on cur.\ni=0; for arm in pre cur cur pre; do i=$((i+1)); b=\"$CUR\"; [ $arm = pre ] && b=\"$JOB_OUT/pre.sh\"\n  python3 harness/stall_load.py --bin \"$b\" --target 127.0.0.1:18980 --workdir \"$JOB_OUT/w\" --accounts-docs 20000 --phase both --rate 200 --duration 20 --no-assert --restore-prebuilt 8 --out \"$JOB_OUT/t45-$i-$arm.json\" 2> \"$JOB_OUT/t45-$i-$arm.log\"; echo \"arm $i $arm rc $?\"; grep -h \"light query\\|worst loop\\|CPU\\|client p50\" \"$JOB_OUT/t45-$i-$arm.log\"; done\npython3 harness/stall_load.py --bin \"$CUR\" --target 127.0.0.1:18980 --workdir \"$JOB_OUT/w\" --accounts-docs 20000 --phase loaded --restore-into accounts --rate 200 --duration 20 --no-assert --restore-prebuilt 8 --out \"$JOB_OUT/same-index-cur.json\" 2> \"$JOB_OUT/same-index-cur.log\"; echo \"same-index rc $?\"; grep -h \"light query\\|worst loop\" \"$JOB_OUT/same-index-cur.log\"\nrm -rf \"$JOB_OUT/w\"\npython3 \"$JOB_OUT/pairs.py\" \"$JOB_OUT\" '\"'\"'t45-*.json'\"'\"' phases.0.light.query.p99_us phases.1.light.query.p99_us phases.0.cpu_us_per_light phases.1.light.probe.all.parts.server.p99_us phases.1.light.probe.search.parts.server.p99_us phases.1.light.probe.pair.parts.server.p99_us phases.1.light.probe.all.parts.gen_wait.p99_us'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164926-89b9ef",
+                  "level": "exclusive",
+                  "seconds": 277.5,
+                  "state": "done",
+                  "what": "x7-gate T4+T5 at the merged head, build-cur built in-job (F2): pre-7c vs head ABBA, --restore-prebuilt 8, same-index run"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F3": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cat > \"$JOB_OUT/pairs.py\" <<'\"'\"'PYEOF'\"'\"'\n# pairs.py DIR GLOB KEY...: files NAME-<i>-<arm>.json in ABBA order; per key each arm'\"'\"'s values, cur/pre per adjacent pair.\nimport glob, json, os, re, statistics as st, sys\nd, pat, keys = sys.argv[1], sys.argv[2], sys.argv[3:]\nrows = sorted((int(m[1]), m[2], json.load(open(f))) for f in glob.glob(os.path.join(d, pat)) if (m := re.search(r\"-(\\d+)-(\\w+)\\.json$\", f)))\ndef get(o, k):\n    for p in k.split(\".\"):\n        o = o[int(p)] if isinstance(o, list) else o.get(p) if isinstance(o, dict) else None\n    return o\narms = sorted({a for _, a, _ in rows})\nfor k in keys:\n    seq = [(a, get(o, k)) for _, a, o in rows]\n    per = {a: [v for b, v in seq if b == a and v is not None] for a in arms}\n    print(k, {a: per[a] for a in arms}, {a: st.median(per[a]) for a in arms if per[a]})\n    if len(arms) == 2:\n        base, new = (\"pre\", \"cur\") if \"pre\" in arms else (arms[0], arms[1])\n        rs = []\n        for i in range(0, len(seq) - 1, 2):\n            x = dict(seq[i : i + 2])\n            if x.get(base) and x.get(new) is not None:\n                rs.append(x[new] / x[base])\n        if rs:\n            print(f\"  {new}/{base} per pair {[round(r, 3) for r in rs]}: median {st.median(rs):.3f}, range {min(rs):.3f}-{max(rs):.3f}\")\nPYEOF\nwrap() { printf '\"'\"'#!/bin/sh\\nXAPIAND_ENGINE=strata exec \"%s\" --solo \"$@\"\\n'\"'\"' \"$PWD/$1/bin/xapiand\" > \"$JOB_OUT/$2\"; chmod +x \"$JOB_OUT/$2\"; }\nstamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\nCUR=\"$PWD/build-cur/bin/xapiand\"; wrap build-pre pre.sh; wrap build-pre-hop pre-hop.sh\necho \"commit $(git rev-parse --short HEAD), $(sysctl -n hw.ncpu) CPUs, $(sysctl -n machdep.cpu.brand_string)\"\n# A16 at a scale one 10-minute strict job holds: 2,500 indexes, 10 searches after the opening one (10,000 took 1,233 s to create in 261111-165347-d979c7).\npython3 harness/wide_search_check.py gate \"$CUR\" \"$JOB_OUT/wide\" 18970 --indexes 2500 --runs 10; r=$?; rm -rf \"$JOB_OUT/wide/data\"; exit $r'",
+                  "commit": "c43ebf6c2158a32611a209af3e40833291928a39",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-191709-809e9e",
+                  "level": "strict",
+                  "seconds": 150.0,
+                  "state": "done",
+                  "what": "x7-gate A16 at the merged head, 2,500 indexes, default pool, build-cur built in-job (F2); SR3 window max at c43ebf6c2158"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F4": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'stamp() { git ls-tree HEAD CMakeLists.txt cmake config.h.in package_config.h.in contrib src | git hash-object --stdin; }\n# F2: the binary this job times is built here, at this job'\"'\"'s commit (a no-op after the builds job); its stamp is the source it came from.\nrm -f build-cur/source.stamp\n[ -f build-cur/CMakeCache.txt ] || cmake -S . -B build-cur -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps-cur\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF -DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer > \"$JOB_OUT/build-cur.log\" 2>&1\ncmake --build build-cur -j4 --target xapiand >> \"$JOB_OUT/build-cur.log\" 2>&1 || { tail -30 \"$JOB_OUT/build-cur.log\"; echo \"build-cur failed\"; exit 3; }\nstamp > build-cur/source.stamp\n[ \"$(cat build-cur/source.stamp)\" = \"$(stamp)\" ] || { echo \"build-cur stamp differs from the checkout\"; exit 3; }\necho \"build-cur built in this job at $(git rev-parse --short HEAD): source stamp $(cat build-cur/source.stamp), strata $(git -C .deps-cur/strata-src rev-parse --short HEAD), binary $(stat -f %Sm build-cur/bin/xapiand); build-pre from $(sed -n '\"'\"'s/^CMAKE_HOME_DIRECTORY:INTERNAL=//p'\"'\"' build-pre/CMakeCache.txt) (142b2ca77)\"\n# T13 per-open-index cost (d979c7'\"'\"'s measure: --pool 10000, 3 searches) on the 10,000 indexes the light job created; memory, not timing.\npython3 harness/wide_search_check.py gate build-cur/bin/xapiand \"$PWD/build-wide10k\" 18970 --indexes 10000 --runs 3 --pool 10000 --reuse; r=$?; rm -rf \"$PWD/build-wide10k\"; exit $r'",
+                  "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+                  "docs": [
+                    "docs/gates/phase7c.md",
+                    "docs/perf/a16-many-index-regression.md",
+                    "docs/perf/a16_probe.sh"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-164953-250830",
+                  "level": "light",
+                  "seconds": 20.4,
+                  "state": "done",
+                  "what": "x7-gate T13 per-open-index cost at the merged head: --pool 10000, 3 searches, on A16's 10,000 indexes (d979c7's measure)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "71a7aa98678c554edeb2cb4ff92e21c8c87aa6d6",
+          "reviewed": "4909eae7ec26d6c037a0729e6e01460d384a8261",
+          "verdict": "CHANGES"
+        },
+        "security": {
+          "at": "2026-11-13T20:26:58",
+          "base": "7251f1f7b109a4e64ae8f977d3186ce01d4184fb",
+          "blobs": {
+            "docs/design/phase7c.md": "100644:7c76cae40d3b19c6d5914ab1963a0cb8e4923a93",
+            "docs/gates/phase7c.md": "100644:1736836728ef980513bd87f9385ef0d1543548a0",
+            "harness/README.md": "100644:04e9cf659efc7bf47c25baafb89488e91a3d058b",
+            "harness/gate7c_rows.sh": "100755:2dd731b4bbd9fea80084ac93fd82673064fb6909",
+            "harness/lua_bounds.py": "100644:9e9101eb285760f0af42f1aca0643f943f23a4af",
+            "harness/stall_load.py": "100755:391dc10cd1422d5688fcdcb927edf0f6de35fff9",
+            "harness/test_gate_tools.py": "100755:8527ddebfdcc83377c5325f667973a8e1e236ddf",
+            "harness/wide_search_check.py": "100755:a97248d9f792daa7b869c1716419d2a7f9f5a42f"
+          },
+          "by": "review",
+          "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+          "criteria": "62caa4aed3ac4515",
+          "diffs": {
+            "docs/design/phase7c.md": "7017e0b4206ec762",
+            "docs/gates/phase7c.md": "709e38be184e3b56",
+            "harness/README.md": "13921d73e39d4b69",
+            "harness/gate7c_rows.sh": "f25c78ada3954771",
+            "harness/lua_bounds.py": "1419671961f165da",
+            "harness/stall_load.py": "d7e35fd68ba36afd",
+            "harness/test_gate_tools.py": "bbc334521da5d452",
+            "harness/wide_search_check.py": "da36af3ba2125b1d"
+          },
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x7-gate-security/lua_mem_seq.sh",
+                  "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+                  "docs": [
+                    "docs/gates/phase7c.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-200618-9d59ed",
+                  "level": "light",
+                  "seconds": 40.2,
+                  "state": "done",
+                  "what": "x7-gate security review: Lua memory held after sequential distinct scripts"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "S2": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-x7-gate-security/wide.sh",
+                  "commit": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+                  "docs": [
+                    "docs/gates/phase7c.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261113-195248-848197",
+                  "level": "strict",
+                  "seconds": 175.9,
+                  "state": "done",
+                  "what": "x7-gate security review: wide-search starvation, 2,000 indexes, 16/64 clients"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "4c51845290d7aea0f2003d23b1ccc5079475cef5",
+          "reviewed": "8fe4fe51a2e1ef5c5f9bc2db7ee259635a55839a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "ddaca9d01e0a66d3ca54ec98b2ed730ef848aef4",
       "branch": "quest/xapiand/x7-gate",
@@ -19388,10 +19905,152 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-13T20:52:19",
+          "commit": "dc1939b3fd21664145aba2b2486f4cd083ddf9b8",
+          "criteria": {
+            "A1": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A10": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164933-460810 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A11": "261113-202441-854ba3",
+            "A12": "261113-164929-53a2d2 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164931-09250a (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A13": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164953-250830 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-191724-166dd3 (passed at c43ebf6c2158; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A14": "`docs/gates/phase7c.md` (every row scored, misses stated, the build behind each number)",
+            "A15": "D90: MISS carried to platform-rows; Linux VM 16b520, 13 of 14 gating rows pass, `t10_lua`'s flood limit unproven (227.0 ms, light VM job); FreeBSD a stated miss (owner D86); arm64 not run",
+            "A16": "261113-191709-809e9e (passed at c43ebf6c2158; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164938-d63930 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164951-e5baa9 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A17": "PASS: build-test 261113-165003-4bde4b; rows 261113-164955-f95555 (`t1_strict_owed`)",
+            "A18": "`docs/design/phase7c.md` (D16)",
+            "A19": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A2": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A20": "PASS: build-test 261113-165003-4bde4b",
+            "A21": "261113-202444-612843, 261113-202448-cfa150, 261113-202450-16c39c",
+            "A22": "`docs/perf/shard-view.md`: PASS (measured in x7-view-bench), 18.6 ns per call at 1 thread, 20.3 ns at 8",
+            "A23": "D53 (T4 reads the control loop only while busy)",
+            "A24": "261113-164929-53a2d2 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh), 261113-164931-09250a (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A3": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A4": "261113-164926-89b9ef (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A5": "261113-164926-89b9ef (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A6": "D90: reported (gated at Phase 6), Linux VM 16b520, 2x RAM unloaded 330.5 per 1,000, loaded 110,093 per 1,000 (99.1% on reactors, light p99 23.2 s); in RAM 0. Phase 6's target is 1 per 1,000",
+            "A7": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A8": "261113-164955-f95555 (passed at d53d85c224c0; ignores docs-only docs/gates/phase7c.md, docs/perf/a16-many-index-regression.md, docs/perf/a16_probe.sh)",
+            "A9": "PASS with a part not shown: build-test 261113-165003-4bde4b (x7-cancel-rows tests; their mutants ran in the landed quest x7-cancel-rows); \"within one slice\" not shown: freed 2.1-3.1 ms after the close"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-4bde4b",
+              "level": "light",
+              "seconds": 223.9,
+              "state": "done",
+              "what": "x7-gate check build-test at d53d85c224c0"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-fb9907",
+              "level": "light",
+              "seconds": 182.5,
+              "state": "done",
+              "what": "x7-gate check e2e at d53d85c224c0"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:ThreadSanitizer",
+              "commit": "9173797f2c89c6e57c13780e2f43721b0625d4c6",
+              "state": "done"
+            },
+            {
+              "cmd": "mkdir -p sdkinc && for f in zlib.h zconf.h uuid; do ln -sfn \"$(xcrun --show-sdk-path)/usr/include/$f\" \"sdkinc/$f\"; done && cmake -S . -B build-tsan -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF -DCMAKE_C_COMPILER=/usr/local/opt/llvm@22/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@22/bin/clang++ \"-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_C_FLAGS=-fsanitize=thread -fno-omit-frame-pointer -g1\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -L/usr/local/opt/llvm@22/lib/c++ -Wl,-rpath,/usr/local/opt/llvm@22/lib/c++\" -DZLIB_INCLUDE_DIR=\"$PWD/sdkinc\" -DUUID_INCLUDE_DIR=\"$PWD/sdkinc\" && cmake --build build-tsan -j4 && TSAN_OPTIONS=log_path=\"$JOB_OUT/san\" python3 harness/engine_mixed_load.py build-tsan/bin/xapiand \"$JOB_OUT/t7\" --engine strata --secs 600 --term-at 300",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165003-2b6d6d",
+              "level": "light",
+              "seconds": 1463.0,
+              "state": "done",
+              "what": "x7-gate check t7-tsan at d53d85c224c0"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && BIN=\"$PWD/build/bin/xapiand\" harness/run_all.sh recovery",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165004-4bafe6",
+              "level": "light",
+              "seconds": 417.5,
+              "state": "done",
+              "what": "x7-gate check recovery at d53d85c224c0"
+            },
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && harness/removed_options_check.sh build/bin/xapiand && ! git grep -n -E 'num_committers|DatabaseCleanup' -- src ARCHITECTURE.md",
+              "commit": "d53d85c224c0e2adbafaefd599ca9c9c3d8a5092",
+              "docs": [
+                "docs/gates/phase7c.md",
+                "docs/perf/a16-many-index-regression.md",
+                "docs/perf/a16_probe.sh"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261113-165004-905bcf",
+              "level": "light",
+              "seconds": 61.4,
+              "state": "done",
+              "what": "x7-gate check removed at d53d85c224c0"
+            }
+          ],
+          "final": true,
+          "from": "cb42383a4f25febde813c76202620e133b94c503",
+          "later": [
+            "261113-211658-c912de",
+            "261113-211658-da1502"
+          ],
+          "reason": "",
+          "tested": "9173797f2c89c6e57c13780e2f43721b0625d4c6"
+        }
+      ],
       "lenses": [
         "correctness",
         "security"
+      ],
+      "messages": [
+        {
+          "answered": "dc1939b3fd21",
+          "at": "2026-11-12T05:22:20",
+          "by": "xapiand-lead",
+          "id": "msg-1",
+          "text": "Lead: phase7c.md amendment from x7-loop-fix-c (land it with x7-gate's doc edits; text in /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/x7-loop-fix-c/.campaign/xapiand/journal/x7-loop-fix-c.md, section 'For x7-gate'): D4's flush row gains RESTORE writes in a shard's turn with engine chores inline; D12's RESTORE sentence becomes the fix (c) description (query chores prepare, flush chores write per shard under at most W children, new numeric ids and post-placement misses serial after the join, in input order). Apply when fix (c) lands; until then it describes unlanded code."
+        }
       ],
       "milestone": "Phase 7c",
       "needs": [
@@ -19401,10 +20060,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Phase 7c's gate on master",
-      "updated": "2026-11-11T14:35:51",
-      "worktree": "../Xapiand-wt/xapiand/x7-gate"
+      "updated": "2026-11-13T21:28:55",
+      "worktree": ""
     },
     "x7-http-repin": {
       "accepted": {},

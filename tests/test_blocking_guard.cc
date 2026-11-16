@@ -50,6 +50,16 @@
 #include "shutdown_wait.h"
 #include "task.hh"
 
+#if defined(__has_feature)
+#  if __has_feature(thread_sanitizer)
+#    define BLOCKING_GUARD_TSAN 1
+#  endif
+#endif
+#if defined(__SANITIZE_THREAD__) || defined(BLOCKING_GUARD_TSAN)
+// guard_fires forks after the control loop's threads exist; the child starts threads of its own.
+extern "C" const char* __tsan_default_options() { return "die_after_fork=0"; }
+#endif
+
 namespace {
 
 task::task<int> answer() {

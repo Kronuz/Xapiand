@@ -280,10 +280,14 @@ def main():
             failures.append(f"the log grew {log_grown} bytes")
 
         # Ten swallowers at once, the shape that used to wedge every reactor.
+        # Ten share the reactors, so each may wait for others' bounds: four bounds' time each.
         swallow_statuses = [None] * 10
+        swallow_secs = [None] * 10
 
         def swallower(i):
-            swallow_statuses[i] = request(args.port, "PUT", f"/lua_swallow{i}/doc?commit", script_doc(SWALLOW_LATE.format(call="pcall", handler=""), x=1), timeout=120)[0]
+            t0 = time.perf_counter()
+            swallow_statuses[i] = request(args.port, "PUT", f"/lua_swallow{i}/doc?commit", script_doc(SWALLOW_LATE.format(call="pcall", handler=""), x=1), timeout=max(120, 4 * args.max_bound_secs))[0]
+            swallow_secs[i] = round(time.perf_counter() - t0, 1)
 
         threads = [threading.Thread(target=swallower, args=(i,)) for i in range(10)]
         for t in threads:
@@ -296,7 +300,7 @@ def main():
                 pass
         for t in threads:
             t.join()
-        print(f"10 swallowing requests at once: fresh GETs answered {answered}/20; the requests answered {swallow_statuses}")
+        print(f"10 swallowing requests at once: fresh GETs answered {answered}/20; the requests answered {swallow_statuses} in {swallow_secs} s")
         if answered != 20:
             failures.append(f"only {answered} of 20 GETs were answered beside ten swallowing requests")
         if swallow_statuses != [400] * 10:

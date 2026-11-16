@@ -21,7 +21,7 @@ interleaved trials, 95% bootstrap interval, under `exclusive` jobs of at most 30
 - A3 T3 recovery: `wal_recovery_check.sh` and `engine_crash_check.sh --reactors 2` pass; writers on two reactors killed mid-run replay to the model: the `recovery` check
 - A4 T4 reactor stall: p99 lag at most the 1,024 µs edge on every loop under the mixed load, p99.9 and max reported; under the standard mixed load, a script-heavy row reporting the per-call bound instead (X4-R1 carried condition): `stall_load.py --phase loaded` jobs
 - A5 T5 light-query p99 under heavy load at most 2x its unloaded p99 + 1 ms and below the pre-7c baseline; the same-index run reported as Q6's cost: `stall_load.py` jobs
-- A6 T6 reactor faults per 1,000 queries at 2x RAM reported (gated at Phase 6, D15): a Linux VM job, `--index-size 2xram`
+- A6 [decision] T6 reactor faults per 1,000 queries at 2x RAM reported (gated at Phase 6, D15): reported by Linux 261113-165001-16b520 (that job fails only on `t10_lua`), fix carried by D90 to pool-from-memory/cheap-reopen and Phase 6
 - A7 T7 concurrency and shutdown: 0 TSan and 0 ASan reports; the final dump equals the model; SIGTERM at 300 s exits 0 with every acknowledged write durable: the `t7-tsan` check and an ASan run
 - A8 T8 overload: light and heavy overloads each give non-zero 503s within one slice of the cap; in-flight and demoted peaks reported; RSS within 10% of T4's run; a 16-record registry gives 503s, not errors: `stall_load.py --overload` jobs, `test_readers_cap`
 - A9 T9 cancellation: a disconnected read frees its reactor within one slice and the cancel counter rises; a half-closed write completes durably: the `build-test` check
@@ -30,7 +30,7 @@ interleaved trials, 95% bootstrap interval, under `exclusive` jobs of at most 30
 - A12 T12 RESTORE docs/s and saturated query QPS each at least 1.0x pre-7c master, on a host with more than 10 CPUs, the CPU count stated: `profile_bulk.sh`, `loadtest.py` jobs
 - A13 T13 every gate: ASan, UBSan, TSan; coverage at TESTING.md's targets; restore corpora replayed; per-open-index cost at 10,000 open indexes and the reader registry's bytes stated (X3-5 carried): the `asan` and `tsan` checks and a coverage job
 - A14 [artifact] The gate report, every row with its commit and jobs: `docs/gates/phase7c.md`
-- A15 C5: Linux and FreeBSD runs of the gate's functional rows (owed since 7a; arm64 before 7b): Linux VM jobs and CI's FreeBSD job
+- A15 [decision] C5: Linux and FreeBSD runs of the gate's functional rows (owed since 7a; arm64 before 7b): stated as a miss and carried by D90 to platform-rows
 
 Carried conditions (road-to-release "Carried conditions"; ledgers named):
 
@@ -40,7 +40,7 @@ Carried conditions (road-to-release "Carried conditions"; ledgers named):
 - A19 X6: the stop's worst case is one bound, not the graceful wait plus 70 s; `--committers`, `num_committers` and the `DatabaseCleanup` box are gone (carried "X6"): the `removed` check and `graceful_shutdown_check.sh`
 - A20 X3-1 C3: `StrataReaders::claimed()` uses the registry's non-allocating `claimed()`, and the admission gate stays at `readers_per_index` until X3-2 (carried "X3-1's C3"; `pins-2026-11` records C3 met): the `build-test` check
 - A21 One shape everywhere: CPU per request and p99 on Linux x86-64 plus one macOS check, allocations and handlers per request no worse than head; L3's review probes rerun on the new API (carried "One shape everywhere"): jobs, against the threshold the owner sets (PLAN open question 7)
-- A22 X3-4: `Shard::view()` measured at 1 and 8 threads on one index (phase7c-x3 ledger, Remaining): job
+- A22 [artifact] X3-4: `Shard::view()` measured at 1 and 8 threads on one index (phase7c-x3 ledger, Remaining): `docs/perf/shard-view.md`
 - A23 [decision] T4's treatment of the control loop's 100 ms idle probe (probe at 1 ms always, or read only while busy) (phase7c S1 finding 1): a Decisions row
 - A24 Perf: the sliced-search residual and the keep-alive watch byte's extra read settled before T12 (road-to-release Perf; `perf-watch-peek`; the prospect half landed at prospect:5c98f81, 1.010 to 1.028 of the pre-sliced loop, and the lead confirms it suffices): T12's jobs at a master pinning both
 

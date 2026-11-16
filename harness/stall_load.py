@@ -30,6 +30,9 @@ One node, two kinds of load, measured together:
   heavy  4x the reactor count in closed-loop clients: exhaustive searches with aggregations, wildcard
          and phrase searches, and a RESTORE stream into its own index `restore-target`
          (--restore-into accounts writes `accounts` itself, which is Q6's cost).
+  held   T8's overload: rounds of F x the in-flight cap in requests (single-term searches, or heavy ones),
+         each head sent with its body withheld until the round's 503s show the cap refused the excess; the
+         heavy overload runs beside light at --rate, which meets the demoted cap's 503.
 
 `accounts` holds --accounts-docs documents (default 1,000,000), loaded in 20,000-document RESTOREs.
 Every phase writes light p50/p99/p99.9, per-loop lag deltas from :metrics, 503 and error counts,
@@ -38,7 +41,7 @@ in-flight and demoted peaks, segment count and merge backlog, RSS and phase time
   stall_load.py --bin build/bin/xapiand --out run.json                  unloaded then loaded
   stall_load.py --bin BIN --phase loaded --restore-into accounts        T5's same-index run
   stall_load.py --bin BIN --saturate                                    find the saturating light rate
-  stall_load.py --bin BIN --overload light 4  |  --overload heavy 4     T8
+  stall_load.py --bin BIN --overload light 1.25  |  --overload heavy 1.25   T8: hold 1.25x the in-flight cap
   stall_load.py --bin BIN --dry-run                                     20,000 documents, short phases
 
 --bin starts a node in --workdir and removes it (process and files) on exit;
@@ -57,6 +60,7 @@ import math
 import os
 import random
 import re
+import resource
 import shutil
 import signal
 import socket
@@ -71,6 +75,7 @@ DATASET = os.path.join(REPO, "docs", "public", "assets", "accounts.ndjson")
 CHUNK_DOCS = 20_000
 JSON_CT = "application/json"
 NDJSON_CT = "application/x-ndjson"
+INFLIGHT_CAP = 1_000  # requests in flight per reactor before a 503 (src/manager.cc, D2)
 
 # Heavy bodies: exhaustive aggregations, wildcard and phrase searches, a text scan.
 HEAVY_QUERIES: list[tuple[str, dict[str, Any]]] = [
@@ -108,10 +113,14 @@ class HttpError(Exception):
 
 
 class Conn:
+    split_write = False  # P1 H1: write a large body apart from the head (no 20 MB concatenation on the loop)
+
     def __init__(self, host: str, port: int) -> None:
         self.host, self.port = host, port
         self.reader: asyncio.StreamReader | None = None
         self.writer: asyncio.StreamWriter | None = None
+        self.server_s = 0.0  # P1 probe: the last response's Response-Time (server begins->ends), seconds
+        self.sent_at = 0.0  # P1 probe: loop time the last request was handed to the socket
 
     async def close(self) -> None:
         if self.writer is not None:
@@ -135,13 +144,36 @@ class Conn:
             raise
 
     async def _request(self, method: str, path: str, body: bytes, content_type: str) -> tuple[int, bytes]:
+        await self.connect()
+        head = self.head(method, path, len(body), content_type)
+        if Conn.split_write and len(body) > 65536:  # no 20 MB concatenation on the loop
+            await self.send(head, body)
+        else:
+            await self.send(head + body)
+        return await self.response()
+
+    async def connect(self) -> None:
         if self.writer is None or self.reader is None:
             self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
-        head = f"{method} {path} HTTP/1.1\r\nHost: {self.host}:{self.port}\r\nContent-Length: {len(body)}\r\n"
-        if body:
+
+    def head(self, method: str, path: str, length: int, content_type: str = JSON_CT) -> bytes:
+        head = f"{method} {path} HTTP/1.1\r\nHost: {self.host}:{self.port}\r\nContent-Length: {length}\r\n"
+        if length:
             head += f"Content-Type: {content_type}\r\n"
-        self.writer.write(head.encode() + b"\r\n" + body)
+        return head.encode() + b"\r\n"
+
+    async def send(self, data: bytes, more: bytes = b"") -> None:
+        assert self.writer is not None
+        self.sent_at = asyncio.get_running_loop().time()
+        self.writer.write(data)
+        if more:
+            self.writer.write(more)
         await self.writer.drain()
+
+    async def response(self) -> tuple[int, bytes]:
+        """Read one response; a `Connection: close` or an unframed body closes the connection after it."""
+        assert self.reader is not None
+        self.server_s = 0.0
         status_line = await self.reader.readline()
         if not status_line:
             raise HttpError("connection closed")
@@ -162,6 +194,9 @@ class Conn:
                 chunked = True
             elif k == "connection" and "close" in v:
                 close = True
+            elif k == "response-time":
+                with contextlib.suppress(ValueError):
+                    self.server_s = float(v)
         if chunked:
             parts: list[bytes] = []
             while True:
@@ -217,6 +252,11 @@ class Node:
                 "-D",
                 os.path.join(self.workdir, "data"),
             ]
+            if args.processors > 0:
+                cmd += ["--processors", str(args.processors)]
+            if args.index_size:
+                # Its own cgroup (systemd-run --scope execs in place, so the pid is the node's): T6 caps its memory.
+                cmd = ["systemd-run", "--user", "--scope", "--quiet", "--collect", "--", *cmd]
             self.proc = subprocess.Popen(cmd, stdout=logf, stderr=logf, env=env, start_new_session=True)
             atexit.register(self.stop)
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -269,6 +309,92 @@ class Node:
             ["ps", "-o", "rss=", "-p", str(self.proc.pid)], capture_output=True, text=True, check=False
         ).stdout.strip()
         return int(out) if out else None
+
+    def cpu_s(self) -> float | None:
+        """The node's user + system CPU seconds so far."""
+        if self.proc is None:
+            return None
+        return process_cpu_s(self.proc.pid)
+
+
+def process_cpu_s(pid: int) -> float | None:
+    """User + system CPU seconds of `pid`: /proc's clock ticks on Linux, `ps -o time` (centiseconds) elsewhere."""
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            fields = f.read().rsplit(")", 1)[1].split()
+        return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+    except OSError:
+        pass
+    out = subprocess.run(["ps", "-o", "time=", "-p", str(pid)], capture_output=True, text=True, check=False).stdout
+    if not out.strip():
+        return None
+    secs = 0.0
+    for part in out.strip().split(":"):
+        secs = secs * 60 + float(part)
+    return secs
+
+
+def thread_major_faults(pid: int | None) -> dict[int, tuple[str, int]] | None:
+    """Each thread's (name, major faults) from /proc/PID/task; None off Linux."""
+    if pid is None or not os.path.isdir(f"/proc/{pid}/task"):
+        return None
+    out: dict[int, tuple[str, int]] = {}
+    for tid in os.listdir(f"/proc/{pid}/task"):
+        with contextlib.suppress(OSError):
+            with open(f"/proc/{pid}/task/{tid}/stat") as f:
+                text = f.read()
+            name = text[text.index("(") + 1 : text.rindex(")")]
+            out[int(tid)] = (name, int(text.rsplit(")", 1)[1].split()[9]))
+    return out
+
+
+def faults_delta(
+    before: dict[int, tuple[str, int]] | None, after: dict[int, tuple[str, int]] | None, queries: int
+) -> dict[str, Any] | None:
+    """Major faults per thread name over a phase, and per 1,000 queries (T6)."""
+    if before is None or after is None:
+        return None
+    by_name: dict[str, int] = {}
+    for tid, (name, n) in after.items():
+        by_name[name] = by_name.get(name, 0) + n - before.get(tid, (name, 0))[1]
+    total = sum(by_name.values())
+    return {
+        "by_thread": dict(sorted(by_name.items())),
+        "total": total,
+        "queries": queries,
+        "per_1000_queries": round(total * 1000 / queries, 3) if queries else None,
+    }
+
+
+def cap_memory(node: Node, factor: float) -> dict[str, Any]:
+    """T6's "index at FACTOR x RAM": the node's cgroup reclaims down to its anonymous memory plus 1/FACTOR of the index.
+
+    memory.high, not memory.max: past it the kernel reclaims (page cache first) instead of killing the node."""
+    pid = node.pid
+    if pid is None or not os.path.isdir("/proc"):
+        raise SystemExit("--index-size needs a node this script started, on Linux")
+    with open(f"/proc/{pid}/cgroup") as f:
+        cg = "/sys/fs/cgroup" + f.read().strip().split("::", 1)[1]
+    index_bytes = sum(
+        os.path.getsize(os.path.join(d, n)) for d, _, ns in os.walk(os.path.join(node.workdir, "data")) for n in ns
+    )
+
+    def stat() -> dict[str, int]:
+        with open(os.path.join(cg, "memory.stat")) as f:
+            return {k: int(v) for k, v in (line.split() for line in f)}
+
+    anon = stat()["anon"]
+    limit = anon + int(index_bytes / factor)
+    with open(os.path.join(cg, "memory.high"), "w") as f:
+        f.write(str(limit))
+    after = stat()
+    return {
+        "cgroup": cg,
+        "index_bytes": index_bytes,
+        "anon_bytes": anon,
+        "memory_high": limit,
+        "file_bytes_after_cap": after["file"],
+    }
 
 
 # ---------------------------------------------------------------------------------------------
@@ -354,7 +480,8 @@ def parse_metrics(text: str) -> dict[str, dict[str, Any]]:
 
 
 def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    """Per-loop lag between two scrapes: wakes, p50, p99, p99.9 (bucket upper edges, us) and the max so far."""
+    """Per-loop lag between two scrapes: wakes, p50, p99, p99.9 and the window's max (bucket upper edges, us), and the
+    max since the node started."""
     out: dict[str, Any] = {}
     for loop, post in after["lag"].items():
         pre = before["lag"].get(loop, {"edges": [], "count": 0})
@@ -383,6 +510,7 @@ def lag_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
             "p50_us": q(0.50),
             "p99_us": q(0.99),
             "p999_us": q(0.999),
+            "max_us_window": q(1.0),
             "max_us_so_far": post["max_us"],
             "p99_within_1ms": (q(0.99) or 0) <= 1024,
         }
@@ -464,6 +592,18 @@ def summarize(values: list[int]) -> dict[str, Any]:
     }
 
 
+def refusal_reason(body: bytes) -> str:
+    """A 503's cause: a JSON error's message (the engine's reason), else the plain-text body."""
+    text = body.decode("utf-8", "replace").strip()
+    try:
+        message = json.loads(text).get("message", text)
+    except (ValueError, AttributeError):
+        message = text
+    if isinstance(message, list):
+        message = "; ".join(str(m) for m in message)
+    return str(message)[:80]
+
+
 @dataclass
 class Counts:
     ok: int = 0
@@ -471,12 +611,15 @@ class Counts:
     other: int = 0
     exceptions: int = 0
     first_errors: list[str] = field(default_factory=list)
+    reasons: dict[str, int] = field(default_factory=dict)  # 503s by body: which admission cap refused them
 
-    def add(self, status: int, what: str = "") -> None:
+    def add(self, status: int, what: str = "", body: bytes = b"") -> None:
         if status < 300 or status == 404 and what == "get":
             self.ok += 1
         elif status == 503:
             self.s503 += 1
+            reason = refusal_reason(body)
+            self.reasons[reason] = self.reasons.get(reason, 0) + 1
         else:
             self.other += 1
             if len(self.first_errors) < 5:
@@ -491,6 +634,7 @@ class Counts:
         return {
             "ok": self.ok,
             "http_503": self.s503,
+            "http_503_by_reason": self.reasons,
             "http_other": self.other,
             "exceptions": self.exceptions,
             "first": self.first_errors,
@@ -507,6 +651,7 @@ class LightResult:
     achieved_rate: float
     window_s: float
     unfinished: int
+    probe: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         everything = [v for vs in self.classes.values() for v in vs]
@@ -528,6 +673,7 @@ class LightResult:
             "search": summarize(self.classes["search"]),
             "pair": summarize(self.classes["pair"]),
             "errors": self.counts.as_dict(),
+            "probe": self.probe,
         }
 
 
@@ -557,29 +703,50 @@ async def run_light(
     last_done = [t0]
     completed = [0]
     inflight: dict[int, tuple[float, str]] = {}
+    probe_rows: list[tuple[str, float, float, float, float]] = []  # P1: kind, sched, first send, end, server s
+    gen_lag: list[tuple[float, float]] = []  # P1: (loop time, lateness s) of a 1 ms sleep in the generator
+    probing = [True]
+
+    async def lag_probe() -> None:
+        while probing[0]:
+            t = loop.time()
+            await asyncio.sleep(0.001)
+            gen_lag.append((t, loop.time() - t - 0.001))
+
+    probe_task = loop.create_task(lag_probe())
 
     async def unit(i: int, sched: float, kind: int, doc_id: int, state: str) -> None:
         inflight[i] = (sched, ("get", "search", "pair")[kind])
         conn = await pool.get()
         try:
+            server = 0.0
             if kind == 0:
                 what = "get"
-                status, _ = await conn.request("GET", f"/accounts/{doc_id}")
+                status, body = await conn.request("GET", f"/accounts/{doc_id}")
+                server = conn.server_s
             elif kind == 1:
                 what = "search"
-                status, _ = await conn.request(
+                status, body = await conn.request(
                     "SEARCH",
                     "/accounts/",
                     json.dumps({"_query": {"contact.state": state}, "_limit": 10}).encode(),
                 )
+                server = conn.server_s
             else:
                 what = "pair"
                 pid = pair_base + i
-                status, _ = await conn.request("PUT", f"/accounts/{pid}", body_row)
+                status, body = await conn.request("PUT", f"/accounts/{pid}", body_row)
+                server = conn.server_s
+                first_send = conn.sent_at
                 if status < 300:
-                    status, _ = await conn.request("GET", f"/accounts/{pid}")
+                    status, body = await conn.request("GET", f"/accounts/{pid}")
+                    server += conn.server_s
             end = loop.time()
-            counts.add(status, what)
+            if kind != 2:
+                first_send = conn.sent_at
+            if sched - t0 >= warmup:
+                probe_rows.append((what, sched, first_send, end, server))
+            counts.add(status, what, body)
             if sched - t0 >= warmup:
                 classes[what].append(int((end - sched) * 1e6))
             completed[0] += 1
@@ -614,6 +781,8 @@ async def run_light(
         if sched - t0 >= warmup:
             classes[what].append(int((cutoff - sched) * 1e6))
     unfinished = len(inflight)
+    probing[0] = False
+    await probe_task
     window = max(1e-9, last_done[0] - t0)
     for _ in range(pool.qsize()):
         await pool.get_nowait().close()
@@ -621,7 +790,52 @@ async def run_light(
     # Achieved is the rate the generator really sent at: units issued over the span it took to issue them. A
     # generator that falls behind its schedule misses the target; a slow server shows in the latencies instead.
     achieved = max(0, total - 1) / issue_span if total > 1 else rate
-    return LightResult(classes, counts, total, completed[0], rate, achieved, window, unfinished)
+    res = LightResult(classes, counts, total, completed[0], rate, achieved, window, unfinished)
+    res.probe = probe_split(probe_rows, gen_lag, t0)
+    return res
+
+
+def probe_split(
+    rows: list[tuple[str, float, float, float, float]], gen_lag: list[tuple[float, float]], t0: float
+) -> dict[str, Any]:
+    """P1: per light class, client latency split into generator wait (sched->send), server (Response-Time) and the
+    rest (sockets, the server loop before parse and after `ends`, the generator reading the response)."""
+    out: dict[str, Any] = {}
+    stalls = [(t, d) for t, d in gen_lag if d > 0.005]
+    for kind in ("get", "search", "pair", "all"):
+        rs = [r for r in rows if kind == "all" or r[0] == kind]
+        if not rs:
+            continue
+        lat = [int((e - s) * 1e6) for _, s, _, e, _ in rs]
+        cut = pct(lat, 99) or 0
+        tail = [r for r, x in zip(rs, lat) if x >= cut]
+
+        def parts(sel: list[tuple[str, float, float, float, float]]) -> dict[str, Any]:
+            gw = [int((sd - s) * 1e6) for _, s, sd, _, _ in sel]
+            sv = [int(sv * 1e6) for *_, sv in sel]
+            rest = [int((e - sd - sv) * 1e6) for _, _, sd, e, sv in sel]
+            return {"gen_wait": summarize(gw), "server": summarize(sv), "rest": summarize(rest)}
+
+        # A tail request overlaps a generator stall when a >5 ms stall began inside its [sched - 50 ms, end].
+        hit = sum(1 for _, s, _, e, _ in tail if any(s - 0.05 <= t <= e for t, _ in stalls))
+        out[kind] = {
+            "n": len(rs),
+            "client": summarize(lat),
+            "parts": parts(rs),
+            "tail_n": len(tail),
+            "tail_parts": parts(tail),
+            "tail_with_gen_stall": hit,
+        }
+    out["t0"] = t0
+    lags = [int(d * 1e6) for _, d in gen_lag]
+    out["generator_lag"] = {
+        **summarize(lags),
+        "stalls_over_5ms": len(stalls),
+        "stalls_over_20ms": sum(1 for _, d in stalls if d > 0.02),
+        "stalled_s": round(sum(d for _, d in stalls), 3),
+        "stall_times_s": [[round(t - t0, 2), round(d * 1e3, 1)] for t, d in stalls if d > 0.02][:60],
+    }
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
@@ -636,9 +850,11 @@ class HeavyResult:
     counts: Counts
     by_kind: dict[str, int]
     latencies: dict[str, list[int]]
+    restore_log: list[tuple[float, float, float, float]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
+            "restore_log": self.restore_log,
             "searches": self.searches,
             "restored_docs": self.restored_docs,
             "restore_requests": self.restore_requests,
@@ -656,15 +872,16 @@ async def run_heavy(
     duration: float,
     restore_index: str,
     restore_first_id: int,
-    open_rate: float = 0.0,
+    prebuilt: dict[int, bytes] | None = None,
 ) -> HeavyResult:
-    """Closed-loop heavy clients (one is the RESTORE stream); open_rate > 0 sends the searches open loop instead."""
+    """Closed-loop heavy clients; one is the RESTORE stream."""
     loop = asyncio.get_running_loop()
     end_at = loop.time() + duration
     counts = Counts()
     by_kind: dict[str, int] = {}
     lat: dict[str, list[int]] = {}
     restored = [0, 0]
+    restore_log: list[tuple[float, float, float, float]] = []  # P1: (start, body build s, round trip s, server s)
 
     async def search_client(n: int) -> None:
         conn = Conn(host, port)
@@ -674,8 +891,8 @@ async def run_heavy(
             i += 1
             t = loop.time()
             try:
-                status, _ = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
-                counts.add(status, kind)
+                status, body = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
+                counts.add(status, kind, body)
                 by_kind[kind] = by_kind.get(kind, 0) + 1
                 lat.setdefault(kind, []).append(int((loop.time() - t) * 1e6))
             except Exception as e:
@@ -688,13 +905,18 @@ async def run_heavy(
         next_id = restore_first_id
         while loop.time() < end_at:
             try:
-                status, _ = await conn.request(
-                    "RESTORE",
-                    f"/{restore_index}/",
-                    restore_body(rows, next_id, CHUNK_DOCS),
-                    NDJSON_CT,
+                tb = loop.time()
+                chunk = (
+                    prebuilt.pop(next_id)
+                    if prebuilt and next_id in prebuilt
+                    else restore_body(rows, next_id, CHUNK_DOCS)
                 )
-                counts.add(status, "restore")
+                tr = loop.time()
+                status, body = await conn.request("RESTORE", f"/{restore_index}/", chunk, NDJSON_CT)
+                restore_log.append(
+                    (round(tb, 3), round(tr - tb, 4), round(loop.time() - tr, 3), round(conn.server_s, 3))
+                )
+                counts.add(status, "restore", body)
                 if status < 300:
                     restored[0] += CHUNK_DOCS
                     restored[1] += 1
@@ -704,47 +926,156 @@ async def run_heavy(
                 conn = Conn(host, port)
         await conn.close()
 
-    async def open_search(rate: float) -> None:
-        pool: asyncio.Queue[Conn] = asyncio.Queue()
-        for _ in range(max(clients, 64)):
-            pool.put_nowait(Conn(host, port))
-        tasks: list[asyncio.Task[None]] = []
+    jobs = [search_client(n) for n in range(max(1, clients - 1))]
+    jobs.append(restore_client())
+    await asyncio.gather(*jobs)
+    res = HeavyResult(sum(by_kind.values()), restored[0], restored[1], counts, by_kind, lat)
+    res.restore_log = restore_log
+    return res
 
-        async def one(i: int, sched: float) -> None:
-            conn = await pool.get()
-            kind, q = HEAVY_QUERIES[i % len(HEAVY_QUERIES)]
-            try:
-                status, _ = await conn.request("SEARCH", "/accounts/", json.dumps(q).encode())
-                counts.add(status, kind)
-                by_kind[kind] = by_kind.get(kind, 0) + 1
-                lat.setdefault(kind, []).append(int((loop.time() - sched) * 1e6))
-            except Exception as e:
-                counts.exc(e, kind)
-                conn = Conn(host, port)
-            finally:
-                pool.put_nowait(conn)
 
+# ---------------------------------------------------------------------------------------------
+# Overload: more requests in flight than the admission cap
+
+
+@dataclass
+class HeldResult:
+    held: int
+    cap: int
+    rounds: list[dict[str, Any]]
+    counts: Counts
+    answered_us: list[int]
+    refused_us: list[int]
+    outstanding_peak: int
+
+    @property
+    def enforced(self) -> bool:
+        return bool(self.rounds) and all(r["enforced"] for r in self.rounds)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "held": self.held,
+            "cap": self.cap,
+            "enforced": self.enforced,
+            "outstanding_peak": self.outstanding_peak,
+            "in_flight_at_barrier_peak": max((r["in_flight_at_barrier"] for r in self.rounds), default=0),
+            "rounds": self.rounds,
+            "answered": summarize(self.answered_us),
+            "refused_at_barrier": summarize(self.refused_us),
+            "errors": self.counts.as_dict(),
+        }
+
+
+async def run_held(
+    host: str,
+    port: int,
+    requests: list[tuple[str, str, str, bytes]],
+    held: int,
+    cap: int,
+    duration: float,
+    settle: float = 0.25,
+    barrier_timeout: float = 30.0,
+) -> HeldResult:
+    """Rounds of `held` requests, each one's head sent and its body withheld until the round's barrier opens.
+
+    The server admits a request at headers-complete and holds it until its response is settled, so while the
+    bodies wait at most `cap` requests are admitted and the other `held - cap` must be refused with a 503: the cap
+    is exceeded by construction, on any host, whatever the server's or this client's speed. The barrier opens once
+    that many 503s came and no more for `settle` s, or after `barrier_timeout` s (the round is then not enforced).
+    `requests` are (what, method, path, body) cycled over the connections; rounds repeat for `duration` s.
+    """
+    loop = asyncio.get_running_loop()
+    conns = [Conn(host, port) for _ in range(held)]
+    opener = asyncio.Semaphore(64)  # a listen backlog is commonly 128
+    counts = Counts()
+    rounds: list[dict[str, Any]] = []
+    answered: list[int] = []
+    refused_us: list[int] = []
+    outstanding = [0, 0]  # heads sent and not answered: now, peak
+    end_at = loop.time() + duration
+
+    async def one(i: int, n: int, release: asyncio.Event, tally: dict[str, Any]) -> None:
+        conn = conns[i]
+        what, method, path, body = requests[(n * held + i) % len(requests)]
+        try:
+            async with opener:
+                await conn.connect()
+            await conn.send(conn.head(method, path, len(body)))
+        except Exception as e:
+            counts.exc(e, what)
+            await conn.close()
+            tally["sent"] += 1
+            return
+        t_sent = loop.time()
+        outstanding[0] += 1
+        outstanding[1] = max(outstanding[1], outstanding[0])
+        tally["sent"] += 1
+        reply = asyncio.ensure_future(conn.response())
+        gate = asyncio.ensure_future(release.wait())
+        try:
+            await asyncio.wait({reply, gate}, return_when=asyncio.FIRST_COMPLETED)
+            early = reply.done()
+            if not early:
+                await conn.send(body)
+            status, data = await asyncio.wait_for(reply, 300.0)
+            counts.add(status, what, data)
+            if early:
+                tally["early"] += 1
+                if status == 503:
+                    tally["refused"] += 1
+                    tally["last"] = loop.time()
+                    refused_us.append(int((loop.time() - t_sent) * 1e6))
+            else:
+                answered.append(int((loop.time() - tally["released"]) * 1e6))
+        except Exception as e:
+            counts.exc(e, what)
+            await conn.close()
+        finally:
+            gate.cancel()
+            reply.cancel()
+            outstanding[0] -= 1
+
+    n = 0
+    while not rounds or loop.time() < end_at:
         t0 = loop.time()
-        for i in range(int(rate * duration)):
-            sched = t0 + i / rate
-            delay = sched - loop.time()
-            if delay > 0.0005:
-                await asyncio.sleep(delay)
-            elif i % 64 == 0:
-                await asyncio.sleep(0)
-            tasks.append(loop.create_task(one(i, sched)))
-        _done, pending = await asyncio.wait(tasks, timeout=10.0)
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
+        release = asyncio.Event()
+        tally: dict[str, Any] = {"sent": 0, "early": 0, "refused": 0, "last": t0, "released": 0.0}
+        tasks = [loop.create_task(one(i, n, release, tally)) for i in range(held)]
+        deadline = t0 + barrier_timeout
+        while loop.time() < deadline and (
+            tally["sent"] < held or tally["refused"] < held - cap or loop.time() - tally["last"] < settle
+        ):
+            await asyncio.sleep(0.02)
+        at_barrier = outstanding[0]
+        tally["released"] = loop.time()
+        release.set()
+        await asyncio.gather(*tasks)
+        rounds.append(
+            {
+                "round": n,
+                "barrier_s": round(tally["released"] - t0, 3),
+                "seconds": round(loop.time() - t0, 3),
+                "in_flight_at_barrier": at_barrier,
+                "refused_at_barrier": tally["refused"],
+                "other_early_answers": tally["early"] - tally["refused"],
+                # At most `cap` held in flight and the rest refused, so the 503s come from exceeding the cap.
+                "enforced": tally["refused"] >= held - cap and at_barrier <= cap,
+            }
+        )
+        n += 1
+    for conn in conns:
+        await conn.close()
+    return HeldResult(held, cap, rounds, counts, answered, refused_us, outstanding[1])
 
-    if open_rate > 0:
-        await open_search(open_rate)
-    else:
-        jobs = [search_client(n) for n in range(max(1, clients - 1))]
-        jobs.append(restore_client())
-        await asyncio.gather(*jobs)
-    return HeavyResult(sum(by_kind.values()), restored[0], restored[1], counts, by_kind, lat)
+
+def held_requests(kind: str, rows: Rows) -> list[tuple[str, str, str, bytes]]:
+    """T8's held requests: single-term searches for the light overload, K3's heavy searches for the heavy one."""
+    if kind == "light":
+        return [
+            ("search", "SEARCH", "/accounts/", json.dumps({"_query": {"contact.state": st}, "_limit": 10}).encode())
+            for st in rows.states
+        ]
+    return [(k, "SEARCH", "/accounts/", json.dumps(q).encode()) for k, q in HEAVY_QUERIES]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -791,13 +1122,38 @@ async def phase(
     duration: float,
     assert_rate: bool = True,
     settle: bool = True,
-    heavy_rate: float = 0.0,
+    held: str = "",
 ) -> dict[str, Any]:
+    """One phase: light at `light_rate` (0: none), heavy clients if `heavy`, a held overload of kind `held`."""
     a = ctx.args
+    # P1 H1: the RESTORE bodies built before the clock starts, so the generator's loop never builds one mid-phase.
+    prebuilt = (
+        {
+            ctx.restore_first_id + k * CHUNK_DOCS: restore_body(
+                ctx.rows, ctx.restore_first_id + k * CHUNK_DOCS, CHUNK_DOCS
+            )
+            for k in range(a.restore_prebuilt)
+        }
+        if heavy and a.restore_prebuilt > 0
+        else None
+    )
     before = await scrape(ctx.ctl)
+    cpu_before = ctx.node.cpu_s()
+    faults_before = thread_major_faults(ctx.node.pid)
     t_start = time.time()
     heavy_clients = 4 * ctx.reactors if a.heavy_clients <= 0 else a.heavy_clients
     jobs: list[asyncio.Future[Any]] = []
+    held_task = None
+    if held:
+        cap = INFLIGHT_CAP * ctx.reactors
+        count = math.ceil(a.overload_factor * cap)
+        log(
+            f"{name}: {count} {held} requests held against an in-flight cap of {INFLIGHT_CAP} x {ctx.reactors} reactors"
+        )
+        held_task = asyncio.ensure_future(
+            run_held(ctx.node.host, ctx.node.port, held_requests(held, ctx.rows), count, cap, duration)
+        )
+        jobs.append(held_task)
     light_task = None
     if light_rate > 0:
         light_task = asyncio.ensure_future(
@@ -824,7 +1180,7 @@ async def phase(
                 duration + 0.3,
                 ctx.restore_index,
                 ctx.restore_first_id,
-                heavy_rate,
+                prebuilt=prebuilt,
             )
         )
         jobs.append(heavy_task)
@@ -833,6 +1189,8 @@ async def phase(
         await asyncio.sleep(duration / 2)
         census_result = await asyncio.get_running_loop().run_in_executor(None, census, ctx.node)
     await asyncio.gather(*jobs)
+    cpu_after = ctx.node.cpu_s()
+    faults_after = thread_major_faults(ctx.node.pid)
     after = await scrape(ctx.ctl)
     entry: dict[str, Any] = {
         "name": name,
@@ -847,6 +1205,7 @@ async def phase(
             "demoted": after["gauges"].get("xapiand_scheduler_demoted_peak"),
         },
         "rss_kb": ctx.node.rss_kb(),
+        "cpu_s": round(cpu_after - cpu_before, 3) if cpu_before is not None and cpu_after is not None else None,
         "index": {
             "accounts": await index_stats(ctx.node, "accounts", settle),
             **(
@@ -879,12 +1238,41 @@ async def phase(
         log(
             f"{name}: light query p50 {q['p50_us']} us, p99 {q['p99_us']} us, p99.9 {q['p999_us']} us over {q['n']}; errors {entry['light']['errors']['http_503']} 503, {entry['light']['errors']['http_other']} other, {entry['light']['errors']['exceptions']} exceptions"
         )
+        if entry["cpu_s"] is not None and res.issued and not heavy and not held:
+            entry["cpu_us_per_light"] = round(entry["cpu_s"] * 1e6 / res.issued, 1)
+            log(f"{name}: node CPU {entry['cpu_s']} s, {entry['cpu_us_per_light']} us per light request")
+    if held_task is not None:
+        res_h = held_task.result()
+        entry["held"] = res_h.as_dict()
+        ctx.assertions.append(
+            {
+                "phase": name,
+                "what": "every round held at most the in-flight cap and the rest were refused with 503",
+                "ok": res_h.enforced,
+                "held": res_h.held,
+                "cap": res_h.cap,
+            }
+        )
+        rs = res_h.rounds
+        e = entry["held"]["errors"]
+        log(
+            f"{name}: {len(rs)} rounds of {res_h.held} held, cap {res_h.cap}: in flight at the barrier "
+            f"{[r['in_flight_at_barrier'] for r in rs]}, refused {[r['refused_at_barrier'] for r in rs]} "
+            f"(peak outstanding {res_h.outstanding_peak}; {'enforced' if res_h.enforced else 'NOT ENFORCED'}); "
+            f"answered p50 {entry['held']['answered']['p50_us']} us; 503s {e['http_503_by_reason']}, "
+            f"{e['http_other']} other, {e['exceptions']} exceptions"
+        )
     if heavy_task is not None:
         entry["heavy"] = heavy_task.result().as_dict()
         h = entry["heavy"]
         log(
             f"{name}: heavy {h['searches']} searches, {h['restored_docs']} restored docs, errors {h['errors']['http_503']} 503, {h['errors']['http_other']} other"
         )
+    queries = (entry.get("light") or {}).get("completed", 0) + (entry.get("heavy") or {}).get("searches", 0)
+    entry["major_faults"] = faults_delta(faults_before, faults_after, queries)
+    if entry["major_faults"]:
+        mf = entry["major_faults"]
+        log(f"{name}: major faults {mf['total']} over {queries} queries ({mf['per_1000_queries']} per 1,000)")
     if entry["lag"]:
         worst = max((v["p99_us"] or 0, k) for k, v in entry["lag"].items())
         log(f"{name}: worst loop p99 lag {worst[0]} us ({worst[1]})")
@@ -944,21 +1332,6 @@ async def saturate(ctx: Ctx) -> dict[str, Any]:
     return result
 
 
-async def heavy_closed_rate(ctx: Ctx) -> float:
-    """The heavy searches' closed-loop throughput at 4x the reactor count in clients (their saturating rate)."""
-    clients = 4 * ctx.reactors if ctx.args.heavy_clients <= 0 else ctx.args.heavy_clients
-    res = await run_heavy(
-        ctx.node.host,
-        ctx.node.port,
-        ctx.rows,
-        clients + 1,
-        ctx.args.step_secs,
-        ctx.restore_index,
-        ctx.restore_first_id,
-    )
-    return res.searches / ctx.args.step_secs
-
-
 async def amain(args: argparse.Namespace) -> int:
     node = Node(args)
     rows = load_rows()
@@ -982,6 +1355,10 @@ async def amain(args: argparse.Namespace) -> int:
         f"{reactors} reactors; accounts {args.accounts_docs} documents loaded in {load_s:.1f} s; rate {args.rate}/s for {args.duration} s"
     )
     extra: dict[str, Any] = {}
+    if args.index_size:
+        factor = float(args.index_size.lower().removesuffix("xram"))
+        extra["index_size"] = {"requested": args.index_size, **cap_memory(node, factor)}
+        log(f"index at {args.index_size}: {json.dumps(extra['index_size'])}")
 
     if args.suite:
         # One load of `accounts` for the whole gate sequence: saturate, T5 (unloaded, loaded, same-index), T8.
@@ -995,37 +1372,14 @@ async def amain(args: argparse.Namespace) -> int:
         args.restore_into = "accounts"
         await phase(ctx, "loaded-same-index", args.rate, True, args.duration)
         args.restore_into = "restore-target"
-        await phase(ctx, "overload-light-4x", sat["saturating_rate"] * 4, False, args.duration, assert_rate=False)
-        closed = await heavy_closed_rate(ctx)
-        extra["heavy_closed_rate"] = closed
-        log(f"heavy closed-loop throughput {closed:.1f} searches/s; overload at 4x")
-        await phase(ctx, "overload-heavy-4x", args.rate, True, args.duration, heavy_rate=closed * 4)
+        await phase(ctx, "overload-light", 0.0, False, args.duration, held="light")
+        await phase(ctx, "overload-heavy", args.rate, False, args.duration, held="heavy")
     elif args.saturate:
         extra["saturate"] = await saturate(ctx)
     elif args.overload:
-        kind, factor = args.overload[0], float(args.overload[1])
-        if kind == "light":
-            sat = args.saturating_rate or (await saturate(ctx))["saturating_rate"]
-            await phase(
-                ctx,
-                f"overload-light-{factor:g}x",
-                sat * factor,
-                False,
-                args.duration,
-                assert_rate=False,
-            )
-        else:
-            closed = await heavy_closed_rate(ctx)
-            log(f"heavy closed-loop throughput {closed:.1f} searches/s; overload at {factor:g}x")
-            await phase(
-                ctx,
-                f"overload-heavy-{factor:g}x",
-                args.rate,
-                True,
-                args.duration,
-                assert_rate=True,
-                heavy_rate=closed * factor,
-            )
+        # Heavy runs beside a light stream at --rate, whose requests meet the demoted cap's 503.
+        kind = args.overload[0]
+        await phase(ctx, f"overload-{kind}", args.rate if kind == "heavy" else 0.0, False, args.duration, held=kind)
     else:
         if args.phase in ("unloaded", "both"):
             await phase(ctx, "unloaded", args.rate, False, args.duration)
@@ -1036,11 +1390,6 @@ async def amain(args: argparse.Namespace) -> int:
         extra["lua_loop"] = {
             "requested": args.lua_loop,
             "status": "not run here: harness/lua_bounds.py --loops N runs the bounds and the slice check (T10)",
-        }
-    if args.index_size:
-        extra["index_size"] = {
-            "requested": args.index_size,
-            "status": "not run: gated at Phase 6 on the Linux VM",
         }
 
     out: dict[str, Any] = {
@@ -1105,6 +1454,15 @@ def dry_checks(out: dict[str, Any]) -> list[dict[str, Any]]:
                     "ok": light["errors"]["http_other"] == 0 and light["errors"]["exceptions"] == 0,
                 }
             )
+        held = p.get("held")
+        if held:
+            checks.append({"what": f"{p['name']}: held requests answered", "ok": held["answered"]["n"] > 0})
+            checks.append(
+                {
+                    "what": f"{p['name']}: no held errors",
+                    "ok": held["errors"]["http_other"] == 0 and held["errors"]["exceptions"] == 0,
+                }
+            )
         heavy = p.get("heavy")
         if heavy:
             checks.append(
@@ -1113,13 +1471,12 @@ def dry_checks(out: dict[str, Any]) -> list[dict[str, Any]]:
                     "ok": heavy["searches"] > 0,
                 }
             )
-            if not p["name"].startswith("overload-heavy"):
-                checks.append(
-                    {
-                        "what": f"{p['name']}: the RESTORE stream wrote documents",
-                        "ok": heavy["restored_docs"] > 0,
-                    }
-                )
+            checks.append(
+                {
+                    "what": f"{p['name']}: the RESTORE stream wrote documents",
+                    "ok": heavy["restored_docs"] > 0,
+                }
+            )
             checks.append(
                 {
                     "what": f"{p['name']}: no heavy errors",
@@ -1155,6 +1512,12 @@ def main() -> int:
     )
     ap.add_argument("--duration", type=float, default=30.0)
     ap.add_argument("--light-conns", type=int, default=64)
+    ap.add_argument(
+        "--restore-prebuilt",
+        type=int,
+        default=0,
+        help="P1 H1: build this many RESTORE bodies before each heavy phase and write large bodies apart from their head",
+    )
     ap.add_argument("--heavy-clients", type=int, default=0, help="default: 4x the reactor count")
     ap.add_argument(
         "--restore-into",
@@ -1170,14 +1533,18 @@ def main() -> int:
     ap.add_argument("--bisect-steps", type=int, default=4)
     ap.add_argument("--step-secs", type=float, default=10.0)
     ap.add_argument(
-        "--saturating-rate",
-        type=float,
-        default=0.0,
-        help="use this light rate instead of finding it",
+        "--overload",
+        nargs=2,
+        metavar=("light|heavy", "F"),
+        help="hold F x the in-flight cap in requests (F > 1; the suite holds 1.25x)",
     )
-    ap.add_argument("--overload", nargs=2, metavar=("light|heavy", "N"))
+    ap.add_argument("--processors", type=int, default=0, help="the node's reactor count (--processors; 0: its default)")
     ap.add_argument("--lua-loop", type=int, default=0, help="looping scripts (run by harness/lua_bounds.py)")
-    ap.add_argument("--index-size", default="", help="e.g. 2xram (gated at Phase 6)")
+    ap.add_argument(
+        "--index-size",
+        default="",
+        help="2xram: on Linux, cap the node's cgroup so the index is 2x the page cache it may hold (T6)",
+    )
     ap.add_argument(
         "--census",
         action="store_true",
@@ -1191,10 +1558,24 @@ def main() -> int:
         help="20,000 documents and short phases; fails if a result is empty",
     )
     args = ap.parse_args()
-    if args.overload and args.overload[0] not in ("light", "heavy"):
-        ap.error("--overload takes light or heavy")
+    args.overload_factor = 1.25
+    if args.overload:
+        if args.overload[0] not in ("light", "heavy"):
+            ap.error("--overload takes light or heavy")
+        args.overload_factor = float(args.overload[1])
+        if args.overload_factor <= 1.0:
+            ap.error("--overload F must exceed 1: the held requests must outnumber the cap")
     if not args.bin and not args.target:
         ap.error("give --bin or --target")
+    # Held requests take a socket each, here and in the node this starts (it inherits the limit).
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    want = math.ceil(args.overload_factor * INFLIGHT_CAP * (args.processors or os.cpu_count() or 1)) + 1024
+    if soft != resource.RLIM_INFINITY and soft < want:  # a refusal shows later as connection errors
+        with contextlib.suppress(ValueError, OSError):
+            resource.setrlimit(
+                resource.RLIMIT_NOFILE, (want if hard == resource.RLIM_INFINITY else min(want, hard), hard)
+            )
+    Conn.split_write = args.restore_prebuilt > 0
     return asyncio.run(amain(args))
 
 
