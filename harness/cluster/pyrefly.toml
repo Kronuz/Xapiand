@@ -1,0 +1,3 @@
+preset = "strict"
+project-includes = ["*.py"]
+python-interpreter-path = "/usr/local/bin/python3"
