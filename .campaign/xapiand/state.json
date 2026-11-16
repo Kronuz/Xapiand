@@ -19282,6 +19282,40 @@
       "updated": "2026-11-11T15:03:25",
       "worktree": ""
     },
+    "strict-text": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "campaign:build-test",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/serialize.cc",
+        "src/serialize.h",
+        "src/cast.cc",
+        "src/cast.h",
+        "src/aggregations/**",
+        "tests/test_serialise*.cc",
+        "tests/test_strict*.cc",
+        "harness/strict_*",
+        "docs/src/content/docs/reference/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
+      "updated": "2026-11-16T15:21:53"
+    },
     "strict-values": {
       "accepted": {
         "correctness": {
