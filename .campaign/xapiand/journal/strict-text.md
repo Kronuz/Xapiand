@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | tests/test_strict_text.cc test_numeric_text_is_a_json_number; job 261116-152435-db3a1a (--fails-without, src at master: fails) |
+| A2 | test_term_filter_reads_exactly; job 261116-152435-db3a1a (--fails-without) |
+| A3 | job 261116-152427-5d1269 (test_strict_text, test_node, test_serialize, test_aggregation_shards pass); build-test job 261116-153459-d05e50 |
 
 ## Result
 
