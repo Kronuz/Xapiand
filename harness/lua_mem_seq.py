@@ -25,7 +25,8 @@ Memory of ended Lua calls (x7-gate security S1). One client PUTs --count documen
 distinct script that builds about 56 MiB of strings and ends. The node's RSS is sampled every 20 requests.
 Exits non-zero when RSS passes --max-rss-mib at any sample or keeps growing over the second half of the run
 (the last sample more than --max-growth-mib above the one at half), or when a request does not answer 2xx. A run
-stops at the first sample past --max-rss-mib.
+stops at the first sample past --max-rss-mib. --control runs the same requests with a script that makes no garbage,
+which separates what the node spends on 200 new indexes from what Lua keeps.
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ import sys
 import time
 
 BODY = "local t = {} for i = 1, 56 do t[i] = string.rep('x', 1048000 + i) end _doc.s = #t -- {tag}"
+CONTROL = "_doc.s = 56 -- {tag}"  # --control: the same requests, index for index, without the garbage
 
 
 def free_port() -> int:
@@ -77,6 +79,7 @@ def main() -> int:
     ap.add_argument("--max-rss-mib", type=float, default=1024)
     ap.add_argument("--max-growth-mib", type=float, default=128)
     ap.add_argument("--flags", default="")
+    ap.add_argument("--control", action="store_true")
     args = ap.parse_args()
     out = os.path.abspath(args.out)
     shutil.rmtree(out, ignore_errors=True)
@@ -113,7 +116,13 @@ def main() -> int:
     print(f"RSS at start {samples[0][1]:.0f} MiB", flush=True)
     statuses: dict[int, bytes] = {}
     for i in range(args.count):
-        doc = {"x": 1, "_script": {"_type": "script", "_lua": {"_body": BODY.replace("{tag}", f"s{i}")}}}
+        doc = {
+            "x": 1,
+            "_script": {
+                "_type": "script",
+                "_lua": {"_body": (CONTROL if args.control else BODY).replace("{tag}", f"s{i}")},
+            },
+        }
         st, raw = call(port, "PUT", f"/seq{i}/doc?commit", doc)
         statuses.setdefault(st, raw[:200])
         if (i + 1) % args.every == 0:
