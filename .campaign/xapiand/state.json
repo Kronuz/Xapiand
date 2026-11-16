@@ -4750,7 +4750,8 @@
     "format-freeze": {
       "accepted": {},
       "after": [
-        "sortable-encoding"
+        "sortable-encoding",
+        "cluster-gate"
       ],
       "checks": [
         {
@@ -4878,7 +4879,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The freeze-readiness review before the first release",
-      "updated": "2026-11-09T04:14:26"
+      "updated": "2026-11-15T23:05:52"
     },
     "format13": {
       "accepted": {},
