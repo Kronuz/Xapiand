@@ -5,12 +5,12 @@ Quest: .campaign/xapiand/quests/faultlab-design.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing: both reviews (Xapiand design D1-D4, Detent R1-R7) folded in at cpp-libraries:bcf85b4
-(pushed); doc check job 261116-144654-56edb5 queued.
+Nothing: both reviews (Xapiand design D1-D4, Detent R1-R7) folded in at cpp-libraries:bcf85b4;
+Detent R8/R9 at cpp-libraries:9d23d74 (pushed); doc check job 261116-145731-e88e27 queued at 9d23d74.
 
 ## Next
 
-1. Re-review of bcf85b4 (D1-D4, R1); owner rules F9.
+1. Re-review of 9d23d74 (D1-D4, R1, R8); owner rules F9.
 
 ## Blocked on
 
@@ -44,12 +44,16 @@ Review findings, by id (Xapiand review at Xapiand:6853e3469; Detent review fault
   named in F14. R4: `kind` lines reserved (F12). R5: kill keeps epochs. R6: recorder takes a
   directory. R7: step 5 recounts at journal-driver. N1, N2, N3, N5 (journal before consensus), N6
   taken. N4, N7, N8, N9 not taken (not in the lead's list).
+- R8: faultfs `File::inspect` and `try_lease` (lease table released by kill and crash, `op::lease`)
+  in F7; `File::map_shared` as the fourth seam addition, folded into the sector model as a write at
+  the next call (F8); ChangeWriter creates, sizes and inspects `change` through the IO and
+  `verify(dir, {"change"})` compares it by length (F10). R9: "legal" judged by the IO contract (F5).
 - These are design-text fixes: their tests are faultlab's build tests (migration "Checks"), not
   runnable before the repository exists.
 
 ## Result
 
-`docs/design/faultlab.md` (cpp-libraries:bcf85b4): 16 decisions F1-F16, migration table, three
+`docs/design/faultlab.md` (cpp-libraries:9d23d74): 16 decisions F1-F16, migration table, three
 Detent questions answered, first buildable steps. No code moved, no repository created.
 
 ## Rulings I made
