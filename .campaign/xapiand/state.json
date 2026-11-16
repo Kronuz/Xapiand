@@ -16134,6 +16134,7 @@
         "src/database/handler.h",
         "src/database/handler.cc",
         "tests/test_restore*.cc",
+        "tests/test_loop_yield.cc",
         "harness/restore_stall_*",
         "docs/perf/restore-stall.md"
       ],
@@ -16146,7 +16147,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T08:07:49",
+      "updated": "2026-11-16T09:59:09",
       "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
     },
     "restore-mixed-sign-integers": {
