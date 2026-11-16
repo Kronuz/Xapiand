@@ -1,112 +1,88 @@
+# File extensions and the media type each maps to, one type per line, sorted by type.
+
 types {
-
-# Audio
-  audio/midi                            mid midi kar;
-  audio/mp4                             aac f4a f4b m4a;
-  audio/mpeg                            mp3;
-  audio/ogg                             oga ogg opus;
-  audio/x-realaudio                     ra;
-  audio/x-wav                           wav;
-
-# Images
-  image/bmp                             bmp;
-  image/gif                             gif;
-  image/jpeg                            jpeg jpg;
-  image/png                             png;
-  image/svg+xml                         svg svgz;
-  image/tiff                            tif tiff;
-  image/vnd.wap.wbmp                    wbmp;
-  image/webp                            webp;
-  image/x-icon                          ico cur;
-  image/x-jng                           jng;
-
-# JavaScript
-  application/javascript                js;
-  application/json                      json;
-
-# Manifest files
-  application/x-web-app-manifest+json   webapp;
-  text/cache-manifest                   manifest appcache;
-
-# Microsoft Office
+  application/font-woff                                                      woff;
+  application/font-woff2                                                     woff2;
+  application/java-archive                                                   ear jar war;
+  application/javascript                                                     js;
+  application/json                                                           json;
+  application/mac-binhex40                                                   hqx;
+  application/msgpack                                                        msgpack;
   application/msword                                                         doc;
+  application/ndjson                                                         ndjson;
+  application/octet-stream                                                   bin deb dll dmg exe img iso msi msm msp safariextz;
+  application/pdf                                                            pdf;
+  application/postscript                                                     ai eps ps;
+  application/rtf                                                            rtf;
+  application/vnd.google-earth.kml+xml                                       kml;
+  application/vnd.google-earth.kmz                                           kmz;
   application/vnd.ms-excel                                                   xls;
+  application/vnd.ms-fontobject                                              eot;
   application/vnd.ms-powerpoint                                              ppt;
-  application/vnd.openxmlformats-officedocument.wordprocessingml.document    docx;
-  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet          xlsx;
   application/vnd.openxmlformats-officedocument.presentationml.presentation  pptx;
-
-# Video
-  video/3gpp                            3gpp 3gp;
-  video/mp4                             mp4 m4v f4v f4p;
-  video/mpeg                            mpeg mpg;
-  video/ogg                             ogv;
-  video/quicktime                       mov;
-  video/webm                            webm;
-  video/x-flv                           flv;
-  video/x-mng                           mng;
-  video/x-ms-asf                        asx asf;
-  video/x-ms-wmv                        wmv;
-  video/x-msvideo                       avi;
-
-# Web feeds
-  application/xml                       atom rdf rss xml;
-
-# Web fonts
-  application/font-woff                 woff;
-  application/font-woff2                woff2;
-  application/vnd.ms-fontobject         eot;
-  application/x-font-ttf                ttc ttf;
-  font/opentype                         otf;
-
-# Other
-  application/java-archive              jar war ear;
-  application/mac-binhex40              hqx;
-  application/pdf                       pdf;
-  application/postscript                ps eps ai;
-  application/rtf                       rtf;
-  application/vnd.wap.wmlc              wmlc;
-  application/xhtml+xml                 xhtml;
-  application/vnd.google-earth.kml+xml  kml;
-  application/vnd.google-earth.kmz      kmz;
-  application/x-7z-compressed           7z;
-  application/x-chrome-extension        crx;
-  application/x-opera-extension         oex;
-  application/x-xpinstall               xpi;
-  application/x-cocoa                   cco;
-  application/x-java-archive-diff       jardiff;
-  application/x-java-jnlp-file          jnlp;
-  application/x-makeself                run;
-  application/x-perl                    pl pm;
-  application/x-pilot                   prc pdb;
-  application/x-rar-compressed          rar;
-  application/x-redhat-package-manager  rpm;
-  application/x-sea                     sea;
-  application/x-shockwave-flash         swf;
-  application/x-stuffit                 sit;
-  application/x-tcl                     tcl tk;
-  application/x-x509-ca-cert            der pem crt;
-  application/x-bittorrent              torrent;
-  application/zip                       zip;
-
-  application/octet-stream              bin exe dll;
-  application/octet-stream              deb;
-  application/octet-stream              dmg;
-  application/octet-stream              iso img;
-  application/octet-stream              msi msp msm;
-  application/octet-stream              safariextz;
-
-  text/css                              css;
-  text/html                             html htm shtml;
-  text/mathml                           mml;
-  text/plain                            txt;
-  text/vnd.sun.j2me.app-descriptor      jad;
-  text/vnd.wap.wml                      wml;
-  text/vtt                              vtt;
-  text/x-component                      htc;
-  text/x-vcard                          vcf;
-
-  application/yaml                      yaml yml;
-  application/ndjson                    ndjson;
-  application/msgpack                   msgpack;
+  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet          xlsx;
+  application/vnd.openxmlformats-officedocument.wordprocessingml.document    docx;
+  application/vnd.wap.wmlc                                                   wmlc;
+  application/x-7z-compressed                                                7z;
+  application/x-bittorrent                                                   torrent;
+  application/x-chrome-extension                                             crx;
+  application/x-cocoa                                                        cco;
+  application/x-font-ttf                                                     ttc ttf;
+  application/x-java-archive-diff                                            jardiff;
+  application/x-java-jnlp-file                                               jnlp;
+  application/x-makeself                                                     run;
+  application/x-opera-extension                                              oex;
+  application/x-perl                                                         pl pm;
+  application/x-pilot                                                        pdb prc;
+  application/x-rar-compressed                                               rar;
+  application/x-redhat-package-manager                                       rpm;
+  application/x-sea                                                          sea;
+  application/x-shockwave-flash                                              swf;
+  application/x-stuffit                                                      sit;
+  application/x-tcl                                                          tcl tk;
+  application/x-web-app-manifest+json                                        webapp;
+  application/x-x509-ca-cert                                                 crt der pem;
+  application/x-xpinstall                                                    xpi;
+  application/xhtml+xml                                                      xhtml;
+  application/xml                                                            atom rdf rss xml;
+  application/yaml                                                           yaml yml;
+  application/zip                                                            zip;
+  audio/midi                                                                 kar mid midi;
+  audio/mp4                                                                  aac f4a f4b m4a;
+  audio/mpeg                                                                 mp3;
+  audio/ogg                                                                  oga ogg opus;
+  audio/x-realaudio                                                          ra;
+  audio/x-wav                                                                wav;
+  font/opentype                                                              otf;
+  image/bmp                                                                  bmp;
+  image/gif                                                                  gif;
+  image/jpeg                                                                 jpeg jpg;
+  image/png                                                                  png;
+  image/svg+xml                                                              svg svgz;
+  image/tiff                                                                 tif tiff;
+  image/vnd.wap.wbmp                                                         wbmp;
+  image/webp                                                                 webp;
+  image/x-icon                                                               cur ico;
+  image/x-jng                                                                jng;
+  text/cache-manifest                                                        appcache manifest;
+  text/css                                                                   css;
+  text/html                                                                  htm html shtml;
+  text/mathml                                                                mml;
+  text/plain                                                                 txt;
+  text/vnd.sun.j2me.app-descriptor                                           jad;
+  text/vnd.wap.wml                                                           wml;
+  text/vtt                                                                   vtt;
+  text/x-component                                                           htc;
+  text/x-vcard                                                               vcf;
+  video/3gpp                                                                 3gp 3gpp;
+  video/mp4                                                                  f4p f4v m4v mp4;
+  video/mpeg                                                                 mpeg mpg;
+  video/ogg                                                                  ogv;
+  video/quicktime                                                            mov;
+  video/webm                                                                 webm;
+  video/x-flv                                                                flv;
+  video/x-mng                                                                mng;
+  video/x-ms-asf                                                             asf asx;
+  video/x-ms-wmv                                                             wmv;
+  video/x-msvideo                                                            avi;
 }

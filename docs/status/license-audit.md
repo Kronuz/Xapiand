@@ -108,12 +108,12 @@ All at their pinned commits in `CMakeLists.txt`. "Binary notice" means the licen
 | Dependency | Pin | License | Binary notice | Mark |
 |---|---|---|---|---|
 | asio (chriskohlhoff) | `asio-1-36-0` (RPM job: 1.28.1 tarball) | BSL-1.0 | no | fine |
-| rapidjson (Tencent) | 24b5e7a8 | MIT (its `msinttypes` BSD-3 is MSVC-only; `bin/jsonchecker` under the JSON license is test data, not compiled) | yes | fine, notice in A1 |
+| rapidjson (Tencent) | 24b5e7a8 | MIT (its `msinttypes` BSD-3 is MSVC-only; `bin/jsonchecker` under the JSON license is test data, not compiled). Unmodified upstream: the build patches no fetched source (the one `PATCH_COMMAND` in `CMakeLists.txt` is Lua's), and only sets `RAPIDJSON_PARSE_DEFAULT_FLAGS` (comments, trailing commas, NaN/Inf, full precision) as a compile definition, which is configuration, not a derivative. The sanitizer patches that earlier gate notes mention (`stack.h`, `document.h`, `GenericStringRef`) applied to the old v1.1.0 pin in scratch trees only; `Xapiand:52235a037` moved the pin and nothing ships them | yes | fine, notice in A1 |
 | cppcodec (tplgy) | `v0.2` | MIT | yes | fine, notice in A1 |
 | CLI11 | `v2.4.2` | BSD-3 | yes | fine, notice in A1 |
 | lz4 | `v1.8.1` | `lib/` BSD-2 (with xxhash), the rest GPL-2; only `lib/*.c` is compiled | yes | fine, notice in A1 |
 | prometheus-cpp | `v1.2.4` | MIT | yes | fine, notice in A1 |
-| Lua | 5.4.7 tarball (sha256 pinned) plus `contrib/lua/xapiand-limits.patch` | MIT (in `lua.h` and `doc/readme.html`; the tarball has no `LICENSE` file) | yes | fine, notice in A1 |
+| Lua | 5.4.7 tarball (sha256 pinned) plus `contrib/lua/xapiand-limits.patch` | MIT (in `lua.h` and `doc/readme.html`; the tarball has no `LICENSE` file). The patch is the owner's and adds a few `lua_xnote` accounting calls to Lua's sources (a derivative under Lua's MIT, shipped only as the compiled result) | yes | fine, notice in A1 |
 | libyaml | `0.2.5` | MIT | yes | fine, notice in A1 |
 | googletest | `master` (`FindGTest.cmake`), tests only | BSD-3 | not shipped | fine |
 | cpp-btree (Kronuz fork of Google's) | strata bench target only | Apache-2.0 | not shipped | fine |
@@ -249,3 +249,20 @@ Build and test: a Release build (Ninja, `BUILD_TESTS=ON`, `LTO=OFF`, ccache) of 
 Not done, by instruction: A3 (waits for `sortable_serialise`'s removal), A9 (`docs/discussions` must stay byte-identical with two other copies), A17, A18, A19, A21, A26, A27. `docs/public/assets/Lenna.*` (blocker 3) is untouched on this branch; an earlier local branch `fix/license-actions` (never pushed, worktree `Xapiand-wt/license-actions`) also replaces those images with a generated sample, which this branch left out.
 
 Design vs code: the audit asks for A1 as a rewritten `NOTICE` that carries the third-party texts; the code splits it into `NOTICE` (ownership, short) and a generated `THIRD-PARTY-NOTICES` (texts), both installed. No other differences.
+
+## Ledger: license closure (quest `license-closure`)
+
+State (2026-11-16, branch `quest/xapiand/license-closure`): blocker 3, A3, A18, A21's tables, the RapidJSON and Lua rows and the Xapian scan are done; A9, A17, A19, A21 (the fixtures) and A26 wait for the owner (the journal's Blocked on lists each decision). Commit hashes carry the repository: `Xapiand:`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Blocker 3 | done | `docs/public/assets/Lenna.*` are gone; `docs/public/assets/sample.{png,jpg,pdf}` come from `sample_image.py` (a generated interference pattern) and `store-api.md` uses them, with lengths and SHA-256 digests that match the files. No tracked file outside history documents names the old files (`git grep -i lenna`). |
+| A3 | done | `ARCHITECTURE.md:609-614` (the licensing note), `README.md:124-129` and `AGENTS.md:42,104` call the value encoding the MIT `Kronuz/sortable`; no tracked file outside design history and the changelog says `sortable_serialise` is GPL, and `src/sortable_serialise.*` and the Python `sortable.py` port are gone. |
+| A9 | prepared | `docs/discussions/LICENSE` (MIT, owner 2026) and the README's license line; the two other copies (`~/code/KronuzBlog/{Kronuz.github.io,gmendezb-pages}/discussions`) need the same two files, then `scripts/check-copies.sh`. |
+| A17 | owner | `stopwords/*.txt` sources are unrecorded and mixed. Compared with Snowball's published lists (fetched 2026-11-16): `no` is identical; `it`, `sv`, `hu` and `ru` contain every Snowball word (hu and ru miss one) and add hundreds; `da`, `de`, `en`, `es`, `fi`, `fr`, `nl` and `pt` overlap them only in part; Snowball publishes no list for `ro` and `tr` at the URLs tried and none for `ca`, `eu` and `hy`. `en` (570 words) is the SMART list. Regenerating from Snowball would shrink the lists (`en` 570 to 174 words) and change analysis results. |
+| A18 | done, regenerated | `mime.types` rewritten as one sorted line per media type with no comments or grouping of the nginx-style file; the extension-to-type map is identical (128 extensions, checked by parsing both files with the loader's rules). |
+| A19 | owner | `docs/public/assets/el_cerrito.png` keeps its visible "Map data ©2019 Google" credit. |
+| A21 | done for the tables | The 25 phrase tables of `docs/public/assets/generator.py` are rewritten and the fantasynamegenerators.com citation is removed; the first-name, surname and trait-word lists are vocabulary and stay. The `accounts.*` fixtures keep the phrases they were generated with; regenerating them changes every account's text and the docs examples built on it. |
+| A26 | owner | See the journal: MIT stays in the metadata, or an SPDX expression. |
+| RapidJSON's patch | done | The dependency table's RapidJSON and Lua rows above state what each carries: RapidJSON has no patch (one compile definition), Lua has `contrib/lua/xapiand-limits.patch`. |
+| Xapian scan | done | `git grep -n -E 'Xapian::|xapian/|"xapian\.h"|<xapian' -- src contrib CMakeLists.txt` matches nothing; the `no-xapian` check runs it. |

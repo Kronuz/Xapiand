@@ -268,21 +268,21 @@ The result (partially shown) has the available content types listed inside
       "type": "stored",
       "volume": 0,
       "offset": 512,
-      "size": "462.7KiB"
+      "size": "154.3KiB"
     },
     {
       "content_type": "application/pdf",
       "type": "stored",
       "volume": 0,
       "offset": 60063,
-      "size": "676.4KiB"
+      "size": "154.7KiB"
     },
     {
       "content_type": "image/jpeg",
       "type": "stored",
       "volume": 0,
       "offset": 143195,
-      "size": "557.6KiB"
+      "size": "8.7KiB"
     }
   ], ...
 }
