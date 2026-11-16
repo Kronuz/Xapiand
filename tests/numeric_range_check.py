@@ -34,6 +34,8 @@ Starts BIN on a fresh data directory and checks, per group, that every answer eq
   ids       integer ids above 2^53: ranges and sorts on _id
   midpoint  9007199254740993.0000001 as a JSON number, a _float cast of its text and a range bound is its
             nearest double
+  text      range bounds written as text on a floating field, in the DSL and in `q=`, and over one integer and
+            one floating index: integer text above 2^53 is exact, as a value and a term are
   refuse    a NaN bound, a NaN value and an integer of 2^63 or more answer 400; -0.0 indexes as 0
 
 Prints each group's wrong count and exits 1 when any answer is wrong.
@@ -54,6 +56,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -299,6 +302,43 @@ def check_wide() -> None:
     found = search("/t6w*/", range_query("w", None, None), "w")
     got = None if found is None else [union[h["i"]] for h in found]
     record("wide", got == sorted(union.values()), f"/t6w*/ sort w got {got}")
+    for lo, hi in (
+        (2**53, 2**53 + 2),
+        (2**53 + 1, 2**53 + 1),
+        (2**53 + 1, None),
+        (None, 7),
+        (2**60, 2**60 + 1),
+        (-7, 6.5),
+    ):
+        want = sorted(i for i, v in union.items() if in_range(v, lo, hi))
+        found = search("/t6w*/", range_query("w", None if lo is None else str(lo), None if hi is None else str(hi)))
+        got = None if found is None else sorted(h["i"] for h in found)
+        record("text", got == want, f"/t6w*/ w text [{lo}, {hi}] got {got} want {want}")
+
+
+def check_text_bounds() -> None:
+    """Text bounds on a floating field read as integers above 2^53 do: exactly, by DSL range and by `q=`."""
+    values: list[Number] = [2**53, 2**53 + 1, 2**53 + 3, 2.0**53 + 4, 2**60 + 1, -(2**60) - 1, 6.5]
+    restore(
+        "t6t",
+        {"f": {"_type": "floating"}, "i": {"_type": "integer"}},
+        [{"_id": f"t{i}", "i": i, "f": v} for i, v in enumerate(values)],
+    )
+    field = Field("t6t", "f", values, str)
+    bounds = [2**53, 2**53 + 1, 2**53 + 2, 2**53 + 3, 2**53 + 4, 2**60 + 1]
+    for lo in bounds:
+        for hi in bounds:
+            if lo <= hi:
+                field.check_range("text", lo, hi)
+    field.check_range("text", 2**53 + 1, None)
+    field.check_range("text", None, 2**53 + 1)
+    field.check_range("text", -(2**60) - 1, 6.5)
+    for lo, hi in ((2**53 + 1, 2**53 + 3), (2**53 + 1, 2**53 + 1), (2**53, 2**53), (2**53 + 3, 2**60 + 1)):
+        want = sorted(i for i, v in enumerate(values) if in_range(v, lo, hi))
+        status, data = call("SEARCH", f"/t6t/?volatile&limit=100&q={urllib.parse.quote(f'f:{lo}..{hi}')}")
+        found = hits(status, data)
+        got = None if found is None else sorted(h["i"] for h in found)
+        record("text", got == want, f"q=f:{lo}..{hi} got {got} want {want}")
 
 
 def check_ids() -> None:
@@ -388,6 +428,7 @@ def main() -> None:
             check_wide,
             check_ids,
             check_midpoint,
+            check_text_bounds,
             check_refusals,
         ):
             check()
