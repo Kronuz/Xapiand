@@ -2957,7 +2957,8 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver"
       ],
       "checks": [
         {
@@ -3008,7 +3009,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T10:28:41"
+      "updated": "2026-11-16T15:42:47"
     },
     "core-lifecycle-tests": {
       "accepted": {},
