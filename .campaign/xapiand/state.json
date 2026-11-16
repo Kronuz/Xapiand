@@ -15668,7 +15668,6 @@
       "files": [
         "src/**",
         "tests/**",
-        "harness/**",
         "contrib/python/**",
         "CMakeLists.txt",
         "ARCHITECTURE.md",
@@ -15892,7 +15891,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-09T15:34:35"
+      "updated": "2026-11-15T22:27:08"
     },
     "sortable-followups": {
       "accepted": {},
