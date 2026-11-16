@@ -15129,11 +15129,46 @@
         "docs/mechanisms/supplied-statistics.md",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/prospect-supplied-stats",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-16T01:09:42",
+          "commit": "2202030d297797929985eddabcafef336d43ce65",
+          "criteria": {
+            "A1": "261115-232146-62bd5a, 261116-010626-4141d8",
+            "A2": "261116-010626-4141d8; fails without: 261115-232149-29b412, 261116-004953-d3a74c",
+            "A3": "261115-232155-edc5bb, 261115-232211-560561",
+            "A4": "`docs/mechanisms/supplied-statistics.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2202030d297797929985eddabcafef336d43ce65",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261115-232155-edc5bb",
+              "level": "light",
+              "seconds": 431.7,
+              "state": "done",
+              "what": "prospect-supplied-stats check build-test at 2202030d2977"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "2202030d297797929985eddabcafef336d43ce65",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+          "reason": "",
+          "tested": "2202030d297797929985eddabcafef336d43ce65"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -15141,10 +15176,10 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Weights from supplied statistics",
-      "updated": "2026-11-16T00:39:01",
-      "worktree": "../prospect-wt/xapiand/prospect-supplied-stats"
+      "updated": "2026-11-16T01:09:58",
+      "worktree": ""
     },
     "prospect-values-bytes": {
       "accepted": {},
