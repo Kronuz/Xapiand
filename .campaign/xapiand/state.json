@@ -6984,6 +6984,8 @@
     "lua-memory-bound": {
       "accepted": {},
       "after": [],
+      "base": "5800937cfd4d68ba4aa6d7779086bb5812067978",
+      "branch": "quest/xapiand/lua-memory-bound",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7010,9 +7012,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T08:58:26"
+      "updated": "2026-11-16T08:58:33",
+      "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
       "accepted": {
