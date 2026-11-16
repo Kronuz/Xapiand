@@ -2771,8 +2771,7 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -2823,7 +2822,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-15T23:04:46"
+      "updated": "2026-11-16T10:28:41"
     },
     "core-lifecycle-tests": {
       "accepted": {},
