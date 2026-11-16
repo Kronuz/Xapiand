@@ -307,7 +307,7 @@ void test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap() {
 		if (!p->outcome.ok()) {
 			std::printf("a concurrent call ended: %s\n", p->outcome.what.c_str());
 		}
-		CHECK(p->outcome.ok());
+		REQUIRE(p->outcome.ok());
 		CHECK_EQ(p->doc.at("n").i64(), 36);
 	}
 }
