@@ -15072,7 +15072,38 @@
       "updated": "2026-11-08T15:40:50"
     },
     "prospect-supplied-stats": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T00:39:01",
+          "base": "cca38415994de15edcd0efb08e324cb8fc3fb332",
+          "blobs": {
+            "CMakeLists.txt": "100644:ded0cf79882d3bdcc1d5bcee2fcd24d82e48e124",
+            "docs/mechanisms/supplied-statistics.md": "100644:5d58f4381689d9577bfca4538b2c588b976c18eb",
+            "include/prospect/searcher.hh": "100644:9d8c2d7bff0fc7d1308e2554125afc05a1d8b709",
+            "test/stats_ab.sh": "100755:f6d9789880f5162e91bd059aeb2034cfdfafe788",
+            "test/stats_ab_build.sh": "100755:7f5e1ad9fb71262080fe650619b11879b94e51fa",
+            "test/stats_mutants.py": "100755:b391a3d1afcb6fd92ca8645dec38a853c757041f",
+            "test/stats_test.cc": "100644:82ea5aa8302345fa5e9e86e2b8ec64f00b9841fd"
+          },
+          "by": "review",
+          "commit": "2202030d297797929985eddabcafef336d43ce65",
+          "criteria": "fa9198fbb0e3ad5d",
+          "diffs": {
+            "CMakeLists.txt": "d50a3e81fe47f486",
+            "docs/mechanisms/supplied-statistics.md": "5695555461f7e036",
+            "include/prospect/searcher.hh": "1e22341f8c22b814",
+            "test/stats_ab.sh": "a3f7fc9e3ba54901",
+            "test/stats_ab_build.sh": "ed20d726cfdddc54",
+            "test/stats_mutants.py": "d0f893d9828027c8",
+            "test/stats_test.cc": "8a7427d0bf118195"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9f191e33f57b8422e935669e38b165764b985c11",
+          "reviewed": "2202030d297797929985eddabcafef336d43ce65",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "cca38415994de15edcd0efb08e324cb8fc3fb332",
       "branch": "quest/xapiand/prospect-supplied-stats",
@@ -15100,7 +15131,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/prospect-supplied-stats",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -15110,7 +15143,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Weights from supplied statistics",
-      "updated": "2026-11-15T23:30:31",
+      "updated": "2026-11-16T00:39:01",
       "worktree": "../prospect-wt/xapiand/prospect-supplied-stats"
     },
     "prospect-values-bytes": {
