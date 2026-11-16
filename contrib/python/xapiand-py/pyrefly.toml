@@ -1,0 +1,3 @@
+preset = "strict"
+python-interpreter = "/usr/local/bin/python3"
+project-includes = ["xapiand/sortable_codec.py"]
