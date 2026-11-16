@@ -1,6 +1,6 @@
 # strict-text: journal
 
-State: waiting on jobs (see below)
+State: ready for review
 Quest: .campaign/xapiand/quests/strict-text.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Next
 
-1. <step>
+1. Lead: review and land. Jobs 261116-152427-5d1269 (build + test_strict_text, test_node, test_serialize, test_aggregation_shards: pass, A3) and 261116-152435-db3a1a (src at master: test_strict_text fails 16 of 40, A1/A2 fails-without).
 
 ## Blocked on
 
