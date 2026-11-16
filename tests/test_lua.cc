@@ -1108,6 +1108,25 @@ void test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread() {
 	CHECK(after.doc.at("ok").boolean());
 }
 
+void test_a_cancelled_call_leaves_no_garbage() {
+	Processor processor("cancel-garbage", "local t = {} for i = 1, 40 do t[i] = string.rep('x', 1048000 + i) end while true do end", MsgPack::MAP());
+	const auto idle = processor.resident_bytes();
+	task::inline_scheduler scheduler;
+	task::cancel_source source;
+	task::budget budget(every_checkpoint, source.token());
+	Pending pending;
+	pending.doc = MsgPack::MAP();
+	start(scheduler, pending, processor, budget);
+	std::size_t n = 0;
+	scheduler.run_until([&] { return ++n > 200; });   // past its 40 strings, into the spin
+	CHECK(!pending.finished);
+	source.request();
+	scheduler.run();
+	CHECK(pending.finished);
+	CHECK(pending.outcome.cancelled);
+	CHECK_LE(processor.resident_bytes(), idle + (16u << 10));
+}
+
 
 // --- SR1: a foreign link is an index path, and an index path names a place inside the data directory ----------
 
@@ -1178,6 +1197,7 @@ TEST_MAIN(
 	test_a_long_script_lets_other_work_run,
 	test_without_a_budget_a_script_runs_to_its_end,
 	test_a_cancelled_call_stops_at_its_next_slice_and_frees_its_thread,
+	test_a_cancelled_call_leaves_no_garbage,
 	test_a_charged_loop_yields_before_its_slice_of_instructions_is_spent,
 	test_a_foreign_link_that_leaves_the_data_directory_is_refused
 )

@@ -699,15 +699,25 @@ State::~State()
 namespace {
 
 // Collects what a call left on its state: the cycle in progress, then a whole one, a step at a time with a
-// checkpoint between steps, so a heap of garbage does not hold the reactor.
+// checkpoint between steps, so a heap of garbage does not hold the reactor. Cancelling ends the slices, not
+// the collection.
 task::task<void> collect(detail::State& state, task::budget* budget) {
+	std::exception_ptr cancelled;
 	for (int ends = 0; ends < 2;) {
 		ends += lua_gc(state.L, LUA_GCSTEP, 0);
 		if (budget != nullptr) {
-			co_await budget->checkpoint();
+			try {
+				co_await budget->checkpoint();
+			} catch (const task::cancelled&) {
+				cancelled = std::current_exception();
+				budget = nullptr;
+			}
 		}
 	}
 	state.settled = state.used;
+	if (cancelled) {
+		std::rethrow_exception(cancelled);
+	}
 }
 
 // Runs one call of the state's script on `doc`.
@@ -851,16 +861,19 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 		~Release() { if (flag != nullptr) { *flag = false; } }
 	} release{held};
 
+	// What the call left is collected however it ended: in slices, or at once when it was cancelled.
 	std::exception_ptr error;
+	task::budget* slices = budget;
 	try {
 		co_await run(*state, limits, method, doc, old_doc, script_params, params, budget);
 	} catch (const task::cancelled&) {
-		throw;   // what it left is collected after the state's next call, or closed with a state of its own
+		error = std::current_exception();
+		slices = nullptr;
 	} catch (...) {
 		error = std::current_exception();
 	}
 	assert(owner == std::this_thread::get_id());
-	co_await collect(*state, budget);
+	co_await collect(*state, slices);
 	if (error) {
 		std::rethrow_exception(error);
 	}
