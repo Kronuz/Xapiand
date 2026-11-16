@@ -7530,20 +7530,51 @@
         "tests/test_lua*.cc",
         "docs/mechanisms/lua*.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T15:57:52",
+          "commit": "31896dd7118fdc39c46bf8bc63c1503374bcc644",
+          "criteria": {
+            "A1": "261116-150830-1f8040 (passed at fa306169f7bc; only merges from main since), 261116-150830-42f3f8 (passed at fa306169f7bc; only merges from main since)",
+            "A2": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since)",
+            "A3": "261116-133011-8e97be (passed at bac328dec1c4; only merges from main since)",
+            "A4": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since), 261116-133012-9b0137 (passed at bac328dec1c4; only merges from main since); fails without: 261116-101214-ce0a1e",
+            "A5": "manual: the lead checked the rows branch at dc8988e42 (master + platform-rows + quest head ff85dcd34): arm64 run 43960602513 and FreeBSD run 43960602117 both green, T10 included; the control without this quest (FreeBSD 43960604601) fails T10's library-call loops",
+            "A6": "261116-133001-b680b7 (the suite check)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-133001-b680b7",
+              "level": "light",
+              "seconds": 309.7,
+              "state": "done",
+              "what": "lua-memory-bound check suite at ff85dcd34bf8"
+            }
+          ],
+          "final": true,
+          "from": "f7f3d249bf7ee34364fe58cc1c52c325610ec058",
+          "reason": "",
+          "tested": "f99c8bb0aba34d26739af792af6f6128da1284bf"
+        }
+      ],
       "lenses": [
         "correctness",
         "security"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T15:38:37",
-      "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
+      "updated": "2026-11-16T15:58:01",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
