@@ -826,7 +826,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 2ef28dc56441828fc1d5082f6f904a830b141ea5)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 886131ba2f61d748cb046b3b4c6171253f04550a)  # reactor main step R (task sessions, owned scheduler, phased teardown)
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG eb08b59e6aa2086a1ebaac665b8475f32e80d230)  # http main: q-values parsed without libc
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
