@@ -55,6 +55,7 @@ byte.
   American spelling (serializer).
 - Lead, 11-13: exact-id-keys folds in; its files join this set at start.
 - Lead, 11-16, from the design re-check (APPROVE at 3f95a5edd): F3, T6 adds a near-midpoint decimal string (e.g. `9007199254740993.0000001`) as a value and as a range bound, so double rounding cannot return unseen; F13, the changelog (A11) and `docs/mechanisms/value-encoding.md` say to dump every index with the old build, start the new build on an empty data directory, then restore (the `.xapiand/indexes` registry is written with the old codec too).
+- Lead, 11-16 (default pending the owner): A12 renames Xapiand's own names now; its grep excludes only calls into Kronuz/msgpack (`MsgPack::serialise`, `unserialise`) and Kronuz/cuuid (`serialise*`, `unserialise`, `is_serialised`, `UUID_MAX_SERIALISED_LENGTH`, its `SerialisationError`), listed in the journal. A maintenance quest renames those two libraries' APIs, repins, and moves every caller in Xapiand and Detent afterwards. The license notes, extraction ledger and exact-id-keys note joined the file set.
 - Lead, 11-16: A8 rests on the `no-gpl` check (there is no `harness/seam_check.sh`). A12's `docs/**` and `harness/**` join the file set once platform-rows (which holds `harness/**` and two `docs/dev` pages) lands; do the rename there last.
 
 - Lead, 11-10 (D52): the switch also updates the docs pages that describe value encoding and the About page's licence sentence (written by docs-site-refresh against the old encoding); they join the file set once docs-site-refresh lands.
