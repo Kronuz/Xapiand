@@ -1,6 +1,6 @@
 # serialize-repin: journal
 
-State: waiting on jobs 261116-051529-669e33 261116-051529-20615b 261116-051829-ed3fbe 261116-051832-47864e 261116-051859-74d69e
+State: waiting on jobs 261116-052345-3145cd 261116-052345-b9b1f8 261116-052347-b2423b 261116-052351-094a46 261116-052354-4dcdf7
 Quest: .campaign/xapiand/quests/serialize-repin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Pins, rename and alias deletion committed and pushed. Jobs running: build-test 261116-051529-669e33,
-e2e 261116-051529-20615b (at 0900fc8; async_check/test_gate_tools edit came after: rerun with `campaign verify`
-if they pass), A2 grep 261116-051829-ed3fbe, A4 harness 261116-051832-47864e, A4 mutant 261116-051859-74d69e.
+Lead rulings applied (xapiand:ef9b4b4cf): oldtests/** and docs_to_postman.py renamed; mutant query-old-codec replaced
+by query-double (numeric _id term encoded via MsgPack(obj.as_f64()); the existing test
+test_ids_that_shared_a_key_are_separate_documents already looks up 2^53-1 and 2^53+1). Jobs at head: build-test
+261116-052345-3145cd, e2e 261116-052345-b9b1f8, A2 grep 261116-052347-b2423b, A4 harness 261116-052351-094a46,
+A4 mutant (--fails-without) 261116-052354-4dcdf7.
 
 ## Next
 
-1. Wait on jobs; fix build errors from the renamed library APIs if any.
+1. On finish: if the mutant job fails (survives or does not apply), fix the mutation text; then State ready for review.
 
 ## Blocked on
 
-A2: `oldtests/` (6 files, names and content) and `docs_to_postman.py:281` (a comment) still say serialis*;
-neither is in my file set. Options: (a) add them to the set so I rename them (recommended; oldtests is a
-legacy suite CMake only builds on demand), (b) exclude them from the A2 grep. The A2 job fails until then.
-A4: `query-old-codec` likely survives (ids and values share one codec, per sortable-encoding's journal);
-see the mutant job's result.
+Nothing.
 
 ## Evidence
 
