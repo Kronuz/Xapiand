@@ -15095,7 +15095,8 @@
         "include/prospect/searcher.hh",
         "src/search*",
         "test/stats*",
-        "docs/mechanisms/supplied-statistics.md"
+        "docs/mechanisms/supplied-statistics.md",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/prospect-supplied-stats",
       "landed": [],
@@ -15109,7 +15110,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Weights from supplied statistics",
-      "updated": "2026-11-15T23:07:17",
+      "updated": "2026-11-15T23:30:31",
       "worktree": "../prospect-wt/xapiand/prospect-supplied-stats"
     },
     "prospect-values-bytes": {
