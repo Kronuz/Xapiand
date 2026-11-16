@@ -1,7 +1,7 @@
 # faultlab-design review: design
 
-Commit: cpp-libraries:a2c60c7193cb6a1637868dd674a082481084c216 (docs/design/faultlab.md)
-Verdict: CHANGES
+Commit: cpp-libraries:bcf85b4b367352284d7bb0ed4c6e72b7da6be9f7 (docs/design/faultlab.md; first reviewed at a2c60c7)
+Verdict: APPROVE (re-check at bcf85b4; CHANGES at a2c60c7)
 Date: 2026-11-16
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
@@ -87,3 +87,17 @@ is F4, F6 is F8, F8 is F10, and F11 is F16 with the migration order.
   against the survey and history.py's line citations.
 - No check of the sizes in the migration table beyond the MemoryIO user counts: journal has 4
   tests and 3 fuzz files, consensus 3 tests, Detent 4 authority tests plus the cluster harness.
+
+## Re-check
+
+At cpp-libraries:bcf85b4 (diff a2c60c7..bcf85b4). All four blockers are closed; the verdict is
+APPROVE. Line numbers are faultlab.md at bcf85b4.
+
+| ID | Status | Where |
+|---|---|---|
+| D1 | closed | F3 (:42-50) withdraws the superset claim and cites the probe. F5 (:76, :87-88) adds an opt-in `size_pick::sector` that cuts at any sector boundary between the durable and current sizes, so the default stream and F3's seeds stay unchanged. Steps 5, 6 and 9 (:318, :319, :322) sweep with it. The checks (:334-336) put the probe in faultlab's suite as a test over random append sequences, so the test's shape is clear; I did not rerun the probe. |
+| D2 | closed | `name_pick::additions` (:75, :86) keeps creates, links and replaces and drops removes. F5 (:90-99) maps Entries::All to it, names the collector's case, and drops both-names-of-a-rename as illegal. QD2 (:354-356) adds a job showing that the four picks reproduce the old model's states, minus the listed both-names states. |
+| D3 | closed | F8 (:136-163) adds a third seam call, `IO::link` (linkat on PosixIO). F7 (:125, :127, :134) adds faultfs's `link` op, `inspect_entry` and `lock_owner`. F10 (:205-211) lists the work Detent does first: retype its stores to `journal::IO`, publish with `link`, move the ownership check into `directory_trust()`, and open ChangeWriter's file through the IO. Step 7 (:320) puts that first. `verify()` (:187-188, :200-203) makes any future out-of-seam change fail loudly. |
+| D4 | closed (self-consistent; ruling pending) | F9 (:165-176): `sync` and `sync_data` are durable in every process, and there is no barrier-only mode. One process-wide switch weakens every sync together, and storage's fsync and full_fsync map to `sync_data` and `sync`, both durable, so the old inversion is gone. Left for the owner's ruling: a deployment that sets the switch in place of STORAGE_FULL_SYNC also weakens journal's and strata's syncs in that process. The text states this ("every sync of the process"). |
+
+Also folded in: N1 (:332-333), N2 (:58-62), N3 (:152-156), N5 (:325-327), N6 (:112-114, :318-319). I did not re-check those.
