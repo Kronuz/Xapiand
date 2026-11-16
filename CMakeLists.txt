@@ -490,7 +490,7 @@ FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG a8e56f8af6405248674e8acc4af316e0e7383ece)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG 0c7e5df8b367dd09c7137d711544789f9451dd0b)
 # sortable: the exact number codec (docs/design/sortable-encoding.md).
-FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG 915b014f417ee9ba23e682ec438ecd9cd34f485e)
+FetchContent_Declare(sortable     GIT_REPOSITORY https://github.com/Kronuz/sortable.git     GIT_TAG 2fad5a281098b55cfac266af92ac13ce665cfa0f)
 FetchContent_MakeAvailable(constexpr_phf split lru_cache errno_names base_x located_exception sortable)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
