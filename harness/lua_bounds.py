@@ -53,6 +53,7 @@ import http.client
 import json
 import os
 import shutil
+import socket
 import statistics
 import subprocess
 import sys
@@ -129,6 +130,13 @@ LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find(
 FLOOD_SCRIPT = "local s = string.rep('a', 1048576) s:find('.-b')"
 
 LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
+
+
+def free_port():
+    """A port nothing holds now; port+1 can be a client socket of the flood phases."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
 def foreign_scripts_check(binary, port, tmp):
@@ -427,7 +435,7 @@ def main():
         except subprocess.TimeoutExpired:
             failures.append("the node did not stop within 20 s of SIGTERM")
 
-        failures.extend(foreign_scripts_check(args.binary, args.port + 1, tmp))
+        failures.extend(foreign_scripts_check(args.binary, free_port(), tmp))
     finally:
         if node.poll() is None:
             node.terminate()

@@ -9,22 +9,22 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Run 3 (arm64 43828387576, FreeBSD 43828387680): arm64 passes 13 of 14 rows (e2e_asan and t10_lua now pass after the timeout and sleep fixes). The only red arm64 row is t1_census: EXPECTED-FAIL until the Xapiand repin picks up reactor:2ef28dc (reactor names its own threads, product finding P1 below); not touched in the harness.
+Run 4 (arm64 43834602759, FreeBSD 43834602347). Only t1_census (expected-fail until the repin, P1) and t10_lua fail on arm64; FreeBSD passes 11 of 14 rows (census now works via procstat and passes; t3, gate_tools, x6, t7, t8 pass).
 
-PRODUCT FINDING P1 (arm64 t1_census, any Linux): 5 `Xapiand:MAIN` threads at 4 reactors; the 4 extras are `reactor::TcpServer::start(unsigned short)::{lambda()#1}` threads (asio::scheduler::run) that never named themselves. Evidence: run 43822616893 thread_stacks.txt (tids 25240-25243). Fixed in reactor:2ef28dc; lands here with the repin in CMakeLists.txt.
+arm64 t10_lua (Release): "the foreign-script node did not come up" again after the sleep fix (2nd run in a row). HARNESS: lua_bounds.py started that node on port+1, and the flood phases just before it leave client sockets across the ephemeral range, so port+1 can be taken. It now takes a fresh free port. Third look at this row: the readiness loop was the first guess and wrong; the port was the cause.
 
-FreeBSD rows (run 43828387680), logs printed by the workflow:
-- t3_crash, t3_crash_asan, t10_lua, t10_lua_asan, gate_tools: HARNESS/WORKFLOW. mkdir/mkdtemp "Permission denied" in the repo's `.scratch`, which the root-run job owns while the rows run as nobody. Fix: chown the repo's .scratch to nobody.
-- t1_census: HARNESS. The census came back empty ("no census"): thread_census.sh reads /proc or macOS `sample`, and FreeBSD has neither. Fix: a FreeBSD branch reading `procstat -t` (the TDNAME column); `ps -M` only on Darwin.
-- t2_e2e_asan: 5 of 761 assertions fail; the detail was not printed. The job now prints assert.txt for this row. UNCLASSIFIED until the next run.
-- Passing: t1_strict_owed, t2_stored_asan, t2_restore_stream_asan (info), t7_asan, t8 light and heavy, x6_shutdown.
+PRODUCT FINDING P2 (FreeBSD only, suspected): valid requests are closed without a response.
+- t2_e2e_asan: 5 of 761 assertions fail, all "HTTP None": GET /:metrics, PUT /walapi/, PUT /walapi/doc/1, WAL /walapi/, WAL /walapi-five/. The node survives (later requests answer).
+- t10_lua_asan: `GET /:metrics` raises RemoteDisconnected ("Remote end closed connection without response") in lag_buckets.
+- t10_lua (Release): 2 of 4 library-call loops answer 400 not 204 ([400, 204, 204, 400]); related or a Lua library difference on FreeBSD, unconfirmed.
+Evidence: run 43834602347 job log (assert block and tracebacks). Not harness: the same rows pass on arm64 Linux. The node's own log was not printed; the job now prints xe2e_node.log's tail. The cause is for the lead (src/) once that log shows it.
 
-Pushed the fixes; re-runs FreeBSD 43834602347, arm64 43834602759.
+Pushed; re-runs below.
 
 ## Next
 
-1. Read the next FreeBSD run; classify t2_e2e_asan's 5 failures and confirm the census.
-2. After the repin, a green arm64 census; then write green run links into docs/dev/freebsd.md and docs/dev/platforms.md (A1, A2) and fill Evidence.
+1. Read the next runs: the FreeBSD node log for P2, the arm64 t10_lua.
+2. After the repin, a green arm64 census; then the green run links into docs/dev/freebsd.md and docs/dev/platforms.md (A1, A2); fill Evidence.
 
 ## Blocked on
 

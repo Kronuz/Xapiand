@@ -64,7 +64,7 @@ jobs:
             su -m nobody -c 'TMPDIR="$PWD/.scratch/rows-freebsd" E2E_TIMEOUT_REQUEST=180000 ASAN_OPTIONS=detect_leaks=0 bash harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-freebsd"' || rc=$?
             # The VM's files do not always come back after a failure: print each failed row's log here.
             while read -r row gating rrc secs; do
-              [ "$rrc" = 0 ] || [ "$row" = row ] || { echo "=== $row (rc $rrc)"; tail -40 ".scratch/rows-freebsd/$row.log"; head -80 ".scratch/rows-freebsd/e2e-asan/assert.txt" 2>/dev/null | grep -q . && [ "$row" = t2_e2e_asan ] && head -120 .scratch/rows-freebsd/e2e-asan/assert.txt; }
+              [ "$rrc" = 0 ] || [ "$row" = row ] || { echo "=== $row (rc $rrc)"; tail -40 ".scratch/rows-freebsd/$row.log"; head -80 ".scratch/rows-freebsd/e2e-asan/assert.txt" 2>/dev/null | grep -q . && [ "$row" = t2_e2e_asan ] && head -120 .scratch/rows-freebsd/e2e-asan/assert.txt; tail -60 .scratch/rows-freebsd/e2e-asan/xe2e_node.log 2>/dev/null; }
             done < .scratch/rows-freebsd/rows.tsv
             exit $rc
       - name: Preserve test logs
