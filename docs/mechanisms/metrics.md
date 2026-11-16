@@ -27,4 +27,16 @@ Kronuz/system's `test/test.cc`.
 
 ## Measured
 
-RESULTS
+Job 261116-083148-c3780d (`harness/metrics_scrape_ab.sh`, `quiet strict`, macOS, `RLIMIT_NOFILE` 1,048,576, one HTTP
+loop, 40 scrapes and 40 `GET /` per arm, ABBA over 3 rounds; the spin probe logs every loop turn over 3 ms):
+
+| | before (limit scan) | after (listing) |
+|---|---|---|
+| `GET /:metrics` median | 69-94 ms | 0.67-1.18 ms |
+| `GET /` median (floor) | 0.51-0.91 ms | 0.67-0.93 ms |
+| loop turns over 3 ms, of 40 scrapes | 41-67 (max turn 85-130 ms) | 0 in 3 arms, 1 in one, 14 and 36 in the others (max turn 3.5-9.6 ms) |
+
+The scrape costs about as much as `GET /` after the change. The after arms that show turns over 3 ms also show `GET /`
+maxima of 11 ms in the same arm: the job ran beside about 10 light holds (strict shares macOS cores with them), so
+those turns are host contention, not the scrape; the quiet arms show none. A quiet-host rerun (`quiet exclusive`)
+has not been made.
