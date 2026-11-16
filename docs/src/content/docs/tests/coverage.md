@@ -55,7 +55,7 @@ check it, and lists what no request covers, with the reason.
 
 | Feature | Page | Tests |
 |---|---|---|
-| Field types (boolean, keyword, text, numeric, date and time, geospatial, UUID) | [Field Types](/Xapiand/reference-guide/schemas/field-types) and its pages | Docs E2E; [Check Datatypes](/Xapiand/tests/datatypes/check-data-types), [Check DateType](/Xapiand/tests/datatypes/date-type), [UUID Field](/Xapiand/tests/schema/uuid-field); `tests/test_serialise.cc`, `tests/test_geospatial.cc`, `tests/test_engine_fields.cc` |
+| Field types (boolean, keyword, text, numeric, date and time, geospatial, UUID) | [Field Types](/Xapiand/reference-guide/schemas/field-types) and its pages | Docs E2E; [Check Datatypes](/Xapiand/tests/datatypes/check-data-types), [Check DateType](/Xapiand/tests/datatypes/date-type), [UUID Field](/Xapiand/tests/schema/uuid-field); `tests/test_serialize.cc`, `tests/test_geospatial.cc`, `tests/test_engine_fields.cc` |
 | Dynamic typing and detection | [Dynamic Typing](/Xapiand/reference-guide/schemas/dynamic-typing) | Docs E2E; `harness/datetime_detection_check.py` |
 | Explicit and cast types | [Explicit Types](/Xapiand/reference-guide/schemas/explicit-types), [Casting Types](/Xapiand/reference-guide/schemas/casting-types) | Docs E2E |
 | Namespaces, dynamic field names | [Namespaces](/Xapiand/reference-guide/schemas/namespaces), [Dynamic Field Names](/Xapiand/reference-guide/schemas/dynamic-field-names) | Docs E2E; [Namespace](/Xapiand/tests/namespace/namespace) |
@@ -70,7 +70,7 @@ check it, and lists what no request covers, with the reason.
 | `SEARCH`, `COUNT`, `limit`, `offset`, `sort`, `q`, `selector`, `collapse` | [Search API](/Xapiand/reference-guide/search/search-api) | Docs E2E; `harness/strata_search_check.sh`; `tests/test_engine_search_strata.cc`, `tests/test_engine_sort.cc` |
 | The query DSL: leaf, compound and logical queries, ranges, casts | [Query DSL](/Xapiand/reference-guide/search/query-dsl) and its pages | Docs E2E; [Range Search](/Xapiand/tests/schema/range-search), [Fuzzy](/Xapiand/tests/querydsl/fuzzy), [Partial](/Xapiand/tests/querydsl/partial), [Wildcard](/Xapiand/tests/querydsl/wildcard); `tests/test_engine_query.cc`; `harness/query_depth_check.py` |
 | The query string grammar | [Text Queries](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries) | Docs E2E; `harness/boolean_query_check.py`; `tests/test_fieldparser.cc`, `tests/test_text.cc`, `tests/fuzz_text.cc` |
-| Metrics and bucket aggregations | [Aggregations](/Xapiand/reference-guide/search/aggregations) and its pages | Docs E2E; `harness/agg_buckets_check.py`, `harness/terms_cap_check.py`; `tests/test_metric_serialise.cc` |
+| Metrics and bucket aggregations | [Aggregations](/Xapiand/reference-guide/search/aggregations) and its pages | Docs E2E; `harness/agg_buckets_check.py`, `harness/terms_cap_check.py`; `tests/test_metric_serialize.cc` |
 | Spatial search | [Spatial Search](/Xapiand/tutorials/spatial-search) | Docs E2E; `tests/test_geospatial.cc` |
 
 ## Not covered by a request

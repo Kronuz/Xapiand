@@ -313,7 +313,7 @@ scale/synonym/wildcard) with a bisect to the crash, add the worst shape to
 ### SR3 (critical, blocking for "every case past a cap answers 400"; pre-existing, not in S4's code): deeply nested MessagePack and YAML bodies crash the node
 
 `json_load` is the only body decoder with a depth guard. The other decoders in
-`search_views.cc:2866-2870` (`yaml_load` then `MsgPack(rdoc)`, `MsgPack::unserialise`) have none:
+`search_views.cc:2866-2870` (`yaml_load` then `MsgPack(rdoc)`, `MsgPack::unserialize`) have none:
 
 ```
 MessagePack array nest (0x91 x n)  PUT/SEARCH: n=600 -> 400, n=800 -> crash   (p9_mp.out)

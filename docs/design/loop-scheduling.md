@@ -196,7 +196,7 @@ one heavy turn.
 - A light resumption or a timer waits for at most one heavy turn per pass, plus the light handles queued ahead of
   it. A heavy turn that ends at a checkpoint is one slice plus one unit of work, about 0.25-0.35 ms (one hit is
   about 50 us and 256 ordinals about 0.15 ms, `x7-loop-stalls.md`). A heavy resume after I/O, a chore or a body
-  read runs to its next checkpoint or suspension. Those un-checkpointed sections, such as response serialisation,
+  read runs to its next checkpoint or suspension. Those un-checkpointed sections, such as response serialization,
   bound a turn as they do today, and the stall quests own them (x7-loop-stalls and its follow-ups). A timer is seen at the pass's poll and runs in the next pass, so the lag is at most
   two heavy turns plus the light work queued ahead.
 - A heavy request at position p in the heavy lane runs within p passes. Heavy requests take turns in FIFO order,

@@ -524,7 +524,7 @@ ShardEndpoint::open_blocking(prospect::index& index)
 	{
 		// The id counter as the last commit left it; the replay below raises it past the writes that commit missed.
 		const auto stored = engine::sync_wait(engine_->metadata(std::string(ID_HIGH_METADATA)));
-		id_high_ = stored.empty() ? 0 : MsgPack::unserialise(stored).u64();
+		id_high_ = stored.empty() ? 0 : MsgPack::unserialize(stored).u64();
 		id_high_moved_ = false;
 	}
 
@@ -716,7 +716,7 @@ ShardEndpoint::do_commit(engine::Shard& eng, engine::Chores& chores_, int flags,
 #endif  // XAPIAND_DATA_STORAGE
 	const auto prior_revision = eng.revision();
 	if (id_high_moved_) {
-		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialise());  // durable with its documents
+		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialize());  // durable with its documents
 	}
 	co_await eng.commit(engine::Transaction::none);
 	id_high_moved_ = false;

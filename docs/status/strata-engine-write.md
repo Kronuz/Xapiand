@@ -23,9 +23,9 @@ Xapiand's compressors pin moved to strata's `816bc82`.
    the doc-length bounds are 0 until prospect P4.
 5. `DocView`: did, version, data. Values are TODO-gated on P1 (`phase4/values-bytes`, not landed):
    `Document` holds them and the WAL line carries them, the shard stores none, `DocView::value` is empty
-   (`values_gap` in the unit test flips when P1 lands). `terms`, `term_details`, `serialise` of a view raise
+   (`values_gap` in the unit test flips when P1 lands). `terms`, `term_details`, `serialize` of a view raise
    `not_available` until P2.
-6. WAL replay through `Document::unserialise(kind, ...)`: done, through a node (below).
+6. WAL replay through `Document::unserialize(kind, ...)`: done, through a node (below).
 7. Hits by docid: `get(did)` and `scan(from, sink)`. Done.
 8. Engine per index: `engine::kind_of(path)` (the files on disk, else `XAPIAND_ENGINE`, registry always Xapian).
    The saved `IndexSettings` field of D8 is not done (see Next).
@@ -75,7 +75,7 @@ Xapiand's compressors pin moved to strata's `816bc82`.
       1. Replay idempotence. Cause: the strata index assigns a version as stored + 1 and cannot be told one, and the
          log line did not carry the version, so replaying a line the index already held bumped it (the unit test
          asserted version 2 and its comment said the opposite). Fix (Xapiand:9cbd16f51): the shard stamps the written
-         version into the document before the log serialises it; a document read back with a stamp is applied only when
+         version into the document before the log serializes it; a document read back with a stamp is applied only when
          the index is behind it. `replay` now asserts version, data and doc count unchanged over repeated replays, an
          older line after a newer write, and the same by key. With the skip removed 21 checks fail (mutant
          `replay-skip`); with `>=` weakened to `>` 19 fail. At the node the double apply cannot arise by itself (pending
@@ -109,7 +109,7 @@ Xapiand's compressors pin moved to strata's `816bc82`.
          `check_version` removed from `replace`: killed (`concurrent_cas`: no conflicts, plus `shared`); no lock in
          `replace`: killed. `erase` not marking dirty survives and is equivalent: an erase of a flushed document shows at
          once through the segment's live bits, and an erase of a buffered one flushes first in `locate`.
-      5. `not_available` for `DocView::terms`, `term_details`, `serialise`, and for `engine::search` (a term and
+      5. `not_available` for `DocView::terms`, `term_details`, `serialize`, and for `engine::search` (a term and
          match-all) on a strata shard (`strata_only`).
       6. Fuzz: `fuzz_strata_document` now also checks the stamp round trip; 443926 runs in 61 s, no finding.
       7. `docs/mechanisms/strata-engine.md` describes the stamp and the crash points.

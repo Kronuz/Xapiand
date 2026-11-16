@@ -630,7 +630,7 @@ add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 # are compiled into XAPIAND_OBJ below (io/strings deps already on the path, so its own CMake
 # is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
 # Xapiand's real logger (+ error::name/description).
-FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 20ffc71647228fb042da9fdd002dd1b8388a8b06)
+FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG 563880aa1303673dfc8b9bd3cb5ad39bd6f652b8)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
@@ -640,7 +640,7 @@ add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
 # uuid.cc is compiled into XAPIAND_OBJ below so its trace/exception/node seams point
 # back at Xapiand's logger, exception hierarchy, and Node registry. Its endian and
 # char-classify dependencies are populated below and are on XAPIAND_OBJ's include path.
-FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG 4f878ed66364e4939a681504439a9994fb1ae34f)
+FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG dad68f8c22b8ed171902dd14de5466d6ef332cd2)
 FetchContent_MakeAvailable(cuuid)
 include_directories("${cuuid_SOURCE_DIR}")
 add_compile_definitions(
@@ -657,8 +657,8 @@ add_compile_definitions(
 # still includes "exception.h" directly; src/ is first on the include path, so
 # Xapiand's wrapper is the one found.
 # hashes: the commit with wordwise::hash32, which strata needs.
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 03ab2d69f7e1b0af6039733e0e06cc1e0118a45e)
-FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 88aab56ac909cfcecd7dd50cb83372c94c6a6fec)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 423c8cc1da989cfa9692250567911d288b49092e)
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG 1e9aaaf4ac5bfefa97c51d6f5884c1f3b61f80a5)
 FetchContent_MakeAvailable(msgpack)
 include_directories("${msgpack_SOURCE_DIR}")
 add_compile_definitions(MSGPACK_EXCEPTION_HEADER="xapiand_exception.h")
@@ -766,11 +766,14 @@ endif ()
 FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
 FetchContent_MakeAvailable(task)
 
+# varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
+FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git GIT_TAG 4dd60a8f199c52f98af2e784d4097cc86f243eb1)
+
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
 FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
-FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG 61e09a60e0bf15c9d44a35b7819d08052f474071)  # prospect main: completion's read-only opens, damaged segments at first map
+FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
 # strings: Xapiand files historically obtained log.h transitively through strings.hh
@@ -823,7 +826,7 @@ include_directories("${http_parser_SOURCE_DIR}")
 # stdlib-only, so putting the repo root on the include path is enough for now. The
 # connection/dispatcher headers used at the transport swap additionally pull in
 # Kronuz/queue + Kronuz/compressors; those get wired at that step.
-FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG ab69cf26e556f7108fb800d89c324648779e2549)  # reactor main step R (task sessions, owned scheduler, phased teardown)
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG 886131ba2f61d748cb046b3b4c6171253f04550a)  # reactor main step R (task sessions, owned scheduler, phased teardown)
 FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG eb08b59e6aa2086a1ebaac665b8475f32e80d230)  # http main: q-values parsed without libc
 FetchContent_MakeAvailable(http_lib)
 include_directories("${http_lib_SOURCE_DIR}")
@@ -856,7 +859,7 @@ include_directories("${reactor_SOURCE_DIR}")
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
 # Xapiand as src/datetime_msgpack.{h,cc}. datetime.cc uses strict_stox, already
 # on the path.
-FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG 5dd9155c2e0f925c745984e099925e05084372dd)
+FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG b5d46a8796a80169f71c0535602a5a9a8714e688)
 FetchContent_MakeAvailable(datetime)
 include_directories("${datetime_SOURCE_DIR}")
 
@@ -907,7 +910,7 @@ include_directories("${soundex_SOURCE_DIR}")
 # alongside the soundex family for PhoneticMetric. Its one out-of-line file
 # (double_metaphone.cc) compiles as part of Xapiand below (the cartesian/htm way),
 # and its header goes on the include path.
-FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG 594e6d69ec46dadcf989ac8989dd1f18c4ffc40f)
+FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG a5f50a6987741ae823c3dcf0e5180d3539625f45)
 FetchContent_Declare(double_metaphone  GIT_REPOSITORY https://github.com/Kronuz/double-metaphone.git  GIT_TAG b3191c4db0d7446dd2711f4aaaea7dbcc737ca3c)
 foreach(dep string_similarity double_metaphone)
 	FetchContent_MakeAvailable(${dep})

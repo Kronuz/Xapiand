@@ -451,7 +451,7 @@ Astro/Starlight.
 
 ### Removed
 - **GoogleTest**: the unit tests run on a dependency-free harness and the legacy test
-  tree was pruned (many suites revived: serialise, endpoint, fieldparser, geospatial
+  tree was pruned (many suites revived: serialize, endpoint, fieldparser, geospatial
   HTM, and more).
 
 ---

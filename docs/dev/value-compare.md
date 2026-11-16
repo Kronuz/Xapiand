@@ -10,7 +10,7 @@ bytes for some inputs. Black-box evidence (`ss.cc`, `sweep*.cc`, `neg.cc`: the f
 ```
 2147483647 -> c5ffffffff     2147483650 -> c600000001
 2147483648 -> c6             2147483651 -> c60000000180
-2147483649 -> c60080         (unserialises to 2164260864; sorts after 2147483650 up to 2147483779)
+2147483649 -> c60080         (unserializes to 2164260864; sorts after 2147483650 up to 2147483779)
 ```
 
 Two defects, one cause (a run of about 30 equal mantissa bits):

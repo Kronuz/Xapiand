@@ -36,7 +36,7 @@ One leaked adapter and one leaked source per translation. Mode `rss` translates 
 
 Why nothing caught it: macOS ASan does not run LeakSanitizer, and `test_engine_query` never counts live sources. The ledger's proof item 5 ("0 AddressSanitizer reports") cannot see leaks on this host.
 
-Fix (probe mode `leakfix` shows both end at `live=0`): construct the adapter on the stack and pass its address (`PostingSourceAdapter adapter(node->src->clone()); return Xapian::Query(&adapter);`, which clones), or `auto* a = new ...; return Xapian::Query(a->release());`. Add a regression test with a live-instance counter in the engine source, asserting zero live after the `Query` and every `Xapian::Query` copy are gone. The `registry` paths (`register_posting_source` passes a temporary by const reference; `unserialise_with_registry` returns an owned object for Xapian to adopt) behave as before; the count in `test_registered_sources` is unaffected.
+Fix (probe mode `leakfix` shows both end at `live=0`): construct the adapter on the stack and pass its address (`PostingSourceAdapter adapter(node->src->clone()); return Xapian::Query(&adapter);`, which clones), or `auto* a = new ...; return Xapian::Query(a->release());`. Add a regression test with a live-instance counter in the engine source, asserting zero live after the `Query` and every `Xapian::Query` copy are gone. The `registry` paths (`register_posting_source` passes a temporary by const reference; `unserialize_with_registry` returns an owned object for Xapian to adopt) behave as before; the count in `test_registered_sources` is unaffected.
 
 ## Conditions (to land, same fix round)
 
@@ -56,15 +56,15 @@ R1 is a real behaviour: probe `probe_eq pattern` shows `wildcard("al?ce", ..., P
 
 Required: tests that fail for R1, R2 and R3 (R1: wildcard against a small database with `?` and `*` patterns; R2: `get_matches_lower_bound` of a filter over a slot every document fills; R3: a source's max weight reaches the matcher, e.g. via `get_max_attained`-style bound or a source whose weight exceeds a wrongly low bound). R4 and R5: add or document.
 
-### CR3. Argument evaluation order decides which field is which in the three `unserialise` functions (CI risk on Linux)
+### CR3. Argument evaluation order decides which field is which in the three `unserialize` functions (CI risk on Linux)
 
-`src/multivalue/range.cc:405-410, 481-486, 556-561` (the geo source reads its slot into a local first and is fine) build the source with `unserialise_length(*it), std::string(*(++it)), std::string(*(++it))`: the order of evaluation of function arguments is unspecified. Clang (the only compiler I ran) evaluates left to right; GCC commonly evaluates right to left, which would swap slot, start and end. The expression is unchanged from master (so a remote range search on a GCC build was already at risk), but the branch adds `test_registered_sources`, which rebuilds these sources through `unserialise` and would then fail on Linux CI. I could not run GCC here. Fix: read the three fields into locals in order, then construct.
+`src/multivalue/range.cc:405-410, 481-486, 556-561` (the geo source reads its slot into a local first and is fine) build the source with `unserialize_length(*it), std::string(*(++it)), std::string(*(++it))`: the order of evaluation of function arguments is unspecified. Clang (the only compiler I ran) evaluates left to right; GCC commonly evaluates right to left, which would swap slot, start and end. The expression is unchanged from master (so a remote range search on a GCC build was already at risk), but the branch adds `test_registered_sources`, which rebuilds these sources through `unserialize` and would then fail on Linux CI. I could not run GCC here. Fix: read the three fields into locals in order, then construct.
 
 ## Rulings
 
 ### R-A. PostingSource as a value-slot filter: accept it
 
-The three real sources (`MultipleValueRange`, `MultipleValueGE`, `MultipleValueLE`, and `GeoSpatialRange` makes four) are all `slot` + predicate + weight, and the Xapian adapter reproduces `next`, `skip_to` and `check` exactly like the code it replaced (I read the old and new bodies side by side; the registry, clone and serialise round trips are covered by `test_registered_sources`, and the corpus shows no answer change).
+The three real sources (`MultipleValueRange`, `MultipleValueGE`, `MultipleValueLE`, and `GeoSpatialRange` makes four) are all `slot` + predicate + weight, and the Xapian adapter reproduces `next`, `skip_to` and `check` exactly like the code it replaced (I read the old and new bodies side by side; the registry, clone and serialize round trips are covered by `test_registered_sources`, and the corpus shows no answer change).
 
 For strata the filter is the easier contract to implement, not the harder: `next` is a scan of the slot column calling `accept`, `skip_to` and `check` are a column lookup by docid then `accept`, `weight` scores a hit, and `max_weight` feeds pruning. A general `next/skip_to/check` cursor would force strata to expose docid iteration for a source it cannot see into. Locking the filter shape does not force a seam rewrite at the S-steps: a cursor-style source is a new base (or a new node kind) beside it, and every caller is ours. The lead's leaning is right.
 
@@ -74,14 +74,14 @@ Three small additions to the contract now, none of them breaking:
 2. State what `accept` does on a value it cannot decode (CR5).
 3. There is no selectivity estimate hook (Xapian gets only `set_termfreq_min(0)`); strata's planner will want an optional `estimate`. Additive, default "unknown".
 
-### R-B. `SerialiseList::size()` no longer `noexcept`: benign
+### R-B. `SerializeList::size()` no longer `noexcept`: benign
 
-The only callers that evaluate `size()` on a list built from untrusted bytes are the four `unserialise` functions (`range.cc` x3, `geospatialrange.cc:150`) and `AggregationMatchSpy::unserialise` (`aggregations.cc:373`); all five sit inside `try { ... } catch (SerialisationError)`. No `noexcept` function or destructor calls it (`git grep` over `src` outside the GPL exclusions). The fix is correct and the garbage test exercises it. I did not find a hot-path caller; the removal costs nothing measurable.
+The only callers that evaluate `size()` on a list built from untrusted bytes are the four `unserialize` functions (`range.cc` x3, `geospatialrange.cc:150`) and `AggregationMatchSpy::unserialize` (`aggregations.cc:373`); all five sit inside `try { ... } catch (SerializationError)`. No `noexcept` function or destructor calls it (`git grep` over `src` outside the GPL exclusions). The fix is correct and the garbage test exercises it. I did not find a hot-path caller; the removal costs nothing measurable.
 
 ### R-C. Lifetimes and ownership
 
 1. `Query` owns sources by `shared_ptr<const PostingSource>`; the Xapian translation clones per call; engine-side adapters own their source (`unique_ptr`). `KeyMakerAdapter` and `MatchSpyAdapter` offer a borrowing constructor whose "must outlive" rule is only a comment. Reasonable, but nothing in step 1 uses them (see CR8).
-2. Remote: `Registry` clones prototypes (`register_posting_source` takes a const reference), so the temporary prototype dies safely; `unserialise_with_registry` returns an owned adapter for Xapian to adopt. `rebuild()` maps `engine::Error` to `Xapian::NetworkError` with the same text; other exceptions pass through as before. Checked by `test_registered_sources` and the garbage test; not exercised across a live cluster by me.
+2. Remote: `Registry` clones prototypes (`register_posting_source` takes a const reference), so the temporary prototype dies safely; `unserialize_with_registry` returns an owned adapter for Xapian to adopt. `rebuild()` maps `engine::Error` to `Xapian::NetworkError` with the same text; other exceptions pass through as before. Checked by `test_registered_sources` and the garbage test; not exercised across a live cluster by me.
 
 ## Non-blocking notes
 
@@ -98,7 +98,7 @@ So the existing no-depth-cap trap (AGENTS.md) fires at about half the depth on t
 
 ### CR5. `accept()` on a corrupt stored value terminates the process (pre-existing, now on the seam)
 
-`insideRange(string_view)` is `noexcept` and iterates a `StringList`, which throws `SerialisationError` lazily. Probe `probe_eq garbage` (200000 random stored values): abort at the 404th with `Bad encoded length: length greater than data`. Same on master. Since strata will call `accept` on stored bytes, either catch and treat as "no match" in the three sources (and the geo one) or document that `accept` may throw and have the adapter translate it.
+`insideRange(string_view)` is `noexcept` and iterates a `StringList`, which throws `SerializationError` lazily. Probe `probe_eq garbage` (200000 random stored values): abort at the 404th with `Bad encoded length: length greater than data`. Same on master. Since strata will call `accept` on stored bytes, either catch and treat as "no match" in the three sources (and the geo one) or document that `accept` may throw and have the adapter translate it.
 
 ### CR6. `get_mset` translates the same query up to three times
 
@@ -141,7 +141,7 @@ Head `a808ecc9d` (fix commit `db0be79ad`). Local build `.scratch/build-asan` reb
 | CR2 | CLOSED | `.scratch/rmutants.py` on the fixed head: R1 wildcard flags dropped fails 3 checks, R2 `set_termfreq_min(0)` removed fails 1, R3 `max_weight` dropped fails 3, R4 fuzzy limit kind swapped fails 2, R6 control fails 277. R5 (binary combine built as a list) survives, as the developer reports; `test_binary_equals_list` (`tests/test_engine_query.cc:796`) now pins that the two forms give the same description and the same hits and weights for every binary op over six operands including empties, so the survival is a stated equivalence, which was the "document" option of the finding. |
 | CR3 | CLOSED | `src/multivalue/range.cc:417-419`, `:501-502`, `:583-584`: slot, start and end are `const`/local reads in order, then the constructor call. Read, not testable on this clang (left to right); a reversed-read mutant fails `test_registered_sources` per the ledger. |
 | CR4 | CLOSED | `src/engine/xapian/query.cc:167-183` folds the append chain in a loop; `src/engine/query.cc:59-76` (`~QueryNode`) frees uniquely owned children from a list. `probe_eq deep 2000 524288` with the translation only (`NODESC=1`): ok at 2000, 5000 and 20000 (`engine::Query` alone: 200000 built and destroyed). With `get_description()` the probe overflows inside Xapian (`QueryBranch::get_description_helper`) at 2000, and Xapian's own destructor (`SmallVectorI::clear`) overflows at 5000: those are Xapian's recursion, not the seam's. `test_append_chain` covers 600 on 256 KB. |
-| CR5 | CLOSED | `probe_eq garbage`: 200000 random stored values, no terminate, hits=19502. `src/multivalue/range.cc:353-372, 443-458, 525-540` (range, GE, LE `insideRange`) and `src/multivalue/geospatialrange.cc:90-122` (`insideRanges`) catch `SerialisationError` and return false; geo `weight` (`:61-85`) returns the no-centroid weight. Revert (range `insideRange` catch rethrows): process aborts (exit -6). `test_corrupt_stored_value` runs 20000 random values per source plus a search over a slot holding one corrupt value. |
+| CR5 | CLOSED | `probe_eq garbage`: 200000 random stored values, no terminate, hits=19502. `src/multivalue/range.cc:353-372, 443-458, 525-540` (range, GE, LE `insideRange`) and `src/multivalue/geospatialrange.cc:90-122` (`insideRanges`) catch `SerializationError` and return false; geo `weight` (`:61-85`) returns the no-centroid weight. Revert (range `insideRange` catch rethrows): process aborts (exit -6). `test_corrupt_stored_value` runs 20000 random values per source plus a search over a slot holding one corrupt value. |
 | New: `reset(db, shard)` override | CLOSED | See below. |
 
 ### New behaviour: bounds now reach the matcher

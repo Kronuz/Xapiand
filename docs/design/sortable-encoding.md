@@ -29,17 +29,17 @@ Lucene's `NumericUtils`.
 ## Where numbers are encoded today
 
 Direct calls at Xapiand:cd9c216b5, excluding the two GPL files. Ids already use `sortable` (exact-id-keys,
-Xapiand:73fbcb48d: `Serialise::id`, `Unserialise::id`).
+Xapiand:73fbcb48d: `Serialize::id`, `Unserialize::id`).
 
 | Use | Sites | Type |
 |---|---|---|
-| Field values: integer, positive, floating, datetime (µs-rounded seconds) | `serialise.h:141, 173, 180, 187`; decoded at `:292, 309, 328, 333` | `int64`, `uint64`, `long double`, `double` |
-| time and timedelta | decoded at `serialise.cc:1228, 1235, 1247, 1254` | `double` |
+| Field values: integer, positive, floating, datetime (µs-rounded seconds) | `serialize.h:141, 173, 180, 187`; decoded at `:292, 309, 328, 333` | `int64`, `uint64`, `long double`, `double` |
+| time and timedelta | decoded at `serialize.cc:1228, 1235, 1247, 1254` | `double` |
 | Versions (`DB_SLOT_VERSION`) | `database/shard.cc:96`, `handler.cc:323, 491, 2048`, `search_views.cc:1904, 2059`, `schemas_lru.cc:124`, `index_resolver_lru.cc:340`, `engine/strata/shard.cc:634` | `double` |
 | `get_hashed` | `database/utils.h:103-104`; no caller (only an include, `cast.h:28`) | `uint64` |
 | Sort sentinels | `multivalue/keymaker.h:47-48` | `double` |
 
-Everything else reaches the codec through `Serialise::`/`Unserialise::`: accuracy terms
+Everything else reaches the codec through `Serialize::`/`Unserialize::`: accuracy terms
 (`generate_terms.cc`), sort keys and distances (`keymaker.cc`), ranges (`range.cc:92-121`), aggregations
 (`aggregations/metrics.h`). Nothing persists a decoded number; the document's own MsgPack data stays the
 source of truth.
@@ -51,7 +51,7 @@ The types meet in one order in four places:
 2. integer, positive and floating share ctype `N` (`schema.h:421-424`), and the slot is
    `xxh32(prefix, ctype)` (`database/utils.cc:102-104`): one field typed integer in one index and floating
    in another sorts and ranges as one slot across a wide search.
-3. A floating field stores integers (`serialise.cc:417-418`); floats' accuracy terms are truncated to
+3. A floating field stores integers (`serialize.cc:417-418`); floats' accuracy terms are truncated to
    `int64` (`schema.cc:5359, 5365`) and share the global accuracy prefixes with integer and positive terms
    (`generate_terms.cc:345-375`), matched by exact term equality.
 4. The Python client exports `sortable_serialise` and `sortable_unserialise` as public API
@@ -126,14 +126,14 @@ maker already frames concatenated keys (`0x00` escaped).
 
 **D4. Values Xapiand will not store (D87 Q3).** A NaN field value or range bound answers 400; -0.0 indexes
 as 0; a `uint64` of 2^63 or more given to an integer field answers 400 instead of wrapping negative
-(`serialise.cc:440-441`).
+(`serialize.cc:440-441`).
 
 **D5. The decoder is strict.** `sortable::decode` accepts exactly the outputs of `encode`: it rejects the
 empty input, the unwritten tags, bytes after zero, NaN or an infinity, a missing or non-canonical escape
 field, a tail over 8 bytes or ending in `00`, 64 fraction bits, and any value that is neither a `double` nor
 an integer in [-2^63, 2^64) (nine rules, `sortable/docs/mechanisms/sortable.md`). It reads only inside its
 input, allocates nothing, never throws. Its result converts exactly (`to_int64`, `to_uint64`, `to_double`)
-or saturating (`saturate_int64`, `saturate_uint64`, today's `clamp_int64` semantics, `serialise.h:313-326`).
+or saturating (`saturate_int64`, `saturate_uint64`, today's `clamp_int64` semantics, `serialize.h:313-326`).
 In Xapiand a rejected value raises `SerializationError` naming it.
 
 **D6. Xapiand's switch.** `Serialize::integer/positive/floating/timestamp` and the `Unserialize` twins call
@@ -197,7 +197,7 @@ a client edit that changes bytes fails a check.
 
 1. **The library's proof** (done in `sortable`: T2's exhaustive run, T4's CPU-hours, `tools/cli.cc`). In
    Xapiand: T1's and T3's CTests and the Python port, with no byte change.
-2. **One seam** (no byte change): every direct call of the first table behind `Serialise::`/`Unserialise::`
+2. **One seam** (no byte change): every direct call of the first table behind `Serialize::`/`Unserialize::`
    (versions through `version`), `get_hashed` deleted.
 3. **The switch** (after the design review confirms this revision): D4-D7 with T1-T6, T8 and T9; `git rm`
    both GPL files and the Python module; the American-spelling rename (D88); changelog `[Unreleased]`

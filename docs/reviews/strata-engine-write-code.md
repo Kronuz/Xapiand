@@ -92,7 +92,7 @@ absent key), skip when `stored >= stamp`, else raise `errc::corrupt`.
    1200 writes with a committer thread (a refresh per read) and a thread opening and closing handles, once inline and once
    through a 4-thread pool scheduler (the offload hop); then 300 rounds of "last handle closes and commits" racing three
    reopeners. Invariants (no backwards version, scan order, count at least the acknowledged count) hold. Close during a write by
-   another handle is safe by construction (`Entry::mtx` serialises the last release against `acquire`); destroying the only
+   another handle is safe by construction (`Entry::mtx` serializes the last release against `acquire`); destroying the only
    handle under an in-flight coroutine is a contract violation, as in the Xapian shard. Notes: the last release commits (fsync,
    merges) on whichever thread drops the shard, including a loop thread if one does; `scan` materialises every live document's
    stored data in a `std::vector<Hit>` under the shard lock (`shard.cc` `scan`), so `dump_documents` on a large shard needs the

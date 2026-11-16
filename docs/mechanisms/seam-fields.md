@@ -45,7 +45,7 @@ Schema / GenerateTerms / QueryDSL            seam                         engine
 
 ## Invariants
 
-1. A document built through fields serialises to the bytes of the Xapian document of the joined
+1. A document built through fields serializes to the bytes of the Xapian document of the joined
    terms (`test_xapian_terms_are_joined`, random operations against Xapian calls).
 2. A query node translates to the Xapian query of the joined strings, edit-distance prefix
    included (`test_query_nodes`).

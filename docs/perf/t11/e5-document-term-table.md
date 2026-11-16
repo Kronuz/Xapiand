@@ -13,7 +13,7 @@ field owns a terms vector (and, past 8 terms, a table): `~StrataDocument` is 216
 
 One terms array and one open-addressing table per document, keyed by (field, term bytes), replace the 47 per-field
 vectors with two blocks. `intern` then touches contiguous memory and the destructor frees a handful of blocks; `fill`
-and `serialise` group the terms by field with a counting pass (the document keeps arrival order). Expected: 4 to 6% of
+and `serialize` group the terms by field with a counting pass (the document keeps arrival order). Expected: 4 to 6% of
 the row.
 
 ## Procedure

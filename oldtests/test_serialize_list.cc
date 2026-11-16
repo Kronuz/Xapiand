@@ -21,27 +21,27 @@
  * THE SOFTWARE.
  */
 
-#include "test_serialise_list.h"
+#include "test_serialize_list.h"
 
-#include "../src/serialise_list.h"
+#include "../src/serialize_list.h"
 #include "utils.h"
 
 
 inline int testing(const std::vector<std::string>& strs) {
-	auto serialised = StringList::serialise(strs.begin(), strs.end());
+	auto serialized = StringList::serialize(strs.begin(), strs.end());
 
 	int cont = 0;
 
-	StringList s(serialised);
+	StringList s(serialized);
 	if (s.size() != strs.size()) {
 		L_ERR("StringList is not working. Size: {} Expected: {}", s.size(), strs.size());
 		++cont;
 	}
 
 	std::vector<std::string> res;
-	StringList::unserialise(serialised, std::back_inserter(res));
+	StringList::unserialize(serialized, std::back_inserter(res));
 	if (res.size() != strs.size()) {
-		L_ERR("StringList::unserialise is not working. Size: {} Expected: {}", res.size(), strs.size());
+		L_ERR("StringList::unserialize is not working. Size: {} Expected: {}", res.size(), strs.size());
 		++cont;
 	}
 
@@ -61,20 +61,20 @@ inline int testing(const std::vector<std::string>& strs) {
 
 
 inline int testing(const std::vector<Cartesian>& ptos) {
-	auto serialised = CartesianList::serialise(ptos.begin(), ptos.end());
+	auto serialized = CartesianList::serialize(ptos.begin(), ptos.end());
 
 	int cont = 0;
 
-	CartesianList s(serialised);
+	CartesianList s(serialized);
 	if (s.size() != ptos.size()) {
 		L_ERR("CartesianList is not working. Size: {} Expected: {}", s.size(), ptos.size());
 		++cont;
 	}
 
 	std::vector<Cartesian> res;
-	CartesianList::unserialise(serialised, std::back_inserter(res));
+	CartesianList::unserialize(serialized, std::back_inserter(res));
 	if (res.size() != ptos.size()) {
-		L_ERR("CartesianList::unserialise is not working. Size: {} Expected: {}", res.size(), ptos.size());
+		L_ERR("CartesianList::unserialize is not working. Size: {} Expected: {}", res.size(), ptos.size());
 		++cont;
 	}
 
@@ -94,20 +94,20 @@ inline int testing(const std::vector<Cartesian>& ptos) {
 
 
 inline int testing(const std::vector<range_t>& ranges) {
-	auto serialised = RangeList::serialise(ranges.begin(), ranges.end());
+	auto serialized = RangeList::serialize(ranges.begin(), ranges.end());
 
 	int cont = 0;
 
-	RangeList s(serialised);
+	RangeList s(serialized);
 	if (s.size() != ranges.size()) {
 		L_ERR("RangeList is not working. Size: {} Expected: {}", s.size(), ranges.size());
 		++cont;
 	}
 
 	std::vector<range_t> res;
-	RangeList::unserialise(serialised, std::back_inserter(res));
+	RangeList::unserialize(serialized, std::back_inserter(res));
 	if (res.size() != ranges.size()) {
-		L_ERR("RangeList::unserialise is not working. Size: {} Expected: {}", res.size(), ranges.size());
+		L_ERR("RangeList::unserialize is not working. Size: {} Expected: {}", res.size(), ranges.size());
 		++cont;
 	}
 

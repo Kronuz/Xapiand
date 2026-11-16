@@ -7,7 +7,7 @@ Design: `docs/design/xapiand-on-strata.md` (row S3, D4, G4, G5, G6, G8; ruling R
 ## State
 
 Every done criterion holds under R-P2: the engine keeps no term lists, `_terms` is served from stored values, and
-`DocView::terms`, `term_details`, `serialise` (so the `:info` term view) are refused with a 400. The branch has
+`DocView::terms`, `term_details`, `serialize` (so the `:info` term view) are refused with a 400. The branch has
 master merged (S1, S2, X6 with (field, term) at the seam, copyright, alpha.10 build fixes) and prospect main
 (becfe3c, strata c4ea4ce).
 
@@ -82,7 +82,7 @@ on the Xapian engine and is refused on strata.
 
 1. **CR1.** A spy, key maker or scan sink that throws now leaves the strata engine as thrown: `CallbackGuard`
    (`shard.h`) marks the throw and `rethrow_translated(core, callback_threw)` keeps an exception of no known kind
-   (strata's own kinds are still translated). `AggregationError` and `SerialisationError` are 400 again. Tests:
+   (strata's own kinds are still translated). `AggregationError` and `SerializationError` are 400 again. Tests:
    `test_sorter` and `test_spy` throw a `ClientLike` (a `std::runtime_error`, not an engine error) and check its
    type; the scan sink too. Revert check: ignoring `callback_threw` fails 6 of 944 checks. The five probe shapes
    (`_sum` over keyword, `_avg` over geo and boolean, `_terms` with an unknown `_sort` field, `_terms` and
@@ -100,7 +100,7 @@ on the Xapian engine and is refused on strata.
 4. **`_terms` memory.** `BucketAggregation` keeps at most about `shard_size` buckets while collecting (`_prune`):
    default `_limit * 1.5 + 10`, `_shard_size` raises it (never below `_limit`); past twice that many it keeps the
    best `shard_size` in its own order (key orders exactly; count orders by count; an order by a sub-aggregation by
-   count) and `serialise_results` sends the best `shard_size`. Only `_terms` and `_values` are capped. Counts of
+   count) and `serialize_results` sends the best `shard_size`. Only `_terms` and `_values` are capped. Counts of
    values pruned and met again restart, so counts fall short past the cap and a flat distribution loses its top
    (guaranteed only for values above `1/shard_size` of the documents), Elasticsearch's caveat. Nested bucket
    aggregations each cap their own buckets. `harness/terms_cap_check.py`: 345,000 documents, 200,000 distinct

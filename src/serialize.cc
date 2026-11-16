@@ -33,7 +33,7 @@
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
 #include "chars.hh"                                   // for iskeyword
-#include "cuuid.hh"                                // for UUID, cuuid::serialise/unserialize dispatch
+#include "cuuid.hh"                                // for UUID, cuuid::serialize/unserialize dispatch
 #include "opts.h"                                   // for opts.legacy_ids (v1 vs v6 codec)
 #include "database/schema.h"                          // for FieldType, FieldType::keyword, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
@@ -131,7 +131,7 @@ Serialize::isUUID(std::string_view field_value) noexcept
 				if (uuid_sz >= 7 && uuid.front() == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = UUID_ENCODER.decode(uuid);
-						if (UUID::is_serialised(decoded)) {
+						if (UUID::is_serialized(decoded)) {
 							continue;
 						}
 					} catch (const std::invalid_argument&) { }
@@ -654,7 +654,7 @@ Serialize::uuid(std::string_view field_value)
 			if (uuid_sz != 0u) {
 				if (uuid_sz == UUID_LENGTH) {
 					try {
-					serialized.append(cuuid::serialise(UUID(uuid)));
+					serialized.append(cuuid::serialize(UUID(uuid)));
 						continue;
 					} catch (const std::invalid_argument&) { }
 				}
@@ -663,7 +663,7 @@ Serialize::uuid(std::string_view field_value)
 				if (uuid_sz >= 7 && uuid_front == '~') {  // floor((4 * 8) / log2(59)) + 2
 					try {
 						auto decoded = UUID_ENCODER.decode(uuid);
-						if (UUID::is_serialised(decoded)) {
+						if (UUID::is_serialized(decoded)) {
 							serialized.append(decoded);
 							continue;
 						}
@@ -1297,7 +1297,7 @@ Unserialize::uuid(std::string_view serialized_uuid, UUIDRepr repr)
 #ifdef XAPIAND_UUID_GUID
 		case UUIDRepr::guid:
 			// {00000000-0000-1000-8000-010000000000}
-			cuuid::unserialise(serialized_uuid, std::back_inserter(uuids), codec);
+			cuuid::unserialize(serialized_uuid, std::back_inserter(uuids), codec);
 			result.push_back('{');
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			result.push_back('}');
@@ -1306,7 +1306,7 @@ Unserialize::uuid(std::string_view serialized_uuid, UUIDRepr repr)
 #ifdef XAPIAND_UUID_URN
 		case UUIDRepr::urn:
 			// urn:uuid:00000000-0000-1000-8000-010000000000
-			cuuid::unserialise(serialized_uuid, std::back_inserter(uuids), codec);
+			cuuid::unserialize(serialized_uuid, std::back_inserter(uuids), codec);
 			result.append("urn:uuid:");
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
@@ -1330,7 +1330,7 @@ Unserialize::uuid(std::string_view serialized_uuid, UUIDRepr repr)
 		default:
 		case UUIDRepr::vanilla:
 			// 00000000-0000-1000-8000-010000000000
-			cuuid::unserialise(serialized_uuid, std::back_inserter(uuids), codec);
+			cuuid::unserialize(serialized_uuid, std::back_inserter(uuids), codec);
 			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 	}

@@ -554,7 +554,7 @@ MsgPack
 Data::get_obj() const
 {
 	auto main_locator = get("");
-	return main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
+	return main_locator != nullptr ? MsgPack::unserialize(main_locator->data()) : MsgPack::MAP();
 }
 
 
@@ -565,7 +565,7 @@ Data::set_obj(const MsgPack& object, bool compress)
 	if (!compress) {
 		locator.type = Locator::Type::inplace;
 	}
-	locator.data(object.serialise());
+	locator.data(object.serialize());
 }
 
 

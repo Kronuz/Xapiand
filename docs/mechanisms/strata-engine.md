@@ -17,13 +17,13 @@ Shard::replace_document  -> engine::Shard::replace_by_key(key, doc, args)
    strata::Shard: find_key -> version -> finalise(doc, result) -> prospect::operation -> index.apply
                   (one operation per transaction; the verdict's docid and version must equal the
                    ones the hook saw, or the write fails as internal)
-WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> replace(did, doc)
+WAL: Document::serialize() -> line -> Document::unserialize(kind, line) -> replace(did, doc)
 ```
 
 1. **One engine per index.** `engine::kind_of(path)` says which engine a shard has: its own files
    (`strata/` or `iamglass`), else `XAPIAND_ENGINE` (`xapian` or `strata`, read once, default `xapian`), and
    the registry (`.xapiand/...`) is always Xapian. `Document(kind)` is built in the engine's own form, the
-   shard opens through `engine::open_local(kind, ...)`, and `DatabaseWAL` unserialises with the shard's
+   shard opens through `engine::open_local(kind, ...)`, and `DatabaseWAL` unserializes with the shard's
    kind (the `:wal` dump has no shard and takes it from the log's files). The remaining half of D8 is an `IndexSettings` field saved with the index; until then a new index
    takes the process default.
 2. **The key is explicit.** `Document::set_key(key)` names the document; the key is the id's type character and its
@@ -53,18 +53,18 @@ WAL: Document::serialise() -> line -> Document::unserialise(kind, line) -> repla
 7. **Values (P1) and term lists (P2).** `Document` holds values, WAL lines carry them, and `DocView::value`
    returns nothing until prospect's values plugin stores them (`src/engine/strata/values.h` is the one place
    to wire it, `tests/test_engine_strata.cc` `values_gap` flips then). `DocView::terms`, `term_details` and
-   `serialise` raise `not_available` until the term-list plugin. Searching a strata shard raises it too (S2).
+   `serialize` raise `not_available` until the term-list plugin. Searching a strata shard raises it too (S2).
 
 ## Replay
 
-A WAL line is `Document::serialise()`; replay is `Document::unserialise(kind, line)` then `replace(did, doc)`.
+A WAL line is `Document::serialize()`; replay is `Document::unserialize(kind, line)` then `replace(did, doc)`.
 A replayed id above `last_docid` is a create (no lookup); one with a key finds its version by the key. Replay
 runs at a writable open, as with Xapian, so a restart serves the committed state until a write opens the
 shard; a strata shard exists from its creation, so unlike an uncommitted new Xapian shard it answers (empty)
 instead of failing the read. A transaction replays inside itself and cancels with it.
 
 Replay is idempotent per line. The index assigns a version as the stored one plus one and cannot be told a
-version, so the shard stamps the version it wrote into the document before the log serialises it. A document read
+version, so the shard stamps the version it wrote into the document before the log serializes it. A document read
 back from the log with a stamp is applied only when the index is behind it: a line the index already holds, or an
 older one after a newer write, changes nothing (`tests/test_engine_strata.cc` `replay`). A line is applied only
 when it is exactly the next version of the document (version 1 for an absent one); a line further ahead means a
@@ -80,10 +80,10 @@ starts from the committed state.
 ## Invariants
 
 1. Only `src/engine/strata/` names strata or prospect (`harness/seam_check.sh` does not need an entry).
-2. A shard is used by one task at a time; the shard's mutex serialises the handles that share an index.
+2. A shard is used by one task at a time; the shard's mutex serializes the handles that share an index.
 3. A write that the index rejects leaves no trace; a version or key conflict is `errc::version_conflict`,
    an invalid document `errc::invalid`.
-4. The stored form of a document is the engine's own (`StrataDocument::serialise`, format byte 3; lines of formats 1 and 2, written before fields, are named as such); a line
+4. The stored form of a document is the engine's own (`StrataDocument::serialize`, format byte 3; lines of formats 1 and 2, written before fields, are named as such); a line
    that does not decode is `errc::syntax`.
 
 ## Code

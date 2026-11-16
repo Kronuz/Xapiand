@@ -119,7 +119,6 @@ class AsyncCheck(unittest.TestCase):
             {
                 "src/xapian/x.cc": bad,
                 "src/engine/xapian/y.cc": bad,
-                "src/sortable_serialise.cc": bad,
                 "src/server/remote_protocol_views.cc": bad,
                 "src/server/replication_protocol_views.cc": bad,
             }

@@ -7,19 +7,19 @@ representation. For the Xapian engine that is a `Xapian::Document` (`engine::xap
 `src/engine/xapian/convert.h`). `Schema::index`, `GenerateTerms` and the handler call `add_term`,
 `add_posting`, `add_value` and `set_data` on the handle; each call goes straight into the engine's document.
 The shard writes that same object (`engine::xapian::xapian_document(doc)` in `src/engine/xapian/shard.cc`)
-and the write-ahead log serialises it (`Document::serialise`, `src/database/wal.cc`).
+and the write-ahead log serializes it (`Document::serialize`, `src/database/wal.cc`).
 
 ## How
 
 ```
 DocIndexer::index (a task)         the shard's turn (a task)              WAL thread
-Schema::index -> Document          lock_shard -> Shard::replace_document  doc.serialise()
+Schema::index -> Document          lock_shard -> Shard::replace_document  doc.serialize()
   (built in Xapian form)             finalise (id, version), stamp          (same object)
                                      db.replace_document(native(doc))
 ```
 
 Nothing is converted. The document the parallel stage builds is the one the shard hands to the database
-and the one the log serialises. The shard's write section only adds what needs the shard (id term, version
+and the one the log serializes. The shard's write section only adds what needs the shard (id term, version
 term and slot, rewritten data) through the same handle.
 
 ## Why
@@ -33,13 +33,13 @@ second build and the conversion, so there is nothing left to move.
 ## Invariants
 
 1. Each `add_*` call has the semantics of the Xapian call it replaces; an empty value clears the slot.
-2. The stored and logged bytes are Xapian's own serialisation, so old log lines stay readable
-   (`Document::unserialise` reads them).
+2. The stored and logged bytes are Xapian's own serialization, so old log lines stay readable
+   (`Document::unserialize` reads them).
 3. A document has one owner at a time. It moves between threads through the indexer queue
    (`ready_queues`) and into the log task; it is never copied.
 4. Only the engine that made a document reads its native form back (`xapian_document` is in the Xapian
    implementation). A second engine defines its own `Document::Native`, its `Document::Document()` and
-   `Document::unserialise`.
+   `Document::unserialize`.
 5. `harness/seam_check.sh` is unchanged: no file outside `src/engine/xapian` names Xapian for this.
 
 ## Numbers
@@ -67,7 +67,7 @@ the bisect (`docs/perf/gate05-index.md`) put the engine shard's `sync_wait` writ
 | What | Where |
 |---|---|
 | The handle and `Native` interface | `src/engine/document.h` |
-| The Xapian document, `xapian_document`, `from_xapian`, `Document::Document`, `Document::unserialise` | `src/engine/xapian/convert.{h,cc}` |
+| The Xapian document, `xapian_document`, `from_xapian`, `Document::Document`, `Document::unserialize` | `src/engine/xapian/convert.{h,cc}` |
 | Shard writes the object | `src/engine/xapian/shard.cc` |
 | Word-break terms added in place | `src/engine/xapian/text.cc` |
 | Log task holds an optional document | `src/database/wal.{h,cc}` |

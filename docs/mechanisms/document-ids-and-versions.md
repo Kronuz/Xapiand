@@ -2,8 +2,8 @@
 
 ## What
 
-A document's id is its key: the id's type character and its serialised value (`document_key`, `src/database/utils.cc`),
-`N` and the number's exact Kronuz/sortable bytes for a number (`Serialise::id`, `docs/design/exact-id-keys.md`). Every write of a document with an id finds it by that key
+A document's id is its key: the id's type character and its serialized value (`document_key`, `src/database/utils.cc`),
+`N` and the number's exact Kronuz/sortable bytes for a number (`Serialize::id`, `docs/design/exact-id-keys.md`). Every write of a document with an id finds it by that key
 (`engine::Shard::replace_by_key`); the docid is the engine's. A write's `?version=N` is a precondition on the
 document's version, checked by the engine in the index's turn, where the write applies.
 
@@ -59,7 +59,7 @@ check before it lets two writers that read one version both apply.
 
 ## Code
 
-`src/database/schema.cc` (`Schema::index`), `src/serialise.cc` (`Serialise::id`, `Unserialise::id`),
+`src/database/schema.cc` (`Schema::index`), `src/serialize.cc` (`Serialize::id`, `Unserialize::id`),
 `src/database/handler.{h,cc}` (`has_document_id`, `numeric_id`, `id_bucket`, `next_auto_id`,
 `NEW_NUMERIC_KEY`, the writes and deletes), `src/database/shard.cc` (`do_replace_term`, `do_delete*`),
 `src/engine/strata/shard.cc` (`check_version`, `replace`, `replace_by_key`, `erase*`), `src/engine/error.h`

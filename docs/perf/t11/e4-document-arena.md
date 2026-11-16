@@ -15,13 +15,13 @@ makes and frees a few hundred small blocks.
 Term bytes in one per-document byte arena (a term is an offset and a size) and positions in one per-document array of
 (position, next) nodes chained per term remove the per-term allocations from the build and from the destruction. The
 index still takes a `std::vector` per term, so `fill` makes those (one per term with positions) and nothing else.
-Positions are ordered and deduplicated when read (`fill`, `serialise`), which replaces `normalise()`. Expected: 5 to
+Positions are ordered and deduplicated when read (`fill`, `serialize`), which replaces `normalise()`. Expected: 5 to
 8% of the row.
 
 ## Procedure
 
 1. Unit tests engine_fields, engine_strata, engine_document, engine_shard, engine_replay; the strata fuzz decoder's
-   fixed point (`serialise` of an unserialised document is a fixed point).
+   fixed point (`serialize` of an unserialized document is a fixed point).
 2. Docs E2E, callbacks check, write check.
 3. T11 profile: E3 against E4, 4 interleaved pairs with an A/A, `quiet exclusive`.
 

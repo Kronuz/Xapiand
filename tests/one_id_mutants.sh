@@ -23,7 +23,7 @@ case $mutant in
 			'		info = co_await (issued == 0 && numeric_id(key) != 0 ? eng.replace(static_cast<engine::docid>(numeric_id(key)), doc, args) : eng.replace_by_key(key, doc, args));' ;;
 	no-persist)    # the commit does not persist the counter
 		mutate src/database/shard.cc \
-			'		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialise());  // durable with its documents' \
+			'		co_await eng.set_metadata(std::string(ID_HIGH_METADATA), MsgPack(id_high_).serialize());  // durable with its documents' \
 			'		(void)0;' ;;
 	no-advance)    # an explicit or restored numeric id does not advance the counter
 		mutate src/database/shard.cc \

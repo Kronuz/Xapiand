@@ -941,7 +941,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 task::task<MsgPack>
 DatabaseHandler::_dump_document(engine::docid did, const Data& data) {
 	auto main_locator = data.get("");
-	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
+	auto obj = main_locator != nullptr ? MsgPack::unserialize(main_locator->data()) : MsgPack::MAP();
 	for (auto& locator : data) {
 		switch (locator.type) {
 			case Locator::Type::inplace:
@@ -1096,7 +1096,7 @@ DatabaseHandler::dump_documents(int fd)
 			for (auto& [shard_did, data] : page) {
 				engine::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 				auto obj = co_await _dump_document(did, Data(std::move(data)));
-				std::string obj_ser = obj.serialise();
+				std::string obj_ser = obj.serialize();
 				ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
 				if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
 				sha256.add(obj_ser.data(), obj_ser.size());

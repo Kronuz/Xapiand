@@ -419,7 +419,7 @@ AggregationMatchSpy::name() const
 std::string
 AggregationMatchSpy::serialize() const
 {
-	std::vector<std::string> data = { _aggs.serialise(), _schema->get_const_schema()->serialise() };
+	std::vector<std::string> data = { _aggs.serialize(), _schema->get_const_schema()->serialize() };
 	return StringList::serialize(data.begin(), data.end());
 }
 
@@ -435,8 +435,8 @@ AggregationMatchSpy::unserialize(std::string_view serialized) const
 		}
 
 		auto it = data.begin();
-		auto aggs = MsgPack::unserialise(*it);
-		auto schema = MsgPack::unserialise(*++it);  // argument order is unspecified, so not inline
+		auto aggs = MsgPack::unserialize(*it);
+		auto schema = MsgPack::unserialize(*++it);  // argument order is unspecified, so not inline
 		return std::make_unique<AggregationMatchSpy>(std::move(aggs), std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(schema)), nullptr, ""));
 	} catch (const SerializationError&) {
 		throw engine::Error(engine::errc::invalid, "Bad serialized AggregationMatchSpy");

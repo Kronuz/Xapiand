@@ -223,7 +223,7 @@ schema_of_metadata([[maybe_unused]] const char* prefix, const std::string& schem
 			L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new initial schema (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 		}
 	} else {
-		schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+		schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialize(schema_ser));
 		schema_ptr->lock();
 		schema_ptr->set_flags(1);
 		L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
@@ -467,16 +467,16 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
 				if (schema_ser.empty()) {
-					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialize());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
-				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
-					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialize()) {
+					co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialize());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 				} else {
 					local_schema_ptr = schema_ptr;
-					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialize(schema_ser));
 					schema_ptr->lock();
 					schema_ptr->set_flags(1);
 					assert(schema_ptr);
@@ -499,7 +499,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					failure = true;
 				}
 			} else {
-				co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
+				co_await _db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialize());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 			}

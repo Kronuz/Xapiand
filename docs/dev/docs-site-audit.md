@@ -371,7 +371,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L8-15 terms/values semantics -> true in code (src/database/schema.cc:5337-5345, 5275); a terms-only field has range limits, see MISSING terms-only ranges
 - `reference-guide/schemas/field-types/boolean-type.md` | **missing content** | Accepted strings right; says strings need an explicit `_type`, but "true"/"false" strings detect as boolean by default; `_bool_term` absent
   - L5-7 "but you have to explicitly use the `_type` boolean" -> only for `t`/`f`/`1`/`0`; the strings "true" and "false" are typed boolean by default (`bool_detection` true): src/database/schema.cc:5193-5202, 1901 (stale)
-  - L31-32 accepted strings true/t/1, false/f/0 -> true (also case-insensitive T/F/TRUE/FALSE): src/serialise.cc:670-700
+  - L31-32 accepted strings true/t/1, false/f/0 -> true (also case-insensitive T/F/TRUE/FALSE): src/serialize.cc:670-700
   - L36-43 parameters -> `_bool_term` (boolean term, no weight; default false) is accepted by every term type but is not listed: src/database/schema.h:118, src/database/schema.cc:5301 (missing)
 - `reference-guide/schemas/field-types/date-type.md` | **stale** | One generated-terms sentence contradicts the default accuracy; type/value-encoding text is owned by another quest
   - L56 "In the above example terms for the day, month and year are generated" -> default datetime accuracy is hour, day, month, year, decade, century (six levels), the page's own L58-62: src/database/schema.cc:170-177 (stale)
@@ -413,7 +413,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - L17-20 distance formula and L22-34 rows -> arithmetic checks (level 0 = 10,007,557.2 m; level 25 = 0.298 m) (true)
   - L12 image /Xapiand/assets/htm.png and L37 link /Xapiand/tutorials/spatial-search/#searching -> both exist (docs/public/assets/htm.png; tutorials/spatial-search.md:77) (true)
 - `reference-guide/schemas/field-types/uuid-type.md` | **stale** | Generated ids are UUIDv6 by default; page describes v1-only condensed ids and versions 1/3/4/5
-  - L5 "version 1, 3, 4, and 5 UUIDs" -> validity is a format check, not a version check, and the default id codec is v6: src/database/schema.cc:2713-2717, src/serialise.cc:1185, src/opts.cc:236 (stale)
+  - L5 "version 1, 3, 4, and 5 UUIDs" -> validity is a format check, not a version check, and the default id codec is v6: src/database/schema.cc:2713-2717, src/serialize.cc:1185, src/opts.cc:236 (stale)
   - L17-21 "a subset of UUID 1 ... condensed" -> v1 condensed `~...` ids still decode; ids the server mints are v6 with an 8-byte compact form unless `--legacy-ids`: docs changelog.md [1.0.0-alpha.5], upgrade.md:44; src/opts.cc:235-238 (stale)
   - L25-26 UUID field names -> Dynamic Field Names -> true: src/database/schema.cc:5896; `_index_uuid_field` values uuid / uuid_field / both, default uuid: src/database/schema.h:122, src/database/schema.cc:445-470 (true)
   - L26 link ../../dynamic-field-names -> lands on a page that never mentions UUID names (see dynamic-field-names.md)
@@ -597,7 +597,7 @@ Format: page, verdict, why; then one line per stale or wrong claim (`L<line>` is
   - `_accuracy_prefix` ['<64>.','<3e8>.',...] and geo ['<3>.',...]: prefix format "<hex>." from src/database/utils.cc:112-122 get_prefix(unsigned long long), used by get_acc_prefix schema.cc:1604 (true)
   - L586-612 "Namespace different nested types" expects 400 for mixed keyword/numeric under one `_namespace`: no reason pinned; the 400 would also arise from any other error in the body (weak: assert the message)
 - `tests/datastructures/arrays.md` | **current** | array schema types, INFO value slots and AND searches over arrays of text/arrays/objects hold
-  - INFO value strings '\u0000\u0001A\u0001B...' are the StringList serialisation (SERIALISED_LIST_MAGIC '\0', then length-prefixed items): src/serialise_list.h:31, 302; a single element is stored bare ('A', L62) (true)
+  - INFO value strings '\u0000\u0001A\u0001B...' are the StringList serialization (SERIALIZED_LIST_MAGIC '\0', then length-prefixed items): src/serialize_list.h:31, 302; a single element is stored bare ('A', L62) (true)
   - slot 1680431078 etc. = xxh32 slots, unchanged (see uuid-field)
 - `tests/datastructures/objects.md` | **current** | object, nested-object, complex-object schema types and field searches hold
   - L549-561 `"_language": "en"` accepted: src/database/schema.cc:1644,1730 (true)
@@ -717,7 +717,7 @@ Claims the audit could not settle from code, each with the probe. All run agains
 - `search/aggregations/bucket/values-aggregation.md` | `_values` over a `text` field and keyword case | probe: PUT {"t":"Red Car","k":"Red"} and {"t":"red","k":"red"} with t text, k keyword; SEARCH {"_limit":0,"_aggs":{"a":{"_values":{"_field":"t"}},"b":{"_values":{"_field":"k"}},"c":{"_terms":{"_field":"k"}}}}; strata-engine-callbacks.md:48 says text `_terms` is 400 but `_values` "unchanged"
 - `search/aggregations/metrics/variance-aggregation.md` | one value | probe: index one doc, SEARCH {"_limit":0,"_aggs":{"v":{"_variance":{"_field":"n"}}}}; metrics.h divides by (_count - 1) = 0, expect NaN/inf or a 400 and say what the JSON shows
 - `search/aggregations/metrics/count-aggregation.md:L32-34` | "number of cities" in Indiana | probe: SEARCH the example plus a _values on contact.city under the same query and compare the bucket count with 17
-- `search/aggregations/bucket/filter-aggregation.md` | `_term` on a keyword field with different case, and on a text field | probe: SEARCH {"_limit":0,"_aggs":{"f":{"_filter":{"_term":{"favoriteFruit":"Strawberry"}}}}} (bank sample); the filter compares serialised slot values (bucket.cc:56-80)
+- `search/aggregations/bucket/filter-aggregation.md` | `_term` on a keyword field with different case, and on a text field | probe: SEARCH {"_limit":0,"_aggs":{"f":{"_filter":{"_term":{"favoriteFruit":"Strawberry"}}}}} (bank sample); the filter compares serialized slot values (bucket.cc:56-80)
 - `reference-guide/search/query-dsl/compound-queries/logical-operators.md:L15` | `_not` over two or more subqueries means "match none of them" | probe: `SEARCH /bank/` with {"_query":{"_not":[{"gender":"female"},{"eyeColor":"brown"}]}} with &limit=0 and compare total against 1000 minus |female OR brown|; code reading says it is NOT(female AND_NOT brown) = males plus brown-eyed females.
 - `reference-guide/search/query-dsl/leaf-queries/casting-values.md:L98` | `_date` / `_time` casts | probe: `SEARCH /bank/` {"_query":{"age":{"_date":"2020-01-01"}}} expect 400 "Invalid operator: _date" (code: src/query_dsl.cc:365-388 has no case for it)
 - `reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md:L39` | only `days` survives | probe: compare `SEARCH /bank/` {"_query":{"personality":"days"}} total against the page's 333 for "these days are few and far between"

@@ -6,7 +6,7 @@ branch). Probes, scripts and logs are in its `.scratch/` (listed at the end); th
 ## Verdict: APPROVE WITH CONDITIONS
 
 The branch does what it says and I found nothing in it that blocks landing. The document is built natively in
-the parallel stage, the shard writes that object, the log serialises it, and the bytes that reach the log, the
+the parallel stage, the shard writes that object, the log serializes it, and the bytes that reach the log, the
 search results and the `:info` are identical to the parent. The one durability finding (CR1) is a WAL replay
 defect that master `cca0011bb` already has and the branch inherits unchanged; it needs an owner before gate 0.5
 closes, but it is not caused by this diff and does not gate this merge.
@@ -53,7 +53,7 @@ In the failing case `_min`/`_max` return the float limits and sort by `balance` 
 After one further `PUT` into the index the result is correct again (30.0619...) and stays correct after a
 clean restart, so the documents and their values are intact on disk and the loss is in what the replay of the
 index-registry WAL (`.xapiand/indexes`, where the schema lives) leaves in effect. Candidate cause: the replay
-path through `Document::unserialise` + `Shard::replace_document(engine::Document&&)` (`src/database/wal.cc:558`,
+path through `Document::unserialize` + `Shard::replace_document(engine::Document&&)` (`src/database/wal.cc:558`,
 `src/database/shard.cc:1386`) differs from the pre-seam path, which handed the `Xapian::Document` straight to
 the database; the branch does not change that logic. I did not isolate it further.
 
@@ -81,12 +81,12 @@ For the architect.
 
 ### CR3 (non-blocking, design): the engine is selected at link time
 
-`engine::Document::Document()` and `Document::unserialise` are defined by the engine's translation unit
+`engine::Document::Document()` and `Document::unserialize` are defined by the engine's translation unit
 (`src/engine/xapian/convert.cc:369,374`) and `xapian_document()` is a `static_cast` of the native pointer
 (`convert.cc:109-112`). One binary can hold one engine, and passing a document from another engine is undefined.
 This is what the mechanism note says (invariant 4), and it is fine for the migration plan if the strata engine
 replaces Xapian per build. If the plan ever needs both engines in one process (a migration tool reading Xapian
-and writing strata), `Document` needs a factory or the engine passed in. Also `Native::serialise()` bakes the
+and writing strata), `Document` needs a factory or the engine passed in. Also `Native::serialize()` bakes the
 Xapian stored form into the seam as the WAL payload. For the architect, no code change.
 
 ### CR4 (non-blocking, perf): a default `Document` now allocates
@@ -103,7 +103,7 @@ the move into `write_replace_document` at `shard.cc:1336` is the last use). Foll
 
 ### CR5 (non-blocking, perf): replay and remote apply still copy
 
-`Document::unserialise` and the `Xapian::Document&&` shims (`shard.cc:1366-1382`) rebuild the document through
+`Document::unserialize` and the `Xapian::Document&&` shims (`shard.cc:1366-1382`) rebuild the document through
 `from_xapian` although the source is an rvalue and `XapianDocument(Xapian::Document)` exists
 (`convert.h`). Wrapping would save one walk of the terms per replayed or remotely applied document. Not on the
 bulk path; leave for the cleanup pass.
@@ -115,7 +115,7 @@ bulk path; leave for the cleanup pass.
 callers (Schema, GenerateTerms) call it cannot show up there. What still protects that is the SEARCH-dump and
 `:info` identity and the E2E. I filled the gap once with `.scratch/probe_equiv.cc` (the old map model with the
 verbatim `to_xapian` of `cca0011bb` against the new document: 20000 random sequences including empty values,
-position 0, wdf 0 and wdf beyond 32 bits, 0 mismatches, and the `unserialise` round trip reserialises to the
+position 0, wdf 0 and wdf beyond 32 bits, 0 mismatches, and the `unserialize` round trip reserializes to the
 same bytes). The new check "the document left by a write is the stored one" (`tests/test_engine_shard.cc`)
 does pin the shard-writes-this-object claim. No action.
 
@@ -129,13 +129,13 @@ does pin the shard-writes-this-object claim. No action.
    (`text.cc:69-71`).
 2. The hand-off is by move with unique ownership: preparer to indexer through the queue
    (`handler.cc:1995-2000`, dequeue `handler.cc:2107`), indexer to the shard write (`handler.cc:2127`), and for
-   the log into `DatabaseWALWriterTask::doc` (`shard.cc:1336,1446,1557`, `wal.cc:1194`, serialised on the WAL thread at
+   the log into `DatabaseWALWriterTask::doc` (`shard.cc:1336,1446,1557`, `wal.cc:1194`, serialized on the WAL thread at
    `wal.cc:1057`). The shard thread does not touch the document after the move. Commit/delete tasks hold an
    empty `std::optional` (`wal.h:271`); `doc->` is only dereferenced in the replace task.
 3. The one assumption I could not verify without reading the Xapian fork: that `WritableDatabase::replace_document`
    does not keep a reference to the `Xapian::Document` internal after returning (otherwise the WAL thread
    would race on its reference count). The developer's new test shows the object left after the write
-   serialises equal to the stored document, and ASan/UBSan show no error, but that is not a race check. A TSan
+   serializes equal to the stored document, and ASan/UBSan show no error, but that is not a race check. A TSan
    run of the bulk path is the cheap proof; the macOS toolchain notes say Apple clang's TSan crashes at thread
    creation, so it needs Homebrew LLVM or the Linux CI.
 
@@ -176,7 +176,7 @@ and fails under node 26 (every request reports HTTP None); I used newman 6.2.3 f
 
 1. `probe_equiv.cc` (binary deleted; rebuild with `build-asan.sh` then `buildprobe.sh`): old-model vs new Document, empty-term exceptions. `buildprobe.sh` builds
    any probe with the test target's flags.
-2. `probe_unser.cc`: binary values on large slot numbers through `Document::unserialise` (round trip equal).
+2. `probe_unser.cc`: binary values on large slot numbers through `Document::unserialize` (round trip equal).
 3. `srv.sh`, `walrun.sh`: start a solo node; serial 150-document index then `kill -9` for the WAL byte compare.
 4. `ops.sh`: mixed write ops, dump hash, `kill -9`, replay by a second binary.
 5. `bulk.sh`, `flaky.sh`, `matrix.sh`: parallel bulk path, `kill -9`, replay, aggregation fingerprint.

@@ -1133,7 +1133,7 @@ retrieve_metadata_view(Request& request)
 		for (auto& _key : co_await db_handler.get_metadata_keys()) {
 			auto metadata = co_await db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
-				response_obj[_key] = MsgPack::unserialise(metadata);
+				response_obj[_key] = MsgPack::unserialize(metadata);
 			}
 		}
 	} else {
@@ -1141,7 +1141,7 @@ retrieve_metadata_view(Request& request)
 		if (metadata.empty()) {
 			throw engine::Error(engine::errc::doc_not_found, "Metadata not found");
 		} else {
-			response_obj = MsgPack::unserialise(metadata);
+			response_obj = MsgPack::unserialize(metadata);
 		}
 	}
 
@@ -1196,7 +1196,7 @@ write_metadata_view(Request& request)
 		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
 	}
 
-	co_await db_handler.set_metadata(key, decoded_body.serialise());
+	co_await db_handler.set_metadata(key, decoded_body.serialize());
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1891,7 +1891,7 @@ retrieve_document_view(Request& request)
 		}
 
 		// Locator doesn't have a content type, serialize and return as document
-		auto obj = MsgPack::unserialise(locator.data());
+		auto obj = MsgPack::unserialize(locator.data());
 
 		// Detailed info about the document:
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
@@ -2044,7 +2044,7 @@ search_view(Request& request)
 		if (main_locator != nullptr) {
 			auto locator_data = main_locator->data();
 			if (!locator_data.empty()) {
-				hit_obj = MsgPack::unserialise(locator_data);
+				hit_obj = MsgPack::unserialize(locator_data);
 			}
 		}
 
@@ -2653,10 +2653,10 @@ serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, boo
 		return std::make_pair(obj.to_string(indent), x_yaml_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == msgpack_type) {
-		return std::make_pair(obj.serialise(), msgpack_type.to_string() + "; charset=utf-8");
+		return std::make_pair(obj.serialize(), msgpack_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == x_msgpack_type) {
-		return std::make_pair(obj.serialise(), x_msgpack_type.to_string() + "; charset=utf-8");
+		return std::make_pair(obj.serialize(), x_msgpack_type.to_string() + "; charset=utf-8");
 	}
 	if (ct_type == html_type) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;

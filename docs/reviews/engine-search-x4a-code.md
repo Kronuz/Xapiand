@@ -58,7 +58,7 @@ A downcast to `Xapian::WritableDatabase` of an object that is a plain `Xapian::D
 
 ### N6. For the architect: `DocView` methods do not translate exceptions
 
-`get`, `scan` and the other task-returning reads translate Xapian exceptions into `Failure<...>` (which derive the Xapian types) through `rethrow_translated`; `DocView::data`, `value`, `values`, `term_details` and `serialise` are plain calls and throw raw Xapian types. Today every caller catches the Xapian types, so nothing differs. When X4c moves the ladders to `engine::Error` kinds, a corrupt stored document read through a `DocView` will not carry a kind, and a strata `DocView` will throw `engine::Error`. The contract should say which, before X4c.
+`get`, `scan` and the other task-returning reads translate Xapian exceptions into `Failure<...>` (which derive the Xapian types) through `rethrow_translated`; `DocView::data`, `value`, `values`, `term_details` and `serialize` are plain calls and throw raw Xapian types. Today every caller catches the Xapian types, so nothing differs. When X4c moves the ladders to `engine::Error` kinds, a corrupt stored document read through a `DocView` will not carry a kind, and a strata `DocView` will throw `engine::Error`. The contract should say which, before X4c.
 
 ### N7. `scan` makes one view per document
 
