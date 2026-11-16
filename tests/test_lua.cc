@@ -371,10 +371,15 @@ std::size_t cache_after(const std::string& prefix, const std::string& body, int 
 void test_a_threads_cached_scripts_hold_at_most_one_calls_cap() {
 	// Scripts as large as a client can send: a string constant of 8 MiB each. The cache keeps what fits.
 	const std::string big = "local s = '" + std::string(8u << 20, 'k') + "' _doc.n = #s";
-	const auto bytes = cache_after("big", big, 12);
-	std::printf("12 scripts of 8 MiB: the cache holds %zu MiB (budget %zu MiB)\n", bytes >> 20, Processor::cache_budget() >> 20);
-	CHECK_LE(bytes, Processor::cache_budget());
-	CHECK_GE(bytes, 2 * (8u << 20));   // it still keeps some
+	const auto saved = opts.scripts_cache_size;
+	for (ssize_t count : {saved, ssize_t{0}}) {   // 0: no count bound, the bytes still bind
+		opts.scripts_cache_size = count;
+		const auto bytes = cache_after("big", big, 12);
+		std::printf("12 scripts of 8 MiB, count bound %zd: the cache holds %zu MiB (budget %zu MiB)\n", count, bytes >> 20, Processor::cache_budget() >> 20);
+		CHECK_LE(bytes, Processor::cache_budget());
+		CHECK_GE(bytes, 2 * (8u << 20));   // it still keeps some
+	}
+	opts.scripts_cache_size = saved;
 }
 
 void test_the_script_cache_default_is_one_and_fits_the_budget() {

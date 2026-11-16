@@ -580,13 +580,11 @@ std::size_t cached_bytes(ScriptLRU& lru) {
 // Drops the least recently used scripts past the count or past the byte budget.
 void trim(ScriptLRU& lru) {
 	std::size_t total = cached_bytes(lru);
-	lru.trim_and([&](const ScriptLRU::value_type& entry, bool overflowed, bool /*expired*/) {
-		if (overflowed || total > cache_budget) {
-			total -= entry.second->resident_bytes();
-			return ScriptLRU::DropAction::evict;
-		}
-		return ScriptLRU::DropAction::stop;
-	});
+	while (!lru.empty() && (lru.size() > lru.max_size() || total > cache_budget)) {
+		const std::string oldest = lru.begin()->first;
+		total -= lru.begin()->second->resident_bytes();
+		lru.erase(oldest);
+	}
 }
 
 std::shared_ptr<Processor> cached(const std::string& name, std::string_view body) {
