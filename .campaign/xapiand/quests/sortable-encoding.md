@@ -21,7 +21,7 @@ and 2).
 - A5 T6 exact at the old failures: range, sort and min/max equal brute force on the listed edge values; 0 wrong (design T6): `harness/numeric_range_check.py` extended, a job
 - A6 T7 size and cost on master, before and after, honest magnitude either way, and the restore rate that prices the migration (design T7, the lead's): `exclusive` jobs
 - A7 Fast: encode and decode cost per value at or below the old codec on `sizes.py`'s real-value set, and indexing, sort and range throughput on the real corpus at or above master's, outside the A/A band only if faster (owner D87: it must not become a bottleneck): `exclusive` jobs at named commits
-- A8 T9 no GPL: `git grep -n sortable_serialise -- src contrib` prints nothing, both GPL files and the Python module removed, the check added to `harness/seam_check.sh`; ARCHITECTURE and the license note updated (design T9; license-audit A3): the `no-gpl` check
+- A8 T9 no GPL: `git grep -n sortable_serialise -- src contrib` prints nothing, both GPL files and the Python module removed; ARCHITECTURE and the license note updated (design T9; license-audit A3): the `no-gpl` check
 - A9 T10 platforms: T1, T2's CI part, T3 and the unit tests pass on every CI platform and sanitizer job (design T10): CI
 - A12 American spelling: `Serialise`/`Unserialise`, `serialise*` files and every other `serialis*` name become `serializ*` in the same landing (owner, D88): `git grep -il serialis -- src tests docs contrib harness CMakeLists.txt` prints nothing, as a job
 - A10 [artifact] How it works: `docs/mechanisms/value-encoding.md`
@@ -54,6 +54,8 @@ byte.
   format marker and no compatibility code: pre-release bytes change freely. Docs and new names use
   American spelling (serializer).
 - Lead, 11-13: exact-id-keys folds in; its files join this set at start.
+- Lead, 11-16, from the design re-check (APPROVE at 3f95a5edd): F3, T6 adds a near-midpoint decimal string (e.g. `9007199254740993.0000001`) as a value and as a range bound, so double rounding cannot return unseen; F13, the changelog (A11) and `docs/mechanisms/value-encoding.md` say to dump every index with the old build, start the new build on an empty data directory, then restore (the `.xapiand/indexes` registry is written with the old codec too).
+- Lead, 11-16: A8 rests on the `no-gpl` check (there is no `harness/seam_check.sh`). A12's `docs/**` and `harness/**` join the file set once platform-rows (which holds `harness/**` and two `docs/dev` pages) lands; do the rename there last.
 
 - Lead, 11-10 (D52): the switch also updates the docs pages that describe value encoding and the About page's licence sentence (written by docs-site-refresh against the old encoding); they join the file set once docs-site-refresh lands.
 
