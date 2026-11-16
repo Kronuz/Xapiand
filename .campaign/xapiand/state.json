@@ -4696,12 +4696,28 @@
           "weakened": [
             "risk high -> low"
           ]
+        },
+        {
+          "at": "2026-11-16T15:03:51",
+          "lenses": [
+            [
+              "correctness",
+              "design"
+            ],
+            [
+              "design"
+            ]
+          ],
+          "reason": "owner-approved 2026-11-16: docs-only design quest; design lens APPROVE at 727e417 plus Detent's APPROVE",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-design",
       "landed": [],
       "lenses": [
-        "correctness",
         "design"
       ],
       "milestone": "",
@@ -4711,7 +4727,7 @@
       "risk": "low",
       "status": "review",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
-      "updated": "2026-11-16T15:03:28",
+      "updated": "2026-11-16T15:03:51",
       "worktree": "../cpp-libraries-wt/xapiand/faultlab-design"
     },
     "field-table": {
