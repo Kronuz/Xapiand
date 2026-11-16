@@ -4,8 +4,10 @@ The first Xapian-free release runs in a cluster again: an index spreads its shar
 each shard keeps replicas, a lost node fails over without losing acknowledged writes, and search
 spans the cluster. All of it runs on strata's replication groups, before the format freeze.
 
-- Status: design, revision 0, 2026-11-15, ready for review (lens `design`). Request: owner ruling
-  D91 (2026-11-16, `.campaign/xapiand/PLAN.md`), which supersedes D9's single-node release.
+- Status: design, revision 1, 2026-11-16, ready for review (lens `design`). It answers the design
+  review at Xapiand:5dc60256a (`.campaign/xapiand/reviews/cluster-release-design.md`, CHANGES);
+  section 12 maps each finding to its fix. Request: owner ruling D91 (2026-11-16,
+  `.campaign/xapiand/PLAN.md`), which supersedes D9's single-node release.
 - Read at: Xapiand `master` `a9cfa2cba`; the Xapian-era cluster at `5a517b052^`, the parent of
   "Delete the Xapian engine and the cluster layer" (v1.0.0-alpha.9 runs the same cluster code);
   strata `main` `9bcb142e`; consensus `main` `a95847e`; journal `main` `8f3e410`; Detent `main`
@@ -34,20 +36,22 @@ correctness:
 
 1. Every shard is one strata replication group, at every replica count, `rf = 1` included. Each
    voter applies every committed batch (document mode), and the journal replaces the WAL.
-2. One consensus "root" group holds the node directory and the shard map.
+2. One consensus "root" group holds the node directory and one record per index with its shard
+   map, as a strata index.
 3. Writes go to the group leader, with at most one forward.
 4. Search fans out over a node-to-node request lane on the transport consensus already uses, with
    exact cross-node statistics.
-5. Acknowledgement levels are `quorum` and `none`; read levels are `prefix` and `leader`.
+5. Acknowledgement levels are `quorum` and `none`; read levels are `prefix` and `linearizable`.
 
 Segment mode, the `memory` acknowledgement, gossip, placement groups, the fan-out tree and rolling
 upgrades follow the release.
 
-That build is 17 quests of roughly 300 to 1,500 lines each, about 17,000 lines with tests. They are
-built on Detent's three remaining driver quests, journal-driver, consensus-driver and
-consensus-transport, which start once task-wheel and completion-seam land. The critical path runs
-through those drivers, then `group-core`, `group-install`, `shard-groups`, `distributed-search`,
-`cluster-gate`, and finally `format-freeze`. Six questions need the owner (section 9).
+That build is 16 quests of roughly 300 to 1,900 lines each, about 18,000 lines with tests. They are
+built on Detent's driver quests `detent:journal-driver`, `detent:consensus-driver`,
+`detent:consensus-transport` and `detent:consensus-quiescence`, which start once task-wheel and
+completion-seam land. The critical path runs through those drivers, then `group-core`,
+`group-install`, `shard-groups`, `distributed-search`, `cluster-api`, `cluster-gate`, and finally
+`format-freeze`. Nine questions need the owner (section 9).
 
 ## 1. What the Xapian-era cluster did
 
@@ -94,6 +98,14 @@ loses the unsynced WAL tail, up to 3.5 s plus the writer's queue.
 - `?commit` (`search_views.cc:2385`).
 - The serialized aggregation partials (`src/aggregations/aggregations.h:72-74`).
 - The batched multi-shard search seam (`src/engine/search.h:145-154`).
+- Index patterns, expanded by walking the local data directory (`search_views.cc:2342-2362`).
+- The largest document: a buffered body of 16 MiB (`search_service.h:50`), a non-stored blob of
+  1 MiB (`handler.cc:94`), and a streamed stored upload of 4 GiB less 1 KiB, written to a volume of
+  its own (`pool.h:160-161`, `shard.cc:1259`).
+- RESTORE, which opens its shards with `DB_DISABLE_WAL` (`search_views.cc:1687`,
+  `handler.cc:1159`), and `?volatile`, which read the primary (`search_views.cc:1109`).
+- `DataStorage` volumes, numbered by a node-local counter (`shard.cc:1100-1130`, `pool.h:236`)
+  that recovery sets to the newest volume plus one (`shard.cc:536`).
 
 ## 2. What exists to build on
 
@@ -103,7 +115,7 @@ loses the unsynced WAL tail, up to 3.5 s plus the writer's queue.
 | consensus transport | Built, one `Peers` per group: TLS over TCP with control and bulk lanes, the `DTHL0001` hello, `DTC2` frames, byte credit, and the `DTFT0001` fetch lane (name to bytes, consensus:6c3018e). Pins are leaf-certificate SHA-256 | `transport/peers.h:16-21`; `transport/tls.h:12-18` |
 | journal | Built. A per-group journal with 4 barriers per append, and `RFTW0001`, one turn log per core with one `sync_data` per turn across its groups | journal `ARCHITECTURE.md:19-25`, `173-206` |
 | Late appends (D83) | On Detent's branch `quest/detent/consensus-late-append`, in review | Detent D92 |
-| Coroutine drivers | Designed (Detent `docs/design/async-drivers.md`, "Designed, not built"). Task-wheel and completion-seam are active; journal-driver, consensus-driver and consensus-transport (D16 multiplexing, one connection per node pair) are planned; quiescence is its own quest after consensus-driver (D97) | async-drivers build plan, quests 1-7 |
+| Coroutine drivers | Designed (Detent `docs/design/async-drivers.md`, "Designed, not built"). Task-wheel and completion-seam are active; journal-driver, consensus-driver and consensus-transport (D16 multiplexing, one connection per node pair) are planned; quiescence is Detent's own quest, `detent:consensus-quiescence`, after consensus-driver and consensus-transport (D97) | async-drivers build plan, quests 1-7; Detent:5e4903e8 |
 | `strata::group` | Not written, on any branch. strata pins no consensus | strata `CMakeLists.txt:26-29` |
 | Durability design | Parked at revision 10, approved with conditions; nothing built | strata `docs/design/durability-modes.md` on main |
 | Simulator | A prototype on `design/simulator` (`sim/`: engine, network, history, checker), unmerged and 961 commits behind main | strata `docs/design/simulator.md` |
@@ -117,9 +129,10 @@ and answers durability-modes Q11 to Q14 with recommendations (section 9).
 
 ## 3. Decisions
 
-**D1. Scope.** The release builds what section 1's table did for users, plus two correctness
-properties: no `quorum`-acknowledged write is ever lost within the fault model, and failover never
-produces two leaders. Section 4 lists everything else, with where it lands. Rejected: building
+**D1. Scope.** The release builds what section 1's table did for users, plus three correctness
+properties: no `quorum`-acknowledged write is ever lost within the fault model; a group has at most
+one leader per term (R3); and a `linearizable` read is never served by a deposed leader (D4).
+Section 4 lists everything else, with where it lands. Rejected: building
 strata's whole Track D first, because its gates need 30 and 300 nodes that do not exist (D35).
 
 **D2. One group per shard, every index, every `rf`.** A one-node index is a lone voter: no
@@ -141,89 +154,183 @@ Every voter applies it in log order: the strata write, then the blobs pushed int
 function of the log and replicas stay digest-equal. Followers skip schema resolution and term
 generation, as the old WAL replay did. Rejected for the release: segment mode (durability-modes
 D8, D17, D18). It costs a three-voter group an estimated 0.38× to 0.43× of document mode's CPU, but
-it needs the file-set mover and the sampled rebuild, and it can arrive later per index without
-changing the command.
+it ships segments at every refresh and needs the sampled rebuild. The release builds only the part
+of D17's file-set mover that install needs (D16), and segment mode can arrive later per index
+without changing the command.
 
 **D4. Levels.**
 
 - `ack`: `quorum` (the default, Q1) or `none` (acknowledged at `ProposalPlaced`).
-- `read`: `prefix` (any replica's last refreshed snapshot, the default) or `leader`.
+- `read`: `prefix` (any replica's last refreshed snapshot, the default) or `linearizable`, both
+  as durability-modes D10 defines them (`durability-modes.md:2047-2056`). A `linearizable` read
+  goes to the leader (one forward, as D8), which confirms its leadership with Core's quorum-probe
+  read, already a Driver call (`Driver::read`, async-drivers D2), and then reads at or past the
+  commit index the probe captured. Get-by-id reads the live version map (strata
+  `ARCHITECTURE.md:91-93`) through `group::read_applied` (quest 5), with no refresh; a search
+  pays a refresh that covers that index. `?volatile`, master's read from the primary, means
+  `read=linearizable`.
 - `refresh`: `false` (periodic, 1 s), `wait_for` or `true`.
-- `?commit` means `ack=quorum&refresh=true` (Q12). `POST /idx/:flush` waits for a checkpoint that
-  covers the write: segments synced, Elasticsearch's flush.
+- `?commit` means `ack=quorum&refresh=true` (Q12). The per-index checkpoint, segments and blob
+  volumes synced, is the explicit durability point; its route is Q8.
 
-`all`, `leader`, `memory`, `session`, `bounded` and `linearizable` follow the release. Each one adds
-a driver event or the forgetful-voter machinery, and parity needs none of them.
+`all`, `memory`, `session` and `bounded` follow the release. Each one adds a driver event or the
+forgetful-voter machinery, and parity needs none of them. There is no `leader` level: without
+leases, the node that believes it leads serves stale reads after a partition until CheckQuorum
+steps it down (up to `election_max`, 2 s by default, track-c D7), and D10's vocabulary names no
+such level.
+
+The gate's histories (R2) state their levels: writes at `quorum` and get-by-id at `linearizable`
+are checked for linearizability; get-by-id at `prefix` is checked for consistent prefix only.
 
 **D5. One root authority.** A strict-consensus group, `strata::placement`, with 3 or 5 voters
-chosen from the first nodes, holds three kinds of record:
+chosen from the first nodes (a lone voter on one node), holds two kinds of record:
 
 - Node directory: id, name, addresses, certificate pin, attributes, state.
-- Namespaces: index path to shard count, `rf` and settings version.
-- Shard map: shard to opaque group id, incarnation, members and a leader hint.
+- Namespaces, one record per index: path, shard count, `rf`, settings version, and per shard its
+  opaque group id, incarnation and members.
 
-Records are keyed by index path, so placement groups can later own ranges of it without a format
-change. Nested paths (`twitter`, `twitter/user`) are distinct keys, and journal artifacts use
-opaque group ids (D97 Q3), so neither can collide. It replaces `.xapiand/indexes`, the UDP Raft
+The root is a `strata::group` like any shard, and its application state is a strata index of
+those records keyed by path (quest 8), not an in-memory map with whole checkpoints. Its checkpoint
+is a strata manifest, its install is quest 6's, and its memory is strata's bounded caches. Records
+keyed by path let placement groups later own ranges of it without a format change, and make a
+pattern a prefix scan: index patterns resolve from these records at every node count, nested
+paths included, and the local directory walk (`search_views.cc:2342-2362`,
+`index_pattern::expand(Endpoint::cwd, ...)`) is deleted (quest 14). A scan reads the root at
+`linearizable` where this node leads it, which on a lone voter costs no round trip, so one node
+sees every index as master's walk does; elsewhere it reads the nearest root member at `prefix`, and
+may miss an index created within that member's last refresh, unless the request asks
+`read=linearizable`. Nested paths (`twitter`, `twitter/user`) are distinct keys, and journal artifacts
+use opaque group ids (D97 Q3), so neither can collide. It replaces `.xapiand/indexes`, the UDP Raft
 and `ELECT_PRIMARY`.
+
+Membership is authoritative in each group's log (track-c D1). The namespace record follows a
+committed membership change: the leader that commits it writes the record, and a node that finds
+them apart after a crash (a group-open exchange naming members the record lacks) rewrites the
+record from the group. Leader hints are never written to the root; they live in each node's cache
+and are corrected by redirects (D8). A shard never gets a new group, nor a new incarnation, while a
+member of its old group may live: a group that lost its quorum stays red until its members return.
+
+Cost at 10^6 namespaces, estimated from the encoded fields and to be measured by quest 8 A4:
+
+| Quantity | Estimate |
+|---|---|
+| Record bytes | a 32 B path plus 16 B of index fields, plus 51 B per shard (16 B group id, 8 B incarnation, 3 × 9 B members): about 300 B at 5 shards, 100 B at 1 |
+| Root state | 10^6 × 300 B ≈ 300 MB on disk at 5 shards (100 MB at 1), plus strata's index overhead; resident memory is the cache bound, not the state |
+| Checkpoint | a manifest naming the new segments: proportional to the records written since the last one, not to the state |
+| Install of a new root voter | the whole pack once, ≈ 2.5 s at 1 Gb/s for 300 MB, plus its sync |
+| Creation rate | one root command of under 1 KiB per index (indexes are created on first write), batched into the root's turns, then `rf` × shards group creates on the chosen nodes: estimated at least 1,000 creations per second per cluster |
+| Creation latency | one root commit plus one group create, two barriers and one round trip, against master's create on first write |
+| A node's shard-map cache | its own groups from their local group metadata (a node restarts without the root), plus an LRU of records filled on a miss and invalidated by a redirect, an unknown-group answer or an incarnation mismatch: the endpoint resolver cache (`RESOLVER_CACHE_SIZE`, `opts.cc`), at 10^4 entries ≈ 3 MB |
+
+At master's default `--shards 5` (`opts.cc:43`), a million indexes are five million groups; the
+default is Q9.
 
 **D6. Membership.** Nodes find the cluster from `--join` seeds (host names resolved by consensus's
 DNS dialing) and present their node certificate (D97 Q7). Liveness is the authority leader's
-volatile keepalive table, with the same 500 ms × 3 misses as track-c D12. Only state transitions
-(`up`, `suspect`, `down`) are logged. Multicast is dropped, so the cluster works on Kubernetes
-without a multicast network plugin (old `kubernetes.md:19-24`). SWIM gossip follows the release;
-the keepalive table is linear in nodes at the authority leader (section 10).
+volatile keepalive table, with the same 500 ms × 3 misses as track-c D12. Each node keeps one
+request-lane connection (D9) to the root leader, whether or not they share a shard group, and
+sends a `keepalive` call on it every 500 ms. Only state transitions (`up`, `suspect`, `down`) are
+logged. Multicast discovery goes, so the cluster works on Kubernetes without a multicast network
+plugin (old `kubernetes.md:19-24`); that removal is the owner's (Q7). SWIM gossip follows the
+release; the keepalive table is linear in nodes at the authority leader (section 10).
 
 **D7. Placement and repair.**
 
 - Each shard takes `rf` distinct nodes with the fewest groups, and leaders are spread by
   `transfer_leadership`.
-- When `rf` exceeds the nodes, the shard runs short and health reports yellow. The old cluster
-  capped replicas the same way.
+- When `rf` exceeds the nodes, the shard runs short and health reports yellow, as the old cluster
+  capped replicas. Short means one data voter and a learner on each other node, never a lasting
+  two-voter group, which REPLICATION.md does not support (`REPLICATION.md:113-115`): on two nodes, `rf = 3`
+  and `rf = 2 + witness` run as a voter and a learner, which serves `prefix` reads and is promoted
+  in the order below when a third node joins.
 - A node `down` longer than `--replace-after` (default 300 s, the old stall time) is replaced:
-  add a learner, install a checkpoint, promote it, remove the dead voter.
+  add a learner, install a checkpoint, promote it, remove the dead voter. An `rf = 1` group whose
+  node is down has no leader to add a learner, so it waits for its node.
 - `PUT _settings {number_of_replicas}` and `POST /:nodes/<n>/:drain` use the same steps.
+- Growth and shrink by `number_of_replicas` (track-c D9's mixes, plus one growth window):
+  - 0 to 1, once three nodes are up: a data learner installs and is promoted, giving two data
+    voters for the window, then the witness is added. The window tolerates no failure, no worse than the lone voter it grows
+    from; it is added to track-c D9's windows.
+  - 1 to 2: a third data learner installs and is promoted (three data voters and the witness,
+    D9's replacement window), then the witness is removed.
+  - 2 to 1 and 1 to 0 run the same steps backwards: add the witness, then remove a data voter; and
+    remove the witness, then a data voter.
 
 The old cluster never re-replicated, so a second failure was fatal.
 
 **D8. Write routing.** The receiving node reads the leader hint from its shard-map cache and
-forwards at most once. A stale hint is answered with a redirect that carries the leader, and a
-group with no quorum answers 503. A cancelled or timed-out proposal has an unknown outcome, so the
+forwards. A node that is not the leader answers a forward with a redirect that carries its hint;
+the receiving node, never the client, follows at most one redirect, so a write takes at most two
+forwards, and a second miss (an election in progress) answers 503 with `Retry-After`. A group with
+no quorum answers 503. A cancelled or timed-out proposal has an unknown outcome, so the
 answer says so, and retries are idempotent by version (async-drivers X11). Rejected: a node-local
 "accepted" level (Q11.3). Its writes have no group order and no version check, which D13 rejects.
 
 **D9. One transport between nodes.** Xapiand's shard RPC runs on a request/response lane of the
 host transport (consensus-transport, D16). The lane generalizes `DTFT0001` and is the same lane
 Detent's history fetch needs (Detent msg-44, option 1). It carries method id, deadline,
-cancellation and opaque msgpack bodies, with its own credit beside the group frames. Rejected: a
-second TLS listener, or HTTP between nodes, which would mean two identities, two sets of ports and
-two flow controls.
+cancellation and opaque msgpack bodies, with its own credit beside the group frames. A body may be
+streamed in chunks under that credit, which `get` of a stored blob (to 4 GiB) and `forward_write`
+of a streamed upload need. The lane opens connections between any two nodes, not only those that
+share a group (D6, D10). Rejected: a second TLS listener, or HTTP between nodes, which would mean
+two identities, two sets of ports and two flow controls.
 
 **D10. Distributed search.**
 
-- The coordinator, the node that received the request, runs `search_batched` (`search.h:145-154`)
-  with one batch per node: local shards in process, remote ones through `search_partial`.
+- Indexes come from the request's names and from patterns resolved by the root (D5).
+- The coordinator, the node that received the request, runs `search_batched` (`search.h:145-154`):
+  local shards in process, remote ones through `search_partial`. Its contract batches whole
+  indexes for their statistics (`search.h:147-154`), so quest 14 keeps statistics per index and
+  changes the batch key so that one call carries a node's shards.
 - Statistics are exact. A `stats` round trip first gathers each index's document count, total
-  length and per-term frequencies. The weights then read them, so answers equal one node's
-  (`search.h:96-99`).
+  length and per-term frequencies. The weights then read them (`search.h:96-99`).
+- Each shard's statistics and its partial come from the same one replica per request. Answers then
+  equal one node's holding those replicas. The residue: ranking statistics count dead ordinals
+  (`durability-modes.md:395-397`), and document-mode replicas' physical segments differ
+  (`REPLICATION.md:84-86`), so on a corpus with deletes or replaces two replica choices can rank
+  differently. Counts and aggregations are logical and exact under any choice.
 - prospect computes statistics from its snapshot today (`searcher.hh:104-151`), so it gains a
   supplied-statistics input.
 - Aggregations merge through `serialise_results` and `merge_results`.
-- Each request carries a deadline. A shard that misses it, after one retry on another replica, is
+- Each request carries a deadline. A shard that misses it is retried once on another replica with
+  the statistics already gathered (the residue above, for that shard only); a second miss is
   reported in `_shards.failed` and the result is marked partial.
 - Fan-out trees, cached statistics, threshold sharing and hedging follow the release.
 
 **D11. Idle groups close.** Groups follow Xapiand's catalog: closed when idle, reopened by a frame
-or a request, quiescent in between (D97 Q4). Two consequences:
+or a request, quiescent in between (D97 Q4). Three rules:
 
-- A node's loss costs elections only in groups that are in use.
-- The first request to a closed group whose leader died pays one election, which is lazy
-  failover.
+- A group closes only after a checkpoint covers its applied position, so a closed group pins no
+  turn-log segment and write-once indexes do not grow the per-host retained log (a closed group
+  runs no timer that would checkpoint it later).
+- A reopened lone voter campaigns at `Start` (async-drivers D5, X5). Its term record and its first
+  write share one turn, so the reopen adds no barrier beyond the write's own; R10 measures
+  first-write latency after a reopen against master.
+- A node's loss costs elections only in groups that are in use. The first request to a closed
+  group whose leader died pays one election, which is lazy failover.
 
 **D12. Blobs stay in the node** (track-d D7, for the release). Each voter's `DataStorage` is
-written by apply. A command carries a blob of at most 64 MiB, the journal's batch bound (journal
-`ARCHITECTURE.md:27-49`). A streamed upload larger than that becomes a sequence of chunk commands
-under one upload id, committed by its last chunk.
+written by apply. The bound on a command is consensus's, set from the largest document master
+accepts (section 1: a 16 MiB buffered body, a 1 MiB non-stored blob, a 4 GiB streamed upload; a
+serialized document with its terms is larger than its JSON). Every Xapiand group sets consensus's
+per-group limits (`types.h:55-67`, `ARCHITECTURE.md:41`):
+
+| Limit | Value | Why |
+|---|---|---|
+| `Flow::frame_bytes` | 1 MiB | A control frame on the shared node-pair connection waits behind at most one append frame: 8.4 ms at 1 Gb/s and 84 ms at 100 Mb/s, against the 1 s minimum election timeout (async-drivers D10). At the default 0, an entry above the cap goes alone, and a 64 MiB entry holds the connection about 0.5 s at 1 Gb/s |
+| `command_bytes` | 1 MiB (the default) | Equal to the frame, so no entry goes alone |
+| `rpc_bytes` | 2 MiB (the default) | A frame plus its headers |
+| `log_bytes` | 64 MiB (the default) | Four buffered bodies; checkpoints trigger by these bytes |
+
+A command whose encoding exceeds 1 MiB, whatever it carries, is a **chunked command**: entries
+`chunk(command id, offset, bytes)` and a final entry, the command itself, which applies it. A
+chunk's apply writes its bytes at its offset (`pwrite`, so replay is idempotent): a blob's bytes go
+straight into a volume of the upload's own, as master's streamed upload writes one
+(`shard.cc:1259`), and other bytes into a staging file in the shard's directory, which the final
+entry reads and deletes. Chunks carry their proposer's term; a voter that applies an entry of a
+higher term deletes the staging and the volume of every open chunked command of a lower term, and
+the client's upload fails, as a connection lost mid-upload fails it on master. A 16 MiB body and a
+4 GiB upload then cost 16 and 4,096 entries, each under the frame cap.
 
 **D13. Migration.** No release has written strata data (D91 supersedes D9). Pre-release data
 directories that hold a WAL are not converted; users reindex or restore, as D87 ruled for
@@ -238,15 +345,60 @@ pre-release bytes. phase7b's A7 becomes:
 1. Processes on one host: N `xapiand` on `127.0.0.1` with their own ports and data directories,
    faults from `kill -9`, `SIGSTOP` and a TLS-transparent proxy (Detent's `network.py` shape), and
    a history checker for linearizable writes and get-by-id. This tier runs in CI.
-2. 3 to 5 Linux VMs under QEMU on a `-netdev socket` or `dgram` L2 between guests, SSH on ports
-   18780 and up. Power loss is a `dm-log-writes` device under the data directory, replayed to every
-   flush mark, so recovery is checked at each state a real power loss can leave.
+2. 3 to 5 Linux VMs under QEMU on a `-netdev socket,mcast=...` L2 between guests, which also
+   carries the multicast the Xapian-era cluster needs for R8, SSH on ports 18780 and up. Power
+   loss is a `dm-log-writes` device under the data directory, replayed to sampled marks.
 
 Killing QEMU loses the guest's page cache but keeps writes it already issued, so it is not a power
 loss; `dm-log-writes` is. VM work runs under quiet holds.
 
+Replay coverage: replaying to a flush mark gives a flush-prefix state, every write before the
+flush durable and none after; replaying to an entry between marks gives a prefix of the issued
+writes. Neither gives a device that persisted a non-prefix subset since its last flush; the
+journal's checksummed records and C3 repair answer that by design, and quest 7's simulator
+injects it (torn and reordered writes at every barrier). Marks are sampled: the marks just before
+and after each of 20 acknowledged writes per run, plus 20 random entries, 60 replays per run. At
+an estimated 5 to 10 s per replay (remount, recovery, digest; quest 1 A3 measures it), a 60 s run
+costs about 10 minutes, so R2's power-loss tier is 20 runs, each a job of at most 15 minutes, and
+its other fault tiers keep 200 runs.
+
 **D15. Ids and shards.** The 1,024-bucket id hash stays (`handler.cc:155-169`). The shard count is
 fixed at create, as before. Resharding by split follows the release (track-d D4).
+
+**D16. `DataStorage` moves with install** (the review's F1). A volume is Xapiand's file, located by
+a node-local counter and offset (`shard.cc:1100-1130`), and strata's checkpoint names only its own
+segments (`REPLICATION.md:88-92`). So:
+
+- Volume numbers are a function of the log: apply allocates them in log order, and recovery and
+  install set the counter from the checkpoint, not from the directory.
+- The checkpoint bundle names an application file set beside the manifest: each volume with its
+  length at the applied position (and its CRC32C once rotated, when it becomes immutable), the
+  open chunked commands' volumes and staging files included, each synced before the manifest.
+- Recovery truncates each volume to its checkpointed length, deletes volumes the checkpoint does
+  not name, and replays the log from the applied position; the replay rewrites the bytes past it.
+- Install moves the file set on the same transfer as the segment pack: durability-modes D17's file
+  sets (`durability-modes.md:2289`), built here for install only. Rotated volumes are immutable,
+  so a retried install sends only the files the learner lacks or holds short.
+
+Without this, a learner from D7's replace, `rf` growth or migration holds locators naming volumes
+it lacks, and two repairs in a row leave the blobs on no replica. Rejected: blobs inside strata
+(track-d D7, a non-goal for the release and the owner's call); it removes the file set but moves
+4 GiB blobs into segments.
+
+**D17. RESTORE goes through the group, at every `rf`.** Master's RESTORE writes no WAL
+(`DB_DISABLE_WAL`, `search_views.cc:1687`, `handler.cc:1159`). Here the RESTORE view prepares its
+documents as today and proposes them as batch commands, each as many prepared documents as fit
+the 1 MiB frame (D12), pipelined without waiting for each commit; the response waits for the last
+batch at the request's `ack` level, and `?commit` adds the refresh. At `rf = 1` this adds a
+sequential log write of the prepared bytes and one barrier per turn, shared by every group on the
+host, which master's RESTORE never paid; at `rf > 1` every voter indexes every batch, as for any
+write. T12 is measured on this path and stated even if it loses (quest 10 A6). Rejected:
+
+- Around the journal at `rf = 1` (build segments, then checkpoint): a second durability path with
+  nothing for replicas.
+- Leader-built segments with an install per follower (REPLICATION.md's bulk-import command): the
+  acknowledgement needs a quorum to hold the files before it commits, which is segment mode's
+  machinery (durability-modes D8). It becomes RESTORE's path if segment mode lands and T12 asks.
 
 ## 4. What stays after the release
 
@@ -254,7 +406,8 @@ fixed at create, as before. Resharding by split follows the release (track-d D4)
 |---|---|---|---|
 | Segment mode, `verify: replica` | durability-modes D8, D17, D18 | Document mode is correct; the gain is CPU | Per index, no command change |
 | `memory` ack, forgetful voters, recovery election | durability-modes D2, D3, D5, D6, D7 | `quorum` and `none` cover parity | Journal `RFTW0002`; a journal drains at a clean upgrade, so a version bump needs no long-lived reader (Q2) |
-| `all`, `leader`, `session`, `bounded`, `linearizable` | durability-modes D10 | Not in the old cluster | One driver event each |
+| `all`, `session`, `bounded` | durability-modes D10 | Not in the old cluster | One driver event each |
+| Background scrubber | revision 0's quest 6 A3 | Reads and installs already fail closed on a checksum (quest 6 A2) | A budgeted pass per replica |
 | SWIM gossip | track-d D2 | The keepalive table serves hundreds of nodes | Replaces the liveness source only |
 | Placement groups, rack and zone awareness, strategies | track-d D3, `placement-strategies.md` | One root at 3 to 5 nodes | Ranges keyed by path (D5) |
 | Aliases, resharding by split | track-d D4 | Not in the old cluster | |
@@ -267,114 +420,163 @@ fixed at create, as before. Resharding by split follows the release (track-d D4)
 
 ## 5. Quests
 
-Sizes are lines of code plus tests. "After" means it must land first. Detent's ids are its own:
-`detent:drivers-task-wheel` and `detent:drivers-completion-seam` exist, and journal-driver,
-consensus-driver and consensus-transport are its build-plan quests 3 to 5, written below as
-`detent:journal-driver`, `detent:consensus-driver` and `detent:consensus-transport` until Detent
-names them.
+Sizes are lines of code plus tests. "Needs" means it must land first; "after" also means it must
+land first, but marks a file-set overlap or an outside dependency rather than an API. Detent's ids
+are its own: `detent:drivers-task-wheel` and `detent:drivers-completion-seam` exist, and
+`detent:journal-driver`, `detent:consensus-driver`, `detent:consensus-transport` and
+`detent:consensus-quiescence` (the owner's ruling in D97: quiescence is its own consensus quest,
+Detent's) are written here by the names Detent gives them.
 
 | # | Id | Title | Risk | Repo | Files | Needs / after | Size |
 |---|---|---|---|---|---|---|---|
 | 1 | `cluster-harness` | Multi-process and VM cluster harness | high | Xapiand | `harness/cluster/**`, `harness/run_all.sh`, `tools/vm/cluster.sh` | none | 1,200 |
 | 2 | `prospect-supplied-stats` | Weights from supplied statistics | normal | prospect | `include/prospect/searcher.hh`, `src/search*`, `test/stats*` | none | 300 |
-| 3 | `consensus-quiescence` | Quiescent and closed groups (D97 Q4) | high | consensus | `include/consensus/core.h`, `driver.h`, `test/quiesc*` | after `detent:consensus-driver` | 1,000 |
-| 4 | `consensus-rpc-lane` | A request lane on the host transport | high | consensus | `include/consensus/transport/**`, `test/transport/rpc*` | after `detent:consensus-transport` | 800 |
-| 5 | `group-core` | `strata::group`: propose, apply, checkpoint, recover | critical | strata | `include/strata/group/**`, `src/group/**`, `test/group/**`, `CMakeLists.txt` | after `detent:journal-driver`, `detent:consensus-driver`; lands after 3 | 1,500 |
-| 6 | `group-install` | Learners, install, catch-up, membership, repair, scrubber | critical | strata | as 5 | needs 5 | 1,300 |
+| 3 | `detent:consensus-quiescence` | Quiescent and closed groups (D97 Q4); Detent's quest, listed for what Xapiand needs | high | consensus | Detent's | after `detent:consensus-driver`, `detent:consensus-transport` | Detent's |
+| 4 | `consensus-rpc-lane` | A request lane on the host transport, streamed bodies | high | consensus | `include/consensus/transport/**`, `test/transport/rpc*` | after `detent:consensus-transport` | 900 |
+| 5 | `group-core` | `strata::group`: propose, apply, checkpoint with a file set, read, close, recover | critical | strata | `include/strata/group/**`, `src/group/**`, `test/group/**`, `CMakeLists.txt` | after `detent:journal-driver`, `detent:consensus-driver`; lands after 3 | 1,600 |
+| 6 | `group-install` | Learners, install of segments and file sets, catch-up, membership, repair, witness | critical | strata | as 5 | needs 5 | 1,400 |
 | 7 | `group-sim` | Phase 3R gate rows in the simulator | high | strata | `sim/**`, `test/group_sim*`, `docs/gates/phase-3r.md` | starts now (port `design/simulator`); lands after 6 | 1,500 |
-| 8 | `placement-root` | The root authority: nodes, namespaces, shard map | high | strata | `include/strata/placement/**`, `src/placement/**`, `test/placement/**` | after `detent:consensus-driver` | 900 |
-| 9 | `placement-repair` | Re-replication, drain, leader balance, `rf` change | high | strata | as 8 | needs 6, 8 | 800 |
-| 10 | `journal-replaces-wal` | Every shard a group at `rf = 1`; the WAL deleted | critical | Xapiand | `src/database/{shard,wal,handler}.*`, `src/xapiand_fsyncher.h`, `src/server/search_views.cc`, `harness/power_loss_check.sh` | needs 5 | 1,500 |
+| 8 | `placement-root` | The root authority as a strata group: nodes and namespace records | high | strata | `include/strata/placement/**`, `src/placement/**`, `test/placement/**` | needs 5 | 1,100 |
+| 9 | `placement-repair` | Re-replication, drain, leader balance, `rf` change, root install | high | strata | as 8 | needs 6, 8 | 900 |
+| 10 | `journal-replaces-wal` | Every shard a group at `rf = 1`; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted | critical | Xapiand | `src/database/{shard,wal,handler,pool}.*`, `src/xapiand_fsyncher.h`, `src/xapiand_storage_io.h`, `src/manager.*`, `src/opts.*`, `src/server/search_views.cc`, `harness/power_loss_check.sh`, `harness/profile_bulk.sh` | needs 1, 5 | 1,900 |
 | 11 | `shard-rpc` | The node-to-node shard service | high | Xapiand | `src/cluster/rpc*`, `tests/rpc*` | needs 4 | 1,200 |
-| 12 | `cluster-membership` | Node identity, `--join`, certificates, `/:nodes` | high | Xapiand | `src/cluster/{node,membership}*`, `src/opts.*`, `src/manager.*` | needs 8 | 900 |
-| 13 | `shard-groups` | Shards across nodes: routing, members, replicas | critical | Xapiand | `src/index_resolver_lru.*`, `src/database/{pool,shard,handler}.*`, `src/cluster/**` | needs 6, 10, 11, 12 | 1,500 |
-| 14 | `distributed-search` | Fan-out, exact statistics, merged aggregations | high | Xapiand | `src/engine/{search,strata/search}.*`, `src/database/handler.cc`, `src/server/search_views.cc` | needs 2, 13 | 1,300 |
-| 15 | `cluster-api` | Settings, health, `:info`, docs, changelog | normal | Xapiand | `src/server/search_views.cc`, `src/index_resolver_lru.cc`, `docs/src/content/docs/**` | needs 13 | 800 |
+| 12 | `cluster-membership` | Node identity, `--join`, certificates, keepalives, `/:nodes` | high | Xapiand | `src/cluster/{node,membership}*`, `src/opts.*`, `src/manager.*` | needs 8; after `detent:consensus-transport` and 10 | 900 |
+| 13 | `shard-groups` | Shards across nodes: routing, members, replicas, linearizable reads | critical | Xapiand | `src/index_resolver_lru.*`, `src/database/{pool,shard,handler}.*`, `src/cluster/**` | needs 1, 6, 10, 11, 12 | 1,700 |
+| 14 | `distributed-search` | Fan-out, exact statistics, merged aggregations, patterns from the root | high | Xapiand | `src/engine/{search,strata/search}.*`, `src/database/handler.cc`, `src/server/search_views.cc`, `src/index_pattern.*`, `src/walk_gate.h` | needs 2, 13 | 1,500 |
+| 15 | `cluster-api` | Settings, health, `:info`, docs, changelog | normal | Xapiand | `src/server/search_views.cc`, `src/index_resolver_lru.cc`, `docs/src/content/docs/{options,installation,architecture,faq,changelog}.md`, `docs/src/content/docs/{reference-guide,tutorials}/**` | needs 9, 13; after 14 | 800 |
 | 16 | `cluster-migration` | One node to a cluster and back, without loss | high | Xapiand | `harness/cluster/migration*`, `docs/src/content/docs/upgrade.md` | needs 9, 13 | 500 |
 | 17 | `cluster-gate` | The release's cluster gate | critical | Xapiand | `docs/gates/cluster-release.md`, `harness/cluster/gate*` | needs 1, 7, 14, 15, 16 | 400 |
 
+Quest 12 lands after 10 because both edit `src/opts.*` and `src/manager.*` (section 6 weighs the
+cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
+`sortable-encoding`'s; 15 starts after it lands.
+
 **Contracts** (provided, consumed):
 
-- 3 provides Core's `Wake`, `LeaderGone`, the quiescent follower and the closed state (hard-state
-  bytes).
-- 4 provides the lane's frames: method, call id, deadline, credit (wire).
-- 5 provides the `strata::group` C++ API and the checkpoint bundle that names a manifest (applied
-  position, term, CRC32C; REPLICATION.md G6), and consumes the drivers' `Driver<Sink>` (D97 Q2).
-- 8 provides the authority's records and checkpoint (bytes).
-- 10 provides Xapiand's command (D3, bytes) and the HTTP `ack`, `refresh` and `?commit` semantics.
-- 11 provides the RPC methods `forward_write`, `stats`, `search_partial`, `get`, `count` and `info`
-  (msgpack, versioned through the hello's range).
+- 3 (Detent's) provides Core's `Wake`, `LeaderGone`, the quiescent follower and the closed state
+  (hard-state bytes).
+- 4 provides the lane's frames: method, call id, deadline, credit, and a body streamed in chunks
+  under that credit (wire).
+- 5 provides the `strata::group` C++ API: the checkpoint bundle that names a manifest (applied
+  position, term, CRC32C; REPLICATION.md G6) and an application file set (name, length, CRC32C
+  when immutable; D16), `read_applied` after `Driver::read` (D4), and close after a checkpoint
+  (D11). It consumes the drivers' `Driver<Sink>` (D97 Q2).
+- 6 provides install of the segment pack and the file set on one transfer (durability-modes D17's
+  file sets, install only).
+- 8 provides the authority's records (one per index, bytes), their prefix scan, and its checkpoint.
+- 10 provides Xapiand's command (D3), the chunked command (D12), the volume file set (D16) and the
+  RESTORE batch (D17), all bytes, and the HTTP `ack`, `read`, `refresh` and `?commit` semantics.
+- 11 provides the RPC methods `forward_write`, `stats`, `search_partial`, `get`, `count`, `info`
+  and `keepalive` (msgpack, versioned through the hello's range).
 - 15 provides `number_of_replicas` back, `GET /:cluster/health`, and `GET /` `cluster_name` and
-  `nodes`.
+  `nodes` (routes per Q8).
 
 **Acceptance criteria and evidence:**
 
 - **1.** A1: the six `cluster_check.sh` items (section 1), rewritten for N = 3 and 5 processes,
   run as a job; on master they pass at N = 1 and the cluster items fail as expected. A2: the
-  history checker rejects a planted lost write and a planted stale read (`--fails-without`). A3:
-  three VMs boot on one L2 and a `dm-log-writes` replay of a planted unsynced write finds it
-  missing at the earlier flush mark (a job under an exclusive hold). A4 [artifact]
+  history checker rejects a planted lost write, a planted stale read, and a planted stale
+  get-by-id answered by a partitioned old leader in a history checked as linearizable
+  (`--fails-without`). A3: three VMs boot on one L2 that carries multicast between them, and a
+  `dm-log-writes` replay of a planted unsynced write finds it missing at the earlier mark; the job
+  states the seconds per replay (a job under an exclusive hold). A4 [artifact]
   `harness/cluster/README.md`.
 - **2.** A1: weights and orders with supplied statistics equal those from the shards' own merged
   statistics on the release-rows corpus (a job). A2: a mutant that ignores the input fails A1.
-- **3.** A1: an idle three-voter group sends no heartbeat frames after it quiesces, counted over
-  10^6 simulated steps (a job). A2: a frame or a proposal reopens it, and with a live leader the
-  first proposal commits with no election (simulation). A3: a leader lost while quiescent is
-  detected through the node keepalive, and no term has two leaders (`simulation_test` with
-  quiescence, mutants killed). A4: TSan and ASan.
+- **3.** Detent's criteria; Xapiand needs these from it, at Detent's scale (Detent:5e4903e8): a
+  quiescent group reopens on a frame or a request with no election while its leader is unchanged;
+  one failure detector per node pair raises `LeaderGone` for all its groups; no term has two
+  leaders with quiescence in the simulation; zero heartbeat frames and the idle CPU per group,
+  measured at 10^6 groups per host.
 - **4.** A1: calls with deadlines and cancellation over shared connections; a full group credit
   does not delay an RPC, and a full RPC credit does not delay a heartbeat (`reader_test` shape,
   control failing). A2: one CPU-hour of fuzzing on the frame decoder, zero findings. A3: Detent's
-  history fetch expressible as one method.
+  history fetch expressible as one method. A4: a 4 GiB streamed body crosses under the lane's
+  credit while a heartbeat on the same connection keeps its gaps under the 1 s minimum election
+  timeout (a job). A5: a call between two nodes that share no group (a test).
 - **5.** A1: a lone voter's create, propose, apply, checkpoint and recover through
-  `HeldCompletion` at every crash point; recovery replays from the manifest's applied position and
-  the logical-content digest equals the uncrashed run (a job). A2: three voters in process: every
-  `quorum`-acknowledged entry survives any one crash, and digests are equal after every schedule
-  (a job). A3: `ack=none` completes at `ProposalPlaced` and `quorum` at commit (a test). A4: an
-  idle open group costs nothing beyond the driver's row, and a closed one zero descriptors (a
-  measured job). A5: ASan, UBSan and TSan.
-- **6.** A1: a learner installs a 64 KiB-chunked segment pack from a pinned manifest, catches up
-  and is promoted; replacement and removal pass across leader changes (jobs). A2: a damaged
-  segment fences the replica, which reinstalls at or below commit (C3) and serves no corrupt byte
-  (a test per file class). A3: the scrubber finds planted damage within one pass, inside its
-  budget (a job).
+  `HeldCompletion` at every crash point, with an application file set in the bundle; recovery
+  replays from the manifest's applied position and the logical-content digest, file set included,
+  equals the uncrashed run (a job). A2: three voters in process: every `quorum`-acknowledged entry
+  survives any one crash, and digests are equal after every schedule (a job). A3: `ack=none`
+  completes at `ProposalPlaced` and `quorum` at commit (a test). A4: an idle open group costs
+  nothing beyond the driver's row, and a closed one zero descriptors (a measured job). A5: a
+  `read_applied` after `Driver::read` on a partitioned old leader never returns a state older than
+  a committed write; a mutant that skips the probe fails (simulation). A6: a closed group pins no
+  turn-log segment; a mutant that closes without a checkpoint fails (a test). A7: ASan, UBSan and
+  TSan.
+- **6.** A1: a learner installs a 64 KiB-chunked segment pack and a file set from a pinned
+  manifest, catches up and is promoted; replacement and removal pass across leader changes
+  (jobs). A2: a mutant install that skips the file set fails A1's digest (`--fails-without`); a
+  retried install sends only the files the learner lacks or holds short (counted). A3: a damaged
+  segment or file fences the replica, which reinstalls at or below commit (C3) and serves no
+  corrupt byte (a test per file class). A4: with Q3 (a), the witness stores the log, never
+  applies, and leads only to hand off (simulation).
 - **7.** phase3r A2 to A4 on this scope: at least 10^7 steps over at least 1,000 seeds for 3 and 5
-  voters, with crashes, power loss at every barrier, partitions, clock skew, add, remove and
-  replace, and corruption of every file class. The linearizability checker passes over write and
-  get-by-id histories. Zero `quorum`-acknowledged loss, zero served corruption, and a rebuild after
-  disk loss (simulator jobs; mutants killed).
-- **8.** A1: create, read and delete of nodes, namespaces and shard records, with nested paths
-  distinct (tests). A2: placement puts `rf` distinct nodes per shard and spreads leaders within one
-  per node (a property test). A3: the authority survives the loss of any minority of its voters
-  (simulation).
+  voters, with crashes, power loss at every barrier with torn and reordered writes, partitions,
+  clock skew, add, remove, replace and D7's growth window, chunked commands cut by a leader
+  change, and corruption of every file class. The linearizability checker passes over write and
+  `linearizable` get-by-id histories. Zero `quorum`-acknowledged loss, zero served corruption, and
+  a rebuild after disk loss (simulator jobs; mutants killed).
+- **8.** A1: create, read and delete of nodes and namespace records, with nested paths distinct
+  (tests). A2: placement puts `rf` distinct nodes per shard and spreads leaders within one per
+  node (a property test). A3: the authority survives the loss of any minority of its voters
+  (simulation). A4: at 10^6 namespace records of 5 shards each (records only): the root's resident
+  memory at most 256 MiB, its checkpoint time and bytes, creations at least 1,000 per second from
+  64 concurrent clients with p50 and p99 latency, and a node's cache size at its default, each
+  stated (a job). A5: a prefix scan returns exactly the paths a directory walk returns over the
+  same tree, nested paths included (a property test).
 - **9.** A1: a node down past `--replace-after` is replaced with no acknowledged loss (a simulator
-  and harness job). A2: a drain empties a node. A3: `rf` 1 to 3 to 1 on a live index (a harness
-  job).
+  and harness job). A2: a drain empties a node. A3: `number_of_replicas` 0, 1, 2, 1, 0 on a live
+  index under writes, through D7's steps, with no acknowledged loss (a harness job). A4: a new
+  root voter installs at 10^6 namespace records, the time stated (a job).
 - **10.** A1: E2E and the docs suite green with every shard a group. A2: `harness/power_loss_check.sh`
-  replaces `wal_recovery_check.sh`: `dm-log-writes` replay at every flush, with no acknowledged
-  `quorum` write missing (a job). A3: T11, the journal costing at most half of the WAL per
-  document in CPU and on the critical path (`profile_bulk.sh`, exclusive jobs, the lead's). A4:
-  Q14, the journal at `none` at least as fast per acknowledged write as the WAL's async default,
-  and at `quorum` as its synchronous WAL (exclusive jobs). A5: `git grep -n DatabaseWAL -- src` is
-  empty (a job).
+  replaces `wal_recovery_check.sh`: `dm-log-writes` replay at D14's sampled marks, with no
+  acknowledged `quorum` write missing (a job). A3: T11 against a baseline where the WAL writes:
+  PUT from concurrent clients on master at the WAL's async default, and at `DB_SYNCHRONOUS_WAL`
+  (`flags.h:42`; no request sets it, so a harness patch does, kept in `harness/`); the journal
+  costs at most half of the WAL per document in CPU and on the critical path (`profile_bulk.sh
+  --put`, exclusive jobs, the lead's). A4: Q14, the journal at `none` at least as fast per
+  acknowledged write as the WAL's async default, and at `quorum` as its synchronous WAL (exclusive
+  jobs). A5: `git grep -n DatabaseWAL -- src` is empty (a job). A6: T12, RESTORE docs/s on D17's
+  path: at `rf = 1` at least 1.0× pre-7c master (x7-gate A12's bar), and at `rf = 3` on three
+  processes, stated; a miss goes to the owner with its profile, not waived (exclusive jobs). A7:
+  `kill -9` at each crash point of a stored-blob write and of a chunked upload around a checkpoint;
+  every acknowledged blob reads back byte-equal, and a mutant that skips D16's truncation fails (a
+  job). A8: a command above 1 MiB is chunked, and a mutant that proposes it whole is refused by
+  `command_bytes` (a test).
 - **11.** A1: each method round-trips, with the error mapping, deadlines and cancellation tested.
   A2: one CPU-hour of fuzzing per decoder. A3: an N − 1 peer is refused with a named error.
 - **12.** A1: three nodes form from one seed. A node from another cluster, or without a pinned
   certificate, is refused (tests and a harness job). A2: `GET /` and `/:nodes` match the authority.
-  A3: plaintext only behind an explicit flag on loopback (Q5).
-- **13.** A1: section 1's checklist passes on 3 and 5 processes. A2: a write to any node is
-  forwarded at most once (counted in a job). A3: a 503 under no quorum, and a redirect on a stale
-  hint (tests). A4: a cancelled proposal's retry is applied once (a test).
-- **14.** A1: search, count and every aggregation kind equal over one node and over three, five
-  and two-shards-per-node placements (agg-shard-parity's test, cross-node; a job). A2: a dropped
-  partial fails A1 (`--fails-without`). A3: a killed replica mid-search is retried, or the result
-  is marked partial within the deadline.
+  A3: plaintext only behind an explicit flag on loopback (Q5). A4: a node that shares no group with
+  the root leader keeps its keepalives, and its `down` is logged after 3 misses (a harness job).
+- **13.** A1: section 1's checklist items 1, 2, 5 and 6 on 3 and 5 processes. A2: a write to any
+  node takes one forward with a fresh hint and at most two with a stale one (counted in a job).
+  A3: a 503 under no quorum and on a second miss, and the receiving node follows the redirect
+  (tests). A4: a cancelled proposal's retry is applied once (a test). A5: through the proxy capped
+  at 100 Mb/s, a 16 MiB buffered document with a stored blob and a 256 MiB streamed upload commit
+  at `rf = 3` while another group on the same node pair keeps its heartbeat gaps under the 1 s
+  minimum election timeout; on loopback, a 4 GiB upload does the same, with its disk (about
+  24 GiB) stated; a control with `frame_bytes` 0 and `command_bytes` 64 MiB fails the capped case
+  (`--fails-without`, jobs). A6: after a replace, `rf` 1 to 3, and a drain, every stored blob reads
+  back byte-equal from the new replica, and a mutant install without the file set fails (a job).
+  A7: with the old leader partitioned by the proxy, its stale get-by-id at `prefix` is flagged by
+  the checker, and at `linearizable` the history passes (a job).
+- **14.** A1: section 1's items 3 and 4, and search, count and every aggregation kind equal over
+  one node and over three, five and two-shards-per-node placements (agg-shard-parity's test,
+  cross-node; a job). A corpus with replaces is included: counts and aggregations exact, ranking
+  compared within one replica choice. A2: a dropped partial fails A1 (`--fails-without`). A3: a
+  killed replica mid-search is retried, or the result is marked partial within the deadline. A4: a
+  wildcard search from any node of 3 and 5 returns the same indexes and hits as master's one-node
+  walk over the same tree, nested paths included (a job), and `git grep -n
+  "expand(Endpoint::cwd" -- src` is empty.
 - **15.** A1: the API's routes and settings documented, with the docs E2E green. A2: GET
-  `_settings` shows `number_of_replicas`; health is green, yellow or red by replica count.
-  A3 [artifact]: the changelog.
-- **16.** A1: a node with indexes seeds three nodes, `number_of_replicas` 0 to 2, digests equal, no
-  document lost (a job). A2: a shrink and a drain lose nothing. A3: a node restarted after its log
-  was truncated catches up by install.
+  `_settings` shows `number_of_replicas`; health is green, yellow or red by replica count. A3
+  [artifact]: the changelog.
+- **16.** A1: a node with indexes seeds three nodes, `number_of_replicas` 0 to 2, digests equal,
+  stored blob bytes included, no document lost (a job). A2: a shrink and a drain lose nothing. A3:
+  a node restarted after its log was truncated catches up by install.
 - **17.** Section 7's rows, each with its commit and jobs, reviewed (lens `system`).
 
 **Changes to existing quests** (the lead's to make):
@@ -382,37 +584,47 @@ names them.
 - `phase3r`: A1 to A4 and A7 become quests 5 to 7; A5, A6 and A8 follow the release.
 - `track-c`: A2 (T2 oracles over the shared turn log), A4 (the C3 gate report) and A8 (goal 5's
   audit) stay before the release. A5 and A7 become `detent:consensus-transport` under D97 Q7. A6
-  is quest 7's checker. A3 follows the release.
-- `track-d`: D4's minimal mapping (D5, D15) and D7's decision (D12) are here; the rest follows the
-  release.
+  is quest 7's checker. A3 follows the release. D9 gains D7's growth window.
+- `track-d`: D4's minimal mapping (D5, D15) and D7's decision (D12, D16) are here; the rest
+  follows the release.
 - `phase7b`: A1, A2, A3, A6, A7 (as D13) and A8 are quests 10 to 17; A4 runs at three nodes only
   (Q4); A5 follows the release.
-- `format-freeze`: after quests 3, 4, 5, 8, 10 and 11, beside `sortable-encoding`.
+- `format-freeze`: after quest 17 (`cluster-gate`) and after `sortable-encoding`, so it reviews
+  every byte below, quest 6's install and quest 8's records included.
 - `drop-replicas` (planned, launchable): cancel it. It removes the setting this design brings back.
 
 ## 6. Order
 
 ```
-task-wheel, completion-seam ─> journal-driver ─> consensus-driver ─┬─> group-core ─> group-install ─┐
-  (detent)                      (detent)          (detent)         ├─> quiescence (lands with 5)     ├─> shard-groups ─> distributed-search ─> cluster-gate ─> format-freeze
-                                                                   ├─> placement-root ─> membership ─┤
-                                                                   └─> consensus-transport ─> rpc-lane ─> shard-rpc ─┘
+drivers (detent: task-wheel, completion-seam, journal-driver, consensus-driver)
+  ├─> group-core ─┬─> group-install ─────────────────────────┐
+  │               ├─> journal-replaces-wal ──────────────────┤
+  │               └─> placement-root ─> cluster-membership ──┼─> shard-groups ─> distributed-search ─> cluster-api ─> cluster-gate ─> format-freeze
+  ├─> consensus-quiescence (detent; lands before group-core) │
+  └─> consensus-transport (detent) ─> rpc-lane ─> shard-rpc ─┘
 ```
 
 The critical path is the drivers, then `group-core`, `group-install`, `shard-groups`,
-`distributed-search`, `cluster-gate` and `format-freeze`: six of the seventeen.
+`distributed-search`, `cluster-api`, `cluster-gate` and `format-freeze`: seven of the sixteen.
+`cluster-membership` also lands after `consensus-transport` and `journal-replaces-wal`. The
+nearest path is `journal-replaces-wal` then `cluster-membership` (2,800 lines against
+`group-install`'s 1,400); it stays off the critical path only if membership is built beside
+`journal-replaces-wal` and rebased over its deletions in `opts.*` and `manager.*`, so that only its
+landing waits. That overlap is the lead's call.
 
 - **Starts now:** `cluster-harness`, `prospect-supplied-stats` and `group-sim`'s port of the
   simulator.
-- **Once the drivers land:** `group-core`, `placement-root`, `consensus-quiescence` and
-  `consensus-rpc-lane` run side by side.
-- **Then:** `journal-replaces-wal` beside `group-install`, and `shard-rpc` beside both.
-- **Late:** `cluster-api` and `cluster-migration` go late but beside `distributed-search`.
+- **Once the drivers land:** `group-core` and `consensus-rpc-lane` run side by side, with Detent's
+  `consensus-quiescence`.
+- **Then:** `group-install`, `placement-root` and `journal-replaces-wal` side by side, and
+  `shard-rpc` beside them.
+- **Late:** `cluster-migration` beside `distributed-search`; `cluster-api` after it.
 
 Where it meets the two format quests:
 
 - **`format-freeze`** reviews every new byte: `RFTW0001` with the per-host layout, the hard state,
-  the checkpoint bundle, Xapiand's command, the authority's records and the two wire formats.
+  the checkpoint bundle with its file set, Xapiand's command and chunked command, the authority's
+  records and the two wire formats. It lands after `cluster-gate` and `sortable-encoding`.
 - **`sortable-encoding`:** the command embeds `engine::Document` bytes, so the value encoding is
   inside it. No code ordering is needed, because both change pre-release bytes freely (D87), but
   the freeze reviews the command only after `sortable-encoding` lands.
@@ -422,23 +634,23 @@ Where it meets the two format quests:
 | Row | Target | Procedure |
 |---|---|---|
 | R1 Parity | Section 1's checklist | On 3 and 5 processes, and on 3 and 5 VMs |
-| R2 No acknowledged loss | Zero `quorum` writes lost; write and get-by-id histories linearizable | 200 seeded runs of 60 s per tier, with `kill -9`, `SIGSTOP`, proxy partitions and VM power loss through `dm-log-writes` |
+| R2 No acknowledged loss | Zero `quorum` writes lost; histories of `quorum` writes and `linearizable` get-by-id linearizable, and `prefix` get-by-id a consistent prefix (D4) | 200 seeded runs of 60 s per fault tier (`kill -9`, `SIGSTOP`, proxy partitions); VM power loss through `dm-log-writes`, 20 runs at D14's sampled marks |
 | R3 No split brain | At most one leader per group per term; digests equal after healing | The leaders' logs and a digest per group, in R2's runs |
 | R4 Simulation | Quest 7's rows | Quest 7's jobs |
 | R5 Failover | Write unavailability after a leader kill, p99, stated against the old 300 s stall plus a 10 to 30 s election | 100 kills on VMs |
 | R6 Migration | Quest 16 | Quest 16's jobs |
-| R7 The journal's cost | T11 and Q14 | Quest 10's jobs |
-| R8 Against the Xapian-era cluster | Ingest, search and aggregation on the same 3 VMs, beating the final Xapian release on every row (phase7b A4 at three nodes) | Exclusive jobs, five interleaved trials |
+| R7 The journal's cost | T11, T12 and Q14 | Quest 10's jobs |
+| R8 Against the Xapian-era cluster | Ingest, search and aggregation on the same 3 VMs, beating the final Xapian release on every row (phase7b A4 at three nodes): ingest at `ack=none`, the old async replication's durability, with `quorum` reported beside it | Exclusive jobs, five interleaved trials; the old cluster on D14's multicast L2 |
 | R9 Every gate | Sanitizers, one CPU-hour of fuzzing per new decoder, fixtures, coverage | CI and jobs |
-| R10 Scale statement | Memory, descriptors and idle CPU per group measured at 10^4 groups per node; the authority's state per node and keepalives per second stated as functions of the node count | A measured job, plus the statement |
+| R10 Scale statement | Memory, descriptors and idle CPU per group measured at 10^4 groups per node; first-write latency for a new index and after a reopen, against master; the per-host retained turn log after 10^4 write-once indexes go idle; keepalives per second as a function of the node count; the authority's records, memory, checkpoint and install, a node's cache, and index creations per second as functions of the index and shard counts (quest 8 A4, quest 9 A4) | Measured jobs, plus the statement |
 
 ## 8. Where this depends on Detent's drivers
 
 | Detent D97 answer | What depends on it here |
 |---|---|
 | Q2 (a), the Sink | Quest 5 applies `Committed` from the Sink in a chore that leaves the group's loop (Xapiand X10) |
-| Q3 (b), one directory per host | D5: groups are opaque ids, so nested paths never collide. The authority's shard record is the only path-to-group map. One lock shared with the cold tier. `format-freeze` reviews this layout |
-| Q4, quiescence | Quest 3 is on the release path: D11's closed groups and their bytes come before `format-freeze` |
+| Q3 (b), one directory per host | D5: groups are opaque ids, so nested paths never collide. The authority's namespace record is the only path-to-group map. One lock shared with the cold tier. `format-freeze` reviews this layout |
+| Q4, quiescence | `detent:consensus-quiescence` is on the release path: D11's closed groups and their bytes come before `format-freeze` |
 | Q7 (a), one certificate per node | D6 and quest 12: the node directory holds the pin, and the group-open exchange checks cluster, group and epoch |
 
 Xapiand's requirements beyond the five recorded items (D21; `SHARED_LIBRARY_DECISIONS.md:251-261`):
@@ -449,7 +661,14 @@ Xapiand's requirements beyond the five recorded items (D21; `SHARED_LIBRARY_DECI
    applies, and leads only to hand off.
 3. **Reopen latency.** A request to a closed group whose leader lives commits with no election,
    and the follower failure detector is the node keepalive shared by every group on the pair
-   (track-c D12), not a timer per group.
+   (track-c D12), not a timer per group. A reopened lone voter's campaign at `Start` (X5) writes
+   its term record in the same turn as its first write (D11).
+4. **Streamed bodies on the lane** (D9, quest 4): `get` of a stored blob to 4 GiB and
+   `forward_write` of a streamed upload, in chunks under the lane's credit, never one frame.
+5. **Lane connections between nodes that share no group** (D6, D10): a coordinator fans out to
+   any node, and every node keeps one to the root leader for its keepalives;
+   `detent:consensus-transport` opens connections only while a group is shared (async-drivers
+   D10).
 
 ## 9. Questions for the owner
 
@@ -503,10 +722,54 @@ blocks quest 17's plan only.
 **Q6. D54's remaining answers** (durability-modes Q11.3, Q12 and Q13).
 
 - No node-local "accepted" level (D8).
-- `?commit` is `ack=quorum&refresh=true`, and `:flush` is the checkpoint (D4).
+- `?commit` is `ack=quorum&refresh=true`, and the per-index checkpoint is the explicit
+  durability point (D4); which route names it is Q8.
 - `commit()` becomes internal (D2).
 
 *Recommendation:* as written. Deferring blocks quest 10.
+
+**Q7. Multicast discovery** (D6). The Xapian-era cluster found its nodes by UDP multicast
+(section 1), with `--discovery-*` options; it carried Raft votes over forgeable UDP.
+
+- (a) Remove it and the options: nodes join from `--join` seeds, host names or a DNS name with many
+  addresses (a Kubernetes headless service, a Compose service, static hosts).
+- (b) Keep multicast as a seed source only: a node announces on the old group and port, learns
+  seeds, then joins over TLS as in (a). About 300 lines, and it works only on one L2.
+- (c) Keep the old discovery messages. Rejected here: its Raft is gone, and its messages are
+  unauthenticated.
+
+*Recommendation: (a).* DNS seeds cover every deployment the docs describe, Kubernetes included
+(old `kubernetes.md:19-24`), and a removed option is cleaner than one kept for LANs. Deferring
+blocks quest 12's options.
+
+**Q8. HTTP routes.** New or changed against master:
+
+| Route | Master | This design |
+|---|---|---|
+| Node list | none (`GET /.nodes` in the Xapian-era cluster) | `GET /:nodes` |
+| Cluster health | none | `GET /:cluster/health` |
+| Drain | none | `POST /:nodes/<n>/:drain` |
+| Per-index checkpoint | `COMMIT /idx/` commits the shard (`search_views.cc:609`, `:1563`) | see options |
+| `FLUSH` | pathless admin command: closes and commits every open writable (`search_views.cc:1521-1543`) | unchanged |
+
+- (a) The `:` routes above, and the per-index checkpoint is the existing `COMMIT /idx/`
+  (durability-modes Q12): one verb, the same meaning of "make it durable", and `FLUSH` keeps its
+  one admin meaning.
+- (b) As (a), but the checkpoint is `POST /idx/:flush`, Elasticsearch's name; `:flush` then means
+  two things by whether it has a path, and `COMMIT` needs a meaning of its own or goes.
+- (c) Elasticsearch's names throughout: `_nodes`, `_cluster/health`, `_flush`.
+
+*Recommendation: (a).* `/.nodes` is not kept as an alias. Deferring blocks quests 13 and 15.
+
+**Q9. The default shard count.** Master creates indexes on first write with `--shards 5`
+(`opts.cc:43`). With a group per shard, a host holding a million indexes holds five million groups,
+and the root five shard entries per index (D5).
+
+- (a) Keep 5.
+- (b) Default to 1, as Elasticsearch has since 7.0; `number_of_shards` still sets more at create.
+
+*Recommendation: (b)*, for the many-indexes workload; it changes no format. Deferring blocks
+quest 15's defaults and R10's statement.
 
 ## 10. Limits
 
@@ -518,12 +781,17 @@ blocks quest 17's plan only.
   `none` writes, and a replica serves its last refresh (1 s by default) after a failover. Both are
   the caller's choice and are documented.
 - **Document mode costs CPU:** each of `rf` voters indexes every document, until segment mode.
-- **The authority leader is linear in nodes** (keepalives) and holds the whole shard map. That is
-  fine at the release's scale; how far it goes is unmeasured, and R10 states it.
-- **Blob locators:** replicas stay equal only while `DataStorage`'s volume rotation is a pure
-  function of the log. A violation would be silent, so R3's digest covers stored blobs.
-- **Power loss** is tested by flush-mark replay on Linux; macOS `F_FULLFSYNC` is not covered by the
-  VMs.
+- **The authority leader is linear in nodes** (keepalives), and the root's state in indexes and
+  shards (D5's arithmetic: about 300 MB at 10^6 indexes of 5 shards, on disk behind strata's
+  caches). Every index creation is a root commit. Quest 8 A4 and R10 measure it.
+- **`linearizable` reads pay a quorum round trip**, and a search at that level a refresh.
+- **A pattern scan away from the root leader reads at `prefix`**, so on a multi-node cluster an
+  index created within the last refresh may be missing from a wildcard search (D5).
+- **Blob locators:** replicas stay equal only while `DataStorage`'s volume allocation is a pure
+  function of the log (D16). A violation would be silent, so R3's digest covers stored blobs.
+- **An upload cut by a leader change fails** and the client retries it whole (D12).
+- **Power loss** is tested by replay to sampled marks on Linux, prefix states only (D14); macOS
+  `F_FULLFSYNC` is not covered by the VMs.
 - **One more round trip per search** for exact statistics.
 - **No mixed-version cluster** in the first release.
 
@@ -531,8 +799,41 @@ blocks quest 17's plan only.
 
 Designed, not built. Every quest's evidence is still to be produced. Review, in order:
 
-1. D2 and D3: the WAL removed at `rf = 1`, and blobs written at apply.
-2. D5 and D6: one root group with keepalive liveness, against the release's scale.
-3. D9's request lane, and the requirements to put to Detent's lead in section 8.
-4. The quest boundaries and the critical path in sections 5 and 6.
-5. The gate rows R2, R3 and R5, which decide what "works in a cluster" means.
+1. D2, D3, D12, D16 and D17: the WAL removed at `rf = 1`, chunked commands, blobs written at
+   apply and moved by install, and RESTORE through the group.
+2. D4: `linearizable` in place of `leader`.
+3. D5 and D6: one root group as a strata index, with keepalive liveness, against 10^6 indexes.
+4. D9's request lane, and the requirements to put to Detent's lead in section 8.
+5. The quest boundaries and the critical path in sections 5 and 6.
+6. The gate rows R2, R3 and R5, which decide what "works in a cluster" means.
+
+## 12. Review answers
+
+The design review at Xapiand:5dc60256a, finding by finding.
+
+| ID | Fix | Where |
+|---|---|---|
+| F1 | The checkpoint bundle names `DataStorage`'s volumes, open uploads included; recovery truncates and replays them; install moves them with the segment pack (D17's file sets, install only) | D16; contracts 5, 6, 10; quests 5 A1, 6 A1-A2, 10 A7, 13 A6, 16 A1 |
+| F2 | RESTORE goes through the group at every `rf`, as batch commands; T11's baseline is PUT with the WAL writing, async and synchronous; T12 on the new path, stated even if it loses | D17; quest 10 A3, A6; R7 |
+| F3 | `read=linearizable` ships through Core's quorum-probe read and the live version map; `leader` is dropped; R2 states each history's level; D1 restated per term | D1, D4; section 4; quests 1 A2, 5 A5, 13 A7; R2 |
+| F4 | Patterns resolve from the root's namespace records by prefix scan, nested paths included; the local walk is deleted | D5, D10; quests 8 A5, 14 A4 |
+| F5 | Consensus's per-group limits, from master's largest document: 1 MiB frames and commands, larger commands chunked; heartbeat test under a maximal upload, with a control | D12; quests 10 A8, 13 A5, 4 A4 |
+| F6 | The root is a strata index of one record per index; bytes, checkpoint, install, creation rate and cache stated with arithmetic, then measured at 10^6 namespaces | D5; quests 8 A4, 9 A4; R10; Q9 |
+| F7 | One replica per shard per request for statistics and partial; the residue stated; a corpus with replaces | D10; quest 14 A1 |
+| F8 | The 0-to-1 path through a growth window; 0, 1, 2, 1, 0 tested | D7; quest 9 A3; track-c change |
+| F9 | Short means one voter plus learners, never two voters | D7 |
+| F10 | Quest 10's files cover every WAL user; 12 after 10 and `detent:consensus-transport`; 15 after 14; `upgrade.md` is 16's alone; 10 and 13 need 1; 15 needs 9 | Section 5's table; section 6 |
+| F11 | Checklist items 3 and 4 move to quest 14 | Quests 13 A1, 14 A1 |
+| F12 | `format-freeze` after `cluster-gate` and after `sortable-encoding` | Section 5's changes; section 6 |
+| F13 | Quiescence is `detent:consensus-quiescence` (D97); Xapiand's needs at Detent's scale, 10^6 groups | Section 5 row 3; section 8 |
+| F14 | A group closes only after a checkpoint; R10 measures the retained log | D11; quest 5 A6; R10 |
+| F15 | A reopened lone voter's term record shares its first write's turn; R10 measures first-write latency | D11; section 8 item 3; R10 |
+| F16 | Streamed bodies on the lane, and lane connections between nodes sharing no group | D9; section 8 items 4, 5; quest 4 A4, A5 |
+| F17 | The group log is authoritative; the record follows and is reconciled; no leader hints at the root; no new group while an old member may live | D5 |
+| F18 | Coverage stated; marks sampled; cost estimated; the multicast L2 named | D14; quest 1 A3; R2 |
+| F19 | Multicast's removal and the routes put to the owner | Q7, Q8; Q6 points its route to Q8 |
+| F20 | The batch key changes; statistics stay per index | D10 |
+| F21 | R8 at `ack=none`, with `quorum` beside it | R8 |
+| F22 | Keepalives ride the request lane, one connection per node to the root leader | D6; quest 12 A4 |
+| F23 | The receiving node follows at most one redirect; counted | D8; quest 13 A2, A3 |
+| F24 | The scrubber is deferred: reads and installs fail closed already | Section 4; quest 6 |
