@@ -2888,7 +2888,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					set_data_id(spc_id);
 					properties = &get_mutable_properties();
 					unprefixed_term_id = type_ser.second;
-					document_id = Cast::cast(id_type, document_id);
+					document_id = Serialize::exact(ID_FIELD_NAME, id_type, document_id);
 					break;
 				}
 				case FieldType::uuid:
@@ -2897,7 +2897,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::floating:
 				case FieldType::text:
 				case FieldType::keyword:
-					document_id = Cast::cast(id_type, document_id);
+					document_id = Serialize::exact(ID_FIELD_NAME, id_type, document_id);
 					unprefixed_term_id = Serialize::id(spc_id, document_id);
 					break;
 				default:
@@ -5349,119 +5349,111 @@ Schema::index_item(engine::Document& doc, const MsgPack& item, size_t pos)
 
 	const auto& g_specification = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 
+	// A number meets its field by the one rule (D92, Serialize::exact); a cast object converts any other value.
+	const auto concrete_type = specification.sep_types[SPC_CONCRETE_TYPE];
+	const bool numeric = concrete_type == FieldType::integer || concrete_type == FieldType::positive || concrete_type == FieldType::floating;
 	MsgPack value_holder;
-	const MsgPack& value = item.is_map() ? value_holder = Cast::cast(item) : item;
+	const MsgPack& value = numeric ? value_holder = Serialize::exact(specification.full_meta_name, concrete_type, item)
+		: item.is_map() ? value_holder = Cast::cast(item) : item;
 
-	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+	switch (concrete_type) {
 		case FieldType::floating: {
-			if (value.is_number()) {
-				// An integer keeps its exact bytes and terms; a float's terms are its truncation (design D6).
-				std::string ser_value;
-				int64_t term_val;
-				switch (value.get_type()) {
-					case MsgPack::Type::NEGATIVE_INTEGER:
-						term_val = value.i64();
-						ser_value = Serialize::integer(term_val);
-						break;
-					case MsgPack::Type::POSITIVE_INTEGER:
-						term_val = static_cast<int64_t>(std::min(value.u64(), static_cast<uint64_t>(std::numeric_limits<int64_t>::max())));
-						ser_value = Serialize::positive(value.u64());
-						break;
-					default:
-						term_val = GenerateTerms::truncate<int64_t>(value.f64());
-						ser_value = Serialize::floating(FieldType::floating, value.f64());
-						break;
-				}
-				if (global_terms && field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					if (specification.accuracy == g_specification.accuracy) {
-						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, term_val);
-					} else {
-						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, term_val);
-						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, term_val);
-					}
-				} else if (global_terms) {
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, term_val);
-				} else if (field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
-					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, term_val);
-				}
-				if (global_values) {
-					map_values[g_specification.slot].insert(ser_value);
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(std::move(ser_value));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
+			// An integer keeps its exact bytes and terms; a float's terms are its truncation (design D6).
+			std::string ser_value;
+			int64_t term_val;
+			switch (value.get_type()) {
+				case MsgPack::Type::NEGATIVE_INTEGER:
+					term_val = value.i64();
+					ser_value = Serialize::integer(term_val);
+					break;
+				case MsgPack::Type::POSITIVE_INTEGER:
+					term_val = static_cast<int64_t>(std::min(value.u64(), static_cast<uint64_t>(std::numeric_limits<int64_t>::max())));
+					ser_value = Serialize::positive(value.u64());
+					break;
+				default:
+					term_val = GenerateTerms::truncate<int64_t>(value.f64());
+					ser_value = Serialize::floating(FieldType::floating, value.f64());
+					break;
 			}
+			if (global_terms && field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, term_val);
+				} else {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, term_val);
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, term_val);
+				}
+			} else if (global_terms) {
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, term_val);
+			} else if (field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, term_val);
+			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
 		case FieldType::integer: {
-			if (fits_integer_type(FieldType::integer, value)) {
-				const auto i_val = value.i64();
-				auto ser_value = Serialize::integer(i_val);
-				if (global_terms && field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					if (specification.accuracy == g_specification.accuracy) {
-						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(i_val));
-					} else {
-						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
-						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
-					}
-				} else if (global_terms) {
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
-				} else if (field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+			const auto i_val = value.i64();
+			auto ser_value = Serialize::integer(i_val);
+			if (global_terms && field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(i_val));
+				} else {
 					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
 				}
-				if (global_values) {
-					map_values[g_specification.slot].insert(ser_value);
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(std::move(ser_value));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
+			} else if (global_terms) {
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
+			} else if (field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
 			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
 		case FieldType::positive: {
-			if (fits_integer_type(FieldType::positive, value)) {
-				const auto u_val = value.u64();
-				auto ser_value = Serialize::positive(u_val);
-				if (global_terms && field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					if (specification.accuracy == g_specification.accuracy) {
-						GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(u_val));
-					} else {
-						GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
-						GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
-					}
-				} else if (global_terms) {
-					index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
-					GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
-				} else if (field_terms) {
-					index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+			const auto u_val = value.u64();
+			auto ser_value = Serialize::positive(u_val);
+			if (global_terms && field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(u_val));
+				} else {
 					GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
+					GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
 				}
-				if (global_values) {
-					map_values[g_specification.slot].insert(ser_value);
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(std::move(ser_value));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
+			} else if (global_terms) {
+				index_term(doc, field_name(g_specification.prefix.field, g_specification.get_ctype()), ser_value, g_specification, pos);
+				GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
+			} else if (field_terms) {
+				index_term(doc, field_name(specification.prefix.field, specification.get_ctype()), ser_value, specification, pos);
+				GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
 			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
 		case FieldType::date:

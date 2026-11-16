@@ -97,6 +97,11 @@ namespace Serialize {
 	bool possiblyUUID(std::string_view field_value) noexcept;
 	bool isUUID(std::string_view field_value) noexcept;
 
+	// The one rule a value meets a typed field by (D92): `value` as exactly a value of `type`, where text spells a
+	// number as JSON does and a cast object ({"_integer": 1.5}) converts on request; else a ClientError naming
+	// `field`, the value and the type. Numeric, keyword, text and uuid types are checked; others pass as given.
+	class MsgPack exact(std::string_view field, FieldType type, const class MsgPack& value);
+
 
 	/*
 	 * Serialize field_value according to field_spc.

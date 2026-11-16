@@ -32,7 +32,6 @@
 #include <utility>                                // for std::pair, std::cmp_less, std::cmp_greater
 #include <vector>                                 // for vector
 
-#include "cast.h"                                 // for Cast
 #include "database/schema.h"                      // for required_spc_t, FieldType
 #include "datetime.h"                             // for timestamp
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
@@ -82,44 +81,26 @@ saturate(I v)
 }
 
 
-// A numeric range bound: its bytes in its own type, and the T its accuracy terms cover. One number has one
-// encoding whatever its type, so 6.5 on an integer field or 2^53 + 1 on a floating one compares exactly
-// against the slot. A string reads as a value's text does, whatever the
-// field's type; NaN is refused.
+// A numeric range bound: its bytes in its own type, and the T its accuracy terms cover. QueryDSL reads each bound as a
+// value of the field's type (Serialize::exact, D92), so it arrives a number; one number has one encoding whatever its
+// type, so 2^53 + 1 on a floating field compares exactly against the slot.
 template <typename T>
 static std::pair<std::string, T>
 numeric_bound(const MsgPack& bound)
 {
-	const MsgPack value = bound.is_map() ? Cast::cast(bound) : bound;
-	auto floating = [](double v) -> std::pair<std::string, T> {
-		if (std::isnan(v)) {
-			THROW(SerializationError, "A range bound cannot be NaN");
-		}
-		return { Serialize::floating(v), GenerateTerms::truncate<T>(v) };
-	};
-	auto integer = [](std::int64_t v) -> std::pair<std::string, T> { return { Serialize::integer(v), saturate<T>(v) }; };
-	auto positive = [](std::uint64_t v) -> std::pair<std::string, T> { return { Serialize::positive(v), saturate<T>(v) }; };
-	switch (value.get_type()) {
+	switch (bound.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return positive(value.u64());
+			return { Serialize::positive(bound.u64()), saturate<T>(bound.u64()) };
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return integer(value.i64());
+			return { Serialize::integer(bound.i64()), saturate<T>(bound.i64()) };
 		case MsgPack::Type::FLOAT:
-			return floating(value.f64());
-		case MsgPack::Type::BOOLEAN:
-			return positive(value.boolean());
-		case MsgPack::Type::STR: {
-			// Text reads as a value's text does (int64, uint64, then double), whatever the field's type.
-			const MsgPack number = Cast::cast(FieldType::empty, value);
-			if (!number.is_string()) {
-				return numeric_bound<T>(number);
+			if (std::isnan(bound.f64())) {
+				THROW(SerializationError, "A range bound cannot be NaN");
 			}
-			break;
-		}
+			return { Serialize::floating(bound.f64()), GenerateTerms::truncate<T>(bound.f64()) };
 		default:
-			break;
+			THROW(SerializationError, "A range bound must be a number, got {}", bound.to_string());
 	}
-	THROW(CastError, "Type {} cannot be cast to a range bound", enum_name(value.get_type()));
 }
 
 

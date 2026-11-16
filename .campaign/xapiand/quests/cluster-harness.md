@@ -28,10 +28,6 @@ strata's on 18772 and 18774 are never touched.
   and a stale get-by-id answered by a partitioned old leader in a history checked as linearizable;
   it accepts the same histories at `prefix`, where only the consistent-prefix check applies: a job,
   and `--fails-without` jobs with each check disabled in turn
-- A3 Three VMs boot on one L2 that carries multicast between them (a probe datagram from each guest
-  received by the other two), and a `dm-log-writes` replay of a planted unsynced write finds it
-  missing at the mark before its flush and present at the mark after; the job states the seconds
-  per replay, which sizes D14's 20-run power-loss tier (an `exclusive` job)
 - A4 The proxy's bandwidth cap: a stream through a proxy capped at 100 Mb/s measures within 10% of
   the cap (a job), which shard-groups A5 relies on
 - A5 [artifact] `harness/cluster/README.md`: how to run each tier, the fault vocabulary, the port
@@ -54,4 +50,4 @@ which owns `run_all.sh` (F10); until then `harness/cluster/run.sh` is called dir
 
 ## May land early
 
-The process tier with A1 and A2, before the VM tier.
+None. The VM tier (old A3) is quest cluster-vm-tier.
