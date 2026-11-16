@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: working
+State: waiting on jobs 261116-152727-9c07ec 261116-152727-4477fa 261116-152728-04a92c 261116-152739-cb18f2
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,69 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Rebased onto master (four of five commits had landed; `Xapiand:4ecda589a` is the Lenna replacement), then
+`Xapiand:49f40ee18`: generator.py phrase tables, mime.types, docs/discussions LICENSE, audit ledger. Jobs queued
+at that commit (A1 e2e, A7 no-xapian, A9 build-test and install staging).
 
 ## Next
 
-1. <step>
+1. `campaign wait` the four jobs; paste `campaign brief`'s table in Evidence; set "ready for review" if green.
+2. Owner answers the Blocked on items; apply them.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Owner decisions (each is reversible; nothing below was changed unless stated):
+
+1. A3 row (docs/discussions): MIT, same text as the root `LICENSE` minus the Dubalu line, is added to this copy.
+   Decide MIT or another license, then copy `docs/discussions/LICENSE` and `README.md` into
+   `~/code/KronuzBlog/Kronuz.github.io/discussions` and `~/code/KronuzBlog/gmendezb-pages/discussions`
+   (other repositories; I did not touch them) and run `scripts/check-copies.sh`. Note the three copies already
+   differ in `worker/package.json` and `worker/package-lock.json`. Recommendation: MIT.
+2. A4 stopwords: sources unrecorded and mixed (`docs/status/license-audit.md` ledger, A17). Options:
+   (a) regenerate from Snowball's BSD-3 lists (fetched; `en` shrinks 570 to 174 words, analysis results change,
+   no Snowball list for ro/tr/ca/eu/hy at the URLs tried); (b) record the sources (only you know them; `en` is
+   the SMART list); (c) keep and accept. Recommendation: (a) for the nine languages Snowball covers, keep the rest
+   until you name their source, as its own quest because tests may pin the words.
+3. A4 mime.types: I regenerated it (sorted, one line per type, no comments; extension map identical, 128 entries).
+   Confirm that a rewritten arrangement of the same facts clears the nginx/h5bp question, or revert
+   (`git revert` of the mime.types hunk of `Xapiand:49f40ee18`) and record nginx BSD-2 and h5bp MIT in `NOTICE`.
+4. A5 `el_cerrito.png`: keep (credit "Map data ©2019 Google" is in the image) or redraw. Recommendation: redraw the
+   trixels and circle as a vector figure with no basemap (a script beside `sample_image.py`), after the release
+   if time is short. A5 generator.py: tables rewritten in new words; the `accounts.*` fixtures keep the
+   phrases they were generated with. Decide whether to regenerate them (changes every account's text and
+   the docs examples built on it); recommendation: keep.
+5. A6 package metadata (`.github/workflows/release.yml:181,247`, `freebsd.yml:98`, `Dockerfile:65`,
+   `contrib/homebrew/xapiand.rb:40`; none in my file set): keep `MIT`, or the SPDX expression
+   `MIT AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND Zlib AND Apache-2.0 AND Unicode-3.0` (Homebrew:
+   `all_of`). Recommendation: the expression for deb, rpm and Homebrew; Docker label keeps MIT plus the notice
+   files. Needs a lead edit outside this quest's files.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | the `e2e` check (`campaign brief` table); `docs/public/assets/Lenna.*` removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history docs (`docs/status/license-audit.md`, `docs/dev/docs-site-audit.md`, `docs/gates/phase7a.md`, `docs/status/phase7c-gate-prep.md`, `.campaign/`), no code, harness, postman or other doc references the files; store-api lengths and SHA-256 digests match `sample.*` (checked); INFO sizes in the example corrected to 154.3, 154.7 and 8.7 KiB |
+| A2 | `ARCHITECTURE.md:609-614` (the licensing note), `README.md:124-129`, `AGENTS.md:42,104`: no GPL claim left; `src/sortable_serialise.*` is gone from master (sortable-encoding landed) |
+| A3 | [decision] Blocked on 1; prepared `docs/discussions/LICENSE`, `docs/discussions/README.md` |
+| A4 | [decision] Blocked on 2 and 3; `mime.types` regenerated; stopwords compared (ledger A17) |
+| A5 | [decision] Blocked on 4; `docs/public/assets/generator.py` tables rewritten |
+| A6 | [decision] Blocked on 5 |
+| A7 | the `no-xapian` check; locally `git grep -n -E 'Xapian::|xapian/|"xapian\.h"|<xapian' -- src contrib CMakeLists.txt` prints nothing; `pack.h` has no include of that name in `src/` or the build |
+| A8 | `docs/status/license-audit.md`: RapidJSON row (unmodified upstream, one compile definition `RAPIDJSON_PARSE_DEFAULT_FLAGS`), Lua row (the owner's patch), ledger "license closure" |
+| A9 | the `build-test` check and job 261116-152739-cb18f2 (install stages the three notice files) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Not yet: waiting on jobs. No code changed; the diff is docs, `mime.types`, a docs asset script and the
+discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-notices.md` unchanged).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
++ mime.types regenerated rather than recorded: behavior-identical (loader's rules, map compared), reversible.
++ generator.py: only the 25 phrase tables rewritten; names and trait vocabulary lists kept (facts/vocabulary);
+  the cited fantasynamegenerators.com docstring line removed; template strings unchanged.
++ docs/discussions gets MIT with only the owner's 2026 line (all 2026 work); no `package.json` change because the
+  copies differ there.
++ The audit's RapidJSON "patch" is a compile definition plus scratch-only sanitizer patches to the old pin; Lua's
+  patch is the only patched source. Recorded as such.
++ store-api example sizes updated; the offsets in that illustrative JSON are left as they were.
