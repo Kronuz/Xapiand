@@ -5756,7 +5756,8 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver"
       ],
       "checks": [
         {
@@ -5817,7 +5818,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-16T10:28:31"
+      "updated": "2026-11-16T15:42:54"
     },
     "group-sim": {
       "accepted": {},
