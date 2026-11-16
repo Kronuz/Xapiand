@@ -16760,7 +16760,7 @@
     "shard-groups": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -16834,7 +16834,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Shards across nodes: routing, members, replicas, linearizable reads",
-      "updated": "2026-11-15T23:05:29"
+      "updated": "2026-11-16T10:28:38"
     },
     "shard-rpc": {
       "accepted": {},
