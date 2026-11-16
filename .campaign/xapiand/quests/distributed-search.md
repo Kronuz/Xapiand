@@ -36,6 +36,8 @@ past subtrees that cannot match, under `walk_gate`'s work bound (F4).
   fuzzers' one CPU-hour each, zero findings (jobs)
 - A7 The one extra round trip of exact statistics: search p50 and p99 on 3 processes against one
   node holding the same shards, stated (an `exclusive` job)
+- A9 Expansion at the coordinator (prospect-supplied-stats review F1): wildcard, partial and fuzzy queries expand once during the statistics round trip and every shard searches the coordinator's term list, so SYNONYM's df, `most_frequent`'s top N and `Expansion::error` match the merged index; a test over 3 shards compares hit ids, order and score bits with one merged index for each expansion kind, and a mutant that expands per shard fails (`--fails-without`)
+- A10 A term missing from the supplied statistics is a host bug, never a client error (review F2): prospect raises its own exception type, Xapiand maps it to an internal error and retries the shard once with fresh statistics; a test forces the race and checks no 400 reaches the client
 - A8 [artifact] `docs/mechanisms/distributed-search.md`
 
 ## Contracts
