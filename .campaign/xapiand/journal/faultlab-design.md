@@ -21,7 +21,7 @@ Detent's lead. Neither blocks review.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/faultlab.md` F7 table ("Crash points \| `power_off_after(n)`, `mutations()`"), F4, F5 ("Detent's four variants"), F6, and the sector tearing, namespace, epochs, media, ENOSPC and short-write rows |
+| A1 | `docs/design/faultlab.md` F7 ("Public API. One table, everything a test touches"), F5 ("Detent's four variants"), F4, F6; rows for crash points, sector tearing, namespace durability, ordering epochs, media, ENOSPC, short writes |
 | A2 | `docs/design/faultlab.md` F8 ("virtual void preallocate(std::uint64_t offset, std::uint64_t length);"), F9 ("Sync: one durable `sync` (pending the owner's ruling)") |
 | A3 | `docs/design/faultlab.md` F10 ("Size against the 475 lines of test_relay_mirror_crash.cc") |
 | A4 | `docs/design/faultlab.md` F11 ("One seeded scenario line"), F12 ("One JSON-line event log"), F13 ("One checker: Xapiand's history.py moves to faultlab"), F14 ("netlab (Linux, root or a user namespace)"), F15 ("What runs where") |
