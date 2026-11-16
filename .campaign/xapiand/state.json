@@ -7361,6 +7361,119 @@
           "review": "0887480ff8999603c462d5f1e312a4e1eed520e1",
           "reviewed": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
           "verdict": "APPROVE"
+        },
+        "security": {
+          "at": "2026-11-16T15:08:56",
+          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "blobs": {
+            "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
+            "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
+            "harness/async_allowlist.tsv": "100644:98709b125fb741313c99dfb6b4832a8187cfb657",
+            "harness/lua_mem.sh": "100755:870b917f2521ce9530b5b41db4e125743f03c480",
+            "harness/lua_mem_same.py": "100755:2a89557fdd2cd1560ca813a2ce5b41505d336af2",
+            "harness/lua_mem_seq.py": "100755:06c30a98a7c65ef097183f7c6cd503daadc7960d",
+            "src/lua/processor.cc": "100644:cdb739f2acf79216e94e54664f1ec339efae3c36",
+            "src/lua/processor.h": "100644:79db358a4eda276d20569cc7e32031108c9a7c44",
+            "src/opts.cc": "100644:a14120752aeb42ef348cf4303feda81b0f8edbf4",
+            "src/opts.h": "100644:a16ec6d9fe2a46cb29645fd2de0683f6ad950508",
+            "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
+          },
+          "by": "review",
+          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
+          "criteria": "125f23c275731226",
+          "diffs": {
+            "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
+            "docs/mechanisms/lua-memory.md": "51593a74bd065914",
+            "harness/async_allowlist.tsv": "8432e2b3a7ff1da0",
+            "harness/lua_mem.sh": "47b5792558890a80",
+            "harness/lua_mem_same.py": "0e272bc2cecc9481",
+            "harness/lua_mem_seq.py": "d480c3afd335b414",
+            "src/lua/processor.cc": "468137ef326afd08",
+            "src/lua/processor.h": "5beddab0d9f1f53c",
+            "src/opts.cc": "bd011c580ca00521",
+            "src/opts.h": "7b32839a61ad6f88",
+            "tests/test_lua.cc": "4fdaa874af8f855e"
+          },
+          "findings": {
+            "S1": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "S2": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "S3": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "S4": {
+              "jobs": [
+                {
+                  "cmd": "bash harness/lua_mem.sh test",
+                  "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-132958-07dd8f",
+                  "level": "light",
+                  "seconds": 263.0,
+                  "state": "done",
+                  "what": "test_lua at round 6 (cancel in the collection, async_check fix)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "harness/async_allowlist.tsv"
+            ],
+            "reason": "harness/async_allowlist.tsv only drops a stale allowlist row (Xapiand:2aa1a1ca5); it adds no mechanism, and the async check passes"
+          },
+          "note": "",
+          "review": "777c478af4edd5a3dd7380ebfe4b3690f176d3c7",
+          "reviewed": "fa613663367f70279e5988113f0d0136423aa30e",
+          "verdict": "CHANGES"
         }
       },
       "after": [],
@@ -7386,7 +7499,8 @@
       ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "correctness",
+        "security"
       ],
       "milestone": "Phase 8",
       "needs": [],
@@ -7395,7 +7509,7 @@
       "risk": "high",
       "status": "review",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T15:08:27",
+      "updated": "2026-11-16T15:08:56",
       "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
     },
     "manifest-log": {
