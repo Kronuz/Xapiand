@@ -3282,6 +3282,11 @@ static void test_searches_take_only_exact_values() {
 	CHECK(hits_of(search(poss, R"({"_id":18446744073709551615})")) == std::vector<std::string>{"max"});
 	CHECK(hits_of(q(poss, "_id:18446744073709551615")) == std::vector<std::string>{"max"});
 	CHECK(hits_of(search(poss, R"({"p":{"_in":{"_range":{"_from":0,"_to":6}}}})")) == std::vector<std::string>{"5"});
+
+	// A field that holds no values of its own (an object) is searched globally, as before: no type to hold a value to.
+	CHECK_EQ(call("PUT", ints + "2?commit", R"({"n":"2","o":{"x":"word"}})").status, 204);
+	CHECK_EQ(search(ints, R"({"o":"word"})").status, 200);
+	CHECK_EQ(q(ints, "o:word").status, 200);
 }
 
 // A3: a cast object converts one value on request, the same on writes and searches; it truncates, never wraps.

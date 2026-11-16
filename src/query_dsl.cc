@@ -475,11 +475,18 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, engine::Op 
 		return get_accuracy_query(path, field_spc, data_field.second, obj, default_op, wqf, flags);
 	}
 
-	// A field without a type yet is searched globally; a typed one takes only values of its type (D92).
-	if (field_spc.get_type() == FieldType::empty) {
-		return get_global_query(field_spc, obj, default_op, wqf, flags);
+	// A field of a value type takes only values of that type (D92); one that holds no values of its own (no type yet,
+	// an object, an array, a foreign or a script) is searched globally.
+	switch (field_spc.get_type()) {
+		case FieldType::empty:
+		case FieldType::object:
+		case FieldType::array:
+		case FieldType::foreign:
+		case FieldType::script:
+			return get_global_query(field_spc, obj, default_op, wqf, flags);
+		default:
+			return get_regular_query(path, field_spc, obj, default_op, wqf, flags);
 	}
-	return get_regular_query(path, field_spc, obj, default_op, wqf, flags);
 }
 
 
