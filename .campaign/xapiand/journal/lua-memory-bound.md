@@ -1,6 +1,6 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs e269be 8c6c1d 006cb7 00721b b53087 e730e7 98cb08; CI 43951584674 43951584685 43951585553 43951585541
+State: waiting on jobs 07dd8f b680b7 f6a627 5bec4c 5553a1 1a8295 0cce84 8e97be 9b0137; CI 43960602513 43960602117 43960601961 43960601777 43960604601 43960604607
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -34,6 +34,37 @@ Suite: 261116-123646-00721b.
 Lead msgs (12:2x, A5 and trivial call): rows branch rebuilt at 169c6a207 (head 30635e8fb + platform-rows 978b707a3,
 parent old rows 38c81f547), pushed: arm64 43951584674, FreeBSD 43951584685, CI 43951584630. Quest branch pushed:
 CI 43951585553, FreeBSD 43951585541. If FreeBSD flood p99 > 100 ms: compare master run 43903990885's log.
+
+Round 6 (13:30), lead's results of round 5. Passed: TSan b53087, ASan e730e7, R5 8c6c1d, suite 00721b, trivial call
+006cb7 (7.6-8.75 us, master 7.6). Triage:
+1. L1 "cancel in the collect" (e269be, 98cb08: CHECK(cancelled > 0)): moot by design, not a lifetime fault. The
+   cancels do land in a collection (800k strings, far past 64 KiB), but the collection now keeps the call's result
+   and runs on in slices (N3, N4), so the answer is ok; resident ends at 91,405 B (idle 89,421). New test
+   `test_a_cancel_inside_the_collection_lets_it_finish` (cancel at 0, 3, 10 resumes after the build: ok, n=800,
+   > 4 slices after the cancel, resident back). e269be's others: R0 resident +198 B after 8 MiB parked (all 20 ok);
+   R2 100 scripts 8,701 KiB compiled, 8,895 after a call each, 8,893 after the insert; R4a longest after the build
+   5.45 / 6.55 ms (27 slices; was 85 ms in one).
+2. CI 43951585553 "Build + unit + smoke": async_check --strict, not a test. `resident_lock.lock()` matched the mutex
+   rule and the allowlist row for the gone `script_params.lock` was stale. Fix 2aa1a1ca5: the free state is taken
+   through the token form (never waits); allowlist row removed (harness/async_allowlist.tsv, outside the file set:
+   one line, the row named this quest's code). async_check --strict clean locally (265 hits, 0 unclassified).
+3. Rows rebuilt at dc8988e42 = head ff85dcd34 (master 1ee55404e merged) + platform-rows 978b707a3: arm64
+   43960602513, FreeBSD 43960602117. Control dc8988e42's twin without this quest, master + platform-rows at
+   86eeb0e76 (branch quest/xapiand/lua-memory-bound-rows-control): FreeBSD 43960604601, arm64 43960604607 (its CI
+   cancelled): it separates t1_strict_owed / gate_tools and the flood p99 from this quest.
+4. FreeBSD flood p99: ours 110.1 ms (169c6a207) and 114.3 ms (38c81f547, before round 5), p50 39.3-39.6, 293-294
+   requests answered. Master in run 43903990885 (platform-rows at 36c2c0ede, older master): p99 24.91 ms (p50 19.24,
+   561 answered) and 63.15 ms (p50 25.49, 426) in its two T10 rows. So far introduced by this quest, before round 5
+   (the flood script is a 1 MiB string and a work-capped find, so not the collect's memory). Suspect: each
+   overlapping call of the small flood script compiles a state of its own. Waiting for the control 43960604601 at
+   the same base before acting.
+Round 6 jobs at ff85dcd34: test_lua 07dd8f, suite b680b7; confirm per finding:
+- S1: R3 in f6a627 (probes.inc), test `test_a_cached_script_keeps_no_call_params` (07dd8f; fails at fa: 714fb5).
+- S2: R1/R2 in f6a627 and 5bec4c (probes2), tests `..._string_table_...`, `..._within_the_budget` (07dd8f; 714fb5).
+- S3: R5 5553a1 (round 5: 8c6c1d passed), test `test_overlapping_calls_of_a_large_script_take_turns`.
+- S4: R4a in 5bec4c, R4 in f6a627, test `test_the_after_call_collection_frees_in_slices` (round 5: e269be 5.45 ms).
+- Lifetimes under ASan: 1a8295 (probes.inc), 0cce84 (probes2: L1's check fails by design, item 1).
+- A3 T10 row 8e97be, A4 node 9b0137.
 
 ## Blocked on
 
