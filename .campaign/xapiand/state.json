@@ -1927,7 +1927,7 @@
     "cluster-harness": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-16T12:28:03",
+          "at": "2026-11-16T12:28:34",
           "base": "74ddd7bf94b30c8053c841de69e81b649d5d9b25",
           "blobs": {
             "harness/cluster/README.md": "100644:49bf32feccc66f8f0b29a531948331f288e10cd6",
@@ -1942,7 +1942,7 @@
           },
           "by": "review",
           "commit": "5e9711f66502963db3b5b179250dc8eca5c78a00",
-          "criteria": "44c8e2959f6f4c87",
+          "criteria": "57c2ccde10155d1f",
           "diffs": {
             "harness/cluster/README.md": "0393293b54717380",
             "harness/cluster/checklist.py": "9b85157ea54574ea",
@@ -2037,7 +2037,7 @@
       "risk": "high",
       "status": "review",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-16T12:28:03",
+      "updated": "2026-11-16T12:28:34",
       "worktree": "../Xapiand-wt/xapiand/cluster-harness"
     },
     "cluster-membership": {
