@@ -1925,7 +1925,83 @@
       "updated": "2026-11-16T10:28:23"
     },
     "cluster-harness": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T12:28:03",
+          "base": "74ddd7bf94b30c8053c841de69e81b649d5d9b25",
+          "blobs": {
+            "harness/cluster/README.md": "100644:49bf32feccc66f8f0b29a531948331f288e10cd6",
+            "harness/cluster/checklist.py": "100755:2e61872bf8080fa1a4a6b54d25ff10859bb2d9cc",
+            "harness/cluster/cluster.py": "100755:12ad4e52eb170e61061d07e5e03a0bb84c01c39c",
+            "harness/cluster/history.py": "100755:c6e7bfcd3c71d0880dd7b29555bd77f9cb1e317c",
+            "harness/cluster/proxy.py": "100755:04276873afbd435b19501e2a48bbd79cd1b0fa9b",
+            "harness/cluster/proxy_test.py": "100644:9e3ed601b77d608a555500064dea427c4da3d62a",
+            "harness/cluster/pyrefly.toml": "100644:27a9742b77bcb284d2227c1bb952d84dec60be11",
+            "harness/cluster/run.sh": "100755:08dbce45a778eb72c20d519b7c0a709532dd6326",
+            "harness/cluster/selftest.py": "100755:b9518e253dee765633c9bd32b1fe473d8e6fd12d"
+          },
+          "by": "review",
+          "commit": "5e9711f66502963db3b5b179250dc8eca5c78a00",
+          "criteria": "44c8e2959f6f4c87",
+          "diffs": {
+            "harness/cluster/README.md": "0393293b54717380",
+            "harness/cluster/checklist.py": "9b85157ea54574ea",
+            "harness/cluster/cluster.py": "21918f8609840d15",
+            "harness/cluster/history.py": "fe66259c51d6253b",
+            "harness/cluster/proxy.py": "610ee91b2227973e",
+            "harness/cluster/proxy_test.py": "a1d7474fc1174c70",
+            "harness/cluster/pyrefly.toml": "5a905f267e9a9535",
+            "harness/cluster/run.sh": "70119da8439b0630",
+            "harness/cluster/selftest.py": "9bf5cffbd88a2a36"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "harness/cluster/run.sh selftest",
+                  "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-120747-f043a1",
+                  "level": "light",
+                  "seconds": 2.6,
+                  "state": "done",
+                  "what": "A2: history checker self-test (planted histories, zones vs brute force) at df3596550c89"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c '/usr/local/bin/python3 -I /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-cluster-harness-correctness/proxy_probe.py \"$JOB_SRC\"'",
+                  "commit": "df3596550c8956ab985076a8b993a049d04531a2",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261116-120746-2a5167",
+                  "level": "none",
+                  "seconds": 13.2,
+                  "state": "done",
+                  "what": "correctness review: what crosses a partitioned proxy link at df3596550c89"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "harness/cluster/proxy_test.py"
+            ],
+            "reason": "proxy_test.py is F2's regression test (fails on the old proxy, job 261116-120758-c77697); it adds no mechanism"
+          },
+          "note": "",
+          "review": "4942c1d0cc37956959f568217090217a8de1a8dc",
+          "reviewed": "45d76f523d7d202827e450890e36bad72f22aaf4",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "b6f2f7c89e1a8112ab5a621e9b845eaaa9044238",
       "branch": "quest/xapiand/cluster-harness",
@@ -1961,7 +2037,7 @@
       "risk": "high",
       "status": "review",
       "title": "Multi-process and VM cluster harness",
-      "updated": "2026-11-16T11:43:56",
+      "updated": "2026-11-16T12:28:03",
       "worktree": "../Xapiand-wt/xapiand/cluster-harness"
     },
     "cluster-membership": {
