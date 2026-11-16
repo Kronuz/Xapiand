@@ -1873,7 +1873,7 @@
     "cluster-gate": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -1922,7 +1922,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-15T23:05:48"
+      "updated": "2026-11-16T10:28:23"
     },
     "cluster-harness": {
       "accepted": {},
