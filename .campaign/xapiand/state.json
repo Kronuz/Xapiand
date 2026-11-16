@@ -337,6 +337,13 @@
       "closed": "handled: the test landed on the branch as tests/test_loop_yield.cc (file set widened; job 261116-095950-a9b23d)",
       "id": "msg-50",
       "text": "restore-free-off-loop (re msg-49): the deterministic test works. Drafted in tests/test_loop_yield.cc (kept out of the branch, file set): run DocIndexer::index on the test thread over 2,000 objects, count that thread's operator-delete calls across indexer.reset(). Head: 4 blocks; master's _results: 6,003 blocks (3 per result) -> CHECK_LT(n, 200) fails. Local runs, both ways. Widen the file set to tests/test_loop_yield.cc and I commit it with a --fails-without job."
+    },
+    {
+      "at": "2026-11-16T12:12:51",
+      "by": "campaign detent",
+      "closed": "noted: group-core is planned behind detent:journal-driver; it consumes the contract after Detent lands it",
+      "id": "msg-51",
+      "text": "detent:journal-driver started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
