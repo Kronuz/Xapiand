@@ -72,22 +72,24 @@ struct Limits {
 //
 // A Processor belongs to the thread that compiled it (each thread keeps its own cache). One state
 // runs one call at a time, so the byte cap is each call's own: a call takes the cached state when it
-// is free and a state of its own when another call holds it. After its call a state collects all
-// it left, in slices; a state of a call's own is then closed (docs/mechanisms/lua-memory.md).
+// is free; when another call holds it, a small script's call compiles a state of its own and a large
+// script's call waits its turn. A call that grew its state collects it in slices afterwards; a state
+// of a call's own is then closed (docs/mechanisms/lua-memory.md).
 class Processor {
 	size_t hash;
 	std::string script_name;
 	std::string source;             // what a call's own state compiles
+	std::string stored_params;      // a foreign script's stored params, serialized; each call's params go over them
 	std::unique_ptr<detail::State> resident;
-	bool busy = false;              // a call holds `resident`
-	MsgPack script_params;
+	task::async_mutex resident_lock;   // held by the call running on `resident`
 	Limits limits;
 	std::thread::id owner;
 	std::chrono::steady_clock::time_point checked;   // a foreign script: when its document was last read
 
 public:
-	// Compiles `body` as the script `name`. A syntax error is a ClientError.
-	Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits = {});
+	// Compiles `body` as the script `name`, with `params` under each call's (a foreign script's stored
+	// ones; a local script's come with each call). A syntax error is a ClientError.
+	Processor(std::string_view name, std::string_view body, const MsgPack& params, Limits limits = {});
 	~Processor();
 	Processor(const Processor&) = delete;
 	Processor& operator=(const Processor&) = delete;
@@ -119,7 +121,8 @@ public:
 	static std::size_t cached_bytes();
 	static std::size_t cache_budget();
 
-	// The bytes the cached state held after its last collection, and its source: what the cache charges.
+	// What the cache charges: the cached state's bytes after its last collection, the garbage calls may leave
+	// on it before the next one, its source and its stored params.
 	std::size_t resident_bytes() const;
 
 	size_t get_hash() const {

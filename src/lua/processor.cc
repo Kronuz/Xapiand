@@ -34,6 +34,7 @@
 #include <exception>                              // for std::exception_ptr
 #include <functional>                             // for std::hash
 #include <new>                                    // for std::bad_alloc
+#include <optional>                               // for std::optional
 #include <string>
 #include <string_view>
 #include <thread>                                 // for std::this_thread
@@ -68,10 +69,11 @@ struct State {
 	std::size_t used = 0;
 	std::size_t limit = 0;
 	bool metered = false;
-	std::size_t settled = 0;            // `used` after the last full collection
+	std::size_t settled = 0;            // `used` after the last collection
 	lua_State* L = nullptr;
 	int func_ref = 0;                   // the compiled chunk, in the registry
 	int new_env_ref = 0;                // the base's environment factory, in the registry
+	int newest_ref = 0;                 // a table made before each collection, in the registry (see `collect`)
 
 	State(std::string_view name, const std::string& source, std::size_t limit);
 	~State();
@@ -569,6 +571,19 @@ ScriptLRU& cache() {
 // What a thread's cached scripts may hold: one call's cap.
 constexpr std::size_t cache_budget = Limits{}.max_bytes;
 
+// A call that grew its state by this much collects it afterwards; a smaller one leaves its garbage to the next
+// call's collection, so a trivial call (a few KiB) costs no collection. It is what the cache charges each state
+// beyond its settled bytes: 100 ordinary scripts are under 9 MiB of the 64 MiB budget.
+constexpr std::size_t collect_after = 64u << 10;
+
+// A script up to this size compiles in about a millisecond (a table constructor, the slowest to compile, takes
+// about 53 ms a MiB), so a call that overlaps another call of it compiles a state of its own; a larger script's
+// calls take the cached state in turn.
+constexpr std::size_t own_state_source = 16u << 10;
+
+// The slices a collection runs in once its request is cancelled: REQUEST_SLICE (search_views.cc).
+constexpr std::chrono::microseconds collect_slice{200};
+
 std::size_t cached_bytes(ScriptLRU& lru) {
 	std::size_t total = 0;
 	for (const auto& entry : lru) {
@@ -578,7 +593,7 @@ std::size_t cached_bytes(ScriptLRU& lru) {
 }
 
 // Drops the least recently used scripts past the count or past the byte budget.
-void trim(ScriptLRU& lru) {
+void trim(ScriptLRU& lru = cache()) {
 	std::size_t total = cached_bytes(lru);
 	while (!lru.empty() && (lru.size() > lru.max_size() || total > cache_budget)) {
 		const std::string oldest = lru.begin()->first;
@@ -673,6 +688,8 @@ State::State(std::string_view name, const std::string& source, std::size_t limit
 			THROW(ClientError, "Script base failed to run: {}", lua_tostring(L, -1));
 		}
 		new_env_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+		lua_newtable(L);
+		newest_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 		const std::string chunk_name(name);
 		if (luaL_loadbufferx(L, source.data(), source.size(), chunk_name.c_str(), "t") != LUA_OK) {
@@ -698,39 +715,47 @@ State::~State()
 
 namespace {
 
-// Collects what a call left on its state: the cycle in progress, then a whole one, a step at a time with a
-// checkpoint between steps, so a heap of garbage does not hold the reactor. Cancelling ends the slices, not
-// the collection.
+// Collects what a call left on its state, a `LUA_GCSTEP` at a time with a checkpoint between steps: the cycle in
+// progress, then whole cycles until one frees almost nothing (each cycle halves a string table the call grew).
+// A sweep first frees the run of dead objects at the head of the object list at once (lgc.c `sweeptolive`), and
+// the newest objects are the call's, so a fresh live table goes at the head first. A cancellation does not end
+// the collection: it runs on in slices of its own.
 task::task<void> collect(detail::State& state, task::budget* budget) {
-	// A basic step is about 8 KiB of the heap: two cycles over a 64 MiB heap are about 16,000 steps. Past four times
-	// that, one full collection ends it (cycles always end; this bounds the loop should a step stop advancing).
+	lua_State* L = state.L;
+	lua_newtable(L);
+	lua_rawseti(L, LUA_REGISTRYINDEX, state.newest_ref);
+	// A basic step is about 8 KiB of the heap: a cycle over a 64 MiB heap is about 8,000 steps. Past `max_steps`,
+	// one full collection ends it (cycles always end; this bounds the loop should a step stop advancing).
 	constexpr int max_steps = 1 << 16;
-	std::exception_ptr cancelled;
-	int steps = 0;
-	for (int ends = 0; ends < 2; ++steps) {
+	constexpr int max_cycles = 16;
+	std::optional<task::budget> own;
+	std::size_t at_end = state.used;
+	for (int steps = 0, cycles = 0;; ++steps) {
 		if (steps == max_steps) {
-			lua_gc(state.L, LUA_GCCOLLECT);
+			lua_gc(L, LUA_GCCOLLECT);
 			break;
 		}
-		ends += lua_gc(state.L, LUA_GCSTEP, 0);
+		if (lua_gc(L, LUA_GCSTEP, 0) != 0) {
+			const bool idle = state.used + 1024 > at_end;   // the last whole cycle freed under 1 KiB
+			if (++cycles == max_cycles || (cycles >= 2 && idle)) {
+				break;
+			}
+			at_end = state.used;
+		}
 		if (budget != nullptr) {
 			try {
 				co_await budget->checkpoint();
 			} catch (const task::cancelled&) {
-				cancelled = std::current_exception();
-				budget = nullptr;
+				budget = &own.emplace(collect_slice);
 			}
 		}
 	}
 	state.settled = state.used;
-	if (cancelled) {
-		std::rethrow_exception(cancelled);
-	}
 }
 
 // Runs one call of the state's script on `doc`.
 task::task<void> run(detail::State& state, const Limits& limits, std::string_view method, MsgPack& doc, const MsgPack& old_doc,
-	const MsgPack& script_params, const MsgPack& params, task::budget* budget) {
+	const std::string& stored_params, const MsgPack& params, task::budget* budget) {
 	lua_State* L = state.L;
 	[[maybe_unused]] const auto owner = std::this_thread::get_id();
 	Call call{&limits};
@@ -752,7 +777,7 @@ task::task<void> run(detail::State& state, const Limits& limits, std::string_vie
 		set("_method", [&] { lua_pushlstring(L, method.data(), method.size()); });
 		set("_doc", [&] { push_msgpack(L, doc, 0); });
 		set("_old_doc", [&] { push_msgpack(L, old_doc, 0); });
-		auto merged_params = script_params;
+		auto merged_params = stored_params.empty() ? MsgPack::MAP() : MsgPack::unserialize(stored_params);
 		merged_params.update(params);
 		for (auto it = merged_params.begin(); it != merged_params.end(); ++it) {
 			auto key = it->str();
@@ -824,17 +849,18 @@ task::task<void> run(detail::State& state, const Limits& limits, std::string_vie
 }  // namespace
 
 
-Processor::Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits_) :
+Processor::Processor(std::string_view name, std::string_view body, const MsgPack& params, Limits limits_) :
 	hash(std::hash<std::string_view>()(body)),
 	script_name(name),
-	script_params(std::move(params)),
 	limits(limits_),
 	owner(std::this_thread::get_id())
 {
 	// The body on the line of `local _ENV`, so line numbers hold.
 	source = "local _ENV = ...; ";
 	source.append(body);
-	script_params.lock();
+	if (params.is_map() && params.size() != 0) {
+		stored_params = params.serialize();
+	}
 	resident = std::make_unique<detail::State>(script_name, source, limits.max_bytes);
 }
 
@@ -845,7 +871,7 @@ Processor::~Processor() = default;
 std::size_t
 Processor::resident_bytes() const
 {
-	return resident->settled + source.size();
+	return resident->settled + collect_after + source.size() + stored_params.size();
 }
 
 
@@ -854,34 +880,38 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 {
 	assert(owner == std::this_thread::get_id());  // a Processor is its thread's own
 
-	// One call per state: the cached state when it is free, else one of the call's own.
+	// One call per state: the cached state when it is free; else a small script's call compiles one of its own
+	// and a large script's call waits for the cached state.
+	task::async_mutex::guard held;
+	if (source.size() > own_state_source) {
+		held = co_await resident_lock.lock(budget != nullptr ? budget->token() : task::cancel_token{});
+		if (!held) {
+			throw task::cancelled{};
+		}
+	} else if (auto take = resident_lock.lock(); take.await_ready()) {
+		held = take.await_resume();
+	}
 	std::unique_ptr<detail::State> own;
 	detail::State* state = resident.get();
-	bool* const held = busy ? nullptr : &busy;
-	if (held == nullptr) {
+	if (!held) {
 		own = std::make_unique<detail::State>(script_name, source, limits.max_bytes);
 		state = own.get();
-	} else {
-		*held = true;
 	}
-	struct Release {
-		bool* flag;
-		~Release() { if (flag != nullptr) { *flag = false; } }
-	} release{held};
 
-	// What the call left is collected however it ended: in slices, or at once when it was cancelled.
+	// A call that grew its state collects it however it ended (a result, an error, a bound, a cancellation).
 	std::exception_ptr error;
-	task::budget* slices = budget;
 	try {
-		co_await run(*state, limits, method, doc, old_doc, script_params, params, budget);
-	} catch (const task::cancelled&) {
-		error = std::current_exception();
-		slices = nullptr;
+		co_await run(*state, limits, method, doc, old_doc, stored_params, params, budget);
 	} catch (...) {
 		error = std::current_exception();
 	}
 	assert(owner == std::this_thread::get_id());
-	co_await collect(*state, slices);
+	if (state->used >= state->settled + collect_after) {
+		co_await collect(*state, budget);
+		if (state == resident.get()) {
+			trim();   // the cache charges this state anew
+		}
+	}
 	if (error) {
 		std::rethrow_exception(error);
 	}
@@ -896,7 +926,7 @@ Processor::compile_local(const Script& script)
 	if (auto processor = cached(key, name_body.second)) {
 		return processor;
 	}
-	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, script.get_params()));
+	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, MsgPack::MAP()));   // its params come with each call
 }
 
 
@@ -1005,18 +1035,18 @@ Processor::compile(const Script& script)
 		THROW(ClientError, "Nested foreign scripts not supported!");
 	}
 	auto name_body = foreign_script.get_name_body();
-	MsgPack params = foreign_script.get_params();
-	params.update(script.get_params());
+	const MsgPack& params = foreign_script.get_params();   // the caller's come with each call
 
 	// The read may have moved this task to another thread: the processor is built where it will run.
 	// The cached one stands while the document's script and params are what it was built from.
 	if (auto current = cached(key, {})) {
-		if (current->get_hash() == std::hash<std::string_view>()(name_body.second) && current->script_params.to_string() == params.to_string()) {
+		const bool same_params = params.is_map() && params.size() != 0 ? current->stored_params == params.serialize() : current->stored_params.empty();
+		if (current->get_hash() == std::hash<std::string_view>()(name_body.second) && same_params) {
 			current->checked = std::chrono::steady_clock::now();
 			co_return current;
 		}
 	}
-	auto processor = std::make_shared<Processor>(name_body.first, name_body.second, std::move(params));
+	auto processor = std::make_shared<Processor>(name_body.first, name_body.second, params);
 	processor->checked = std::chrono::steady_clock::now();
 	co_return remember(key, std::move(processor));
 }

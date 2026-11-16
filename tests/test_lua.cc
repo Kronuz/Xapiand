@@ -25,6 +25,7 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -351,6 +352,123 @@ void test_a_call_of_its_own_state_leaves_the_cached_one_as_it_was() {
 	}
 	CHECK_LE(processor.resident_bytes(), idle + (16u << 10));
 	CHECK(call(processor, MsgPack::MAP()).ok());   // the cached state is free again
+}
+
+void test_a_cached_script_keeps_no_call_params() {
+	// A local script's params come with each call, so its cached Processor keeps none (S1), and a later call sees
+	// only its own (N2).
+	std::thread([] {
+		MsgPack object({{"_name", "params-once"}, {"_body", "_doc.k = k"}, {"_params", MsgPack({{"k", std::string(1u << 20, 'p')}})}});
+		Script script(object);
+		auto processor = Processor::compile_local(script);
+		auto first = call(*processor, MsgPack::MAP(), script.get_params());
+		REQUIRE(first.ok());
+		CHECK_EQ(str(first.doc, "k").size(), std::size_t{1} << 20);
+		MsgPack name_only({{"_name", "params-once"}});
+		Script again(name_only);
+		auto hit = Processor::compile_local(again);
+		CHECK(hit == processor);   // a name alone is a cache hit
+		auto second = call(*hit, MsgPack::MAP(), MsgPack::MAP());
+		REQUIRE(second.ok());
+		CHECK(absent(second.doc, "k"));
+	}).join();
+	// A foreign script's stored params stay with its Processor, and the cache charges them.
+	MsgPack stored({{"k", std::string(1u << 20, 'p')}});
+	Processor foreign("stored", "_doc.k = #k", stored);
+	CHECK_GE(foreign.resident_bytes(), stored.serialize().size());
+	auto out = call(foreign, MsgPack::MAP());
+	REQUIRE(out.ok());
+	CHECK_EQ(out.doc.at("k").i64(), 1 << 20);
+}
+
+// 700,000 interned strings alive at the call's end: the call grows its state's string table to about 8 MiB (S2).
+const char* const interned_700k = "local t = {} for i = 1, 700000 do t[i] = 'k' .. i end _doc.n = #t";
+
+void test_a_call_leaves_its_string_table_as_it_was() {
+	Processor processor("intern", interned_700k, MsgPack::MAP());
+	const auto idle = processor.resident_bytes();
+	for (int i = 0; i < 2; ++i) {
+		REQUIRE(call(processor, MsgPack::MAP()).ok());
+		CHECK_LE(processor.resident_bytes(), idle + (16u << 10));
+	}
+}
+
+void test_calls_keep_a_threads_cached_scripts_within_the_budget() {
+	// 32 cached scripts, each called once and no insert between: at the 2 MiB of string table a call used to
+	// leave on each, past the budget.
+	std::size_t after_calls = 0;
+	std::thread([&] {
+		std::vector<std::shared_ptr<Processor>> held;
+		for (int i = 0; i < 32; ++i) {
+			MsgPack object({{"_name", "intern-" + std::to_string(i)}, {"_body", std::string(interned_700k) + " -- " + std::to_string(i)}});
+			Script script(object);
+			held.push_back(Processor::compile_local(script));
+		}
+		for (auto& processor : held) {
+			CHECK(call(*processor, MsgPack::MAP()).ok());
+		}
+		after_calls = Processor::cached_bytes();
+	}).join();
+	std::printf("32 cached scripts after a call each: %zu KiB (budget %zu KiB)\n", after_calls >> 10, Processor::cache_budget() >> 10);
+	CHECK_LE(after_calls, Processor::cache_budget());
+}
+
+void test_overlapping_calls_of_a_large_script_take_turns() {
+	// A call that overlaps another call of a large script waits for the cached state rather than compiling the
+	// script again on its thread (S3); each still has the whole cap.
+	const std::string body = "print('started') local s = '" + std::string(64u << 10, 'k') + "' local n = 0 for i = 1, 300000 do n = n + i end _doc.n = #s";
+	Processor processor("large", body, MsgPack::MAP());
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending a, b;
+	a.doc = MsgPack::MAP();
+	b.doc = MsgPack::MAP();
+	const auto printed = Processor::printed_bytes();
+	start(scheduler, a, processor, budget);
+	start(scheduler, b, processor, budget);
+	std::size_t resumes = scheduler.run_until([&] { return a.finished || b.finished; });
+	CHECK_GT(resumes, 4u);
+	CHECK_EQ(Processor::printed_bytes() - printed, 7u);   // "started": only the first call has run
+	scheduler.run();
+	for (Pending* p : {&a, &b}) {
+		REQUIRE(p->finished);
+		REQUIRE(p->outcome.ok());
+		CHECK_EQ(p->doc.at("n").i64(), 64 << 10);
+	}
+}
+
+// About 800,000 short strings in 800 tables, alive at the call's end, and a print once they are built.
+const std::string short_strings_800k =
+	"local t = {} for j = 1, 800 do local u = {} for k = 1, 1000 do u[k] = j .. ':' .. k end t[j] = u end print('built') ";
+
+void test_the_after_call_collection_frees_in_slices() {
+	// The call's garbage is freed over many steps, each a slice, not in the first step of a sweep (S4).
+	Processor processor("sweep", short_strings_800k + "_doc.n = #t", MsgPack::MAP());
+	task::inline_scheduler scheduler;
+	task::budget budget(every_checkpoint);
+	Pending pending;
+	pending.doc = MsgPack::MAP();
+	start(scheduler, pending, processor, budget);
+	const auto printed = Processor::printed_bytes();
+	scheduler.run_until([&] { return Processor::printed_bytes() > printed; });
+	std::size_t after = 0;
+	double longest = 0;
+	auto last = std::chrono::steady_clock::now();
+	auto tick = [&] {
+		const auto now = std::chrono::steady_clock::now();
+		longest = std::max(longest, std::chrono::duration<double, std::milli>(now - last).count());
+		last = now;
+	};
+	scheduler.run_until([&] {
+		tick();
+		++after;
+		return false;
+	});
+	tick();
+	REQUIRE(pending.finished);
+	REQUIRE(pending.outcome.ok());
+	std::printf("800,000 strings of garbage: %zu slices after the build, the longest %.2f ms\n", after, longest);
+	CHECK_GE(after, 8u);
 }
 
 // Compiles `n` distinct scripts named `prefix<i>` with `body` on a fresh thread; returns its cache's bytes.
@@ -1189,6 +1307,11 @@ TEST_MAIN(
 	test_concurrent_calls_of_one_script_each_get_the_whole_byte_cap,
 	test_a_call_leaves_no_garbage_in_its_state,
 	test_a_call_of_its_own_state_leaves_the_cached_one_as_it_was,
+	test_a_cached_script_keeps_no_call_params,
+	test_a_call_leaves_its_string_table_as_it_was,
+	test_calls_keep_a_threads_cached_scripts_within_the_budget,
+	test_overlapping_calls_of_a_large_script_take_turns,
+	test_the_after_call_collection_frees_in_slices,
 	test_a_threads_cached_scripts_hold_at_most_one_calls_cap,
 	test_the_script_cache_default_is_one_and_fits_the_budget,
 	test_report_the_cost_of_a_vararg_chain,
