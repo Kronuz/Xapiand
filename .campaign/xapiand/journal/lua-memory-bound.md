@@ -1,14 +1,17 @@
 # lua-memory-bound: journal
 
-State: waiting on jobs 261116-091202-d7bb0a 261116-091207-81cf40 261116-091215-ebabc4 261116-091512-ce4041
+State: waiting on jobs 261116-091202-d7bb0a 261116-091512-ce4041 261116-091556-27c491 261116-092016-425ef9 261116-092020-f5728f 261116-092023-4668af 261116-092027-f463a6 261116-092038-52142f 261116-092041-9abe61 261116-092044-f3b45f; CI runs 43917519747 43917520640
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Before jobs (src at master, commit 2e30d05c6) and the first after test job are queued; host load above 32.
+All jobs queued behind full light slots (none started as of 09:35). Branch pushed at dd27793e6; CI (ci.yml
+43917520640, FreeBSD 43917519747) running. Rows branch not pushed yet: waits for test_lua to pass locally.
+Merge tree of HEAD + quest/xapiand/platform-rows is clean (git merge-tree).
 
 ## Next
 
+0. Fill the TBD numbers in docs/mechanisms/lua-memory.md from test_lua's prints (state bytes, trivial-call cost).
 1. Read the before jobs: A4 test fails on master, lua_mem_seq grows, lua_mem_same answers 400s.
 2. After jobs at the head: test_lua (A2, A4), lua_mem_seq (A1), lua_mem_same, TSan test_lua (light).
 3. Write docs/mechanisms/lua-memory.md with the measured numbers (state bytes, trivial-call cost before/after).
@@ -43,10 +46,11 @@ peak concurrency, and the cache would have to count and trim states inside a scr
 
 | Criterion | Evidence |
 |---|---|
-| A1 | before 261116-091207-81cf40 (queued); after: to submit |
+| A1 | before 261116-092038-52142f (master src); after 261116-092016-425ef9 (both queued) |
 | A2 | test_the_script_cache_default_is_one_and_fits_the_budget in 261116-091512-ce4041 (queued) |
-| A3 | to run |
-| A4 | fails on master: 261116-091202-d7bb0a (--fails-without, queued); passes: 261116-091512-ce4041; node: lua_mem_same before 261116-091215-ebabc4 |
+| A3 | T10 row at defaults 261116-092023-4668af (queued) |
+| A4 | fails on master: 261116-091202-d7bb0a (--fails-without); passes: 261116-091512-ce4041; node: lua_mem_same before 261116-092041-9abe61 / after 261116-092020-f5728f; T10 on 2 reactors before 261116-092044-f3b45f / after 261116-092027-f463a6 (all queued) |
+| TSan | 261116-091556-27c491 test_lua + fuzz_lua 60 s (queued) |
 | A5 | to run |
 | A6 | to run |
 
