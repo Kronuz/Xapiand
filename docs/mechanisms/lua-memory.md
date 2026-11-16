@@ -54,8 +54,9 @@ Measured (macOS x86_64, RelWithDebInfo):
 
 1. `lua_mem_seq.py` at the defaults (16 reactors), 200 distinct scripts each leaving 56 MiB of garbage: before, RSS
    reached 1,162 MiB after 20 scripts (job 261116-101116-e8fd26); after, 290 MiB after 200, about 0.6 MiB a script
-   in the second half (job 261116-101130-d8dfc8). Each request also makes a new index; `--control` runs the same
-   requests without the garbage to measure that cost (job 261116-111156-44ae75).
+   in the second half (job 261116-101130-d8dfc8). Each request also makes a new index; `--control`, the same
+   requests without the garbage, ends at 65 MiB, +0.2 MiB a script (job 261116-111156-44ae75). Lua keeps about
+   24 KB a script, so the remaining 0.4 MiB a script is the allocator keeping freed blocks, not live Lua bytes.
 2. A trivial call (`_doc.x = _doc.x * 2`, end to end): 14.6 us before, 14.1 us after: the collection of a small
    state costs nothing measurable.
 3. Twelve scripts of 8 MiB: the cache keeps 48 MiB of them, with or without a count bound.
