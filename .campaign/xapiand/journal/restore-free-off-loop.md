@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-132256-cc3a07 261116-132306-8991a0 261116-132309-2a2006 261116-132311-060154 261116-132320-0820f5 261116-132322-e97b37 261116-132322-503ac7 (exclusive A/B rerun, A3 mutant --fails-without, verify; master merged)
+State: waiting on jobs 261116-134914-800879 261116-134917-95bcd5 261116-134919-dcde7e 261116-134922-f916a1 261116-134924-4ed7e7 (resubmitted with --ref fixed; build-test e97b37 and e2e 503ac7 passed)
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
