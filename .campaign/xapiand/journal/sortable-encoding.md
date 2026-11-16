@@ -5,14 +5,23 @@ Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
 
-Step 1 in Xapiand: T1's `sortable_property` and T3's `sortable_xlang` as CTests over the fetched library
-(pin sortable:915b014, bytes equal to 67b2a90), and the Python port adopted from `codex/py-sortable`.
+Steps 1 and 2 done (no byte change); their checks are running. `tests/numeric_range_check.py` (T6, A5)
+written, being debugged against a pre-switch binary.
+
+1. Step 1, Xapiand:49deb7184: CTests `sortable_property` (T1, from `${sortable_SOURCE_DIR}/test/property.cc`)
+   and `sortable_xlang` (T3: `tests/sortable_xlang.py` against `sortable_cli` from `tools/cli.cc`); the port
+   merged from `codex/py-sortable` and moved to `contrib/python/xapiand-py/xapiand/sortable.py`; pin
+   sortable:915b014. Mutants in `tests/sortable_xlang_mutants.sh`.
+2. Step 2, Xapiand:8a7da1f4a: versions through `Serialise::version`/`Unserialise::version` (engine adapter
+   too), time decoders through `Unserialise::floating`, `get_hashed` deleted. The old codec is called only
+   from `src/serialise.h` (and the GPL files themselves).
 
 ## Next
 
-1. Step 1: CTests `sortable_property`, `sortable_xlang`; port at `contrib/python/xapiand-py/xapiand/sortable.py`.
-2. Step 2: the seam (versions through `Serialise::version`, sentinels, time decoders, `get_hashed` deleted), no byte change.
-3. Step 3 (after the lead says the design is accepted): the switch, rename (A12), docs, T5/T6/T8 jobs.
+1. When build-test 261115-224734-3b43cf and e2e 261115-224734-8ff56e finish: fix anything they show.
+2. Step 3 (after the lead says the design is accepted): the switch in `src/serialise.h` (trusted decode for
+   stored bytes, strict for user bytes), D4 400s, D6 strict_stod and ±inf open bounds, `git rm` the GPL
+   files and module, rename (A12), docs (A10, A11), T5/T6/T8 jobs.
 
 ## For the lead
 
@@ -37,6 +46,10 @@ Step 3 on the design reviewer's confirmation of the D87 revision. Steps 1 and 2 
 | Criterion | Evidence |
 |---|---|
 | A1 | D87 (PLAN.md decision row, owner 2026-11-13) |
+| A3 | 261115-224157-3d7604 (pass at 49deb7184: 113,491 vectors, 10^6 random, 1,541,467 decodes); mutants killed: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 (queued). rule-8 261115-224330-733fc7 survived: equivalent (rule 8 is implied by rule 9, as sortable's note says) |
+
+Jobs at step 2 (8a7da1f4a): build-test 261115-224734-3b43cf, e2e 261115-224734-8ff56e (running);
+no-gpl 261115-224735-2ae37e failed as expected (the GPL files go in step 3).
 
 ## Result
 
