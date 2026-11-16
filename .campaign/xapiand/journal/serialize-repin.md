@@ -25,7 +25,12 @@ Nothing.
 
 ## Evidence
 
-See `campaign brief serialize-repin`.
+| Criterion | Evidence |
+|---|---|
+| A1 | build-test 261116-064759-26b223 at 5b8e4589b; CI 43889549864, FreeBSD 43889549933 |
+| A2 | grep 261116-064804-6644f0 |
+| A3 | e2e 261116-064759-a1e3d1 |
+| A4 | harness 261116-064804-511a73; mutant query-double 261116-064804-835cd1 |
 
 ## Result
 
