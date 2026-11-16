@@ -1,6 +1,6 @@
 # prospect-supplied-stats: journal
 
-State: waiting on jobs 261115-232146-62bd5a 261115-232149-29b412 261115-232155-edc5bb 261115-232208-acfc3c 261115-232211-560561
+State: ready for review
 Quest: .campaign/xapiand/quests/prospect-supplied-stats.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -33,7 +33,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261115-232146-62bd5a |
+| A2 | 261116-004953-d3a74c (`--fails-without`; first run 261115-232149-29b412 untagged) |
+| A3 | 261115-232155-edc5bb, 261115-232211-560561 (A/A 261115-232208-acfc3c) |
+| A4 | `docs/mechanisms/supplied-statistics.md` |
 
 ## Result
 
