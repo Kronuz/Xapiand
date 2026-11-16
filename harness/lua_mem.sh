@@ -20,8 +20,8 @@
 # THE SOFTWARE.
 
 # lua_mem.sh PROBE [ARGS...]: builds xapiand and the Lua test in ./build (the suite's configuration), then runs
-# PROBE: `seq` (lua_mem_seq.py), `same` (lua_mem_same.py) or `test` (xapiand_test_lua). Output goes to
-# $JOB_OUT when set, else .scratch/lua_mem.
+# PROBE: `seq` (lua_mem_seq.py), `same` (lua_mem_same.py), `test` (xapiand_test_lua), or `t10 [N]` (Phase 7c's
+# T10 row, gate7c_rows.sh t10_lua, on N reactors when given). Output goes to $JOB_OUT when set, else .scratch/lua_mem.
 set -u
 . "$(dirname "$0")/env.sh"
 H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
@@ -35,5 +35,13 @@ case $probe in
 	seq) exec "$PY" -I "$H/lua_mem_seq.py" "$REPO/build/bin/xapiand" "$OUT/seq" "$@" ;;
 	same) exec "$PY" -I "$H/lua_mem_same.py" "$REPO/build/bin/xapiand" "$OUT/same" "$@" ;;
 	test) exec "$REPO/build/bin/xapiand_test_lua" "$@" ;;
+	t10)
+		bin="$REPO/build/bin/xapiand"
+		if [ -n "${1:-}" ]; then
+			bin="$OUT/xapiand-$1"
+			printf '#!/bin/sh\nexec "%s" "$@" --processors %s\n' "$REPO/build/bin/xapiand" "$1" >"$bin"; chmod +x "$bin"
+		fi
+		GATE7C_ROWS=t10_lua bash "$H/gate7c_rows.sh" "$bin" "$bin" "$OUT/rows"; rc=$?
+		cat "$OUT/rows/t10_lua.log"; exit $rc ;;
 	*) echo "lua_mem.sh: unknown probe $probe" >&2; exit 2 ;;
 esac
