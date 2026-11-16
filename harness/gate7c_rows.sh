@@ -54,6 +54,7 @@ for p in out["phases"]:
         print(p["name"], "census", json.dumps(threads), "total", c.get("total"), "reactors", out["meta"]["reactors"])
         if not threads: bad.append("no census")
         bad += [f"offender {t}" for t in threads if t not in allow]
+        if threads.get("Xapiand:MAIN", 0) > 1: bad.append(f"{threads['Xapiand:MAIN']} Xapiand:MAIN threads, want 1")
         if sys.platform == "darwin" and threads.get("unnamed", 0) != out["meta"]["reactors"]:
             bad.append(f"unnamed {threads.get('unnamed', 0)} != reactors {out['meta']['reactors']}")
     elif p["name"].startswith("overload"):

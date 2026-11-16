@@ -38,7 +38,7 @@ jobs:
           set -eux
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            g++-13 cmake ninja-build pkg-config ccache python3 curl \
+            gdb g++-13 cmake ninja-build pkg-config ccache python3 curl \
             libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
       - name: Sanitizer-compatible ASLR
         # Ubuntu 24.04's random mmap bits can break the sanitizer runtimes' shadow memory.
@@ -80,6 +80,9 @@ jobs:
         run: |
           mkdir -p .scratch/rows-arm64
           harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-arm64"
+      - name: Thread stacks at 4 reactors (census diagnosis)
+        if: always()
+        run: harness/thread_stacks.sh "$PWD/build/bin/xapiand" 4 | tee .scratch/rows-arm64/thread_stacks.txt
       - name: Preserve logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,6 +92,7 @@ jobs:
             build/Testing/Temporary/LastTest*.log
             .scratch/rows-arm64/*.tsv
             .scratch/rows-arm64/*.log
+            .scratch/rows-arm64/thread_stacks.txt
             .scratch/rows-arm64/e2e-asan/*.txt
             .scratch/rows-arm64/e2e-asan/*.log
           if-no-files-found: ignore
