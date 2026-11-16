@@ -98,8 +98,8 @@ peak concurrency, and the cache would have to count and trim states inside a scr
 | A2 | test_lua 261116-111134-c035c3, 897 checks (`test_the_script_cache_default_is_one_and_fits_the_budget`: 100 scripts hold 2,324 KiB, 23,800 bytes each) |
 | A3 | T10 row at defaults 261116-101136-539595 (pass) |
 | A4 | fails without: unit mutant 261116-101214-ce0a1e; passes: test_lua 261116-111134-c035c3; node, 4 loops on 1 reactor: 261116-101133-813db6 (all 204; master b19ec0 also all 204 on macOS) |
-| A5 | rows branch at 38c81f547: arm64 43940511521, FreeBSD 43940511755 (running) |
-| A6 | quest branch CI 43917520640 and FreeBSD 43917519747 green at dd27793e6; head 6d024683d pushed; `campaign verify` not run |
+| A5 | manual: the lead checked the rows branch at dc8988e42 (master + platform-rows + quest head ff85dcd34): arm64 run 43960602513 and FreeBSD run 43960602117 both green, T10 included; the control without this quest (FreeBSD 43960604601) fails T10's library-call loops |
+| A6 | build-test check (`campaign verify`) |
 | TSan | test_lua passes (c83216, 929a79); fuzz_lua 60 1 passes at master 14c2ac and head 929a79 |
 | Cost | trivial call 14.6 us master / 14.1 us head (ce0a1e / 2bc205); vararg chain A/B 880538 / d65b43 (queued) |
 
