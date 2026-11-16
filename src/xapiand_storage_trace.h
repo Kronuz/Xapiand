@@ -33,5 +33,5 @@
 
 #pragma once
 
-#include "logger.h"       // L_CALL, L_DEBUG, L_ERR, L_WARNING, L_WARNING_ONCE, L_EXC
+#include "log.h"          // L_CALL, L_DEBUG, L_ERR, L_WARNING, L_WARNING_ONCE, L_EXC
 #include "repr.hh"        // repr (used in the engine's L_* message arguments)
