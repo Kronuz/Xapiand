@@ -1,6 +1,6 @@
 # lua-memory-bound: journal
 
-State: round 5, security review fixes (S1-S4, trivial-call cost) at 309df5cf1, master merged (87bc48324); waiting on jobs
+State: waiting on jobs 714fb5 700284 e269be 8c6c1d 35676b 5a787f 006cb7 00721b; CI 43951584674 43951584685 43951585553 43951585541
 Quest: .campaign/xapiand/quests/lua-memory-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -18,9 +18,15 @@ Round 5 (12:30). Review .campaign/xapiand/reviews/lua-memory-bound-security.md (
   sweep frees ~51k objects a LUA_GCSTEP. Cancel: collect continues in its own 200 us slices (N3, N4).
   Test `test_the_after_call_collection_frees_in_slices` (>= 8 slices after the build; prints the longest).
 - Lead's trivial-call finding: collect only when the call grew the state >= 64 KiB; cache charges that allowance.
-Jobs: test_lua at head 261116-122901-b5da7b; fails-at-fa mutant (new tests on fa's code, branch
-probe/lua-memory-bound-s1s4-at-fa f0a2301ec) 261116-122927-714fb5 (must exit 1 with FAILs in the 5 new tests).
-Next: reviewer probe reruns, strict trivial-call timing, rows branch rebuild (A5, FreeBSD flood p99), verify.
+Jobs: test_lua at 87bc48324 261116-122901-b5da7b PASS (953 checks; 32 cached x 700k strings: 2,846 KiB; 800k strings:
+27 slices after the build, longest 8.45 ms; 100 ordinary scripts 8,729 KiB, 89,392 B each; trivial call 7.42 us,
+light). Fails-at-fa mutant (new tests on fa's code, probe/lua-memory-bound-s1s4-at-fa f0a2301ec)
+261116-122927-714fb5 (must exit 1 with FAILs in the 5 new tests).
+Confirm reruns at 30635e8fb: S1/S2 R0-R3 700284, R2/R4a e269be, S3 R5 8c6c1d, ASan 35676b + 5a787f; trivial call and
+vararg strict timing 006cb7 (vs master 880538: 7.6 us). Suite: 261116-123646-00721b.
+Lead msgs (12:2x, A5 and trivial call): rows branch rebuilt at 169c6a207 (head 30635e8fb + platform-rows 978b707a3,
+parent old rows 38c81f547), pushed: arm64 43951584674, FreeBSD 43951584685, CI 43951584630. Quest branch pushed:
+CI 43951585553, FreeBSD 43951585541. If FreeBSD flood p99 > 100 ms: compare master run 43903990885's log.
 
 ## Blocked on
 
