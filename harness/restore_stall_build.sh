@@ -11,6 +11,14 @@ fail() {
 	tail -30 "$@"
 	exit 2
 }
+# A build dir configured from another source directory (a ref checkout lives under its job) is rebuilt.
+fresh() {
+	local home
+	home=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$1/CMakeCache.txt" 2> /dev/null)
+	[ -z "$home" ] || [ "$home" = "$(cd "$2" && pwd -P)" ] || [ "$home" = "$(cd "$2" && pwd)" ] || rm -rf "$1"
+}
+fresh build-rs .
+fresh build-rs-base "$BASE"
 cmake -S . -B build-rs "${FLAGS[@]}" > cfg.log 2>&1 || fail cfg.log
 cmake -S "$BASE" -B build-rs-base "${FLAGS[@]}" > cfg-base.log 2>&1 || fail cfg-base.log
 git -C "$DEPS/reactor-src" apply --reverse --check "$PATCH" 2> /dev/null || git -C "$DEPS/reactor-src" apply "$PATCH" || exit 2
