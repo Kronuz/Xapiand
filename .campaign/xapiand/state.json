@@ -358,6 +358,13 @@
       "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
       "id": "msg-48",
       "text": "drivers-task-wheel: msg-1 (your A5 review of task:627aca3) is fixed in task:a30bb0f on quest/detent/drivers-task-wheel. X1: drive(done, may_wait) sleeps with no deadline when nothing is armed and may_wait() holds; drive(done) defaults to 'a timer is armed' (lost-wake cases unchanged). ARCHITECTURE.md 'Schedulers' maps your BlockingScheduler::drive(done) to drive([&]{return done;}, []{return true;}) inside HostScope, post_demoted as post. Test blocking_test wakes-unarmed (post/post_call at 20 ms; 5,000 rounds with the post around the sleep decision, TSan), mutant unarmed-returns kills it. X4 static drop_timer (no call into a dead inline/blocking scheduler; test late, ASan mutant). X5 asio arm after close now asserts; cancel keeps the allowance (control closed-arm). X7 blocking arm/cancel assert runs_here() (control offthread-cancel). X8 fixed: each drive pass runs what was queued when it began, then expires (test starve). Jobs queued at a30bb0f; please re-check A5."
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-52",
+      "text": "detent:consensus-driver started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
     }
   ],
   "quests": {
