@@ -53,6 +53,7 @@ import http.client
 import json
 import os
 import shutil
+import socket
 import statistics
 import subprocess
 import sys
@@ -131,6 +132,13 @@ FLOOD_SCRIPT = "local s = string.rep('a', 1048576) s:find('.-b')"
 LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
 
 
+def free_port():
+    """A port nothing holds now; port+1 can be a client socket of the flood phases."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 def foreign_scripts_check(binary, port, tmp):
     """A local script named like a foreign reference neither replaces nor stands in for the cached foreign script, and a
     rewritten foreign script takes effect. One processor is one reactor, so every request reaches the same (per-thread) cache."""
@@ -143,7 +151,8 @@ def foreign_scripts_check(binary, port, tmp):
                 if request(port, "GET", "/", timeout=2)[0] == 200:
                     break
             except OSError:
-                time.sleep(0.25)
+                pass
+            time.sleep(0.25)
         else:
             return ["the foreign-script node did not come up"]
 
@@ -372,7 +381,9 @@ def main():
 
         def lib_worker(i):
             t0 = time.time()
-            lib_statuses[i] = request(args.port, "PUT", f"/lua_lib{i}/doc?commit", script_doc(LIB_LOOP, x=1), timeout=120)[0]
+            lib_statuses[i], body = request(args.port, "PUT", f"/lua_lib{i}/doc?commit", script_doc(LIB_LOOP, x=1), timeout=120)
+            if not 200 <= lib_statuses[i] < 300:
+                print(f"library-call loop {i} answered {lib_statuses[i]}: {str(body)[:300]}")
             lib_timings[i] = time.time() - t0
 
         def lib_during():
@@ -426,7 +437,7 @@ def main():
         except subprocess.TimeoutExpired:
             failures.append("the node did not stop within 20 s of SIGTERM")
 
-        failures.extend(foreign_scripts_check(args.binary, args.port + 1, tmp))
+        failures.extend(foreign_scripts_check(args.binary, free_port(), tmp))
     finally:
         if node.poll() is None:
             node.terminate()

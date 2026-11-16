@@ -48,3 +48,15 @@ privilege guard (`src/main.cc`, `demote`) requires a user switch for root
 startup. The workflow runs the harness as `nobody` with an owned scratch
 directory. No product portability fixes are needed and no failing tests
 remain in the completed run.
+
+## Phase 7c rows
+
+The job also builds an ASan+UBSan tree (`--parallel 2`: the pool.cc compile is
+killed by the VM's memory at 4) and runs `harness/gate7c_rows.sh` as `nobody`.
+[Run 43847919063](https://github.com/Kronuz/Xapiand/actions/runs/43847919063)
+at Xapiand:c85a1f6fd passes 11 of 14 rows (the suite's 40 CTest cases, the T1
+census through `procstat -t`, crash, overload, shutdown and gate-tool rows).
+`t2_e2e_asan` and `t10_lua_asan` fail on a UBSan abort in `system`'s
+`get_total_virtual_memory` (fixed in system:563880a, awaiting the repin);
+`t10_lua` answers 400 for two of four library-call loops. See
+`docs/dev/platforms.md`.
