@@ -6669,6 +6669,8 @@
         "sortable-encoding",
         "x7-gate"
       ],
+      "base": "d372d44d4a07e299db43e49ddabf73c62cd85d12",
+      "branch": "quest/xapiand/license-closure",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -6817,9 +6819,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-08T22:56:37"
+      "updated": "2026-11-16T15:22:12",
+      "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
       "accepted": {},
