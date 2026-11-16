@@ -1,7 +1,8 @@
 # faultlab-design review: design
 
 Commit: cpp-libraries:bcf85b4b367352284d7bb0ed4c6e72b7da6be9f7 (docs/design/faultlab.md; first reviewed at a2c60c7)
-Verdict: APPROVE (re-check at bcf85b4; CHANGES at a2c60c7)
+Verdict: APPROVE
+History: CHANGES at a2c60c7; APPROVE on re-check at bcf85b4.
 Date: 2026-11-16
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
