@@ -1,48 +1,54 @@
 # sortable-encoding: journal
 
-State: waiting on jobs 261115-224734-3b43cf 261115-224734-8ff56e 261115-225548-6cc0f3
+State: waiting on jobs 261115-232708-0f4cbd 261115-232708-0ace82 261115-232709-ac7e21 261115-232743-4f303d 261115-232745-4d0bb2 261115-232755-9ae906 261115-232807-2ddfbe 261115-232828-c1d9f2 261115-232849-00d421
 Quest: .campaign/xapiand/quests/sortable-encoding.md (the lead's; never edit it)
 
 ## Doing
 
-Steps 1 and 2 done (no byte change); their checks are running. `tests/numeric_range_check.py` (T6, A5)
-written (Xapiand:6e8bd448f). A debug run on a pre-switch binary (one-id-rel slot, Xapiand:1f5b791d2) shows
-the old failures it targets: range 189 wrong of 788, sort 6 of 8, intbound 4 of 11, wide 1 of 7 (a 6.5
-bound truncated on the integer-typed index), NaN bound and NaN value accepted. Baseline job
-261115-225548-6cc0f3 records it on the step-2 build (exit 1 expected).
+Step 3, the switch, is committed (Xapiand:9fff694dd, Xapiand:c9d8bc9f8); its jobs run. Step 2's build-test
+261115-224734-3b43cf and e2e 261115-224734-8ff56e passed (exit 0, VERDICT GREEN).
 
-1. Step 1, Xapiand:49deb7184: CTests `sortable_property` (T1, from `${sortable_SOURCE_DIR}/test/property.cc`)
-   and `sortable_xlang` (T3: `tests/sortable_xlang.py` against `sortable_cli` from `tools/cli.cc`); the port
-   merged from `codex/py-sortable` and moved to `contrib/python/xapiand-py/xapiand/sortable.py`; pin
-   sortable:915b014. Mutants in `tests/sortable_xlang_mutants.sh`.
-2. Step 2, Xapiand:8a7da1f4a: versions through `Serialise::version`/`Unserialise::version` (engine adapter
-   too), time decoders through `Unserialise::floating`, `get_hashed` deleted. The old codec is called only
-   from `src/serialise.h` (and the GPL files themselves).
+1. Xapiand:9fff694dd: `src/serialise.h` calls `sortable::encode`; stored bytes decode with `sortable::to_double`,
+   `to_int64`, `to_uint64`, integer/positive fall back to strict `decode` and saturate; bad bytes raise
+   SerialisationError (`Unserialise::invalid_number`, `number`). D4: NaN value or bound 400 (`Serialise::floating(FieldType,
+   double)`, `floating(string_view)`, `numeric_bound`), uint64 >= 2^63 to an integer field 400. D6: double end to end
+   (`Cast::floating` double, strict_stod), floating fields keep an integer's exact bytes and terms (schema.cc), range bounds
+   encode in their own type with an absent bound -inf/+inf (range.cc `numeric_bound`), `GenerateTerms::truncate` shared,
+   keymaker sentinels `sortable::max_finite/min_finite`, ids through the value entry points. `git rm` of both GPL files and
+   `xapiand/utils/sortable.py` (unopened), exports dropped. T1 unit test `test_number_vectors` in test_serialise.
+2. Xapiand:c9d8bc9f8: `tests/sort_range_identity.py` (T5), frozen corpus `docs/design/sortable-encoding/files.ndjson.gz`
+   (20,000 files' size and mtime, content sha256 27dfeab6f157d9a9...), T6 midpoint case (F3), rapidjson full precision,
+   `tests/bench_number_codec.{cc,cmake}` (T8), `docs/mechanisms/value-encoding.md` (A10), changelog (A11, F13, D55).
 
 ## Next
 
-1. When build-test 261115-224734-3b43cf and e2e 261115-224734-8ff56e finish: fix anything they show.
-2. Step 3 (after the lead says the design is accepted): the switch in `src/serialise.h` (trusted decode for
-   stored bytes, strict for user bytes), D4 400s, D6 strict_stod and ±inf open bounds, `git rm` the GPL
-   files and module, rename (A12), docs (A10, A11), T5/T6/T8 jobs.
+1. Read the jobs above; fix what they show.
+2. The D88 rename (A12), after the lead rules on library names (Blocked on 1). Then A12's grep job.
+3. A6 and A7's throughput half: a driver that starts each build and runs `harness/loadtest.py` interleaved under
+   `exclusive` (each run at most 10 minutes), plus `du` after FLUSH of the restored corpora; at the final head.
 
 ## For the lead
 
-- Design revised to D87 at Xapiand:3f95a5edd ("Revise the sortable-encoding design for D87"): D8 is
-  now "no marker, no compatibility", T8 (marker) is gone and T8 is now speed (A7). F1, F8, F9, F10 are
-  obsolete with the marker. F2 (blocking) is answered: T1 and T3 are CTests over the fetched library's
-  fixtures with sha256 asserts, so CI runs them on every platform. F3-F7, F11, F12 are folded into D6,
-  T1, T3, T5, T6, T7. Please have the design reviewer confirm.
-- File set, needed before step 3:
-  1. A12's grep covers `docs` and `harness` whole (about 60 docs files, including docs/reviews,
-     docs/perf raw JSON, and harness/async_check.py, harness/test_gate_tools.py). The file set has only
-     five docs paths and no harness. Add `docs/**` and `harness/**`, or narrow A12.
-  2. A8 says "the check added to `harness/seam_check.sh`"; that file does not exist. The quest's
-     `no-gpl` check already runs the grep; I propose A8 rest on that check.
+- Ready-made at 9fff694dd: ARCHITECTURE.md, AGENTS.md and README.md paragraphs about the old routine are replaced.
+- Job 261115-225548-6cc0f3 (the step-2 T6 baseline) will fail: it runs `cmake --build build` in a fresh checkout with no
+  build. `campaign job cancel` was denied to me; please cancel it. 261115-232755-9ae906 replaces it (`--fails-without`).
+- `tests/exact_id_mutants.sh` loses its `old-codec` mutant: ids and values are one codec now, so it has nothing to revert
+  to. `docs/design/exact-id-keys.md:50` still names it (not in my file set).
 
 ## Blocked on
 
-Step 3 on the design reviewer's confirmation of the D87 revision. Steps 1 and 2 are not blocked.
+1. A12 collides with library APIs Xapiand calls: Kronuz/msgpack (`MsgPack::serialise()`, `MsgPack::unserialise`) and
+   Kronuz/cuuid (`cuuid::serialise/unserialise`, `UUID::serialise`, `is_serialised`, `serialise_full/condensed`,
+   `UUID_MAX_SERIALISED_LENGTH`, its own `SerialisationError`), about 60 call sites. `git grep -il serialis -- src ...`
+   cannot print nothing while those libraries spell it that way. Options:
+   (a) rename both libraries' APIs first (their own quests, all users ours), bump the pins here, then rename Xapiand whole;
+   (b) rename only Xapiand's own names now and narrow A12's grep to exclude the library calls.
+   Recommendation: (a), one spelling everywhere; I rename Xapiand's own names in the same commit as the pin bumps.
+2. A8's "license note updated" is outside my file set: `NOTICE:14`, `THIRD-PARTY-NOTICES:726`,
+   `cmake/generate_third_party_notices.py:124`, `docs/mechanisms/third-party-notices.md:25`,
+   `docs/src/content/docs/copyright.md:19` still name the removed GPL files. Please add them (each is a sentence or a
+   section to delete; the notices file is regenerated by the script). Also `docs/dev/extraction-ledger.md` for step 3's
+   ledger row.
 
 ## Evidence
 
@@ -51,8 +57,13 @@ Step 3 on the design reviewer's confirmation of the D87 revision. Steps 1 and 2 
 | A1 | D87 (PLAN.md decision row, owner 2026-11-13) |
 | A3 | 261115-224157-3d7604 (pass at 49deb7184: 113,491 vectors, 10^6 random, 1,541,467 decodes; brief says "ran other code" after later commits, rerun at the final head); mutants killed: window-62 261115-224339-653d9d, rule-7 261115-224809-f01fd9 (`decode 0200: python i -2^63, C++ reject`). rule-8 261115-224330-733fc7 survived: equivalent (rule 8 is implied by rule 9, as sortable's note says) |
 
-Jobs at step 2 (8a7da1f4a): build-test 261115-224734-3b43cf, e2e 261115-224734-8ff56e (running);
-no-gpl 261115-224735-2ae37e failed as expected (the GPL files go in step 3).
+Jobs at step 2 (8a7da1f4a): build-test 261115-224734-3b43cf and e2e 261115-224734-8ff56e passed; no-gpl
+261115-224735-2ae37e failed as expected (the GPL files go in step 3).
+
+Jobs at step 3 (c9d8bc9f8): gate checks build-test 261115-232708-0f4cbd (A2 T1 CTests and test_serialise), e2e
+261115-232708-0ace82, no-gpl 261115-232709-ac7e21 (A8); T3 rerun 261115-232743-4f303d (A3); T6 261115-232745-4d0bb2 (A5)
+and its fails-without on the pre-switch build 261115-232755-9ae906; T5 identity plus E2E bodydiff, old 8a7da1f4a vs head,
+261115-232807-2ddfbe (A4); T8 build 261115-232828-c1d9f2 then exclusive run 261115-232849-00d421 (A7, codec half).
 
 ## Result
 
@@ -68,3 +79,15 @@ no-gpl 261115-224735-2ae37e failed as expected (the GPL files go in step 3).
 - Python module path `xapiand/sortable.py` (not the GPL file's `xapiand/utils/sortable.py`, so the
   diff never shows the GPL text being replaced in place).
 - An absent range bound encodes as -inf/+inf for every numeric type (design D6, review F4c).
+- A range bound encodes in its own MsgPack type (int64, uint64 or double), not the field's: the codec is cross-type exact,
+  so `x >= 6.5` on an integer field and `x >= 2^53 + 1` on a floating field compare exactly. A string bound parses as the
+  field's type. Accuracy terms use the truncation of either, which is monotone, so the cover stays a superset.
+- A floating field stores an integer value's exact bytes and terms (D1: one number, one encoding), not its double.
+- NaN is refused at the user-value entry points; `Serialise::floating(double)` itself stays total (keymaker distances).
+- rapidjson parses with `kParseFullPrecisionFlag` so a JSON decimal equals strict_stod's double for the same text (D6, F3).
+- Pre-switch reference build for A4, A5 and A7: 8a7da1f4a (step 2's head, the old codec behind the one seam, same pins).
+- T5's file corpus: 20,000 files sampled (seed 20261116) from ~/code/Kronuz, sizes and mtimes only, frozen in the repo
+  (259 KB) so the job and any rerun read the same bytes.
+- T8 uses sortable's real-value set from sortable:722c30e (`docs/perf/data/real-values.tsv.gz`, 434,977 values, content
+  sha256 7b5c20d8...), the frozen set its own speed note used; the bench source is appended to the old tree so both
+  builds time one source with one set of flags.
