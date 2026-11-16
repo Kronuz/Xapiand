@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-152341-b40b49 261116-152344-390c05 261116-152346-3f7758 261116-152349-798018 261116-153503-8232b1 261116-153509-f2b0ec 261116-152404-9e4b93
+State: waiting on jobs 261116-152341-b40b49 261116-152344-390c05 261116-152346-3f7758 261116-152349-798018 261116-153509-f2b0ec 261116-152404-9e4b93 (round 1 building both binaries at 15:46)
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -70,7 +70,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | 261116-152341-b40b49, 261116-152344-390c05 (ABBA p99, exclusive); 261116-152346-3f7758 (spin turns): queued |
 | A2 | 261116-152341-b40b49, 261116-152344-390c05: queued |
-| A3 | e2e 261116-152405-fc88a5 passed; build-test 261116-152404-9e4b93; items 261116-152349-798018; mutants 261116-153503-8232b1, 261116-153509-f2b0ec (--fails-without): queued |
+| A3 | e2e 261116-152405-fc88a5 passed; build-test 261116-152404-9e4b93; items 261116-152349-798018; mutant 261116-153503-8232b1 done (results test fails without round 1), mutant 261116-153509-f2b0ec queued (--fails-without) |
 | A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" and "Fix, round 2: the 8 ms left" |
 
 ## Result
