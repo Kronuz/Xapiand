@@ -16413,6 +16413,8 @@
     "serialize-repin": {
       "accepted": {},
       "after": [],
+      "base": "68e847c8edd704cee9a96ca1621334d7f0da725a",
+      "branch": "quest/xapiand/serialize-repin",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -16551,9 +16553,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Repin the renamed libraries and finish serialize in Xapiand",
-      "updated": "2026-11-16T05:12:54"
+      "updated": "2026-11-16T05:13:05",
+      "worktree": "../Xapiand-wt/xapiand/serialize-repin"
     },
     "sha256-cl-10": {
       "accepted": {},
