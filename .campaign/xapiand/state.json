@@ -5454,7 +5454,7 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-fetch-macos"
+        "detent:consensus-transport"
       ],
       "checks": [
         {
@@ -5515,7 +5515,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-15T23:04:55"
+      "updated": "2026-11-16T10:28:31"
     },
     "group-sim": {
       "accepted": {},
