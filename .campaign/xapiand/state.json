@@ -11390,7 +11390,9 @@
     },
     "metrics-fd-count": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "logger-workpool-repin"
+      ],
       "base": "befc7db535f5aeae2e50af495395f4a41260cd1e",
       "branch": "quest/xapiand/metrics-fd-count",
       "checks": [
@@ -11423,7 +11425,7 @@
       "risk": "low",
       "status": "active",
       "title": "Count open descriptors without scanning to the fd limit",
-      "updated": "2026-11-16T08:07:44",
+      "updated": "2026-11-16T08:35:33",
       "worktree": "../Xapiand-wt/xapiand/metrics-fd-count"
     },
     "more-like-this": {
