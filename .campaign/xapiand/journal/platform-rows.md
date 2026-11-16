@@ -1,6 +1,6 @@
 # platform-rows: journal
 
-State: waiting on CI runs 43840819520 (FreeBSD) 43840819547 (arm64)
+State: waiting on CI runs 43847919063 (FreeBSD) 43847919086 (arm64)
 Quest: .campaign/xapiand/quests/platform-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
