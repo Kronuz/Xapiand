@@ -14129,9 +14129,14 @@
       "consumes": [],
       "files": [
         ".github/workflows/**",
-        "harness/**",
         "docs/dev/freebsd.md",
-        "docs/dev/platforms.md"
+        "docs/dev/platforms.md",
+        "harness/e2e_capture.sh",
+        "harness/gate7c_rows.sh",
+        "harness/lua_bounds.py",
+        "harness/thread_census.sh",
+        "harness/thread_stacks.sh",
+        "harness/run_all.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -14142,7 +14147,7 @@
       "risk": "normal",
       "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-15T22:25:14",
+      "updated": "2026-11-16T05:13:02",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
