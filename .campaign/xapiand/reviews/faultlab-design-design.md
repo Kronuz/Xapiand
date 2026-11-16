@@ -111,3 +111,30 @@ the shape of its test clear.
 | N9 | no | nit | Partly closed. sync_calls_test is cited per primitive and platform, but the `PosixIOOptions` that Detent runs with are not named. | faultlab.md:214, :346 | As in round 1 |
 
 Folded in but not re-checked: N1 (:332-333), N2 (:58-62), N3 (:152-156), N5 (:325-327), N6 (:112-114, :318-319).
+
+## Re-check 2
+
+Commit: cpp-libraries:9d23d747b746432c14cd5550204e817704d7b482
+Verdict: CHANGES
+
+This round covers only the bcf85b4..9d23d74 delta: Detent's R8 and R9, `inspect`, `try_lease`,
+`File::map_shared`, the agent store's `change` file going through the IO, `verify` comparing by
+length only, and the new meaning of "illegal". Line numbers are faultlab.md at 9d23d74. I read the
+delta against faultfs.hh at strata:491a1bd; I ran no job.
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| E1 | yes | defect | faultfs folds a shared mapping's stores into the inode "as one write of the changed sectors through the ordinary write path". It does this at the next call and at `crash` (:161-165). That write path calls `check(op::write)`, which conflicts with the sector model the text says it keeps. Four problems follow. (1) Once `power_off_after` has run out, `check` fails the write before its effect (faultfs.hh:373-378, 499-500). Stores made while the power was on are then dropped at the fold. At a crash every changed sector keeps its old bytes, never its new ones. (2) Each fold counts as a mutation and spends `power_left_`, so `mutations()` and the cut points depend on when the program next calls in. (3) Fault rules on `op::write`, `short_writes` and `damage_writes` fire on a write the program never issued, and the error surfaces from an unrelated call such as a read. A short write silently drops some of the stores. (4) `kill()` and `snapshot()` do not fold. A process death would then lose stores the page cache keeps, or fold them later into the restarted process's history. | faultfs.hh:373-384, 494-517; faultlab.md:161-165, :131 | One rule. A fold applies the changed sectors directly (`note_write`, copy, mark dirty), bypassing `check`, the power counter, fault rules and short or damaged writes. It happens at every call (before that call takes effect), at `crash`, at `kill()` and at `snapshot()`. Crash and kill detach the mapping, so later stores go nowhere. faultlab's `map_shared` test (:361) adds three cases: stores followed by `power_off_after(0)` and a crash can keep their new sectors; stores and then `kill()` keep every word; and `mutations()` is unchanged by a fold. |
+| E2 | no | gap | The fold reads the buffer while another thread may still be storing into it. A real mapping races the same way, but faultfs's comparison is its own read, so TSan reports it in faultfs. | faultlab.md:161-163 | Say that stores and calls must not overlap in a faultfs test, or that a fold reads per sector with relaxed atomics. |
+| E3 | no | nit | `try_lease` is released by `kill()` and `crash()` (:131). The doc does not say a lease is also released when the `File` holding it is destroyed, as flock does on close. | faultlab.md:131 | Add "and when its file closes". |
+| E4 | no | nit | The new definition of "legal" is sound: allowed by the IO contract, not reachable on a real filesystem. Its claim that journaled ext4, xfs and APFS persist directory operations in prefix order is uncited. | faultlab.md:96-99 | Cite the claim, or soften it to "commit directory operations in transaction order". |
+
+Checked and fine:
+- `map_shared` goes to the real file only in recorder runs, and `verify(dir, {"change"})` compares
+  by length (:216, :202-204). That matches today's model, which keeps only `change`'s length
+  (test_agent_store_crash.cc:63-64).
+- Ordering against epochs holds once E1's fold runs before each call's effect: a store before an
+  ordering point is staged, and one after it is unordered.
+- Step 0 grows to four virtuals plus `SharedMapping` (:336), and nothing changes the order.
