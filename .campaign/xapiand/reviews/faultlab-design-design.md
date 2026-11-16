@@ -1,8 +1,7 @@
 # faultlab-design review: design
 
-Commit: cpp-libraries:bcf85b4b367352284d7bb0ed4c6e72b7da6be9f7 (docs/design/faultlab.md; first reviewed at a2c60c7)
-Verdict: APPROVE
-History: CHANGES at a2c60c7; APPROVE on re-check at bcf85b4.
+Commit: cpp-libraries:a2c60c7193cb6a1637868dd674a082481084c216 (docs/design/faultlab.md)
+Verdict: CHANGES
 Date: 2026-11-16
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. CHANGES: lands once each
@@ -91,14 +90,24 @@ is F4, F6 is F8, F8 is F10, and F11 is F16 with the migration order.
 
 ## Re-check
 
-At cpp-libraries:bcf85b4 (diff a2c60c7..bcf85b4). All four blockers are closed; the verdict is
-APPROVE. Line numbers are faultlab.md at bcf85b4.
+Commit: cpp-libraries:bcf85b4b367352284d7bb0ed4c6e72b7da6be9f7
+Verdict: APPROVE
 
-| ID | Status | Where |
-|---|---|---|
-| D1 | closed | F3 (:42-50) withdraws the superset claim and cites the probe. F5 (:76, :87-88) adds an opt-in `size_pick::sector` that cuts at any sector boundary between the durable and current sizes, so the default stream and F3's seeds stay unchanged. Steps 5, 6 and 9 (:318, :319, :322) sweep with it. The checks (:334-336) put the probe in faultlab's suite as a test over random append sequences, so the test's shape is clear; I did not rerun the probe. |
-| D2 | closed | `name_pick::additions` (:75, :86) keeps creates, links and replaces and drops removes. F5 (:90-99) maps Entries::All to it, names the collector's case, and drops both-names-of-a-rename as illegal. QD2 (:354-356) adds a job showing that the four picks reproduce the old model's states, minus the listed both-names states. |
-| D3 | closed | F8 (:136-163) adds a third seam call, `IO::link` (linkat on PosixIO). F7 (:125, :127, :134) adds faultfs's `link` op, `inspect_entry` and `lock_owner`. F10 (:205-211) lists the work Detent does first: retype its stores to `journal::IO`, publish with `link`, move the ownership check into `directory_trust()`, and open ChangeWriter's file through the IO. Step 7 (:320) puts that first. `verify()` (:187-188, :200-203) makes any future out-of-seam change fail loudly. |
-| D4 | closed (self-consistent; ruling pending) | F9 (:165-176): `sync` and `sync_data` are durable in every process, and there is no barrier-only mode. One process-wide switch weakens every sync together, and storage's fsync and full_fsync map to `sync_data` and `sync`, both durable, so the old inversion is gone. Left for the owner's ruling: a deployment that sets the switch in place of STORAGE_FULL_SYNC also weakens journal's and strata's syncs in that process. The text states this ("every sync of the process"). |
+This round covers the diff a2c60c7..bcf85b4. Line numbers are faultlab.md at bcf85b4. All four
+blockers are closed. I re-checked D1-D4 only. I did not rerun the probe, because D1's text makes
+the shape of its test clear.
 
-Also folded in: N1 (:332-333), N2 (:58-62), N3 (:152-156), N5 (:325-327), N6 (:112-114, :318-319). I did not re-check those.
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| D1 | no | defect | Closed. F3 withdraws the superset claim and cites the probe. An opt-in `size_pick::sector` reaches the partial-append sizes. The default coin stream, and so F3's seeds, stay unchanged. Steps 5, 6 and 9 sweep with the new pick, and the probe becomes a faultlab suite test. | faultlab.md:42-50, :76, :87-88, :318-319, :322, :334-336 | none |
+| D2 | no | defect | Closed. `name_pick::additions` keeps creates, links and replaces and drops removes. Entries::All maps to it. The both-names state is dropped as illegal. A job lists every state the four picks no longer reproduce. | faultlab.md:75, :86, :90-99, :354-356 | none |
+| D3 | no | gap | Closed. `IO::link` becomes a third seam addition. faultfs adds `link`, `inspect_entry` and `lock_owner`. Before Detent's crash tests move, its stores: take `journal::IO`; publish with `link`; check ownership through `directory_trust()`; open ChangeWriter's file through the IO. Step 7 does that first. `verify()` fails loudly on any change made outside the seam. | faultlab.md:125, :127, :134, :136-163, :187-188, :200-211, :320 | none |
+| D4 | no | defect | Closed as text. `sync` and `sync_data` are durable in every process, and there is no barrier-only mode. One switch weakens all of a process's syncs together, and storage maps both of its syncs to durable calls. The owner still rules on F9. If a deployment sets the switch in place of STORAGE_FULL_SYNC, journal's and strata's syncs in that process weaken too. The text states this. | faultlab.md:165-176 | Owner's ruling |
+| N4 | no | gap | Still open. The doc does not cite strata's parked simulator D5. The map switch is still read from the environment (`FAULTLAB_MAP`), and the store is still dense. | faultlab.md:36, :316 | As in round 1 |
+| N7 | no | nit | Still open. The shadow plays a group sync in list order, so it reaches only prefix subsets of the group. | faultlab.md:197-198 | As in round 1 |
+| N8 | no | nit | Still open. Step 3 keeps strata's 8 two-filesystem tests and does not say whether they move to one device later. | faultlab.md:65-66, :316 | As in round 1 |
+| N9 | no | nit | Partly closed. sync_calls_test is cited per primitive and platform, but the `PosixIOOptions` that Detent runs with are not named. | faultlab.md:214, :346 | As in round 1 |
+
+Folded in but not re-checked: N1 (:332-333), N2 (:58-62), N3 (:152-156), N5 (:325-327), N6 (:112-114, :318-319).
