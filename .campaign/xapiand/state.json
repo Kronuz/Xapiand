@@ -18739,6 +18739,52 @@
       "updated": "2026-11-11T15:03:25",
       "worktree": ""
     },
+    "strict-values": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "src/cast.cc",
+        "src/cast.h",
+        "src/serialize.cc",
+        "src/serialize.h",
+        "src/multivalue/range.cc",
+        "tests/test_query*.cc",
+        "tests/test_schema*.cc",
+        "tests/test_node.cc",
+        "tests/test_cast*.cc",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/changelog.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "One strict rule for values, ids and searches",
+      "updated": "2026-11-16T08:24:39"
+    },
     "sync-at-first-commit": {
       "accepted": {
         "design": {
