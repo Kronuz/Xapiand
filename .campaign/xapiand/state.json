@@ -14196,7 +14196,9 @@
     },
     "platform-rows": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "lua-memory-bound"
+      ],
       "base": "5b3c89d71edd53ed9f3a2330033439718965e3d5",
       "branch": "quest/xapiand/platform-rows",
       "checks": [
@@ -14228,7 +14230,7 @@
       "risk": "normal",
       "status": "active",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-16T05:13:02",
+      "updated": "2026-11-16T08:59:05",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
