@@ -1,6 +1,6 @@
 # exact-id-keys: journal
 
-State: waiting on jobs 261115-210614-d6a201 261115-210629-01840c 261115-210632-ca9170 261115-210635-274f76 261115-210639-ed1c27
+State: ready for review
 Quest: .campaign/xapiand/quests/exact-id-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -33,7 +33,7 @@ At the merged head 68f26a25e (earlier runs at 7b23f319e: A1 261113-142240-d936af
 |---|---|
 | A1 | 261115-210629-01840c (test); fails without: 261115-210632-ca9170 (old-codec) |
 | A2 | 261115-210635-274f76 (test); fails without: 261115-210639-ed1c27 (cap-2-32) |
-| A3 | [artifact] docs/design/exact-id-keys.md |
+| A3 | `docs/design/exact-id-keys.md` |
 | A4 | suite 261115-210614-d6a201; CI on quest/xapiand/exact-id-keys |
 
 ## Result
