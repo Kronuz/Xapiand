@@ -1,6 +1,6 @@
 # strict-values: journal
 
-State: waiting on jobs 261116-092507-997086 261116-092507-845129 261116-092510-5a755e 261116-092513-8e8db4 261116-092516-7d49d2 261116-092519-a7c977 261116-092523-55e91e
+State: ready for review
 Quest: .campaign/xapiand/quests/strict-values.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on the gate checks and the criterion jobs at 710beb9f3.
+Code done at 710beb9f3; the gate checks and criterion jobs below are queued (still pending after one 600 s wait).
 
 ## Next
 
