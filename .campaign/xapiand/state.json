@@ -3693,11 +3693,12 @@
         "direct-pins"
       ],
       "provides": [],
+      "reason": "D91: the cluster design (docs/design/cluster-release.md, Xapiand:5dc60256a) brings number_of_replicas back on strata groups",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Remove the replica settings left from the cluster",
-      "updated": "2026-11-09T19:54:48"
+      "updated": "2026-11-15T22:12:19"
     },
     "drop-threadpool": {
       "accepted": {},
