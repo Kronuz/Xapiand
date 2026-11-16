@@ -112,6 +112,29 @@ response array once, so no per-object map exists at all. The first is 10 lines a
 `record` and the response writer. The sliced free also applies to `Admitted::~Admitted` and the parser's objects, which
 are 19% and 7% of the loop's samples but not yet long turns.
 
+## Fix: the results in one buffer
+
+Why 5,000 results cost 10-25 ms to free. Every `MsgPack` value owns a `msgpack::zone`, and a zone `malloc`s its first
+8,192-byte chunk when it is made (`msgpack/detail/cpp11_zone.hpp`, `MSGPACK_ZONE_CHUNK_SIZE`). `_results` held one
+`MsgPack` per object, so a 5,000-object chunk held 5,000 zones, 41 MB of 8 KB blocks, and `~DocIndexer` freed them in
+one turn; Darwin's `free` of an 8 KB small-zone block returns its pages with `madvise`, which is the 81%. Recording
+made two more zones per object on the loop (the `MsgPack::MAP()` placeholder of `admit` and the `MsgPack result` of
+`record`), freed one at a time.
+
+The change (`src/database/handler.{h,cc}`): `DocIndexer` keeps its results as MessagePack bytes appended to one
+`std::string` (`_packed`) and an (offset, size) per object (`_at`); `record`, `apply` and the failure path pack each
+value from the `msgpack::object` the `MsgPack` held before, and `results()` builds the response's array once, by
+unpacking the concatenation into one `MsgPack`. No per-object `MsgPack` exists for a result, so the chunk's end frees
+two blocks instead of 5,000 zones, and recording allocates nothing per object. Slicing the free was not needed: the
+cost was the allocation, not its timing. The CLI restore, which keeps its results for the whole file, holds tens of
+bytes per document instead of a zone each (arithmetic, not measured: 8 KB per document before, 8 GB per million).
+
+The RESTORE responses are unchanged: `harness/restore_stall_items.py` sends the same 32 RESTOREs (streamed and array
+bodies; given, new numeric and repeated ids; one and three shards; echo, comments and neither; failing and script
+objects) to a node of each binary, in JSON and in MessagePack, and all 64 responses match byte for byte but `took`
+(96 failed items among them). The A/B under `quiet strict` (two ABBA rounds and a spin run,
+`harness/restore_stall_ab.sh`) is pending; its table goes here.
+
 ## 2. The lag probe's 49-82 ms
 
 `LagProbe` (`reactor_lag.h`) re-arms a `steady_timer` and records how late each wake ran. Is its max a floor or a stall?
