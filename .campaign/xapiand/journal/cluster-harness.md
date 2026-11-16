@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Tier 1 (A1, A2, A4) and the README (A5) are written at Xapiand:8ba28ec89; their jobs are queued.
+Tier 1 (A1, A2, A4) and the README (A5) are written at Xapiand:8ba28ec89, with master merged in; their jobs rerun at the head.
 
 ## Next
 
@@ -30,7 +30,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261116-113803-e3d7df (pending): `--build` master's xapiand, then `run.sh check --nodes 1` green, `--nodes 3` and `--nodes 5` with `--expect-fail membership,read,search,aggregations,failover,replay` |
-| A2 | 261116-113744-61bbf2 passed: 3 planted histories rejected at linearizable and accepted at prefix; zones agree with brute force on 1,878 random histories. Mutants (`--fails-without`, exit 1 means the test failed): written 261116-114144-9d35dc, prefix 261116-114148-339c7a, linearizable 261116-114152-beba20 (pending). 261116-113747-7b7eb1, -113750-28fadf and -113753-8a9769 ran the same mutants without the exit inversion (each exit 1, the self-test RED); superseded |
+| A2 | 261116-113744-61bbf2 passed: 3 planted histories rejected at linearizable and accepted at prefix; zones agree with brute force on 1,878 random histories. Mutants (`--fails-without`, exit 1 means the test failed): written 261116-114144-9d35dc, prefix 261116-114148-339c7a, linearizable 261116-114152-beba20 (pending). 261116-113747-7b7eb1, 261116-113750-28fadf and 261116-113753-8a9769 ran the same mutants without the exit inversion (each exit 1, the self-test RED); superseded |
 | A3 | not started; left for a follow-up |
 | A4 | 261116-113756-045bc1 (pending, strict): 48 MiB through a link capped at 100 Mb/s, 1 and 4 streams |
 | A5 | `harness/cluster/README.md` |
