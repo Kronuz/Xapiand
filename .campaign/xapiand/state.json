@@ -19285,6 +19285,8 @@
     "strict-text": {
       "accepted": {},
       "after": [],
+      "base": "31c9ee7919b144f7ceea65f43add563caf716176",
+      "branch": "quest/xapiand/strict-text",
       "checks": [
         {
           "cmd": "campaign:build-test",
@@ -19312,9 +19314,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:21:53"
+      "updated": "2026-11-16T15:22:02",
+      "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {
       "accepted": {
