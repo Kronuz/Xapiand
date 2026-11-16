@@ -15629,6 +15629,8 @@
         "sortable-proof",
         "x7-gate"
       ],
+      "base": "432299ed08977dace1b36f124058e321c6bd015f",
+      "branch": "quest/xapiand/sortable-encoding",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -15889,9 +15891,10 @@
       ],
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "active",
       "title": "A clean-room number encoding replaces sortable_serialise",
-      "updated": "2026-11-15T22:27:08"
+      "updated": "2026-11-15T22:27:51",
+      "worktree": "../Xapiand-wt/xapiand/sortable-encoding"
     },
     "sortable-followups": {
       "accepted": {},
