@@ -31,7 +31,6 @@
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
-#include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
 #include "database/data.h"         // for ct_type_t, Data
 #include "engine/types.h"          // for engine::valueno, engine::rev, engine::doccount
@@ -98,11 +97,6 @@ struct query_field_t {
 	std::string metric;
 	bool icase = false;
 };
-
-
-inline std::string get_hashed(std::string_view name) {
-	return sortable_serialise(xxh64::hash(name));
-}
 
 
 inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {

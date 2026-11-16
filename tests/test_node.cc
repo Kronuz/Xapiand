@@ -71,7 +71,6 @@
 #include "endpoint.h"
 #include "logger.h"
 #include "serialise.h"
-#include "sortable_serialise.h"
 #include "engine/chores.h"
 #include "engine/host.h"
 #include "engine/document.h"
@@ -2041,7 +2040,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 	const auto replace = [&](engine::docid did, bool must_exist, std::optional<engine::rev> expected = std::nullopt) -> std::optional<engine::errc> {
 		auto doc = std::get<1>(x.prepare("again"));
 		if (expected) {
-			doc.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(*expected)));
+			doc.add_value(DB_SLOT_VERSION, Serialise::version(*expected));
 		}
 		try {
 			engine::sync_wait(use.replace_document(did, std::move(doc), false, false, true, must_exist));

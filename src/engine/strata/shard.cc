@@ -46,7 +46,7 @@
 #include "prospect/index.hh"       // for prospect::index
 
 #include "log.h"                   // for L_ERR
-#include "sortable_serialise.h"    // for sortable_serialise
+#include "serialise.h"             // for Serialise::version
 
 #include "database/utils.h"        // for DB_SLOT_VERSION
 #include "engine/census.h"         // for ENGINE_CENSUS_*
@@ -631,7 +631,7 @@ void
 stamp_version(StrataDocument& native, rev version)
 {
 	native.stamp(version);
-	native.add_value(DB_SLOT_VERSION, sortable_serialise(static_cast<double>(version)));
+	native.add_value(DB_SLOT_VERSION, Serialise::version(version));
 }
 
 [[noreturn]] void

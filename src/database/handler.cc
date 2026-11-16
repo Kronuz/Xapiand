@@ -320,7 +320,7 @@ finish_prepared(std::tuple<std::string, engine::Document, MsgPack>& prepared, Da
 		doc.set_data(serialised);
 	}
 	if (document_ver != UNKNOWN_REVISION) {
-		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
+		doc.add_value(DB_SLOT_VERSION, Serialise::version(document_ver));
 	} else if (!data.version.empty()) {
 		doc.add_value(DB_SLOT_VERSION, data.version);
 	}
@@ -488,7 +488,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, engine::rev document_ver, c
 	std::tuple<std::string, engine::Document, MsgPack> prepared;
 
 	if (document_ver != UNKNOWN_REVISION && !data.version.empty()) {
-		const auto current = static_cast<engine::rev>(sortable_unserialise(data.version));
+		const auto current = Unserialise::version(data.version);
 		if (document_ver != current) {
 			throw engine::version_conflict(current);  // early; the shard checks it again in the write's turn
 		}
@@ -2045,7 +2045,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 
 	auto version = co_await document.get_value(DB_SLOT_VERSION);
 	if (!version.empty()) {
-		info[RESPONSE_VERSION] = static_cast<engine::rev>(sortable_unserialise(version));
+		info[RESPONSE_VERSION] = Unserialise::version(version);
 	}
 
 	size_t n_shards = endpoints.size();

@@ -51,7 +51,7 @@
 #include "engine/strata/document.h"
 #include "engine/strata/shard.h"
 #include "engine/sync.h"
-#include "sortable_serialise.h"
+#include "serialise.h"
 
 namespace {
 
@@ -1084,20 +1084,20 @@ void version_slot() {
 	const auto slot = [&](engine::docid did) { return engine::sync_wait(shard.get(did))->value(1); };
 	engine::WriteArgs plain;
 	auto doc = make("Qa", "one");
-	doc.add_value(1, sortable_serialise(0.0));   // what the host asks for on a new document
+	doc.add_value(1, Serialise::version(0));   // what the host asks for on a new document
 	CHECK_EQ(engine::sync_wait(shard.replace_by_key("Qa", doc, plain)).version, 1u);
-	CHECK_EQ(slot(1), sortable_serialise(1.0));
+	CHECK_EQ(slot(1), Serialise::version(1));
 	for (engine::rev v = 1; v < 4; ++v) {
 		engine::WriteArgs expect;
 		expect.expected_version = v;
 		auto next = make("Qa", "again");
-		next.add_value(1, sortable_serialise(static_cast<double>(v)));
+		next.add_value(1, Serialise::version(v));
 		CHECK_EQ(engine::sync_wait(shard.replace(1, next, expect)).version, v + 1);
-		CHECK_EQ(slot(1), sortable_serialise(static_cast<double>(v + 1)));
+		CHECK_EQ(slot(1), Serialise::version(v + 1));
 	}
 	auto added = make("Qb", "b");
 	CHECK_EQ(engine::sync_wait(shard.add(added, plain)).version, 1u);
-	CHECK_EQ(slot(2), sortable_serialise(1.0));
+	CHECK_EQ(slot(2), Serialise::version(1));
 }
 
 // The stats report the shortest and longest document length of the shard (D3).

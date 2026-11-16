@@ -187,6 +187,11 @@ namespace Serialise {
 		return sortable_serialise(field_value);
 	}
 
+	// A document version's bytes in DB_SLOT_VERSION, the slot the `_version` field (positive) sorts and ranges.
+	inline std::string version(std::uint64_t document_version) {
+		return sortable_serialise(static_cast<double>(document_version));
+	}
+
 	// Serialise field_value like UUID.
 	std::string uuid(std::string_view field_value);
 
@@ -331,6 +336,11 @@ namespace Unserialise {
 	// Unserialise a serialised positive.
 	inline std::uint64_t positive(std::string_view serialised_positive) {
 		return clamp_uint64(sortable_unserialise(serialised_positive));
+	}
+
+	// A document version from its DB_SLOT_VERSION bytes (Serialise::version).
+	inline std::uint64_t version(std::string_view serialised_version) {
+		return static_cast<std::uint64_t>(sortable_unserialise(serialised_version));
 	}
 
 	// Unserialise a serialised boolean.

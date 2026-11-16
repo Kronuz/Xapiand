@@ -1225,14 +1225,14 @@ Unserialise::datetime(std::string_view serialised_date)
 std::string
 Unserialise::time(std::string_view serialised_time)
 {
-	return Datetime::time_to_string(sortable_unserialise(serialised_time));
+	return Datetime::time_to_string(floating(serialised_time));
 }
 
 
 double
 Unserialise::time_d(std::string_view serialised_time)
 {
-	auto t = sortable_unserialise(serialised_time);
+	auto t = floating(serialised_time);
 	if (Datetime::isvalidTime(t)) {
 		return t;
 	}
@@ -1244,14 +1244,14 @@ Unserialise::time_d(std::string_view serialised_time)
 std::string
 Unserialise::timedelta(std::string_view serialised_timedelta)
 {
-	return Datetime::timedelta_to_string(sortable_unserialise(serialised_timedelta));
+	return Datetime::timedelta_to_string(floating(serialised_timedelta));
 }
 
 
 double
 Unserialise::timedelta_d(std::string_view serialised_time)
 {
-	auto t = sortable_unserialise(serialised_time);
+	auto t = floating(serialised_time);
 	if (Datetime::isvalidTimedelta(t)) {
 		return t;
 	}

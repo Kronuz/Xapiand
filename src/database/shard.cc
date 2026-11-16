@@ -93,7 +93,7 @@ expected_version(const engine::Document& doc)
 	if (serialised.empty()) {
 		return std::nullopt;
 	}
-	return static_cast<engine::rev>(sortable_unserialise(serialised));
+	return Unserialise::version(serialised);
 }
 
 

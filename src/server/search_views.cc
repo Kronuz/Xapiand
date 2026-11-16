@@ -1901,7 +1901,7 @@ retrieve_document_view(Request& request)
 		if (obj.find(VERSION_FIELD_NAME) == obj.end()) {
 			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
+				obj[VERSION_FIELD_NAME] = Unserialise::version(version);
 			}
 		}
 
@@ -2056,7 +2056,7 @@ search_view(Request& request)
 		if (hit_obj.find(VERSION_FIELD_NAME) == hit_obj.end()) {
 			auto version = co_await document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				hit_obj[VERSION_FIELD_NAME] = static_cast<engine::rev>(sortable_unserialise(version));
+				hit_obj[VERSION_FIELD_NAME] = Unserialise::version(version);
 			}
 		}
 

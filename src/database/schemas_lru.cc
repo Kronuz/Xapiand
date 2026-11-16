@@ -121,7 +121,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			if (version_ser.empty()) {
 				THROW(Error, "Inconsistency in '{}' for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 			}
-			version = sortable_unserialise(version_ser);
+			version = Unserialise::version(version_ser);
 		}
 		obj = obj[SCHEMA_FIELD_NAME];
 		Schema::check<Error>(obj, "Foreign schema is invalid: ", false);

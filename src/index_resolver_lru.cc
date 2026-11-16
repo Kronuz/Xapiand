@@ -337,7 +337,7 @@ load_settings(const std::string& unsharded_normalized_path)
 				if (version_ser.empty()) {
 					THROW(Error, "Inconsistency in '{}' configured for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 				}
-				index_settings.version = sortable_unserialise(version_ser);
+				index_settings.version = Unserialise::version(version_ser);
 			}
 
 			it = obj.find("number_of_replicas");

@@ -25,7 +25,6 @@
 
 #include <string_view>           // for std::string_view
 
-#include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
 #include "enum.h"                // for ENUM_CLASS
 #include "reserved/schema.h"     // for RESERVED_LUA
