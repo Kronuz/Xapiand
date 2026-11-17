@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-132452-78690b 261117-132452-34527b 261117-132510-faa8a2 261117-132517-62b8d5 261117-132523-1e7db7 261117-132530-ad8ab3 261117-132538-e38f12 261117-132602-c8b02d 261117-132608-869a06
+State: waiting on jobs 261117-134414-aaeddb 261117-134414-ef6998 261117-134416-c8e692 261117-134421-e77835 261117-134428-8708d8 261117-134435-94dd84 261117-134441-a5a538 261117-134448-2b4bae 261117-134456-196914 261117-134505-949822
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,7 +10,9 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Doing
 
 Step 4: A5 (the part before detent:consensus-quiescence), A6, A10 built at strata:29f928ad;
-Evidence for A1-A4 filled from step 3's green jobs at strata:1e88eb3f; jobs queued (Evidence).
+checkpoints serialized at strata:b98362b7 (Rulings); Evidence for A1-A4 filled from step 3's
+green jobs at strata:1e88eb3f; jobs queued at b98362b7 (Evidence). The TSan job at 29f928ad
+(261117-132510-faa8a2) failed one burst call, no race report: a checkpoint overlapping another.
 
 - A6, `test/group/footprint_test.cc` (ctest `group_footprint`): COUNT lone voters on real
   directories (PosixIO), one loop and chore, frames counted (`TASK_COUNT_FRAMES`). Local, 32
@@ -101,7 +103,7 @@ Evidence for A1-A4 filled from step 3's green jobs at strata:1e88eb3f; jobs queu
 ## Blocked on
 
 - Lead: A6's `exclusive` job at 10^4 groups (my rule is light jobs only). Command, at
-  strata:29f928ad: `campaign job submit --quest group-core --for A6 --level exclusive --minutes 30
+  strata:b98362b7: `campaign job submit --quest group-core --for A6 --level exclusive --minutes 30
   --env GROUP_FOOTPRINT_NOSYNC=1 --env GROUP_FOOTPRINT_WAVE=8 --build "cmake -B build
   -DCMAKE_BUILD_TYPE=Release && cmake --build build --target group_footprint_test -j4" --
   build/group_footprint_test 10000 100`. 1,000 groups took 185 s on a loaded host, so 10^4 may
@@ -133,12 +135,12 @@ Evidence for A1-A4 filled from step 3's green jobs at strata:1e88eb3f; jobs queu
 | A2 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
 | A3 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
 | A4 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
-| A5 (part) | queued at strata:29f928ad: build-test 261117-132452-78690b, crash 261117-132452-34527b, TSan 261117-132510-faa8a2; `--fails-without` close-uncovered 261117-132517-62b8d5. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
-| A6 (part) | queued at strata:29f928ad: build-test 261117-132452-78690b (ctest `group_footprint`, 64 groups); `--fails-without` close-keeps-index 261117-132530-ad8ab3, files-keep-handle 261117-132538-e38f12. Left: the exclusive 10^4 job (Blocked on), quiescent groups (consensus-quiescence), the catalog close |
+| A5 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
+| A6 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb (ctest `group_footprint`, 64 groups); `--fails-without` close-keeps-index 261117-134441-a5a538, files-keep-handle 261117-134448-2b4bae. Left: the exclusive 10^4 job (Blocked on), quiescent groups (consensus-quiescence), the catalog close |
 | A7 | waits on detent:consensus-quiescence (in-process reopen, `TurnLog::read` after close) |
 | A8 | [decision] the owner's (cluster-release Q2); lead default (a) |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
-| A10 | queued at strata:29f928ad: build-test 261117-132452-78690b (ctest `group_lifetime`), TSan 261117-132510-faa8a2; `--fails-without` apply-on-loop 261117-132523-1e7db7, capture-on-loop (TSan) 261117-132602-c8b02d, read-on-loop (TSan) 261117-132608-869a06 |
+| A10 | queued at strata:b98362b7: build-test 261117-134414-aaeddb (ctest `group_lifetime`), TSan 261117-134416-c8e692; `--fails-without` apply-on-loop 261117-134435-94dd84, capture-on-loop (TSan) 261117-134456-196914, read-on-loop (TSan) 261117-134505-949822 |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
@@ -149,6 +151,11 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- Checkpoints run one at a time (`task::async_mutex` in `group`, strata:b98362b7): consensus
+  rejects a checkpoint while one is pending (`Busy`, core.h:600), so a close racing a periodic
+  checkpoint failed with "consensus call rejected". `points` starts a checkpoint and a close
+  together at every event; mutant checkpoints-overlap fails it (killed locally).
 
 - A6: "of its own" is measured against a bare index holding the same document (2 descriptors,
   5.1 KB, 1 pooled task block: the index holds one), so the group's own is the difference; the
