@@ -8024,17 +8024,40 @@
       "files": [
         "src/manager.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T08:30:06",
+          "commit": "f5e26741127986b61e85a725e49613b761a1fc38",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c30d437ab4d79509b5926e8fe3c9cca32401d523",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-075419-f95bc0",
+              "level": "light",
+              "seconds": 1463.8,
+              "state": "done",
+              "what": "manager-periodic check suite at c30d437ab4d7"
+            }
+          ],
+          "final": true,
+          "from": "87a8d9cd45cb8836019acb830372f5a0067027d1",
+          "reason": "",
+          "tested": "750afae86b5415b7bbc8275b081687f41172aeb9"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "manager.cc's shutdown retry runs as a control::Periodic task",
-      "updated": "2026-11-17T07:53:39",
-      "worktree": "../Xapiand-wt/xapiand/manager-periodic"
+      "updated": "2026-11-17T08:30:23",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
