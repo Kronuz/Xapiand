@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: working
+State: waiting on jobs 261117-032048-bef4fe 261117-032504-3bf776 261117-032507-1bd2ec 261117-032510-cabfbf 261117-032521-37a35e 261117-023209-cd38c4
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,10 +18,14 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A10 (P13), performance assignment, same worktree and host: plan, rule and offline tool committed
-   (prospect `docs/perf/p13-positions.md`, `bench/quick/p13_positions.cc`); prototype EF-per-block
-   behind `PROSPECT_EXPERIMENT_P13` built (`.scratch/bin/p13`), 1M variant index building at
-   `.scratch/idx-p13`; next: parity (dump/verify), then the exclusive A/B and engines jobs.
+0. A10 (P13): prospect `docs/perf/p13-positions.md` (plan, rule, offline bytes), tool
+   `bench/quick/p13_positions.cc`, prototype `docs/perf/p13-positions.patch` (EF per block when
+   smaller, header 0xC0|l, `PROSPECT_EXPERIMENT_P13=1`), variant 1M index `.scratch/idx-p13`
+   (positions 342.13 MB vs 348.09, file 570.32 vs 576.29 MB, -1.04%), parity clean (dump both,
+   verify 0 mismatches, 962 queries). Jobs: bef4fe decode microbench, 3bf776 A/B (deciding),
+   1bd2ec engines over serve, cabfbf indexing speed, 37a35e ctest with the patch. When they land:
+   write the A/B, engines, four-axis table and verdict into the entry; Rice-from-length stays an
+   offline result (-11.0% positions, decode about 12x PFOR's in the screen).
 1. Jobs running/queued: 261117-023209-cd38c4 (before/after vs Lucene/Tantivy over serve, exclusive),
    261117-024522-d2facd (full ctest with the patch at bits 1+2), 261117-024524-7249b7 (build-test).
    Add the after-vs-Tantivy table to `docs/perf/p2-intersection.md` when cd38c4 lands.
@@ -57,6 +61,14 @@ main beats Lucene on every intersection row; Tantivy leads main at TOP_100/TOP_1
 Not measured: arm64, Linux, FreeBSD, the gate VM's 5M, PISA (not on this host).
 
 ## Rulings I made
+
+- A10: proximity is not measured: prospect's harness queries have no proximity class (no NEAR in
+  the gate set); phrase classes stand for P13's query axis.
+- A10: the length-based Rice code is judged offline (bytes, decode microbench, profile share), not
+  prototyped: it is bit-serial per document and cannot step over blocks, and its screened decode
+  is about 12x PFOR's against a 7-10% decode share of phrase rows.
+- A10: landing either codec bumps strata's `pre_freeze` (0x8000'000D to 0x8000'000E) with fixtures,
+  digest identity, a decoder fuzz target and a revert check (track-p Contracts, D30).
 
 - The prototype stays a patch in `docs/perf/` (source files are outside the file set); jobs apply
   it in their checkout.
