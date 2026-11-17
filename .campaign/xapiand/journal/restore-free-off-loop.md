@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: fixing F1 F2 F3 (review CHANGES at Xapiand:a6f6c9bbc); jobs queued after the push, ids under Next
+State: waiting on jobs 261116-173647-493966 261116-173649-1899c9 261116-173711-8e1b0c 261116-173713-f9cc67 261116-173716-2ec07a 261116-173718-ee8f9b 261116-173701-649dc3 261116-173701-c65330 and CI run 43996880543 at 25a3a4850
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -41,6 +41,10 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
 
 ## Next
 
+0. At 25a3a4850 (review fixes): mutants 261116-173647-493966, 261116-173649-1899c9 (--fails-without); items with the
+   awkward cases 261116-173711-8e1b0c; ABBA 261116-173713-f9cc67, 261116-173716-2ec07a and spin 261116-173718-ee8f9b
+   (exclusive, BASE merged master c6380001d); build-test 261116-173701-649dc3; e2e 261116-173701-c65330; CI run
+   43996880543 (the ASan unit job is F1's proof). Then record results in docs/perf/restore-stall.md and the table.
 1. Reruns at Xapiand:a6f6c9bbc (master merged again, BASE kept at Xapiand:49a73300d): ABBA 261116-163129-344a10,
    261116-163129-4fff0e; spin 261116-163130-b509cb (now with its own workdir); items 261116-163130-ab4353;
    mutants 261116-163130-1875e5, 261116-163130-006d68; build-test 261116-163133-9cc384; e2e 261116-163133-2c3c88.
@@ -85,6 +89,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | At Xapiand:a85559290, exclusive ABBA against master Xapiand:49a73300d: 261116-152341-b40b49 PASS (p99 1.44/1.61 ms, master 10.90/10.67, bound 2.76), 261116-152344-390c05 PASS (1.58/1.66, master 10.11/10.24, bound 2.77). Spin 261116-152346-3f7758 recorded nothing (harness bug, fixed). Reruns at a6f6c9bbc: 261116-163129-344a10, 261116-163129-4fff0e, spin 261116-163130-b509cb |
 | A2 | 261116-152341-b40b49 PASS (7,088 docs/s, master 6,686, floor 6,542), 261116-152344-390c05 PASS (7,119, master 6,711, floor 6,576); reruns 261116-163129-344a10, 261116-163129-4fff0e |
 | A3 | At a85559290: e2e 261116-152405-fc88a5, build-test 261116-152404-9e4b93, items 261116-152349-798018 (byte-identical), mutants 261116-153503-8232b1 (master's handler fails the results test), 261116-153509-f2b0ec (round-1 handler fails the off-loop test), all passed. Reruns at a6f6c9bbc: 261116-163133-2c3c88, 261116-163133-9cc384, 261116-163130-ab4353, 261116-163130-1875e5, 261116-163130-006d68 |
+| Review fixes at 25a3a4850 | pending: A1/A2 261116-173713-f9cc67, 261116-173716-2ec07a, spin 261116-173718-ee8f9b; A3 items (with F3's cases) 261116-173711-8e1b0c, mutants 261116-173647-493966, 261116-173649-1899c9, build-test 261116-173701-649dc3, e2e 261116-173701-c65330; CI 43996880543 |
 | A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" and "Fix, round 2: the 8 ms left" (with the exclusive table) |
 
 ## Result
