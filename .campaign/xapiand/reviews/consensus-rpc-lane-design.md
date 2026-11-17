@@ -91,3 +91,46 @@ No code exists, so nothing of A1-A7 was built or timed. I did not model one host
 across connections and roles (F8), nor unknown totals, nor fairness. I spot-checked citations, not
 every one (`peer-fetch.md` lines, `track-c.md:762-789` read in part). I did not judge Detent's side
 of the split beyond its quest file.
+
+## Round 2
+
+Commit: consensus:0fd8a7f (`docs/design/rpc-lane.md` revision 2, `rpc-lane-model.py`)
+Verdict: APPROVE
+Date: 2026-11-16
+
+Re-checked F1-F5 and F8 only, against revision 2 and the quest file at Xapiand:51b2de228.
+
+Evidence relied on, the lead's model jobs at 0fd8a7f, budgets 4/1:
+- Job 261116-210034-206f06, `drain,reorder`: holds, 1,553,861 states.
+- Job 261116-210037-5fa288, `early-end`: holds, 2,647,540 states.
+- Job 261116-210040-c06b73, `early-end,drain`: holds, 19,102,833 states.
+- Jobs 261116-210043-6fe73c through 261116-210106-216657: the eight mutants under the default
+  `drain,reorder` each fail (`split-release` with I4, `drain-ignored` with I6, `id-at-call` with I2).
+
+My probes (`.scratch/review-consensus-rpc-lane-design/run-r2.sh`):
+- Job 261116-210533-66c8fe (`contend`): reproduces 4/1 `drain,reorder` and all eight kills. At
+  4/2 the design holds (2,129,359 states), but `split-release` survives (6,922,011 states). The
+  server's first grant then covers the whole two-chunk request, so the stealing call never needs
+  a regrant.
+- Job 261116-210541-28e1c1 (`cross`): `early-end,reorder` holds (4,813,420 states). Every mutant
+  fails except `drain-ignored`, which is expected without `drain`, and `split-release`, which
+  survives (18,376,100 states). Under `early-end`, a server can always end a call whose request
+  credit stalled, so request-side liveness is not checked under that rule.
+
+| ID | Status | Note |
+|---|---|---|
+| F1 | resolved | Builders marked per decision; D9 lists this quest's part; steps 1-4 are the transport's; the request-direction bytes are in version 1; the quest's Contracts match |
+| F2 | resolved | D5 *Regrant*: `ByteBudget::renew`, atomic, the call's own bytes first; `split-release` killed at the shipped 4/1 `drain,reorder` |
+| F3 | resolved | D5 *Sending*: `rpc_outgoing_bytes` charged before queuing, FIFO wait, returned at the socket; A2 asserts its high water |
+| F4 | resolved | `Drain` (kind 6, D2-D4, T8), `not_processed` safe to retry; `drain-ignored` killed; A3 closes with a call in flight, with a `rpc-no-drain` control |
+| F5 | resolved | D3 rules 1-10 cover every case F5 named, in overflow-safe form; the codec checks 1-5 and the call table 6-10 |
+| F8 | resolved | The model runs at 4/1 with `drain`, `reorder` and `early-end`, and eight mutants; Limits name nested calls, fairness and what the model leaves out |
+
+New, non-blocking:
+
+| ID | Blocking | Kind | Finding | Fix |
+|---|---|---|---|---|
+| R1 | no | gap | Mutants are killed only under `drain,reorder` at 4/1. `split-release` survives at 4/2 and under `early-end` (jobs above) | The model's check row says the mutants run under the default rules at 4/1, as the lead's jobs do |
+| R2 | no | gap | `rpc_outgoing_bytes` is one host-wide FIFO pool. A slow peer's Bulk socket can hold up to 64 MiB of queued chunks, and writes to every other peer wait behind them | A per-connection cap on queued lane chunks (a few chunks, as D16 bounds unsent bytes), or a line in Limits |
+| R3 | no | nit | A `not_processed` retry needs a new connection while the old one drains. T6/T8 should say a draining connection does not count for the dial tie-break, so the retry is not refused `not_connected` or closed as a duplicate. A `Drain` id should have the receiver's parity or be 0 | One clause each in T6 and D3 rule 10 |
+| R4 | no | nit | For the lead: the quest's Decisions and Detent's consensus-transport A7 say T1-T7. The design now asks for T8 and `Drain` from that quest | The lead tells Detent's lead so that A7 gains T8 and `Drain` |
