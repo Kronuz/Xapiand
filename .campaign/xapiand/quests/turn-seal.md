@@ -27,6 +27,10 @@ open for the next turn; `forget(group)` unregisters the sealer.
   the budget always admits a turn's first record, so a full-size record seals (review R3): tests.
 - A4 `forget(group)` unregisters the sealer while a turn is open, and no sealer runs after it
   returns (a test, under TSan: the `tsan` check).
+- A7 `TurnLog::append` refuses a checkpoint record whose covered sequence is below the group's last
+  acknowledged record, at the lowest layer, so Journal, Host and strata standalone share one guard:
+  the document-gate design review's supersede probe (P1, Xapiand `.scratch/review-document-gate-design/
+  supersede.cc`) as a test, and a mutant without the guard failing it (`--fails-without`)
 - A5 [artifact] `docs/mechanisms/turn-seal.md` states the contract, and CHANGELOG.md the addition.
 - A6 The suite passes (the `build-test` check).
 
@@ -35,6 +39,9 @@ open for the next turn; `forget(group)` unregisters the sealer.
 Provides `journal:turn-seal` (API). Consumes `journal:turn-log` (RFTW0001, unchanged).
 
 ## Decisions
+
+- Detent's lead (2026-11-16): the supersede guard goes in TurnLog here (A7); consensus's Worker is
+  already safe (consensus:41ee584, `checkpoint_keeps_acknowledged`).
 
 - Detent's lead (2026-11-16): build it as a xapiand journal quest; Detent reviews. Shape notes from
   Detent are criteria A1-A4.
