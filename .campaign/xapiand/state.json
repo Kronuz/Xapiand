@@ -2990,7 +2990,11 @@
         "detent:consensus-driver",
         "detent:transport-connection",
         "detent:transport-groups",
-        "detent:rpc-lane-codec"
+        "detent:rpc-lane-codec",
+        "detent:transport-identity",
+        "detent:transport-idle-cost",
+        "detent:peers-retry-flake",
+        "detent:transport-groups-ci"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3179,7 +3183,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T04:27:58",
+      "updated": "2026-11-17T08:29:21",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
@@ -6657,6 +6661,44 @@
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
       "updated": "2026-11-15T23:05:08"
     },
+    "journal-seal-repeat": {
+      "accepted": {},
+      "after": [],
+      "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+      "branch": "quest/xapiand/journal-seal-repeat",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/turn_driver.h",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/journal-seal-repeat",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:driver"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "review",
+      "title": "A turn takes several records from one sealer",
+      "updated": "2026-11-17T10:36:41",
+      "worktree": "../journal-wt/xapiand/journal-seal-repeat"
+    },
     "key-field": {
       "accepted": {},
       "after": [],
@@ -8002,6 +8044,58 @@
       "title": "A name-only script request that misses the cache answers an error",
       "updated": "2026-11-16T22:50:16",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
+    },
+    "manager-periodic": {
+      "accepted": {},
+      "after": [],
+      "base": "9e3151e16f7af08deaa44adc4982bc14509dcca8",
+      "branch": "quest/xapiand/manager-periodic",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/manager.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-17T08:30:06",
+          "commit": "f5e26741127986b61e85a725e49613b761a1fc38",
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c30d437ab4d79509b5926e8fe3c9cca32401d523",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-075419-f95bc0",
+              "level": "light",
+              "seconds": 1463.8,
+              "state": "done",
+              "what": "manager-periodic check suite at c30d437ab4d7"
+            }
+          ],
+          "final": true,
+          "from": "87a8d9cd45cb8836019acb830372f5a0067027d1",
+          "reason": "",
+          "tested": "750afae86b5415b7bbc8275b081687f41172aeb9"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "manager.cc's shutdown retry runs as a control::Periodic task",
+      "updated": "2026-11-17T08:30:23",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
@@ -12612,6 +12706,8 @@
       "after": [
         "x-pool"
       ],
+      "base": "d9f4255a7f431385dfd0c8ee382eb7cc54236fbf",
+      "branch": "quest/xapiand/name-index",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -12646,10 +12742,15 @@
         "src/database/**",
         "src/engine/**",
         "src/server/search_views.cc",
+        "src/index_pattern.h",
+        "src/index_pattern.cc",
         "tests/**",
         "harness/**",
         "docs/design/name-index.md",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/reference-guide/api.md"
       ],
       "history": [
         {
@@ -12823,9 +12924,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-09T04:14:27"
+      "updated": "2026-11-17T08:21:54",
+      "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
       "accepted": {},
