@@ -1,40 +1,48 @@
 # consensus-rpc-lane: journal
 
-State: working
+State: design ready for review
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Design assignment done: consensus `docs/design/rpc-lane.md` and `docs/design/rpc-lane-model.py`
+at consensus:dbf559b (pushed on quest/xapiand/consensus-rpc-lane). No consensus sources touched:
+the quest is --after detent:consensus-transport and detent:consensus-driver.
 
 ## Next
 
-1. <step>
+1. Design review (lens `design`) of consensus:dbf559b; the lead answers Q1-Q4.
+2. The lead forwards T1-T7 (the doc's "Requirements on consensus-transport") to Detent's lead.
+3. After the driver and transport land: the doc's "First buildable steps" 1-4.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+The lead / owner: Q1 (where A4's Detent test runs; recommend this quest moves `Peers`' fetch onto
+lane frames), Q2 (file set: add CMakeLists.txt, fuzz/fuzz_decoders.cc, test/transport/peers_test.cc,
+docs/design/rpc-lane*, CHANGELOG.md, ARCHITECTURE.md), Q3 (the `fuzz` check configures without
+CONSENSUS_FUZZ and libFuzzer, so `ctest -R rpc_fuzz` would pass unfuzzed), Q4 (A2's "same
+connection": the lane is on Bulk, heartbeats on Control). Building waits on detent:consensus-transport.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1-A7 | none yet (design only); each has its check in the design's criteria table |
+| model | job 261116-200021-283afb (design passes); mutants must fail: 261116-200036-5f5bed forget-is-violation, 200040-9732b6 grant-without-reserve, 200044-7ce605 no-release-on-close, 200047-65d447 no-regrant, 200051-577a89 grant-on-receive |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Design: lane on the Bulk connection; frames `DTRP0001` + kind/flags/word/call id (24 bytes) with
+Call, Body, Credit, Cancel, Error and `end` as a flag; version range in the hello (DTHL0002);
+per-call cumulative credit from a lane budget separate from group credit; retired ids discard late
+frames; lane-only connections via hold/release; fetch becomes method 1 and DTFT0001 goes.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- R1 Lane on Bulk, not Control or a third connection (design D1).
+- R2 "End" is a flag on Call/Body, not a sixth kind: one way to end a stream, one-frame calls.
+- R3 Call ids by parity of the connection role (dialer odd), no direction bit.
+- R4 Per-call windows only; no lane-wide connection window (the grantor owns the memory).
+- R5 Overloaded calls are answered `Error overloaded`, never queued nor closing the connection.
+- R6 The model lives beside the design as docs/design/rpc-lane-model.py (a design artifact, not
+  consensus sources); the lead asked for one new file, the skill asks for an executable model.
