@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-091838-23ddb4 261117-091852-57ea00 261117-091856-a76548 261117-091901-6fcb16 261117-091906-801787 261117-091911-f1781d 261117-091916-4a93f1 261117-091931-76a727 261117-091936-03c7ff 261117-091940-c8e3b4 261117-091946-abd6b3 261117-091950-5486cf (F1 fix round at strata:94d73236)
+State: waiting on jobs 261117-122058-8a1058 261117-122105-d69a24 261117-122114-58e309 261117-122123-3b0f9a 261117-122132-b7e7f7 261117-122140-f6bc36 261117-122146-4905bb 261117-122153-b3653c 261117-122200-8f7079 261117-122207-91af71 261117-122213-71b50f 261117-122219-ff1809 (F1 fix round at strata:3d5ecedb; the first submission exited 127, zsh passed the flags as one word; resubmitted by .scratch/submit-f1.sh)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,11 +17,11 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 ## Next
 
 0. F1 fix round (D107, lead's option (c)), strata:94d73236 (code) and 3d5ecedb (docs). Jobs:
-   build-test 261117-091838-23ddb4; TSan lag+served+T4+T12+T3+T8+t6w 261117-091852-57ea00;
-   batch TSan 261117-091856-a76548; mutants (fails-without) M-s 261117-091901-6fcb16, M-t
-   261117-091906-801787 (lag), M-v 261117-091911-f1781d (t9o); review probe 261117-091916-4a93f1;
-   exclusive rows vs RocksDB: wal1 t3 261117-091931-76a727, sync1 261117-091936-03c7ff
-   261117-091940-c8e3b4 261117-091946-abd6b3, N-log (K=4 on 1 log) 261117-091950-5486cf. When
+   build-test 261117-122058-8a1058; TSan lag+served+T4+T12+T3+T8+t6w 261117-122105-d69a24;
+   batch TSan 261117-122114-58e309; mutants (fails-without) M-s 261117-122123-3b0f9a, M-t
+   261117-122132-b7e7f7 (lag), M-v 261117-122140-f6bc36 (t9o); review probe 261117-122146-4905bb;
+   exclusive rows vs RocksDB: wal1 t3 261117-122153-b3653c, sync1 261117-122200-8f7079
+   261117-122207-91af71 261117-122213-71b50f, N-log (K=4 on 1 log) 261117-122219-ff1809. When
    they finish: write the wal1 cost of the cap, the probe's lag, N2's p99.99 and the group-commit
    rows into docs/perf/standalone-turn-log.md; fill Evidence.
    A6 VM rows to rerun at the fix commit: wal1 and sync1 and N-log on Linux and FreeBSD
