@@ -5,7 +5,7 @@
       arm's trivial and trivial3 phases) (abba), and its spin run has no loop turn over 5 ms in the RESTORE phase (spin);
   A2: head's RESTORE docs/s is within base's A/A band (base's min minus base's spread) or faster (abba).
 
-Exits 0 when every check it can make holds.
+Exits 0 when every check it can make holds, and 1 when it finds nothing to check.
 
   harness/restore_stall_verdict.py OUTDIR [OUTDIR ...]
 """
@@ -51,6 +51,7 @@ def main() -> int:
             f"| trivial3 p99 {row['trivial3_p99']:6.2f} | {row['docs_s']:.0f} docs/s | errors {row['errors']}"
         )
     ok = True
+    checked = bool(arms["head"] and arms["base"])
     for out in outs:
         for arm in ("base", "head"):
             log = os.path.join(out, f"spin-{arm}", "node.log")
@@ -60,6 +61,7 @@ def main() -> int:
             longest = max(gaps, default=0)
             print(f"spin {arm}: {len(gaps)} loop turns over 3 ms in the RESTORE phase, longest {longest} us")
             if arm == "head":
+                checked = True
                 good = longest <= 5000
                 ok = ok and good
                 print(f"A1 (turns) {'PASS' if good else 'FAIL'}: head's longest loop turn {longest} us (bound 5,000)")
@@ -81,7 +83,9 @@ def main() -> int:
             f"against base {base_s} (mean {statistics.mean(base_s):.0f}, band floor {floor:.0f})"
         )
         ok = ok and a1 and a2
-    return 0 if ok else 1
+    if not checked:
+        print(f"FAIL: no A/B arms and no spin run of head in {' '.join(outs)}")
+    return 0 if ok and checked else 1
 
 
 if __name__ == "__main__":

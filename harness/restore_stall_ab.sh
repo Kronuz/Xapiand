@@ -26,7 +26,7 @@ abba)
 spin)
 	for arm in base head; do
 		python3 $P --bin "$(bin_of $arm)" --docs 20000 --idle-secs 1 --phases restore --spin 3000 \
-			--workdir .scratch/rs-spin --keep "$OUT/spin-$arm" --out "$OUT/spin-$arm.json" > "$OUT/spin-$arm.log" 2>&1 || echo "spin $arm failed"
+			--workdir .scratch/rs-spin-work --keep "$OUT/spin-$arm" --out "$OUT/spin-$arm.json" > "$OUT/spin-$arm.log" 2>&1 || echo "spin $arm failed"
 		python3 harness/restore_stall_stalls.py "$(bin_of $arm)" "$OUT/spin-$arm/node.log" --probe-log "$OUT/spin-$arm.log" \
 			--phase restore --top 5 --frames 8 > "$OUT/spin-$arm.stalls.txt" 2>&1
 	done
