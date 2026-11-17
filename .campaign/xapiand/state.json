@@ -20629,6 +20629,8 @@
     "turn-seal": {
       "accepted": {},
       "after": [],
+      "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+      "branch": "quest/xapiand/turn-seal",
       "checks": [
         {
           "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
@@ -20654,6 +20656,7 @@
         "docs/mechanisms/turn-seal.md",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/turn-seal",
       "landed": [],
       "lenses": [
         "durability"
@@ -20665,9 +20668,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-16T20:53:29"
+      "updated": "2026-11-16T20:53:51",
+      "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
       "accepted": {
