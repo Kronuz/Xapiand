@@ -889,6 +889,19 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 {
 	assert(owner == std::this_thread::get_id());  // a Processor is its thread's own
 
+	// A call is user code that can hold the reactor for a stretch no hook interrupts (a library call), so it runs in the
+	// heavy lane from its first turn and leaves it on exit (docs/design/loop-scheduling.md D7). It holds nothing yet.
+	const bool light = task::current() && !task::current().heavy();
+	if (light) {
+		co_await task::schedule_on{task::current().with_heavy(true)};
+	}
+	struct LightOnExit {
+		bool light;
+		~LightOnExit() {
+			if (light) { task::enter_light(); }
+		}
+	} light_on_exit{light};
+
 	// One call per state: the cached state when it is free; else a small script's call compiles one of its own
 	// and a large script's call waits for the cached state.
 	task::async_mutex::guard held;

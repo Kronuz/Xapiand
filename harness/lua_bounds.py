@@ -127,7 +127,20 @@ FINISH_CASES = [
 LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
 
 # X4-R1: what a client can re-send as fast as the 400 returns; each makes one uninterruptible call that runs to the per-call cap.
+
+
+def timed(call):
+    t0 = time.perf_counter()
+    call()
+    return (time.perf_counter() - t0) * 1000
+
+
 FLOOD_SCRIPT = "local s = string.rep('a', 1048576) s:find('.-b')"
+
+# Heavy turns a light request waits for: one per hop through the loop (its read and its database chore), beside the stretch in progress.
+FLOOD_STRETCHES = 2
+
+TINY_SCRIPT = "_doc.x = (_doc.x or 0) + 1"
 
 LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
 
@@ -221,6 +234,117 @@ def percentile(values, q):
     return values[min(len(values) - 1, int(len(values) * q))] if values else 0.0
 
 
+class Conn:
+    """One keep-alive connection: the latency of a request, in ms, without the connect."""
+
+    def __init__(self, port):
+        self.conn = http.client.HTTPConnection("127.0.0.1", port, timeout=60)
+
+    def timed(self, method, path, body=None):
+        data = json.dumps(body) if body is not None else None
+        t0 = time.perf_counter()
+        self.conn.request(method, path, data, {"Content-Type": "application/json"} if data else {})
+        resp = self.conn.getresponse()
+        resp.read()
+        return resp.status, (time.perf_counter() - t0) * 1000
+
+
+def cost_main(args, tmp, port):
+    """What the heavy-lane call costs and buys, on a node of --processors (default 1) reactors:
+    1. a tiny scripted write alone (an idle heavy lane runs at once, so its p50 and p99 should not move);
+    2. the same beside 8 clients that only GET (a light-only load);
+    3. the light GET's p99 beside 1, 2, 4, 8 and 16 clients flooding the per-call cap, against (FLOOD_STRETCHES + 1) x one call.
+    --check fails when a row passes its limit; without it the rows are only measured (the baseline at master)."""
+    failures = []
+    rows = {}
+    ok_doc = script_doc(TINY_SCRIPT, x=1)
+    request(port, "PUT", "/lua_ok/doc?commit", ok_doc)
+
+    def stats(series):
+        return {"n": len(series), "p50_ms": round(percentile(series, .5), 3), "p99_ms": round(percentile(series, .99), 3), "max_ms": round(max(series), 3)}
+
+    def tiny_writes(count, stop=None):
+        conn, series = Conn(port), []
+        i = 0
+        while (stop is None and i < count) or (stop is not None and not stop.is_set()):
+            status, ms = conn.timed("PUT", f"/lua_tiny/d{i % 64}", ok_doc)
+            if not 200 <= status < 300:
+                failures.append(f"a tiny scripted write answered {status}")
+                break
+            series.append(ms)
+            i += 1
+        return series
+
+    tiny_writes(100)   # warms the script's cache and the index
+    idle = tiny_writes(args.cost_writes)
+    rows["tiny_idle"] = stats(idle)
+    print(f"tiny scripted write alone: {rows['tiny_idle']}")
+
+    stop = threading.Event()
+
+    def getter():
+        conn = Conn(port)
+        while not stop.is_set():
+            conn.timed("GET", "/lua_ok/doc")
+
+    getters = [threading.Thread(target=getter) for _ in range(8)]
+    for t in getters:
+        t.start()
+    beside = tiny_writes(args.cost_writes)
+    stop.set()
+    for t in getters:
+        t.join()
+    rows["tiny_beside_light"] = stats(beside)
+    print(f"tiny scripted write beside 8 GET-only clients: {rows['tiny_beside_light']}")
+
+    if args.rows_only:
+        if args.out:
+            with open(args.out, "w") as fh:
+                json.dump(rows, fh, indent=1)
+        return failures if args.check else []
+
+    solo = sorted(timed(lambda: request(port, "PUT", "/lua_solo/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)) for _ in range(9))
+    hold_ms = solo[len(solo) // 2]
+    limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else (FLOOD_STRETCHES + 1) * hold_ms
+    print(f"one flood call alone: {hold_ms:.1f} ms; p99 limit {limit_ms:.1f} ms ({FLOOD_STRETCHES + 1} calls)")
+    sweep = {}
+    for clients in (1, 2, 4, 8, 16):
+        flood_stop = time.time() + args.cost_secs
+        statuses = []
+        gets = []
+
+        def flooder(i):
+            while time.time() < flood_stop:
+                statuses.append(request(port, "PUT", f"/lua_flood{i}/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)[0])
+
+        def prober():
+            conn = Conn(port)
+            while time.time() < flood_stop:
+                gets.append(conn.timed("GET", "/lua_ok/doc")[1])
+                time.sleep(0.002)
+
+        threads = [threading.Thread(target=flooder, args=(i,)) for i in range(clients)] + [threading.Thread(target=prober)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        sweep[clients] = {**stats(gets), "floods": len(statuses), "statuses": sorted(set(statuses))}
+        print(f"light GET beside {clients} flooding clients: {sweep[clients]}")
+        if sweep[clients]["p99_ms"] > limit_ms:
+            failures.append(f"light GET p99 {sweep[clients]['p99_ms']:.1f} ms beside {clients} flooding clients (limit {limit_ms:.1f})")
+        if sweep[clients]["statuses"] != [400]:
+            failures.append(f"the flooding requests answered {sweep[clients]['statuses']}")
+    rows["sweep"] = sweep
+    rows["hold_ms"] = hold_ms
+    rows["limit_ms"] = limit_ms
+    if args.out:
+        with open(args.out, "w") as fh:
+            json.dump(rows, fh, indent=1)
+    if not args.check:
+        return []
+    return failures
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("binary")
@@ -229,15 +353,23 @@ def main():
     ap.add_argument("--max-bound-secs", type=float, default=30.0)
     ap.add_argument("--max-light-ms", type=float, default=50.0)
     ap.add_argument("--flood-clients", type=int, default=16)
-    ap.add_argument("--max-flood-p99-ms", type=float, default=100.0)
+    ap.add_argument("--max-flood-p99-ms", type=float, default=None,
+                    help="fixed flood limit; by default (FLOOD_STRETCHES + 1) x the median of one flood call timed alone on this node")
+    ap.add_argument("--processors", type=int, help="reactors of the node (default: its core count)")
     ap.add_argument("--out")
+    ap.add_argument("--cost", action="store_true", help="only the heavy-lane call's cost and the flood sweep (cost_main)")
+    ap.add_argument("--check", action="store_true", help="with --cost: fail when a sweep row passes its limit")
+    ap.add_argument("--rows-only", action="store_true", help="with --cost: the tiny-write rows only, no sweep")
+    ap.add_argument("--cost-writes", type=int, default=2000)
+    ap.add_argument("--cost-secs", type=float, default=5.0)
     args = ap.parse_args()
 
     scratch = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".scratch")
     os.makedirs(scratch, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=scratch)
     node = subprocess.Popen(
-        [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")],
+        [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")]
+        + (["--processors", str(args.processors)] if args.processors else ["--processors", "1"] if args.cost else []),
         stdout=open(os.path.join(tmp, "node.log"), "w"), stderr=subprocess.STDOUT)
     failures = []
     report = {"bounds": [], "slices": {}}
@@ -254,6 +386,14 @@ def main():
         else:
             print("node did not come up")
             return 2
+
+        if args.cost:
+            failures = cost_main(args, tmp, args.port)
+            if failures:
+                print("FAILED:", *failures, sep="\n  ")
+                return 1
+            print("DONE")
+            return 0
 
         status, _ = request(args.port, "PUT", "/lua_ok/doc?commit", script_doc("_doc.x = _doc.x * 2", x=21))
         print(f"plain script: {status}")
@@ -404,6 +544,12 @@ def main():
             failures.append(f"a light GET took {max(lib_loaded):.1f} ms while library-call loops ran (limit {args.max_light_ms})")
         # X4-R1: clients re-sending a worst-case single call as fast as it answers. Every call ends at the per-call cap, so the
         # light GETs' p99 is bounded by the cap (about 20 ms) plus the host's load, not by the whole-call cap.
+        # The control: one flood call timed alone is the stretch a reactor cannot yield inside on this host.
+        solo = sorted(timed(lambda: request(args.port, "PUT", "/lua_solo/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)) for _ in range(9))
+        hold_ms = solo[len(solo) // 2]
+        # A script call runs in the heavy lane (loop-scheduling D7), so a light GET waits for the stretch in progress and one heavy
+        # turn for each of its (at most) two hops through the loop: FLOOD_STRETCHES + 1 stretches, whatever the clients or reactors.
+        flood_limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else (FLOOD_STRETCHES + 1) * hold_ms
         flood_statuses = []
         flood_stop = time.time() + 6.0
 
@@ -425,11 +571,12 @@ def main():
         print(f"light GET beside {args.flood_clients} clients flooding the per-call cap: n={len(flooded)} p50={percentile(flooded, .5):.2f} ms p99={percentile(flooded, .99):.2f} ms max={max(flooded):.2f} ms; "
               f"{len(flood_statuses)} requests answered, {sorted(set(flood_statuses), key=str)}")
         report["slices"]["flood"] = {"clients": args.flood_clients, "n": len(flooded), "p50_ms": percentile(flooded, .5), "p99_ms": percentile(flooded, .99),
-                                     "max_ms": max(flooded), "requests": len(flood_statuses), "lag": flood_lag}
+                                     "max_ms": max(flooded), "requests": len(flood_statuses), "hold_ms": hold_ms, "limit_ms": flood_limit_ms, "lag": flood_lag}
         if set(flood_statuses) != {400}:
             failures.append(f"the flooding requests answered {sorted(set(flood_statuses), key=str)}")
-        if percentile(flooded, .99) > args.max_flood_p99_ms:
-            failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {args.max_flood_p99_ms})")
+        print(f"one flood call alone: {hold_ms:.1f} ms; p99 limit {flood_limit_ms:.1f} ms ({FLOOD_STRETCHES + 1} calls)")
+        if percentile(flooded, .99) > flood_limit_ms:
+            failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {flood_limit_ms:.1f})")
         node.terminate()
         try:
             node.wait(timeout=20)
