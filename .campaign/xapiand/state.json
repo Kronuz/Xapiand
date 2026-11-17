@@ -20087,6 +20087,33 @@
       "updated": "2026-11-12T13:16:29",
       "worktree": ""
     },
+    "t10-flood-limit": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/lua_bounds.py",
+        "docs/dev/t10-flood-limit.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "T10's flood p99 limit scales with the host's cost per call",
+      "updated": "2026-11-16T21:51:25"
+    },
     "t11-barriers": {
       "accepted": {},
       "after": [],
