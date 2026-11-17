@@ -45,8 +45,9 @@ driver's quorum-probe read (D4), and closes only after a checkpoint covers its a
   answer matches its effect, the invalid one answered 400 and never submitted again, and no second
   submission; with a predictor that misses the fields mark, every request answered within three
   placements (503 after the third), a deposed proposer's refused merge forwarded once and answered
-  by the leader; a leader stalled on `no_space` hands leadership to a follower applied past it; mutants that acknowledge at commit and that prepare
-  before the ready point fail (tests)
+  by the leader; a leader stalled on `no_space` hands leadership to a follower applied past it;
+  mutants that acknowledge at commit, that prepare before the ready point, and that lift the
+  bound fail (tests)
 - A4 On a leader partitioned away and deposed, `read_applied` after `Driver::read` never returns a
   state older than a committed write; a mutant that skips the probe fails (`--fails-without`, a
   simulation-style test); a mutant that publishes the applied position before strata's write is
