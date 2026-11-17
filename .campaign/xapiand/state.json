@@ -4233,7 +4233,8 @@
         "include/strata/core/**",
         "test/**",
         "CMakeLists.txt",
-        "docs/design/standalone-turn-log.md"
+        "docs/design/standalone-turn-log.md",
+        "fuzz/**"
       ],
       "history": [
         {
@@ -4275,7 +4276,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-16T20:03:49",
+      "updated": "2026-11-16T20:42:21",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
