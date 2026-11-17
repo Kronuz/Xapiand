@@ -4159,7 +4159,11 @@
         "docs/gates/document-profile.md",
         "bench/kv/**",
         "docs/perf/**",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "include/strata/core/**",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/design/standalone-turn-log.md"
       ],
       "history": [
         {
@@ -4201,7 +4205,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-16T19:44:10",
+      "updated": "2026-11-16T20:03:49",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
