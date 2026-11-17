@@ -6743,7 +6743,8 @@
         "cmake/**",
         "contrib/**",
         "stopwords/**",
-        "mime.types"
+        "mime.types",
+        "docs/mechanisms/third-party-notices.md"
       ],
       "history": [
         {
@@ -6859,7 +6860,7 @@
       "risk": "normal",
       "status": "active",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T15:22:12",
+      "updated": "2026-11-16T19:44:18",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
