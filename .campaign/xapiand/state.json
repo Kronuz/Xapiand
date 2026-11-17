@@ -1,37 +1,6 @@
 {
   "campaign": "xapiand",
   "ci": "github",
-  "landing": {
-    "at": "2026-11-16T22:48:31",
-    "criteria": {
-      "A1": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-185852-7c38a4, 261116-200155-3846f1",
-      "A2": "docs/mechanisms/lua-memory.md (unbounded wait; C1 error)",
-      "A3": "261116-200158-58b4cd (the suite check), 261116-200158-58b4cd (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md)",
-      "A4": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-200151-314f45"
-    },
-    "evidence": [
-      {
-        "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
-        "commit": "4e4f647b3506fba6aec36712efac17bcc702b430",
-        "docs": [
-          "docs/dev/test-pool-flake.md"
-        ],
-        "exit": 0,
-        "host": "kronuz",
-        "job": "261116-200158-58b4cd",
-        "level": "light",
-        "seconds": 568.9,
-        "state": "done",
-        "what": "lua-name-miss check suite at 4e4f647b3506"
-      }
-    ],
-    "final": true,
-    "from": "2ddf6232761949ef9de3ecf372e3be559f0766c3",
-    "id": "lua-name-miss",
-    "mode": "ff",
-    "reason": "",
-    "target": "00d8148571b6a22e0b3ec5a66e2abf5c1842a85c"
-  },
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
@@ -7806,7 +7775,38 @@
         "src/database/schema.*",
         "tests/test_schema*.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T22:50:16",
+          "commit": "00d8148571b6a22e0b3ec5a66e2abf5c1842a85c",
+          "criteria": {
+            "A1": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-185852-7c38a4, 261116-200155-3846f1",
+            "A2": "docs/mechanisms/lua-memory.md (unbounded wait; C1 error)",
+            "A3": "261116-200158-58b4cd (the suite check), 261116-200158-58b4cd (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md)",
+            "A4": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-200151-314f45"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "4e4f647b3506fba6aec36712efac17bcc702b430",
+              "docs": [
+                "docs/dev/test-pool-flake.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-200158-58b4cd",
+              "level": "light",
+              "seconds": 568.9,
+              "state": "done",
+              "what": "lua-name-miss check suite at 4e4f647b3506"
+            }
+          ],
+          "final": true,
+          "from": "2ddf6232761949ef9de3ecf372e3be559f0766c3",
+          "reason": "",
+          "tested": "00d8148571b6a22e0b3ec5a66e2abf5c1842a85c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -7815,9 +7815,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T20:45:54",
+      "updated": "2026-11-16T22:50:16",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
