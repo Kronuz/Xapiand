@@ -20369,7 +20369,10 @@
         "tests/test_loop_yield.cc",
         "harness/lua_bounds.py",
         "docs/design/loop-scheduling.md",
-        "docs/dev/t10-flood-limit.md"
+        "docs/dev/t10-flood-limit.md",
+        "src/lua/**",
+        "tests/test_lua*.cc",
+        "docs/mechanisms/lua*.md"
       ],
       "history": [
         {
@@ -20417,8 +20420,8 @@
       "repo": ".",
       "risk": "normal",
       "status": "active",
-      "title": "An over-slice turn counts every slice it spent",
-      "updated": "2026-11-16T23:45:00",
+      "title": "A long Lua call yields at each slice, so it turns heavy",
+      "updated": "2026-11-17T01:19:18",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
