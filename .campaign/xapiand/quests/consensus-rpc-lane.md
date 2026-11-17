@@ -34,11 +34,18 @@ opens connections between any two nodes, not only those sharing a group. Detent'
 
 ## Contracts
 
-Provides `consensus:rpc-lane` (wire): the lane's frames (method id, call id, deadline, cancel,
-credit grant, body chunk, end, error), versioned through the `DTHL0001` hello's range. Consumes
-`consensus:transport` from Detent's quest. `format-freeze` reviews these bytes.
+Consumes `consensus:rpc-lane` (wire) from `detent:consensus-transport`, whose A7 builds the lane's
+frames, call table, versioning through the `DTHL0002` hello and lane-only connections; this repo's
+`docs/design/rpc-lane.md` stays the one spec of those bytes, with every decision marked by who builds
+it. This quest provides streamed request bodies and Xapiand's methods on top and changes no byte:
+the request-direction fields (`Call.total`, request `Body` and `Credit`) are in version 1.
+`format-freeze` reviews these bytes.
 
 ## Decisions
+
+- Lead (2026-11-16, design review F4): a call racing an idle close or shutdown is settled by a
+  `Drain` frame carrying the last accepted call id (HTTP/2 GOAWAY's shape), sent before any close;
+  Detent's transport quest builds it with the other frames.
 
 - Scope (Detent's lead, 2026-11-16): `detent:consensus-transport` owns the request/response lane
   and moves fetch onto it (criterion A7 holds T1-T7). This quest adds streamed request bodies and
