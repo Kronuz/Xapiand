@@ -1,6 +1,6 @@
 # t10-flood-limit: journal
 
-State: waiting on jobs (ABBA 52bbdf ac1d98 4a9b4c a1e5d9 b5fa04 b0633c; mutant 5e1452; reruns 6a526c abdc04 448daa; suite d945e6)
+State: waiting on jobs, exclusive chain 016422 79af24 a10581 e8623e 739b28 ccb986 0ea9e1 ea75e8 afc6c2 9ae194
 Quest: .campaign/xapiand/quests/t10-flood-limit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,6 +19,12 @@ Jobs (f0fe7e failed on a wrong binary path, eec143/5d02bf were cancelled by me f
 (2 + 1) x one flood call. Their logs: /Users/kronuz/.scratch/t10-flood-limit/cost-{master,fix}.{log,json}.
 
 ## Next
+
+0. The strict ABBA was contaminated by light holds (fix idle p99 64.9/1.79/73.1 ms, p50 21 ms in F1; master stable 1.22/1.47/1.74; fix sweep
+   448daa failed 102.7 ms against 76.7 with a 25.6 ms call, beside the suite's build). Rerun at `exclusive` by /Users/kronuz/.scratch/t10-flood-limit/abba-x.sh:
+   M F F M M F M M (rows only; the last two are the A/A pair), then the sweep once per commit (SM master 261117-022543-afc6c2, SF fix
+   261117-022547-9ae194). If the fix's idle or beside-light p99 stays above the A/A spread, time the hop's enter-to-run latency at idle.
+   Mutant 5e1452, tests 6a526c and the suite d945e6 passed at fbd5d8ab4.
 
 1. When f0fe7e passes: submit the mutant job (`--fails-without`: sed the hop line out of src/lua/processor.cc, build, run test_lua).
 2. Read the cost rows: if tiny-write p50/p99 idle or beside light regress, report the numbers before landing.
