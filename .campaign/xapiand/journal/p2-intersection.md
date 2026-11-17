@@ -19,7 +19,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | at 0aad777 (tests only since 387a47f; reader.hh unchanged): build-test 261117-072238-8ce0c3; mutants 0-9 as --fails-without jobs 261117-072240-309cc3, -072244-880b46, -072248-575707, -072252-14b5e4, -072256-38c7b0, -072300-99692a, -072304-ae8cc7, -072309-65fc3b, -072314-efd042, -072319-fd1112 (survivors of the previous round, 0 2 3 4 6, were not killed by it: the test only advanced to each target from a fresh iterator, which never reached the compare past the probes; strides now do, and tail terms of 30 postings pad-check it) |
+| A1 | at 0aad777 (tests only since 387a47f; reader.hh unchanged): build-test 261117-072238-8ce0c3; mutants 0-9 as --fails-without jobs 261117-072240-309cc3, -072244-880b46, -072248-575707, -072252-14b5e4, -072256-38c7b0, -072300-99692a, -072304-ae8cc7, -072309-65fc3b, -072314-efd042, -072319-fd1112 (mutant 4, -072256-38c7b0, survives and is equivalent: ordinals strictly increase, so when base[half] equals the target `<=` moves base onto that slot and the final `*base < target` is then 0, the same position `<` reaches; mutants 7-9 were still running when this was written; survivors of the previous round, 0 2 3 4 6, were not killed by it: the test only advanced to each target from a fresh iterator, which never reached the compare past the probes; strides now do, and tail terms of 30 postings pad-check it) |
 | A2 | job 261117-060144-9cd5a2 and the 387a47f identity job (lead: green); reader.hh identical at 0aad777 |
 | A3 | 1M A/B 261117-065724-58ce08 (exclusive, 7 rounds, A/A c/a 0.95-1.08) and short-list probe 261117-065716-5491a6 (exclusive), at 387a47f; numbers in Result |
 | A4 | CI green at 387a47f (lead); rerun at 0aad777 pending |
