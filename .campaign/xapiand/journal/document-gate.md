@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-082401-124c5c 261117-085159-309a79 (A6 builds; row jobs queued after them, ids in Evidence A6) 261117-075713-601c02 261117-075726-9eb435 261117-075737-0c8aec 261117-075748-8a784a 261117-075800-5c7ffa 261117-075821-5866e7 261117-075429-907b22 261117-075430-571f74 261117-075441-a3837d 261117-075442-939866 261117-075442-e8e160 261117-075443-3e1d5f (durability review running at strata:12f59669)
+State: blocked on lead: D107 step 1 (F1), journal's sealer returns one record per call; options under "Blocked on". A6 and A7 jobs at strata:12f59669 still queued (ids under Evidence), untouched
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,6 +30,26 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 3. The durability review's findings. Don't change reviewed code unless a rerun fails.
 
 ## Blocked on
+
+- D107 step 1 (F1), 2026-11-17: journal cc95ba6 (= journal main) cannot carry several records
+  per sealer call. `Sealer` is `optional<TurnRecord>(room, first)`, one record at the group's
+  staged + 1; `seal_turn` (turn_driver.h:451-506) calls each group's sealer once per turn, and
+  `room` budgets that one record. Merging closed records into one strata record would move
+  positions {s, j} already handed to `applied` (ruled: records stay whole). Packing needs a
+  journal contract change, so I stopped; no code changed. Options:
+  (a) Journal, with Detent: `seal_turn` calls a sealer again with the room left (first =
+      false) until it returns nothing ("until nothing", not "once"); about ten lines plus a
+      journal test. Then D107 as written: pack plus a byte-bounded backlog.
+  (b) Strata only: apply waits while a closed record is unsealed (backlog = one command). The
+      window is one barrier plus one write; memory is open + closed + in flight, three
+      commands per index. Throughput caps at one record per turn: kv_strata's 1 MiB command at
+      ~21 ms barriers is about 48 MiB/s, roughly 400k ops/s at 120 B against wal1's 924k.
+      turn_sealer requires segment >= 2 x framed(command), so kv_strata can raise its command
+      to half its segment (2 MiB at 4 MiB, 4 MiB at 8 MiB); packing's ceiling is the whole
+      room, about two such records per turn.
+  (c) (b) now, then (a) as a throughput change measured on the wal rows.
+  Recommendation: (c). (b) gives D107's bound and bounded memory inside the file set today;
+  what it costs on wal1 is measured and is exactly what (a) wins back.
 
 - (ruled D105: option (b) on own VMs, arm64 by CI smoke now) A6 (platform rows): what is owed is every A3 row set on Linux x86_64, FreeBSD
   x86_64 and arm64: fits1 (13 rows), twox1 (13), big1 (10x: 3 rows, and the 10x rows A3 still
