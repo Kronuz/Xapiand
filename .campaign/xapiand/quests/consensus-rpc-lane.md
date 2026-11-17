@@ -24,8 +24,9 @@ opens connections between any two nodes, not only those sharing a group. Detent'
   (`--fails-without`)
 - A3 A call between two nodes that share no group connects, completes and is accounted to no group
   (a test)
-- A4 Detent's history fetch is expressed as one method, with its existing test passing over the
-  lane (a test)
+- A4 Xapiand's methods (at least one real call, e.g. a remote search) run over the lane that
+  `detent:consensus-transport` provides, with streamed bodies; the lane's base frames, fetch as
+  method 1 and DTFT0001's removal are that quest's, not this one's (a test)
 - A5 Under the load that broke `detent:consensus-fetch-macos` on macOS, a streamed body's bytes
   equal the source's SHA-256 over 1,000 calls with zero errors (a job on macOS, and on Linux in CI)
 - A6 One CPU-hour of fuzzing on the lane's frame decoder, zero findings (the `fuzz` milestone check)
@@ -38,6 +39,11 @@ credit grant, body chunk, end, error), versioned through the `DTHL0001` hello's 
 `consensus:transport` from Detent's quest. `format-freeze` reviews these bytes.
 
 ## Decisions
+
+- Scope (Detent's lead, 2026-11-16): `detent:consensus-transport` owns the request/response lane
+  and moves fetch onto it (criterion A7 holds T1-T7). This quest adds streamed request bodies and
+  Xapiand's methods on top, and never ports today's `Peers` fetch (D102: no building on code about
+  to be deleted).
 
 - Design D9: one transport between nodes; a second TLS listener or HTTP between nodes is
   rejected.
