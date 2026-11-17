@@ -1,31 +1,26 @@
 # t10-flood-limit: T10's flood p99 limit scales with the host's cost per call
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status t10-flood-limit`.
+Risk: low (a harness). The lead writes this quest; contributors read it and never edit it.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+T10's "light GET beside 16 clients flooding the per-call cap" row failed on FreeBSD CI at 110-123 ms
+against a constant 100 ms set on the dev host. The exploration (`explore/t10-flood`,
+docs/dev/t10-flood-limit.md) found the mechanism sound: on one reactor a light GET waits behind a
+flood call that runs its whole ~22 ms per-call cap, and the CI VM's cost per call swings ~30% between
+runs. The limit becomes 6x the median of nine flood calls timed alone on the same node.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 [manual] FreeBSD CI's rows pass at the landing commit, and the run's T10 log shows the derived
+  limit and its median (lead).
+- A2 [artifact] `docs/dev/t10-flood-limit.md` states the derivation and the caveat that the per-call
+  cap cases still cover a longer cap.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead: a limit derived from a control measured in the same run, never a constant tuned to a host.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
