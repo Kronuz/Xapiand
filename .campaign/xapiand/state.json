@@ -6661,6 +6661,39 @@
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
       "updated": "2026-11-15T23:05:08"
     },
+    "journal-seal-repeat": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/turn_driver.h",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:driver"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "A turn takes several records from one sealer",
+      "updated": "2026-11-17T09:12:59"
+    },
     "key-field": {
       "accepted": {},
       "after": [],
