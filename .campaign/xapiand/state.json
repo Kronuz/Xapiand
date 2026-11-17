@@ -7576,6 +7576,36 @@
       "updated": "2026-11-16T15:58:01",
       "worktree": ""
     },
+    "lua-name-miss": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/lua/**",
+        "src/script*",
+        "tests/test_lua*.cc",
+        "docs/mechanisms/lua*.md",
+        "docs/src/content/docs/reference/scripting*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A name-only script request that misses the cache answers an error",
+      "updated": "2026-11-16T18:57:23"
+    },
     "manifest-log": {
       "accepted": {
         "design": {
