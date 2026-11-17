@@ -20525,9 +20525,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A script call runs in the heavy lane",
-      "updated": "2026-11-17T01:21:21",
+      "updated": "2026-11-17T03:37:53",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
