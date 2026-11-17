@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -56,7 +56,7 @@ both models extended (`docs/design/cluster-release/`).
 |---|---|
 | A1-A9 | none yet: design only, nothing built |
 | Models, round 1 | `bundle_model.py` job 261117-024523-dd3b4d and `verdict_model.py` job 261117-024526-a92827, both exit 0 at Xapiand:faf31a50635b |
-| Models, round 2 | pending |
+| Models, round 2 | `bundle_model.py` job 261117-025944-a43484 and `verdict_model.py` job 261117-025949-8a87ce, both exit 0 at Xapiand:904f8c6a7038 |
 
 ## Result
 
