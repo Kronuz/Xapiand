@@ -286,6 +286,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D101 | 2026-11-16 | Package license metadata is plain `MIT` (license audit A26). Third-party notices live in NOTICE and THIRD-PARTY-NOTICES. Owner. |
 | D102 | 2026-11-17 | Owner approved starting group-core (critical), on Detent's landed Driver at consensus:57745e8; a design review precedes building. A8 (release level set) keeps the lead default (a) until cluster-release Q2 is answered. | owner |
 | D103 | 2026-11-17 | document-gate's turn-log questions take the design's option 1: Q3 states the read-your-writes gap under `ack=none`, Q4 keeps `log_lost`, Q5 keeps the 64 MiB command limit on a logged index (gate report notes the narrowing). The owner wants parity or better with RocksDB and the other engines soon: quest turn-log-parity closes all three after document-gate. | owner |
+| D104 | 2026-11-17 | document-gate design Q1 and Q2 (technical, lead): Q1 one turn log per core as D11 says; macOS `F_FULLFSYNC` calls coalesce across logs (1 log 46 calls/s at 21 ms; 8 logs 185 calls/s at 42 ms), while a per-device log serializes every core on one turn. Q2 the `wal1` row runs `ack=none` on the log with D4's crash windows stated in the row, never claimed as equal durability (consistent with D103). | lead |
 
 ## Pending owner
 

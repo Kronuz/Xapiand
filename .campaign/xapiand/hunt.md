@@ -177,12 +177,27 @@ quest starts (name it) or is dropped with a reason.
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
 - N1 journal `TurnDriver`: a Sealer can be destroyed while `sealers_mutex_` is held; a sealer whose captures call back into the driver deadlocks. Destroy outside the lock.
-- N2 (taken by detent:journal-host-guards A2) journal `TurnDriver::wake()`: ignores a false `post_call`; "any thread" needs a thread-safe `post_call` in the scheduler. State the requirement or handle the false return.
+- N2 (done: journal:cc95ba6, journal-host-guards A2) journal `TurnDriver::wake()`: ignores a false `post_call`; "any thread" needs a thread-safe `post_call` in the scheduler. State the requirement or handle the false return.
 - N3 journal: `covers` is `record_sequence_` by construction on the Journal path, so the supersede guard can't fire there; bench/fuzz/placement pass `sequence - 1` and never exercise a refusal. Add a refusal case to the fuzz target.
 - N4 journal: sealers can starve while staged records fill every turn (unlikely at 64 MiB segments). Bound it or document it.
 - N5 journal: a sealer calling `commit()` from inside itself is not refused.
 
 ## group-core design review follow-ups (2026-11-17)
 
-- (taken by detent:journal-host-guards A1) journal `Host::close_group` (host.h:321-328) forgets every record after the sequence it is given without checking it is the group's last; the turn-seal supersede guard covers only `TurnLog::append`. Route to consensus-quiescence or a journal fix (tell Detent).
+- (done: journal:cc95ba6, journal-host-guards A1) journal `Host::close_group` (host.h:321-328) forgets every record after the sequence it is given without checking it is the group's last; the turn-seal supersede guard covers only `TurnLog::append`. Route to consensus-quiescence or a journal fix (tell Detent).
 - At rf = 1, group-core's `ack=none` and `ack=quorum` wait for the same barrier (unlike document-gate's `ack=none`); quest 10's A4 (Q14, journal at `none` at least as fast as the WAL's async default) likely loses on single-client latency. Decide with turn-log-parity's Q3 work.
+
+## group-core step 1 findings (2026-11-17)
+
+- At consensus's default limits a group checkpoint never gets its admission reservation and waits forever (group-core journal, strata:0d6486006cc3). Size the admission replacement pool to its limits in quest 10, or fail the checkpoint loudly instead of waiting; tell Detent if the default is consensus's.
+- strata's faultfs has no owner lock (`lock_owner`); group-core's `test/group/host_io.hh` adds one locally. Move it into faultfs so every crash harness shares one.
+
+## t10-flood-limit correctness review follow-ups (2026-11-17)
+
+- F3 (explained: P2's stack sample shows reactor-0 inside the flooders' `str_find_aux`/`match`, the light-lane starvation t10-flood-limit fixes; drop once it lands) master (9ae4f7957) stopped answering every request during a scripted RESTORE beside 2 Lua flooders on one reactor: RESTORE and both flooders' PUTs timed out at 300 s (probe P1, job 261117-034526-66767d; P2 261117-042554-2e8d5a samples stacks on a stall). Pre-existing; find the hang.
+- F6: TSan race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239); failed CI run 44056420626 at code-identical 37eda4ed0. Flaky; can turn any landing's CI red.
+- F4/F5 nits: stale comment at handler.cc:473; two `LightOnExit` structs for one mechanism.
+
+## p2-intersection follow-up (2026-11-17)
+
+- Adaptive in-block search (prospect reader.hh `find_in_block`): the 128-slot branch-free compare gave 0.80-0.92 on the 1M intersection rows (A/B 261117-034629-5eeca5) but 1.5-2.3x on short tails and 1.24x on sparse-in-long (probes 261117-053908-cd8c4d, 261117-065316-b2628d); the landed probe/bisect/compare-from-row variant (prospect:387a47f) is neutral on short lists but keeps only 0.90-1.03 on long ones (261117-065724-58ce08). Find a selector (expected skip distance, list density, block fill) that gets both; measure with the reviewer's tiny_bench probe plus the 1M A/B, exclusive.

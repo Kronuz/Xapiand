@@ -2988,7 +2988,9 @@
         "detent:consensus-transport",
         "detent:consensus-driver",
         "detent:consensus-driver",
-        "detent:transport-connection"
+        "detent:transport-connection",
+        "detent:transport-groups",
+        "detent:rpc-lane-codec"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3177,7 +3179,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T00:49:26",
+      "updated": "2026-11-17T04:27:58",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
@@ -5867,7 +5869,40 @@
       "worktree": ""
     },
     "group-core": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-17T03:06:14",
+          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "blobs": {},
+          "by": "review",
+          "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "criteria": "8382fed6c73acdd9",
+          "diffs": {},
+          "findings": {
+            "B10": {
+              "jobs": [
+                {
+                  "cmd": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-core/docs/design/cluster-release/bundle_model.py",
+                  "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-030555-450eb8",
+                  "level": "none",
+                  "seconds": 4.2,
+                  "state": "done",
+                  "what": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-c at 491a1bdc2aa1"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "7a8ed667b8dc903725be55b09e5fccbaf7f1d2e2",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:journal-driver",
         "detent:consensus-driver",
@@ -5937,7 +5972,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-17T02:54:40",
+      "updated": "2026-11-17T03:06:14",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -13202,6 +13237,8 @@
     "p2-intersection": {
       "accepted": {},
       "after": [],
+      "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+      "branch": "quest/xapiand/p2-intersection",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13216,6 +13253,7 @@
         "test/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/p2-intersection",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -13223,9 +13261,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "review",
       "title": "Branch-free block compare and per-word rank in intersections",
-      "updated": "2026-11-17T02:56:28"
+      "updated": "2026-11-17T05:35:13",
+      "worktree": "../prospect-wt/xapiand/p2-intersection"
     },
     "perf-watch-peek": {
       "accepted": {
@@ -20417,7 +20456,57 @@
       "worktree": ""
     },
     "t10-flood-limit": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T04:58:35",
+          "base": "348e7e813e74980f7af6a108ae651fad3309c2d2",
+          "blobs": {
+            "docs/design/loop-scheduling.md": "100644:a5c65c5b74f4f4a7344a0cc062927ff8e842363a",
+            "docs/dev/t10-flood-limit.md": "100644:e62169daa2337908c9913fe60b625e1d9c1f9e82",
+            "docs/mechanisms/lua-bounds.md": "100644:743fe044e8a999ab7013711d9584337ba0f26dca",
+            "harness/lua_bounds.py": "100644:f68ba824a58e1dff3f47875a58f74e63794325dc",
+            "src/lua/processor.cc": "100644:479cb6b5e59b75ce742f865d55ffed66e428f762",
+            "tests/test_lua.cc": "100644:ef9744103f4443e4b324785b850b32acb63f306c"
+          },
+          "by": "review",
+          "commit": "9f51efd8ffcc45ebb97ed481fe514e01915ed7e1",
+          "criteria": "8b7b3d6ae4aea5dd",
+          "diffs": {
+            "docs/design/loop-scheduling.md": "a2526d3671018da9",
+            "docs/dev/t10-flood-limit.md": "1a6c7cc1682bdced",
+            "docs/mechanisms/lua-bounds.md": "780bbd59ed50148a",
+            "harness/lua_bounds.py": "3b251393ef9a9083",
+            "src/lua/processor.cc": "fcf595d498162b7f",
+            "tests/test_lua.cc": "f0b6afae11561d26"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-t10-flood-limit-correctness/run_p2.sh",
+                  "commit": "e817fdc2be894891e81fd3db25b7a587bb8dfe54",
+                  "docs": [
+                    "docs/dev/t10-flood-limit.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-042554-2e8d5a",
+                  "level": "strict",
+                  "seconds": 122.1,
+                  "state": "done",
+                  "what": "review P2: scripted RESTORE beside 2 flooders, does the node stall (master base vs fix)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "c92f9519d7757160bbe9132d1b264a32645f9fc7",
+          "reviewed": "e817fdc2be894891e81fd3db25b7a587bb8dfe54",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "b10e26aa021524b7b049f83d692fbce55240e98e",
       "branch": "quest/xapiand/t10-flood-limit",
@@ -20479,19 +20568,52 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T05:39:43",
+          "commit": "a9bafb8d9fe52fee18211645d4746a9546a40d4d",
+          "criteria": {
+            "A1": "261117-015256-6a526c (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md); fails without: 261117-015216-5e1452",
+            "A2": "261117-015256-abdc04 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-015323-ac1d98 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-015327-4a9b4c (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-015336-b0633c (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-022519-79af24 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-022523-a10581 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-022533-ccb986 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md), 261117-022547-9ae194 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md)",
+            "A3": "261117-022547-9ae194 (`--check` against the derived limit passed); `harness/lua_bounds.py`: T10's flood limit is `(FLOOD_STRETCHES + 1) x` one flood call alone, k = 2, no client or reactor term. [manual] FreeBSD CI's T10 log: the lead",
+            "A4": "`docs/design/loop-scheduling.md` D7; `docs/dev/t10-flood-limit.md` (derivation, sweep, cost); `docs/mechanisms/lua-bounds.md`",
+            "A5": "261117-015303-d945e6 (the suite check), 261117-015303-d945e6 (passed at a0de067c4df9; ignores docs-only docs/dev/t10-flood-limit.md)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "fbd5d8ab4251d8b3dfe14d65dd1afbdacbcfe7e0",
+              "docs": [
+                "docs/dev/t10-flood-limit.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-015303-d945e6",
+              "level": "light",
+              "seconds": 359.7,
+              "state": "done",
+              "what": "t10-flood-limit check suite at fbd5d8ab4251"
+            }
+          ],
+          "final": true,
+          "from": "91e8b20647fc5608e7a1eecceb16335d65654645",
+          "reason": "",
+          "tested": "fc8f34d90a9575b3c4bddb3e8b3bd6d1096b22f6"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A script call runs in the heavy lane",
-      "updated": "2026-11-17T01:21:21",
-      "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
+      "updated": "2026-11-17T05:39:51",
+      "worktree": ""
     },
     "t11-barriers": {
       "accepted": {},

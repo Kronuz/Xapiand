@@ -38,7 +38,9 @@ set of meters (its bytes are its own state's, `lua-memory.md`); the first to cro
    20 ms). A linear call charges before it works, so it is refused before it touches the data; a call made of many small charges
    (a `gsub`) is cut when their sum passes the cap. The matcher's step budget is further capped at `lua_xcallwork() / 5` steps
    (4 units a step, so the step error comes before the sum of the charges does), 3.2 x 10^6 by default, so a quadratic pattern over a 1 MiB subject ends in a step-budget error instead of the
-   64 x 10^6 steps `64 x subject` allows. The bound is on a stretch, not on a call: a loop of such calls yields between them.
+   64 x 10^6 steps `64 x subject` allows. The bound is on a stretch, not on a call: a loop of such calls yields between them. A call runs in the heavy lane
+   (`docs/design/loop-scheduling.md` D7), so a stretch holds the reactor only against other heavy turns and a light
+   request waits for at most (2 + 1) stretches, however many calls are flooding.
    A normal script is unaffected (strings under about 2 MiB, tables under about 1M elements per call).
 3. **A condemned call cannot be caught.** The first meter to cross its bound sets `Call::reason`, arms the hook to fire at every
    following instruction, and (in the VM and the library) raises the sentinel. The base's `pcall` and `xpcall` ask the host
@@ -78,7 +80,7 @@ and the interpreter's bulk operations by their lengths, then lets one cap and on
 `tests/test_lua.cc` (`test_a_close_handler_cannot_outlive_a_bound`, `test_library_calls_are_charged_by_what_they_touch`,
 `test_a_slow_search_ends_at_the_work_cap`, `test_one_call_cannot_hold_the_loop_past_the_call_cap`, `test_the_matcher_is_charged_by_work_not_by_entries`, `test_a_vararg_chain_ends_at_the_work_cap`,
 `test_weak_tables_are_refused_and_never_weak`, `test_a_result_past_its_byte_budget_is_refused`,
-`test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference`, `test_a_cached_foreign_script_is_trusted_for_a_second_and_then_read_again`, `test_print_is_bounded_per_call`), `tests/fuzz_lua.cc`, the drift test, and on a live node
+`test_a_local_script_name_cannot_evict_or_stand_in_for_a_foreign_reference`, `test_a_cached_foreign_script_is_trusted_for_a_second_and_then_read_again`, `test_print_is_bounded_per_call`), `test_a_call_runs_every_slice_in_the_heavy_lane_and_the_request_is_light_after` and its two companions, `tests/fuzz_lua.cc`, the drift test, and on a live node
 `harness/lua_bounds.py`.
 
 ## Limits that remain
