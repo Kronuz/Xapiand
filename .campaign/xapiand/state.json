@@ -6694,9 +6694,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T09:38:41",
+      "updated": "2026-11-17T10:36:41",
       "worktree": "../journal-wt/xapiand/journal-seal-repeat"
     },
     "key-field": {
