@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-024952-c870f5 261117-025002-c70c5f 261117-025006-d345af and 12 mutant jobs
+State: waiting on jobs 261117-024952-c870f5 261117-025006-d345af and mutants M-e..M-o (261117-025024-24bfef .. 261117-025050-ee8915)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -45,7 +45,7 @@ commit, kv_strata on a journal::Host. Seal shim kept. Local run of the whole tes
 
 | Criterion | Evidence |
 |---|---|
-| A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f (pending): build-test 261117-024952-c870f5; TSan 261117-025002-c70c5f; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
+| A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f: build-test 261117-024952-c870f5 (running); TSan 261117-025002-c70c5f passed (served, T4, T12, T3, T8); killed so far: M-a (exit 1), M-b (exit 134, abort), M-c, M-d (exit 1); the rest running or queued; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
