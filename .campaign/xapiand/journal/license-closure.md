@@ -35,11 +35,9 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 3. A4 mime.types: I regenerated it (sorted, one line per type, no comments; extension map identical, 128 entries).
    Confirm that a rewritten arrangement of the same facts clears the nginx/h5bp question, or revert
    (`git revert` of the mime.types hunk of `Xapiand:49f40ee18`) and record nginx BSD-2 and h5bp MIT in `NOTICE`.
-4. A5 `el_cerrito.png`: keep (credit "Map data ©2019 Google" is in the image) or redraw. Recommendation: redraw the
-   trixels and circle as a vector figure with no basemap (a script beside `sample_image.py`), after the release
-   if time is short. A5 generator.py: tables rewritten in new words; the `accounts.*` fixtures keep the
-   phrases they were generated with. Decide whether to regenerate them (changes every account's text and
-   the docs examples built on it); recommendation: keep.
+4. A5 generator.py fixtures: tables are rewritten in new words; the `accounts.*` fixtures keep the phrases they
+   were generated with. Decide whether to regenerate them (changes every account's text and the docs examples
+   built on it); recommendation: keep. (`el_cerrito.png` is decided: see Rulings.)
 5. A6 package metadata (`.github/workflows/release.yml:181,247`, `freebsd.yml:98`, `Dockerfile:65`,
    `contrib/homebrew/xapiand.rb:40`; none in my file set): keep `MIT`, or the SPDX expression
    `MIT AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND Zlib AND Apache-2.0 AND Unicode-3.0` (Homebrew:
@@ -54,7 +52,7 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 | A2 | `ARCHITECTURE.md` licensing note, `README.md` license section and `AGENTS.md` carry no GPL claim; the sortable-encoding quest already landed on master, so this branch does not touch them (verified by `git grep -i gpl` on the three files, no hit) |
 | A3 | [decision] Blocked on 1 (owner); prepared `docs/discussions/LICENSE` |
 | A4 | [decision] Blocked on 2 and 3 (owner); `mime.types` regenerated, stopword comparison in `docs/status/license-audit.md` |
-| A5 | [decision] Blocked on 4 (owner); `docs/public/assets/generator.py` tables rewritten |
+| A5 | [decision] owner's ruling 2026-11-16 on `docs/public/assets/el_cerrito.png`: keep as is (ledger row A19 in `docs/status/license-audit.md`); `docs/public/assets/generator.py` tables rewritten, fixtures pending (Blocked on 4) |
 | A6 | [decision] Blocked on 5 (owner) |
 | A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
@@ -75,3 +73,4 @@ discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-not
 + The audit's RapidJSON "patch" is a compile definition plus scratch-only sanitizer patches to the old pin; Lua's
   patch is the only patched source. Recorded as such.
 + store-api example sizes updated; the offsets in that illustrative JSON are left as they were.
++ Owner's ruling (2026-11-16, via the lead): `el_cerrito.png` is kept unchanged. The trixel overlay is the owner's (his tool, Xapiand's HTM code); the basemap is Google Maps under Google's terms with "Map data ©2019 Google" visible; docs-only asset, outside the binary and the MIT source license. An earlier ruling to redraw it was reversed before any redraw work was committed.

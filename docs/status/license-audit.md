@@ -252,7 +252,7 @@ Design vs code: the audit asks for A1 as a rewritten `NOTICE` that carries the t
 
 ## Ledger: license closure (quest `license-closure`)
 
-State (2026-11-16, branch `quest/xapiand/license-closure`): blocker 3, A3, A18, A21's tables, the RapidJSON and Lua rows and the Xapian scan are done; A9, A17, A19, A21 (the fixtures) and A26 wait for the owner (the journal's Blocked on lists each decision). Commit hashes carry the repository: `Xapiand:`.
+State (2026-11-16, branch `quest/xapiand/license-closure`): blocker 3, A3, A18, A21's tables, the RapidJSON and Lua rows and the Xapian scan are done; A9, A17, A21 (the fixtures) and A26 wait for the owner (the journal's Blocked on lists each decision). Commit hashes carry the repository: `Xapiand:`.
 
 | Item | Status | Evidence |
 |---|---|---|
@@ -261,7 +261,7 @@ State (2026-11-16, branch `quest/xapiand/license-closure`): blocker 3, A3, A18, 
 | A9 | prepared | `docs/discussions/LICENSE` (MIT, owner 2026) and the README's license line; the two other copies (`~/code/KronuzBlog/{Kronuz.github.io,gmendezb-pages}/discussions`) need the same two files, then `scripts/check-copies.sh`. |
 | A17 | owner | `stopwords/*.txt` sources are unrecorded and mixed. Compared with Snowball's published lists (fetched 2026-11-16): `no` is identical; `it`, `sv`, `hu` and `ru` contain every Snowball word (hu and ru miss one) and add hundreds; `da`, `de`, `en`, `es`, `fi`, `fr`, `nl` and `pt` overlap them only in part; Snowball publishes no list for `ro` and `tr` at the URLs tried and none for `ca`, `eu` and `hy`. `en` (570 words) is the SMART list. Regenerating from Snowball would shrink the lists (`en` 570 to 174 words) and change analysis results. |
 | A18 | done, regenerated | `mime.types` rewritten as one sorted line per media type with no comments or grouping of the nginx-style file; the extension-to-type map is identical (128 extensions, checked by parsing both files with the loader's rules). |
-| A19 | owner | `docs/public/assets/el_cerrito.png` keeps its visible "Map data ©2019 Google" credit. |
+| A19 | done, owner's ruling (2026-11-16): keep | `docs/public/assets/el_cerrito.png` stays as it is. The trixel overlay is the owner's (his tool drawing Xapiand's HTM code); the basemap is Google Maps under Google's terms, with "Map data ©2019 Google" kept visible in the image. It is a docs-only asset: it is not in the binary and not covered by the MIT source license. |
 | A21 | done for the tables | The 25 phrase tables of `docs/public/assets/generator.py` are rewritten and the fantasynamegenerators.com citation is removed; the first-name, surname and trait-word lists are vocabulary and stay. The `accounts.*` fixtures keep the phrases they were generated with; regenerating them changes every account's text and the docs examples built on it. |
 | A26 | owner | See the journal: MIT stays in the metadata, or an SPDX expression. |
 | RapidJSON's patch | done | The dependency table's RapidJSON and Lua rows above state what each carries: RapidJSON has no patch (one compile definition), Lua has `contrib/lua/xapiand-limits.patch`. |
