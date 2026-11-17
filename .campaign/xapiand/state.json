@@ -13199,6 +13199,34 @@
       "updated": "2026-11-12T03:19:59",
       "worktree": ""
     },
+    "p2-intersection": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 90,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/reader.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Branch-free block compare and per-word rank in intersections",
+      "updated": "2026-11-17T02:56:28"
+    },
     "perf-watch-peek": {
       "accepted": {
         "correctness": {
