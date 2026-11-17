@@ -144,6 +144,30 @@ struct Bounds {
 // Called before each directory entry the walk reads, on the walking thread; it may throw to stop the walk.
 using Checkpoint = std::function<void()>;
 
+// What each source of names counts as its work, for the 400 that names it.
+inline constexpr const char* walk_work = "directory entries";
+inline constexpr const char* names_work = "index names";
+
+// The 400s of the bounds: more names than `limit`, or more work (`what`, and the steps it allows) than `limit`.
+[[noreturn]] void too_many(std::size_t limit);
+[[noreturn]] void too_much_work(std::size_t limit, const char* what);
+
+// A search's items, split once for every source of names: the plain names no exclusion removes (they stand for
+// themselves and are not looked up), the wanted patterns (`_all` as `**`) and the exclusions, each sorted with no
+// repeats. `steps` is the matching the plain names took. Raises errc::invalid (a 400) for a pattern longer than
+// `max_pattern_size`, more than `max_patterns` of them, plain names past `bounds.names`, or steps past `bounds.steps`
+// (`what` names the source's work).
+struct Items {
+	std::vector<std::string> names;
+	std::vector<std::string> wanted;
+	std::vector<std::string> excluded;
+	std::size_t steps = 0;
+};
+Items parse(std::span<const std::string> items, const Bounds& bounds, const char* what);
+
+// The plain names and the names a source `found` for the patterns, sorted with no repeats; past `bounds.names`, a 400.
+std::vector<std::string> merged(Items& parsed, std::vector<std::string>& found, const Bounds& bounds);
+
 // The indexes `items` name under `root` (the node's data directory, ending in `/`): a plain item stands for itself,
 // `_all` and a pattern for the indexes on disk it matches, `-item` removes names. An index is a directory that holds
 // `strata` (an index of one shard) or a shard `.__N`; it may hold other indexes in its other directories, and a

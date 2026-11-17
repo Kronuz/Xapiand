@@ -38,19 +38,20 @@
 
 namespace index_pattern {
 
-namespace {
-
-[[noreturn]] void
+void
 too_many(std::size_t limit)
 {
 	throw engine::Error(engine::errc::invalid, "A search can read at most " + std::to_string(limit) + " indexes (--max-search-indexes) and these patterns name more; narrow the index pattern");
 }
 
-[[noreturn]] void
-too_much_work(std::size_t limit)
+void
+too_much_work(std::size_t limit, const char* what)
 {
-	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " directory entries (--max-search-indexes), and spend " + std::to_string(limit * steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
+	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " " + what + " (--max-search-indexes), and spend " + std::to_string(limit * steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
 }
+
+
+namespace {
 
 // The walk read more entries than its budget.
 struct OutOfBudget { };
@@ -454,55 +455,71 @@ trimmed(const std::string& root)
 }  // namespace
 
 
-std::vector<std::string>
-expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint)
+Items
+parse(std::span<const std::string> items, const Bounds& bounds, const char* what)
 {
-	std::vector<std::string> plain, wanted, excluded, names;
+	Items parsed;
+	std::vector<std::string> plain;
 	for (const auto& item : items) {
 		if (item.size() > max_pattern_size) {
 			throw engine::Error(engine::errc::invalid, "An index pattern is at most " + std::to_string(max_pattern_size) + " bytes");
 		}
 		if (item.size() > 1 && item[0] == '-') {
-			excluded.push_back(item.substr(1));
+			parsed.excluded.push_back(item.substr(1));
 		} else if (is_wildcard(item)) {
-			wanted.push_back(item == "_all" ? std::string("**") : item);
+			parsed.wanted.push_back(item == "_all" ? std::string("**") : item);
 		} else {
 			plain.push_back(item);
 		}
 	}
 	sort_unique(plain);
-	sort_unique(wanted);
-	sort_unique(excluded);
-	if (wanted.size() + excluded.size() > max_patterns) {
+	sort_unique(parsed.wanted);
+	sort_unique(parsed.excluded);
+	if (parsed.wanted.size() + parsed.excluded.size() > max_patterns) {
 		throw engine::Error(engine::errc::invalid, "A search names at most " + std::to_string(max_patterns) + " index patterns (wildcards and exclusions together)");
 	}
-	std::size_t steps = 0;   // a plain name is tested against the exclusions: at most a URL of names, 32 patterns, counted too
-	for (auto& item : plain) {
-		const bool removed = std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, item, steps); });
-		if (steps > bounds.steps) {
-			too_much_work(bounds.visits);
+	for (auto& item : plain) {   // tested against the exclusions: at most a URL of names, 32 patterns, counted too
+		const bool removed = std::any_of(parsed.excluded.begin(), parsed.excluded.end(), [&](const std::string& pattern) { return match(pattern, item, parsed.steps); });
+		if (parsed.steps > bounds.steps) {
+			too_much_work(bounds.visits, what);
 		}
 		if (!removed) {
-			names.push_back(std::move(item));
+			parsed.names.push_back(std::move(item));
 		}
 	}
-	if (names.size() > bounds.names) {
+	if (parsed.names.size() > bounds.names) {
 		too_many(bounds.names);
 	}
-	if (!wanted.empty()) {
-		std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
-		try {
-			Walk(wanted, excluded, bounds, checkpoint, found).run(trimmed(root));   // stops at the bounds
-		} catch (const OutOfBudget&) {
-			too_much_work(bounds.visits);
-		}
-		names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
-	}
+	return parsed;
+}
+
+
+std::vector<std::string>
+merged(Items& parsed, std::vector<std::string>& found, const Bounds& bounds)
+{
+	auto names = std::move(parsed.names);
+	names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
 	sort_unique(names);
 	if (names.size() > bounds.names) {
 		too_many(bounds.names);
 	}
 	return names;
+}
+
+
+std::vector<std::string>
+expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint)
+{
+	auto parsed = parse(items, bounds, walk_work);
+	std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
+	if (!parsed.wanted.empty()) {
+		try {
+			Walk(parsed.wanted, parsed.excluded, bounds, checkpoint, found).run(trimmed(root));   // stops at the bounds
+		} catch (const OutOfBudget&) {
+			too_much_work(bounds.visits, walk_work);
+		}
+	}
+	return merged(parsed, found, bounds);
 }
 
 }  // namespace index_pattern

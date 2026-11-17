@@ -23,31 +23,18 @@
 
 #include "database/name_index.h"
 
-#include <algorithm>               // for std::sort, std::unique, std::any_of, std::all_of, std::max
+#include <algorithm>               // for std::sort, std::all_of, std::max
 #include <exception>               // for std::exception
-#include <iterator>                // for std::next, std::make_move_iterator
+#include <iterator>                // for std::next
 #include <limits>                  // for std::numeric_limits
-#include <string>                  // for std::to_string
+#include <string>                  // for std::string
 #include <utility>                 // for std::move
 
-#include "engine/error.h"          // for engine::Error, engine::errc
 #include "index_path.h"            // for index_path::valid
 #include "log.h"                   // for L_ERR, L_NOTICE
 
 
 namespace {
-
-[[noreturn]] void
-too_many(std::size_t limit)
-{
-	throw engine::Error(engine::errc::invalid, "A search can read at most " + std::to_string(limit) + " indexes (--max-search-indexes) and these patterns name more; narrow the index pattern");
-}
-
-[[noreturn]] void
-too_much_work(std::size_t limit)
-{
-	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " index names (--max-search-indexes), and spend " + std::to_string(limit * index_pattern::steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
-}
 
 // The build was stopped.
 struct Stopped { };
@@ -83,13 +70,6 @@ literal_prefix(std::string_view pattern) noexcept
 		prefix.remove_suffix(1);
 	}
 	return prefix;
-}
-
-void
-sort_unique(std::vector<std::string>& names)
-{
-	std::sort(names.begin(), names.end());
-	names.erase(std::unique(names.begin(), names.end()), names.end());
 }
 
 }  // namespace
@@ -347,38 +327,11 @@ NameIndex::bytes() const
 std::vector<std::string>
 NameIndex::expand(std::span<const std::string> items, const index_pattern::Bounds& bounds, const index_pattern::Checkpoint& checkpoint) const
 {
-	std::vector<std::string> plain, wanted, excluded, names;
-	for (const auto& item : items) {
-		if (item.size() > index_pattern::max_pattern_size) {
-			throw engine::Error(engine::errc::invalid, "An index pattern is at most " + std::to_string(index_pattern::max_pattern_size) + " bytes");
-		}
-		if (item.size() > 1 && item[0] == '-') {
-			excluded.push_back(item.substr(1));
-		} else if (index_pattern::is_wildcard(item)) {
-			wanted.push_back(item == "_all" ? std::string("**") : item);
-		} else {
-			plain.push_back(item);
-		}
-	}
-	sort_unique(plain);
-	sort_unique(wanted);
-	sort_unique(excluded);
-	if (wanted.size() + excluded.size() > index_pattern::max_patterns) {
-		throw engine::Error(engine::errc::invalid, "A search names at most " + std::to_string(index_pattern::max_patterns) + " index patterns (wildcards and exclusions together)");
-	}
-	std::size_t steps = 0;
-	for (auto& item : plain) {
-		const bool removed = std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return index_pattern::match(pattern, item, steps); });
-		if (steps > bounds.steps) {
-			too_much_work(bounds.visits);
-		}
-		if (!removed) {
-			names.push_back(std::move(item));
-		}
-	}
-	if (names.size() > bounds.names) {
-		too_many(bounds.names);
-	}
+	auto parsed = index_pattern::parse(items, bounds, index_pattern::names_work);
+	const auto& wanted = parsed.wanted;
+	const auto& excluded = parsed.excluded;
+	auto steps = parsed.steps;
+	std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
 	if (!wanted.empty()) {
 		std::vector<index_pattern::Glob> globs;
 		globs.reserve(wanted.size() + excluded.size());
@@ -409,7 +362,7 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 		std::size_t visits = 0;
 		const auto visit = [&] {
 			if (++visits > bounds.visits || steps > bounds.steps) {
-				too_much_work(bounds.visits);
+				index_pattern::too_much_work(bounds.visits, index_pattern::names_work);
 			}
 			if (checkpoint) {
 				checkpoint();
@@ -436,7 +389,6 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 			return accepted;
 		};
 
-		std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
 		std::string seek;
 		std::shared_lock<std::shared_mutex> lk(mtx_);
 		Cursor cursor(base_, delta_);
@@ -477,18 +429,12 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 				if (matched(level)) {
 					found.emplace_back(name);
 					if (found.size() > bounds.names) {
-						too_many(bounds.names);
+						index_pattern::too_many(bounds.names);
 					}
 				}
 				cursor.next();
 			}
 		}
-		lk.unlock();
-		names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
 	}
-	sort_unique(names);
-	if (names.size() > bounds.names) {
-		too_many(bounds.names);
-	}
-	return names;
+	return index_pattern::merged(parsed, found, bounds);
 }
