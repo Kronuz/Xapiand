@@ -188,6 +188,36 @@ artifact.
 | Source release (GitHub tag tarball) | Whole tree, including `contrib/` | Blockers 2 and 3 apply to it as well as blocker 1; the Apache-2.0 client (A10) is fine once named | blockers |
 | Sortable encoding after replacement | — | Re-run this audit's dependency and header scans at the release commit; the scripts are short and can live under `harness/` | **A27** |
 
+## Provenance of A17 and A18 (stopwords, mime.types)
+
+Exploration only; fetched copies live in the ignored `.scratch/`. The Xapian copy was compared for provenance and deleted; none of its words appear here.
+
+**A17, stopwords.** All 18 lists arrived in one commit, `Xapiand:b2858ab15` (2016-12-06, José María Valencia, not the owner): "Add stopwords for armenian(hy.txt), basque(eu.txt), catalan(ca.txt), ... languages". `git log --follow` and `git blame` show that commit for every line of every file; nothing was added later. The language set (ca da de en es eu fi fr hu hy it nl no pt ro ru sv tr) matches Lucene's per-language analyzers.
+
+| English list | Size | Overlap with ours | Only in theirs | Only in ours |
+|---|---|---|---|---|
+| ours (`en.txt`) | 570 | | | |
+| SMART (igorbrigadir/stopwords mirror) | 570 | 570 | 0 | 0 |
+| Snowball English (BSD-3) | 174 | 164 | 10 | 406 |
+| Lucene `EnglishAnalyzer` default (Apache-2.0; `StopAnalyzer` uses the same list) | 33 | 33 | 0 | 537 |
+| NLTK English (Apache-2.0) | 198 | 165 | 33 | 405 |
+| Xapian `xapian-core/languages/stopwords/english.txt` | 174 | 164 | 10 | 406 |
+
+Verdict for `en.txt`: derived from SMART, word for word (set equality, 570 of 570), with no owner additions. Every word not in Snowball or NLTK is a SMART word (examples: `able`, `accordingly`, `ain't`, `allow`, `anybody`, `appreciate`, `apart`, `anyways`, `appropriate`, `becomes`), so there are no words only in ours beyond SMART. Xapian's list matches Snowball's counts and shares nothing extra with ours.
+
+Other languages against Snowball's list (ours size, overlap, ours-only): da 101/50/51, nl 275/90/185, fi 772/49/723, fr 605/101/504, de 595/208/387, hu 781/197/584, it 623/279/344, no 172/172/0, pt 408/119/289, ru 539/158/381, es 577/166/411, sv 401/114/287. They are supersets of, or loosely related to, Snowball's lists (no, sv, it, hu, ru nearly contain them). Verdict: imported wholesale from third-party lists (Snowball and Lucene-family sources), not owner-curated; the exact per-language upstream is not recoverable from the history. The credit owed is the SMART list (Cornell, G. Salton and C. Buckley; its terms are not a standard license) and Snowball's BSD-3 notice. Safest fix is the audit's existing one: regenerate from Snowball's lists, which the build already carries.
+
+**A18, `mime.types`.** Added in `Xapiand:a3abe894e` (2019-03-25, the owner, "Load mime types from file", 109 lines, the table lifted from the old `mime_types.hh`); the only later commit, `Xapiand:b88d75fc5` (2019-05-06, owner), added `yaml`/`yml`, `ndjson`, `msgpack`. Blame at the import: 109 of 109 lines the owner's commit, so no wholesale import is visible, but the content is nginx-format with h5bp-style section comments. Measured on (type, extension) pairs (128 in ours, 84 distinct types):
+
+| Source | Pairs in source | Overlap | Ours-only |
+|---|---|---|---|
+| h5bp server-configs-nginx (MIT) | 144 | 112 | 16 |
+| nginx `conf/mime.types` (BSD-2) | 107 | 90 | 38 |
+| Apache httpd (Apache-2.0) | 1000 | 74 | 54 |
+| IANA registry (names only, no extensions) | 2380 types | 47 of 84 types | 37 types |
+
+68 of ours' 100 non-blank lines are byte-identical to an h5bp line, including the section comments and column alignment. The 16 h5bp misses are the owner's three additions plus renames and regrouping (`application/xml` atom/rdf/rss, `font/opentype`, `application/font-woff*`, `x-font-ttf`, `wmv`, `vcf`, `manifest`). Verdict: mixed, mostly derived from h5bp (MIT), itself an nginx mime.types derivative (BSD-2), with the owner's three entries on top. Credit owed: h5bp's MIT copyright line, and nginx's BSD-2 notice. IANA supplies only names, so nothing is owed; Apache's table overlaps only through shared facts.
+
 ## Actions
 
 1. **A1**: Rewrite `NOTICE` as the third-party notice file.
