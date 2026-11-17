@@ -173,3 +173,11 @@ quest starts (name it) or is dropped with a reason.
 | FreeBSD T10 flood p99 is noisy around its 100 ms limit: 110, 114, 123 ms on quest branches and 63.6 / 122.8 ms on a control without lua-memory-bound (run 43960604601), but it passed at 26d4a14f6. Pre-existing, the light-share path (D90) on the 2-vCPU FreeBSD VM. Measure it on master N times, find what the light GET waits on beside the flood, and fix or rule the limit per platform with numbers | lead 11-16 | src/lua/**, harness/lua_bounds.py, the light-share scheduler | Xapiand | open, flaky gate row |
 | RESTORE: a repeated key inside a nested object answers 500 "The map only contains N elements" on master and head (restore-free-off-loop review F6); it should be a 400 or last-wins like the top level | restore-free-off-loop correctness 11-16 | src/database/handler.cc, src/msgpack* | Xapiand | open, small, pre-existing |
 | RESTORE: results() builds the whole response array in one loop turn at the end of the request; one 70,000-object request makes one long turn (review F5, not measured). Measure, then stream or slice it | restore-free-off-loop correctness 11-16 | src/database/handler.cc | Xapiand | open, measure first |
+
+## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
+
+- N1 journal `TurnDriver`: a Sealer can be destroyed while `sealers_mutex_` is held; a sealer whose captures call back into the driver deadlocks. Destroy outside the lock.
+- N2 journal `TurnDriver::wake()`: ignores a false `post_call`; "any thread" needs a thread-safe `post_call` in the scheduler. State the requirement or handle the false return.
+- N3 journal: `covers` is `record_sequence_` by construction on the Journal path, so the supersede guard can't fire there; bench/fuzz/placement pass `sequence - 1` and never exercise a refusal. Add a refusal case to the fuzz target.
+- N4 journal: sealers can starve while staged records fill every turn (unlikely at 64 MiB segments). Bound it or document it.
+- N5 journal: a sealer calling `commit()` from inside itself is not refused.
