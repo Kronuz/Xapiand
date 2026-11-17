@@ -41,7 +41,7 @@
 struct lua_State;
 
 namespace lua::detail {
-struct Heap;
+struct State;
 }
 
 namespace lua {
@@ -51,7 +51,7 @@ struct Limits {
 	std::size_t hook_period = 10'000;               // VM instructions between two hook calls
 	std::size_t max_instructions = 100'000'000;     // per call
 	std::size_t max_unyielded_hooks = 100;          // hook periods in a row without a yield point
-	std::size_t max_bytes = 64u << 20;              // live bytes of a script's state
+	std::size_t max_bytes = 64u << 20;              // live bytes of a call's state; also what a thread's cached scripts may hold
 	std::size_t max_work = 500'000'000;             // per call: matcher steps, bytes and elements the library touches (about a nanosecond each)
 	std::size_t slice_work = 200'000;               // work after which the call yields at its next instruction
 	std::size_t max_call_work = 16'000'000;         // work one uninterrupted stretch (a library call, between two hook calls) may do: about 20 ms
@@ -70,22 +70,26 @@ struct Limits {
 // A call yields to its reactor at the hook (every `hook_period` instructions) wherever Lua
 // allows it, so scripts run in slices; calls of one script interleave without sharing globals.
 //
-// A Processor belongs to the thread that compiled it (each thread keeps its own cache); the byte
-// cap is charged to the state's live bytes, so interleaved calls on one script share it.
+// A Processor belongs to the thread that compiled it (each thread keeps its own cache). One state
+// runs one call at a time, so the byte cap is each call's own: a call takes the cached state when it
+// is free; when another call holds it, a small script's call compiles a state of its own and a large
+// script's call waits its turn. A call that grew its state collects it in slices afterwards; a state
+// of a call's own is then closed (docs/mechanisms/lua-memory.md).
 class Processor {
 	size_t hash;
-	std::unique_ptr<detail::Heap> heap;
-	lua_State* L = nullptr;
-	int func_ref = 0;               // the compiled chunk, in the registry
-	int new_env_ref = 0;            // the base's environment factory, in the registry
-	MsgPack script_params;
+	std::string script_name;
+	std::string source;             // what a call's own state compiles
+	std::string stored_params;      // a foreign script's stored params, serialized; each call's params go over them
+	std::unique_ptr<detail::State> resident;
+	task::async_mutex resident_lock;   // held by the call running on `resident`
 	Limits limits;
 	std::thread::id owner;
 	std::chrono::steady_clock::time_point checked;   // a foreign script: when its document was last read
 
 public:
-	// Compiles `body` as the script `name`. A syntax error is a ClientError.
-	Processor(std::string_view name, std::string_view body, MsgPack params, Limits limits = {});
+	// Compiles `body` as the script `name`, with `params` under each call's (a foreign script's stored
+	// ones; a local script's come with each call). A syntax error is a ClientError.
+	Processor(std::string_view name, std::string_view body, const MsgPack& params, Limits limits = {});
 	~Processor();
 	Processor(const Processor&) = delete;
 	Processor& operator=(const Processor&) = delete;
@@ -113,6 +117,13 @@ public:
 	// ...whether a cached foreign script is still within `foreign_revalidation()` (`compile` serves it without a read), and the bytes `print` has logged on this thread.
 	static bool foreign_trusted(const std::string& reference);
 	static std::size_t printed_bytes();
+	// ...the bytes this thread's cached scripts hold, and the most they may (`Limits::max_bytes`).
+	static std::size_t cached_bytes();
+	static std::size_t cache_budget();
+
+	// What the cache charges: the cached state's bytes after its last collection, the garbage calls may leave
+	// on it before the next one, its source and its stored params.
+	std::size_t resident_bytes() const;
 
 	size_t get_hash() const {
 		return hash;

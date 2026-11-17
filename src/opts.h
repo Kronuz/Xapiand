@@ -67,7 +67,7 @@ extern struct opts_t {
 	double search_walk_wait = 10;              // the seconds a pattern walk waits for its turn; past it the search answers 503
 	ssize_t schema_pool_size = 30;
 	ssize_t schema_versions_size = 1000;
-	ssize_t scripts_cache_size = 10;
+	ssize_t scripts_cache_size = 100;           // compiled scripts a thread keeps; their bytes are capped too (docs/mechanisms/lua-memory.md)
 	ssize_t resolver_cache_size = 100;
 	ssize_t wal_writer_cache_size = 100;
 	ssize_t max_clients = 10;
