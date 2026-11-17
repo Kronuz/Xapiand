@@ -28,5 +28,5 @@ Rerun the script at every repin and at the release commit; a run against the mas
 
 ## Data files
 
-`mime.types` derives from h5bp's and nginx's tables (MIT, BSD-2-Clause); the script writes their credits and license texts into `THIRD-PARTY-NOTICES` from static text (`MIME_TYPES`; audit A18).
-The stopword lists have no recorded source yet, so `THIRD-PARTY-NOTICES` does not cover them (audit A17).
+`mime.types` derives from h5bp's and nginx's tables (MIT, BSD-2-Clause), and each `stopwords/*.txt` list matches an upstream (Lucene, Savoy, Snowball, stopwords-iso, SMART). The script writes their credits and
+license texts into `THIRD-PARTY-NOTICES` from static text (`MIME_TYPES`, `STOPWORD_SOURCES`) and the Apache-2.0 text from `prospect-src/LICENSES`; audit A17 and A18 hold the per-language evidence.
