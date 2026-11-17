@@ -21415,6 +21415,7 @@
         "docs/perf/**",
         "bench/quick/**",
         "include/prospect/reader.hh",
+        "include/prospect/search.hh",
         "test/**"
       ],
       "history": [
@@ -21457,7 +21458,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-17T13:42:25",
+      "updated": "2026-11-17T15:52:12",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "turn-log-parity": {
