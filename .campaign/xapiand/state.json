@@ -13296,20 +13296,49 @@
         "test/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/p2-intersection",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-17T07:44:50",
+          "commit": "0aad777095c43d29c26a7124358583f4039e3e81",
+          "criteria": {
+            "A1": "261117-072238-8ce0c3; fails without: 261117-025850-78b1d9, 261117-025857-03282d, 261117-025904-c44dfb, 261117-025910-5aa1df, 261117-025917-919ac8, 261117-025924-b146ca, 261117-025930-78ee6d, 261117-034556-bfc0aa, 261117-034603-7c65ba, 261117-034609-858907, 261117-034613-bb1349, 261117-034616-5e4b22, 261117-060113-7e021c, 261117-060117-dae932, 261117-060120-35e79c, 261117-060124-c1060f, 261117-060127-884294, 261117-060130-ae26ae, 261117-060133-4f8a73, 261117-060137-f668dd, 261117-065615-08dbde, 261117-065631-d68413, 261117-065642-233ca5, 261117-065649-9f6bb4, 261117-065656-e2b644, 261117-072240-309cc3, 261117-072244-880b46, 261117-072248-575707, 261117-072252-14b5e4, 261117-072300-99692a, 261117-072304-ae8cc7, 261117-072309-65fc3b, 261117-072314-efd042, 261117-072319-fd1112",
+            "A2": "261117-073948-099d4a",
+            "A3": "261117-073948-1c1cd6",
+            "A4": "lead checked GitHub CI run 44113619238: green on every platform at 0aad777"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "0aad777095c43d29c26a7124358583f4039e3e81",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-072238-8ce0c3",
+              "level": "light",
+              "seconds": 150.4,
+              "state": "done",
+              "what": "p2-intersection check build-test at 0aad777095c4"
+            }
+          ],
+          "final": true,
+          "from": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+          "reason": "",
+          "tested": "0aad777095c43d29c26a7124358583f4039e3e81"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Branch-free block compare and per-word rank in intersections",
-      "updated": "2026-11-17T07:44:45",
-      "worktree": "../prospect-wt/xapiand/p2-intersection"
+      "updated": "2026-11-17T07:44:56",
+      "worktree": ""
     },
     "perf-watch-peek": {
       "accepted": {
