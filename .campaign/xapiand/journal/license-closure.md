@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: waiting on jobs 261116-190946-604384 261116-190946-893cd4 261116-190947-ea5c65 (and the A9 install job after build-test); next: set the docs and e2e counts the fixtures changed from the e2e failures, exactly
+State: waiting on jobs 261116-191254-7eda99 261116-191255-64e1c6 261116-191255-aaf381 and the A9 install job; next: the e2e failures give the exact doc counts the regenerated fixtures moved; set them, no loosening
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -35,7 +35,7 @@ license); they stay as the owner's test data under the lead's ruling, and the le
 | A6 | [decision] the owner's ruling: plain `MIT` metadata (ledger row A26); `NOTICE` carries the notices |
 | A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
-| A9 | the build-test check (job 261116-190058-7aadbd) and the DESTDIR install job 261116-190105-d1aa4f (notice files, mime.types and stopwords staged) |
+| A9 | the build-test check (job 261116-191254-7eda99) and the DESTDIR install job after it (notice files, mime.types, stopwords staged) |
 
 ## Result
 
