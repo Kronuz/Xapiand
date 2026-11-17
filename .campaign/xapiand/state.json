@@ -2988,7 +2988,8 @@
         "detent:consensus-transport",
         "detent:consensus-driver",
         "detent:consensus-driver",
-        "detent:transport-connection"
+        "detent:transport-connection",
+        "detent:transport-groups"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3177,7 +3178,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T00:49:26",
+      "updated": "2026-11-17T04:27:42",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
