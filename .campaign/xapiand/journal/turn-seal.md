@@ -5,14 +5,14 @@ Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 
 ## Doing
 
-Dev job 261116-211639-f3740c (build + `turn_seal|driver` tests) running; fix what it shows, then
-the evidence jobs.
+Dev job 261116-211933-50e55d (build + `turn_seal|driver|turn_log` at journal:e61906e) queued; fix
+what it shows, then the evidence jobs. msg (lead, A7) folded in at journal:e61906e.
 
 ## Next
 
 1. Green dev job, then `campaign verify turn-seal` (build-test, tsan) and per-criterion jobs:
    A1 `crash`, A2 `sequence` + mutant (`--fails-without`, own slot), A3 `budget full_size bound`,
-   A4 `forget_*` under TSan.
+   A4 `forget_*` under TSan, A7 `supersede` + mutant (`--fails-without`, own slot).
 2. Fill Evidence, push the branch, set ready for review.
 
 ## Blocked on
@@ -32,6 +32,7 @@ change; landing needs the set amended.
 | A4 | pending |
 | A5 | `docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16 |
 | A6 | pending |
+| A7 | pending |
 
 ## Result
 
@@ -57,5 +58,10 @@ contract `docs/mechanisms/turn-seal.md`.
   new API; without it a consumer with only an open record never gets a turn under `run()`.
 - R6 Loop-confined like the rest of the driver: `seal`, `forget` and sealers run on the loop; A4's
   TSan case is the consumer's shape (a writer thread under the consumer's lock).
+- R8 A7: the log cannot read a checkpoint's payload, so `TurnRecord::covers` (optional, not stored,
+  not compared) carries its covered sequence; `TurnLog::stage` refuses `covers` below the record
+  before it. Unset keeps every caller (Journal, Host, fuzz, bench, tests) unchanged, so the guard
+  bites only callers that state coverage; strata standalone must set it. Making it mandatory would
+  touch `journal.h` (outside the file set): say if you want that.
 - R7 `commit()` with nothing pending calls the sealers and throws "no records to write" only when
   nothing was pending, owed, or sealed. `stage()` from inside a sealer is refused.
