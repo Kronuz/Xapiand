@@ -16,7 +16,9 @@ Rules of `fixed` (D16): the bundle is captured on the apply chore between two en
 file lengths, the application state section); files and the directory are synced and strata commits
 before the bundle publishes; a retired file is unlinked only after a bundle that omits it publishes;
 file effects run whatever strata answers, before strata's write, and the application state updates
-after it whatever it answered; a retryable answer (`no_space`) leaves strata's position and is
+after it whatever it answered; every file effect writes at the volume and offset the entry's
+starting application state names, so a failed write (ENOSPC) stalls and rewrites the same bytes;
+a failed checkpoint sync fences the replica, which reopens through recovery; a retryable answer (`no_space`) leaves strata's position and is
 retried with strata's write alone; the capture moves strata's position to P_b; recovery opens
 strata at its head P_H, fails closed if P_b > P_H, truncates and deletes to the bundle, and replays
 from P_b while strata skips at or below P_H.
@@ -32,10 +34,12 @@ Variants that must fail somewhere (each breaks one rule):
   read-early          reads open at P_b instead of P_H
   no-mark             the capture leaves strata's position behind P_b after entries strata never saw
   nospace-moves       a no_space moves strata's position, so the retry is skipped (strata 491a1bdc, B7)
-  retry-whole         a retry re-runs the whole entry, its file effects included
+  append-on-retry     a failed blob push is retried by appending at the file's end, not at its offset
+  sync-retry          a failed checkpoint sync is retried and the bundle publishes, instead of fencing
   appstate-gated      the application state updates only when strata does not answer `skipped`
-`fixed` and `sync-late` (files synced after strata's commit, still before publication) must fail
-nowhere, with a second crash inside recovery (before replay, and halfway through it).
+`fixed`, `sync-late` (files synced after strata's commit, still before publication) and
+`retry-whole` (a retry re-runs the whole entry: positional file effects rewrite the same bytes) must
+fail nowhere, with a second crash inside recovery (before replay, and halfway through it).
 Exit status 0 when every variant behaves as stated.
 """
 from __future__ import annotations
@@ -71,11 +75,18 @@ SCRIPTS = {
     # A checkpoint right after entries strata never saw (chunks), for the capture's mark.
     "mark": [("put", "a", b"AAAA"), ("ckpt",), ("chunk", "y", 0, b"ZZ"), ("ckpt",), ("chunk", "y", 2, b"WW"),
              ("final", "y", "doc2")],
+    # A blob push that fails partway (ENOSPC before strata answers), stalls, and is retried.
+    "eio": [("put", "a", b"AAAA"), ("ckpt",), ("put", "b", b"BBBB", None, "eio"), ("scommit",),
+            ("put", "c", b"CCCC"), ("ckpt",), ("put", "d", b"DDDD")],
+    # A checkpoint whose file sync fails (step 2): the replica fences and reopens, then goes on.
+    "syncfail": [("put", "a", b"AAAA"), ("ckpt",), ("put", "b", b"BBBB"), ("failsync",), ("ckpt",),
+                 ("put", "c", b"CCCC"), ("ckpt",), ("put", "d", b"DDDD")],
 }
 
-PASS = ("fixed", "sync-late")
+PASS = ("fixed", "sync-late", "retry-whole")
 FAIL = ("a1-literal", "eager-delete", "counter-from-dir", "publish-first", "commit-after-publish", "capture-mid",
-        "verdict-gated", "read-early", "no-mark", "nospace-moves", "retry-whole", "appstate-gated")
+        "verdict-gated", "read-early", "no-mark", "nospace-moves", "appstate-gated", "append-on-retry",
+        "sync-retry")
 SEMANTIC = ("eager-delete", "verdict-gated")  # variants whose uncrashed run differs from fixed's
 
 
@@ -86,18 +97,29 @@ class Disk:
         self.data: dict[str, bytearray] = {}
         self.synced: dict[str, bytes] = {}
         self.durable: dict[str, bytes] = {}  # durable directory entries and their durable bytes
+        self.failed = {}
 
     def create(self, name: str) -> None:
         self.data.setdefault(name, bytearray())
         self.synced.setdefault(name, b"")
 
+    failed: dict[str, bytes]
+
+    def fsync_fails(self, name: str) -> None:
+        # The kernel reports the error and marks the pages clean: a later fsync of the same bytes
+        # succeeds without making them durable, until a write dirties them again.
+        self.failed[name] = bytes(self.data[name])
+
     def write(self, name: str, off: int, b: bytes) -> None:
+        self.failed.pop(name, None)
         f = self.data[name]
         if len(f) < off:
             f.extend(b"\0" * (off - len(f)))
         f[off:off + len(b)] = b
 
     def fsync(self, name: str) -> None:
+        if self.failed.get(name) == bytes(self.data[name]):
+            return
         self.synced[name] = bytes(self.data[name])
         if name in self.durable:
             self.durable[name] = self.synced[name]
@@ -110,6 +132,7 @@ class Disk:
         self.synced.pop(name, None)
 
     def truncate(self, name: str, n: int) -> None:
+        self.failed.pop(name, None)
         del self.data[name][n:]
 
     def crash(self, power: bool) -> Disk:
@@ -122,6 +145,10 @@ class Disk:
 
 
 class Failed(Exception):
+    pass
+
+
+class Fenced(Exception):
     pass
 
 
@@ -143,6 +170,9 @@ class Node:
         self.mid = False  # capture-mid: a checkpoint waits for the next put's file write
         self.nputs = 0  # application state: puts applied, which rotates the volume every third
         self.spaced: set[int] = set()  # entries whose first strata attempt answered no_space
+        self.eio: set[int] = set()  # entries whose first blob push failed partway
+        self.curlen = 0  # application state: the current volume's length
+        self.failsync = False  # the next checkpoint's first file sync fails
 
     # --- strata ------------------------------------------------------------------------------
     def strata_verdict(self, pos: int, key: str, expected: int | None) -> str:
@@ -186,13 +216,16 @@ class Node:
                 self.strata_apply(pos, op[1], (), expected)
             else:
                 if self.cur is None:
-                    self.cur = self.allocate()
-                off = len(self.disk.data[self.cur])
+                    self.cur, self.curlen = self.allocate(), 0
+                off = self.curlen  # positional: from the entry's starting application state (B10)
+                if "eio" in op[4:] and pos not in self.eio:
+                    self.eio.add(pos)
+                    self.disk.write(self.cur, off, op[2][:len(op[2]) // 2])
+                    yield  # ENOSPC partway: the replica stalls, then retries
+                    if self.variant == "append-on-retry":
+                        off = len(self.disk.data[self.cur])
                 self.disk.write(self.cur, off, op[2])
                 yield
-                if self.mid:
-                    self.mid = False
-                    yield from self.checkpoint()
                 value = ("blob", self.cur, off, len(op[2]))
                 if "nospace" in op[4:] and pos not in self.spaced:
                     # A retryable refusal (no_space, an owed verdict, a stage-1 throw): the position
@@ -208,8 +241,12 @@ class Node:
                 # The application state after the strata write (D18), whatever strata answered (N13).
                 if self.variant != "appstate-gated" or v != "skipped":
                     self.nputs += 1
+                    self.curlen = off + len(op[2])
                     if self.nputs % 3 == 0:
                         self.cur = None  # rotation at an entry the log decides (D12)
+                if self.mid:
+                    self.mid = False
+                    yield from self.checkpoint()
         elif kind == "rotate":
             self.cur = None
         elif kind == "upload":
@@ -239,6 +276,12 @@ class Node:
     # --- the checkpoint -------------------------------------------------------------------
     def sync_files(self, live: list[str]):
         for n in live:
+            if self.failsync:
+                self.failsync = False
+                self.disk.fsync_fails(n)
+                yield
+                if self.variant != "sync-retry":
+                    raise Fenced(n)
             self.disk.fsync(n)
             yield
         self.disk.sync_dir()
@@ -252,7 +295,7 @@ class Node:
             self.strata_applied = max(self.strata_applied, self.applied)
         bundle = {"pos": self.applied, "fs": {n: len(self.disk.data[n]) for n in live},
                   "app": {"counter": self.counter, "cur": self.cur, "uploads": dict(self.uploads),
-                          "nputs": self.nputs}}
+                          "nputs": self.nputs, "curlen": self.curlen}}
         yield
         if self.variant not in ("publish-first", "sync-late"):
             yield from self.sync_files(live)
@@ -283,7 +326,13 @@ class Node:
             if action[0] == "ckpt" and self.variant == "capture-mid":
                 self.mid = True
             elif action[0] == "ckpt":
-                yield from self.checkpoint()
+                try:
+                    yield from self.checkpoint()
+                except Fenced:
+                    self.recover(power=False)  # the replica fences and reopens: recovery, no reboot
+                    yield
+            elif action[0] == "failsync":
+                self.failsync = True
             elif action[0] == "ckpt-cancel":
                 yield from self.checkpoint(publish=False)
             elif action[0] == "scommit":
@@ -292,7 +341,11 @@ class Node:
             else:
                 self.log.append(action)  # durable at append
                 yield
-                yield from self.apply(len(self.log), action)
+                try:
+                    yield from self.apply(len(self.log), action)
+                except Fenced:  # capture-mid's checkpoint runs inside apply
+                    self.recover(power=False)
+                    yield
 
     # --- recovery ---------------------------------------------------------------------------
     def recover(self, power: bool, again: str = "") -> None:
@@ -300,7 +353,7 @@ class Node:
         p_h, docs, versions = self.head
         self.docs, self.versions = copy.deepcopy(docs), dict(versions)
         self.strata_applied = p_h
-        b = self.bundle or {"pos": 0, "fs": {}, "app": {"counter": 0, "cur": None, "uploads": {}, "nputs": 0}}
+        b = self.bundle or {"pos": 0, "fs": {}, "app": {"counter": 0, "cur": None, "uploads": {}, "nputs": 0, "curlen": 0}}
         if b["pos"] > p_h:
             raise Failed(f"fail closed: P_b {b['pos']} > P_H {p_h}")
         for name, length in b["fs"].items():
@@ -318,7 +371,7 @@ class Node:
         self.retired, self.mid = set(), False
         app = b["app"]
         self.counter, self.cur, self.uploads = app["counter"], app["cur"], dict(app["uploads"])
-        self.nputs, self.spaced = app["nputs"], set()
+        self.nputs, self.curlen, self.spaced, self.eio = app["nputs"], app["curlen"], set(), set()
         if self.variant == "counter-from-dir":
             vols = [int(n.split("-")[1]) for n in self.disk.data if n.startswith("vol-")]
             self.counter = max(vols) + 1 if vols else 0
@@ -357,7 +410,7 @@ class Node:
         live |= {v[1] for v in self.docs.values() if v[0] == "blob"}
         live |= {n for n in self.disk.data if n.startswith("stage-") and n not in self.retired}
         files = tuple(sorted((n, bytes(self.disk.data.get(n, b"<gone>"))) for n in live))
-        return self.reads(), files, self.counter, self.nputs
+        return self.reads(), files, self.counter, self.nputs, self.curlen
 
 
 def oracle(variant: str, log: list[tuple]) -> Node:

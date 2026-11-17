@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review
+State: working
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,23 +32,17 @@ both models extended (`docs/design/cluster-release/`).
   head P_H, fails closed if P_b > P_H, and replays the log above P_b; strata skips entries at or
   below P_H, and the application's file effects re-run."
 
-## Proposed criteria deltas (against the quest file at Xapiand master)
+## Proposed criteria deltas (round 3, against the quest file at Xapiand:4f0c74bdb)
 
-- A1 (N10, B7, N13): the run also covers a checkpoint right after chunks or NoOps and a write
-  whose first strata attempt answers `no_space`; the mutants add: the application state gated on
-  strata's verdict; skip the capture's mark (`no-mark`); commit strata after publication; a retry
-  that re-runs the whole entry
-- A2 (B7): adds "one replica's storage budget refuses at allowance growth and then frees, and
-  digests stay equal; a mutant that re-runs the whole entry on retry fails it; seeds and crash
-  points stated"
-- A3 (B8, N15): replace "two merges to one id and a conditional write with an election between,
-  every schedule: ... and no re-proposal" with "two merges to one id, a conditional write and an
-  invalid document with an election between, every schedule: no acknowledged success refused, no
-  merge answered 409, the conditional write's answer matches its effect, the invalid one answered
-  400 and never submitted again, and no second submission; with a predictor that misses the
-  fields mark, every request answered within three placements (503 after the third), a deposed
-  proposer's refused merge forwarded once and answered by the leader; a leader stalled on
-  `no_space` hands leadership to a follower applied past it"; mutants add "that lift the bound"
+- A1 (B10): the run also covers a blob push that fails partway with ENOSPC and a checkpoint whose
+  file sync fails; in the mutant list, replace "a retry that re-runs the whole entry" (now safe:
+  positional file effects rewrite the same bytes) with "append on retry; retry a failed checkpoint
+  sync and publish"
+- A2 (B10): the storage case reads "one replica's storage budget refuses at allowance growth and
+  its file-set write fails once with ENOSPC, then both free, and digests stay equal; a mutant that
+  appends on retry fails it"
+- A3 (N17): adds "an election that replaces an uncommitted entry answers its request `superseded`,
+  never submitted again by the group"
 
 ## Evidence
 
@@ -59,6 +53,14 @@ both models extended (`docs/design/cluster-release/`).
 | Models, round 2 | `bundle_model.py` job 261117-025944-a43484 and `verdict_model.py` job 261117-025949-8a87ce, both exit 0 at Xapiand:904f8c6a7038 |
 
 ## Result
+
+Round 3 (B10, N16, N17): file effects are positional from the entry's starting application state
+(the current volume's length is in it), so a failed push (ENOSPC) stalls and rewrites the same
+bytes; a failed checkpoint sync fences and reopens through recovery; a forwarded re-submission
+carries its placement count. D3, D16 step 2, quest 5 A1-A3. `bundle_model.py`, 11 scripts:
+`fixed` 0 of 1,746, `sync-late` 0 of 1,752, `retry-whole` 0 of 1,758 (now safe); `append-on-retry`
+fails 34, `sync-retry` 6, the other twelve broken variants fail as before.
+
 
 Round 2 (re-check B7, B8, N10-N15), on top of round 1's revision 2 (B1-B6):
 

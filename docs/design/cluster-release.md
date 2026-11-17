@@ -176,9 +176,12 @@ change them:
   the replica (`application_failed`), which repairs by install (quest 6 A3). strata 491a1bdc moves
   the position on the allowance-path `no_space` (`index.hh:860`, `:878-880`), so its retry would
   answer `skipped`; `strata-nospace-position` fixes that, and quest 5 lands after it
-  (`nospace-moves` in D16's model). A retry repeats only the strata write: the entry's file
-  effects ran once before the first attempt, and the application state updates after the definite
-  answer (`retry-whole`, which pushes the blobs again on one replica, fails). The capture's mark
+  (`nospace-moves` in D16's model). Every file effect writes at the volume and offset the entry's
+  starting application state names (it holds the current volume's length), a blob push included,
+  so no effect appends: a failed one (ENOSPC before strata answers) stalls and retries like
+  `no_space` and rewrites the same bytes, and a retry from the entry's start is idempotent
+  (`retry-whole` passes, `append-on-retry` fails). The application state updates once, after the
+  definite answer. The capture's mark
   (D16 step 1) is an entry like any other, so a capture, and a close, waits out `no_space` too.
 - Definite, the same on every replica, position moved: `accepted`, `version_conflict`,
   `schema_conflict`, `fields_conflict` and `invalid`. Each is a function of the log, `invalid`'s
@@ -207,7 +210,8 @@ before its entry applied), apply answers `version_conflict`, `fields_conflict` o
 `schema_conflict` against expectations the leader chose, and the request is submitted again
 through the write path (D8) from the original request, not the prepared command: the leader
 prepares it from the state it now has, and a proposer deposed meanwhile forwards it once to the
-leader, which then owns the answer. A request gets at most three placements; after the third
+leader, which then owns the answer. The forward carries the request's placement count, so the
+bound is the request's, not each leader's. A request gets at most three placements; after the third
 refusal it answers a retryable 503 with `Retry-After` (Q10), so a merge is never answered 409.
 `verdict_model.py` (two voters with their own applied state) reaches the deposed proposer's
 forward, and under every prepare rule answers every request within the bound with no false
@@ -478,7 +482,9 @@ A checkpoint, in order:
    length and the application state are read there, and apply continues after it. If strata's
    position is below P_b (the last entries had no strata operation: chunks, NoOps, membership), the
    capture applies an empty transaction at P_b, which moves it (`index.hh:877-880`).
-2. Sync each file the bundle names and the file-set directory.
+2. Sync each file the bundle names and the file-set directory. A failed sync fences the replica,
+   which reopens through recovery: the kernel may have marked the pages clean, so a retried sync
+   can succeed with the bytes lost (`sync-retry` fails).
 3. Commit strata, so P_H ≥ P_b. Steps 2 and 3 may run in either order; both precede step 4.
 4. Publish through `Driver::checkpoint`; consensus may then compact the log at or below P_b.
 5. Unlink each retired file the published bundle omits (D12), then sync the directory.
@@ -644,7 +650,8 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   unlink included, and a second crash at every point of recovery. The run covers a staging file
   consumed above the bundle, an aborted upload, an upload open across a checkpoint, a cancelled
   checkpoint, a strata commit outside the group, a refused write, a checkpoint right after chunks
-  or NoOps, and a write whose first strata attempt answers `no_space`, with the application's
+  or NoOps, a write whose first strata attempt answers `no_space`, a blob push that fails partway
+  with ENOSPC, and a checkpoint whose file sync fails, with the application's
   counter, current volume and open uploads in the bundle's application state. Oracle: every
   acknowledged command is in the recovered log, and the digest (documents with versions resolved
   through their locators, the file set, the application state) equals a replay from empty of the
@@ -652,11 +659,13 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   Mutants, each `--fails-without`: replay the file set from P_H; unlink at apply; publish before
   the files sync; capture inside an entry's apply; file effects gated on strata's verdict; the
   application state gated on it; skip the capture's mark (`no-mark`); commit strata after
-  publication; a retry that re-runs the whole entry (the `crash` gate check, jobs). A2: three and
+  publication; append on retry; retry a failed checkpoint sync and publish (the `crash` gate
+  check, jobs). A2: three and
   five voters in process: every `quorum`-acknowledged entry survives any one crash (two at five),
   and digests, file sets included, are equal after every schedule; seeds and crash points stated;
-  one replica's storage budget refuses at allowance growth and then frees, and digests stay equal,
-  a mutant that re-runs the whole entry on retry failing it (a job). A3: `ack=none` completes at
+  one replica's storage budget refuses at allowance growth and its file-set write fails once with
+  ENOSPC, then both free, and digests stay equal, a mutant that appends on retry failing it (a
+  job). A3: `ack=none` completes at
   `ProposalPlaced` and `quorum` when the proposer applies its placement, with apply's verdict;
   with the followers' appends held, `none` completes and `quorum` does not; two merges to one id,
   a conditional write and an invalid document with an election between, every schedule: no
@@ -664,7 +673,9 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   effect, the invalid one answered 400 and never submitted again, and no second submission; with a
   predictor that misses the fields mark, every request answered within three placements (503
   after the third), a deposed proposer's refused merge forwarded once and answered by the leader;
-  a leader stalled on `no_space` hands leadership to a follower applied past it; mutants that
+  a leader stalled on `no_space` hands leadership to a follower applied past it; an election that
+  replaces an uncommitted entry answers its request `superseded`, never submitted again by the
+  group; mutants that
   acknowledge at commit, that prepare before the ready point and that lift the bound fail
   (tests). A4: `read_applied` after `Driver::read` on a leader partitioned away and deposed never
   returns a state older than a committed write; mutants that skip the probe and that publish the
@@ -1092,3 +1103,11 @@ The re-check at Xapiand:edb610078:
 | N12 | `invalid` is definite; replicas share strata's caps; the cap path's position is `strata-nospace-position` A4's | D3 |
 | N13 | The application state's update is verdict-independent (`appstate-gated` fails) | D3 |
 | N15 | A stalled leader holds its group's `quorum` answers; it hands leadership to a follower applied past the entry after one election timeout | D3; quest 5 A3 |
+
+The round 2 re-check at Xapiand:4f0c74bdb:
+
+| ID | Fix | Where |
+|---|---|---|
+| B10 | File effects are positional from the entry's starting application state; a failed one stalls and retries like `no_space`; a failed checkpoint sync fences | D3, D16 step 2; quest 5 A1, A2 |
+| N16 | A forwarded re-submission carries its placement count | D3 |
+| N17 | A3 answers an entry replaced by an election `superseded` | Quest 5 A3 |
