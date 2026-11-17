@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -85,7 +85,7 @@ criteria, section 12's group-core table) on this branch, with the review's model
 | Criterion | Evidence |
 |---|---|
 | A1-A9 | none yet: design only, nothing built |
-| Models | see Result; job ids recorded below once they run |
+| Models | `bundle_model.py` job 261117-024523-dd3b4d and `verdict_model.py` job 261117-024526-a92827, both exit 0 at Xapiand:faf31a50635b (`none` level) |
 
 ## Result
 
