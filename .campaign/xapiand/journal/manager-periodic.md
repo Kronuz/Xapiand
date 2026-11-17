@@ -17,7 +17,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | suite 261117-075419-f95bc0 at c30d437 (44 of 44 passed) |
+| A2 | `src/manager.cc`: "std::unique_ptr<control::Periodic> shutdown_retry;" |
+| A3 | lead read the diff: shutdown_impl starts the task only when shutdown_retry is null, and the teardown in join() stops it beside housekeeping before drain_control |
 
 ## Result
 
