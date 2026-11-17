@@ -849,6 +849,15 @@ task::task<void> run(detail::State& state, const Limits& limits, std::string_vie
 }  // namespace
 
 
+static constexpr std::string_view prefix = "local _ENV = ...; ";
+
+std::string_view
+Processor::body() const
+{
+	return std::string_view(source).substr(prefix.size());
+}
+
+
 Processor::Processor(std::string_view name, std::string_view body, const MsgPack& params, Limits limits_) :
 	hash(std::hash<std::string_view>()(body)),
 	script_name(name),
@@ -856,7 +865,7 @@ Processor::Processor(std::string_view name, std::string_view body, const MsgPack
 	owner(std::this_thread::get_id())
 {
 	// The body on the line of `local _ENV`, so line numbers hold.
-	source = "local _ENV = ...; ";
+	source = prefix;
 	source.append(body);
 	if (params.is_map() && params.size() != 0) {
 		stored_params = params.serialize();
@@ -928,7 +937,7 @@ Processor::compile_local(const Script& script)
 		return processor;
 	}
 	if (name_body.second.empty()) {
-		THROW(ClientError, "Script {} is not cached; send its '_body'", repr(name_body.first));
+		THROW(ClientError, "Script {} has no body and is not cached; send its '_body'", repr(name_body.first));
 	}
 	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, MsgPack::MAP()));   // its params come with each call
 }

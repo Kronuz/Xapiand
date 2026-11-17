@@ -95,6 +95,10 @@ Calls of a script over 16 KiB wait for each other, one at a time on its thread, 
 request's cancel: a call near `max_instructions` holds every other call of that script on its reactor for its whole
 run.
 
-A request that names a script without its body, when the script is not cached (evicted by the count bound, or
-dropped because its charge alone passes the byte budget), answers a ClientError naming the script and asking for its
+A request that names a script without its body, when the script is not cached (evicted by the count bound, dropped
+because its charge alone passes the byte budget, compiled on another worker thread, or lost to a restart), answers a ClientError naming the script and asking for its
 `_body`; it never runs an empty script.
+
+A schema never stores a name-only script: declaring one whose script is cached stores its body, so writes keep
+running it after a restart and on every worker thread; declaring one that is not cached answers the same error at
+declaration.

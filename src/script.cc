@@ -253,7 +253,8 @@ Script::process_script([[maybe_unused]] bool strict) const
 		return script_data;
 	} else {
 		auto name_body = get_name_body();
-		lua::Processor::compile_local(*this);
+		auto processor = lua::Processor::compile_local(*this);   // a name alone must be cached: the schema stores the body
+		name_body.second = processor->body();
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_LUA, {

@@ -1327,10 +1327,13 @@ void test_a_name_only_request_for_a_script_that_is_not_cached_is_refused() {
 		auto name_only_refused = [](const std::string& name) {
 			MsgPack object({{"_name", name}});
 			Script script(object);
+			MsgPack doc = doc_of({{"x", 1}});
 			try {
-				Processor::compile_local(script);
+				auto processor = Processor::compile_local(script);
+				call(*processor, doc);
 			} catch (const ClientError& e) {
-				return std::string(e.what()).find(name) != std::string::npos;
+				const bool is_400 = dynamic_cast<const PayloadTooLarge*>(&e) == nullptr;   // a plain ClientError answers 400
+				return is_400 && doc == doc_of({{"x", 1}}) && std::string(e.what()).find(name) != std::string::npos;
 			}
 			return false;
 		};
@@ -1361,10 +1364,46 @@ void test_a_name_only_request_for_a_script_that_is_not_cached_is_refused() {
 	opts.scripts_cache_size = saved;
 }
 
+void test_a_schema_stores_the_body_of_a_name_only_script_or_refuses_it() {
+	const auto saved = opts.scripts_cache_size;
+	std::thread([] {
+		auto declare = [](const std::string& name) {
+			MsgPack object({{"_name", name}});
+			Script script(object);
+			return script.process_script(true);
+		};
+		MsgPack full({{"_name", "decl-cached"}, {"_body", "_doc.ran = _doc.x + 1"}});
+		Script cached_script(full);
+		Processor::compile_local(cached_script);
+		// Cached: the stored script carries the body.
+		auto stored = declare("decl-cached");
+		CHECK_EQ(stored.at("_lua").at("_body").str(), "_doc.ran = _doc.x + 1");
+		// Not cached: refused at declaration, with a plain ClientError (400).
+		bool refused = false;
+		try {
+			declare("decl-missing");
+		} catch (const ClientError& e) {
+			refused = dynamic_cast<const PayloadTooLarge*>(&e) == nullptr && std::string(e.what()).find("decl-missing") != std::string::npos;
+		}
+		CHECK(refused);
+		// A write through the stored schema on a fresh thread (its own, empty cache) still runs the script.
+		std::thread([stored] {
+			CHECK(Processor::cached_local("decl-cached") == nullptr);
+			Script from_schema(stored.at("_lua"));
+			auto processor = Processor::compile_local(from_schema);
+			auto out = call(*processor, doc_of({{"x", 41}}));
+			CHECK(out.ok());
+			CHECK_EQ(out.doc.at("ran").i64(), 42);
+		}).join();
+	}).join();
+	opts.scripts_cache_size = saved;
+}
+
 }  // namespace
 
 TEST_MAIN(
 	test_a_name_only_request_for_a_script_that_is_not_cached_is_refused,
+	test_a_schema_stores_the_body_of_a_name_only_script_or_refuses_it,
 	test_a_script_transforms_the_document,
 	test_params_and_old_doc_are_in_scope,
 	test_numbers_keep_their_kind,
