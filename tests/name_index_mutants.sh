@@ -2,10 +2,10 @@
 # name_index_mutants.sh MUTANT TARGET TEST: applies one mutant of docs/design/name-index.md's mechanism to this
 # checkout, builds the test binary TARGET (xapiand_test_index_pattern, xapiand_test_node) and runs its case TEST.
 # Exits with TEST's status, so a `campaign job submit --fails-without` job passes when the mutant is killed; 126
-# when the mutant does not apply or build, which never counts as killed. The checkout is left mutated: run each
-# in a fresh checkout.
+# when the mutant does not apply or build, which never counts as killed. The mutated sources are restored on exit.
 set -u
 mutant=$1 target=$2 test=$3
+trap 'git checkout -- src/database/name_index.cc src/database/pool.cc src/server/search_views.cc' EXIT
 
 mutate() {   # mutate FILE OLD NEW: replaces the one OLD text in FILE, or fails
 	python3 - "$1" "$2" "$3" <<'EOF' || { echo "MUTATION NOT APPLIED: $mutant"; exit 126; }
