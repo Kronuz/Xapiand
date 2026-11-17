@@ -21039,6 +21039,43 @@
       "updated": "2026-11-17T02:00:33",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
+    "turn-log-parity": {
+      "accepted": {},
+      "after": [
+        "document-gate"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/**",
+        "test/*.cc",
+        "test/fixtures/**",
+        "bench/kv/**",
+        "docs/design/standalone-turn-log.md",
+        "docs/perf/**",
+        "docs/mechanisms/**",
+        "fuzz/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
+      "updated": "2026-11-17T02:22:54"
+    },
     "turn-seal": {
       "accepted": {},
       "after": [],
