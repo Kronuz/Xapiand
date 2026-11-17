@@ -35,7 +35,8 @@ mutants. Built at strata:e7bb6c70 and the ctest rename after it; A1's jobs queue
 | Criterion | Evidence |
 |---|---|
 | A1 | queued: build-test 261117-041324-e0772a, crash (ctest `group_crash_lone_voter`) 261117-041324-825bcd, TSan 261117-041429-1aa7a2; `--fails-without` mutants: replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. Locally at strata:e7bb6c70: 174 script events, 175 crash points, 2,527 second crashes, 0 failures; all ten mutants killed |
-| A2-A10 | none yet |
+| A9 | strata `docs/mechanisms/replication-group.md` at strata:0d6486006cc3: the lone voter's mechanism (grows with each step) |
+| A2-A8, A10 | none yet |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
