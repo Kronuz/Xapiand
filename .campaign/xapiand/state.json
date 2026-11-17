@@ -20626,6 +20626,49 @@
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
     },
+    "turn-seal": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "journal:turn-log"
+      ],
+      "files": [
+        "include/journal/turn_driver.h",
+        "include/journal/turn_log.h",
+        "test/turn_driver*",
+        "test/turn_seal*",
+        "docs/mechanisms/turn-seal.md",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:turn-seal"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "TurnDriver::seal: one sealed record per group per turn",
+      "updated": "2026-11-16T20:53:29"
+    },
     "unpin-after-kick": {
       "accepted": {
         "correctness": {
