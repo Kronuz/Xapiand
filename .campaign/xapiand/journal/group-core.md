@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review
+State: waiting on jobs 261117-041324-e0772a 261117-041324-825bcd 261117-041429-1aa7a2 and ten mutant jobs (Evidence)
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,51 +9,69 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 2 of the design (the last): the re-check at Xapiand:edb610078 (CHANGES on B7, B8; N10-N15)
-answered in `docs/design/cluster-release.md` D3, D18, Q10, quest 5's criteria and section 12, with
-both models extended (`docs/design/cluster-release/`).
+Build step 1, the lone voter end to end (strata `quest/xapiand/group-core`): `strata::group`
+create/open/propose/apply off the loop, checkpoint with the D16 bundle, recover; A1's test and
+mutants. Built at strata:e7bb6c70 and the ctest rename after it; A1's jobs queued.
 
 ## Next
 
-1. Lead: fold the criteria deltas below into the quest file; Q10 (with the 503 after the bound) to
-   the owner; anything still open after this round goes to the owner.
-2. Build starts after `strata-nospace-position` and the design review accept.
+1. Read A1's jobs (Evidence); fold failures in.
+2. Step 2: multi-voter in process (A2), the transport hook on `loop::send`, `transfer_leadership`
+   on a stalled leader (A3's part).
+3. Then `read_applied` after `Driver::read` (A4), close against `Committed` and the catalog (A5,
+   A6), A7 after `detent:consensus-quiescence`, A10's scheduling points under TSan.
 
 ## Blocked on
 
-- Owner, through the lead: Q10. Recommendation (b), the `quorum` answer carries apply's verdict,
-  plus: a refused merge gets at most three placements, then a retryable 503 with `Retry-After`
-  (keeps "a merge is never answered 409"). Client-visible against revision 1, not master: a
-  `quorum` 2xx means applied; a conditional write can get its 409 after commit; a merge can get a
-  503 after three refused placements (0 schedules with the ready point and pending versions).
-- Lead: strata `docs/REPLICATION.md` text (outside the file set), unchanged from round 1:
-  "A checkpoint bundle binds the log to strata by position: strata's durable head is at or past
-  the bundle's position P_b when the bundle publishes." and "Recovery opens strata at its durable
-  head P_H, fails closed if P_b > P_H, and replays the log above P_b; strata skips entries at or
-  below P_H, and the application's file effects re-run."
-
-## Proposed criteria deltas (round 3, against the quest file at Xapiand:4f0c74bdb)
-
-- A1 (B10): the run also covers a blob push that fails partway with ENOSPC and a checkpoint whose
-  file sync fails; in the mutant list, replace "a retry that re-runs the whole entry" (now safe:
-  positional file effects rewrite the same bytes) with "append on retry; retry a failed checkpoint
-  sync and publish"
-- A2 (B10): the storage case reads "one replica's storage budget refuses at allowance growth and
-  its file-set write fails once with ENOSPC, then both free, and digests stay equal; a mutant that
-  appends on retry fails it"
-- A3 (N17): adds "an election that replaces an uncommitted entry answers its request `superseded`,
-  never submitted again by the group"
+- Owner, through the lead: Q10. Built on the lead default (b), kept in one place
+  (strata `include/strata/group/answer.hh`: `ack`, `answer`, `max_placements = 3`, `after()`).
+- `strata-nospace-position` (not built): the group relies on its contract (a `no_space` answer
+  leaves strata's position unmoved). At 491a1bdc the reservation path keeps it and the allowance
+  path moves it; the group fences on the `skipped` that follows (`group.hh`, `write()`), and A1's
+  `no_space` case uses the reservation path. When it lands, add the allowance-path case.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1-A9 | none yet: design only, nothing built |
-| Models, round 1 | `bundle_model.py` job 261117-024523-dd3b4d and `verdict_model.py` job 261117-024526-a92827, both exit 0 at Xapiand:faf31a50635b |
-| Models, round 3 | `bundle_model.py` job 261117-030454-a1f4da, exit 0 at Xapiand:2fea83c16dea |
-| Models, round 2 | `bundle_model.py` job 261117-025944-a43484 and `verdict_model.py` job 261117-025949-8a87ce, both exit 0 at Xapiand:904f8c6a7038 |
+| A1 | queued: build-test 261117-041324-e0772a, crash (ctest `group_crash_lone_voter`) 261117-041324-825bcd, TSan 261117-041429-1aa7a2; `--fails-without` mutants: replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. Locally at strata:e7bb6c70: 174 script events, 175 crash points, 2,527 second crashes, 0 failures; all ten mutants killed |
+| A2-A10 | none yet |
+| Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
+
+Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, target `strata::group`;
+`test/group/{lone_voter_test.cc,blob_app.hh,host_io.hh,mutants.py}`, ctest `group_lone_voter`;
+`docs/mechanisms/replication-group.md`; `docs/REPLICATION.md` "Checkpoints and repair" takes the
+proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
+
+## Rulings I made
+
+- strata pins consensus at 57745e8 and moves journal to 555b69f, task to 95798a0 and completion to
+  7731315 (consensus's and journal's own pins, each a descendant of strata's old one; framing.h
+  unchanged), and turns on `COMPLETION_TASK`, which journal now links.
+- Strata position of entry i is `(i, 1)`; the capture's mark is an empty transaction at `(P_b, 1)`.
+- One queue per group on a host-supplied chore scheduler, one item per resume, so every entry,
+  capture, sync-and-commit, unlink and recovery is a crash point. Recovery goes to the queue's
+  front and the queue holds until then, so ranges Core delivers during `recover` wait behind it.
+- strata is created after the journal group's create (open-or-create on the chore), so a strata
+  index never holds entries its journal lacks.
+- Apply keeps a phase: a stall after the file effects retries only the strata write; a stall in
+  the effects (ENOSPC) re-runs them from the entry's start, positionally.
+- A `quorum` proposal not yet registered may be any entry applied meanwhile: apply keeps outcomes
+  above the oldest unregistered proposal's starting applied index, pruned as they register.
+- The journal host's faultfs goes through `test/group/host_io.hh`, a forwarding IO that adds
+  `lock_owner` (faultfs::io implements only the legacy lock calls; core is outside this file set).
+- Oracle: the test application records every entry it applies (index, term, kind, command); the
+  replay runs those through the application alone on a fresh strata index and an in-memory file
+  set, sharing no code with the group's apply, checkpoint or recovery.
+- The consensus limits in the test are small (log 64 KiB): at the defaults a checkpoint's
+  reservation exceeds the admission's 64 MiB replacement pool and waits forever. Xapiand's group
+  options must size the pool for `maximum_size(limits)`; noted for quest 10.
+- "Capture inside an entry's apply" is reached through the test application's `after_effects`
+  hook, which starts a checkpoint while an upload's final entry applies.
+
+## Design result (rounds 1-3)
 
 Round 3 (B10, N16, N17): file effects are positional from the entry's starting application state
 (the current volume's length is in it), so a failed push (ENOSPC) stalls and rewrites the same
@@ -90,7 +108,7 @@ Models (`docs/design/cluster-release/`), jobs below:
   re-submitted, no request past three placements; re-submissions 35,296 / 6,328 / 0 / 24,040,
   deposed-proposer forwards 9,128 / 0 / 0 / 9,296, merges answered 503 2,152 / 112 / 0 / 1,680.
 
-## Rulings I made
+## Design rulings
 
 - Criteria in the design's section 5 follow the quest file's numbering (A1-A9, plus A10) so the two
   stop drifting.
