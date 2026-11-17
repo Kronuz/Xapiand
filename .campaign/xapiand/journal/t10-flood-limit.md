@@ -43,9 +43,11 @@ Jobs prove criteria by their tags (`--for A1`); `campaign brief` has the generat
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+A script call runs in the heavy lane (loop-scheduling D7): `Processor::operator()` hops before its first turn and marks the scope light
+on exit. At 16 clients on one reactor the light GET's p99 is 38.7 ms against master's 85.7 and its p50 17.0 against 39.1; every client
+count is within (2 + 1) x one call alone (66.5 ms). The tiny scripted write's cost is in the ABBA rows (docs/dev/t10-flood-limit.md,
+"Cost", to be filled when the chain finishes). Docs: loop-scheduling.md D7, t10-flood-limit.md, lua-bounds.md. Open: FreeBSD CI's T10
+row (lead), the A5 suite and the T10 full run of lua_bounds.py.
 
 ## Rulings I made
 
