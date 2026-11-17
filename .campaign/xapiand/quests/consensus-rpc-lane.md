@@ -24,9 +24,9 @@ opens connections between any two nodes, not only those sharing a group. Detent'
   (`--fails-without`)
 - A3 A call between two nodes that share no group connects, completes and is accounted to no group
   (a test)
-- A4 Xapiand's methods (at least one real call, e.g. a remote search) run over the lane that
-  `detent:consensus-transport` provides, with streamed bodies; the lane's base frames, fetch as
-  method 1 and DTFT0001's removal are that quest's, not this one's (a test)
+- A4 The three Xapiand method shapes the design names (D9) run over the transport's lane with
+  streamed bodies, each with a test; the real remote search over prospect runs on this lane in
+  `shard-rpc` (Xapiand), not here (a test)
 - A5 Under the load that broke `detent:consensus-fetch-macos` on macOS, a streamed body's bytes
   equal the source's SHA-256 over 1,000 calls with zero errors (a job on macOS, and on Linux in CI)
 - A6 One CPU-hour of fuzzing on the lane's frame decoder, zero findings (the `fuzz` milestone check)
