@@ -20420,8 +20420,8 @@
       "repo": ".",
       "risk": "normal",
       "status": "active",
-      "title": "A long Lua call yields at each slice, so it turns heavy",
-      "updated": "2026-11-17T01:19:18",
+      "title": "A script call runs in the heavy lane",
+      "updated": "2026-11-17T01:21:21",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
