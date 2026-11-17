@@ -40,8 +40,8 @@ follow it in the order.
 **D3. The catalog's resolve keeps it.** Every resolve of a key on disk (an open or a create, `make_host`'s
 `h.resolve`, after `create_directories`) calls `NameIndex::opened(key)`, which adds what that directory makes the
 walk list: for each proper prefix P of `key + "/strata"`, P is an index when the segment after it is `strata` or
-starts with `.__`, and P is added when D2 admits it. So `twitter/.__2` adds `twitter`; `a/strata` adds `a/strata`
-and `a` (the walk takes `a/strata` as `a`'s marker), and `a/.__1/b` adds `a`. A name already present costs a
+starts with `.__`, and P is added when D2 admits it. So `twitter/.__2` adds `twitter`; `a/strata` adds `a` alone
+(the walk takes `a/strata` for `a`'s own data and never lists it), and `a/.__1/b` adds `a`. A name already present costs a
 lookup, O(log N) under a shared lock; only a new one takes the exclusive lock. An open adds too, so an index
 copied in while the node runs is listed once anything opens it. The hostless path (`engine::open_local`, engine
 tests and `engine::check`) never serves a request (x-pool CR6) and keeps no names.

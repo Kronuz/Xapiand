@@ -567,6 +567,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 			}
 			fs::create_directories(dir);
 		}
+		names_.opened(path);   // the walk lists the index from here on, so the names do (name-index D3)
 		return strata::counted_io::make(op.counts, [&] {
 			return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
 		});
@@ -867,6 +868,7 @@ DatabasePool::finish()
 
 	finished_.store(true);
 	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
+	names_.request_stop();
 }
 
 
@@ -876,6 +878,7 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 	L_CALL("DatabasePool::join(<timeout>)");
 
 	engine::check_may_block("DatabasePool::join");
+	names_.stop();
 
 	auto& state = begin_shutdown();
 	std::unique_lock<std::mutex> lk(state.mtx);

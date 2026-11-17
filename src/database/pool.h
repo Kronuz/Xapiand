@@ -44,6 +44,7 @@
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
 
+#include "database/name_index.h"  // for NameIndex
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include <string_view>         // for std::string_view
 
@@ -454,6 +455,7 @@ class DatabasePool {
 	struct Shutdown;
 	std::mutex shutdown_mtx_;
 	std::shared_ptr<Shutdown> shutdown_;  // under shutdown_mtx_
+	NameIndex names_;  // kept by the catalog's resolve, so it goes after the catalog
 	std::unique_ptr<IndexCatalog> catalog_;
 
 	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
@@ -481,6 +483,11 @@ public:
 	}
 	IndexCatalog& catalog() noexcept {
 		return *catalog_;
+	}
+
+	// The names of the indexes under the data directory, for index patterns (docs/design/name-index.md).
+	NameIndex& names() noexcept {
+		return names_;
 	}
 
 	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).

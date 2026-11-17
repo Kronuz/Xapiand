@@ -35,10 +35,12 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "database/name_index.h"
 #include "engine/error.h"
 #include "engine/open.h"
 #include "engine/sync.h"
@@ -705,6 +707,206 @@ void test_a_zero_cap_is_refused() {
 	CHECK_EQ(defaults.search_walk_wait, 10.0);
 }
 
+// ---- the name index (docs/design/name-index.md) ----
+
+// The names a directory makes the walk list: its own, and a parent whose marker it is.
+void test_the_names_of_an_index_directory() {
+	CHECK_TRUE(NameIndex::names_of("twitter") == (Names{"twitter"}));
+	CHECK_TRUE(NameIndex::names_of("twitter/user") == (Names{"twitter/user"}));
+	CHECK_TRUE(NameIndex::names_of("twitter/.__2") == (Names{"twitter"}));      // a shard is its index
+	CHECK_TRUE(NameIndex::names_of("a/strata") == (Names{"a"}));                // the walk takes it as a's own data
+	CHECK_TRUE(NameIndex::names_of("strata") == (Names{"strata"}));             // at the top it is a name like any
+	CHECK_TRUE(NameIndex::names_of("a/.__1/b") == (Names{"a"}));                // a/.__1 is a's shard; b is inside it
+	CHECK_TRUE(NameIndex::names_of("a/strata/b") == (Names{"a"}));
+	CHECK_TRUE(NameIndex::names_of(".xapiand") == (Names{}));                   // the node's own: never listed
+	CHECK_TRUE(NameIndex::names_of("a/.hidden") == (Names{}));
+	CHECK_TRUE(NameIndex::names_of(".xapiand/strata") == (Names{}));
+}
+
+// A tree of random nested index directories, some on disk before the build, some opened while it is about to run,
+// and some made after it; the walk over the same tree is the specification.
+struct RandomTree {
+	std::string root = "names_random_root/";
+	std::mt19937 rng;
+	NameIndex index;
+
+	explicit RandomTree(unsigned seed) : rng(seed) { fs::remove_all(root); }
+	~RandomTree() { fs::remove_all(root); }
+
+	std::string pick(std::initializer_list<const char*> choices) {
+		return *(choices.begin() + std::uniform_int_distribution<std::size_t>(0, choices.size() - 1)(rng));
+	}
+	std::string key() {
+		std::string key;
+		const auto depth = std::uniform_int_distribution<int>(1, 4)(rng);
+		for (int i = 0; i < depth; ++i) {
+			key += (i != 0 ? "/" : "") + pick({"a", "b", "ab", "a-1", "a.b", "strata", ".__1", ".__2", ".h", "x y", "\xc3\xa9", "a[1]", "w0"});
+		}
+		return key;
+	}
+	void make(const std::string& key) { fs::create_directories(root + key + "/strata"); }
+	void noise() {
+		const auto k = key();
+		fs::create_directories(root + k);
+		std::ofstream(root + k + "/.__9") << "x";   // a file is no shard
+		std::ofstream(root + k + "/strata0") << "x";
+	}
+	std::string pattern() {
+		std::string pattern;
+		const auto depth = std::uniform_int_distribution<int>(1, 3)(rng);
+		for (int i = 0; i < depth; ++i) {
+			pattern += (i != 0 ? "/" : "") + pick({"*", "**", "?", "a*", "*b", "[ab]", "[!a]*", "a", "ab", "strata", "a?1", "*-1", "w*", "\xc3\xa9*", "a[1]*", "a[[]1]", "?.b"});
+		}
+		return pattern;
+	}
+	Names items() {
+		Names items;
+		const auto wanted = std::uniform_int_distribution<int>(1, 3)(rng);
+		for (int i = 0; i < wanted; ++i) {
+			items.push_back(std::uniform_int_distribution<int>(0, 9)(rng) == 0 ? std::string("_all") : pattern());
+		}
+		const auto excluded = std::uniform_int_distribution<int>(0, 2)(rng);
+		for (int i = 0; i < excluded; ++i) {
+			items.push_back("-" + pattern());
+		}
+		if (std::uniform_int_distribution<int>(0, 3)(rng) == 0) {
+			items.push_back(key());   // a plain name
+		}
+		return items;
+	}
+};
+
+// A3: every pattern answer from the names equals the walk's over the same tree, nested paths, shards, the engine's own
+// `strata` and hidden names included, whether a name came from the build, a resolve before it, or one after it.
+void test_the_names_answer_as_the_walk() {
+	const index_pattern::Bounds big(1000000, 1000000);
+	std::size_t compared = 0, nonempty = 0;
+	for (unsigned seed = 1; seed <= 300; ++seed) {
+		RandomTree tree(seed);
+		const auto before = std::uniform_int_distribution<int>(0, 12)(tree.rng);
+		for (int i = 0; i < before; ++i) {
+			tree.make(tree.key());
+		}
+		for (int i = 0; i < 3; ++i) {
+			tree.noise();
+		}
+		for (int i = 0; i < 3; ++i) {   // resolved before the build: in the delta, and on disk
+			const auto key = tree.key();
+			tree.make(key);
+			tree.index.opened(key);
+		}
+		CHECK_TRUE(tree.index.build(tree.root));
+		const auto after = std::uniform_int_distribution<int>(0, 12)(tree.rng);
+		for (int i = 0; i < after; ++i) {   // made by a create after the build
+			const auto key = tree.key();
+			tree.make(key);
+			tree.index.opened(key);
+		}
+		CHECK_TRUE(tree.index.expand(Names{"**"}, big) == expand(tree.root, Names{"**"}, big));
+		for (int round = 0; round < 30; ++round) {
+			const auto items = tree.items();
+			const auto walked = expand(tree.root, items, big);
+			const auto indexed = tree.index.expand(items, big);
+			if (walked != indexed) {
+				std::string text;
+				for (const auto& item : items) {
+					text += " " + item;
+				}
+				std::fprintf(stderr, "  seed %u, items%s: the walk lists %zu names, the index %zu\n", seed, text.c_str(), walked.size(), indexed.size());
+			}
+			CHECK_TRUE(walked == indexed);
+			++compared;
+			nonempty += walked.empty() ? 0 : 1;
+		}
+	}
+	std::fprintf(stderr, "  %zu comparisons, %zu with names\n", compared, nonempty);
+	CHECK_GT(nonempty, compared / 10);   // the comparison is not vacuous
+}
+
+// A name resolve adds while the build runs is kept: the walk may have passed its directory already.
+void test_a_name_added_during_the_build_is_kept() {
+	const std::string root = "names_late_root/";
+	fs::remove_all(root);
+	fs::create_directories(root + "early/strata");
+	NameIndex index;
+	index.opened("late/.__1");   // its directory comes after the walk read the top
+	CHECK_TRUE(index.build(root));
+	fs::create_directories(root + "late/.__1/strata");
+	CHECK_TRUE(index.expand(Names{"_all"}, {100, 100}) == (Names{"early", "late"}));
+	CHECK_TRUE(index.expand(Names{"_all"}, {100, 100}) == expand(root, Names{"_all"}, {100, 100}));
+	fs::remove_all(root);
+}
+
+// The delta merges into the packed base once it is large; the answers stay the walk's.
+void test_the_delta_merges_into_the_base() {
+	const std::string root = "names_merge_root/";
+	fs::remove_all(root);
+	NameIndex index;
+	CHECK_TRUE(index.build(root));
+	for (int i = 0; i < 3000; ++i) {
+		const auto key = "m" + std::to_string(i % 7) + "/n" + std::to_string(i);
+		fs::create_directories(root + key + "/strata");
+		index.opened(key);
+	}
+	CHECK_EQ(index.size(), std::size_t{3000});
+	CHECK_LT(index.bytes(), std::size_t{3000} * 40);   // packed: about a name's bytes and 8 more each, not a tree node
+	const index_pattern::Bounds big(100000, 100000);
+	for (const char* pattern : {"_all", "m3/*", "m*/n1*", "**/n29??", "m6/n[12]*"}) {
+		CHECK_TRUE(index.expand(Names{pattern}, big) == expand(root, Names{pattern}, big));
+	}
+	fs::remove_all(root);
+}
+
+// The visits of one lookup: each name read and each seek.
+std::size_t lookups(const NameIndex& index, const Names& items) {
+	std::size_t calls = 0;
+	index.expand(items, {100000, 100000}, [&] { ++calls; });
+	return calls;
+}
+
+// A prefix pattern reads its range alone, and a subtree no pattern can match below costs one seek (A2's mechanism).
+void test_a_prefix_pattern_reads_its_range() {
+	Wide wide(1000);   // i1000 .. i1999
+	NameIndex index;
+	CHECK_TRUE(index.build(wide.root));
+	CHECK_TRUE(index.expand(Names{"i101*"}, {100, 100}) == expand(wide.root, Names{"i101*"}, {100, 2000}));
+	CHECK_LE(lookups(index, {"i101*"}), std::size_t{12});    // a seek and its 10 names, not the 1,000 the walk reads
+	CHECK_LE(lookups(index, {"i101?", "i102?"}), std::size_t{24});
+	CHECK_EQ(lookups(index, {"q*"}), std::size_t{1});
+	for (int i = 0; i < 500; ++i) {
+		const auto key = "i1500/c" + std::to_string(i);
+		fs::create_directories(wide.root + key + "/strata");
+		index.opened(key);
+	}
+	// `i15*` lists i1500 .. i1599 and steps past i1500's 500 children with one seek.
+	CHECK_EQ(index.expand(Names{"i15*"}, {1000, 1000}).size(), std::size_t{100});
+	CHECK_LE(lookups(index, {"i15*"}), std::size_t{110});
+}
+
+// A4: on a node with more indexes than the cap, a pattern answers from the names, where the walk is refused.
+void test_the_names_answer_over_the_cap() {
+	Wide wide(300);
+	NameIndex index;
+	CHECK_TRUE(index.build(wide.root));
+	CHECK_THROW(expand(wide.root, Names{"i101*"}, {50, 50}), engine::Error);   // the walk reads all 300 entries
+	CHECK_TRUE(index.expand(Names{"i101*"}, {50, 50}) == (Names{"i1010", "i1011", "i1012", "i1013", "i1014", "i1015", "i1016", "i1017", "i1018", "i1019"}));
+	CHECK_THROW(index.expand(Names{"_all"}, {50, 50}), engine::Error);          // the cap on names stays
+	CHECK_THROW(index.expand(Names{"*0", "-i1*"}, {50, 50}), engine::Error);    // so does the cap on the names read
+	CHECK_THROW(index.expand(Names{"i1*"}, {50, 1000}), engine::Error);
+}
+
+// A stopped index builds nothing and starts no build.
+void test_a_stopped_build_ends() {
+	Wide wide(50);
+	NameIndex index;
+	index.request_stop();
+	CHECK_FALSE(index.build(wide.root));
+	CHECK_FALSE(index.complete());
+	index.start(wide.root);
+	index.stop();
+	CHECK_FALSE(index.complete());
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -729,6 +931,13 @@ int main(int argc, char** argv) {
 		{"test_the_walk_queue_is_bounded", test_the_walk_queue_is_bounded},
 		{"test_a_walk_waits_for_the_deadline_at_most", test_a_walk_waits_for_the_deadline_at_most},
 		{"test_a_walk_that_is_cancelled_gives_its_place_back", test_a_walk_that_is_cancelled_gives_its_place_back},
+		{"test_the_names_of_an_index_directory", test_the_names_of_an_index_directory},
+		{"test_the_names_answer_as_the_walk", test_the_names_answer_as_the_walk},
+		{"test_a_name_added_during_the_build_is_kept", test_a_name_added_during_the_build_is_kept},
+		{"test_the_delta_merges_into_the_base", test_the_delta_merges_into_the_base},
+		{"test_a_prefix_pattern_reads_its_range", test_a_prefix_pattern_reads_its_range},
+		{"test_the_names_answer_over_the_cap", test_the_names_answer_over_the_cap},
+		{"test_a_stopped_build_ends", test_a_stopped_build_ends},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
