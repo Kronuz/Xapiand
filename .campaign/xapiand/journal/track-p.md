@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-140026-dba8cc 261117-141714-e0904c 261117-141718-c0035a 261117-141721-81b492 261117-141725-aa9027
+State: waiting on jobs 261117-155032-ecb275 261117-155033-63b78b 261117-155036-9088e8 261117-155040-04a4e1 261117-155044-c780b6 261117-155047-253843
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -34,21 +34,20 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
    Variants (`PROSPECT_EXPERIMENT_P7`): bit 1, the term's bulk top-k with excluded clauses
    probed only for hits that could enter; bit 2, nested exclusions counted apart by windows so
    a counted top-k takes the bulk path; bit 4, term-minus-term counted by windows too.
-   Done: prototype prospect:983b064 (`docs/perf/p7-exclusion.patch`; the worktree's search.hh
-   carries it uncommitted, equal to the patch). Parity of bits 1, 1+2, 1+4: `verify` 0
-   mismatches and `dump` counted/uncounted byte-identical over the 962 gate queries
-   (`.scratch/p7/parity.sh`), and on the 12 short-list negations. Local screen (loaded host)
-   of bit 1 on the 19 negated queries: `TOP_10` 0.52, `TOP_100` 0.81, `TOP_1000` 0.89,
-   `TOP_100_COUNT` 0.96 of main.
-   Test: prospect:080e0a7 (search_test `negations()`, `test/negation_mutants.py`); mutant 1
-   caught locally.
-   Pending: A/B 261117-140026-dba8cc (exclusive; `.scratch/p7/job-ab.sh`: a main, c A/A copy,
-   b1/b3/b5 bits 1, 1+2, 1+4; targets negated 2/3, guards terms, intersection 2, phrase 2,
-   union 2, then the short-list probe per case); search_test with the patch e0904c; mutants
-   0-2 c0035a, 81b492, aa9027 (--fails-without, bit 1).
-   Next: score the A/B by the rule; if a bit keeps, run the engines comparison against
-   Tantivy over `serve` for it, mutant 3, and (bits 2/4 kept) their own mutants; write
-   `docs/perf/p7-exclusion.md`.
+   Decided (lead's message, A/B 261117-140026-dba8cc): bit 1 kept, bits 2 and 4 removed (lose
+   negated 3 `TOP_100_COUNT` 1.153/1.234 and short counts 1.15-1.29). Checked the reading: also
+   intersection 2 `TOP_100` 1.053 [1.018, 1.089] (untouched code, per-query 1.020) and two short
+   `TOP_1000` cases past their A/A (+xylophone -music -film 1.183, +quokka -the 1.167): the
+   prototype's per-query fresh copies of the excluded clauses. Landed form probes in place and
+   copies only where groups step back.
+   Landed: prospect:bd60f39 (search.hh, no switch; mutants retargeted); verdict
+   `docs/perf/p7-exclusion.md` + README row (prospect:2ce63ac).
+   Pending at bd60f39: suite ecb275; parity (engine built from the commit) 63b78b; A/B
+   9088e8 (exclusive, after parity; a main, c A/A, b landing); mutants 0-2 04a4e1, c780b6,
+   253843 (--fails-without). e0904c (runner lost) is superseded by the suite at bd60f39.
+   Next: read 9088e8; if intersection 2 `TOP_100` or a short case loses again, record it;
+   update the doc's landing section; mutant 3 job; rerun the serve comparison against
+   Tantivy for the negated rows.
 1. Disk: host at 96%; P9/P13 builds and `.scratch/idx-p13` removed.
 
 ## Blocked on
@@ -63,7 +62,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A5 | P7 kept (bit 1), `docs/perf/p7-exclusion.md`: deciding A/B 261117-140026-dba8cc; prototype mutants 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027; at landing prospect:bd60f39 pending: suite 261117-155032-ecb275, parity 261117-155033-63b78b, A/B 261117-155036-9088e8, mutants 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843 |
 
 ## Result
 
@@ -89,6 +88,12 @@ best 0.95-0.99, inside the A/A (383ae4; serve ad33ee agrees); ctest passed (2768
 for every variant. Patch `docs/perf/p9-planner.patch` is the record.
 
 ## Rulings I made
+
+- A5: search.hh is outside the file set; productionized there on the lead's message (P7 verdict).
+- A5: mutants that only change work, not values (the threshold drop's `<=`, restarts always
+  on, the started flag) are not listed: no value test can catch them.
+- A5: the short-list probe is twelve rare-term negations on the 1M index, not `tiny_bench`,
+  which times reader.hh only.
 
 - A10: proximity is not measured: prospect's harness queries have no proximity class (no NEAR in
   the gate set); phrase classes stand for P13's query axis.
