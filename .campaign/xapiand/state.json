@@ -6662,7 +6662,36 @@
       "updated": "2026-11-15T23:05:08"
     },
     "journal-seal-repeat": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T11:58:43",
+          "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+          "blobs": {
+            "CHANGELOG.md": "100644:1f77f39c2e94b9946e47d09e37c31908f7bcbe69",
+            "CMakeLists.txt": "100644:519aef713d287ab4f402a3dccfe7bc8833e20c77",
+            "docs/mechanisms/turn-seal.md": "100644:d5e9079b4be9c8c830c2a6fb0014e74cd031b0c0",
+            "include/journal/turn_driver.h": "100644:8aea707418fe628fa7732c6d5112b1c876cfaa48",
+            "test/turn_seal_mutants.sh": "100644:ce0645f8d06afb819d243d45a8f335a726404570",
+            "test/turn_seal_test.cc": "100644:819fc4d5a7df58b197e4946b996ee9459747f592"
+          },
+          "by": "review",
+          "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "criteria": "995476b6579c7323",
+          "diffs": {
+            "CHANGELOG.md": "a2f5ea10814a8f8a",
+            "CMakeLists.txt": "5fa8a2c7ae47113c",
+            "docs/mechanisms/turn-seal.md": "d8e9b70d0fd76422",
+            "include/journal/turn_driver.h": "992cd26d17e6d959",
+            "test/turn_seal_mutants.sh": "10f1f41c349af7ac",
+            "test/turn_seal_test.cc": "a56d26fe6a1d2d0e"
+          },
+          "findings": {},
+          "note": "",
+          "review": "ab1f195e7ded5b7ca71252a329d5985df2dbb921",
+          "reviewed": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
       "branch": "quest/xapiand/journal-seal-repeat",
@@ -6696,7 +6725,7 @@
       "risk": "high",
       "status": "review",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T10:36:41",
+      "updated": "2026-11-17T11:58:43",
       "worktree": "../journal-wt/xapiand/journal-seal-repeat"
     },
     "key-field": {
