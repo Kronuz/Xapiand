@@ -7603,9 +7603,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T18:57:38",
+      "updated": "2026-11-16T19:25:36",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
