@@ -19349,7 +19349,32 @@
       "worktree": ""
     },
     "strict-text": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T16:10:55",
+          "base": "31c9ee7919b144f7ceea65f43add563caf716176",
+          "blobs": {
+            "CMakeLists.txt": "100644:43b1040e9bcba12f1a12a4e89ed286f59db30b82",
+            "src/aggregations/bucket.cc": "100644:81ebd0a490fcdeacbdd5417c924a0e4eba86d5c2",
+            "src/serialize.cc": "100644:e24be6b24d2d1716a6e26dc9f56a3552203d3cba",
+            "tests/test_strict_text.cc": "100644:fe01a351a69d91374af0492ec398b1185e292fb5"
+          },
+          "by": "review",
+          "commit": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "criteria": "6af5f2350116ce68",
+          "diffs": {
+            "CMakeLists.txt": "e4ab380916f7463b",
+            "src/aggregations/bucket.cc": "e226d1341c7f6fdb",
+            "src/serialize.cc": "39051cf668a00732",
+            "tests/test_strict_text.cc": "2576359fc18c16e3"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8d59f72536f6582b28fa382517a5ef3e93dfaa08",
+          "reviewed": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "31c9ee7919b144f7ceea65f43add563caf716176",
       "branch": "quest/xapiand/strict-text",
@@ -19402,7 +19427,9 @@
         }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -19410,7 +19437,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T16:10:30",
+      "updated": "2026-11-16T16:10:55",
       "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {
