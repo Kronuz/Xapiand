@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-055209-094ff8 261117-055220-ecd5d0 261117-055245-3aecbb 261117-055253-80fcf5 261117-055301-8578af 261117-055310-7264db 261117-055320-5ca39d 261117-055327-074989 261117-055334-a41ea3
+State: ready for review
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,38 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-The sync batch fix at strata:193e6e32 (pushed; fix strata:5e7d1178, test host fix 193e6e32).
-kv_strata's engine moved to `bench/kv/kv_strata.hh`; a sync phase's writes join one transaction
-applied at durable() (RocksDB's WriteBatch is one synced write), split only at the 1 MiB command
-limit; on_phase turns batching on for sync phases only (the load runs at none).
-`test/kv_strata_batch_test.cc` runs the engine over faultfs (host and index on separate
-filesystems, the host's owner lock a token) with its served loop. Local run: 32 batches of 16
-writes (duplicates and an erase inside): 32 records, 32 barriers, 32 writes; the 1.6 MiB batch
-splits into two records. Mutant M-r (strata:a949a8b9, branch mutant/document-gate/m-r, batching
-off) locally: 48 records, 48 barriers, the per-batch check fails. run.py's `aa` takes a set;
-`syncaa` is sync1's fillrandom b100, ycsb_a b1, fillrandom b1. The 5e7d1178 jobs failed to
-compile the test (faultfs namespace) and were replaced.
+Ready for review at strata:12f59669 (pushed; main is an ancestor, nothing to merge). The sync batch
+is one transaction (strata:5e7d1178, 193e6e32); perf note `docs/perf/standalone-turn-log.md` and
+gate report `docs/gates/document-profile.md` (strata:eb8437bc); the served test's reader reads at
+least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Next
 
-1. Passed at strata:193e6e32: batch test 261117-055212-dc6fc0 (32 batches: 32 records, 32
-   barriers, 32 writes); batch test TSan 261117-055212-624015; seal TSan (served, T4, T12, T3,
-   T8) 261117-055212-556ecf; t6w TSan 261117-055212-f28b3a; T6+t6w+T5 261117-055213-a1333d.
-   M-d killed at its mutant 261117-052940-986f82. Pending: build-test 261117-055209-094ff8, M-r
-   fails-without 261117-055220-ecd5d0. Rows, exclusive: sync1 a/b/c 261117-055245-3aecbb,
-   261117-055253-80fcf5, 261117-055301-8578af; wal1 t3 261117-055310-7264db; A/A syncaa x/y
-   261117-055320-5ca39d, 261117-055327-074989; M2 strict 261117-055334-a41ea3.
-   N-log done 261117-034940-b2b9c3 (7db7a919, batch 1, unaffected by the fix): K=1 ties
-   (48.5/47.6 against 47.8/45.1 ops/s); group commit on one log K=4 99 against 121-144 ops/s,
-   K=8 186 against 228-247 (1.2-1.45x slower, strata p50 40 ms against RocksDB's 21 ms at K=4:
-   a writer arriving during a barrier waits for it and the next); L logs per core worse (K=4 L=4
-   62-64, K=8 L=8 119-123): a gap for the perf note, turn-log-parity's.
-2. Write docs/perf/standalone-turn-log.md from those rows: four-axis table, the honest gap (D103,
-   D104), the ack=none window (Q3: one barrier plus one write, ~21 ms on macOS). Prior rows at
-   9d7c7710 (before the fix) as the before column: sync1 261117-033324-78da56 (fillrandom b100
-   1.98x slower, overwrite b100 1.99x, b10 1.53x, b1 rows tie), wal1 261117-033320-c0fc7f
-   (5.54x/6.80x/4.66x faster), M4 floor 261117-034943-316356 (48.4/s, p50 20.2 ms).
-3. Then A2/A8's gate report (docs/gates/document-profile.md) and the Evidence table.
+1. Confirm the reruns at strata:12f59669 (changed only the served test since 193e6e32):
+   build-test 261117-075429-907b22, served TSan 261117-075430-571f74, T6+t6w+T5
+   261117-075441-a3837d, t6w TSan 261117-075442-939866, batch test 261117-075442-e8e160, batch
+   TSan 261117-075443-3e1d5f; CI on the push.
+2. The durability review (not run yet).
+3. The gate rows the report lists as owed (A3 10x, A4 misses, A6 platforms, A7 sanitizers and
+   fuzz): beyond this assignment; the lead's call.
 
 ## Blocked on
 
@@ -51,6 +33,12 @@ compile the test (faultfs namespace) and were replaced.
   (turn mutex, then record mutex). Doc "Built" lists them.
 
 ## Messages
+
+- Lead (2026-11-17, rows finished): read every row log; wrote docs/perf/standalone-turn-log.md
+  (batch-1 ties, batched rows tie after the fix, wal1, A/A, the group-commit gap stated as
+  turn-log-parity A6, the ack=none window) and docs/gates/document-profile.md; filled Evidence;
+  main already merged (no new commits); pushed; fixed FreeBSD CI's served-test flake; ready
+  for review.
 
 - msg-1 (lead, journal-host-guards): repinned journal to cc95ba6 (landed). turn_sealer mirrors
   durable(): a wait on a group closed here, or at or below what its closed life retired, throws
@@ -64,13 +52,14 @@ compile the test (faultfs namespace) and were replaced.
 
 | Criterion | Evidence |
 |---|---|
-| A1 (step 6, real seal, strata:395644a7) | pending: build-test 261117-030334-5d9e3a; TSan 261117-030338-64ed0e; fails-without M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2 |
-| A1 (steps 4-5, shim, strata:40f89d0f) | TSan 261117-025002-c70c5f passed; T1 200-seed sweep 261117-025006-d345af passed; all 12 mutants killed: M-a 261117-025010-4c8220, M-b 261117-025013-a6cec4, M-c 261117-025017-0b218d, M-d 261117-025020-93f7da, M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-h 261117-025032-8fc28b, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc, M-n 261117-025046-ec1d6e, M-o 261117-025050-ee8915 (exit 1, or 134 where the mutant aborts the run) |
-| A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f: build-test 261117-024952-c870f5 (running); TSan 261117-025002-c70c5f passed (served, T4, T12, T3, T8); killed so far: M-a (exit 1), M-b (exit 134, abort), M-c, M-d (exit 1); the rest running or queued; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
-| A1 (D7, M1, strata:9d7c7710) | pending: build-test 261117-033227-678742; TSan 261117-033250-38d2df; T1 sweep 261117-033250-f42f82; fails-without M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-d 261117-033240-5df553, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3 |
-| A1 (step 6 seal, strata:395644a7) | TSan 261117-030338-64ed0e passed; killed: M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2 |
-| A1 (sync batch, strata:193e6e32) | batch test 261117-055212-dc6fc0 passed; TSan 261117-055212-624015 passed; seal TSan 261117-055212-556ecf, t6w TSan 261117-055212-f28b3a, T6+t6w+T5 261117-055213-a1333d passed; M-d 261117-052940-986f82 killed; pending build-test 261117-055209-094ff8, M-r 261117-055220-ecd5d0 |
-| A2-A8 | <no evidence yet> |
+| A1 | At strata:193e6e32: build-test 261117-055209-094ff8; batch test 261117-055212-dc6fc0 (32 batches: 32 records, 32 barriers, 32 writes); batch TSan 261117-055212-624015; seal TSan (served, T4, T12, T3, T8) 261117-055212-556ecf; t6w TSan 261117-055212-f28b3a; T6+t6w+T5 261117-055213-a1333d. Reruns at 12f59669 queued (Next 1). T1 200-seed sweep 261117-033250-f42f82 (9d7c7710). Killed mutants: M-r 261117-055220-ecd5d0, M-d 261117-052940-986f82, M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3, M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2, and steps 4-5's M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc |
+| A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of 12f59669 |
+| A3 | Durable tiers at 193e6e32, exclusive: sync1 261117-055245-3aecbb, 261117-055253-80fcf5, 261117-055301-8578af; wal1 261117-055310-7264db; A/A 261117-055320-5ca39d, 261117-055327-074989; N-log 261117-034940-b2b9c3 (7db7a919). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
+| A4 | Four axes per row in `docs/perf/standalone-turn-log.md`: sync throughput ties (0.96-1.05x), M2 261117-055334-a41ea3 one barrier per batch. Misses against 1.0x: group commit 1.2-1.45x slower (turn-log-parity A6), memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
+| A5 | RocksDB 11.11 pinned on lvl-16k-lz4 (calibrated fastest for 100 B and 1 KiB) in every row job above; harness per `docs/perf/rocksdb-fairness-audit.md` |
+| A6 | None: no Linux VM, FreeBSD VM or arm64 rows yet (owed; gate report item 3) |
+| A7 | Partial: TSan on the turn log's cases (above); fixtures `test/fixtures/command/` (codec, T9); ASan/UBSan, the fuzz CPU-hour, coverage and the scale statement not run (owed; gate report item 4) |
+| A8 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), in progress: every measured row with commit, platform and jobs, and the owed list |
 
 ## Result
 
