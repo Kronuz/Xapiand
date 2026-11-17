@@ -31,6 +31,11 @@ open for the next turn; `forget(group)` unregisters the sealer.
   acknowledged record, at the lowest layer, so Journal, Host and strata standalone share one guard:
   the document-gate design review's supersede probe (P1, Xapiand `.scratch/review-document-gate-design/
   supersede.cc`) as a test, and a mutant without the guard failing it (`--fails-without`)
+- A8 The contract strata's shim needs (strata:efe25bcd `include/strata/core/turn_seal.hh`, design
+  "Built"): `unseal` keyed by its owner, so a reopened index's registration survives the old one's
+  destructor; a thread-safe wake when an open record takes its first transaction, so `run()` and
+  `journal::run` see unstaged work; the turn budget's room passed to the sealer; and the lock order
+  turn mutex, then group record mutex, never the reverse: tests, the wake under TSan
 - A5 [artifact] `docs/mechanisms/turn-seal.md` states the contract, and CHANGELOG.md the addition.
 - A6 The suite passes (the `build-test` check).
 
