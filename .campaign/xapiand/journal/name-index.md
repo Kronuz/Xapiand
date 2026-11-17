@@ -9,15 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Step 1 of docs/design/name-index.md: `NameIndex` (src/database/name_index.{h,cc}), resolve's hook in
+src/database/pool.cc, the search's use in src/server/search_views.cc, tests in tests/test_index_pattern.cc.
 
 ## Next
 
-1. <step>
+1. Build NameIndex and its tests (A3, A4, A5), then the mutants as --fails-without jobs.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -27,7 +28,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | `docs/design/name-index.md` |
 
 ## Result
 
