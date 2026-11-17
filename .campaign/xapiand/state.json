@@ -21455,9 +21455,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "active",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-17T13:41:57",
+      "updated": "2026-11-17T13:42:25",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "turn-log-parity": {
