@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: waiting on jobs 261116-203022-cfa948 261116-203023-d1015e 261116-203023-eb84bf and the A9 install job; all 16 e2e disagreements were the regenerated fixtures' text, set to the server's exact values
+State: ready for review (master merged at 0ae4f966d; checks reused from c0f8d23c5f41, passed: build-test cfa948, e2e d1015e, no-xapian eb84bf, install 03b690)
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Rebased onto master (four of five commits had landed; `Xapiand:4ecda589a` is the Lenna replacement), then
-`Xapiand:49f40ee18`: generator.py phrase tables, mime.types, docs/discussions LICENSE, audit ledger. Jobs queued
-at that commit (A1 e2e, A7 no-xapian, A9 build-test and install staging).
+Nothing; ready for review.
 
 ## Next
 
-1. `campaign wait` the four jobs; paste `campaign brief`'s table in Evidence; set "ready for review" if green.
-2. Owner answers the Blocked on items; apply them.
+1. Security review, then land.
 
 ## Blocked on
 
@@ -29,18 +26,17 @@ license); they stay as the owner's test data under the lead's ruling, and the le
 |---|---|
 | A1 | the e2e check (job 261116-203023-d1015e, at the head with the fixtures' exact doc numbers); `docs/public/assets/Lenna.jpg` is removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history documents and `.campaign/`; the store-api lengths and digests match `docs/public/assets/sample.png` (checked) |
 | A2 | `ARCHITECTURE.md` licensing note, `README.md` license section and `AGENTS.md` carry no GPL claim; the sortable-encoding quest already landed on master, so this branch does not touch them (verified by `git grep -i gpl` on the three files, no hit) |
-| A3 | [decision] owner's ruling 2026-11-16: `docs/discussions` is fully MIT; `docs/discussions/LICENSE` and `docs/discussions/README.md` here, identical in the blog copy (Kronuz.github.io:afd643d, `cmp` of both files equal) |
+| A3 | D99 (`docs/discussions` fully MIT): `docs/discussions/LICENSE`, identical in the blog copy (Kronuz.github.io:afd643d); the work-repo copy is the owner's |
 | A4 | [decision] D98 (the owner's `mime.types` kept, h5bp MIT and nginx BSD-2 credited) and D97 as revised (all 18 stopword lists kept as on master with one `THIRD-PARTY-NOTICES` entry per source and its license text): `mime.types`, `stopwords/`, `THIRD-PARTY-NOTICES`, `docs/status/license-audit.md` rows A17 and A18 |
-| A5 | [decision] the lead's ruling on `docs/public/assets/el_cerrito.png` (kept, credit visible; ledger row A19); `docs/public/assets/generator.py` tables rewritten; the fixtures stay as the owner's test data (row A21) |
-| A6 | [decision] the owner's ruling: plain `MIT` metadata (ledger row A26); `NOTICE` carries the notices |
-| A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
+| A5 | D100 (`docs/public/assets/el_cerrito.png` kept and credited; the accounts fixtures regenerated, `docs/public/assets/generator.py` rewritten): audit ledger rows A19 and A21; e2e 261116-203023-d1015e passes on the new fixtures |
+| A6 | D101 (package license metadata plain `MIT`): `NOTICE`, `docs/status/license-audit.md` row A26 |
+| A7 | 261116-203023-eb84bf (the no-xapian check) |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
-| A9 | the build-test check (job 261116-203022-cfa948) and the DESTDIR install job after it (notice files, mime.types, stopwords staged) |
+| A9 | the build-test check (261116-203022-cfa948) and install job 261116-203042-03b690 (notice files, mime.types, stopwords staged) |
 
 ## Result
 
-Not yet: waiting on jobs. No code changed; the diff is docs, `mime.types`, a docs asset script and the
-discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-notices.md` unchanged).
+Blocker 3 and the owner's actions are closed, with the rulings D97 (revised), D98 to D101: the generated sample replaces Lenna; mime.types is kept and credited (h5bp MIT, nginx BSD-2); the 18 stopword lists stay with one credit entry per source in `THIRD-PARTY-NOTICES` (Lucene, Savoy, Snowball, stopwords-iso, SMART); `docs/discussions` carries MIT; `el_cerrito.png` is kept with its credit; the accounts personality texts are regenerated from the rewritten `generator.py` (fixed seed) with the text-query docs set to exact new numbers; package metadata stays `MIT`; `NOTICE` notes Lua's patch and RapidJSON. The audit's ledger (`docs/status/license-audit.md`) and `docs/mechanisms/third-party-notices.md` record it. Jobs: build-test 261116-203022-cfa948, e2e 261116-203023-d1015e, no-xapian 261116-203023-eb84bf, install 261116-203042-03b690. Open: nothing for this quest (A27, the audit re-run at the release commit, belongs to `release`).
 
 ## Rulings I made
 
