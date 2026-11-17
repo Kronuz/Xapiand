@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-111114-a561e9 261117-111116-6a201d 261117-111120-c58a04 261117-111122-2127b7 261117-111125-4e9ed2 261117-111128-454171 261117-111130-d7d999 261117-111133-bce3db 261117-111135-e55cc4 261117-111138-ee8d5a 261117-111148-ad0dfa 261117-111148-fd7cdc 261117-111149-7494c4 261117-111152-737949 261117-111154-5c4bb9
+State: waiting on jobs 261117-112639-0e3525 261117-112642-eee4a9 261117-112645-377e63 261117-112648-9a2926 261117-112650-2e5ea4 261117-112653-d75991 261117-112656-b5bed0 261117-112659-a0922c 261117-112702-5fc7d8 261117-112704-eaa423 261117-112707-8d20d3 261117-112710-55af69 261117-112713-54e643 261117-112713-a33261 261117-112714-70e657 261117-112716-5eea20 261117-112719-032b88
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,20 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 3 at strata:94def77f. A2's settle failures diagnosed (Blocked on: install, lead's ruling).
-A3's write path built (`submit.hh`, D106) with its test and seven mutants; jobs queued
+Step 3. A2's settle failures diagnosed; D109 (a) built (msg-2).
+A3's write path built (`submit.hh`, D106) with its test and mutants; jobs queued at strata:1e88eb3f
 (Evidence). Found: the step-2 mutant jobs run with `group_voters_test 1` were vacuous (seed 1
 alone never spends space, so "some replica stalled on space" failed every run, mutant or not):
 quorum-at-placement 261117-085711-59939a, close-keeps-waiters 261117-085705-587d4d,
 read-skips-probe 261117-085718-358fc4 prove nothing. Fixed at strata:94def77f (the check counts
-only when a storage schedule ran; `0` runs the named cases alone) and rerun with `0`.
+only when a storage schedule ran; `0` runs the named cases alone) and rerun with `0`. Old-commit
+jobs cancelled or superseded.
 
 ## Next
 
-1. Read step 3's jobs. Then, on the lead's ruling (Blocked on, "A2's settle failures"): with
-   (a), gate the schedule's checkpoints and pin seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) as
-   fixed regression schedules; rerun voters 40, build-test, crash, TSan, ASan. Push for CI (lead) once green: the asan job and linux-x86_64-gcc were
-   CI's two failures at 0d64860.
+1. Read step 3's jobs (Evidence); fix failures; fill Evidence for A2-A4. Push for CI (lead)
+   once green: the asan job and linux-x86_64-gcc were CI's two failures at 0d64860.
 2. A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
    `write_paths`, mutants ack-at-commit, prepare-before-ready, pending-ignored, lift-the-bound,
    no-forward, resubmit-invalid). Left: a leader stalled on `no_space` hands leadership to a
@@ -56,6 +55,15 @@ only when a storage schedule ran; `0` runs the named cases alone) and rerun with
 
 ## Messages
 
+- msg-2 (lead, D109): (a). Built: A2's gated schedules checkpoint only when every node is up,
+  none stalled or short of space, and the checkpointing node's commit is at or below every
+  node's; its loop and chore then run alone (IO held, no message in) so the capture lands at or
+  below that commit (`world::leaves_none_behind`, `world::capture`); the settle check is
+  unchanged. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) run ungated as fixed schedules that
+  assert the cluster does not settle and every replica behind is named in `installs_needed()`.
+  Root cause (for group-install): a replica cut off while another checkpoints past its log end
+  gets `SnapshotNeeded` (consensus core.h:1164-1168) and, with no install, stays behind; 7 of 80
+  schedules, all failing, none failing without it (`~/.scratch/group-core/census-40-seeds.txt`).
 - msg-1 (lead, journal-host-guards): done in strata:1068c00d. journal pinned at cc95ba6 (landed);
   `jn::group_closed` from the Driver's propose maps to `cs::closed` (`group::place`); consensus's
   own `durable()` watch (driver.h:928) swallows it, so the group's wait is where it lands: a
@@ -74,30 +82,8 @@ only when a storage schedule ran; `0` runs the named cases alone) and rerun with
 
 ## Blocked on
 
-- A2's settle failures (lead's ruling). Root cause: a replica behind the leader's checkpoint
-  needs an install, which group-core does not serve (`ActivateInstall` refused, `SnapshotNeeded`
-  was dropped; install is group-install's, which starts after group-core lands). Not consensus
-  (57745e8 is right: `core.h:1164-1168` asks for a snapshot once `peer.next <= base_index_`), not
-  the chore, not the settle check. Proof (local, strata:466dbece plus a trace patch,
-  `~/.scratch/group-core/trace.patch`): seed 27 alone reproduces (node 2 cut at event 507 at
-  applied 7; node 1 checkpoints through 13 at event 685 while it is down; at restart node 1
-  emits `SnapshotNeeded{peer 2, through 13}`, later 39; node 2 stays at 7). Over all 80
-  schedules (`~/.scratch/group-core/census-40-seeds.txt`): 7 see a `SnapshotNeeded`, all 7 fail
-  (3 voters, seeds 8, 12, 16, 18, 23, 24, 27), the stuck node is always its peer, and no
-  schedule fails without one. Built meanwhile: the group surfaces it (`installs_needed()`), the
-  settle dump names it, and `install_gap` (3 and 5 voters) proves the gap is named, not silent.
-  Options:
-  (a) recommended: until group-install lands, the A2 schedule starts a checkpoint only while
-      every node is up and the checkpointing node's applied is at or below every node's
-      committed, so no log compacts past a replica; the settle check is untouched. The 7 seeds
-      stay as fixed regression schedules (passing under the gate) and become group-install's
-      catch-up cases with the gate lifted; group-install A1 owns "checkpoint while a replica is
-      down, then catch up".
-  (b) move install's catch-up (`SnapshotNeeded` -> `SnapshotTransmit` of bundle, segment pack
-      and file set; `ActivateInstall` at the learner) into group-core: group-install's A1, on
-      consensus's `SnapshotChannel` after detent:consensus-fetch-macos; large and critical.
-  (c) hold back compaction for a lagging peer: no consensus API (`RetainedStatePolicy` has no
-      peer hold), and a dead replica would fill the log and stop writes. Not recommended.
+- A2's settle failures: ruled (a), PLAN.md D109 (lead, msg-2); group-install takes the seven
+  seeds as its A8. Root cause and proof under Messages, msg-2.
 - detent:consensus-quiescence: in-process reopen after close and recovery over the retired
   sequence gap (msg-1), and A7.
 - Q10: decided (b), D106. Built on it, kept in one place
@@ -117,9 +103,9 @@ only when a storage schedule ran; `0` runs the named cases alone) and rerun with
 | A3 (part) | ack levels (none at ProposalPlaced, quorum waits with appends held): quorum-at-placement 261117-085711-59939a; close answers `closed`: close-keeps-waiters 261117-085705-587d4d |
 | A4 (part) | deposed leader's `read_applied` never answers the older state: read-skips-probe 261117-085718-358fc4 |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
-| A2 (step 3, strata:94def77f) | queued: voters 40 schedules 261117-111149-7494c4 (seeds 8, 12, 16, 18, 23, 24, 27 at 3 voters expected to fail, now naming the peer that needs an install), TSan 261117-111152-737949, ASan+LSan 261117-111154-5c4bb9, gate build-test 261117-111148-ad0dfa and crash 261117-111148-fd7cdc. Diagnosis (local, trace patch): `~/.scratch/group-core/census-40-seeds.txt` (7 of 80 schedules see `SnapshotNeeded`, all 7 fail, none fails without), `~/.scratch/group-core/seed27-installs.txt` (seed 27 at a4e7cf80: "node 1 has no log for peers 2") |
-| A3 (step 3, strata:94def77f) | queued: named cases alone (`group_voters_test 0`, write paths at 3 and 5 voters, 8 seeds each, plain and stale) 261117-111114-a561e9; `--fails-without` mutants ack-at-commit 261117-111116-6a201d, prepare-before-ready 261117-111120-c58a04, pending-ignored 261117-111122-2127b7, lift-the-bound 261117-111125-4e9ed2, no-forward 261117-111128-454171, resubmit-invalid 261117-111130-d7d999, quorum-at-placement 261117-111133-bce3db, close-keeps-waiters 261117-111135-e55cc4. Local at a4e7cf80: write path 3 voters 32 requests, 19 placements, 19 forwards, 1 superseded, 12 answered 503 (stale: 39 placements, 22 answered 503); 5 voters 32, 24, 19, 2, 6 (stale 48, 18) |
-| A4 (step 3) | `--fails-without` read-skips-probe 261117-111138-ee8d5a (rerun: step 2's was vacuous) |
+| A2 (step 3, strata:1e88eb3f, D109) | queued: voters 40 schedules, gated 261117-112714-70e657; TSan 261117-112716-5eea20; ASan+LSan 261117-112719-032b88; gate build-test 261117-112713-54e643, crash 261117-112713-a33261; `--fails-without` install-silent 261117-112707-8d20d3, checkpoint-ungated (14 schedules) 261117-112710-55af69. Local at ef4bde08: seeds 1-4 at 3 and 5 voters ok, 47 gated checkpoints, the seven install seeds named. Diagnosis: `~/.scratch/group-core/census-40-seeds.txt`, `~/.scratch/group-core/seed27-installs.txt` |
+| A3 (step 3, strata:1e88eb3f) | queued: named cases alone (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0, quorum-at-placement 261117-112659-a0922c, close-keeps-waiters 261117-112702-5fc7d8. Local: write path 3 voters 32 requests, 19 placements, 19 forwards, 1 superseded, 12 answered 503 (stale: 39 placements, 22 answered 503); 5 voters 32, 24, 19, 2, 6 (stale 48, 18) |
+| A4 (step 3) | `--fails-without` read-skips-probe 261117-112704-eaa423 (step 2's was vacuous) |
 | A5-A8, A10 | none yet |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
