@@ -41,7 +41,7 @@ Nothing.
 |---|---|
 | A1 | tests on a two-lane scheduler (a call's 41 of 41 resumes after its entry heavy, the request light after; a heavy request stays heavy; a script error and a bound leave it light): 261117-015256-6a526c (test_lua 996 checks, test_loop_yield 846); mutant that stays light (hop removed), `--fails-without`: 261117-015216-5e1452 |
 | A2 | exclusive sweep, one reactor, GET p99 at 1/2/4/8/16 clients: master 261117-022543-afc6c2 19.1/20.0/43.4/60.9/67.8 ms (over its 57.2 limit at 8 and 16), fix 261117-022547-9ae194 27.6/26.7/34.7/37.3/38.2 ms (limit 65.7, p50 17 ms flat; GETs at 16 clients 132 vs 275). Cost rows, exclusive ABBA M F F M M F plus an A/A pair: 261117-022514-016422, 79af24, a10581, e8623e, 739b28, ccb986, 0ea9e1, ea75e8; tiny write p99 alone master 1.40 ms (1.27-1.48, 6 runs) vs fix 1.35 (1.31-1.45); beside 8 GET clients master 4.54 vs fix 4.39; inside master's spread |
-| A3 | `harness/lua_bounds.py`: T10's flood limit is `(FLOOD_STRETCHES + 1) x` one flood call alone, k = 2, no client or reactor term. [manual] FreeBSD CI's T10 log: the lead |
+| A3 | 261117-022547-9ae194 (`--check` against the derived limit passed); `harness/lua_bounds.py`: T10's flood limit is `(FLOOD_STRETCHES + 1) x` one flood call alone, k = 2, no client or reactor term. [manual] FreeBSD CI's T10 log: the lead |
 | A4 | `docs/design/loop-scheduling.md` D7; `docs/dev/t10-flood-limit.md` (derivation, sweep, cost); `docs/mechanisms/lua-bounds.md` |
 | A5 | suite 261117-015303-d945e6 (at fbd5d8ab4) |
 
