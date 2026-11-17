@@ -6711,11 +6711,41 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-seal-repeat",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-17T12:09:20",
+          "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "criteria": {
+            "A1": "261117-110901-9d1761; fails without: 261117-094035-f25876, 261117-094044-57a827, 261117-094052-389c68, 261117-103648-33ecb9, 261117-103649-0bda71, 261117-103649-5a9afd, 261117-110923-a1e7a9, 261117-110926-0a82cc, 261117-110930-622d76",
+            "A2": "261117-110904-7f8b43; fails without: 261117-094103-c463ab, 261117-103649-e1512d, 261117-110934-39fbbf",
+            "A3": "261117-110912-4385ec, 261117-110908-fa600f, 261117-115626-2642cf; fails without: 261117-094114-d5bc25, 261117-094124-60920c, 261117-103649-d57047, 261117-103650-77d440, 261117-110937-84fdcd, 261117-110941-e5fab6, 261117-110945-9afd4e",
+            "A4": "261117-110859-91c046, 261117-110912-4385ec, 261117-110915-52232d",
+            "A5": "[artifact] `docs/mechanisms/turn-seal.md` at journal:13592a1: sections Repeat calls, What it gets (room accounting and the first flag), A failing repeat call, lifetime under One per group, Later sealed records, and Fairness (no per-group cap); CHANGELOG.md 2026-11-17 entries"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-110859-91c046",
+              "level": "light",
+              "seconds": 110.5,
+              "state": "done",
+              "what": "journal-seal-repeat check build-test at 13592a1675f0"
+            }
+          ],
+          "final": true,
+          "from": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+          "reason": "",
+          "tested": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -6723,10 +6753,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T11:58:43",
-      "worktree": "../journal-wt/xapiand/journal-seal-repeat"
+      "updated": "2026-11-17T12:09:23",
+      "worktree": ""
     },
     "key-field": {
       "accepted": {},
