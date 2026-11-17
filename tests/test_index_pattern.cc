@@ -33,6 +33,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <random>
@@ -907,6 +908,59 @@ void test_a_stopped_build_ends() {
 	CHECK_FALSE(index.complete());
 }
 
+// A2: a prefix pattern that names 10 of N top-level indexes, answered by the walk and by the names. Runs only when
+// NAME_INDEX_BENCH lists the counts (`10000,100000`); prints one row per count.
+void bench_name_index() {
+	const char* counts = std::getenv("NAME_INDEX_BENCH");
+	if (counts == nullptr) {
+		return;
+	}
+	using clock = std::chrono::steady_clock;
+	const auto seconds = [](clock::duration d) { return std::chrono::duration<double>(d).count(); };
+	const auto median = [](std::vector<double> v) { std::sort(v.begin(), v.end()); return v[v.size() / 2]; };
+	const std::string root = "names_bench_root/";
+	std::fprintf(stderr, "  %9s %9s %9s %12s %12s %12s %11s %8s\n", "indexes", "mkdir s", "build s", "walk ms", "names us", "faster", "names read", "B/name");
+	for (std::string_view rest = counts; !rest.empty(); ) {
+		const auto comma = rest.find(',');
+		const auto n = static_cast<std::size_t>(std::stoull(std::string(rest.substr(0, comma))));
+		rest = comma == std::string_view::npos ? std::string_view() : rest.substr(comma + 1);
+		fs::remove_all(root);
+		char name[32];
+		auto began = clock::now();
+		for (std::size_t i = 0; i < n; ++i) {
+			std::snprintf(name, sizeof(name), "i%07zu/strata", i);
+			fs::create_directories(root + name);
+		}
+		const auto made = seconds(clock::now() - began);
+		NameIndex index;
+		began = clock::now();
+		CHECK_TRUE(index.build(root));
+		const auto built = seconds(clock::now() - began);
+		std::snprintf(name, sizeof(name), "i%06zu?", n / 20);   // 10 names in the middle
+		const Names items{name};
+		const index_pattern::Bounds bounds(n * 4, n * 4);
+		std::vector<double> walks, lookups_us;
+		Names walked, indexed;
+		for (int run = 0; run < 5; ++run) {
+			began = clock::now();
+			walked = expand(root, items, bounds);
+			walks.push_back(seconds(clock::now() - began) * 1e3);
+		}
+		std::size_t read = 0;
+		index.expand(items, bounds, [&] { ++read; });
+		for (int run = 0; run < 2000; ++run) {
+			began = clock::now();
+			indexed = index.expand(items, bounds);
+			lookups_us.push_back(seconds(clock::now() - began) * 1e6);
+		}
+		CHECK_EQ(walked.size(), std::size_t{10});
+		CHECK_TRUE(walked == indexed);
+		const auto walk_ms = median(walks), names_us = median(lookups_us);
+		std::fprintf(stderr, "  %9zu %9.2f %9.2f %12.3f %12.3f %11.0fx %11zu %8.1f\n", n, made, built, walk_ms, names_us, walk_ms * 1e3 / names_us, read, static_cast<double>(index.bytes()) / static_cast<double>(n));
+		fs::remove_all(root);
+	}
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -938,6 +992,7 @@ int main(int argc, char** argv) {
 		{"test_a_prefix_pattern_reads_its_range", test_a_prefix_pattern_reads_its_range},
 		{"test_the_names_answer_over_the_cap", test_the_names_answer_over_the_cap},
 		{"test_a_stopped_build_ends", test_a_stopped_build_ends},
+		{"bench_name_index", bench_name_index},   // only with NAME_INDEX_BENCH
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {
