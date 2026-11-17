@@ -1,6 +1,6 @@
 # journal-seal-repeat: journal
 
-State: waiting on jobs 261117-092826-f9528f 261117-092848-fe33c7 261117-092857-383352 261117-092907-717875 261117-092917-c2a313 261117-092925-8390f8
+State: waiting on jobs 261117-093716-f2fb9d 261117-093720-c440b3 261117-093730-64891f 261117-093740-8488e1 261117-093752-798fd9 261117-093803-66f758
 Quest: .campaign/xapiand/quests/journal-seal-repeat.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code, tests, mutants and docs committed at journal:6187a32 (branch pushed for CI). Jobs queued;
+Code, tests, mutants and docs committed at journal:57849ad (branch pushed for CI). Jobs queued;
 the six mutant jobs cannot be queued yet (Blocked on).
 
 ## Next
 
-1. Read the six jobs; fix any red case.
+1. Read the six jobs at journal:57849ad; fix any red case. (Build-test 261117-092826-f9528f at
+   journal:6187a32 failed only `staged_room`, where the edit wrongly counted a repeat call after a
+   record that spends the room; fixed in journal:57849ad. Every `repeat*` case passed there.)
 2. Once the quest file's criteria heading is fixed, submit the mutants (commands below).
-3. Check CI on quest/xapiand/journal-seal-repeat at journal:6187a32 (A4), then ready for review.
+3. Check CI on quest/xapiand/journal-seal-repeat at journal:57849ad (A4), then ready for review.
 
 Mutant jobs, from the home checkout (each fails its case at the mutant):
 
@@ -40,20 +42,20 @@ can be tagged. The jobs queued so far carry no `--for`.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261117-092848-fe33c7 (`repeat`: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants one-call, framing, staged pending (Blocked on) |
-| A2 | 261117-092857-383352 (`repeat_turns`: `first` across groups, two-group alternation 1,2,1,2); mutant rotation pending |
-| A3 | 261117-092907-717875 (`repeat_throw`, `repeat_unseal`, `repeat_threads`); 261117-092917-c2a313 (turn tests under TSan, `repeat_threads` included); mutants unsealed-again, repeat-throw pending |
-| A4 | 261117-092826-f9528f (build-test, whole suite with the crash fixtures); 261117-092917-c2a313 (TSan, `-R turn`); 261117-092925-8390f8 (ASan, turn_seal); CI on the pushed branch |
-| A5 | [artifact] journal `docs/mechanisms/turn-seal.md` at journal:6187a32: "Repeat calls", "What it gets" (room accounting, `first`), "A failing repeat call", lifetime under "One per group", "Later sealed records" and "Fairness" (no per-group cap) |
+| A1 | 261117-093720-c440b3 (`repeat`: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants one-call, framing, staged pending (Blocked on) |
+| A2 | 261117-093730-64891f (`repeat_turns`: `first` across groups, two-group alternation 1,2,1,2); mutant rotation pending |
+| A3 | 261117-093740-8488e1 (`repeat_throw`, `repeat_unseal`, `repeat_threads`); 261117-093752-798fd9 (turn tests under TSan, `repeat_threads` included); mutants unsealed-again, repeat-throw pending |
+| A4 | 261117-093716-f2fb9d (build-test, whole suite with the crash fixtures); 261117-093752-798fd9 (TSan, `-R turn`); 261117-093803-66f758 (ASan, turn_seal); CI on the pushed branch |
+| A5 | [artifact] journal `docs/mechanisms/turn-seal.md` at journal:57849ad: "Repeat calls", "What it gets" (room accounting, `first`), "A failing repeat call", lifetime under "One per group", "Later sealed records" and "Fairness" (no per-group cap) |
 
 ## Result
 
-journal:6187a32 `TurnDriver::seal_turn` (include/journal/turn_driver.h) calls a sealer again with
+journal:6187a32 and journal:57849ad: `TurnDriver::seal_turn` (include/journal/turn_driver.h) calls a sealer again with
 the room left and `first = false` while it returns records, charging each `record_cost` before the
 next call; `running_` spans a group's calls and the table is re-checked before each repeat call.
 Contract: journal `docs/mechanisms/turn-seal.md`. Tests: `test/turn_seal_test.cc` cases `repeat*`;
 mutants in `test/turn_seal_mutants.sh`. Existing call-count checks in `budget`, `trigger`,
-`staged_room` and `forget_in_flight` now count the extra repeat call that answers nothing.
+and `forget_in_flight` now count the extra repeat call that answers nothing.
 Leaves open: CHANGELOG.md entry (outside the file set); telling Detent's lead to repin on landing.
 
 ## Rulings I made
