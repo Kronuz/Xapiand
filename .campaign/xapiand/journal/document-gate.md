@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: blocked on lead: D107 step 1 (F1), journal's sealer returns one record per call; options under "Blocked on". A6 and A7 jobs at strata:12f59669 still queued (ids under Evidence), untouched
+State: waiting on jobs 261117-091838-23ddb4 261117-091852-57ea00 261117-091856-a76548 261117-091901-6fcb16 261117-091906-801787 261117-091911-f1781d 261117-091916-4a93f1 261117-091931-76a727 261117-091936-03c7ff 261117-091940-c8e3b4 261117-091946-abd6b3 261117-091950-5486cf (F1 fix round at strata:94d73236)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,6 +16,20 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Next
 
+0. F1 fix round (D107, lead's option (c)), strata:94d73236 (code) and 3d5ecedb (docs). Jobs:
+   build-test 261117-091838-23ddb4; TSan lag+served+T4+T12+T3+T8+t6w 261117-091852-57ea00;
+   batch TSan 261117-091856-a76548; mutants (fails-without) M-s 261117-091901-6fcb16, M-t
+   261117-091906-801787 (lag), M-v 261117-091911-f1781d (t9o); review probe 261117-091916-4a93f1;
+   exclusive rows vs RocksDB: wal1 t3 261117-091931-76a727, sync1 261117-091936-03c7ff
+   261117-091940-c8e3b4 261117-091946-abd6b3, N-log (K=4 on 1 log) 261117-091950-5486cf. When
+   they finish: write the wal1 cost of the cap, the probe's lag, N2's p99.99 and the group-commit
+   rows into docs/perf/standalone-turn-log.md; fill Evidence.
+   A6 VM rows to rerun at the fix commit: wal1 and sync1 and N-log on Linux and FreeBSD
+   (261117-084100-27be96, 261117-084037-d4e2de, 261117-084045-d42d02, 261117-084053-6d8351,
+   261117-084215-47c83b, 261117-085309-9d6302, 261117-085245-45a977, 261117-085253-f20138,
+   261117-085301-985f09, 261117-085413-1ba8b7) and the A/A sync pairs; fits1, twox1, big1 and the
+   none-tier A/A do not use the log and stay valid. A7's fuzz jobs (codec and manifest log) stay
+   valid; the version-rejection/fixtures job too (command.hh unchanged); coverage reruns.
 1. Reruns at strata:12f59669: build-test 261117-075429-907b22, served TSan 261117-075430-571f74,
    T6+t6w+T5 261117-075441-a3837d, t6w TSan 261117-075442-939866, batch test
    261117-075442-e8e160, batch TSan 261117-075443-3e1d5f. CI run 44119676721 (in progress).
@@ -80,6 +94,9 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Messages
 
+- msg (lead, F1 option (c)): built the backpressure, the lag test and mutants M-s, M-t, N1-N4;
+  probe and rows queued (ids under Next 0). Packing waits for Detent's journal change.
+
 - Lead (2026-11-17, durability review running): A7 queued at 12f59669 (fuzz x4, version and
   fixtures, coverage); ASan/UBSan/TSan point at CI run 44119676721; scale statement in the gate
   report; A6 options under "Blocked on"; reviewed code untouched.
@@ -121,6 +138,21 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
 `.scratch/mutate.py` in the strata worktree).
 
 ## Rulings I made
+
+- F1 fix (D107 option (c), 2026-11-17):
+  - Backpressure, not a byte bound: `log_state::turn_records` (1, journal seals one record per
+    sealer call) caps unsealed records; `join` returns the full record's sequence instead of
+    closing it, and the owner waits in `turn_sealer::await_sealed` until the loop seals it. The
+    wait wakes at the seal (the sealer lambda calls `sealed()`), not the barrier, so the writer
+    fills the next record while the turn writes. Not served: the owner writes the turn inline.
+  - A wait that throws (failed turn, closed group) fences the index, as a failed append does.
+  - faultfs gains `sync_latency` (each file sync sleeps first), for the lag test's 2 ms barriers.
+  - N1: predicate checks `sequence <= retired_locked(group)`. No fails-without test: the window
+    is a scheduler race (the waiter must not run between the leave's turn and the reopen), which
+    no test seam reaches without a new hook; t6w covers its correctness.
+  - N4: t9o stages a version-2 batch, a version-2 checkpoint and a HardState record into the
+    group and expects `unsupported_index` at open; replay now refuses a non-batch record past
+    the front checkpoint (it skipped them). M-v (the skip) fails t9o.
 
 - Sync batch (2026-11-17):
   - A sync batch is one transaction: the fair mapping of RocksDB's WriteBatch (both make a batch
