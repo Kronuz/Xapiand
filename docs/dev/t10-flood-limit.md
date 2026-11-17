@@ -58,6 +58,8 @@ A tiny scripted write (`_doc.x = (_doc.x or 0) + 1`, no commit, 2,000 serial wri
 
 The fix is inside master's own spread on every row: the heavy-lane hop costs a tiny script nothing measurable, since an idle heavy lane runs at once (the drainer's post is the next handler of the same loop). Earlier runs of the same rows under strict holds, beside the suite's build, showed the fix at p99 65 and 73 ms alone; they were contaminated (master's p99 was stable in the same runs), and the exclusive runs do not reproduce them.
 
+A scripted RESTORE (review F1, probe job 261117-042554-2e8d5a, P2): 200 scripted objects beside 2 Lua flooders on one reactor. At the fix it took 4.88 s and 4.73 s over two rounds (41 to 42 docs/s, values correct): each object waits about one flood call, because every script call is a heavy turn and the drainer runs one per pass. At master (9ae4f7957) both rounds stalled after 45 s with the ping timing out; the stack sample (`out/hang_master_0_*/sample.txt`) shows reactor 0 inside the flooders' `str_find_aux` and `match`, the light-lane starvation this change removes, not a separate hang. A scripted write beside heavy load pays one heavy pass per call by design (D7).
+
 ## Exploration measurements
 
 The exploration's rows before the fix, kept for the record (hold t10-sweep, 1 reactor, flood clients 1 / 2 / 4 / 8 / 16, one call 22.4 ms): GET p50 0.4 / 20.5 / 20.9 / 44.0 / 44.1 ms, p99 22.5 / 24.3 / 46.7 / 87.4 / 133.5 ms; FreeBSD run 44027025303 (2 reactors, 16 clients): p99 155 ms with one call 21.5 ms alone, 7.2 calls, the limit of 128.8 that the earlier multiple had derived.
