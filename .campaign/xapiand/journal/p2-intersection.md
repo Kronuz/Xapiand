@@ -1,6 +1,6 @@
 # p2-intersection: journal
 
-State: waiting on jobs 261117-065609-561d97 (build-test), mutants 261117-065612-0ce8b7..065656-e2b644, A2 261117-065703-06c7aa, probe 261117-065716-5491a6, A/B 261117-065724-58ce08, and CI at prospect:387a47f
+State: waiting on jobs 261117-072238-8ce0c3 (build-test), mutants 261117-072240-309cc3..072319-fd1112 at prospect:0aad777
 Quest: .campaign/xapiand/quests/p2-intersection.md (the lead's; never edit it)
 
 ## Doing
@@ -19,14 +19,18 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261117-065609-561d97; mutants 0-9 at 387a47f as --fails-without jobs 261117-065612-0ce8b7, -065615-08dbde, -065619-923e47, -065623-f316a1, -065627-79ac60, -065631-d68413, -065636-91fca7, -065642-233ca5, -065649-9f6bb4, -065656-e2b644 (read each; any that survived is named in Result) |
-| A2 | job 261117-065703-06c7aa (dump counted and uncounted vs main, verify, 962 gate queries, 1M) |
-| A3 | long lists: 261117-065724-58ce08 (exclusive, 7 rounds, A/A); short lists (R1): 261117-065716-5491a6 (exclusive, run.sh); variant C measured earlier at c3a9fa9, job 261117-065517-ce9053: every case within the A/A (sparse50&blocks2000 1.039 [0.905-1.088], A/A [0.863-1.026]) |
-| A4 | CI at prospect:387a47f (run id to read) |
+| A1 | at 0aad777 (tests only since 387a47f; reader.hh unchanged): build-test 261117-072238-8ce0c3; mutants 0-9 as --fails-without jobs 261117-072240-309cc3, -072244-880b46, -072248-575707, -072252-14b5e4, -072256-38c7b0, -072300-99692a, -072304-ae8cc7, -072309-65fc3b, -072314-efd042, -072319-fd1112 (survivors of the previous round, 0 2 3 4 6, were not killed by it: the test only advanced to each target from a fresh iterator, which never reached the compare past the probes; strides now do, and tail terms of 30 postings pad-check it) |
+| A2 | job 261117-060144-9cd5a2 and the 387a47f identity job (lead: green); reader.hh identical at 0aad777 |
+| A3 | 1M A/B 261117-065724-58ce08 (exclusive, 7 rounds, A/A c/a 0.95-1.08) and short-list probe 261117-065716-5491a6 (exclusive), at 387a47f; numbers in Result |
+| A4 | CI green at 387a47f (lead); rerun at 0aad777 pending |
 
 ## Result
 
-In process at 1M, b/a over 7 rounds: intersection_2/3/gt3 and intersection_union TOP_k run at 0.80-0.92 of main's time; intersection_union COUNT rows are neutral (0.98-1.07, intervals span 1); A/A 0.998-1.026. Results byte-identical.
+Smaller than the P2 prototype's 0.78-0.92: the final search (probe 4 slots, bisect a long remainder, compare a short one from its row) trades part of the all-128-slot compare's long-list gain for no regression on short lists.
+
+1M A/B (job 261117-065724-58ce08, b/a, 7 rounds; A/A c/a 0.95-1.08): intersection rows 0.90-1.03 of main's time, none slower. Intervals entirely below 1.0: intersection_2 `TOP_100` 0.930 [0.894, 0.967], intersection_3 `TOP_100_COUNT` 0.946 [0.909, 0.983], intersection_gt3 `TOP_100_COUNT` 0.927 [0.870, 0.986], intersection_union_2 `TOP_10` 0.933 and `TOP_100_COUNT` 0.897, intersection_union_3 `TOP_100_COUNT` 0.972, intersection_union_gt3 `TOP_100` 0.915. Every other row (all `COUNT` rows 0.97-1.03, most `TOP_10` and `TOP_1000`) is within noise: its interval spans 1.0 as does the A/A's.
+
+Short lists (probe 261117-065716-5491a6, new/old; A/A): tail40&tail100 0.954 [0.883-0.971], tail10&tail120 1.010, tail40&100&120 0.972, one&tail100 0.995, one&tail40&100 0.961, sparse50&blocks2000 1.033 [0.923-1.108] (A/A [0.926-1.063]), tail100&blocks2000 0.945; all within the A/A. Before the fix: 1.5-2.3x slower (review R1).
 
 ## Rulings I made
 
