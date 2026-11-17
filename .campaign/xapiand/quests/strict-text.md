@@ -16,7 +16,7 @@ through `Serialize::exact` like searches do.
   that fails on master proves it, with a `--fails-without` job.
 - A2 The `_term` filter aggregation accepts `12.0` on an integer field and refuses `12.5`, exactly
   as a search does (review C6, R1); a test that fails on master, with a `--fails-without` job.
-- A3 The suite passes (the build-test check), and the e2e strict cases from strict-values still
+- A3 The suite passes (the `suite` check), and the e2e strict cases from strict-values still
   pass.
 
 ## Decisions
