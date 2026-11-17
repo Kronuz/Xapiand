@@ -285,6 +285,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D100 | 2026-11-16 | The `el_cerrito.png` screenshot is kept and credited as a Google Maps basemap (license audit A19). The accounts fixtures are regenerated with the rewritten `generator.py` at a fixed seed (A21), so no fantasynamegenerators.com text remains, and the doc examples use the server's exact numbers. Owner (screenshot); lead, delegated by the owner (fixtures). |
 | D101 | 2026-11-16 | Package license metadata is plain `MIT` (license audit A26). Third-party notices live in NOTICE and THIRD-PARTY-NOTICES. Owner. |
 | D102 | 2026-11-17 | Owner approved starting group-core (critical), on Detent's landed Driver at consensus:57745e8; a design review precedes building. A8 (release level set) keeps the lead default (a) until cluster-release Q2 is answered. | owner |
+| D103 | 2026-11-17 | document-gate's turn-log questions take the design's option 1: Q3 states the read-your-writes gap under `ack=none`, Q4 keeps `log_lost`, Q5 keeps the 64 MiB command limit on a logged index (gate report notes the narrowing). The owner wants parity or better with RocksDB and the other engines soon: quest turn-log-parity closes all three after document-gate. | owner |
 
 ## Pending owner
 
