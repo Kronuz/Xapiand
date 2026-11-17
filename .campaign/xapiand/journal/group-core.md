@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-134414-aaeddb 261117-134414-ef6998 261117-134416-c8e692 261117-134421-e77835 261117-134428-8708d8 261117-134435-94dd84 261117-134441-a5a538 261117-134448-2b4bae 261117-134456-196914 261117-134505-949822
+State: waiting on jobs 261117-145424-c6058d 261117-145425-546e2d 261117-144145-d6642a 261117-145443-7d6ef1 261117-145446-d7d1b2 261117-145409-97b241 261117-145413-4a4fef 261117-145417-0353c2 261117-145421-9882e8 261117-144044-aee607 261117-144102-268e06 261117-144106-b87f0c 261117-144110-e0f969 261117-144113-7e2482 261117-144117-70b7fd 261117-134414-aaeddb 261117-134414-ef6998 261117-134421-e77835 261117-134428-8708d8 261117-134435-94dd84 261117-134456-196914 261117-134505-949822
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,36 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 4: A5 (the part before detent:consensus-quiescence), A6, A10 built at strata:29f928ad;
-checkpoints serialized at strata:b98362b7 (Rulings); Evidence for A1-A4 filled from step 3's
-green jobs at strata:1e88eb3f; jobs queued at b98362b7 (Evidence). The TSan job at 29f928ad
-(261117-132510-faa8a2) failed one burst call, no race report: a checkpoint overlapping another.
+Step 5 (D111, A6 as written), strata:1b1601be and strata:ba578486; jobs queued (Evidence).
+Step 4's jobs at b98362b7 kept, except the A6 mutants and the TSan job, superseded at 1b1601be
+(the tests they run changed).
 
-- A6, `test/group/footprint_test.cc` (ctest `group_footprint`): COUNT lone voters on real
-  directories (PosixIO), one loop and chore, frames counted (`TASK_COUNT_FRAMES`). Local, 32
-  groups: per idle open group 3 descriptors (index 2, the bare index's; file-set directory 1),
-  17.9 KB heap (bare index 5.1 KB; `sizeof(group)` 3,216 B), 0 threads, 0 timers, 1 frame (the
-  index's, as bare), 0 IO in flight; an idle minute 0 resumes; a close 9.1 syncs and 330-670 ms
-  (macOS full flushes); closed 9.2 KB, 2 descriptors (its two directories, the host's); destroyed
-  1.5 KB left (consensus's closed row, the host table). At 1,000 groups (syncs through PosixIO's
-  seam skipped, `GROUP_FOOTPRINT_NOSYNC`): 3 descriptors, 17.5 KB, 0 threads, 0 timers, an idle
-  minute 0 resumes and 0.19 us CPU per group; 185 s to open (strata and journal still flush
-  directly). Mutants close-keeps-index, files-keep-handle (killed locally).
+- A6, one directory per group: the file set lives in the index's directory under `app.`
+  (`bundle_detail::prefix`; bundle names cap at 251 so the on-disk name fits NAME_MAX); strata
+  parses only `manifest-*`/`seg-*` and its open, clear_uncreated and retention touch nothing else
+  (index.hh 141, 5234, 5284, 5311); the set's recovery deletes only prefixed names. The group
+  owns its directory (`std::unique_ptr<jn::IO>`) and drops it at close. Tests run one faultfs
+  disk per group (A1's ENOSPC and sync-EIO cases unchanged in effect: no strata IO in those
+  windows). `test/group/file_set_test.cc` (ctest `group_file_set`), mutant no-prefix.
+- A6 heap, by owner (`test/group/footprint_owners.py`, malloc_history at 100 idle groups, malloc
+  blocks, b98362b7): group 8.7 KB (chore deque's 4 KiB block 4.6 KB, the object 3.6 KB, file map
+  0.1), consensus 5.2 KB (Core 2 KB, Worker 2 KB, Group row 0.4, log 0.2), journal 4.7 KB
+  (host table 1.3 at 100 groups, falls with count; Journal 0.85; turn-log notes 0.9; Admission
+  0.3; owner session 0.2; PrefixIO 0.2), index 4.0 KB. Cut: the deque (an intrusive queue), the
+  config kept after open (800 B in the object plus its heap; `opening_` freed at open's end), the
+  file set's directory. Now (64 groups, requested bytes): idle 12,720 B = index 5,090 + consensus
+  row and journal group 6,984 + the group's own 645 (sizeof group 2,504, of it the index 1,856);
+  2.00 descriptors; closed 3.7 KB and 0 descriptors (was 9.2 KB, 2); destroyed 1.1 KB. The test
+  checks own <= 1,024 B (mutant keeps-config) and closed 0 (mutant close-keeps-directory).
+- A6 open cost (sample(1), 200 groups, waves of 8, PosixIO-seam syncs skipped: 289 ms per open
+  and first write on a loaded host; 1,117 ms with syncs issued, 12.4 seam syncs): journal's host
+  table commit at create_group (`Host::commit` -> `replace_file`: create, write, direct
+  F_FULLFSYNC, rename, directory sync) 38%; journal's turn flush (`execute_primitive` sync_data
+  through InlineCompletion) 15%; strata's `create` committing generation 1 (manifest write,
+  rename) 20%; the first write's blob (file-set open, pwrite, close) 17%; the host's mkdir 5%.
+  Direct flushes bypass the seam (`PosixFile::sync`), so NOSYNC skips none of them. Ours:
+  strata's create commit (fix outside this file set: Blocked on); the rest is journal's
+  (Detent) or the host's.
 - A10 and A5, `test/group/lifetime_test.cc` (ctest `group_lifetime`): `held`, threads: A's apply
   blocked inside an entry, B on the same loop answers 5 `quorum` writes, a read and a checkpoint;
   then 60 writes, 9 reads, 3 checkpoints against B's apply, for TSan. `points`: checkpoint,
@@ -37,7 +52,8 @@ green jobs at strata:1e88eb3f; jobs queued at b98362b7 (Evidence). The TSan job 
 
 ## Next
 
-1. Read step 4's jobs (Evidence); fix failures. Push for CI (lead).
+1. Read step 5's and step 4's jobs (State, Evidence); fix failures; fill A6's numbers at 5,000
+   (counts) and 1,500 (timing). Push for CI (lead).
 2. A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
    `write_paths`, mutants ack-at-commit, prepare-before-ready, pending-ignored, lift-the-bound,
    no-forward, resubmit-invalid). Left: a leader stalled on `no_space` hands leadership to a
@@ -102,19 +118,21 @@ green jobs at strata:1e88eb3f; jobs queued at b98362b7 (Evidence). The TSan job 
 
 ## Blocked on
 
-- Lead: A6's `exclusive` job at 10^4 groups (my rule is light jobs only). Command, at
-  strata:b98362b7: `campaign job submit --quest group-core --for A6 --level exclusive --minutes 30
-  --env GROUP_FOOTPRINT_NOSYNC=1 --env GROUP_FOOTPRINT_WAVE=8 --build "cmake -B build
-  -DCMAKE_BUILD_TYPE=Release && cmake --build build --target group_footprint_test -j4" --
-  build/group_footprint_test 10000 100`. 1,000 groups took 185 s on a loaded host, so 10^4 may
-  pass 30 minutes; 5,000 is the fallback.
-- A6's budget (decision, lead or owner): the quest names the index's 2 descriptors; an idle
-  group holds 3, the third its file set's directory (a PosixIO the host hands it). Options:
-  (a) count it: 3 per group; (b) the file set opens its directory per use (an IO factory in
-  `group`'s constructor): 2 idle, one more open per write and sync; (c) the file set lives in
-  the index's directory under a prefix, its recovery scoped to it: 2, no extra opens, strata
-  must leave foreign names alone. Recommend (c) if strata's open never deletes unknown names,
-  else (a). Changes `strata:group`'s constructor, so not mine.
+- Lead (strata core, outside this file set): a group's open pays strata's `create` commit
+  (generation 1: manifest written, renamed, directory synced; 20% of the open, 2-3 full flushes
+  with syncs on). `basic_index::create_deferred` (index.hh 5213, private) writes nothing until the
+  first commit, which a group's first checkpoint makes; a crash before it recreates the index
+  from the journal (P_b 0). Options: (a) make `create_deferred` public and call it from
+  `group::recover`; (b) keep the commit. Recommend (a).
+- Detent (forward): (1) 64 groups opened at once on one host fail with "storage fenced outside
+  worker"; bare consensus rows reproduce it, no strata::group involved:
+  `GROUP_FOOTPRINT_NOSYNC=1 GROUP_FOOTPRINT_WAVE=64 build/group_footprint_test 64 0` at
+  strata:ba578486 (rows: `Driver::open`, `create`, one `propose`, `applied`; 8 at once pass).
+  (2) The host table's `replace_file` and the turn flush call `PosixFile::sync` directly, past
+  PosixIO's sync seam, and are 53% of an open's time with the seam's syncs skipped.
+- 10^4 groups: a strict job is capped at 10 minutes and `--long` proves nothing before landing,
+  so the counts run light at 5,000 (30 minutes) and the timing strict at 1,500 (Evidence). At
+  about 0.25-0.29 s per open (journal's flushes), 10^4 needs about 45 minutes.
 
 - A2's settle failures: ruled (a), PLAN.md D109 (lead, msg-2); group-install takes the seven
   seeds as its A8. Root cause and proof under Messages, msg-2.
@@ -131,12 +149,12 @@ green jobs at strata:1e88eb3f; jobs queued at b98362b7 (Evidence). The TSan job 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
-| A2 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
+| A1 | queued at strata:1b1601be (one directory per group): crash 261117-145425-546e2d (at ba578486), TSan 261117-144145-d6642a, `--fails-without` unlink-at-apply 261117-144102-268e06, append-on-retry 261117-144106-b87f0c, sync-retry 261117-144110-e0f969. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
+| A2 | queued at strata:1b1601be: append-on-retry (voters) 261117-144113-7e2482, admission-waits 261117-144117-70b7fd. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
 | A3 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
 | A4 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
 | A5 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
-| A6 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb (ctest `group_footprint`, 64 groups); `--fails-without` close-keeps-index 261117-134441-a5a538, files-keep-handle 261117-134448-2b4bae. Left: the exclusive 10^4 job (Blocked on), quiescent groups (consensus-quiescence), the catalog close |
+| A6 (part) | queued at strata:ba578486: build-test 261117-145424-c6058d (ctest `group_footprint` 64 groups, `group_file_set`), counts at 5,000 groups 261117-145443-7d6ef1, timing at 1,500 groups (strict) 261117-145446-d7d1b2; `--fails-without` keeps-config 261117-145409-97b241, close-keeps-directory 261117-145413-4a4fef, close-keeps-index 261117-145417-0353c2, files-keep-handle 261117-145421-9882e8; at strata:1b1601be no-prefix 261117-144044-aee607. Left: quiescent groups (consensus-quiescence), the catalog close |
 | A7 | waits on detent:consensus-quiescence (in-process reopen, `TurnLog::read` after close) |
 | A8 | [decision] the owner's (cluster-release Q2); lead default (a) |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
@@ -151,6 +169,16 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- D111's directory: the group owns its one directory (`std::unique_ptr<jn::IO>`) and lets it go
+  at close; a reopen is a new group object over the same path, as the tests already did.
+- `own_heap` = 1,024 B is the group's own budget past its index and consensus row (measured 539-
+  645 B); it holds the object past its index and the file set's entries, which grow with the
+  application's live files. `recovered()` keeps the recovered bundle (one map entry per file):
+  kept, the lifetime test reads it.
+- Bare index and row costs come from 256 of each: per unit they do not change with count.
+- The bare index closed still holds 1.9 KB per index (pooled task frames and an executor's
+  cancel_source), strata core's and task's, not the group's.
 
 - Checkpoints run one at a time (`task::async_mutex` in `group`, strata:b98362b7): consensus
   rejects a checkpoint while one is pending (`Busy`, core.h:600), so a close racing a periodic
