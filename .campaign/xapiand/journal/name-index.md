@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: ready for review
+State: fixing F1, F2 (correctness review, round 1 of 2)
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,25 +9,29 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Lead findings at b43d399 fixed in xapiand:8987bea (master merged: xapiand:291ec89):
-1. async_check: the build's std::thread and its joins are gone. `DatabasePool::build_names` claims the build with
-   one atomic and posts a detached task to the control loop that awaits one `merge` chore of its own IndexChores;
-   `set_control(nullptr)` and `finish()` request its stop, so the shutdown's drain ends it. The 6 lock sites left are
-   classified in harness/async_allowlist.tsv (pool workers only, in-memory, bounded). Local async_check: 0
-   unclassified.
-2. Bench: NAME_INDEX_BENCH_ROOT keeps trees at `~/.scratch/name-index-bench/<N>/`; NAME_INDEX_BENCH_MAKE=1 only
-   makes them (::mkdir, light job); the strict job times them.
-
-Jobs at 291ec89: build-test 261117-110158-de9685; e2e 261117-110158-9cdd8c; targeted 261117-110204-e7835e (A3-A5);
-fixture 261117-110254-f71df8 (light); A2 bench 261117-110258-76c693 (strict, after the fixture). Mutants
-(--fails-without, after targeted): no-parents 261117-110214-031049, keep-slash 261117-110217-85a114, drop-delta
-261117-110221-d6fa49, lose-merge 261117-110224-f3f320 (A3); no-seek 261117-110228-88596e (A2); no-range
-261117-110232-ddea0a, no-index 261117-110235-4fbeb9, no-hook 261117-110238-651fe2 (A4); top-build
-261117-110242-e44601 (A5).
+Correctness review (.campaign/xapiand/reviews/name-index-correctness.md, CHANGES at 291ec89), round 1:
+- F1 fixed: a lookup counts one visit per name read, a seek none; a dead name waits on a stack (`closed`) until its
+  subtree, which is skipped unread; a dead prefix that is no name is found by its first name (that visit is its
+  entry). Each name read maps to a distinct entry the walk reads, so names <= walk. A name steps only the segments
+  it does not share with the last name stepped (`levels`, `ends`), so steps <= walk too. Test:
+  test_the_names_never_refuse_what_the_walk_answers (random trees at caps 1-40, nested 50+50 at cap 50); mutant
+  no-closed.
+- F2 fixed: `index_pattern::Unreadable::fail` (the build's walk) throws on an opendir error other than ENOENT and
+  ENOTDIR (ruling D110); `build()` returns false, keeps `failure()`, and the pool logs it; the walk keeps answering
+  and a later pattern retries. Test: test_an_unreadable_directory_fails_the_build (EMFILE by taking every
+  descriptor, then a retry equals the walk); mutant skip-unreadable.
+- F3-F6: not fixed (non-blocking), for a follow-up:
+  - F3: delete needs `erased()` with a tombstone the build applies at its swap; erasing `twitter` keeps
+    `twitter/user` (D9).
+  - F4: the delta is unbounded until the first pattern; say so in D4 and the Limits, or merge before completion.
+  - F5: on a case-insensitive file system `opened()` adds the request's spelling and the walk lists the disk's.
+  - F6: a build that keeps failing is retried, and logged, by every later pattern; it needs a back-off.
+  - Also seen: a readdir error in the middle of a directory still reads as the end of it (D110 covers opendir).
 
 ## Next
 
-1. Fold in review findings by id. No new building.
+1. Submit at the fix: targeted tests, mutants no-closed and skip-unreadable (--fails-without), the reviewer's
+   oracle.sh and emfile.sh, and build-test and e2e via `campaign verify`. Then ready for review.
 
 ## Blocked on
 
@@ -69,3 +73,8 @@ docs/mechanisms/wide-search.md. Open: the release gating (owner).
   request awaits it; patterns walk until it ends. With no control loop nothing is posted. Clearing the control stops it.
 - R6 The names' 6 lock sites stay, classified `allow`: taken only on pool workers (resolve's open chore, the build
   chore, a lookup's query chore), no I/O or await under them; loops touch only atomics.
+- R7 F1's "same 400 text when both refuse" cannot hold as asked: the names read less than the walk, so they can
+  get to the indexes cap (too many names, "indexes" text) where the walk refuses its work first ("directory
+  entries"). Probe: 37 of 2,869 both-refuse cases at caps 1-40, all names=indexes cap, walk=work. The test asserts
+  what holds: a work refusal by the names implies one by the walk, and the work texts differ only by the noun
+  (the lead's earlier ruling). For the lead to confirm.
