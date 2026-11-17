@@ -5873,6 +5873,8 @@
         "detent:consensus-driver",
         "detent:consensus-quiescence"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/group-core",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5916,6 +5918,7 @@
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
       "lenses": [
         "correctness",
@@ -5927,11 +5930,13 @@
         "strata:group",
         "strata:checkpoint-bundle"
       ],
+      "reason": "started by force: only CMakeLists.txt is shared with document-gate: each adds its own target lines; the lead merges",
       "repo": "../strata",
       "risk": "critical",
-      "status": "planned",
+      "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-15T23:04:50"
+      "updated": "2026-11-17T02:05:37",
+      "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
       "accepted": {},
