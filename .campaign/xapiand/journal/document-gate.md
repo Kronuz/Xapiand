@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: design fixed
+State: waiting on jobs 261116-211612-1ad7b7 261116-211626-0daa5f 261116-211632-9ff248 261116-211637-83ad1f
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,38 +9,65 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A1 design revision 1: strata `docs/design/standalone-turn-log.md` at strata:8e919415 (pushed),
-folding the design review (Xapiand:dc0590b32, CHANGES) F1-F6, N1, N2, N4, N6, N7; N3 and N5 left
-as owner questions Q3, Q4. Ready for the re-check.
+A1 build, design first steps 1-3 (lead's launch 2026-11-16), at strata:efe25bcd (pushed):
+repin, command codec (D3) with fixtures and fuzz target, logged mode (position with the append,
+open record, sealing through a shim, watcher V, flush rule, replay). Review nits R1-R3, R5 folded
+into the doc; R4 is Q5.
 
 ## Next
 
-1. Design review of standalone-turn-log.md (lens design, durability).
-2. After review and the file-set widening: build first steps 2-5 of the design.
+1. Read jobs: build-test 261116-211612-1ad7b7; M-j 261116-211626-0daa5f (fails-without, T12);
+   M-k 261116-211632-9ff248 (fails-without, T4); TSan 261116-211637-83ad1f.
+2. Fix whatever they show; then steps 4-5 in the next launch (checkpoint, recovery's cross-checks,
+   join/leave; kv_strata on a host).
 
 ## Blocked on
 
-- Lead: the file set lacks `include/strata/core/**`, `test/**`, `CMakeLists.txt` and
-  `docs/design/standalone-turn-log.md`; building A1 needs them.
-- Owner (design Q1-Q4): per-core logs on macOS (P2), the wal1 label, read-your-writes under
-  ack=none (N3), a tolerant open after log damage (N5). Defaults recommended in the doc.
-- Journal (Detent reviews): `TurnDriver::seal`; strata's journal pin moves to journal main for
-  the host layer. Until seal lands, one record per transaction.
+- Owner (design Q1-Q5): per-core logs on macOS, the wal1 label, read-your-writes under
+  ack=none, a tolerant open after log damage, the 64 MiB command limit (R4). Defaults in the doc.
+- Journal (Detent reviews): `TurnDriver::seal`. The shim (strata `turn_seal.hh`) shows the
+  contract needs four things beyond seal(group, fn): unseal by owner, a thread-safe wake for an
+  open record's first transaction, the turn budget's room passed to the sealer, and a lock order
+  (turn mutex, then record mutex). Doc "Built" lists them.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | design only: strata:8e919415 docs/design/standalone-turn-log.md; checks listed there as jobs |
+| A1 | build-test 261116-211612-1ad7b7 (pending); M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 (fails-without, pending); TSan 261116-211637-83ad1f (pending) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
 
-Design for A1 in strata `docs/design/standalone-turn-log.md`: turn log as WAL, commit() as a
-background checkpoint, ack and visibility at the turn barrier, one record per index per turn,
-crash tests T1-T9, mutants M-a to M-f, measurements M1-M5. Nothing measured yet.
+strata `docs/design/standalone-turn-log.md` ("Built"); code in `include/strata/core/command.hh`,
+`turn_seal.hh`, `index.hh` (logged mode), `test/standalone_turn_log_test.cc` (T2, T4, T9, T11,
+T12, served), `fuzz/fuzz_command.cc`, fixtures `test/fixtures/command/`. Mutant commits on local
+strata branches `mutant/document-gate/m-j` (9ff37a0a) and `m-k` (1f827405).
 
 ## Rulings I made
+
+- Build launch (steps 1-3):
+  - The repin also moves completion to 7731315 and task to 95798a0 (journal 7c08540's pins) and
+    sets COMPLETION_TASK ON: journal's turn driver needs completion::task, and strata's
+    declarations win FetchContent.
+  - Transaction types moved from index.hh to command.hh, so the codec and the index share them.
+  - Codec: role and postings bytes decoded raw (stage 1 judges them; a replicated command may be
+    invalid), flags/mask/kind strict; unknown kind/version unsupported_index, else corrupt_index.
+  - The append runs after publish_cover, so V never passes the cover (D7 rule 4); a throw in it
+    fences (an accepted transaction the log lacks).
+  - Records stay whole: the transaction that would take a record past command_bytes closes it;
+    positions never move between records.
+  - Views of a logged index keep their predecessor's metadata/fields/schema/last docid while the
+    applied position is past the log (those are not filtered by V); flush() and apply_pending()
+    (pending deletes into segment bits, also run by merge()) await the log.
+  - Owner-thread reads (index.get under the lease) see applied state; D4 governs reader handles.
+  - attach_log refuses a head past the log's durable sequence with log_lost (D6.4, early).
+  - T2 and T12 put the log in the index's faultfs directory (no name overlap), so one cut orders
+    both; faultfs gains power_on() for a process crash.
+  - M-k is T4's flush wait only; apply_pending's wait has no mutant of its own (no deterministic
+    publication reaches it).
+  - Syntax checks ran locally under `quiet light` (fsyntax-only, older deps); builds are jobs.
+
 
 - Review fold-in (revision 1), by finding:
   - F1: lease from seal to checkpoint record; V and acks published by a watcher without the lease. Tests T1, T11; mutant M-g.
