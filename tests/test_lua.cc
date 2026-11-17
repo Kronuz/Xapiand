@@ -1370,7 +1370,7 @@ void test_a_schema_stores_the_body_of_a_name_only_script_or_refuses_it() {
 		auto declare = [](const std::string& name) {
 			MsgPack object({{"_name", name}});
 			Script script(object);
-			return script.process_script(true);
+			return script.process_script(false);
 		};
 		MsgPack full({{"_name", "decl-cached"}, {"_body", "_doc.ran = _doc.x + 1"}});
 		Script cached_script(full);
