@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-033227-678742 261117-033229-e6ebfc 261117-033233-7e4d9b 261117-033236-b7fbb6 261117-033240-5df553 261117-033244-6cd288 261117-033248-e735a3 261117-033250-38d2df 261117-033250-f42f82 261117-033320-c0fc7f 261117-033324-78da56 261117-033327-395b53 261117-033331-422c2f
+State: waiting on jobs 261117-033227-678742 261117-033229-e6ebfc 261117-033233-7e4d9b 261117-033236-b7fbb6 261117-033240-5df553 261117-033244-6cd288 261117-033248-e735a3 261117-033250-38d2df 261117-033250-f42f82 261117-033320-c0fc7f 261117-033324-78da56 261117-033327-395b53 261117-033331-422c2f 261117-034937-925436 261117-034940-b2b9c3 261117-034943-316356
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,13 +28,17 @@ namespace ops. Seal mutants at 395644a7 all killed (M-j, M-k, M-a, M-c, M-h).
    ~/.scratch/document-gate/rows-*; each prints report.md).
 2. Write docs/perf/standalone-turn-log.md from the rows: four axes, the gap per D103, Q3's ack=none
    window on wal1; then the Evidence table and A2/A8's gate report.
-3. M2 (barriers.c F_FULLFSYNC per op), M3's group-commit and N-log rows, M4 floor, M5 checkpoint
-   stall: not yet run.
+3. At strata:7db7a919 (harnesses bench/kv/barriers.py, nlog.py, floor.c; kv_strata KV_LOOPS):
+   M2 261117-034937-925436 (strict), N-log/group-commit 261117-034940-b2b9c3 (exclusive), M4
+   261117-034943-316356 (strict). M5 is read from the rows' p99/p99.9/p99.99 (no separate writer
+   wait histogram). Group commit of several writers on one index is not a kv_strata mode; the
+   N-log row's L=1, K>1 cases are group commit across indexes on one log.
+4. msg (lead): Q1/Q2 ruled D104, closed in the design (strata:0ad... "design: close Q1 and Q2
+   under D104"); reopen-at-open noted in Built.
 
 ## Blocked on
 
-- Owner (design Q1, Q2): per-core logs on macOS, the wal1 label. Q3-Q5 ruled option 1 (D103,
-  Xapiand:1935c388d), closed in the doc at strata:8b91d151; quest turn-log-parity follows.
+- (none from the owner: Q1/Q2 ruled D104 by the lead, Q3-Q5 D103.)
 - Journal (Detent reviews): `TurnDriver::seal`. The shim (strata `turn_seal.hh`) shows the
   contract needs four things beyond seal(group, fn): unseal by owner, a thread-safe wake for an
   open record's first transaction, the turn budget's room passed to the sealer, and a lock order
