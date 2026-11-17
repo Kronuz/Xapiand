@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: waiting on jobs 261116-190058-7aadbd 261116-190058-b967fe 261116-190058-4765ae 261116-190105-d1aa4f
+State: waiting on jobs 261116-190946-604384 261116-190946-893cd4 261116-190947-ea5c65 (and the A9 install job after build-test); next: set the docs and e2e counts the fixtures changed from the e2e failures, exactly
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
