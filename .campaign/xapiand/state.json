@@ -12612,6 +12612,8 @@
       "after": [
         "x-pool"
       ],
+      "base": "d9f4255a7f431385dfd0c8ee382eb7cc54236fbf",
+      "branch": "quest/xapiand/name-index",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -12823,9 +12825,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-09T04:14:27"
+      "updated": "2026-11-17T07:49:53",
+      "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
       "accepted": {},
