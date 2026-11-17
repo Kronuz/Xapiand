@@ -39,9 +39,9 @@ pm.test("Stop words are filtered from the query", function() {
 ```
 e2e:end -->
 
-The stop words in the phrase (`these`, `are`, `few`, `and`, `between`: all
+The stop words in the phrase (`these`, `are`, `few`, `and`, `far`, `between`: all
 are in the English list) are removed before the query runs, and only the remaining
-content words, `days` and `far`, are searched. That is why documents match even though none of them
+content word, `days`, is searched. That is why documents match even though none of them
 contain the whole phrase. The words of a group that are stop words are dropped
 unless the group holds only stop words.
 

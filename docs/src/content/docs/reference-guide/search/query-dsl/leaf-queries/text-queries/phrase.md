@@ -24,7 +24,7 @@ plain words.
 #### Example
 
 In the following example, we will retrieve documents with the exact phrase,
-including the stop words `these`, `are`, `few`, `and` and `between`.
+including the stop words `these`, `are`, `few`, `and` `far` and `between`.
 
 ```rest
 SEARCH /bank/

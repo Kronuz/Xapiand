@@ -4,7 +4,7 @@
 
 ## What
 
-Every package carries `LICENSE` (MIT), `NOTICE` (who owns what, and the Apache-2.0 client and docs attribution) and `THIRD-PARTY-NOTICES` (the license text of every bundled component and data file) in
+Every package carries `LICENSE` (MIT), `NOTICE` (who owns what, and the Apache-2.0 client and docs attribution) and `THIRD-PARTY-NOTICES` (the license text of every bundled component) in
 `share/doc/xapiand`.
 
 ## How
@@ -28,5 +28,5 @@ Rerun the script at every repin and at the release commit; a run against the mas
 
 ## Data files
 
-`stopwords/*.txt` are Snowball's stop word lists (BSD-3-Clause) and `mime.types` derives from h5bp's and nginx's tables (MIT, BSD-2-Clause). The script writes their sources and license texts into
-`THIRD-PARTY-NOTICES` from static text (`SNOWBALL_STOPWORDS`, `MIME_TYPES`); refresh the Snowball commit named there when the lists are refetched (audit A17, A18).
+`mime.types` derives from h5bp's and nginx's tables (MIT, BSD-2-Clause); the script writes their credits and license texts into `THIRD-PARTY-NOTICES` from static text (`MIME_TYPES`; audit A18).
+The stopword lists have no recorded source yet, so `THIRD-PARTY-NOTICES` does not cover them (audit A17).
