@@ -2986,8 +2986,11 @@
       "accepted": {},
       "after": [
         "detent:consensus-transport",
+        "detent:consensus-driver",
         "detent:consensus-driver"
       ],
+      "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
+      "branch": "quest/xapiand/consensus-rpc-lane",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3008,7 +3011,7 @@
           "name": "tsan"
         },
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
           "later": true,
           "level": "light",
           "minutes": 70,
@@ -3022,8 +3025,144 @@
         "include/consensus/transport/**",
         "test/transport/rpc*",
         "fuzz/rpc*",
-        "docs/mechanisms/rpc-lane.md"
+        "docs/mechanisms/rpc-lane.md",
+        "CMakeLists.txt",
+        "fuzz/fuzz_decoders.cc",
+        "test/transport/peers_test.cc",
+        "docs/design/rpc-lane*",
+        "CHANGELOG.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T20:04:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command built without CONSENSUS_FUZZ, so it passed without fuzzing (design Q3)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        },
+        {
+          "at": "2026-11-16T21:04:04",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: LLVM clang with libFuzzer and the stream fuzzer's name (design Q2)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
         "correctness"
@@ -3035,9 +3174,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T15:42:47"
+      "updated": "2026-11-16T21:04:04",
+      "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -4137,6 +4277,8 @@
         "phase4-gate",
         "manifest-log"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/document-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4152,7 +4294,12 @@
         "docs/gates/document-profile.md",
         "bench/kv/**",
         "docs/perf/**",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "include/strata/core/**",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/design/standalone-turn-log.md",
+        "fuzz/**"
       ],
       "history": [
         {
@@ -4182,6 +4329,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/document-gate",
       "landed": [],
       "lenses": [
         "durability"
@@ -4191,9 +4339,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-08T22:35:42"
+      "updated": "2026-11-16T20:42:21",
+      "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
       "accepted": {},
@@ -6694,7 +6843,90 @@
       "updated": "2026-11-08T15:40:00"
     },
     "license-closure": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-16T22:50:23",
+          "base": "fbc7b199b39fe1c4e72d74de5cc1714c0399e5b8",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:734c3f40e3e3dcb6d4e26f8f44441ac61045a90e",
+            "NOTICE": "100644:f198f7b2ed628ac12f63488af138c0672a915d05",
+            "THIRD-PARTY-NOTICES": "100644:93131ce935bf0ae02ef4c8c1b173b930a838289c",
+            "cmake/Modules/FindGTest.cmake": "100644:f20602a9db73872ab03bdbc8b150b1f707d6c4e1",
+            "cmake/Modules/FindPackageTools.cmake": "100644:b8b14a2011f0d00423a642441f6d98800a7aad8f",
+            "cmake/generate_third_party_notices.py": "100644:5857d4e89875cf4101ad79bf81c0541da717bf46",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "100644:6af04a7bed837a95bb885856deabe554d8aac846",
+            "contrib/python/xapiand-py/xapiand/utils/serialize.py": "100644:8f8c26172299fd7a80e072ab4545a48ec27e1e83",
+            "docs/discussions/LICENSE": "100644:4c287331ebeabd6490b1f9c276c116897496ee6b",
+            "docs/discussions/README.md": "100644:ff624e8d73b4f4740abb1535e91397b67467e871",
+            "docs/discussions/package.json": "100644:27107c63178c1d8651c581764f17318000727f43",
+            "docs/discussions/worker/package.json": "100644:2aca5452ddade810d086c1582a208c75c2817810",
+            "docs/mechanisms/third-party-notices.md": "100644:169bb9f58ca1b66c1bed584996df8175a3a70b68",
+            "docs/public/assets/Lenna.jpg": "deleted",
+            "docs/public/assets/Lenna.pdf": "deleted",
+            "docs/public/assets/Lenna.png": "deleted",
+            "docs/public/assets/accounts.http": "100644:03aafe5066164a46a288d5c97bce379446b0b333",
+            "docs/public/assets/accounts.json": "100644:21f2c86b354742db99518c38c1a9efa3fe513888",
+            "docs/public/assets/accounts.msgpack": "100644:bf01a321970ed77e093258adffb1001a99fc36f1",
+            "docs/public/assets/accounts.ndjson": "100644:ec4ad461467edfae05ede380d9225bba97cb4e01",
+            "docs/public/assets/generator.py": "100755:7e4f81138d3f7b51b592c6b60026ddcc5473c8b6",
+            "docs/public/assets/sample.jpg": "100644:1bccf053f10add2bcc73ce29b4f0823e71b33389",
+            "docs/public/assets/sample.pdf": "100644:19aed42b257cd1d05d12b6e8cd33c5cea705c6ad",
+            "docs/public/assets/sample.png": "100644:5bb486dbfead5fc4ed8abf758d9df5b670c22a9b",
+            "docs/public/assets/sample_image.py": "100644:d7de19370167faecd2ea0c4e9b4880cb80c57cad",
+            "docs/src/content/docs/copyright.md": "100644:bdfcc0339c80a6a2043f8ca565661be094f9cda5",
+            "docs/src/content/docs/exploration.md": "100644:96334d87769bed47270bcb48baff2f894d70168f",
+            "docs/src/content/docs/reference-guide/documents/store-api.md": "100644:0cb6f0c3ff7a57cbd68934a94beddeac356d78eb",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries.md": "100644:ed773ec299315344abc9c6bdf3517c9042f77e5e",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/default-operator.md": "100644:2dd4616d063342cf39cc060ce194ce4e9742b45d",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/love-and-hate.md": "100644:325c70510006127c4823263c6a3c45f0af75a2f2",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/near.md": "100644:612eb6aa7df39ac7d1e87615412b33c34626b297",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/phrase.md": "100644:5247ee6d489e34c545e8a7f86d0ec145d33c57e5",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/simple.md": "100644:a11e54edb4ac7c6d2006b9d4be0275e13eb9a3c1",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "100644:3c61c51eb78fc212674ca28bd3b29121e030c8b1",
+            "docs/status/license-audit.md": "100644:ee852bd2dc377df1f2e66398521690ee54019c29"
+          },
+          "by": "review",
+          "commit": "a64429f304a5cc8dea9ef8439509948e489fec1c",
+          "criteria": "903e4cf5fde6ce3e",
+          "diffs": {
+            "": "81f80236e2558cdf",
+            "ARCHITECTURE.md": "e46d49b56e46ac64",
+            "NOTICE": "c7ee30a7e636f566",
+            "THIRD-PARTY-NOTICES": "ba33b94824317690",
+            "cmake/Modules/FindGTest.cmake": "18804e174865f4df",
+            "cmake/Modules/FindPackageTools.cmake": "a305c33809b069c3",
+            "cmake/generate_third_party_notices.py": "3747c38ec345c800",
+            "contrib/python/xapiand-py/xapiand/sortable.py": "1876610400eaac7e",
+            "contrib/python/xapiand-py/xapiand/utils/serialize.py": "db226bad6270a736",
+            "docs/discussions/LICENSE": "4ce3b884b2c26ab9",
+            "docs/discussions/README.md": "9580241bdb56a066",
+            "docs/discussions/package.json": "36b940822a29f718",
+            "docs/discussions/worker/package.json": "b2017a39ed514a11",
+            "docs/mechanisms/third-party-notices.md": "28361cd2269049f3",
+            "docs/public/assets/accounts.http": "7eb59286e6a0104f",
+            "docs/public/assets/accounts.json": "3013cf67a766c97a",
+            "docs/public/assets/accounts.ndjson": "9e47d410ec160e32",
+            "docs/public/assets/generator.py": "b67a9e7b1950955b",
+            "docs/public/assets/sample_image.py": "e93e5d84bcf6baaf",
+            "docs/src/content/docs/copyright.md": "d3347cf5fd755011",
+            "docs/src/content/docs/exploration.md": "cb305982cb67d305",
+            "docs/src/content/docs/reference-guide/documents/store-api.md": "2eb7710ec6886fcb",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries.md": "621f2cfea46137cb",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/default-operator.md": "71ff7e1716bcb1b6",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/love-and-hate.md": "369ebf07dda955bc",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/near.md": "99926ebade0af9cd",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/phrase.md": "2b83b1c79233209d",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/simple.md": "b0ce81e0666af257",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "157a497c15980f83",
+            "docs/status/license-audit.md": "f9cbf3f4f0bb9ef3"
+          },
+          "findings": {},
+          "note": "",
+          "review": "b8072d43e79c95796db1e92e1f1c800acfb74dc8",
+          "reviewed": "90454dc6d533820c3cf5edf4e48b8094f3e4059b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "sortable-encoding",
         "x7-gate"
@@ -6735,7 +6967,8 @@
         "cmake/**",
         "contrib/**",
         "stopwords/**",
-        "mime.types"
+        "mime.types",
+        "docs/mechanisms/third-party-notices.md"
       ],
       "history": [
         {
@@ -6849,9 +7082,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T15:22:12",
+      "updated": "2026-11-16T22:50:23",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
@@ -7575,6 +7808,100 @@
       "title": "Lua memory has a node-wide bound below host RAM",
       "updated": "2026-11-16T15:58:01",
       "worktree": ""
+    },
+    "lua-name-miss": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T20:45:54",
+          "base": "aa037cecfc1e2b6636822284c9caee2109c6cf90",
+          "blobs": {
+            "docs/mechanisms/lua-memory.md": "100644:3f6d4457dfcaddcaa3393ebe3a8281f45349be9d",
+            "src/lua/processor.cc": "100644:eb3120e041da7d8c4939b2ecc3626bb195dc6f68",
+            "src/lua/processor.h": "100644:91c7ac5301d294b7b04aaf3e0453f9638de1c65d",
+            "src/script.cc": "100644:969ca335618f07908701e3ef97174aa7de8b7974",
+            "tests/test_lua.cc": "100644:b969ae0328e0a4ce61135de8e2f409c121a4e552"
+          },
+          "by": "review",
+          "commit": "c7e3d16d9bb7acfa3bd9946e509cd4b8dc158edc",
+          "criteria": "e73f634c2b9868c2",
+          "diffs": {
+            "docs/mechanisms/lua-memory.md": "5cd3988952a1f7b4",
+            "src/lua/processor.cc": "17fb370d3c61734e",
+            "src/lua/processor.h": "4d430e4b715207ae",
+            "src/script.cc": "b5f54c27ef4bb6f3",
+            "tests/test_lua.cc": "cfec19ba9fabfe4a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d71438f016956acc1ff7ee91e9640aa1932d1d75",
+          "reviewed": "4e4f647b3506fba6aec36712efac17bcc702b430",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
+      "branch": "quest/xapiand/lua-name-miss",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/lua/**",
+        "src/script*",
+        "tests/test_lua*.cc",
+        "docs/mechanisms/lua*.md",
+        "src/database/schema.*",
+        "tests/test_schema*.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-16T22:50:16",
+          "commit": "00d8148571b6a22e0b3ec5a66e2abf5c1842a85c",
+          "criteria": {
+            "A1": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-185852-7c38a4, 261116-200155-3846f1",
+            "A2": "docs/mechanisms/lua-memory.md (unbounded wait; C1 error)",
+            "A3": "261116-200158-58b4cd (the suite check), 261116-200158-58b4cd (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md)",
+            "A4": "261116-200146-ecb2eb (passed at c7e3d16d9bb7; ignores docs-only docs/dev/test-pool-flake.md); fails without: 261116-200151-314f45"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "4e4f647b3506fba6aec36712efac17bcc702b430",
+              "docs": [
+                "docs/dev/test-pool-flake.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-200158-58b4cd",
+              "level": "light",
+              "seconds": 568.9,
+              "state": "done",
+              "what": "lua-name-miss check suite at 4e4f647b3506"
+            }
+          ],
+          "final": true,
+          "from": "2ddf6232761949ef9de3ecf372e3be559f0766c3",
+          "reason": "",
+          "tested": "00d8148571b6a22e0b3ec5a66e2abf5c1842a85c"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "A name-only script request that misses the cache answers an error",
+      "updated": "2026-11-16T22:50:16",
+      "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
       "accepted": {
@@ -14820,16 +15147,43 @@
         "harness/thread_stacks.sh",
         "harness/run_all.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T18:19:24",
+          "commit": "ce8e9f08593f4269eaa0c2f0dad7f87938465be9",
+          "criteria": {
+            "A1": "`docs/dev/freebsd.md`: \"Run 43983942535\"",
+            "A2": "`docs/dev/platforms.md`: \"43983942361\"",
+            "A3": "manual: the lead checked both runs at 26d4a14f6: all 14 rows pass on arm64 and FreeBSD; earlier failures were fixed upstream (reactor:2ef28dc, system:563880a, lua-memory-bound)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c5a5d06b0649dfc279cedd3853c1e674b71cc332",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-164820-2e5e1f",
+              "level": "light",
+              "seconds": 539.8,
+              "state": "done",
+              "what": "platform-rows check suite at c5a5d06b0649"
+            }
+          ],
+          "final": true,
+          "from": "c6380001d649ae252f1069b4236b16087a53997f",
+          "reason": "",
+          "tested": "c5a5d06b0649dfc279cedd3853c1e674b71cc332"
+        }
+      ],
       "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-16T08:59:05",
+      "updated": "2026-11-16T18:19:24",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
@@ -16707,7 +17061,55 @@
       "updated": "2026-11-08T15:39:15"
     },
     "restore-free-off-loop": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T22:51:08",
+          "base": "c6380001d649ae252f1069b4236b16087a53997f",
+          "blobs": {
+            "docs/perf/restore-stall.md": "100644:e4971b5b2d864a69bd0f283e9587a1a91c6d7258",
+            "harness/restore_stall_ab.sh": "100755:4807d58e6fda0a7db7d217f42325a16b80530247",
+            "harness/restore_stall_build.sh": "100755:c329619a93c11981d45258c6b73011584be1bf6e",
+            "harness/restore_stall_items.py": "100755:f3c5757e472591e24b986f68459b63c031971d85",
+            "harness/restore_stall_probe.py": "100755:c2accfed5212865713b7d597dfa9e774bbcf2f6b",
+            "harness/restore_stall_profile.py": "100755:8d52867908c51c6ff776740f3ef0a37e9c0976d3",
+            "harness/restore_stall_reactor_lag.patch": "100644:25e16c3f2c06a8cdc81dfbaabe8b17727323934f",
+            "harness/restore_stall_slice_results.patch": "100644:d3bd8f54c9a827b20516b07e9ed555b5d814dabf",
+            "harness/restore_stall_stalls.py": "100755:9345be1b839047410851198a2809117456364382",
+            "harness/restore_stall_table.py": "100755:1520975d8b92ee6d0038bc72385d82dd5069f330",
+            "harness/restore_stall_verdict.py": "100755:a937fecdd2e14d4e14038de3a790bebd648a00cb",
+            "src/database/handler.cc": "100644:61c7ef0bccc3630ab7f21395ca90c9d517c3d326",
+            "src/database/handler.h": "100644:e0a49a75f01d6635d48c864bb95d9c632bc4e4dd",
+            "src/server/search_views.cc": "100644:10931115c0e4cd8fd02972ce0171c8d9ec5037d3",
+            "tests/test_loop_yield.cc": "100644:02a768baeacab787d29b3e27dd0a1d8ec7a724c0"
+          },
+          "by": "review",
+          "commit": "5959edc933b14bba99792e44f29042c25cac68b1",
+          "criteria": "bda33671661cbf03",
+          "diffs": {
+            "": "2d509866427bd13b",
+            "docs/perf/restore-stall.md": "b68f12f6bf7cdc1d",
+            "harness/restore_stall_ab.sh": "08571f49f614b566",
+            "harness/restore_stall_build.sh": "e4ad48938203ef61",
+            "harness/restore_stall_items.py": "8eb3d4e5e5a3426f",
+            "harness/restore_stall_probe.py": "b63379a49f1d76f3",
+            "harness/restore_stall_profile.py": "180af40b903a7320",
+            "harness/restore_stall_reactor_lag.patch": "c64dd5ec9205bfb1",
+            "harness/restore_stall_slice_results.patch": "80d3a038d7069b67",
+            "harness/restore_stall_stalls.py": "d0b78345aedb4c42",
+            "harness/restore_stall_table.py": "23f512cd821a4800",
+            "harness/restore_stall_verdict.py": "d2ecc7d837f14b70",
+            "src/database/handler.cc": "32728253a921f6e5",
+            "src/database/handler.h": "fa46fd2f80ca9c52",
+            "src/server/search_views.cc": "a5623f7694e2bb6f",
+            "tests/test_loop_yield.cc": "be4c5164ac723d68"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dad5165a46a784bc531cfd2febcfb2fa7721bde9",
+          "reviewed": "3198212335487034c809f3c97eeaa608d55bfa3b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "ceb05856963b4075c80043b9ea832bed1148fa56",
       "branch": "quest/xapiand/restore-free-off-loop",
@@ -16737,7 +17139,9 @@
         "docs/perf/restore-stall.md"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -16745,7 +17149,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T09:59:09",
+      "updated": "2026-11-16T22:51:08",
       "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
     },
     "restore-mixed-sign-integers": {
@@ -19847,6 +20251,36 @@
       "updated": "2026-11-12T13:16:29",
       "worktree": ""
     },
+    "t10-flood-limit": {
+      "accepted": {},
+      "after": [],
+      "base": "b10e26aa021524b7b049f83d692fbce55240e98e",
+      "branch": "quest/xapiand/t10-flood-limit",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/lua_bounds.py",
+        "docs/dev/t10-flood-limit.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "T10's flood p99 limit scales with the host's cost per call",
+      "updated": "2026-11-16T21:51:31",
+      "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
+    },
     "t11-barriers": {
       "accepted": {},
       "after": [],
@@ -20450,6 +20884,60 @@
       "status": "planned",
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
+    },
+    "turn-seal": {
+      "accepted": {},
+      "after": [],
+      "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+      "branch": "quest/xapiand/turn-seal",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "journal:turn-log"
+      ],
+      "files": [
+        "include/journal/turn_driver.h",
+        "include/journal/turn_log.h",
+        "include/journal/journal.h",
+        "test/turn_driver*",
+        "test/turn_seal*",
+        "test/turn_log_test.cc",
+        "test/turn_log_power_test.cc",
+        "test/placement_test.cc",
+        "fuzz/fuzz_turn_log.cc",
+        "bench/turn_bench.cc",
+        "docs/mechanisms/turn-seal.md",
+        "CHANGELOG.md",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/turn-seal",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:turn-seal"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "active",
+      "title": "TurnDriver::seal: one sealed record per group per turn",
+      "updated": "2026-11-16T21:53:41",
+      "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
       "accepted": {
