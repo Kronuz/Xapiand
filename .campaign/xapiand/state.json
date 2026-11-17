@@ -21088,9 +21088,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-16T21:53:41",
+      "updated": "2026-11-17T02:08:20",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
