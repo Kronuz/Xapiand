@@ -33,6 +33,13 @@ Consumes the manifest log (`manifest-log`, strata-manifest-log) and the turn log
 
 ## Decisions
 
+- Detent's lead on the A1 design's Q1/Q2 (2026-11-16): group retirement is recorded in one place, the
+  host's group table (journal:7c08540 F1/F2), not a second `Retire` log kind; if a log kind is needed
+  it becomes the single source and the table derives from it. A failed turn fences the loop
+  (fail-stop) and reopen cuts the log at the failed range by the torn-tail rule; zero only if the design
+  must keep appending without a reopen, with the zeroing's own failure defined and crash-tested.
+  Detent reviews any journal change that follows.
+
 - The lead's priority (owner, 2026-10-17): strata is a lifecycle core that must beat RocksDB and search
   plugins that must beat Lucene and Tantivy; the core against RocksDB is calibrated once (db_bench
   fillseq, fillrandom, readrandom, seekrandom, YCSB A to F at about 1M keys), then timed against

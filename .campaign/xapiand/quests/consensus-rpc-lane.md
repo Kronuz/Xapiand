@@ -18,7 +18,7 @@ opens connections between any two nodes, not only those sharing a group. Detent'
 - A1 Calls with deadlines and cancellation over shared connections; a full group credit does not
   delay an RPC, and a full RPC credit does not delay a heartbeat (the `reader_test` shape, with a
   control that shares one credit and fails): tests with values, run as a job
-- A2 A 4 GiB streamed body crosses under the lane's credit while a heartbeat on the same connection
+- A2 A 4 GiB streamed body crosses under the lane's credit while a heartbeat between the same two nodes (on Control; the body rides Bulk, design D1)
   keeps every gap under the 1 s minimum election timeout (async-drivers D10); the job states the
   largest gap and the throughput, and a control sending the body as one frame fails
   (`--fails-without`)
