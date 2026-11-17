@@ -17,10 +17,30 @@ slices of A3 (ack levels) and A4 (`read_applied`, deposed leader). Jobs queued (
 
 1. Read this step's jobs; fold failures in. Push for CI (lead) once green: the asan job and
    linux-x86_64-gcc were CI's two failures at 0d64860.
-2. A3's remainder: two merges to one id, the conditional write and the invalid document across an
-   election, the fields-mark predictor (three placements, 503), the deposed proposer's forward,
-   the `no_space` leader's handoff, `superseded`; mutants acknowledge-at-commit, prepare-before-
-   ready, lift-the-bound. Needs the write path's resubmission loop (Q10 (b), `answer.hh`).
+2. A3's remainder (Q10 decided: default (b), PLAN.md D106; no longer blocked). Lead's list:
+   quorum answer carries apply's verdict (built: `propose` at `ack::quorum`); refused merge
+   resubmitted from the original request up to 3 placements, then a retryable 503; a deposed
+   proposer forwards once carrying its placement count; `superseded`. Plan, for the next
+   contributor (this one stopped near its context budget):
+   - `include/strata/group/answer.hh` holds the rule (`after`, `max_placements`); add the loop
+     there or beside it: `submit(request)`, where the request prepares a command from the
+     leader's applied state (a merge chooses `expected_version`: `leader_chose = true`), proposes
+     at `quorum`, and on `after(...) == resubmit` prepares again from the original request;
+     `unavailable` answers a retryable 503; `rejected{NotLeader}` at a deposed proposer forwards
+     once through a host hook on `loop` (like `send`), carrying `placements`; `superseded`
+     answers as is, never resubmitted. Keep it isolated so a different ruling edits one file.
+   - blob app: add a merge command (`M|key|value`, prepared to `C|key|value|<version>` at the
+     leader) and an invalid one (strata `invalid`, answered 400, never resubmitted); a test hook
+     that makes the predictor miss the fields mark (stale version) so the bound is reached.
+   - voters_test cases: two merges to one id, a conditional write and an invalid document with
+     an election between, every schedule: no acknowledged success refused, no merge answered
+     409, the conditional's answer matches its effect, invalid answered 400 once, no request past
+     3 placements (503 after the third), a deposed proposer's merge forwarded once and answered
+     by the leader; a leader stalled on `no_space` hands leadership to a follower applied past
+     it (`transfer_leadership`); an election replacing an uncommitted entry answers `superseded`.
+   - Mutants (`mutants.py`, `--target=group_voters_test`, each a `--fails-without` job):
+     acknowledge-at-commit, prepare-before-ready, lift-the-bound (`max_placements` unbounded),
+     forward-twice or no-forward, resubmit-invalid.
 3. A4's applied-before-write mutant (see Rulings), A5 close racing `Committed`, A6, A10; A7 after
    `detent:consensus-quiescence`.
 
@@ -46,7 +66,7 @@ slices of A3 (ack levels) and A4 (`read_applied`, deposed leader). Jobs queued (
 
 - detent:consensus-quiescence: in-process reopen after close and recovery over the retired
   sequence gap (msg-1), and A7.
-- Owner, through the lead: Q10. Built on the lead default (b), kept in one place
+- Q10: decided (b), D106. Built on it, kept in one place
   (strata `include/strata/group/answer.hh`: `ack`, `answer`, `max_placements = 3`, `after()`).
 - `strata-nospace-position` (not built): the group relies on its contract (a `no_space` answer
   leaves strata's position unmoved). At 491a1bdc the reservation path keeps it and the allowance
