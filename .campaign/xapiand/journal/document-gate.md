@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: ready for review
+State: waiting on jobs 261117-075713-601c02 261117-075726-9eb435 261117-075737-0c8aec 261117-075748-8a784a 261117-075800-5c7ffa 261117-075821-5866e7 261117-075429-907b22 261117-075430-571f74 261117-075441-a3837d 261117-075442-939866 261117-075442-e8e160 261117-075443-3e1d5f (durability review running at strata:12f59669)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,15 +16,41 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Next
 
-1. Confirm the reruns at strata:12f59669 (changed only the served test since 193e6e32):
-   build-test 261117-075429-907b22, served TSan 261117-075430-571f74, T6+t6w+T5
-   261117-075441-a3837d, t6w TSan 261117-075442-939866, batch test 261117-075442-e8e160, batch
-   TSan 261117-075443-3e1d5f; CI on the push.
-2. The durability review (not run yet).
-3. The gate rows the report lists as owed (A3 10x, A4 misses, A6 platforms, A7 sanitizers and
-   fuzz): beyond this assignment; the lead's call.
+1. Reruns at strata:12f59669: build-test 261117-075429-907b22, served TSan 261117-075430-571f74,
+   T6+t6w+T5 261117-075441-a3837d, t6w TSan 261117-075442-939866, batch test
+   261117-075442-e8e160, batch TSan 261117-075443-3e1d5f. CI run 44119676721 (in progress).
+2. A7 at 12f59669: fuzz, Homebrew LLVM 23 with ASan+UBSan, 3 workers for 25 min (75 CPU-min)
+   each: stored (format 14) 261117-075713-601c02, manifest_log 261117-075726-9eb435,
+   manifest_log_file 261117-075737-0c8aec, command 261117-075748-8a784a. Version rejection and
+   fixtures (index, format14, manifest_log, directory, standalone_turn_log, corpus replays)
+   261117-075800-5c7ffa. Coverage (llvm-cov over every test, per header; llvm-cov keeps one
+   binary's counters per inline instantiation, so it undercounts) 261117-075821-5866e7. The
+   scale statement is in the gate report (strata:91366374, docs only). ASan/UBSan and TSan: CI's
+   linux-asan-ubsan and linux-tsan in run 44119676721.
+3. The durability review's findings. Don't change reviewed code unless a rerun fails.
 
 ## Blocked on
+
+- Lead or owner, A6 (platform rows): what is owed is every A3 row set on Linux x86_64, FreeBSD
+  x86_64 and arm64: fits1 (13 rows), twox1 (13), big1 (10x: 3 rows, and the 10x rows A3 still
+  owes on macOS), sync1 (6), wal1 (3), the N-log group-commit rows, and the A/A on each
+  platform. None have run. Options:
+  (a) CI carries them: a workflow_dispatch job running run.py's `dry`, then a few trials of
+      fits1, sync1 and wal1 on GitHub's ubuntu x86_64, ubuntu-24.04-arm and the FreeBSD qemu
+      runner. This is free and needs no VM. But shared runners and virtual disks make `sync`
+      barriers and the absolute ratios unrepresentative, so they are functional rows with an
+      A/A, not gate rows.
+  (b) A dedicated quest VM from tools/vm/linux.sh and freebsd.sh, created in this worktree's
+      .scratch on its own ports (for example 18782 and 18784), leaving strata's (18772, 18774)
+      and Detent's (18762, 18763) alone. HVF qemu with cache=none on this Mac, runs under
+      `quiet exclusive`. The disk image is 220G (Linux, sparse) and 40G (FreeBSD). Their
+      `F_FULLFSYNC` and fsync barriers measure qemu on APFS, not a device, so the durable rows
+      are labelled VM rows.
+  (c) arm64 has no host beyond GitHub's runners (D36): option (a) or wait for one.
+  No AWS (owner, 2026-11-04). Recommendation: (a) for arm64 and as a smoke test everywhere, and
+  (b) for the Linux and FreeBSD none/wal rows. The durable tiers stay macOS-only until bare
+  metal exists, stated in the gate report. This needs a decision: the gate's platform claim
+  changes under any of these options.
 
 - (none from the owner: Q1/Q2 ruled D104 by the lead, Q3-Q5 D103.)
 - Journal (Detent reviews): `TurnDriver::seal`. The shim (strata `turn_seal.hh`) shows the
@@ -33,6 +59,10 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
   (turn mutex, then record mutex). Doc "Built" lists them.
 
 ## Messages
+
+- Lead (2026-11-17, durability review running): A7 queued at 12f59669 (fuzz x4, version and
+  fixtures, coverage); ASan/UBSan/TSan point at CI run 44119676721; scale statement in the gate
+  report; A6 options under "Blocked on"; reviewed code untouched.
 
 - Lead (2026-11-17, rows finished): read every row log; wrote docs/perf/standalone-turn-log.md
   (batch-1 ties, batched rows tie after the fix, wal1, A/A, the group-commit gap stated as
@@ -57,8 +87,8 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 | A3 | Durable tiers at 193e6e32, exclusive: sync1 261117-055245-3aecbb, 261117-055253-80fcf5, 261117-055301-8578af; wal1 261117-055310-7264db; A/A 261117-055320-5ca39d, 261117-055327-074989; N-log 261117-034940-b2b9c3 (7db7a919). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
 | A4 | Four axes per row in `docs/perf/standalone-turn-log.md`: sync throughput ties (0.96-1.05x), M2 261117-055334-a41ea3 one barrier per batch. Misses against 1.0x: group commit 1.2-1.45x slower (turn-log-parity A6), memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
 | A5 | RocksDB 11.11 pinned on lvl-16k-lz4 (calibrated fastest for 100 B and 1 KiB) in every row job above; harness per `docs/perf/rocksdb-fairness-audit.md` |
-| A6 | None: no Linux VM, FreeBSD VM or arm64 rows yet (owed; gate report item 3) |
-| A7 | Partial: TSan on the turn log's cases (above); fixtures `test/fixtures/command/` (codec, T9); ASan/UBSan, the fuzz CPU-hour, coverage and the scale statement not run (owed; gate report item 4) |
+| A7 | Queued at 12f59669: fuzz (75 CPU-min each, ASan+UBSan) stored 261117-075713-601c02, manifest_log 261117-075726-9eb435, manifest_log_file 261117-075737-0c8aec, command 261117-075748-8a784a; version rejection and fixtures 261117-075800-5c7ffa; coverage 261117-075821-5866e7. ASan/UBSan and TSan: CI run 44119676721 (linux-asan-ubsan, linux-tsan), in progress; TSan on the turn log's cases passed (A1). Scale statement: [artifact] gate report "Scale" (strata:91366374) |
+| A6 | Blocked on a decision (see "Blocked on"): no platform rows run |
 | A8 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), in progress: every measured row with commit, platform and jobs, and the owed list |
 
 ## Result
