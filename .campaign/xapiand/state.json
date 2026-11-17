@@ -19655,6 +19655,38 @@
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
     },
+    "strata-nospace-position": {
+      "accepted": {},
+      "after": [
+        "document-gate"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/index_refusal_test.cc",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A refused apply never moves strata's position",
+      "updated": "2026-11-17T02:54:34"
+    },
     "strata-pins-2026-11": {
       "accepted": {},
       "after": [],
