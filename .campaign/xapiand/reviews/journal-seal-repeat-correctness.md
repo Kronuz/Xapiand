@@ -95,3 +95,36 @@ The quest's five questions:
 CI (run 44148860137 was still running); other platforms; the probes under TSan or ASan (the
 contributor's sanitizer jobs cover the suite's repeat cases); strata's sealer against this
 contract; Detent.
+
+## Re-check of F1 at journal:13592a1
+
+Commit: journal:13592a1 (fix journal:12c5425)
+Verdict: APPROVE
+
+The fix: `completed()` acknowledges the turn's records, then fails the driver with the parked error
+and rethrows it; `idle()` is false while an error is parked; a waiter whose state is `completed`
+is answered as durable even if the driver failed after that turn (`fail()` now resumes the waiters
+left with a distinct `failed` outcome). The suite's `repeat_latent` case guards it, killed by the
+`deferred-ignored` mutant.
+
+- 261117-115626-2642cf `latent`, exit 0. The probe's first block now accepts a throw from
+  `commit()` when the driver is failed afterward, and both the `run()` and blocking-entry blocks
+  check a waiter on record 1. `commit()` throws "repeat call failed" with record 1 durable and
+  `failed()` true; `run()` under a stop request throws the error, and the waiter on record 1 is
+  answered as durable; the blocking entry throws the error after its `durable(1, 1)` task
+  completed.
+- 261117-115722-5ba8fa `crash`, exit 0: 645 cuts; on a kill turn the probe now accepts
+  `commit()` throwing after acknowledging, and recovery equals the acknowledged records, the
+  in-flight turn whole or absent.
+
+Throwing from `commit()` is acceptable: `commit()` and `completed()` already throw for a failed
+barrier or reclamation, and the throw now means "the driver failed", with `failed()` true, not
+"this turn is unwritten". The docs (turn-seal.md, A failing repeat call) say so.
+
+The contributor's note is right: a waiter that `completed()` claimed was made durable by that
+turn, so answering it as durable matches what replay sees (crash probe); answering it with the
+failure would report a written record as lost. Only a `completed` claim skips the rethrow, and
+group waiters reach it only in `completed()` when their sequence is durable; every waiter left
+linked gets `failed` and the error.
+
+F1 is closed. F2 and F3 stay non-blocking notes (13592a1 also updates the fairness wording for F2).
