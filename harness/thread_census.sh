@@ -47,6 +47,9 @@ trap 'rm -rf "$WORK"' EXIT
 names() {
 	if [ -d "/proc/$PID/task" ]; then
 		for f in /proc/"$PID"/task/*/comm; do cat "$f" 2>/dev/null || true; done
+	elif [ "$(uname -s)" = FreeBSD ]; then
+		# procstat -t: PID TID COMM TDNAME CPU PRI STATE WCHAN; a thread without a name shows "-".
+		procstat -t "$PID" | awk 'NR > 1 { print ($4 == "-" ? "unnamed" : $4) }'
 	else
 		sample "$PID" 1 -mayDie -file "$WORK/sample.txt" >/dev/null 2>&1 || { echo "thread_census: sample failed" >&2; exit 2; }
 		# "    1000 Thread_12345: name" or "Thread_12345   DispatchQueue_1: com.apple.main-thread (serial)"
@@ -62,7 +65,7 @@ names() {
 names | sed -E 's/[-_.]*[0-9]*[-_.]*$//' | sort | uniq -c | sort -k1,1nr -k2 | awk '{ c = $1; $1 = ""; sub(/^ /, ""); print c "\t" $0 }' > "$WORK/census.tsv"
 TOTAL=$(awk -F'\t' '{ s += $1 } END { print s + 0 }' "$WORK/census.tsv")
 PS_TOTAL=""
-if [ ! -d "/proc/$PID/task" ]; then PS_TOTAL=$(ps -M -p "$PID" | awk 'NR > 1 { n++ } END { print n + 0 }'); fi
+if [ "$(uname -s)" = Darwin ]; then PS_TOTAL=$(ps -M -p "$PID" | awk 'NR > 1 { n++ } END { print n + 0 }'); fi
 
 OFFENDERS=""
 if [ -n "$ALLOW" ]; then

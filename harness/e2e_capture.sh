@@ -147,7 +147,7 @@ module.exports = function (newman, options) {
 JS
 fi
 NODE_PATH="$TMPD/node_modules${NODE_PATH:+:$NODE_PATH}" newman run "$COLL" ${newman_ca[@]+"${newman_ca[@]}"} \
-	--reporters "$reporter" --reporter-"$reporter"-export "$OUT" --timeout-request 30000 >"$TMPD/xe2e_newman.log" 2>&1
+	--reporters "$reporter" --reporter-"$reporter"-export "$OUT" --timeout-request "${E2E_TIMEOUT_REQUEST:-30000}" >"$TMPD/xe2e_newman.log" 2>&1
 rc=$?
 echo "newman exit $rc (0 expected when green; the verdict is e2e_assert.py) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 [ "$rc" -eq 0 ] || { echo "node log tail:"; tail -20 "$TMPD/xe2e_node.log"; }
