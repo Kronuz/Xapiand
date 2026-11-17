@@ -927,6 +927,9 @@ Processor::compile_local(const Script& script)
 	if (auto processor = cached(key, name_body.second)) {
 		return processor;
 	}
+	if (name_body.second.empty()) {
+		THROW(ClientError, "Script {} is not cached; send its '{}'", repr(name_body.first), RESERVED_BODY);
+	}
 	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, MsgPack::MAP()));   // its params come with each call
 }
 

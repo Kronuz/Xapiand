@@ -1320,9 +1320,51 @@ void test_a_foreign_link_that_leaves_the_data_directory_is_refused() {
 	}
 }
 
+void test_a_name_only_request_for_a_script_that_is_not_cached_is_refused() {
+	// Evicted by the count bound, and dropped for passing the byte budget: both answer an error naming the script.
+	const auto saved = opts.scripts_cache_size;
+	std::thread([saved] {
+		auto name_only_refused = [](const std::string& name) {
+			MsgPack object({{"_name", name}});
+			Script script(object);
+			try {
+				Processor::compile_local(script);
+			} catch (const ClientError& e) {
+				return std::string(e.what()).find(name) != std::string::npos;
+			}
+			return false;
+		};
+		auto upload = [](const std::string& name, const std::string& body) {
+			MsgPack object({{"_name", name}, {"_body", body}});
+			Script script(object);
+			return Processor::compile_local(script);
+		};
+		opts.scripts_cache_size = 1;
+		upload("miss-evicted-a", "_doc.ran = 1");
+		upload("miss-evicted-b", "_doc.ran = 1");
+		CHECK(Processor::cached_local("miss-evicted-a") == nullptr);
+		CHECK(name_only_refused("miss-evicted-a"));
+		opts.scripts_cache_size = saved;
+		std::string big = "local function f() return {";
+		for (int i = 0; big.size() < (9u << 20); ++i) {
+			big += "'k" + std::to_string(i) + "',";
+		}
+		big += "} end _doc.ran = 1";
+		upload("miss-big", big);
+		CHECK(Processor::cached_local("miss-big") == nullptr);   // its charge alone passes the budget
+		CHECK(name_only_refused("miss-big"));
+		upload("miss-kept", "_doc.ran = 1");
+		MsgPack object({{"_name", "miss-kept"}});
+		Script script(object);
+		CHECK(Processor::compile_local(script) != nullptr);   // a cached script still runs by name
+	}).join();
+	opts.scripts_cache_size = saved;
+}
+
 }  // namespace
 
 TEST_MAIN(
+	test_a_name_only_request_for_a_script_that_is_not_cached_is_refused,
 	test_a_script_transforms_the_document,
 	test_params_and_old_doc_are_in_scope,
 	test_numbers_keep_their_kind,
