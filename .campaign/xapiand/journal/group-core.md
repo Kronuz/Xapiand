@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-041324-e0772a 261117-041324-825bcd 261117-041429-1aa7a2 and ten mutant jobs (Evidence)
+State: waiting on jobs 261117-085649-7369d7 261117-085649-593d4f 261117-085651-94cdb1 261117-085659-d135d4 261117-085705-587d4d 261117-085711-59939a 261117-085718-358fc4 261117-085735-f77e18 261117-085742-96a255 261117-085749-e0c12d
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,20 +9,43 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Build step 1, the lone voter end to end (strata `quest/xapiand/group-core`): `strata::group`
-create/open/propose/apply off the loop, checkpoint with the D16 bundle, recover; A1's test and
-mutants. Built at strata:e7bb6c70 and the ctest rename after it; A1's jobs queued.
+Step 2 at strata:466dbece: CI fixes at 0d64860 (GCC `-Wchanges-meaning`, ASan leaks), msg-1
+(journal cc95ba6, close answers waiters), A2 (three and five voters, storage and ENOSPC), and
+slices of A3 (ack levels) and A4 (`read_applied`, deposed leader). Jobs queued (Evidence).
 
 ## Next
 
-1. Read A1's jobs (Evidence); fold failures in.
-2. Step 2: multi-voter in process (A2), the transport hook on `loop::send`, `transfer_leadership`
-   on a stalled leader (A3's part).
-3. Then `read_applied` after `Driver::read` (A4), close against `Committed` and the catalog (A5,
-   A6), A7 after `detent:consensus-quiescence`, A10's scheduling points under TSan.
+1. Read this step's jobs; fold failures in. Push for CI (lead) once green: the asan job and
+   linux-x86_64-gcc were CI's two failures at 0d64860.
+2. A3's remainder: two merges to one id, the conditional write and the invalid document across an
+   election, the fields-mark predictor (three placements, 503), the deposed proposer's forward,
+   the `no_space` leader's handoff, `superseded`; mutants acknowledge-at-commit, prepare-before-
+   ready, lift-the-bound. Needs the write path's resubmission loop (Q10 (b), `answer.hh`).
+3. A4's applied-before-write mutant (see Rulings), A5 close racing `Committed`, A6, A10; A7 after
+   `detent:consensus-quiescence`.
+
+## Messages
+
+- msg-1 (lead, journal-host-guards): done in strata:1068c00d. journal pinned at cc95ba6 (landed);
+  `jn::group_closed` from the Driver's propose maps to `cs::closed` (`group::place`); consensus's
+  own `durable()` watch (driver.h:928) swallows it, so the group's wait is where it lands: a
+  close (and a fence) refuses every `quorum` waiter, linked or not yet (sticky `refused_`).
+  Tests: lone voter's script proposes then closes, the write answered (verdict or `closed`), the
+  group reopened from its bundle at every crash point; voters_test `close_with_uncommitted`: a
+  leader cut off from its followers places a write and closes, the waiter answers `closed`
+  (mutant close-keeps-waiters, job 261117-085705-587d4d), the group reopens and the cluster
+  settles to equal digests. Not testable yet: an in-process reopen and recovery over a retired
+  sequence gap. At consensus 57745e8, `Driver::close` drains the worker but never calls
+  `Host::close_group`, so the journal group stays `stored` and an in-process reopen is refused
+  ("the group was recovered on this host"); the gap appears only once
+  detent:consensus-quiescence closes the journal group. The tests restart the process instead
+  and say so; add the in-process case with A7.
+- Lead, mid-step: keep consensus at 57745e8 (main e4e394b red). Kept; only journal moved.
 
 ## Blocked on
 
+- detent:consensus-quiescence: in-process reopen after close and recovery over the retired
+  sequence gap (msg-1), and A7.
 - Owner, through the lead: Q10. Built on the lead default (b), kept in one place
   (strata `include/strata/group/answer.hh`: `ack`, `answer`, `max_placements = 3`, `after()`).
 - `strata-nospace-position` (not built): the group relies on its contract (a `no_space` answer
@@ -35,8 +58,12 @@ mutants. Built at strata:e7bb6c70 and the ctest rename after it; A1's jobs queue
 | Criterion | Evidence |
 |---|---|
 | A1 | queued: build-test 261117-041324-e0772a, crash (ctest `group_crash_lone_voter`) 261117-041324-825bcd, TSan 261117-041429-1aa7a2; `--fails-without` mutants: replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. Locally at strata:e7bb6c70: 174 script events, 175 crash points, 2,527 second crashes, 0 failures; all ten mutants killed |
-| A9 | strata `docs/mechanisms/replication-group.md` at strata:0d6486006cc3: the lone voter's mechanism (grows with each step) |
-| A2-A8, A10 | none yet |
+| A1 (step 2, strata:466dbece) | queued: build-test 261117-085649-7369d7, crash 261117-085649-593d4f, ASan+LSan (Homebrew LLVM, lone voter every 10th crash point plus seconds, voters 4) 261117-085742-96a255. Local ASan+LSan at every 25th crash point: 196 script events, 8 crash points, 112 second crashes, ok, no leaks |
+| A2 | queued: 40 schedules per voter count 261117-085749-e0c12d, TSan 261117-085735-f77e18; `--fails-without` append-on-retry 261117-085651-94cdb1; hunt row (default limits) admission-waits 261117-085659-d135d4. Local probe at strata:466dbece's tree: 4 schedules, 4 crashes, 113 acknowledged, 129 entries applied, 201 stalled chore steps, ok |
+| A3 (part) | ack levels (none at ProposalPlaced, quorum waits with appends held): quorum-at-placement 261117-085711-59939a; close answers `closed`: close-keeps-waiters 261117-085705-587d4d |
+| A4 (part) | deposed leader's `read_applied` never answers the older state: read-skips-probe 261117-085718-358fc4 |
+| A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
+| A5-A8, A10 | none yet |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
@@ -47,6 +74,24 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- Step 2: the CI leak was the test destroying a group with its chore and waiters suspended.
+  Rule: a group is destroyed with its chore idle (after `close()`, or fenced and drained); a
+  fence drops the item `drain()` kept; `applied(through)` posts hold loop and id, not the group.
+- A checkpoint with nothing applied past the last bundle answers that bundle (`published_`):
+  consensus refuses a capture at or below its base (`InvalidCheckpoint`), which made `close()`
+  right after a checkpoint fail.
+- Hunt row "checkpoint admission at default limits": the group fails such a checkpoint with
+  `length_error` when `maximum_size(limits) + bundle > replacement_pool.logical_bytes` (necessary,
+  not sufficient: journal's plan peak is private). Sizing the pool stays quest 10's.
+- Hunt row "faultfs lacks lock_owner": the fix is in `strata/core/faultfs.hh`, outside this file
+  set; the voters test reuses `test/group/host_io.hh` per node. Left on the hunt list.
+- `read_applied` runs its function on the chore between two entries once applied reaches the
+  Driver's read index, so A4's "publish applied before strata's write" mutant cannot make it read
+  early: the read never runs mid-entry. That mutant needs a loop-side read; not built.
+- A2's budget refusal uses the reservation path (as A1): the allowance path moves strata's
+  position until strata-nospace-position lands, and the group fences on the `skipped` after.
+- The voters test's ctest runs 12 schedules per voter count; the evidence job runs 40.
 
 - strata pins consensus at 57745e8 and moves journal to 555b69f, task to 95798a0 and completion to
   7731315 (consensus's and journal's own pins, each a descendant of strata's old one; framing.h
