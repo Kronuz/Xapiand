@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-092109-383ae4 261117-092115-ad33ee 261117-092124-2768e6
+State: waiting on jobs 261117-111542-e71d1f 261117-111546-b099bb
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,17 +18,13 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A7 (P9), `docs/perf/p9-planner.md` + `p9-planner.patch` (prospect:4f6f4df). Experiments, screens
-   in process under strict, parity clean for every variant (verify 0, dumps identical):
-   1. Windowed top-k (bit 1): loser, 1.12-1.34 at every top-k row.
-   2. Match first (bit 2): TOP_100/1000 0.93-0.95, TOP_10 1.04-1.11 (loses): mixed.
-   3. Adaptive (bit 4: lead scores first only while min - rest > ALPHA x lead bound): screen
-      0.86-1.05, noisy host. Deciding jobs: 383ae4 A/B (main, bit 4 at ALPHA 0 and 0.5, A/A,
-      exclusive), ad33ee engines over serve (index clones idx-prospect-b/-d), 2768e6 ctest with
-      the patch at bit 4. When they land: rule per the plan, four axes (reader-only: indexing and
-      disk unchanged; memory by /usr/bin/time), verdict. Keep: fold into search.hh without the
-      switch is a landing for the lead. Two experiments left in the budget.
-1. Disk: host at 96% (40 GB free); idx-p13 (570 MB) and build-p9-* can go once P9 is decided.
+0. A7 (P9) decided: removed (prospect:7754048). Reruns e71d1f (A/B) and b099bb (engines) only
+   restore a passing exit: 383ae4 and ad33ee exited 1 on their own file-count check (macOS
+   `wc -l` pads its number) after complete tables (840 and 375 files); scripts now
+   `set -euo pipefail` and trim the count. If a rerun shows an intersection row beyond its A/A,
+   reopen the verdict; else nothing changes.
+1. Disk: host at 96%; `.scratch/idx-p13`, `idx-prospect-b/-d` (APFS clones) and `build-p9-*` can go.
+2. Track P next items need the lead's pick; P9 stopped at three non-winners.
 
 ## Blocked on
 
@@ -61,6 +57,12 @@ copy), serve agrees (261117-032507-1bd2ec), indexing +2.6% (261117-032510-cabfbf
 PFOR's (261117-032048-bef4fe), ctest 52/52 with the patch (261117-032521-37a35e). Rice from length:
 -6.6% of the segment at 16x PFOR's decode, removed offline. Main vs Tantivy on phrases 1.10-1.40.
 
+A7 (P9): `docs/perf/p9-planner.md` (prospect:7754048), removed. Baseline 261117-075402-484d70 ranks
+P9's rows as the losers vs Tantivy (P3's all win). Windowed top-k 1.12-1.34 (loser); match first
+0.93-0.95 at TOP_100/1000, 1.04-1.11 at TOP_10; adaptive (bit 4) 0.88-1.03 run level, per-query
+best 0.95-0.99, inside the A/A (383ae4; serve ad33ee agrees); ctest passed (2768e6). Parity clean
+for every variant. Patch `docs/perf/p9-planner.patch` is the record.
+
 ## Rulings I made
 
 - A10: proximity is not measured: prospect's harness queries have no proximity class (no NEAR in
@@ -82,3 +84,7 @@ PFOR's (261117-032048-bef4fe), ctest 52/52 with the patch (261117-032521-37a35e)
 - A10: verdict by the plan's rule, the A/A band read as the A/A run's interval: a row loses when its
   lower bound is over 1.0 and its ratio over the A/A's upper bound. The worktree's applied patch was
   reverted (it equals `docs/perf/p13-positions.patch`, which stays as the record).
+- A7: the deciding numbers come from 383ae4 and ad33ee although they exited 1: the failing step was
+  the scripts' own file-count check after the tables were complete (padded `wc -l`), not the runs.
+- A7: P9 stops after three experiments (two losers and one non-winner); the remaining gap to Tantivy
+  is `advance` and scoring every lead document, not evaluation order.
