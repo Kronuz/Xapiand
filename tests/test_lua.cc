@@ -1320,9 +1320,90 @@ void test_a_foreign_link_that_leaves_the_data_directory_is_refused() {
 	}
 }
 
+void test_a_name_only_request_for_a_script_that_is_not_cached_is_refused() {
+	// Evicted by the count bound, and dropped for passing the byte budget: both answer an error naming the script.
+	const auto saved = opts.scripts_cache_size;
+	std::thread([saved] {
+		auto name_only_refused = [](const std::string& name) {
+			MsgPack object({{"_name", name}});
+			Script script(object);
+			MsgPack doc = doc_of({{"x", 1}});
+			try {
+				auto processor = Processor::compile_local(script);
+				call(*processor, doc);
+			} catch (const ClientError& e) {
+				const bool is_400 = dynamic_cast<const PayloadTooLarge*>(&e) == nullptr;   // a plain ClientError answers 400
+				return is_400 && doc == doc_of({{"x", 1}}) && std::string(e.what()).find(name) != std::string::npos;
+			}
+			return false;
+		};
+		auto upload = [](const std::string& name, const std::string& body) {
+			MsgPack object({{"_name", name}, {"_body", body}});
+			Script script(object);
+			return Processor::compile_local(script);
+		};
+		opts.scripts_cache_size = 1;
+		upload("miss-evicted-a", "_doc.ran = 1");
+		upload("miss-evicted-b", "_doc.ran = 1");
+		CHECK(Processor::cached_local("miss-evicted-a") == nullptr);
+		CHECK(name_only_refused("miss-evicted-a"));
+		opts.scripts_cache_size = saved;
+		std::string big = "local function f() return {";
+		for (int i = 0; big.size() < (9u << 20); ++i) {
+			big += "'k" + std::to_string(i) + "',";
+		}
+		big += "} end _doc.ran = 1";
+		upload("miss-big", big);
+		CHECK(Processor::cached_local("miss-big") == nullptr);   // its charge alone passes the budget
+		CHECK(name_only_refused("miss-big"));
+		upload("miss-kept", "_doc.ran = 1");
+		MsgPack object({{"_name", "miss-kept"}});
+		Script script(object);
+		CHECK(Processor::compile_local(script) != nullptr);   // a cached script still runs by name
+	}).join();
+	opts.scripts_cache_size = saved;
+}
+
+void test_a_schema_stores_the_body_of_a_name_only_script_or_refuses_it() {
+	const auto saved = opts.scripts_cache_size;
+	std::thread([] {
+		auto declare = [](const std::string& name) {
+			MsgPack object({{"_name", name}});
+			Script script(object);
+			return script.process_script(false);
+		};
+		MsgPack full({{"_name", "decl-cached"}, {"_body", "_doc.ran = _doc.x + 1"}});
+		Script cached_script(full);
+		Processor::compile_local(cached_script);
+		// Cached: the stored script carries the body.
+		auto stored = declare("decl-cached");
+		CHECK_EQ(stored.at("_lua").at("_body").str(), "_doc.ran = _doc.x + 1");
+		// Not cached: refused at declaration, with a plain ClientError (400).
+		bool refused = false;
+		try {
+			declare("decl-missing");
+		} catch (const ClientError& e) {
+			refused = dynamic_cast<const PayloadTooLarge*>(&e) == nullptr && std::string(e.what()).find("decl-missing") != std::string::npos;
+		}
+		CHECK(refused);
+		// A write through the stored schema on a fresh thread (its own, empty cache) still runs the script.
+		std::thread([stored] {
+			CHECK(Processor::cached_local("decl-cached") == nullptr);
+			Script from_schema(stored.at("_lua"));
+			auto processor = Processor::compile_local(from_schema);
+			auto out = call(*processor, doc_of({{"x", 41}}));
+			CHECK(out.ok());
+			CHECK_EQ(out.doc.at("ran").i64(), 42);
+		}).join();
+	}).join();
+	opts.scripts_cache_size = saved;
+}
+
 }  // namespace
 
 TEST_MAIN(
+	test_a_name_only_request_for_a_script_that_is_not_cached_is_refused,
+	test_a_schema_stores_the_body_of_a_name_only_script_or_refuses_it,
 	test_a_script_transforms_the_document,
 	test_params_and_old_doc_are_in_scope,
 	test_numbers_keep_their_kind,
