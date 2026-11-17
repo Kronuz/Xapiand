@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: waiting on jobs 261117-080546-47c0ee 261117-082004-d0df9b 261117-082004-b9960c 261117-080833-2abb8f 261117-080839-4055d7
+State: waiting on jobs 261117-082412-f109f8 261117-082356-ca5b98 261117-082356-64c350 261117-082416-4d23b7 261117-082420-521d8b and 9 mutants
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,29 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1 of docs/design/name-index.md built (4fc89cd..a3058e2): `NameIndex` (src/database/name_index.{h,cc}),
-resolve's hook (src/database/pool.cc), the search's use (src/server/search_views.cc), tests in
-tests/test_index_pattern.cc (A3 property, A4 unit, bench for A2) and tests/test_node.cc (A4 node, A5 kill),
-mutants in tests/name_index_mutants.sh. Not compiled locally (host loaded); jobs below build it.
+Step 1 built (xapiand:4fc89cd..b43d399), with the lead's rulings folded in (xapiand:6dcae4a): one item parser,
+`index_pattern::parse` + `merged`, used by the walk and NameIndex; the 400 names its work ("directory entries" or
+"index names"); options.md, changelog.md and api.md say so. Not compiled locally (host loaded).
 
-Jobs: 261117-080546-47c0ee targeted build + new tests (at 4fc89cd); build-test 261117-082004-d0df9b and e2e
-261117-082004-b9960c (at 9b8e411; the acde48f pair was cancelled); A2 benches 261117-080833-2abb8f (10^4, 10^5) and 261117-080839-4055d7 (10^6),
-strict, after the targeted job.
+Jobs at b43d399: targeted 261117-082412-f109f8 (test_index_pattern, test_node names, over_cap); build-test
+261117-082356-ca5b98; e2e 261117-082356-64c350; A2 benches 261117-082416-4d23b7 (10^4, 10^5) and
+261117-082420-521d8b (10^6), strict. Mutants (--fails-without, after the targeted job): no-parents
+261117-082425-28cde9, keep-slash 261117-082430-ea3fab, drop-delta 261117-082434-4426d7, lose-merge
+261117-082439-942a8a (A3); no-seek 261117-082444-aa8b4a (A2); no-range 261117-082448-a97fae, no-index
+261117-082452-c9b8bb, no-hook 261117-082456-c44e69 (A4); top-build 261117-082501-7bf23f (A5).
 
 ## Next
 
-1. Targeted job green, then the mutants as --fails-without jobs: no-parents, keep-slash, drop-delta, lose-merge
-   (A3, test_index_pattern), no-seek, no-range (A2/A4, test_a_prefix_pattern_reads_its_range,
-   test_the_names_answer_over_the_cap), no-index, no-hook (A4, test_node over_cap), top-build (A5, test_node names).
-2. Bench numbers into docs/design/name-index.md "Costs"; re-verify at the final head.
+1. Fix any failure among the jobs above; bench numbers into docs/design/name-index.md "Costs"; Evidence table;
+   State ready for review. No new building after that (lead, 250k tokens).
 
 ## Blocked on
 
-Nothing blocking. For the lead (outside the file set): docs/src/content/docs/options.md and changelog say a
-pattern is refused for "directory entries"; with the index it is also refused for "index names" read. Starting
-the build at the node's start needs src/manager.cc (design step 3). The item split in NameIndex::expand repeats
-index_pattern::expand's (about 25 lines), since src/index_pattern.{h,cc} is outside the file set; folding it
-into one parse step needs that file.
+Nothing. Lead rulings received (docs to "index names", lazy build stays, one parser, release gating is the
+owner's): 1 and 3 done in xapiand:6dcae4a, 2 kept, 4 noted.
 
 ## Evidence
 
@@ -53,8 +50,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 - R1 In memory, rebuilt by one walk at every start; no persisted table (design D1). The directory stays the one
   truth, so A5 has nothing to reconcile.
-- R2 The build starts at the node's first pattern (lazy), not at boot: src/manager.cc is outside the file set, and
-  a node that serves no pattern pays nothing. Until it ends, patterns walk.
+- R2 The build starts at the node's first pattern (lazy), not at boot (lead ruling: a walk at start costs every
+  node with millions of indexes). Until it ends, patterns walk.
 - R3 The lookup keeps `--max-search-indexes` as its bound, counting names read and seeks as visits (D7); `_all`
   over the cap stays 400. The walk gate does not apply to lookups.
 - R4 Resolve adds on open as well as create, so an index copied in while running is listed once opened (D3).
