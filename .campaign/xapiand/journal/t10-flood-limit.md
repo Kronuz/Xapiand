@@ -1,6 +1,6 @@
 # t10-flood-limit: journal
 
-State: waiting on jobs 261117-013727-5859b4 261117-013730-0581d4 261117-013736-919aea 261117-013747-427f04
+State: waiting on jobs (ABBA 52bbdf ac1d98 4a9b4c a1e5d9 b5fa04 b0633c; mutant 5e1452; reruns 6a526c abdc04 448daa; suite d945e6)
 Quest: .campaign/xapiand/quests/t10-flood-limit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,13 +31,15 @@ Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
+Jobs prove criteria by their tags (`--for A1`); `campaign brief` has the generated table at the head.
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | tests (3, two-lane scheduler: 41 of 41 resumes after the call's entry heavy, request light after; heavy request stays heavy; error and bound leave it light) 261117-015256-6a526c (first pass at 37eda4ed0: 261117-013727-5859b4, 996 + 846 checks); mutant that stays light (hop removed) 261117-015216-5e1452 `--fails-without` |
+| A2 | sweep at master 261117-015256-abdc04 and at the fix 261117-015257-448daa (first pass: 0581d4, 919aea): GET p99 at 1/2/4/8/16 clients, master 22.8/22.5/47.2/68.3/85.7 ms, fix 26.3/28.2/45.1/36.0/38.7, limit 66.5 ms (3 x 22.2 ms); p50 at 16 clients 39.1 vs 17.0; GETs served 111 vs 285. Cost rows ABBA (M F F M M F): 52bbdf ac1d98 4a9b4c a1e5d9 b5fa04 b0633c |
+| A3 | `harness/lua_bounds.py`: T10's flood limit is `(FLOOD_STRETCHES + 1) x` one flood call alone, k = 2; no client or reactor term. [manual] FreeBSD CI's T10 log: the lead |
+| A4 | `docs/design/loop-scheduling.md` D7; `docs/dev/t10-flood-limit.md` (derivation, sweep, cost); `docs/mechanisms/lua-bounds.md` |
+| A5 | suite 261117-015303-d945e6 |
 
 ## Result
 
