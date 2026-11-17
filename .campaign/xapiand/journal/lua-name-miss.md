@@ -1,6 +1,6 @@
 # lua-name-miss: journal
 
-State: ready for review
+State: waiting on jobs 261116-195523-625a45 261116-195526-63a363 261116-195543-4751c6 261116-195533-dc4c74
 Quest: .campaign/xapiand/quests/lua-name-miss.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,9 +27,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pass 261116-191106-ac85b9; fails without the fix (master processor.cc) 261116-185852-7c38a4 |
+| A1 | 261116-195523-625a45; fails without the refusal 261116-195543-4751c6 |
+| A4 | 261116-195523-625a45; fails without the schema fix 261116-195526-63a363 |
 | A2 | docs/mechanisms/lua-memory.md (unbounded wait; C1 error) |
-| A3 | suite 261116-191113-863775 |
+| A3 | suite 261116-195533-dc4c74 |
 
 ## Result
 
