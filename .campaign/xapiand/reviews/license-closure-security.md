@@ -86,3 +86,25 @@ rerun against the head with `campaign job submit --quest license-closure --level
    how the packages declare them (`release.yml`, `Dockerfile`), not their copyright files.
 5. No GPL file was opened, and Xapian's sources were not read; the F2 comparison is between two files of this repository.
 6. CI at 70a7398c7 (FreeBSD, CI, arm64) was still running when I stopped.
+
+## Round 2
+
+Commit: Xapiand:90454dc6d533820c3cf5edf4e48b8094f3e4059b (journal-only commit be9bb3331 on top)
+Verdict: APPROVE
+Date: 2026-11-16
+
+Checked in the diff `bb59b0e74..90454dc6d` and by rerunning `regen.sh` (job 261116-212240-84e046: notice file regenerates identically at the new head, pins match). build-test 261116-212229-7bfdbe passed at this commit.
+
+| ID | Status | Evidence |
+|---|---|---|
+| F1 | fixed | `ARCHITECTURE.md:612-613` now says "except the files that carry their own notice (named in `NOTICE` and `THIRD-PARTY-NOTICES`)"; `NOTICE` and `copyright.md` have a "Google Maps" section saying `el_cerrito.png` is a Google Maps screenshot under Google's terms, the overlay is Xapiand's, and the image is not MIT; ledger row "A19 notice". |
+| F2 | fixed, on the lead's ruling | `contrib/python/xapiand-py/xapiand/utils/serialize.py:3` carries Olly Betts' line; `cmake/generate_third_party_notices.py` names the Python port in the `src/length` entry (`THIRD-PARTY-NOTICES:723`). The ruling that his grant for `src/length.*` reaches the port is the lead's, not something I could verify. |
+| F3 | fixed | `FindGTest.cmake` and `FindPackageTools.cmake` headers carry Kitware's BSD-3 text; `THIRD-PARTY-NOTICES:731-744` lists it (one entry for both). The copyright year range "2000-2026" is the lead's wording; upstream's own line was not re-checked (no network). |
+| F4 | open, owner's | unchanged (lead's). |
+| F5 | fixed | the journal's "Blocked on" no longer claims old phrases remain. |
+| F6 | fixed | `xapiand/sortable.py:1-20` has the 2026 MIT header. |
+| F7 | fixed | `"license": "MIT"` in both discussions `package.json` files. |
+| F8, F9 | open, lead's | unchanged. |
+| F10 | fixed | ledger rows for `brand/`, the docs images and the `oldtests` polygons in `docs/status/license-audit.md`. |
+
+No new blocking finding.
