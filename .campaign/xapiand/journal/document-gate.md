@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-024952-c870f5 261117-025006-d345af and mutants M-e..M-o (261117-025024-24bfef .. 261117-025050-ee8915)
+State: waiting on jobs 261117-030334-5d9e3a 261117-030338-64ed0e 261117-030347-7f586d 261117-030357-c294a1 261117-030405-14df88 261117-030412-4cd813 261117-030420-64cdd2
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A1 build, steps 4-5 (lead's resume 2026-11-17), at strata:40f89d0f (pushed): checkpoint (commit()
-as the checkpoint record, I1/I2 under one lease), recovery in open() (eager replay, owed verdicts,
-cross-checks, log_lost/log_mismatch), fail-stop (fence + outcome_unknown), await_durable for group
-commit, kv_strata on a journal::Host. Seal shim kept. Local run of the whole test: all 14 cases ok
-(3.2 s).
+A1, step 6 (the real seal) at strata:395644a7 (pushed; docs strata:706cdaf5): journal repinned to
+555b69f; the driver seals through TurnDriver::seal/unseal/wake; turn_sealer stays as the
+synchronous host loop (turn mutex = loop context, inline or served turns, watchers after a barrier);
+checkpoint records carry `covers`. Whole test passes locally (8 s); kv_strata wal and sync rows ran
+once as a strict smoke (beside 14 light holds, numbers not usable): fillrandom wal 375k ops/s;
+fillrandom sync batch 10, 249.8 ops/s (60 s cap); ycsb_a sync batch 1, 86.9 ops/s, p50 20.6 ms.
 
 ## Next
 
-1. Read jobs: build-test 261117-024952-c870f5; TSan 261117-025002-c70c5f; long sweep (200 seeds)
-   261117-025006-d345af; mutants M-a..M-o (12 jobs 261117-025010-4c8220 .. 261117-025050-ee8915,
-   ids in Evidence).
-2. Lead (2026-11-17): turn-seal landed at journal:555b69f. Repin journal to 555b69f and replace the
-   shim (turn_seal.hh) with TurnDriver::seal/unseal/wake. Contract changes to fold in and record
-   in the design's Built: unseal waits for the running sealer call of its (group, owner); every
-   checkpoint record carries `covers` (the sequence it supersedes through, refused below the
-   record before it); seal/forget and sealers run on the loop's thread (attach_log must hop to
-   it); one record per group per turn (the closed-record queue may stay, sealing one per turn);
-   no watcher: V and acks move on durable() / journal::run.
-3. Step 4 rest: D7 join/leave (turn_group attribute in the manifest log, host create/close/reopen
-   group, checkpoint at close), T6; D6.3's closed/none statuses through the Host.
-4. Step 5 rest: run kv_strata sync1/wal1 rows (M2, M3 exclusive), M1 faultfs counter assertion, M4
-   floor, M5 checkpoint stall; docs/perf/standalone-turn-log.md.
+1. Read jobs at strata:395644a7: build-test 261117-030334-5d9e3a, TSan 261117-030338-64ed0e,
+   seal mutants M-j 261117-030347-7f586d (T12), M-k 261117-030357-c294a1 (T4), M-a
+   261117-030405-14df88 (T1), M-c 261117-030412-4cd813 (T4), M-h 261117-030420-64cdd2 (T7b).
+   Build-test 261117-024952-c870f5 (40f89d0f) was still running; superseded by the new one.
+2. For a fresh contributor: D7 join/leave (turn_group attribute in the manifest log, host
+   create/close/reopen_group, a checkpoint at close), T6; D6.3's closed/none statuses through the
+   Host.
+3. Step 5 rest: M1 faultfs counter assertion; M2/M3 sync1 and wal1 rows (exclusive; the smoke
+   suggests about two device flushes per barrier on macOS at batch 10: check in M2); M4 floor; M5
+   checkpoint stall; docs/perf/standalone-turn-log.md.
+4. Stale design text: D3's "until it lands" and Limits' "Until TurnDriver::seal lands" bullets.
 
 ## Blocked on
 
@@ -45,6 +43,8 @@ commit, kv_strata on a journal::Host. Seal shim kept. Local run of the whole tes
 
 | Criterion | Evidence |
 |---|---|
+| A1 (step 6, real seal, strata:395644a7) | pending: build-test 261117-030334-5d9e3a; TSan 261117-030338-64ed0e; fails-without M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2 |
+| A1 (steps 4-5, shim, strata:40f89d0f) | TSan 261117-025002-c70c5f passed; T1 200-seed sweep 261117-025006-d345af passed; all 12 mutants killed: M-a 261117-025010-4c8220, M-b 261117-025013-a6cec4, M-c 261117-025017-0b218d, M-d 261117-025020-93f7da, M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-h 261117-025032-8fc28b, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc, M-n 261117-025046-ec1d6e, M-o 261117-025050-ee8915 (exit 1, or 134 where the mutant aborts the run) |
 | A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f: build-test 261117-024952-c870f5 (running); TSan 261117-025002-c70c5f passed (served, T4, T12, T3, T8); killed so far: M-a (exit 1), M-b (exit 134, abort), M-c, M-d (exit 1); the rest running or queued; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
 | A2-A8 | <no evidence yet> |
 
@@ -59,13 +59,23 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
 
 ## Rulings I made
 
+- Step 6, the real seal (2026-11-17):
+  - turn_sealer kept as the blocking host loop rather than journal::run: strata's owner thread
+    is synchronous and needs inline turns, a serving thread and per-group watchers.
+  - Seal mutants rerun at the new commit: M-j, M-k, M-a, M-c, M-h; the others don't touch it.
 - Steps 4-5 (2026-11-17):
   - Replay runs inside open() (eager, D6.6); the public replay() is gone. The checkpoint record
     goes through the sealer as a closed record, so the loop alone calls the driver.
   - Checkpoint triggers built: apply's inline flush and checkpoint_log_bytes (default 64 MiB; off
     under defer_io, whose host owns flushes). close() does not checkpoint until D7's leave.
-  - M-g not built: commit()'s single writer_scope is the lease span, no apply can enter it;
-    log_state::checkpoint throws if a batch is not yet durable instead. No stepping executor in T1.
+  - M-g replaced by an invariant check (for the reviewer to judge): D5's lease span is not a
+    separate mechanism in strata. commit() holds one writer_scope from the log wait to the
+    checkpoint record's staging; apply() needs the same lease on the same owner, so a mutant
+    "releasing the lease after step 1" has no code to change without adding a second scope that
+    nothing calls between. What would break if it did, a batch between X and the record, is
+    refused twice: log_state::checkpoint throws unless no record is open or queued and X is the
+    record before it, and journal 555b69f's log refuses a checkpoint whose `covers` is behind a
+    record (T11 checks the latter). No stepping executor in T1.
   - Extra mutants for claims this step adds: M-m (fail-stop fence), M-n (head older than the
     checkpoint), M-o (checkpoint UUID).
   - M-a is "the checkpoint record made durable before the edit": staged alone it would not reach
