@@ -297,6 +297,12 @@ def cost_main(args, tmp, port):
     rows["tiny_beside_light"] = stats(beside)
     print(f"tiny scripted write beside 8 GET-only clients: {rows['tiny_beside_light']}")
 
+    if args.rows_only:
+        if args.out:
+            with open(args.out, "w") as fh:
+                json.dump(rows, fh, indent=1)
+        return failures if args.check else []
+
     solo = sorted(timed(lambda: request(port, "PUT", "/lua_solo/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)) for _ in range(9))
     hold_ms = solo[len(solo) // 2]
     limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else (FLOOD_STRETCHES + 1) * hold_ms
@@ -353,6 +359,7 @@ def main():
     ap.add_argument("--out")
     ap.add_argument("--cost", action="store_true", help="only the heavy-lane call's cost and the flood sweep (cost_main)")
     ap.add_argument("--check", action="store_true", help="with --cost: fail when a sweep row passes its limit")
+    ap.add_argument("--rows-only", action="store_true", help="with --cost: the tiny-write rows only, no sweep")
     ap.add_argument("--cost-writes", type=int, default=2000)
     ap.add_argument("--cost-secs", type=float, default=5.0)
     args = ap.parse_args()
