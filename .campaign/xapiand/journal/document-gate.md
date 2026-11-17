@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-033227-678742 261117-033229-e6ebfc 261117-033233-7e4d9b 261117-033236-b7fbb6 261117-033240-5df553 261117-033244-6cd288 261117-033248-e735a3 261117-033250-38d2df 261117-033250-f42f82 261117-033320-c0fc7f 261117-033324-78da56 261117-033327-395b53 261117-033331-422c2f 261117-034937-925436 261117-034940-b2b9c3 261117-034943-316356
+State: waiting on jobs 261117-052934-a0beca 261117-052936-c07ebf 261117-052940-986f82 261117-052942-6f3a29 261117-052954-d49c2b 261117-034940-b2b9c3
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,21 +20,40 @@ namespace ops. Seal mutants at 395644a7 all killed (M-j, M-k, M-a, M-c, M-h).
 
 ## Next
 
-1. Read jobs at strata:9d7c7710: build-test 261117-033227-678742; mutants M-p 261117-033229-e6ebfc
-   (T6), M-q 261117-033233-7e4d9b (T6), M-o 261117-033236-b7fbb6 (T5), M-d 261117-033240-5df553
-   (T5), M-n 261117-033244-6cd288 (T5), M-b 261117-033248-e735a3 (T1); TSan 261117-033250-38d2df;
-   T1 200-seed sweep 261117-033250-f42f82; rows (exclusive) wal1 261117-033320-c0fc7f, sync1 a/b/c
-   261117-033324-78da56 261117-033327-395b53 261117-033331-422c2f (OUT under
-   ~/.scratch/document-gate/rows-*; each prints report.md).
-2. Write docs/perf/standalone-turn-log.md from the rows: four axes, the gap per D103, Q3's ack=none
-   window on wal1; then the Evidence table and A2/A8's gate report.
-3. At strata:7db7a919 (harnesses bench/kv/barriers.py, nlog.py, floor.c; kv_strata KV_LOOPS):
-   M2 261117-034937-925436 (strict), N-log/group-commit 261117-034940-b2b9c3 (exclusive), M4
-   261117-034943-316356 (strict). M5 is read from the rows' p99/p99.9/p99.99 (no separate writer
-   wait histogram). Group commit of several writers on one index is not a kv_strata mode; the
-   N-log row's L=1, K>1 cases are group commit across indexes on one log.
-4. msg (lead): Q1/Q2 ruled D104, closed in the design (strata:3fc7fad4, "design: close Q1 and Q2
-   under D104"); reopen-at-open noted in Built.
+Handoff (context near 350k). Code at strata:f55df333 (journal pin cc95ba6). Not built locally:
+the repin commit's first build is the jobs'.
+
+1. Check the jobs at strata:f55df333: build-test 261117-052934-a0beca; T6+t6w+T5
+   261117-052936-c07ebf; M-d fails-without 261117-052940-986f82; TSan (served, T4, T12, T3, T8)
+   261117-052942-6f3a29; t6w under TSan 261117-052954-d49c2b. N-log 261117-034940-b2b9c3 queued.
+   Earlier at 9d7c7710: build-test failed only core_includes (journal/host.h, allowlisted since);
+   TSan's one race was the served test reading stats before loop.join (test fixed); M-d survived
+   T5 (the join path reached log_lost first; a rollback case now reaches the cross-check). Killed:
+   M-p, M-q (T6), M-o, M-n (T5), M-b (T1). T1 200-seed sweep passed.
+2. Fix the sync rows' gap before the perf note: M2 (261117-034937-925436) shows strata pays two
+   F_FULLFSYNC per batch at batch 100 (0.020/op vs RocksDB's 0.010) and 1.8 at batch 10 (0.182 vs
+   0.100); batch 1 ties (1.001 each). Cause: kv_strata applies each put as its own transaction, so
+   the served loop seals the open record at the first put and writes a second turn for the rest.
+   RocksDB's WriteBatch is one atomic write: make kv_strata's batch one transaction (bench/kv),
+   then rerun sync1. This is the 1.98x/1.53x gap below.
+3. Write docs/perf/standalone-turn-log.md: rows (exclusive, strata:9d7c7710, RocksDB 11.11
+   lvl-16k-lz4, one trial each; the report printed in each job's log; the `cat report.md` at the
+   end fails on its path only):
+   - sync1 (261117-033324-78da56): fillrandom b100 1.98x slower, overwrite b100 1.99x slower,
+     ycsb_a/ycsb_f b1 ties (0.99, 1.00), fillrandom b1 tie (1.01, p99 1.67x lower), fillrandom
+     b10 1.53x slower; CPU/op 1.38-1.77x more on batched rows; peak RSS 2.7-3.2x on 1 KiB rows;
+     fillrandom b1 disk 37.8x (the host's preallocated 4 MiB segments against 0.1 MiB of data).
+     Against main's 4.76-5.09x slower (core-vs-rocksdb-f14), batch-1 rows reach parity.
+     sync1 b/c: 261117-033327-395b53, 261117-033331-422c2f.
+   - wal1 (261117-033320-c0fc7f, 3 trials), ack=none on the log (D104; Q3 window: up to one
+     barrier plus one write, ~21 ms on macOS, lost to a process crash and invisible to its
+     writer): fillseq 5.54x, fillrandom 6.80x, overwrite 4.66x faster; p99 7.3-9.6x lower; CPU/op
+     4.2-6.0x less; 3.0-3.4x the memory, 2.6-3.7x the disk, 87%-2.2x more written.
+   - M4 (261117-034943-316356): 4 KiB pwrite + F_FULLFSYNC floor 48.4/s, p50 20.2 ms, p99 36.2
+     ms, 118 us CPU per op (that CPU is the syscall's; K' target is CPU per durable batch).
+   - M1: 32 acks, 32 writes, 32 syncs, 0 namespace ops (test).
+   - N-log/group commit: 261117-034940-b2b9c3 (queued). M5: from the rows' p99.9/p99.99.
+4. Then A2/A8's gate report (docs/gates/document-profile.md) and the Evidence table.
 
 ## Blocked on
 
@@ -43,6 +62,16 @@ namespace ops. Seal mutants at 395644a7 all killed (M-j, M-k, M-a, M-c, M-h).
   contract needs four things beyond seal(group, fn): unseal by owner, a thread-safe wake for an
   open record's first transaction, the turn budget's room passed to the sealer, and a lock order
   (turn mutex, then record mutex). Doc "Built" lists them.
+
+## Messages
+
+- msg-1 (lead, journal-host-guards): repinned journal to cc95ba6 (landed). turn_sealer mirrors
+  durable(): a wait on a group closed here, or at or below what its closed life retired, throws
+  journal::group_closed; await_durable catches it by type and throws index_closed (header doc:
+  after a leave the transaction is durable; after a close that could not leave, recovery tells).
+  The restaged table record follows max(base, retired). Tests: t6w (a waiter blocked across
+  close, then an old-life wait after reopen on the same host, then recovery over the gap at
+  base + 2); build-test, TSan and T6 rerun as jobs (ids under Next).
 
 ## Evidence
 
