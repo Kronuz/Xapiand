@@ -358,6 +358,34 @@
       "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
       "id": "msg-48",
       "text": "drivers-task-wheel: msg-1 (your A5 review of task:627aca3) is fixed in task:a30bb0f on quest/detent/drivers-task-wheel. X1: drive(done, may_wait) sleeps with no deadline when nothing is armed and may_wait() holds; drive(done) defaults to 'a timer is armed' (lost-wake cases unchanged). ARCHITECTURE.md 'Schedulers' maps your BlockingScheduler::drive(done) to drive([&]{return done;}, []{return true;}) inside HostScope, post_demoted as post. Test blocking_test wakes-unarmed (post/post_call at 20 ms; 5,000 rounds with the post around the sleep decision, TSan), mutant unarmed-returns kills it. X4 static drop_timer (no call into a dead inline/blocking scheduler; test late, ASan mutant). X5 asio arm after close now asserts; cancel keeps the allowance (control closed-arm). X7 blocking arm/cancel assert runs_here() (control offthread-cancel). X8 fixed: each drive pass runs what was queued when it began, then expires (test starve). Jobs queued at a30bb0f; please re-check A5."
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-52",
+      "text": "detent:consensus-driver started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-53",
+      "text": "detent:consensus-driver started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-54",
+      "text": "detent:consensus-driver started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-55",
+      "text": "detent:consensus-driver started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
     }
   ],
   "quests": {
@@ -2957,8 +2985,12 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver",
+        "detent:consensus-driver"
       ],
+      "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
+      "branch": "quest/xapiand/consensus-rpc-lane",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -2979,7 +3011,7 @@
           "name": "tsan"
         },
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
           "later": true,
           "level": "light",
           "minutes": 70,
@@ -2993,8 +3025,144 @@
         "include/consensus/transport/**",
         "test/transport/rpc*",
         "fuzz/rpc*",
-        "docs/mechanisms/rpc-lane.md"
+        "docs/mechanisms/rpc-lane.md",
+        "CMakeLists.txt",
+        "fuzz/fuzz_decoders.cc",
+        "test/transport/peers_test.cc",
+        "docs/design/rpc-lane*",
+        "CHANGELOG.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T20:04:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command built without CONSENSUS_FUZZ, so it passed without fuzzing (design Q3)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        },
+        {
+          "at": "2026-11-16T21:04:04",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: LLVM clang with libFuzzer and the stream fuzzer's name (design Q2)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
         "correctness"
@@ -3006,9 +3174,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T10:28:41"
+      "updated": "2026-11-16T21:04:04",
+      "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -4108,6 +4277,8 @@
         "phase4-gate",
         "manifest-log"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/document-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4123,7 +4294,12 @@
         "docs/gates/document-profile.md",
         "bench/kv/**",
         "docs/perf/**",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "include/strata/core/**",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/design/standalone-turn-log.md",
+        "fuzz/**"
       ],
       "history": [
         {
@@ -4153,6 +4329,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/document-gate",
       "landed": [],
       "lenses": [
         "durability"
@@ -4162,9 +4339,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-08T22:35:42"
+      "updated": "2026-11-16T20:42:21",
+      "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
       "accepted": {},
@@ -5755,7 +5933,8 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver"
       ],
       "checks": [
         {
@@ -5816,7 +5995,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-16T10:28:31"
+      "updated": "2026-11-16T15:42:54"
     },
     "group-sim": {
       "accepted": {},
@@ -6705,7 +6884,8 @@
         "cmake/**",
         "contrib/**",
         "stopwords/**",
-        "mime.types"
+        "mime.types",
+        "docs/mechanisms/third-party-notices.md"
       ],
       "history": [
         {
@@ -6821,7 +7001,7 @@
       "risk": "normal",
       "status": "active",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T15:22:12",
+      "updated": "2026-11-16T19:44:18",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
@@ -7328,8 +7508,8 @@
     "lua-memory-bound": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-16T15:08:27",
-          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "at": "2026-11-16T15:38:18",
+          "base": "e35bf2e28b855076f28f4c7ab06ce0dbaf16de74",
           "blobs": {
             "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
             "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
@@ -7344,8 +7524,8 @@
             "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
           },
           "by": "review",
-          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
-          "criteria": "125f23c275731226",
+          "commit": "f99c8bb0aba34d26739af792af6f6128da1284bf",
+          "criteria": "3fcf0d8a9c465d88",
           "diffs": {
             "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
             "docs/mechanisms/lua-memory.md": "51593a74bd065914",
@@ -7366,8 +7546,8 @@
           "verdict": "APPROVE"
         },
         "security": {
-          "at": "2026-11-16T15:08:56",
-          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "at": "2026-11-16T15:38:37",
+          "base": "e35bf2e28b855076f28f4c7ab06ce0dbaf16de74",
           "blobs": {
             "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
             "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
@@ -7382,8 +7562,8 @@
             "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
           },
           "by": "review",
-          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
-          "criteria": "125f23c275731226",
+          "commit": "f99c8bb0aba34d26739af792af6f6128da1284bf",
+          "criteria": "3fcf0d8a9c465d88",
           "diffs": {
             "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
             "docs/mechanisms/lua-memory.md": "51593a74bd065914",
@@ -7500,20 +7680,114 @@
         "tests/test_lua*.cc",
         "docs/mechanisms/lua*.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T15:57:52",
+          "commit": "31896dd7118fdc39c46bf8bc63c1503374bcc644",
+          "criteria": {
+            "A1": "261116-150830-1f8040 (passed at fa306169f7bc; only merges from main since), 261116-150830-42f3f8 (passed at fa306169f7bc; only merges from main since)",
+            "A2": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since)",
+            "A3": "261116-133011-8e97be (passed at bac328dec1c4; only merges from main since)",
+            "A4": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since), 261116-133012-9b0137 (passed at bac328dec1c4; only merges from main since); fails without: 261116-101214-ce0a1e",
+            "A5": "manual: the lead checked the rows branch at dc8988e42 (master + platform-rows + quest head ff85dcd34): arm64 run 43960602513 and FreeBSD run 43960602117 both green, T10 included; the control without this quest (FreeBSD 43960604601) fails T10's library-call loops",
+            "A6": "261116-133001-b680b7 (the suite check)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-133001-b680b7",
+              "level": "light",
+              "seconds": 309.7,
+              "state": "done",
+              "what": "lua-memory-bound check suite at ff85dcd34bf8"
+            }
+          ],
+          "final": true,
+          "from": "f7f3d249bf7ee34364fe58cc1c52c325610ec058",
+          "reason": "",
+          "tested": "f99c8bb0aba34d26739af792af6f6128da1284bf"
+        }
+      ],
       "lenses": [
         "correctness",
         "security"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T15:08:56",
-      "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
+      "updated": "2026-11-16T15:58:01",
+      "worktree": ""
+    },
+    "lua-name-miss": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T20:45:54",
+          "base": "aa037cecfc1e2b6636822284c9caee2109c6cf90",
+          "blobs": {
+            "docs/mechanisms/lua-memory.md": "100644:3f6d4457dfcaddcaa3393ebe3a8281f45349be9d",
+            "src/lua/processor.cc": "100644:eb3120e041da7d8c4939b2ecc3626bb195dc6f68",
+            "src/lua/processor.h": "100644:91c7ac5301d294b7b04aaf3e0453f9638de1c65d",
+            "src/script.cc": "100644:969ca335618f07908701e3ef97174aa7de8b7974",
+            "tests/test_lua.cc": "100644:b969ae0328e0a4ce61135de8e2f409c121a4e552"
+          },
+          "by": "review",
+          "commit": "c7e3d16d9bb7acfa3bd9946e509cd4b8dc158edc",
+          "criteria": "e73f634c2b9868c2",
+          "diffs": {
+            "docs/mechanisms/lua-memory.md": "5cd3988952a1f7b4",
+            "src/lua/processor.cc": "17fb370d3c61734e",
+            "src/lua/processor.h": "4d430e4b715207ae",
+            "src/script.cc": "b5f54c27ef4bb6f3",
+            "tests/test_lua.cc": "cfec19ba9fabfe4a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d71438f016956acc1ff7ee91e9640aa1932d1d75",
+          "reviewed": "4e4f647b3506fba6aec36712efac17bcc702b430",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
+      "branch": "quest/xapiand/lua-name-miss",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/lua/**",
+        "src/script*",
+        "tests/test_lua*.cc",
+        "docs/mechanisms/lua*.md",
+        "src/database/schema.*",
+        "tests/test_schema*.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "A name-only script request that misses the cache answers an error",
+      "updated": "2026-11-16T20:45:54",
+      "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
       "accepted": {
@@ -14759,16 +15033,43 @@
         "harness/thread_stacks.sh",
         "harness/run_all.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T18:19:24",
+          "commit": "ce8e9f08593f4269eaa0c2f0dad7f87938465be9",
+          "criteria": {
+            "A1": "`docs/dev/freebsd.md`: \"Run 43983942535\"",
+            "A2": "`docs/dev/platforms.md`: \"43983942361\"",
+            "A3": "manual: the lead checked both runs at 26d4a14f6: all 14 rows pass on arm64 and FreeBSD; earlier failures were fixed upstream (reactor:2ef28dc, system:563880a, lua-memory-bound)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c5a5d06b0649dfc279cedd3853c1e674b71cc332",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-164820-2e5e1f",
+              "level": "light",
+              "seconds": 539.8,
+              "state": "done",
+              "what": "platform-rows check suite at c5a5d06b0649"
+            }
+          ],
+          "final": true,
+          "from": "c6380001d649ae252f1069b4236b16087a53997f",
+          "reason": "",
+          "tested": "c5a5d06b0649dfc279cedd3853c1e674b71cc332"
+        }
+      ],
       "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-16T08:59:05",
+      "updated": "2026-11-16T18:19:24",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
@@ -17375,7 +17676,9 @@
     },
     "shard-rpc": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-driver"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -17427,7 +17730,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The node-to-node shard service",
-      "updated": "2026-11-15T23:05:13"
+      "updated": "2026-11-16T15:42:58"
     },
     "shared-reader-core": {
       "accepted": {},
@@ -19286,16 +19589,41 @@
       "worktree": ""
     },
     "strict-text": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T16:10:55",
+          "base": "31c9ee7919b144f7ceea65f43add563caf716176",
+          "blobs": {
+            "CMakeLists.txt": "100644:43b1040e9bcba12f1a12a4e89ed286f59db30b82",
+            "src/aggregations/bucket.cc": "100644:81ebd0a490fcdeacbdd5417c924a0e4eba86d5c2",
+            "src/serialize.cc": "100644:e24be6b24d2d1716a6e26dc9f56a3552203d3cba",
+            "tests/test_strict_text.cc": "100644:fe01a351a69d91374af0492ec398b1185e292fb5"
+          },
+          "by": "review",
+          "commit": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "criteria": "6af5f2350116ce68",
+          "diffs": {
+            "CMakeLists.txt": "e4ab380916f7463b",
+            "src/aggregations/bucket.cc": "e226d1341c7f6fdb",
+            "src/serialize.cc": "39051cf668a00732",
+            "tests/test_strict_text.cc": "2576359fc18c16e3"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8d59f72536f6582b28fa382517a5ef3e93dfaa08",
+          "reviewed": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "31c9ee7919b144f7ceea65f43add563caf716176",
       "branch": "quest/xapiand/strict-text",
       "checks": [
         {
-          "cmd": "campaign:build-test",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
           "level": "light",
-          "minutes": 30,
-          "name": "build-test"
+          "minutes": 40,
+          "name": "suite"
         }
       ],
       "consumes": [],
@@ -19307,19 +19635,78 @@
         "src/aggregations/**",
         "tests/test_serialise*.cc",
         "tests/test_strict*.cc",
-        "harness/strict_*"
+        "harness/strict_*",
+        "CMakeLists.txt"
       ],
-      "landed": [],
-      "lenses": [],
+      "history": [
+        {
+          "at": "2026-11-16T16:10:30",
+          "checks": [
+            [
+              {
+                "cmd": "campaign:build-test",
+                "level": "light",
+                "minutes": 30,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 40,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "the build-test check's command 'campaign:build-test' does not exist (job d05e50 exit 127); the suite check other quests use replaces it",
+          "voided": [],
+          "weakened": [
+            "gate check build-test removed"
+          ]
+        }
+      ],
+      "landed": [
+        {
+          "at": "2026-11-16T16:37:39",
+          "commit": "ed134bf4e646dddc38927faf9ccee3e521c1f2d4",
+          "criteria": {
+            "A1": "261116-161041-958417 (passed at 7376bd7a3381; only merges from main since); fails without: 261116-152435-db3a1a",
+            "A2": "261116-161041-958417 (passed at 7376bd7a3381; only merges from main since); fails without: 261116-152435-db3a1a",
+            "A3": "261116-161044-420e84 (the suite check), 261116-152427-5d1269 (passed at 7376bd7a3381; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-161044-420e84",
+              "level": "light",
+              "seconds": 271.0,
+              "state": "done",
+              "what": "strict-text check suite at 7376bd7a3381"
+            }
+          ],
+          "final": true,
+          "from": "33d69428a72c32bb179f765109c55b6d93a5671b",
+          "reason": "",
+          "tested": "ed134bf4e646dddc38927faf9ccee3e521c1f2d4"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:22:10",
-      "worktree": "../Xapiand-wt/xapiand/strict-text"
+      "updated": "2026-11-16T16:37:46",
+      "worktree": ""
     },
     "strict-values": {
       "accepted": {
@@ -20303,6 +20690,53 @@
       "status": "planned",
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
+    },
+    "turn-seal": {
+      "accepted": {},
+      "after": [],
+      "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+      "branch": "quest/xapiand/turn-seal",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "journal:turn-log"
+      ],
+      "files": [
+        "include/journal/turn_driver.h",
+        "include/journal/turn_log.h",
+        "test/turn_driver*",
+        "test/turn_seal*",
+        "docs/mechanisms/turn-seal.md",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/turn-seal",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:turn-seal"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "active",
+      "title": "TurnDriver::seal: one sealed record per group per turn",
+      "updated": "2026-11-16T20:53:51",
+      "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
       "accepted": {

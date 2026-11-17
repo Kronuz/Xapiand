@@ -9,9 +9,9 @@ Phase 7c's functional rows run in CI on FreeBSD and arm64, so C5 is a measuremen
 
 ## Acceptance criteria
 
-- A1 FreeBSD: a CI job builds and runs the suite and gate7c_rows.sh's functional rows: green runs linked in docs/dev/freebsd.md
-- A2 arm64: the same on GitHub's arm64 runners: green runs linked in docs/dev/platforms.md
-- A3 Failures found are fixed or each is a named quest
+- A1 [artifact] FreeBSD: a CI job builds and runs the suite and gate7c_rows.sh's functional rows: green runs linked in docs/dev/freebsd.md
+- A2 [artifact] arm64: the same on GitHub's arm64 runners: green runs linked in docs/dev/platforms.md
+- A3 [manual] Failures found are fixed or each is a named quest (the lead checks the rows against the hunt list)
 
 ## Contracts
 

@@ -25,10 +25,10 @@ env:
 
 jobs:
   freebsd-test:
-    name: FreeBSD 14 Release + tests
+    name: FreeBSD 14 Release + tests + 7c rows
     if: github.event_name == 'push' && github.ref_type == 'branch'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     permissions:
       contents: read
     steps:
@@ -50,12 +50,34 @@ jobs:
             ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
             install -d -o nobody -g nobody "$PWD/.scratch/freebsd-e2e"
             su -m nobody -c 'TMPDIR="$PWD/.scratch/freebsd-e2e" RUN_ALL_STRICT=1 BIN="$PWD/build/bin/xapiand" bash harness/run_all.sh e2e'
+            # Phase 7c's functional rows on this Release and an ASan+UBSan build (gate7c_rows.sh); each
+            # row's result and log land in .scratch/rows-freebsd. The rows run as nobody (root startup demotes).
+            cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF \
+              -DASAN=ON -DUBSAN=ON -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
+              -DASIO_INCLUDE_DIR=/usr/local/include
+            cmake --build build-asan --parallel 2
+            cmake --build build --target strata_check
+            cmake --build build-asan --target strata_check
+            install -d -o nobody -g nobody "$PWD/.scratch/rows-freebsd"
+            chown -R nobody:nobody "$PWD/.deps" "$PWD/.scratch" || true
+            rc=0
+            su -m nobody -c 'TMPDIR="$PWD/.scratch/rows-freebsd" E2E_TIMEOUT_REQUEST=180000 ASAN_OPTIONS=detect_leaks=0 bash harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-freebsd"' || rc=$?
+            # The VM's files do not always come back after a failure: print each failed row's log here.
+            while read -r row gating rrc secs; do
+              [ "$rrc" = 0 ] || [ "$row" = row ] || { echo "=== $row (rc $rrc)"; tail -40 ".scratch/rows-freebsd/$row.log"; head -80 ".scratch/rows-freebsd/e2e-asan/assert.txt" 2>/dev/null | grep -q . && [ "$row" = t2_e2e_asan ] && head -120 .scratch/rows-freebsd/e2e-asan/assert.txt; tail -60 .scratch/rows-freebsd/e2e-asan/xe2e_node.log 2>/dev/null; }
+            done < .scratch/rows-freebsd/rows.tsv
+            exit $rc
       - name: Preserve test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: freebsd-test-logs
-          path: build/Testing/Temporary/LastTest*.log
+          path: |
+            build/Testing/Temporary/LastTest*.log
+            .scratch/rows-freebsd/*.tsv
+            .scratch/rows-freebsd/*.log
+            .scratch/rows-freebsd/e2e-asan/*.txt
+            .scratch/rows-freebsd/e2e-asan/*.log
           if-no-files-found: ignore
 
   freebsd-pkg:

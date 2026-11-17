@@ -1,0 +1,100 @@
+name: arm64
+
+# Build and test on GitHub's native arm64 Linux runners, then run Phase 7c's functional rows
+# (harness/gate7c_rows.sh) on a Release and an ASan+UBSan binary.
+
+on:
+  push:
+    branches: [master, 'quest/**', 'quick/**']
+    paths-ignore: ['.campaign/**']
+  workflow_dispatch:
+
+concurrency:
+  group: arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CC: gcc-13
+  CXX: g++-13
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  arm64-rows:
+    name: arm64 Release + tests + 7c rows
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 300
+    env:
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_COMPRESS: "true"
+      CCACHE_MAXSIZE: 1G
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gdb g++-13 cmake ninja-build pkg-config ccache python3 curl \
+            libzstd-dev uuid-dev zlib1g-dev libcap-dev libssl-dev
+      - name: Sanitizer-compatible ASLR
+        # Ubuntu 24.04's random mmap bits can break the sanitizer runtimes' shadow memory.
+        run: sudo sysctl -w vm.mmap_rnd_bits=28 || sudo sysctl -a 2>/dev/null | grep mmap_rnd || true
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-arm64-${{ github.sha }}
+          restore-keys: ccache-arm64-
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-arm64-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: deps-arm64-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install newman
+        run: npm install -g newman@6
+      - name: Build Release and run the suite
+        run: |
+          set -eux
+          cmake -GNinja -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DLTO=OFF
+          ninja -C build
+          ninja -C build strata_check
+          ctest --test-dir build --output-on-failure --parallel 4 --timeout 1800
+      - name: Build ASan + UBSan
+        run: |
+          set -eux
+          cmake -GNinja -B build-asan -DFETCHCONTENT_BASE_DIR="$PWD/.deps" \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON -DUBSAN=ON -DLTO=OFF
+          ninja -C build-asan -j3
+          ninja -C build-asan strata_check
+      - name: Phase 7c functional rows
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          # The ASan restore of the sample data outlasts newman's default 30 s.
+          E2E_TIMEOUT_REQUEST: "180000"
+        run: |
+          mkdir -p .scratch/rows-arm64
+          harness/gate7c_rows.sh "$PWD/build/bin/xapiand" "$PWD/build-asan/bin/xapiand" "$PWD/.scratch/rows-arm64"
+      - name: Thread stacks at 4 reactors (census diagnosis)
+        if: always()
+        run: harness/thread_stacks.sh "$PWD/build/bin/xapiand" 4 | tee .scratch/rows-arm64/thread_stacks.txt
+      - name: Preserve logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm64-rows-logs
+          path: |
+            build/Testing/Temporary/LastTest*.log
+            .scratch/rows-arm64/*.tsv
+            .scratch/rows-arm64/*.log
+            .scratch/rows-arm64/thread_stacks.txt
+            .scratch/rows-arm64/e2e-asan/*.txt
+            .scratch/rows-arm64/e2e-asan/*.log
+          if-no-files-found: ignore
