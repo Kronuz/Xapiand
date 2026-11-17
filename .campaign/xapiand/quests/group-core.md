@@ -8,8 +8,10 @@ state (status, branch, checks, reviews) is in `state.json`: `campaign status gro
 `strata::group` exists: one replication group per shard on Detent's coroutine drivers
 (`Driver<Sink>`, D97 Q2), at every replica count, a lone voter included. It proposes commands,
 applies each committed entry in log order from the Sink in a chore that leaves the group's loop
-(Xapiand X10), checkpoints with a bundle that names the strata manifest and an application file set
-(design D16), recovers from the bundle's applied position, reads through `read_applied` after the
+(Xapiand X10), checkpoints with a bundle that binds the log to strata by position P_b and carries the application
+file set and an opaque application state (design D16), recovers with strata at its durable head
+P_H and the file effects replayed from P_b (failing closed if P_b > P_H), answers `quorum` with
+apply's verdict (D3, Q10), reads through `read_applied` after the
 driver's quorum-probe read (D4), and closes only after a checkpoint covers its applied position
 (D11). Document mode only (D3); segment mode follows the release. strata pins consensus here.
 
@@ -29,7 +31,7 @@ driver's quorum-probe read (D4), and closes only after a checkpoint covers its a
   `--fails-without`: replay the file set from P_H; unlink at apply; publish before the files sync;
   capture inside an entry's apply; file effects gated on strata's verdict (the `crash` gate check,
   jobs)
-- A2 Three voters in process: every `quorum`-acknowledged entry survives any one crash, and digests
+- A2 Three and five voters in process: every `quorum`-acknowledged entry survives any one crash, and digests
   are equal after every schedule (a job)
 - A3 `ack=none` completes at `ProposalPlaced` and `quorum` when the proposer applies its
   placement, with apply's verdict; with the followers' appends held, `none` completes and `quorum`
@@ -39,7 +41,8 @@ driver's quorum-probe read (D4), and closes only after a checkpoint covers its a
   before the ready point fail (tests)
 - A4 On a leader partitioned away and deposed, `read_applied` after `Driver::read` never returns a
   state older than a committed write; a mutant that skips the probe fails (`--fails-without`, a
-  simulation-style test; a mutant that publishes the applied position before strata's write is visible fails it
+  simulation-style test); a mutant that publishes the applied position before strata's write is
+  visible fails it
 - A5 Once a group closes, `TurnLog::read` finds none of its records, and a reopen recovers
   every acknowledged entry from the bundle; a close racing a `Committed` range ends with a bundle
   covering applied; a mutant that closes without a covering checkpoint fails (`--fails-without`, a
@@ -70,8 +73,9 @@ driver's quorum-probe read (D4), and closes only after a checkpoint covers its a
 
 
 Provides `strata:group` (C++ API: create, open, propose, `read_applied`, checkpoint, close) and
-`strata:checkpoint-bundle` (bytes): the manifest's applied position, term, CRC32C (REPLICATION.md
-G6), and the application file set: name, length at the applied position, CRC32C once immutable.
+`strata:checkpoint-bundle` (bytes, design D16's table): the position P_b and term, the application
+file set (name, length at P_b, CRC32C once immutable), and an opaque application-state section; no
+manifest CRC32C (install's pin carries it).
 Consumes `consensus:driver` and `journal:driver` from Detent's quests, and the closed state's
 hard-state bytes from `detent:consensus-quiescence`. `format-freeze` reviews the bundle.
 

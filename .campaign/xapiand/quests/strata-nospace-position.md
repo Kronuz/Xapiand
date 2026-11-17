@@ -5,27 +5,29 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A `no_space` from the commit-allowance check (`include/strata/core/index.hh:860` at strata
+491a1bdc) still moves the index's position (`:878-880`), so a retry of the same entry is answered
+`skipped` and a replica silently loses a committed write (group-core design re-check B7). Every
+refusal that a retry can clear (`no_space`, `flush_owed`, any environment-dependent result) leaves
+the position where it was; only semantic refusals (D3's list) move it. The empty "mark"
+transaction group-core's capture uses is covered too (review N11).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 A test with values: an entry refused `no_space` and retried after space frees is applied, not
+  `skipped`, and the position moves exactly once; the same for `flush_owed`; a mutant that moves
+  the position on `no_space` fails it (`--fails-without`)
+- A2 The empty mark transaction at a full allowance answers a retryable refusal and leaves the
+  position (a test)
+- A3 The group-core reviewer's probe `.scratch/review-group-core-design/verdict_position_probe.py`
+  (job 261117-025140-4bbcdd exits 1 at 491a1bdc) exits 0 at the fix (a job)
+- A4 Every refusal the index returns is listed as position-moving or not in the header's API doc,
+  matching D3 (the size-cap `invalid`, review N12, decided there)
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead: fix the cause in strata core rather than fencing every replica on `no_space`.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: the change is small.
