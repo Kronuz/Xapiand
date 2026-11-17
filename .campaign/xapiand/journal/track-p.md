@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-075402-484d70 261117-075409-260e88
+State: working
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,15 +18,15 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. Next item (P3 or P9): fresh 1M baseline on prospect main 0aad777 (merged into the branch at
-   1778b8c), every class vs Lucene/Tantivy over serve, script `.scratch/next/job-baseline.sh`,
-   job 261117-075402-484d70 (exclusive, queued); build-test check 261117-075409-260e88.
-   Rank P3's rows (terms, unions) against P9's (intersections, negated) by prospect/Tantivy; take
-   the bigger loser; plan in `docs/perf/` before the runs; prototype; A/B with A/A (exclusive,
-   at most 10 minutes per job). Budget about five experiments, stop at the third loser in a row.
-1. The same baseline is P2's after-vs-Tantivy (bits 1+2 landed at 0aad777): add its intersection
-   rows to `docs/perf/p2-intersection.md`. Job 261117-023209-cd38c4 failed (two serve sides on one
-   index: journal directory lock), so it is not evidence.
+0. A7 (P9), `docs/perf/p9-planner.md` (prospect:b09132d: baseline ranking, plan, rule). Baseline
+   261117-075402-484d70 checked: 7 rounds, 150 rows (15 classes x 5 commands x 2 engines), no
+   crash. P3's rows all win vs Tantivy (terms 0.69-0.95, unions 0.37-0.85); P9's lose
+   (intersection 2 TOP_100/1000/100_COUNT 1.08/1.15/1.18, negated 1.15-1.64). Prototype in the
+   worktree (search.hh, `PROSPECT_EXPERIMENT_P9`): bit 1 windowed top-k (fresh copy's fill, then
+   score only matches) when prefer_windows(); bit 2 match first in collect_block. Next: build
+   (`.scratch/p9/build-variant.sh`), screen (`.scratch/p9/screen.sh`, strict), parity
+   (`.scratch/parity.sh p9-N`), patch into docs/perf, deciding A/B with A/A as a job.
+1. P2's after-vs-Tantivy table is in `docs/perf/p2-intersection.md` (prospect:b09132d) from 484d70.
 
 ## Blocked on
 
