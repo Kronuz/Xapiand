@@ -35,6 +35,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
+#include <new>
+#include <optional>
 #include <string>
 #include <thread>
 #include <time.h>
@@ -42,6 +44,7 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -52,6 +55,8 @@
 #include "database/pool.h"
 #include "database/utils.h"
 #include "endpoint.h"
+#include "engine/chores.h"
+#include "engine/sync.h"
 #include "http_asio.h"
 #include "manager.h"
 #include "msgpack.h"
@@ -62,6 +67,61 @@
 #include "xapiand_exception.h"
 
 using namespace std::chrono_literals;
+
+// operator delete calls on one thread while `counting` (the test's own), to count the blocks a destruction frees.
+namespace {
+std::atomic<bool> counting{false};
+pthread_t counted_thread;
+std::size_t deletes_counted = 0;
+
+void count_delete() noexcept {
+	if (counting.load(std::memory_order_relaxed) && pthread_equal(pthread_self(), counted_thread)) {
+		++deletes_counted;
+	}
+}
+}  // namespace
+
+// The whole family is replaced, so every block pairs with the free that releases it (a sanitizer's own new would not).
+namespace {
+void* alloc(std::size_t size) noexcept {
+	return std::malloc(size != 0 ? size : 1);
+}
+void* alloc_aligned(std::size_t size, std::size_t align) noexcept {
+	void* p = nullptr;
+	return ::posix_memalign(&p, align < sizeof(void*) ? sizeof(void*) : align, size != 0 ? size : 1) == 0 ? p : nullptr;
+}
+void* alloc_or_throw(void* p) {
+	if (p == nullptr) {
+		throw std::bad_alloc();
+	}
+	return p;
+}
+void release(void* p) noexcept {
+	count_delete();
+	std::free(p);
+}
+}  // namespace
+
+void* operator new(std::size_t size) { return alloc_or_throw(alloc(size)); }
+void* operator new[](std::size_t size) { return alloc_or_throw(alloc(size)); }
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept { return alloc(size); }
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept { return alloc(size); }
+void* operator new(std::size_t size, std::align_val_t a) { return alloc_or_throw(alloc_aligned(size, static_cast<std::size_t>(a))); }
+void* operator new[](std::size_t size, std::align_val_t a) { return alloc_or_throw(alloc_aligned(size, static_cast<std::size_t>(a))); }
+void* operator new(std::size_t size, std::align_val_t a, const std::nothrow_t&) noexcept { return alloc_aligned(size, static_cast<std::size_t>(a)); }
+void* operator new[](std::size_t size, std::align_val_t a, const std::nothrow_t&) noexcept { return alloc_aligned(size, static_cast<std::size_t>(a)); }
+void operator delete(void* p) noexcept { release(p); }
+void operator delete[](void* p) noexcept { release(p); }
+void operator delete(void* p, std::size_t) noexcept { release(p); }
+void operator delete[](void* p, std::size_t) noexcept { release(p); }
+void operator delete(void* p, const std::nothrow_t&) noexcept { release(p); }
+void operator delete[](void* p, const std::nothrow_t&) noexcept { release(p); }
+void operator delete(void* p, std::align_val_t) noexcept { release(p); }
+void operator delete[](void* p, std::align_val_t) noexcept { release(p); }
+void operator delete(void* p, std::size_t, std::align_val_t) noexcept { release(p); }
+void operator delete[](void* p, std::size_t, std::align_val_t) noexcept { release(p); }
+void operator delete(void* p, std::align_val_t, const std::nothrow_t&) noexcept { release(p); }
+void operator delete[](void* p, std::align_val_t, const std::nothrow_t&) noexcept { release(p); }
 
 namespace {
 
@@ -1135,6 +1195,76 @@ static void test_each_chunk_of_a_streamed_restore_starts_light() {
 }
 
 
+// A RESTORE's results are one buffer, not a MsgPack (a zone of 8 KB) per object: destroying the indexer of 2,000
+// objects frees a few blocks, where one MsgPack per result frees thousands in one turn of its loop
+// (docs/perf/restore-stall.md).
+static void test_a_restores_results_are_freed_as_one_buffer() {
+	constexpr int objects = 2000;
+	CHECK_EQ(http_call("RESTORE", "/results/?commit", R"({"_id":"r0","n":0})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists
+	const auto endpoints = engine::sync_wait(XapiandManager::resolve_index_endpoints(Endpoint("results"), true));
+	query_field_t query_field;
+	std::optional<DocIndexer> indexer;
+	indexer.emplace(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, true, true, query_field, engine::inline_chores());
+	std::vector<MsgPack> batch;
+	for (int i = 1; i <= objects; ++i) {
+		batch.push_back(MsgPack({{"_id", "r" + std::to_string(i)}, {"n", i}}));
+	}
+	engine::sync_wait(indexer->index(batch));
+	engine::sync_wait(indexer->commit());
+	batch.clear();
+	CHECK_EQ(indexer->indexed(), std::size_t{objects});
+	CHECK_EQ(indexer->results().size(), std::size_t{objects});
+	counted_thread = pthread_self();
+	deletes_counted = 0;
+	counting = true;
+	indexer.reset();
+	counting = false;
+	std::fprintf(stderr, "  the indexer of %d objects freed %zu blocks\n", objects, deletes_counted);
+	CHECK_LT(deletes_counted, std::size_t{objects / 10});
+}
+
+
+// A RESTORE's objects are freed off its loop: each is a tree of MsgPack bodies, and its loop neither builds the tree
+// (`reads_stored` reads the raw map) nor frees it (the run is cleared in a chore). Before, the loop freed the trees of
+// a whole run in one turn (docs/perf/restore-stall.md, round 2).
+static void test_a_restores_objects_are_freed_off_its_loop() {
+	constexpr int objects = 2000;
+	CHECK_EQ(http_call("RESTORE", "/offloopfree/?commit", R"({"_id":"f0","n":0})" "\n", "application/x-ndjson") / 100, 2);   // the schema exists
+	std::string body;
+	for (int i = 1; i <= objects; ++i) {
+		body += R"({"_id":"f)" + std::to_string(i) + R"(","n":)" + std::to_string(i) + R"(,"a":"x","b":"y","c":"z"})" "\n";
+	}
+	std::atomic<bool> set{false};
+	asio::post(XapiandManager::manager()->http_service->reactor(0).io(), [&] {
+		counted_thread = pthread_self();
+		deletes_counted = 0;
+		counting = true;
+		set = true;
+	});
+	eventually([&] { return set.load(); }, 10s);
+	CHECK_EQ(http_call("RESTORE", "/offloopfree/?commit", body, "application/x-ndjson") / 100, 2);
+	std::atomic<std::size_t> freed{0};
+	set = false;
+	asio::post(XapiandManager::manager()->http_service->reactor(0).io(), [&] {   // after the request's own frees
+		counting = false;
+		freed = deletes_counted;
+		set = true;
+	});
+	eventually([&] { return set.load(); }, 10s);
+	std::fprintf(stderr, "  the loop freed %zu blocks restoring %d objects\n", freed.load(), objects);
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
+#define LOOP_YIELD_SANITIZED 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+#define LOOP_YIELD_SANITIZED 1
+#endif
+#endif
+#ifndef LOOP_YIELD_SANITIZED
+	// A sanitizer's allocator moves the per-object count; the release-build test job checks this bound.
+	CHECK_LT(freed.load(), std::size_t{objects * 50});   // 34 per object measured; 75 with the trees on the loop
+#endif
+}
+
 int main() {
 	RunningNode node;
 	if (!node.ready()) {
@@ -1156,6 +1286,8 @@ int main() {
 	test_a_light_request_runs_ahead_of_heavy_turns();
 	test_a_request_after_a_heavy_one_starts_light();
 	test_each_chunk_of_a_streamed_restore_starts_light();
+	test_a_restores_results_are_freed_as_one_buffer();
+	test_a_restores_objects_are_freed_off_its_loop();
 	if (testh::failures != 0) {
 		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
 		return 1;

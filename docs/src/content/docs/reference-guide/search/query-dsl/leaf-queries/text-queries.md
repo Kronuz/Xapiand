@@ -47,7 +47,7 @@ SEARCH /bank/?limit=0
 
 {
   "_query": {
-    "personality": "ambitious adventurous"
+    "personality": "adventurous creative"
   }
 }
 ```
@@ -60,7 +60,7 @@ description: Grammar: the default operator is OR
 ```js
 pm.test("Two words match either", function() {
   pm.response.to.be.success;
-  pm.expect(pm.response.json().total).to.equal(89);
+  pm.expect(pm.response.json().total).to.equal(74);
 });
 ```
 e2e:end -->
@@ -71,7 +71,7 @@ SEARCH /bank/?limit=0
 {
   "_query": {
     "personality": {
-      "_and": "ambitious adventurous"
+      "_and": "adventurous creative"
     }
   }
 }
@@ -85,7 +85,7 @@ description: Grammar: _and joins the words with AND
 ```js
 pm.test("_and needs both words", function() {
   pm.response.to.be.success;
-  pm.expect(pm.response.json().total).to.equal(2);
+  pm.expect(pm.response.json().total).to.equal(4);
 });
 ```
 e2e:end -->
@@ -96,7 +96,7 @@ SEARCH /bank/?limit=0
 {
   "_query": {
     "personality": {
-      "_and": "ambitious NOT adventurous"
+      "_and": "adventurous NOT creative"
     }
   }
 }
@@ -110,7 +110,7 @@ description: Grammar: boolean words under _and
 ```js
 pm.test("NOT excludes the second word", function() {
   pm.response.to.be.success;
-  pm.expect(pm.response.json().total).to.equal(39);
+  pm.expect(pm.response.json().total).to.equal(34);
 });
 ```
 e2e:end -->
@@ -120,7 +120,7 @@ SEARCH /bank/?limit=0
 
 {
   "_query": {
-    "personality": "+ambitious -adventurous"
+    "personality": "+adventurous -creative"
   }
 }
 ```
@@ -133,7 +133,7 @@ description: Grammar: required and excluded words
 ```js
 pm.test("Required and excluded words", function() {
   pm.response.to.be.success;
-  pm.expect(pm.response.json().total).to.equal(39);
+  pm.expect(pm.response.json().total).to.equal(34);
 });
 ```
 e2e:end -->
@@ -143,7 +143,7 @@ SEARCH /bank/?limit=0
 
 {
   "_query": {
-    "personality": "ambitious AND adventurous"
+    "personality": "adventurous AND creative"
   }
 }
 ```
@@ -156,7 +156,7 @@ description: Grammar: AND in a plain string is a word
 ```js
 pm.test("A plain string does not read AND as an operator", function() {
   pm.response.to.be.success;
-  pm.expect(pm.response.json().total).to.equal(89);
+  pm.expect(pm.response.json().total).to.equal(74);
 });
 ```
 e2e:end -->

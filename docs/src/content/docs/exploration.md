@@ -40,7 +40,7 @@ customer bank account information. Each document has the following form:
     },
     "hairstyle": "slick back"
   },
-  "personality": "A lot can be assumed..."
+  "personality": "Everyone has an opinion on Michael Lee..."
 }
 ```
 

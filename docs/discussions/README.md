@@ -61,7 +61,9 @@ Verify vendored copies while ignoring generated and deployment-local files:
 ./discussions/scripts/check-copies.sh ../another-site/discussions
 ```
 
+Kronuz Discussions is MIT-licensed ([`LICENSE`](LICENSE)); every vendored copy carries that file.
+
 The package manifest is currently `private` while this code is vendored in host repositories.
-Before publishing it independently, choose a license, add repository metadata, remove
-`private`, and publish the root package for the Astro/widget client. The Worker remains its
-own deployable package under `worker/`.
+Before publishing it independently, add repository metadata, remove `private`, and publish the
+root package for the Astro/widget client. The Worker remains its own deployable package under
+`worker/`.

@@ -90,3 +90,15 @@ A memory refusal condemns the call at the first refused allocation, before Lua's
 the call's own garbage; a call that churns garbage near the cap ends earlier than its live bytes alone would. Letting
 the retry through would run an uncharged full collection per refusal. Compilation and the conversion of `_doc`, `_old_doc` and the params into the state are unmetered (X4-N5, N1). On glibc,
 freed blocks may stay in the process's heap rather than return to the system, so RSS can sit above the live bound.
+
+Calls of a script over 16 KiB wait for each other, one at a time on its thread, with no bound on the wait but the
+request's cancel: a call near `max_instructions` holds every other call of that script on its reactor for its whole
+run.
+
+A request that names a script without its body, when the script is not cached (evicted by the count bound, dropped
+because its charge alone passes the byte budget, compiled on another worker thread, or lost to a restart), answers a ClientError naming the script and asking for its
+`_body`; it never runs an empty script.
+
+A schema never stores a name-only script: declaring one whose script is cached stores its body, so writes keep
+running it after a restart and on every worker thread; declaring one that is not cached answers the same error at
+declaration.

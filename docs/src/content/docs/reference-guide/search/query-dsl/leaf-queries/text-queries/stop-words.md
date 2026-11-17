@@ -34,7 +34,7 @@ pm.test("Response is success", function() {
 pm.test("Stop words are filtered from the query", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.count).to.equal(10);
-  pm.expect(jsonData.total).to.equal(333);
+  pm.expect(jsonData.total).to.equal(292);
 });
 ```
 e2e:end -->

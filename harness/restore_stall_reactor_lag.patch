@@ -1,0 +1,117 @@
+diff --git a/reactor_lag.h b/reactor_lag.h
+index d9da172..c77a0da 100644
+--- a/reactor_lag.h
++++ b/reactor_lag.h
+@@ -44,7 +44,104 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <memory>
++#include <vector>
++#include <functional>
+ #include <new>
++#include <cstdio>
++#include <cstdlib>
++#include <thread>
++#include <signal.h>
++#include <pthread.h>
++#include <unistd.h>
++#include <mach-o/dyld.h>
++#include <sys/ucontext.h>
++
++
++// ---- restore-stall experiment (env XAPIAND_LAG_SPIN=<threshold_us>): a sleep-free probe and a stall sampler ----
++namespace spin_probe {
++inline constexpr int kFrames = 40;
++inline void* g_frames[kFrames];
++inline std::atomic<int> g_n{-1};
++inline std::atomic<std::uintptr_t> g_lo{0}, g_hi{0};
++
++inline void on_signal(int, siginfo_t*, void* uc) {
++	auto* ctx = static_cast<ucontext_t*>(uc);
++	auto pc = reinterpret_cast<void*>(ctx->uc_mcontext->__ss.__rip);
++	auto fp = reinterpret_cast<std::uintptr_t*>(ctx->uc_mcontext->__ss.__rbp);
++	int n = 0;
++	g_frames[n++] = pc;
++	const auto lo = g_lo.load(), hi = g_hi.load();
++	while (n < kFrames && reinterpret_cast<std::uintptr_t>(fp) >= lo && reinterpret_cast<std::uintptr_t>(fp) + 16 <= hi && (reinterpret_cast<std::uintptr_t>(fp) & 7) == 0) {
++		g_frames[n++] = reinterpret_cast<void*>(fp[1]);
++		auto next = reinterpret_cast<std::uintptr_t*>(fp[0]);
++		if (next <= fp) { break; }
++		fp = next;
++	}
++	g_n.store(n, std::memory_order_release);
++}
++
++struct Spin : std::enable_shared_from_this<Spin> {
++	asio::io_context& io;
++	std::uint64_t threshold_us;
++	int id;
++	std::atomic<std::int64_t> beat_ns{0};
++	std::atomic<bool> stopping{false};
++	std::atomic<bool> have_tid{false};
++	pthread_t tid{};
++	std::thread watchdog;
++	Spin(asio::io_context& i, std::uint64_t t, int n) : io(i), threshold_us(t), id(n) {}
++	static std::int64_t now_ns() { return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
++	void run() {
++		const auto now = now_ns();
++		const auto prev = beat_ns.exchange(now);
++		if (!have_tid.load()) { tid = pthread_self(); g_lo = reinterpret_cast<std::uintptr_t>(pthread_get_stackaddr_np(tid)) - pthread_get_stacksize_np(tid); g_hi = reinterpret_cast<std::uintptr_t>(pthread_get_stackaddr_np(tid)); have_tid.store(true); }
++		if (prev != 0 && static_cast<std::uint64_t>(now - prev) / 1000 >= threshold_us) {
++			std::fprintf(stderr, "SPIN loop=%d at_ns=%lld gap_us=%lld\n", id, static_cast<long long>(now), static_cast<long long>((now - prev) / 1000));
++		}
++		if (!stopping.load()) { asio::post(io, [self = shared_from_this()] { self->run(); }); }
++	}
++	void start() {
++		struct sigaction sa{};
++		sa.sa_sigaction = on_signal;
++		sa.sa_flags = SA_SIGINFO | SA_RESTART;
++		sigemptyset(&sa.sa_mask);
++		sigaction(SIGUSR2, &sa, nullptr);
++		std::fprintf(stderr, "SPIN loop=%d image_base=%p threshold_us=%llu\n", id, static_cast<const void*>(_dyld_get_image_header(0)), static_cast<unsigned long long>(threshold_us));
++		asio::post(io, [self = shared_from_this()] { self->run(); });
++		watchdog = std::thread([this] {
++			std::int64_t last_sig = 0;
++			while (!stopping.load()) {
++				std::this_thread::sleep_for(std::chrono::microseconds(500));
++				if (!have_tid.load()) { continue; }
++				const auto now = now_ns();
++				const auto age = (now - beat_ns.load()) / 1000;
++				if (age >= static_cast<std::int64_t>(threshold_us) && now - last_sig > 1'500'000) {
++					last_sig = now;
++					g_n.store(-1);
++					pthread_kill(tid, SIGUSR2);
++					for (int w = 0; w < 200 && g_n.load(std::memory_order_acquire) < 0; ++w) { std::this_thread::sleep_for(std::chrono::microseconds(10)); }
++					const int n = g_n.load(std::memory_order_acquire);
++					if (n > 0) {
++						std::fprintf(stderr, "STALL loop=%d at_ns=%lld age_us=%lld frames=", id, static_cast<long long>(now), static_cast<long long>(age));
++						for (int i = 0; i < n; ++i) { std::fprintf(stderr, "%s%p", i ? "," : "", g_frames[i]); }
++						std::fprintf(stderr, "\n");
++					}
++				}
++			}
++		});
++		watchdog.detach();
++	}
++};
++inline void maybe_start(asio::io_context& io) {
++	static std::atomic<int> next{0};
++	const char* v = std::getenv("XAPIAND_LAG_SPIN");
++	if (!v) { return; }
++	auto spin = std::make_shared<Spin>(io, std::strtoull(v, nullptr, 10), next++);
++	static std::vector<std::shared_ptr<Spin>> keep;
++	keep.push_back(spin);
++	spin->start();
++}
++}  // namespace spin_probe
+ 
+ namespace reactor {
+ 
+@@ -115,6 +212,7 @@ public:
+ 	// Arms the timer at the idle interval; the first wake picks the interval from the activity seen.
+ 	void start() {
+ 		if (state_->started.exchange(true)) { return; }
++		spin_probe::maybe_start(static_cast<asio::io_context&>(asio::query(state_->timer.get_executor(), asio::execution::context)));
+ 		state_->arm(idle_interval);
+ 	}
+ 	void stop() {
