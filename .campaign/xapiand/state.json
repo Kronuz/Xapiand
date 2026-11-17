@@ -3011,7 +3011,7 @@
           "name": "tsan"
         },
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
           "later": true,
           "level": "light",
           "minutes": 70,
@@ -3031,6 +3031,72 @@
         "test/transport/peers_test.cc",
         "docs/design/rpc-lane*"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T20:04:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command built without CONSENSUS_FUZZ, so it passed without fuzzing (design Q3)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
@@ -3045,7 +3111,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T20:04:50",
+      "updated": "2026-11-16T20:04:54",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
