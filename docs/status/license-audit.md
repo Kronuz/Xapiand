@@ -218,6 +218,27 @@ Other languages against Snowball's list (ours size, overlap, ours-only): da 101/
 
 68 of ours' 100 non-blank lines are byte-identical to an h5bp line, including the section comments and column alignment. The 16 h5bp misses are the owner's three additions plus renames and regrouping (`application/xml` atom/rdf/rss, `font/opentype`, `application/font-woff*`, `x-font-ttf`, `wmv`, `vcf`, `manifest`). Verdict: mixed, mostly derived from h5bp (MIT), itself an nginx mime.types derivative (BSD-2), with the owner's three entries on top. Credit owed: h5bp's MIT copyright line, and nginx's BSD-2 notice. IANA supplies only names, so nothing is owed; Apache's table overlaps only through shared facts.
 
+### A17 follow-up: can the original lists stay?
+
+Compared with Lucene's analysis-common resources (Apache-2.0; `ca/`, `eu/`, `hy/`, `ro/`, `tr/stopwords.txt` and `snowball/*_stop.txt`), stopwords-iso (MIT, Gene Diaz; an aggregate of about 35 web sources listed in its `CREDITS.md`, each with its own unstated terms), NLTK and Alir3z4/stop-words (CC-BY-4.0). Counts are ours / overlap with that source. Xapian's lists were not compared for these languages (the fetch was not permitted); only English was, above.
+
+| Lang | Matches | Evidence | Credit line |
+|---|---|---|---|
+| ca | Lucene `ca/stopwords.txt`, exact | 218 of 218; header says from vcl/cue.language (Apache-2.0) | Apache-2.0 notice naming vcl/cue.language and Lucene |
+| eu | Lucene `eu/` exact | 98 of 98; "example set" header, Apache-2.0 via Lucene | Lucene Apache-2.0 notice |
+| hy | Lucene `hy/` exact | 45 of 45; same | Lucene Apache-2.0 notice |
+| no | Snowball Norwegian exact (= Lucene, NLTK) | 172 of 172 | Snowball BSD-3 notice |
+| sv | Snowball Swedish exact for 114 words, plus 287 more; equals Alir3z4 (401 of 401) | the extra words come from an aggregate | Snowball BSD-3, source of the rest unrecorded |
+| ro | Lucene `ro/` (Jacques Savoy, BSD), partial | ours 282, Lucene 254, overlap 228 | Savoy BSD notice (copyright line from Lucene's header) |
+| tr | Lucene `tr/` (LUCENE-559 plus a JASIST 2008 paper list) is a subset of ours | ours 279, Lucene 209, overlap 209; 70 extra | Lucene Apache-2.0 notice; the 70 extra words have no source |
+| it, hu, ru, nl, de | Snowball is a (near) subset of ours: it 279/279, hu 197/198, ru 158/159, nl 90/101, de 208/231 | extras from an aggregate (stopwords-iso contains all of ours except de 2, it 29) | Snowball BSD-3; extras unsourced |
+| da, es, fi, fr, pt | Snowball overlaps only partly (da 50/94, es 166/308, fi 156/229, fr 101/154, pt 119/203) | stopwords-iso contains every word of ours (stopwords-iso is a superset) | no single upstream identified |
+| en | SMART, exact | see below | see below |
+
+Finding: no list is the owner's curation and none has a recorded upstream; at most 5 (ca, eu, hy, no, plus ro and tr in part) match a licensed upstream exactly or as a core. For da, es, fi, fr, pt and the extras in the others, stopwords-iso contains them, so they derive from public web lists (probably ranks.nl, the Snowball family and similar, per `CREDITS.md`), whose terms cannot be established. Those can stay only with a generic credit line that is honest about that. Cleanest: ca, eu, hy, ro, tr, no from Lucene/Snowball with their notices; da, de, es, fi, fr, hu, it, nl, pt, ru, sv regenerated from Snowball's BSD-3 lists (Lucene carries them too).
+
+SMART (`en.txt`): the web has no license text for the original. The list is credited to Gerard Salton and Chris Buckley, SMART system, Cornell, 1971; copies cite `ftp://ftp.cs.cornell.edu/pub/smart/english.stop` and carry no terms (RAKE's `SmartStoplist.txt` cites Salton 1971 and the FTP path only; R `stopwords` (MIT) and stopwords-json (Apache-2.0) bundle it under their own license without relicensing it). The FTP site did not answer, so the SMART package's README could not be read. Verdict: there is no known license with conditions, nor a grant; the practice is an attribution line only. Keep it with "SMART stop list, Salton and Buckley, Cornell University" in the notice, or swap to Snowball English (BSD-3) to remove the doubt. The owner decides.
+
 ## Actions
 
 1. **A1**: Rewrite `NOTICE` as the third-party notice file.
