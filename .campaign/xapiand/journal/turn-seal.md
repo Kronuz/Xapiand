@@ -1,14 +1,15 @@
 # turn-seal: journal
 
-State: waiting on jobs 261116-214957-43b4e8 261116-214957-d91d5b 261116-214958-b99c15 261116-215000-31bcd7
+State: working
 Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 
 ## Doing
 
-At journal:4e0e523 (pushed): build-test 261116-214957-43b4e8, tsan 261116-214957-d91d5b, mutants
-A2 261116-214958-b99c15 (`sequence`) and A7 261116-215000-31bcd7 (`supersede`), `--fails-without`,
-own slots. Jobs at journal:ba827e1 cancelled (superseded). Lead's R8/R9 rulings folded in at
-journal:4e0e523; branch pushed to origin.
+journal:b08212f (pushed): build-test 261117-020559-d9967e (40/40) and tsan 261117-020559-c74944
+green; mutants killed, `--fails-without`: A2 261117-020600-2e3287, A7 261117-020603-a0abbc. The
+jobs at journal:4e0e523 failed on a test build error (`room` shadowed); fixed in journal:01387e7,
+along with the budget case's `firsts` and the sequence mutant's anchor. Next: tagged A1/A3/A8 jobs,
+then ready for review.
 
 ## Next
 
@@ -28,12 +29,12 @@ R8 made `covers` mandatory, so checkpoint callers outside the file set needed on
 | Criterion | Evidence |
 |---|---|
 | A1 | pending |
-| A2 | pending |
+| A2 | mutant 261117-020600-2e3287 (`sequence` fails without the check); plain case in build-test 261117-020559-d9967e |
 | A3 | pending |
-| A4 | pending |
+| A4 | tsan 261117-020559-c74944 (`forget_*`) |
 | A5 | `docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16 |
-| A6 | pending |
-| A7 | pending |
+| A6 | build-test 261117-020559-d9967e, 40/40 |
+| A7 | mutant 261117-020603-a0abbc (`supersede` fails without the guard); plain case in build-test 261117-020559-d9967e |
 | A8 | pending |
 
 ## Result
