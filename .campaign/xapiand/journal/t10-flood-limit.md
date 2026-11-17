@@ -1,6 +1,6 @@
 # t10-flood-limit: journal
 
-State: blocked on lead: the count hook already yields each slice; the flood is one C library call it cannot interrupt
+State: waiting on jobs 261117-012336-f0fe7e 261117-012822-eec143 261117-012828-5d02bf
 Quest: .campaign/xapiand/quests/t10-flood-limit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,38 +9,25 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Task-side test reverted (36f9ddcf6), master merged (158234c8e), prototype jobs cancelled by the lead. Read src/lua/processor.cc and
-docs/mechanisms/lua-bounds.md for the Lua yield; stopped before building (see Blocked on).
+Option 1 built (lead's ruling): `Processor::operator()` (src/lua/processor.cc) hops to the heavy lane before its first turn and
+marks the scope light on every exit if it was light on entry (a heavy request stays heavy). Commits e78e3a766 (code and tests),
+harness commit (`lua_bounds.py --cost`, derived limit), 1036ca25a (docs: D7, lua-bounds.md).
+A1 restated for the lead: the script call enters heavy and leaves light, with values (the lane of every resume of a 200,000-iteration
+call; heavy request stays heavy; error and bound leave light) on a two-lane test scheduler, plus a mutant that stays light.
+Jobs: f0fe7e builds and runs test_lua and test_loop_yield; eec143 (master, strict) and 5d02bf (fix, strict, `--check`) run
+`lua_bounds.py --cost` on a Release build: tiny scripted write idle and beside 8 GET-only clients, then the 1/2/4/8/16 sweep against
+(2 + 1) x one flood call. Their logs: /Users/kronuz/.scratch/t10-flood-limit/cost-{master,fix}.{log,json}.
 
 ## Next
 
-1. The lead rules on the options below; then build, then A1 tests, A2 strict sweeps (master and fix), A3 limit, A4 docs, A5 suite.
+1. When f0fe7e passes: submit the mutant job (`--fails-without`: sed the hop line out of src/lua/processor.cc, build, run test_lua).
+2. Read the cost rows: if tiny-write p50/p99 idle or beside light regress, report the numbers before landing.
+3. Write the numbers into docs/dev/t10-flood-limit.md (replace the exploration's limit section with the derivation), push.
+4. `campaign verify t10-flood-limit` for the suite (A5), rerun test_lua probes (lua-memory sweep) and `lua_bounds.py` full run; set ready for review.
 
 ## Blocked on
 
-The premise does not hold for the flood script. The count hook already exists and already yields at each slice: `hook()` in
-src/lua/processor.cc runs every `hook_period` (10,000 instructions), or at the next instruction once a call's work passes
-`slice_work` (200,000 units), and `lua_yield`s to the reactor, where `co_await budget->checkpoint()` spends a slice (`:812`). The
-flood script is `s = string.rep('a', 1048576); s:find('.-b')`: one C library call (the matcher, 3.2 x 10^6 steps, about 22 ms)
-with no VM instruction inside it, so no hook can fire in it (lua-bounds.md item 2, "No uninterruptible stretch passes
-max_call_work"; the call is condemned at 1.6 x 10^7 units). Lua can yield a C function only through lua_yieldk with a
-continuation, and the matcher's `.-` expansion is a C loop with no restart point. So the call is one stretch however the hook is
-tuned, and it runs in the request's first light turn: nothing charged after it, or by a hook, reclassifies that request.
-Options (each changes behavior, so the lead's):
-1. Class before the stretch: a request about to run a script call enters the heavy lane first (a heavy post before
-   `Processor::operator()`, then `enter_light()` after). The GET waits one heavy turn per pass (about one stretch plus the one in
-   progress, k = 2), flat in the client count. Cost: every scripted write is heavy-class (one heavy pass per call and per resumption
-   of the script), so an honest scripted write waits behind heavy turns as heavy requests do; D1 rejected "a class per route"
-   for this reason. Files: src/server/search_views.cc (the three script sites), src/lua/**, maybe a lane awaiter in src/server/lanes*.
-2. Cap the stretch: lower `Limits::max_call_work` (16 x 10^6 units, about 22 ms) to a few slices' worth, so a flood call holds a
-   reactor about that long; p99 stays (clients per reactor + 1) x stretch, bounded and small but not flat. Cost: a library call
-   that charges more than the cap (a linear op over a string beyond about cap bytes, now allowed up to 16 MiB) answers 400 where it
-   answers 200 today.
-3. Yield inside the library (lstrlib patch: lua_yieldk with a continuation between match attempts and inside `min_expand`): the
-   only way to make the call itself 110 slices; a large Lua patch (contrib/lua/xapiand-limits.patch, drift test) and the
-   matcher's recursion limits what can be resumed.
-Recommendation: 1, with a limit derived from k = 2 stretches (plus the in-progress one). 2 as a cheap complement if the lead
-wants less than one 22 ms stretch per heavy turn.
+Nothing.
 
 ## Evidence
 
@@ -59,5 +46,12 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- The hop sits in `Processor::operator()`, not in `DatabaseHandler::call_script` (src/database/handler.cc is outside the file set); it
+  precedes the state lock, so the call holds nothing while it waits for its turn. Scripts already yield at every hook, so no new
+  yield point can occur under a document lock or a transaction: the one new suspension is the hop at the entry, before anything is held.
+- The lane is restored with a scope guard (`enter_light`) and no hop back, as `SearchService::handle`'s guard does (D2 f).
+- k = 2: the stretch in progress plus one heavy turn at each of a GET's two hops through the loop (its read, its database chore);
+  limit (k + 1) x one flood call alone.
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
