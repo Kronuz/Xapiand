@@ -108,12 +108,12 @@ All at their pinned commits in `CMakeLists.txt`. "Binary notice" means the licen
 | Dependency | Pin | License | Binary notice | Mark |
 |---|---|---|---|---|
 | asio (chriskohlhoff) | `asio-1-36-0` (RPM job: 1.28.1 tarball) | BSL-1.0 | no | fine |
-| rapidjson (Tencent) | 24b5e7a8 | MIT (its `msinttypes` BSD-3 is MSVC-only; `bin/jsonchecker` under the JSON license is test data, not compiled) | yes | fine, notice in A1 |
+| rapidjson (Tencent) | 24b5e7a8 | MIT (its `msinttypes` BSD-3 is MSVC-only; `bin/jsonchecker` under the JSON license is test data, not compiled). Unmodified upstream: the build patches no fetched source (the one `PATCH_COMMAND` in `CMakeLists.txt` is Lua's), and only sets `RAPIDJSON_PARSE_DEFAULT_FLAGS` (comments, trailing commas, NaN/Inf, full precision) as a compile definition, which is configuration, not a derivative. The sanitizer patches that earlier gate notes mention (`stack.h`, `document.h`, `GenericStringRef`) applied to the old v1.1.0 pin in scratch trees only; `Xapiand:52235a037` moved the pin and nothing ships them | yes | fine, notice in A1 |
 | cppcodec (tplgy) | `v0.2` | MIT | yes | fine, notice in A1 |
 | CLI11 | `v2.4.2` | BSD-3 | yes | fine, notice in A1 |
 | lz4 | `v1.8.1` | `lib/` BSD-2 (with xxhash), the rest GPL-2; only `lib/*.c` is compiled | yes | fine, notice in A1 |
 | prometheus-cpp | `v1.2.4` | MIT | yes | fine, notice in A1 |
-| Lua | 5.4.7 tarball (sha256 pinned) plus `contrib/lua/xapiand-limits.patch` | MIT (in `lua.h` and `doc/readme.html`; the tarball has no `LICENSE` file) | yes | fine, notice in A1 |
+| Lua | 5.4.7 tarball (sha256 pinned) plus `contrib/lua/xapiand-limits.patch` | MIT (in `lua.h` and `doc/readme.html`; the tarball has no `LICENSE` file). The patch is the owner's and adds a few `lua_xnote` accounting calls to Lua's sources (a derivative under Lua's MIT, shipped only as the compiled result) | yes | fine, notice in A1 |
 | libyaml | `0.2.5` | MIT | yes | fine, notice in A1 |
 | googletest | `master` (`FindGTest.cmake`), tests only | BSD-3 | not shipped | fine |
 | cpp-btree (Kronuz fork of Google's) | strata bench target only | Apache-2.0 | not shipped | fine |
@@ -188,6 +188,57 @@ artifact.
 | Source release (GitHub tag tarball) | Whole tree, including `contrib/` | Blockers 2 and 3 apply to it as well as blocker 1; the Apache-2.0 client (A10) is fine once named | blockers |
 | Sortable encoding after replacement | — | Re-run this audit's dependency and header scans at the release commit; the scripts are short and can live under `harness/` | **A27** |
 
+## Provenance of A17 and A18 (stopwords, mime.types)
+
+Exploration only; fetched copies live in the ignored `.scratch/`. The Xapian copy was compared for provenance and deleted; none of its words appear here.
+
+**A17, stopwords.** All 18 lists arrived in one commit, `Xapiand:b2858ab15` (2016-12-06, José María Valencia, not the owner): "Add stopwords for armenian(hy.txt), basque(eu.txt), catalan(ca.txt), ... languages". `git log --follow` and `git blame` show that commit for every line of every file; nothing was added later. The language set (ca da de en es eu fi fr hu hy it nl no pt ro ru sv tr) matches Lucene's per-language analyzers.
+
+| English list | Size | Overlap with ours | Only in theirs | Only in ours |
+|---|---|---|---|---|
+| ours (`en.txt`) | 570 | | | |
+| SMART (igorbrigadir/stopwords mirror) | 570 | 570 | 0 | 0 |
+| Snowball English (BSD-3) | 174 | 164 | 10 | 406 |
+| Lucene `EnglishAnalyzer` default (Apache-2.0; `StopAnalyzer` uses the same list) | 33 | 33 | 0 | 537 |
+| NLTK English (Apache-2.0) | 198 | 165 | 33 | 405 |
+| Xapian `xapian-core/languages/stopwords/english.txt` | 174 | 164 | 10 | 406 |
+
+Verdict for `en.txt`: derived from SMART, word for word (set equality, 570 of 570), with no owner additions. Every word not in Snowball or NLTK is a SMART word (examples: `able`, `accordingly`, `ain't`, `allow`, `anybody`, `appreciate`, `apart`, `anyways`, `appropriate`, `becomes`), so there are no words only in ours beyond SMART. Xapian's list matches Snowball's counts and shares nothing extra with ours.
+
+Other languages against Snowball's list (ours size, overlap, ours-only): da 101/50/51, nl 275/90/185, fi 772/49/723, fr 605/101/504, de 595/208/387, hu 781/197/584, it 623/279/344, no 172/172/0, pt 408/119/289, ru 539/158/381, es 577/166/411, sv 401/114/287. They are supersets of, or loosely related to, Snowball's lists (no, sv, it, hu, ru nearly contain them). Verdict: imported wholesale from third-party lists (Snowball and Lucene-family sources), not owner-curated; the exact per-language upstream is not recoverable from the history. The credit owed is the SMART list (Cornell, G. Salton and C. Buckley; its terms are not a standard license) and Snowball's BSD-3 notice. Safest fix is the audit's existing one: regenerate from Snowball's lists, which the build already carries.
+
+**A18, `mime.types`.** Added in `Xapiand:a3abe894e` (2019-03-25, the owner, "Load mime types from file", 109 lines, the table lifted from the old `mime_types.hh`); the only later commit, `Xapiand:b88d75fc5` (2019-05-06, owner), added `yaml`/`yml`, `ndjson`, `msgpack`. Blame at the import: 109 of 109 lines the owner's commit, so no wholesale import is visible, but the content is nginx-format with h5bp-style section comments. Measured on (type, extension) pairs (128 in ours, 84 distinct types):
+
+| Source | Pairs in source | Overlap | Ours-only |
+|---|---|---|---|
+| h5bp server-configs-nginx (MIT) | 144 | 112 | 16 |
+| nginx `conf/mime.types` (BSD-2) | 107 | 90 | 38 |
+| Apache httpd (Apache-2.0) | 1000 | 74 | 54 |
+| IANA registry (names only, no extensions) | 2380 types | 47 of 84 types | 37 types |
+
+68 of ours' 100 non-blank lines are byte-identical to an h5bp line, including the section comments and column alignment. The 16 h5bp misses are the owner's three additions plus renames and regrouping (`application/xml` atom/rdf/rss, `font/opentype`, `application/font-woff*`, `x-font-ttf`, `wmv`, `vcf`, `manifest`). Verdict: mixed, mostly derived from h5bp (MIT), itself an nginx mime.types derivative (BSD-2), with the owner's three entries on top. Credit owed: h5bp's MIT copyright line, and nginx's BSD-2 notice. IANA supplies only names, so nothing is owed; Apache's table overlaps only through shared facts.
+
+### A17 follow-up: can the original lists stay?
+
+Compared with Lucene's analysis-common resources (Apache-2.0; `ca/`, `eu/`, `hy/`, `ro/`, `tr/stopwords.txt` and `snowball/*_stop.txt`), stopwords-iso (MIT, Gene Diaz; an aggregate of about 35 web sources listed in its `CREDITS.md`, each with its own unstated terms), NLTK and Alir3z4/stop-words (CC-BY-4.0). Counts are ours / overlap with that source. Xapian's lists were not compared for these languages (the fetch was not permitted); only English was, above.
+
+| Lang | Matches | Evidence | Credit line |
+|---|---|---|---|
+| ca | Lucene `ca/stopwords.txt`, exact | 218 of 218; header says from vcl/cue.language (Apache-2.0) | Apache-2.0 notice naming vcl/cue.language and Lucene |
+| eu | Lucene `eu/` exact | 98 of 98; "example set" header, Apache-2.0 via Lucene | Lucene Apache-2.0 notice |
+| hy | Lucene `hy/` exact | 45 of 45; same | Lucene Apache-2.0 notice |
+| no | Snowball Norwegian exact (= Lucene, NLTK) | 172 of 172 | Snowball BSD-3 notice |
+| sv | Snowball Swedish exact for 114 words, plus 287 more; equals Alir3z4 (401 of 401) | the extra words come from an aggregate | Snowball BSD-3, source of the rest unrecorded |
+| ro | Lucene `ro/` (Jacques Savoy, BSD), partial | ours 282, Lucene 254, overlap 228 | Savoy BSD notice (copyright line from Lucene's header) |
+| tr | Lucene `tr/` (LUCENE-559 plus a JASIST 2008 paper list) is a subset of ours | ours 279, Lucene 209, overlap 209; 70 extra | Lucene Apache-2.0 notice; the 70 extra words have no source |
+| it, hu, ru, nl, de | Snowball is a (near) subset of ours: it 279/279, hu 197/198, ru 158/159, nl 90/101, de 208/231 | extras from an aggregate (stopwords-iso contains all of ours except de 2, it 29) | Snowball BSD-3; extras unsourced |
+| da, es, fi, fr, pt | Snowball overlaps only partly (da 50/94, es 166/308, fi 156/229, fr 101/154, pt 119/203) | stopwords-iso contains every word of ours (stopwords-iso is a superset) | no single upstream identified |
+| en | SMART, exact | see below | see below |
+
+Finding: no list is the owner's curation and none has a recorded upstream; at most 5 (ca, eu, hy, no, plus ro and tr in part) match a licensed upstream exactly or as a core. For da, es, fi, fr, pt and the extras in the others, stopwords-iso contains them, so they derive from public web lists (probably ranks.nl, the Snowball family and similar, per `CREDITS.md`), whose terms cannot be established. Those can stay only with a generic credit line that is honest about that. Cleanest: ca, eu, hy, ro, tr, no from Lucene/Snowball with their notices; da, de, es, fi, fr, hu, it, nl, pt, ru, sv regenerated from Snowball's BSD-3 lists (Lucene carries them too).
+
+SMART (`en.txt`): the web has no license text for the original. The list is credited to Gerard Salton and Chris Buckley, SMART system, Cornell, 1971; copies cite `ftp://ftp.cs.cornell.edu/pub/smart/english.stop` and carry no terms (RAKE's `SmartStoplist.txt` cites Salton 1971 and the FTP path only; R `stopwords` (MIT) and stopwords-json (Apache-2.0) bundle it under their own license without relicensing it). The FTP site did not answer, so the SMART package's README could not be read. Verdict: there is no known license with conditions, nor a grant; the practice is an attribution line only. Keep it with "SMART stop list, Salton and Buckley, Cornell University" in the notice, or swap to Snowball English (BSD-3) to remove the doubt. The owner decides.
+
 ## Actions
 
 1. **A1**: Rewrite `NOTICE` as the third-party notice file.
@@ -249,3 +300,27 @@ Build and test: a Release build (Ninja, `BUILD_TESTS=ON`, `LTO=OFF`, ccache) of 
 Not done, by instruction: A3 (waits for `sortable_serialise`'s removal), A9 (`docs/discussions` must stay byte-identical with two other copies), A17, A18, A19, A21, A26, A27. `docs/public/assets/Lenna.*` (blocker 3) is untouched on this branch; an earlier local branch `fix/license-actions` (never pushed, worktree `Xapiand-wt/license-actions`) also replaces those images with a generated sample, which this branch left out.
 
 Design vs code: the audit asks for A1 as a rewritten `NOTICE` that carries the third-party texts; the code splits it into `NOTICE` (ownership, short) and a generated `THIRD-PARTY-NOTICES` (texts), both installed. No other differences.
+
+## Ledger: license closure (quest `license-closure`)
+
+State (2026-11-16, branch `quest/xapiand/license-closure`): blocker 3, A3, A18, A19, A21, A26, the RapidJSON and Lua rows and the Xapian scan are closed. Commit hashes carry the repository: `Xapiand:`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Blocker 3 | done | `docs/public/assets/Lenna.*` are gone; `docs/public/assets/sample.{png,jpg,pdf}` come from `sample_image.py` (a generated interference pattern) and `store-api.md` uses them, with lengths and SHA-256 digests that match the files. No tracked file outside history documents names the old files (`git grep -i lenna`). |
+| A3 | done | `ARCHITECTURE.md:609-614` (the licensing note), `README.md:124-129` and `AGENTS.md:42,104` call the value encoding the MIT `Kronuz/sortable`; no tracked file outside design history and the changelog says `sortable_serialise` is GPL, and `src/sortable_serialise.*` and the Python `sortable.py` port are gone. |
+| A9 | done, owner's ruling | `docs/discussions` is the owner's own code and fully MIT: `docs/discussions/LICENSE` and its README line here, and the same two files in the personal blog copy (`Kronuz.github.io:afd643d`). The `gmendezb-pages` copy is in a work repository, outside this quest; the owner handles it. |
+| A17 | closed: kept with credits (D97) | The 18 `stopwords/*.txt` lists stay exactly as on master. `THIRD-PARTY-NOTICES` (written by `cmake/generate_third_party_notices.py`) carries one entry per source with its license text: Lucene (Apache-2.0) for `ca`, `eu`, `hy` and the base of `tr`; Jacques Savoy's BSD via Lucene for `ro`; Snowball (BSD-3) for `no` and the base of `de`, `hu`, `it`, `nl`, `ru`, `sv`; stopwords-iso (MIT) for `da`, `es`, `fi`, `fr`, `pt`; SMART (Salton and Buckley, Cornell) by attribution for `en`. Words beyond those bases have no recorded source (see "A17 follow-up"). |
+| A18 | done, D98 | `mime.types` stays the owner's 2019 file. It is mostly h5bp server-configs-nginx (MIT) lines, themselves from nginx's `mime.types` (BSD-2-Clause), plus the owner's `yaml`, `ndjson` and `msgpack` entries; `THIRD-PARTY-NOTICES` credits both with their license texts. An earlier regenerated copy was dropped. |
+| A19 | done, owner's ruling (2026-11-16): keep | `docs/public/assets/el_cerrito.png` stays as it is. The trixel overlay is the owner's (his tool drawing Xapiand's HTM code); the basemap is Google Maps under Google's terms, with "Map data ©2019 Google" kept visible in the image. It is a docs-only asset: it is not in the binary and not covered by the MIT source license. |
+| A21 | done, fixtures regenerated | The 25 phrase tables of `docs/public/assets/generator.py` are rewritten and the fantasynamegenerators.com citation is removed; the first-name, surname and trait-word lists are vocabulary and stay. The lead's ruling (delegated by the owner): the `accounts.*` fixtures are regenerated so no third-party text is left. `generator.py --personality accounts.json` rewrites the 1000 personality texts from the fixed seed `SEED`, keeping every other field and record, and `update_formats.py accounts.json` writes the `.ndjson`, `.http` and `.msgpack` copies; rerunning reproduces the bytes. The docs examples and e2e assertions that counted the old text (the text-queries grammar, simple, phrase, near, love-and-hate, default-operator and stop-words pages) carry the server's exact new numbers; examples whose query no longer matched use a word or phrase the new fixtures contain. |
+| A26 | done, owner's ruling | The package license metadata stays plain `MIT`; it is already `MIT` in `.github/workflows/release.yml`, `.github/workflows/freebsd.yml`, `Dockerfile` and `contrib/homebrew/xapiand.rb`, and the third-party notices live in `NOTICE` and `THIRD-PARTY-NOTICES`. |
+| RapidJSON's patch | done | The dependency table's RapidJSON and Lua rows above state what each carries: RapidJSON has no patch (one compile definition), Lua has `contrib/lua/xapiand-limits.patch`. |
+| Xapian scan | done | `git grep -n -E 'Xapian::|xapian/|"xapian\.h"|<xapian' -- src contrib CMakeLists.txt` matches nothing; the `no-xapian` check runs it. |
+| A19 notice | done (review F1) | `NOTICE` and `docs/src/content/docs/copyright.md` say `docs/public/assets/el_cerrito.png` is a Google Maps screenshot under Google's terms with Xapiand's trixel overlay, and not MIT; `ARCHITECTURE.md`'s licensing note no longer says every file is MIT. |
+| `utils/serialize.py` | done (review F2) | `contrib/python/xapiand-py/xapiand/utils/serialize.py` ports the routines of `src/length.{cc,h}`, which are MIT under Olly Betts' grant (`Xapiand:1691e5b2e`); it carries his copyright line and the notice generator names it with `src/length`. The file is in the source release, not in any package. |
+| A14b, Kitware | done (review F3) | `cmake/Modules/FindGTest.cmake` and `cmake/Modules/FindPackageTools.cmake` ("Based on official CMake's FindGTest.cmake") carry Kitware's BSD-3-Clause notice in their headers, and `THIRD-PARTY-NOTICES` lists it, as for A14 and A15. Build and test only. |
+| `xapiand/sortable.py` | done (review F6) | `contrib/python/xapiand-py/xapiand/sortable.py` has the owner's 2026 MIT header. |
+| `docs/discussions` manifests | done (review F7) | `docs/discussions/package.json` and `docs/discussions/worker/package.json` say `"license": "MIT"`; the other copies take the same lines when synced. |
+| Brand images | recorded (review F10) | `brand/` (`logo.svg`, the variants, `build-icons.mjs`, `logo-vs-png.png`) is the owner's own work, committed 2026-11-11 as a vector redraw measured from `docs/src/assets/logo.png`; `docs/public/img/*`, `docs/public/{favicon.*,apple-touch-icon*,footer-logo.png}` came with the docs-site migration (`Xapiand:f6299c83c`) and its brand variants (`Xapiand:bf0e44821`), the owner's Xapiand logo and cards. No third-party source is recorded for any of them. |
+| `oldtests` polygons | recorded (review F10) | `oldtests/examples/geospatial/convex_hull/{ColoradoPoly,Georgia,Utah}.txt` are state outlines as coordinates (Utah's is a five-point rectangle), added with the 2018 CMake and tests refactor (`Xapiand:86879a90d`); facts, with no source recorded. They are test inputs, not in any package. |

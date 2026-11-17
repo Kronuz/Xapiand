@@ -22,8 +22,8 @@ and stemmed and then joined with the `OR` operator to create a query.
 
 This query example will match with any document with the word "**_responsive_**"
 in the text field "**_personality_**" but will also match documents with the
-word "**_response_**" because "_responsive_" is reduced to "**_response_**" by
-the stemming algorithm.
+words "**_responsiveness_**", "**_responsible_**" and "**_responsibility_**" because they
+are all reduced to the same stem as "_responsive_" by the stemming algorithm.
 
 ```rest
 SEARCH /bank/
@@ -63,7 +63,7 @@ pm.test("Simple query size", function() {
 ```js
 pm.test("Simple query value is valid", function() {
   var jsonData = pm.response.json();
-  var expected = [20, 25, 27, 31, 37, 38, 52, 89, 106, 109];
+  var expected = [32, 39, 53, 69, 78, 91, 98, 117, 128, 135];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

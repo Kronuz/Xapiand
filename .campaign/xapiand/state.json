@@ -7073,7 +7073,62 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T23:40:20",
+          "commit": "c1f224207cedb9e8d084e8b5a82900f3dd1e8275",
+          "criteria": {
+            "A1": "261116-212229-30c98e (the e2e check); the e2e check (job 261116-203023-d1015e, at the head with the fixtures' exact doc numbers); `docs/public/assets/Lenna.jpg` is removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history documents and `.campaign/`; the store-api lengths and digests match `docs/public/assets/sample.png` (checked)",
+            "A2": "`ARCHITECTURE.md` licensing note, `README.md` license section and `AGENTS.md` carry no GPL claim; the sortable-encoding quest already landed on master, so this branch does not touch them (verified by `git grep -i gpl` on the three files, no hit)",
+            "A3": "D99 (`docs/discussions` fully MIT): `docs/discussions/LICENSE`, identical in the blog copy (Kronuz.github.io:afd643d); the work-repo copy is the owner's",
+            "A4": "[decision] D98 (the owner's `mime.types` kept, h5bp MIT and nginx BSD-2 credited) and D97 as revised (all 18 stopword lists kept as on master with one `THIRD-PARTY-NOTICES` entry per source and its license text): `mime.types`, `stopwords/`, `THIRD-PARTY-NOTICES`, `docs/status/license-audit.md` rows A17 and A18",
+            "A5": "D100 (`docs/public/assets/el_cerrito.png` kept and credited; the accounts fixtures regenerated, `docs/public/assets/generator.py` rewritten): audit ledger rows A19 and A21; e2e 261116-203023-d1015e passes on the new fixtures",
+            "A6": "D101 (package license metadata plain `MIT`): `NOTICE`, `docs/status/license-audit.md` row A26",
+            "A7": "261116-212229-d375b4 (the no-xapian check); 261116-203023-eb84bf (the no-xapian check)",
+            "A8": "`docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger",
+            "A9": "261116-212229-7bfdbe (the build-test check), 261116-212246-f088a6 (passed at a64429f304a5; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "90454dc6d533820c3cf5edf4e48b8094f3e4059b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-212229-7bfdbe",
+              "level": "light",
+              "seconds": 1284.6,
+              "state": "done",
+              "what": "license-closure check build-test at 90454dc6d533"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "90454dc6d533820c3cf5edf4e48b8094f3e4059b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-212229-30c98e",
+              "level": "light",
+              "seconds": 1105.6,
+              "state": "done",
+              "what": "license-closure check e2e at 90454dc6d533"
+            },
+            {
+              "cmd": "! git grep -n -E 'Xapian::|xapian/|\"xapian\\.h\"|<xapian' -- src contrib CMakeLists.txt",
+              "commit": "90454dc6d533820c3cf5edf4e48b8094f3e4059b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-212229-d375b4",
+              "level": "none",
+              "seconds": 0.4,
+              "state": "done",
+              "what": "license-closure check no-xapian at 90454dc6d533"
+            }
+          ],
+          "final": true,
+          "from": "bab09ce2ae6ac146d29ed42a1f11c6e01624e623",
+          "reason": "",
+          "tested": "dab5312b65656f3f1a64f74426a3d0852286e64f"
+        }
+      ],
       "lenses": [
         "security"
       ],
@@ -7082,9 +7137,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T22:50:23",
+      "updated": "2026-11-16T23:40:20",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
