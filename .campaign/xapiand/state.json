@@ -3029,7 +3029,8 @@
         "CMakeLists.txt",
         "fuzz/fuzz_decoders.cc",
         "test/transport/peers_test.cc",
-        "docs/design/rpc-lane*"
+        "docs/design/rpc-lane*",
+        "CHANGELOG.md"
       ],
       "history": [
         {
@@ -3111,7 +3112,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T20:04:54",
+      "updated": "2026-11-16T21:04:02",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
