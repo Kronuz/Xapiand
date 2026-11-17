@@ -102,3 +102,43 @@ with `campaign job submit --quest document-gate --level light --minutes 10 -- ba
   `E::encode_part` hook's fit with every layout.
 - Whether consensus's Worker meets F1's supersede rule on the replicated path is not checked; it is
   the same `turn_log.h` rule and worth a look by Detent's lead.
+
+## Round 2
+
+Commit: strata:8e9194152649479710eb051130ba2f8fcf4e4334 (`docs/design/standalone-turn-log.md`,
+revision 1)
+Verdict: APPROVE
+Date: 2026-11-16
+
+I re-checked only F1 to F6, against revision 1's D3 to D6, the test table (T1 to T12) and the
+mutant table (M-a to M-l). Every fix names a test and a mutant that fails it, so the suite and the
+mutant jobs confirm each fix once the code exists. No second review is needed.
+
+**Probe.** Job `261116-204308-773aad` at strata:8e919415 runs `run.sh` with a new `lease.cc` (P1b).
+P1 still reproduces revision 0's hazard, which T11 now keeps as a test. P1b follows revision 1's
+order: batch seq 1 (X), the checkpoint at seq 2 under the lease, then a batch at seq 3 after the
+lease is released. Recovery returns {checkpoint 2, batch 3} both when seq 3 is in a later turn and
+when it shares the checkpoint's turn, after it, as D3's sealer orders it. P2 repeats: 21 ms p50
+with one log, 42 ms from 2 to 8 logs.
+
+| ID | Status | Evidence |
+|---|---|---|
+| F1 | resolved | D5 holds the lease from the seal until the checkpoint record is staged at s + 1. Step 3 awaits `driver.durable`, not V, so it cannot wait on itself. Acks move to a watcher that needs no lease (D4). The stall is restated, and M5 reports it at p99.9. Tests: T1 with racing applies and M-g; P1b shows the order keeps the post-release batch. |
+| F2 | resolved | D6.5 runs the chore for each owed verdict and applies again. Replay flushes publish no edit and no checkpoint record until `release`. `no_space` is reported as itself. T7b; M-h and M-i. |
+| F3 | resolved | D3 takes the position, appends and sets the applied position in one critical section after stage 1. The driver seals under the same mutex. T12 adds a forced seam, plus M-j and TSan. |
+| F4 | resolved | D3 adds `command_bytes` (64 MiB, the replicated ceiling) at admission, segments of at least twice that, and a sealer budget of `segment_bytes / 2`. `encode()`'s `length_error` cannot fire on a shared turn. T8; M-l. |
+| F5 | resolved | D4: every flush on a logged index publishes only after the log is durable through the applied position. T4 adds a `refresh()` case; M-k. |
+| F6 | resolved | T1 and T2 write after each recovery and check after a second crash, so M-b fails T1. T10 refuses at runtime, so M-f fails T10. |
+
+Non-blocking notes from this round:
+
+| ID | Blocking | Kind | Finding | Fix |
+|---|---|---|---|---|
+| R1 | no | nit | D4 says every flush "first seals and then waits", but D5 flushes (step 2) before it awaits (step 3). Both are safe only because `flush()` publishes nothing: publication comes after `commit_files()` (`index.hh:1034-1045`). | Word D4 as "publishes only after the log is durable through the applied position". |
+| R2 | no | nit | Under D3 a self-assigned position is never skipped, so M-b now shows as a regressed applied position whose writes are lost at the next replay, not as a skip (D5 I1's wording). T1's second crash catches that. An assert that the applied position never moves backward would catch it at once. | Reword I1, and add the assert. |
+| R3 | no | nit | D3's sealer budget must admit a lone record past `segment_bytes / 2` (one command plus its framing), or that command never seals. "Plus framing" in the segment rule should name that bound. | State that the first record of a turn is always admitted, and give the framing bound. |
+| R4 | no | nit | The 64 MiB `invalid` limit narrows what a logged index admits against an unlogged one. It matches the replicated path, so the narrowing is the owner's to accept, not a defect. | Note it in the gate report. |
+| R5 | no | nit | D6.4 has a typo: "below X_H.index". | Fix the text. |
+
+Not run in this round: N1 to N7's folds beyond F1 to F6, the journal `7c08540` host API
+(`seal`, `durable`, `close_group`) against its code, and every platform but macOS.
