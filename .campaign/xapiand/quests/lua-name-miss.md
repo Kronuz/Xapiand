@@ -17,9 +17,16 @@ ClientError naming the script instead, and the docs say what bounds a large scri
   script and one over the byte budget (review job 261116-150120-f8089e's shape).
 - A2 [artifact] `docs/mechanisms/lua-memory.md` states that calls of a script over 16 KiB wait
   for each other with no bound but the request's cancel (review C2) and the C1 error.
+- A4 A schema never stores a name-only script: declaring one whose script is cached stores its body,
+  so writes keep running it after a restart and on every worker thread; declaring one that is not
+  cached answers a 4xx at declaration. A test covers both, plus a write through the stored schema on
+  a fresh thread (review F1), and checks the status and that the document is unchanged (F4).
 - A3 The suite passes (the `suite` check).
 
 ## Decisions
+
+- Lead: the review's F1 (a stored name-only script would 400 every write after a restart) is fixed
+  at declaration, so the schema carries the body; the owner was told 2026-11-16 (default: proceed).
 
 - Lead: an error, not a silent no-op ("errors should never pass silently"); the owner was told
   2026-11-16 and did not object.

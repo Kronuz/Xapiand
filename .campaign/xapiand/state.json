@@ -2986,8 +2986,11 @@
       "accepted": {},
       "after": [
         "detent:consensus-transport",
+        "detent:consensus-driver",
         "detent:consensus-driver"
       ],
+      "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
+      "branch": "quest/xapiand/consensus-rpc-lane",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3024,6 +3027,7 @@
         "fuzz/rpc*",
         "docs/mechanisms/rpc-lane.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
         "correctness"
@@ -3035,9 +3039,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T15:42:47"
+      "updated": "2026-11-16T19:44:34",
+      "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -4137,6 +4142,8 @@
         "phase4-gate",
         "manifest-log"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/document-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4182,6 +4189,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/document-gate",
       "landed": [],
       "lenses": [
         "durability"
@@ -4191,9 +4199,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-08T22:35:42"
+      "updated": "2026-11-16T19:44:10",
+      "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
       "accepted": {},
@@ -6735,7 +6744,8 @@
         "cmake/**",
         "contrib/**",
         "stopwords/**",
-        "mime.types"
+        "mime.types",
+        "docs/mechanisms/third-party-notices.md"
       ],
       "history": [
         {
@@ -6851,7 +6861,7 @@
       "risk": "normal",
       "status": "active",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T15:22:12",
+      "updated": "2026-11-16T19:44:18",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
@@ -7579,6 +7589,8 @@
     "lua-name-miss": {
       "accepted": {},
       "after": [],
+      "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
+      "branch": "quest/xapiand/lua-name-miss",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7592,7 +7604,9 @@
         "src/lua/**",
         "src/script*",
         "tests/test_lua*.cc",
-        "docs/mechanisms/lua*.md"
+        "docs/mechanisms/lua*.md",
+        "src/database/schema.*",
+        "tests/test_schema*.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -7601,9 +7615,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T18:57:33"
+      "updated": "2026-11-16T19:54:16",
+      "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
       "accepted": {
