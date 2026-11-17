@@ -6664,6 +6664,8 @@
     "journal-seal-repeat": {
       "accepted": {},
       "after": [],
+      "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+      "branch": "quest/xapiand/journal-seal-repeat",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6677,8 +6679,10 @@
         "include/journal/turn_driver.h",
         "test/**",
         "docs/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/journal-seal-repeat",
       "landed": [],
       "lenses": [
         "correctness"
@@ -6690,9 +6694,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T09:12:59"
+      "updated": "2026-11-17T09:38:41",
+      "worktree": "../journal-wt/xapiand/journal-seal-repeat"
     },
     "key-field": {
       "accepted": {},
