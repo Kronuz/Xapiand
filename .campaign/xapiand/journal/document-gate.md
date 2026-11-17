@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261116-211612-1ad7b7 261116-211637-83ad1f
+State: waiting on jobs 261117-020047-53b736
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -36,7 +36,7 @@ into the doc; R4 is Q5.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261116-211612-1ad7b7 (pending); M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
+| A1 | build-test 261116-211612-1ad7b7 failed core_includes only (turn_seal.hh includes journal/turn_driver.h), fixed at strata:2b8ca7a6, rerun 261117-020047-53b736; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
@@ -47,6 +47,8 @@ T12, served), `fuzz/fuzz_command.cc`, fixtures `test/fixtures/command/`. Mutant 
 strata branches `mutant/document-gate/m-j` (9ff37a0a) and `m-k` (1f827405).
 
 ## Rulings I made
+
+- Edited cmake/check_core_includes.cmake, outside the file set, at the lead's request: journal/turn_driver.h joins the allowlist (journal is already a core library).
 
 - Build launch (steps 1-3):
   - The repin also moves completion to 7731315 and task to 95798a0 (journal 7c08540's pins) and
