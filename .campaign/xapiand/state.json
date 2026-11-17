@@ -21079,8 +21079,8 @@
     "turn-seal": {
       "accepted": {
         "durability": {
-          "at": "2026-11-17T02:26:56",
-          "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+          "at": "2026-11-17T02:52:40",
+          "base": "8d0af7ae10235c13fcdebad7ded3100abde4139b",
           "blobs": {
             "CHANGELOG.md": "100644:68ba9ac4fb841675397560a3a16c971b10fd309d",
             "CMakeLists.txt": "100644:58039497d38c63015f1b1fa7948015c70c7456f1",
@@ -21097,7 +21097,7 @@
             "test/turn_seal_test.cc": "100644:0f404a482b3f4bb653906ddaa8e96c74e3ca4ffa"
           },
           "by": "review",
-          "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+          "commit": "555b69fa425621682c42bd8a52d3353a25300222",
           "criteria": "103ac4e92c0d9c8f",
           "diffs": {
             "CHANGELOG.md": "4af08f8b932d0b88",
@@ -21222,7 +21222,7 @@
       "risk": "high",
       "status": "review",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-17T02:26:56",
+      "updated": "2026-11-17T02:52:40",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
