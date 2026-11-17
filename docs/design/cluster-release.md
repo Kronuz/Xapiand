@@ -10,7 +10,8 @@ spans the cluster. All of it runs on strata's replication groups, before the for
   `.campaign/xapiand/PLAN.md`), which supersedes D9's single-node release.
 - Revision 2, 2026-11-17: answers group-core's design review at strata:491a1bdc
   (`.campaign/xapiand/reviews/group-core-design.md`, CHANGES) in D3, D4, D11, D12, D16, D18 and
-  Q10, with the review's two models extended in `cluster-release/` (section 12).
+  Q10, with the review's two models extended in `cluster-release/` (section 12); and its re-check
+  (Xapiand:edb610078, B7, B8, N10-N15) in D3, D18, Q10 and quest 5's criteria.
 - Read at: Xapiand `master` `a9cfa2cba`; the Xapian-era cluster at `5a517b052^`, the parent of
   "Delete the Xapian engine and the cluster layer" (v1.0.0-alpha.9 runs the same cluster code);
   strata `main` `9bcb142e`; consensus `main` `a95847e`; journal `main` `8f3e410`; Detent `main`
@@ -155,32 +156,62 @@ op, id, expected version, schema version, engine::Document::serialize() bytes (w
 Every voter applies it in log order: first the blobs pushed into its own `DataStorage`, whatever
 strata will answer, then the strata write carrying their locators. The push moves from prepare
 (`shard.cc:754`) to apply, so blob locators are a pure function of the log and replicas stay
-digest-equal. File effects never depend on strata's verdict: replay skips strata at or below its
-head (D16), where the verdict is no longer known, and a refused write whose bytes replay would add
-shifts every later locator in that volume (`verdict-gated` in D16's model). Followers skip schema
+digest-equal. File effects and the application state's update never depend on strata's verdict:
+replay skips strata at or below its head (D16), where the verdict is no longer known, and a
+refused write whose bytes replay would add shifts every later locator in that volume
+(`verdict-gated` and `appstate-gated` in D16's model). Followers skip schema
 resolution and term generation, as the old WAL replay did. Rejected for the release: segment
 mode (durability-modes D8, D17, D18). It costs a three-voter group an estimated 0.38× to 0.43× of
 document mode's CPU, but it ships segments at every refresh and needs the sampled rebuild. The
 release builds only the part of D17's file-set mover that install needs (D16), and segment mode
 can arrive later per index without changing the command.
 
-Apply's verdicts (strata's ten, `index.hh:88`) split in two:
+Apply's answers (strata's ten verdicts, `index.hh:88`, and a throw) split by whether a retry can
+change them:
 
-- Per replica: `flush_owed`, `drain_owed` and `map_owed` run their chore and apply again
-  (document-gate D6); `no_space` stalls that replica's apply and reports it. None is ever skipped,
-  so replicas never diverge on their environment.
-- Semantic: `version_conflict`, `schema_conflict`, `fields_conflict` and `invalid` are functions of
-  the log, so every replica refuses alike. The refusal is a committed no-op (strata moves its
-  position, `index.hh:877-880`), and the proposer's `quorum` waiter receives it (D4). `skipped`
-  occurs only in replay.
+- Retryable, per replica, position unmoved: `flush_owed`, `drain_owed` and `map_owed` run their
+  chore and apply again (document-gate D6); `no_space` stalls that replica's apply, reports it,
+  and retries when space frees; a stage-1 throw is rolled back with the position unmoved
+  (`index.hh:790-793`) and retried after the chore yields, and a third throw at one entry fences
+  the replica (`application_failed`), which repairs by install (quest 6 A3). strata 491a1bdc moves
+  the position on the allowance-path `no_space` (`index.hh:860`, `:878-880`), so its retry would
+  answer `skipped`; `strata-nospace-position` fixes that, and quest 5 lands after it
+  (`nospace-moves` in D16's model). A retry repeats only the strata write: the entry's file
+  effects ran once before the first attempt, and the application state updates after the definite
+  answer (`retry-whole`, which pushes the blobs again on one replica, fails). The capture's mark
+  (D16 step 1) is an entry like any other, so a capture, and a close, waits out `no_space` too.
+- Definite, the same on every replica, position moved: `accepted`, `version_conflict`,
+  `schema_conflict`, `fields_conflict` and `invalid`. Each is a function of the log, `invalid`'s
+  size caps included because a group's replicas share strata's `buffered_docs_cap` and
+  `lane_chunks_cap` (`index.hh:534-540`; the group sets them, never a replica). A refusal is a
+  committed no-op, and the proposer's `quorum` waiter receives it (D4). The cap `invalid` returns
+  before the move at 491a1bdc (`index.hh:822-824`); `strata-nospace-position` A4 makes it move,
+  and until then the mark covers it. `skipped` occurs only in replay.
+
+A replica stalled on `no_space` applies nothing past that entry. When it is the leader, every
+`quorum` answer of its group waits with it, since each completes at its proposer's apply (D4),
+while the followers apply on. After one election timeout of stall, with a follower applied past
+the entry, the leader transfers leadership to it (`transfer_leadership`); its own waiting answers
+end at their deadline as unknown outcomes (D8), and health reports the stall. A lone voter has no
+one to hand to: its writes wait for space and time out the same way.
 
 The leader prepares from its applied state plus its own unapplied proposals, and prepares nothing
 before it has applied through its term's first entry (Core's NoOp, `core.h:1146`): the ready
 point. Then a merge's expectations match apply in every schedule of `verdict_model.py`, so no log
-entry is wasted; when they miss anyway (a check the predictor does not model), the leader prepares
-the merge again from the state it now has and proposes it once more. A client's own condition
-(`if_version`) is checked at prepare, answering 409 there as master does, and answers 409 from
-apply if it still fails there.
+entry is wasted. A client's own condition (`if_version`) is checked at prepare, answering 409
+there as master does, and answers 409 from apply if it still fails there; `invalid` answers 400.
+Neither is submitted again.
+
+When a merge's expectations miss anyway (a check the predictor does not model, or a leader change
+before its entry applied), apply answers `version_conflict`, `fields_conflict` or
+`schema_conflict` against expectations the leader chose, and the request is submitted again
+through the write path (D8) from the original request, not the prepared command: the leader
+prepares it from the state it now has, and a proposer deposed meanwhile forwards it once to the
+leader, which then owns the answer. A request gets at most three placements; after the third
+refusal it answers a retryable 503 with `Retry-After` (Q10), so a merge is never answered 409.
+`verdict_model.py` (two voters with their own applied state) reaches the deposed proposer's
+forward, and under every prepare rule answers every request within the bound with no false
+acknowledgement; with the ready point and pending versions it submits nothing twice.
 
 **D4. Levels.**
 
@@ -497,9 +528,10 @@ write. T12 is measured on this path and stated even if it loses (quest 10 A6). R
 **D18. Apply leaves the loop** (async-drivers X10). The Sink applies nothing inline: it posts each
 `Committed` range to the index's chore, under the index's turn, and returns. Core holds that one
 range until the chore calls `applied` (a `post_call` back to the loop), so a slow apply delays
-only its own group. On the chore, in order per entry: file effects, the strata write, the
-application state, then the group's applied position (published after strata's write is
-visible), then the `quorum` waiter of that placement (D4). Everything that must see a boundary
+only its own group. On the chore, in order per entry: file effects, the strata write (a
+retryable answer repeats only this, D3), the application state, then the group's applied
+position (published after strata's write is visible), then the `quorum` waiter of that placement
+(D4). Everything that must see a boundary
 between two entries runs on the same chore and needs no lock: the capture (D16 step 1), close's
 drain (D11), and recovery's replay. `read_applied` runs on the reader's thread against strata's
 visible state once the published position reaches the read index, so it never sees an entry's
@@ -611,21 +643,29 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   windows between strata's commit and publication and between publication and the retired files'
   unlink included, and a second crash at every point of recovery. The run covers a staging file
   consumed above the bundle, an aborted upload, an upload open across a checkpoint, a cancelled
-  checkpoint, a strata commit outside the group and a refused write, with the application's
+  checkpoint, a strata commit outside the group, a refused write, a checkpoint right after chunks
+  or NoOps, and a write whose first strata attempt answers `no_space`, with the application's
   counter, current volume and open uploads in the bundle's application state. Oracle: every
   acknowledged command is in the recovered log, and the digest (documents with versions resolved
   through their locators, the file set, the application state) equals a replay from empty of the
   recovered log's committed commands; reads open only at P_H and match that replay through it.
   Mutants, each `--fails-without`: replay the file set from P_H; unlink at apply; publish before
-  the files sync; capture inside an entry's apply; file effects gated on strata's verdict (the
-  `crash` gate check, jobs). A2: three and five voters in process: every `quorum`-acknowledged
-  entry survives any one crash (two at five), and digests, file sets included, are equal after
-  every schedule; seeds and crash points stated (a job). A3: `ack=none` completes at
+  the files sync; capture inside an entry's apply; file effects gated on strata's verdict; the
+  application state gated on it; skip the capture's mark (`no-mark`); commit strata after
+  publication; a retry that re-runs the whole entry (the `crash` gate check, jobs). A2: three and
+  five voters in process: every `quorum`-acknowledged entry survives any one crash (two at five),
+  and digests, file sets included, are equal after every schedule; seeds and crash points stated;
+  one replica's storage budget refuses at allowance growth and then frees, and digests stay equal,
+  a mutant that re-runs the whole entry on retry failing it (a job). A3: `ack=none` completes at
   `ProposalPlaced` and `quorum` when the proposer applies its placement, with apply's verdict;
-  with the followers' appends held, `none` completes and `quorum` does not; two merges to one id
-  and a conditional write with an election between, every schedule: no acknowledged success
-  refused, no merge answered 409, the conditional write's answer matches its effect, and no
-  re-proposal; mutants that acknowledge at commit and that prepare before the ready point fail
+  with the followers' appends held, `none` completes and `quorum` does not; two merges to one id,
+  a conditional write and an invalid document with an election between, every schedule: no
+  acknowledged success refused, no merge answered 409, the conditional write's answer matches its
+  effect, the invalid one answered 400 and never submitted again, and no second submission; with a
+  predictor that misses the fields mark, every request answered within three placements (503
+  after the third), a deposed proposer's refused merge forwarded once and answered by the leader;
+  a leader stalled on `no_space` hands leadership to a follower applied past it; mutants that
+  acknowledge at commit, that prepare before the ready point and that lift the bound fail
   (tests). A4: `read_applied` after `Driver::read` on a leader partitioned away and deposed never
   returns a state older than a committed write; mutants that skip the probe and that publish the
   applied position before strata's write is visible fail (simulation). A5: once a group closes,
@@ -910,31 +950,39 @@ and the root five shard entries per index (D5).
 quest 15's defaults and R10's statement.
 
 **Q10. What a `quorum` write's answer means when apply refuses it** (D3, D4; group-core's design
-review B4). A committed command can be refused at apply: a version, schema or fields conflict, or
-an invalid document. `verdict_model.py` runs every schedule of two merges and a conditional write
-to one id with an election between (360 schedules) under each rule.
+review B4, B8). A committed command can be refused at apply: a version, schema or fields
+conflict, or an invalid document. `verdict_model.py` runs two voters, each with its own applied
+state, through every schedule of two merges, a conditional write (and under (b) an invalid
+document) to one id, a commit, each voter's apply and an election: 2,520 schedules under (a),
+20,160 under (b), for each prepare rule.
 
 - (a) Total apply plus the leader's ready point: `quorum` completes at commit, and a refusal of a
   committed command fences the replica (`application_failed`). Safe only while prepare predicts
   every check apply makes: with the ready point and pending versions it acknowledges no refused
-  write (0 of 360), but a predictor that misses the fields mark acknowledges a refused write in
-  259 schedules and fences every replica in them, a shard outage from a prediction gap.
+  write (0 of 2,520), but a predictor that misses the fields mark acknowledges a refused write in
+  1,813 schedules and fences every replica in them, a shard outage from a prediction gap.
 - (b) The answer carries apply's verdict: `quorum` completes when the proposer applies its
-  placement, a refusal is a committed no-op on every replica, the leader prepares a refused merge
-  again, and a client's own failed condition answers 409. Safe and transparent under every
-  prepare rule (0 false acknowledgements, 0 fences, 0 merges answered 409); the ready point and
-  pending versions only remove re-proposals (552 under the applied rule, 0 with both).
+  placement, a refusal is a committed no-op on every replica, a refused merge is submitted again
+  (at most three placements, D3), a client's own failed condition answers 409 and an invalid
+  document 400. Under every prepare rule: 0 false acknowledgements, 0 fences, 0 merges answered
+  409, every request answered within the bound, the deposed proposer's forward reached (9,296
+  forwards under the fields-mark gap). The ready point and pending versions remove the extra
+  submissions (35,296 under the applied rule, 0 with both) and the answers after the bound (2,152
+  schedules under the applied rule, 1,680 under the gap, 0 with both).
 
 What a client sees, under (b): a 2xx at `quorum` means applied, never only committed, so a
 get-by-id on the leader right after it reads the write; a 409 carries strata's current version,
 answered at prepare as on master, or after commit when prepare's prediction missed; a
-merge (no `if_version`) is never answered 409; `ack=none` is answered at placement, and a refusal
+merge (no `if_version`) is never answered 409, and after its third refused placement answers a
+retryable 503 with `Retry-After` (the alternative, a 409 there, breaks that rule for a conflict the
+client did not ask about); `ack=none` is answered at placement, and a refusal
 after that is silent, as its loss on a leader crash is. Each `quorum` answer also waits for the
 leader's apply of its entry, which master's PUT already does before it answers (the strata write
 is in the request). Under (a), the same, except that a missed prediction answers 2xx for a write
 that never took effect and then fences the shard.
 
-*Recommendation: (b)*, with the ready point and pending versions kept for zero re-proposals. It
+*Recommendation: (b)*, with the ready point and pending versions kept for zero re-submissions,
+and the retryable 503 after the bound. It
 is the lead's default for quest 5; it changes the reply only against this design's revision 1, not
 against master. Deferring blocks quest 5's A3 and quest 10's HTTP semantics.
 
@@ -1032,3 +1080,15 @@ extended to these rules; each exits 0 only when the rules pass and every broken 
 | N7 | Apply leaves the loop, with its interleavings | D18; quest 5 A10 |
 | N8 | A2 runs five voters with seeds and crash points stated; the journal pin is the lead's | Quest 5 A2 |
 | N9 | The bundle drops the manifest CRC32C; install's pin carries it | D16 |
+
+The re-check at Xapiand:edb610078:
+
+| ID | Fix | Where |
+|---|---|---|
+| B7 | `strata-nospace-position` keeps the position on every retryable answer, and quest 5 lands after it; a retry repeats only the strata write; a stage-1 throw retries, the third fences; D3 lists the position-moving answers | D3, D18; quest 5 A1, A2 |
+| B8 | Re-submission from the original request for leader-chosen expectations only, at most three placements, a deposed proposer forwards once, a retryable 503 after the bound (owner, Q10); the model has per-voter state | D3, Q10; quest 5 A3 |
+| N10 | `no-mark` and commit-after-publication join A1's mutants, with a checkpoint after chunks | Quest 5 A1 |
+| N11 | The mark is an entry: its retryable answers retry, so a capture and a close wait out `no_space` | D3 |
+| N12 | `invalid` is definite; replicas share strata's caps; the cap path's position is `strata-nospace-position` A4's | D3 |
+| N13 | The application state's update is verdict-independent (`appstate-gated` fails) | D3 |
+| N15 | A stalled leader holds its group's `quorum` answers; it hands leadership to a follower applied past the entry after one election timeout | D3; quest 5 A3 |

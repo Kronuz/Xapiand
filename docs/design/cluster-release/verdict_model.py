@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
 """What a `quorum` acknowledgement says when apply can refuse a committed command (cluster-release D3).
 
-From the group-core design review's model (`.campaign/xapiand/reviews/group-core-design.md`, B4),
-extended to compare the two answers. The leader prepares each command with the expectations apply
-checks: the id's version and strata's fields mark (`expected_fields`, index.hh:79-80; a mismatch is
-`fields_conflict`, index.hh:88). w1 and w2 are merges whose expectations the leader chose; w3 is a
-client's conditional write (`if_version=0`), which the leader checks at prepare and refuses there
-with 409 when its own prediction already mismatches. Every interleaving of the three prepares, a
-commit, an apply and an election runs under each pair of an acknowledgement rule and a prepare rule.
+From the group-core design review's model (`.campaign/xapiand/reviews/group-core-design.md`, B4,
+B8), with per-node state: two voters N1 and N2 share one committed log and each applies it at its
+own pace. The leader prepares each command with the expectations apply checks: the id's version
+and strata's fields mark (`expected_fields`, index.hh:79-80; a mismatch is `fields_conflict`). w1
+and w2 are merges whose expectations the leader chose; w3 is a client's conditional write
+(`if_version=0`), checked at prepare; w4 (B only) is a document apply finds `invalid`. Every
+interleaving of the prepares (at the current leader), a commit, each node's apply and an election
+runs under each pair of an acknowledgement rule and a prepare rule.
 
 Acknowledgement rules:
-  A  `quorum` completes at commit; apply is total, so a refusal of a committed command fences the
-     replica (application_failed), on every replica alike
-  B  `quorum` completes when the proposer applies its placement (index, term), with apply's
-     verdict; a refusal is a committed no-op on every replica. A refusal of an expectation the
-     leader chose is re-prepared and proposed again; one of the client's own answers 409
+  A  `quorum` completes at commit; a refusal of a committed command fences the replicas
+  B  `quorum` completes when the request's proposer applies its placement, with apply's verdict.
+     A refusal of an expectation the leader chose (`version_conflict`, `fields_conflict`) is
+     re-submitted through the write path: prepared again at the leader, or forwarded once to it
+     when the proposer was deposed, which then owns the answer. At most ATTEMPTS placements per
+     request; after the last, a retryable 503. `invalid` answers 400 and a failed client
+     condition 409; neither is re-submitted
 Prepare rules:
-  applied           expectations from the applied state
-  pending           the applied state plus the leader's own unapplied proposals
-  pending+start     as pending, and nothing is prepared before the leader applied through its term's
-                    first entry (Core's NoOp, core.h:1146): the ready point
-  versions+start    as pending+start for versions, but the fields mark from the applied state (a
+  applied           expectations from the leader's applied state
+  pending           plus the leader's own unapplied proposals of its term
+  pending+start     as pending, and nothing is prepared before the leader applied through its
+                    term's first entry (Core's NoOp, core.h:1146): the ready point
+  versions+start    as pending+start for versions, the fields mark from the applied state (a
                     predictor that misses one of apply's checks)
-A pair is safe when no acknowledged success was refused and no replica fenced. It is also
-transparent when no merge (w1, w2) is answered 409, since master never answers one a conflict.
-Exit status 0 when A is safe only under pending+start, and B is safe and transparent under all four.
+Checks: no acknowledged success was refused; replicas agree on every verdict; A fences nothing;
+under B every request is answered, no merge is answered 409, `invalid` is never re-submitted, no
+request exceeds ATTEMPTS, and pending+start makes no re-submission. Exit status 0 when A is safe
+only under pending+start and B passes every check under all four, the deposed-proposer forward
+reached.
 """
 from __future__ import annotations
 
@@ -32,118 +37,146 @@ import itertools
 import sys
 
 RULES = ("applied", "pending", "pending+start", "versions+start")
+ATTEMPTS = 3
+NODES = ("N1", "N2")
 
 
-def run(ack: str, rule: str, order: tuple[str, ...]) -> dict[str, int]:
-    log: list[tuple] = []  # (client, expected version, expected fields); NoOp is ("noop",)
-    state = {"applied": 0, "version": 0, "fields": 0}
-    own: list[int] = []  # log indexes the current leader proposed
-    term_start = 0
-    committed = 0
-    effects: dict[int, bool] = {}  # log index -> accepted
-    replies: dict[str, str] = {}  # client -> "ok" or "409"
-    placed: dict[str, int] = {}  # client -> its latest log index
-    stats = {"false_ack": 0, "fence": 0, "merge_409": 0, "retries": 0}
-    fenced = False
+class Run:
+    def __init__(self, ack: str, rule: str) -> None:
+        self.ack, self.rule = ack, rule
+        self.log: list[tuple] = []  # ("noop",) or (client, expected version, expected fields)
+        self.commit = 0
+        self.node = {n: {"applied": 0, "version": 0, "fields": 0} for n in NODES}
+        self.leader, self.term_start, self.own = "N1", 0, []
+        self.req: dict[str, dict] = {}  # client -> proposer, placement, attempts, reply
+        self.effects: dict[int, str] = {}  # index -> verdict, the same on every node
+        self.s = {"false_ack": 0, "fence": 0, "merge_409": 0, "unanswered": 0, "diverge": 0,
+                  "invalid_resubmit": 0, "over_bound": 0, "resubmits": 0, "forwards": 0, "merge_503": 0}
 
-    def predict() -> tuple[int, int]:
-        pend = [i for i in own if i > state["applied"]]
-        v, f = state["version"], state["fields"]
-        if rule != "applied":
+    def predict(self, n: str) -> tuple[int, int]:
+        st = self.node[n]
+        pend = [i for i in self.own if i > st["applied"] and self.log[i - 1][0] != "w4"]
+        v, f = st["version"], st["fields"]
+        if self.rule != "applied":
             v += len(pend)
-            if rule != "versions+start":
+            if self.rule != "versions+start":
                 f += len(pend)
         return v, f
 
-    def prepare(client: str) -> None:
-        if rule.endswith("+start") and state["applied"] < term_start:
-            apply_through(term_start)  # the ready point
-        v, f = predict()
+    def prepare(self, client: str) -> None:
+        n = self.leader
+        if self.rule.endswith("+start") and self.node[n]["applied"] < self.term_start:
+            self.commit = max(self.commit, self.term_start)  # the NoOp commits, and all before it
+            self.apply(n, self.term_start)
+        v, f = self.predict(n)
+        r = self.req.setdefault(client, {"attempts": 0, "reply": None})
         if client == "w3" and v != 0:
-            replies[client] = "409"  # the client's condition fails at prepare, as on master
+            r["reply"] = "409"  # the client's condition fails at prepare, as on master
             return
-        log.append((client, 0 if client == "w3" else v, f))
-        own.append(len(log))
-        placed[client] = len(log)
+        self.log.append((client, 0 if client == "w3" else v, f))
+        self.own.append(len(self.log))
+        r.update(proposer=n, index=len(self.log), attempts=r["attempts"] + 1)
 
-    def apply_through(n: int) -> None:
-        nonlocal fenced
-        while state["applied"] < n:
-            i = state["applied"] + 1
-            entry = log[i - 1]
-            state["applied"] = i
-            if entry[0] == "noop":
+    def apply(self, n: str, through: int | None = None) -> None:
+        st = self.node[n]
+        through = self.commit if through is None else through
+        while st["applied"] < through:
+            i = st["applied"] + 1
+            st["applied"] = i
+            e = self.log[i - 1]
+            if e[0] == "noop":
                 continue
-            client, ev, ef = entry
-            ok = ev == state["version"] and ef == state["fields"]
-            effects[i] = ok
-            if ok:
-                state["version"] += 1
-                state["fields"] += 1  # each write declares a new field
-            if ack == "A" and not ok:
-                fenced = True
-            if ack == "B" and placed.get(client) == i and client not in replies:
-                if ok:
-                    replies[client] = "ok"
-                elif client == "w3":
-                    replies[client] = "409"
-                else:  # the leader's own expectation was stale: prepare again from the state now
-                    stats["retries"] += 1
-                    prepare(client)
+            client, ev, ef = e
+            if client == "w4":
+                verdict = "invalid"
+            elif ev == st["version"] and ef == st["fields"]:
+                verdict = "accepted"
+                st["version"] += 1
+                st["fields"] += 1  # each write declares a new field
+            else:
+                verdict = "conflict"
+            if self.effects.setdefault(i, verdict) != verdict:
+                self.s["diverge"] += 1
+            if self.ack == "A":
+                self.s["fence"] |= verdict != "accepted"
+                continue
+            r = self.req[client]
+            if r.get("index") != i or r.get("proposer") != n or r["reply"]:
+                continue
+            if verdict == "accepted":
+                r["reply"] = "ok"
+            elif verdict == "invalid":
+                r["reply"] = "400"
+            elif client == "w3":
+                r["reply"] = "409"
+            elif r["attempts"] >= ATTEMPTS:
+                r["reply"] = "503"
+            else:
+                self.s["resubmits"] += 1
+                self.s["forwards"] += n != self.leader
+                self.prepare(client)
 
-    for step in order:
+    def step(self, step: str) -> None:
         if step.startswith("prepare"):
-            prepare(step.split(":")[1])
+            self.prepare(step.split(":")[1])
         elif step == "commit":
-            committed = len(log)
-            if ack == "A":
-                for i in range(1, committed + 1):
-                    if log[i - 1][0] != "noop" and placed.get(log[i - 1][0]) == i:
-                        replies.setdefault(log[i - 1][0], "ok")
-        elif step == "apply":
-            apply_through(committed)
+            self.commit = len(self.log)
+            if self.ack == "A":
+                for r in self.req.values():
+                    if r.get("index", 1 << 30) <= self.commit:
+                        r["reply"] = r["reply"] or "ok"
+        elif step.startswith("apply"):
+            self.apply(step.split(":")[1])
         elif step == "elect":
-            log.append(("noop",))  # the new leader holds every entry so far and appends its NoOp
-            term_start = len(log)
-            own = []
-    for _ in range(4):  # drain: commit and apply everything, re-proposals included
-        apply_through(len(log))
-    if ack == "A":
-        for c, i in placed.items():
-            replies.setdefault(c, "ok")
-    for c, r in replies.items():
-        if r == "ok" and not effects.get(placed.get(c, 0), False):
-            stats["false_ack"] += 1
-        if r == "409" and c != "w3":
-            stats["merge_409"] += 1
-    stats["fence"] = int(fenced)
-    return stats
+            self.leader = "N2" if self.leader == "N1" else "N1"
+            self.log.append(("noop",))  # the new leader holds every entry so far
+            self.term_start, self.own = len(self.log), []
+
+    def finish(self) -> dict[str, int]:
+        for _ in range(4 * ATTEMPTS):
+            self.step("commit")
+            for n in NODES:
+                self.apply(n)
+        for c, r in self.req.items():
+            if r["reply"] is None:
+                self.s["unanswered"] += 1
+            if r["reply"] == "ok" and self.effects.get(r["index"]) != "accepted":
+                self.s["false_ack"] += 1
+            if c in ("w1", "w2") and r["reply"] == "409":
+                self.s["merge_409"] += 1
+            if c in ("w1", "w2") and r["reply"] == "503":
+                self.s["merge_503"] += 1
+            if c == "w4" and r["attempts"] > 1:
+                self.s["invalid_resubmit"] += 1
+            if r["attempts"] > ATTEMPTS:
+                self.s["over_bound"] += 1
+        return self.s
 
 
 def main() -> int:
-    steps = ["prepare:w1", "prepare:w2", "prepare:w3", "commit", "apply", "elect"]
-    orders = [o for o in itertools.permutations(steps) if o.index("prepare:w1") < o.index("prepare:w2")]
-    ok = True
+    ok, forwards = True, 0
     for ack in ("A", "B"):
+        writes = ["prepare:w1", "prepare:w2", "prepare:w3"] + (["prepare:w4"] if ack == "B" else [])
+        steps = writes + ["commit", "apply:N1", "apply:N2", "elect"]
+        orders = [o for o in itertools.permutations(steps) if o.index("prepare:w1") < o.index("prepare:w2")]
         for rule in RULES:
-            totals = {"false_ack": 0, "fence": 0, "merge_409": 0, "retries": 0}
-            bad = []
+            tot: dict[str, int] = {}
             for order in orders:
-                s = run(ack, rule, order)
-                for k in totals:
-                    totals[k] += bool(s[k]) if k != "retries" else s[k]
-                if s["false_ack"] or s["fence"] or s["merge_409"]:
-                    bad.append(" ".join(order))
-            safe = totals["false_ack"] == 0 and totals["fence"] == 0
-            print(f"{ack} {rule}: of {len(orders)} schedules, {totals['false_ack']} acknowledge a refused write, "
-                  f"{totals['fence']} fence the replicas, {totals['merge_409']} answer a merge 409; "
-                  f"{totals['retries']} re-proposals")
-            for o in bad[:2]:
-                print(f"  {o}")
+                r = Run(ack, rule)
+                for st in order:
+                    r.step(st)
+                for k, v in r.finish().items():
+                    tot[k] = tot.get(k, 0) + (v if k in ("resubmits", "forwards") else bool(v))
+            print(f"{ack} {rule}: {len(orders)} schedules; " + ", ".join(f"{k} {v}" for k, v in tot.items()))
             if ack == "A":
-                ok &= safe == (rule == "pending+start")
+                ok &= (tot["false_ack"] == 0 and tot["fence"] == 0) == (rule == "pending+start")
             else:
-                ok &= safe and totals["merge_409"] == 0
+                bad = ("false_ack", "fence", "merge_409", "unanswered", "diverge", "invalid_resubmit", "over_bound")
+                ok &= all(tot[k] == 0 for k in bad)
+                if rule == "pending+start":
+                    ok &= tot["resubmits"] == 0 and tot["merge_503"] == 0
+                forwards += tot["forwards"]
+    ok &= forwards > 0
     print("RESULT", "as expected" if ok else "UNEXPECTED")
     return 0 if ok else 1
 

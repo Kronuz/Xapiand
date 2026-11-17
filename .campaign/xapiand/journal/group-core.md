@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review
+State: working
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,108 +9,83 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Design revision answering `reviews/group-core-design.md` (CHANGES, B1-B6): Xapiand
-`docs/design/cluster-release.md` revision 2 (D3, D4, D11, D12, D16, new D18, new Q10, quest 5's
-criteria, section 12's group-core table) on this branch, with the review's models extended in
-`docs/design/cluster-release/{bundle_model,verdict_model}.py`.
+Round 2 of the design (the last): the re-check at Xapiand:edb610078 (CHANGES on B7, B8; N10-N15)
+answered in `docs/design/cluster-release.md` D3, D18, Q10, quest 5's criteria and section 12, with
+both models extended (`docs/design/cluster-release/`).
 
 ## Next
 
-1. Lead: rewrite the quest's A1, A3, A5, A6, A7 and add A10 from "Proposed criteria" below; fold
-   the contract delta; route Q10 to the owner; relaunch the design review on revision 2.
-2. Build starts after the design review accepts (none of `include/strata/group/**` is written).
+1. Lead: fold the criteria deltas below into the quest file; Q10 (with the 503 after the bound) to
+   the owner; anything still open after this round goes to the owner.
+2. Build starts after `strata-nospace-position` and the design review accept.
 
 ## Blocked on
 
-- Owner, through the lead: Q10 (design section 9), what a `quorum` write's answer means when apply
-  refuses it. Recommendation (b): the answer carries apply's verdict. Client-visible against
-  revision 1 (not against master): a `quorum` 2xx now means applied, not only committed, and a
-  conditional write can be answered 409 after its entry committed; merges are never answered 409.
-  Lead default for quest 5: (b).
-- Lead: the contract `strata:checkpoint-bundle` changes (quest file "Contracts"): P_b and term, the
-  file set, an opaque application-state section, and no manifest CRC32C (N9; install's pin carries
-  it). D16's table has the bytes.
-- Lead: strata `docs/REPLICATION.md` is outside this quest's file set. Proposed text for
-  "Checkpoints and repair" lines 90-92 and 99-100: "A checkpoint bundle binds the log to strata by
-  position: strata's durable head is at or past the bundle's position P_b when the bundle
-  publishes. Strata owns its segment files and their retention; the journal never copies them."
-  and "Recovery opens strata at its durable head P_H, fails closed if P_b > P_H, and replays the
-  log above P_b; strata skips entries at or below P_H, and the application's file effects re-run."
-- Lead: `Host::close_group`'s missing sequence guard (review N1) belongs to turn-seal or
-  `detent:consensus-quiescence`; the journal pin for the suite (N8) is the lead's.
+- Owner, through the lead: Q10. Recommendation (b), the `quorum` answer carries apply's verdict,
+  plus: a refused merge gets at most three placements, then a retryable 503 with `Retry-After`
+  (keeps "a merge is never answered 409"). Client-visible against revision 1, not master: a
+  `quorum` 2xx means applied; a conditional write can get its 409 after commit; a merge can get a
+  503 after three refused placements (0 schedules with the ready point and pending versions).
+- Lead: strata `docs/REPLICATION.md` text (outside the file set), unchanged from round 1:
+  "A checkpoint bundle binds the log to strata by position: strata's durable head is at or past
+  the bundle's position P_b when the bundle publishes." and "Recovery opens strata at its durable
+  head P_H, fails closed if P_b > P_H, and replays the log above P_b; strata skips entries at or
+  below P_H, and the application's file effects re-run."
 
-## Proposed criteria (quest file numbering)
+## Proposed criteria deltas (against the quest file at Xapiand master)
 
-- A1 (B1, B2, B3, B6) A lone voter over strata's faultfs (unsynced sectors and directory entries
-  lost) for strata, the file set and the journal host, with `HeldCompletion` choosing the cut:
-  create, propose, apply, checkpoint and recover at every crash point, the windows between
-  strata's commit and publication and between publication and the retired files' unlink included,
-  and a second crash at every point of recovery. The run covers a staging file consumed above the
-  bundle, an aborted upload, an upload open across a checkpoint, a cancelled checkpoint, a strata
-  commit outside the group and a refused write, with the application's counter, current volume
-  and open uploads in the bundle's application state. Oracle: every acknowledged command is in the
-  recovered log, and the digest (documents with versions resolved through their locators, the file
-  set, the application state) equals a replay from empty of the recovered log's committed
-  commands; reads open only at P_H and match that replay through it. Mutants, each
-  `--fails-without`: replay the file set from P_H; unlink at apply; publish before the files sync;
-  capture inside an entry's apply; file effects gated on strata's verdict (the `crash` gate check,
-  jobs)
-- A3 (B4, N3) `ack=none` completes at `ProposalPlaced` and `quorum` when the proposer applies its
-  placement, with apply's verdict; with the followers' appends held, `none` completes and `quorum`
-  does not; two merges to one id and a conditional write with an election between, every
-  schedule: no acknowledged success refused, no merge answered 409, the conditional write's answer
-  matches its effect, and no re-proposal; mutants that acknowledge at commit and that prepare
-  before the ready point fail (tests)
-- A4 (N4) adds: a mutant that publishes the applied position before strata's write is visible fails
-- A5 (N1) Once a group closes, `TurnLog::read` finds none of its records, and a reopen recovers
-  every acknowledged entry from the bundle; a close racing a `Committed` range ends with a bundle
-  covering applied; a mutant that closes without a covering checkpoint fails (`--fails-without`, a
-  test)
-- A6 (B5) An idle open group holds no thread, timer, frame or descriptor of its own beyond
-  consensus's row and its open strata index (2 descriptors, about 5.4 KB of heap); memory,
-  descriptors and idle CPU per group stated at 10^4 groups for open idle, quiescent and closed
-  groups, with a close's cost (its checkpoint's syncs); a closed group holds zero descriptors.
-  strata's catalog owns the group's and index's lifetime: a catalog close of an idle group
-  publishes a bundle covering applied (an `exclusive` job and a test)
-- A7 (N2) `detent:consensus-quiescence` A5's consumer check: a reopened lone voter's term record
-  and its first write share one turn, the barrier count of that write equal to a write to an open
-  group (a test counting barriers, run after that quest lands; its A5 job is the evidence beside it)
-- A10 (X10, N7) Apply leaves the loop: with one group's apply chore held, another group on the
-  same loop proposes, commits and applies; capture against apply, close against a `Committed`
-  range and `read_applied` against apply, each with its scheduling points enumerated, under TSan
-  (tests)
+- A1 (N10, B7, N13): the run also covers a checkpoint right after chunks or NoOps and a write
+  whose first strata attempt answers `no_space`; the mutants add: the application state gated on
+  strata's verdict; skip the capture's mark (`no-mark`); commit strata after publication; a retry
+  that re-runs the whole entry
+- A2 (B7): adds "one replica's storage budget refuses at allowance growth and then frees, and
+  digests stay equal; a mutant that re-runs the whole entry on retry fails it; seeds and crash
+  points stated"
+- A3 (B8, N15): replace "two merges to one id and a conditional write with an election between,
+  every schedule: ... and no re-proposal" with "two merges to one id, a conditional write and an
+  invalid document with an election between, every schedule: no acknowledged success refused, no
+  merge answered 409, the conditional write's answer matches its effect, the invalid one answered
+  400 and never submitted again, and no second submission; with a predictor that misses the
+  fields mark, every request answered within three placements (503 after the third), a deposed
+  proposer's refused merge forwarded once and answered by the leader; a leader stalled on
+  `no_space` hands leadership to a follower applied past it"; mutants add "that lift the bound"
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1-A9 | none yet: design only, nothing built |
-| Models | `bundle_model.py` job 261117-024523-dd3b4d and `verdict_model.py` job 261117-024526-a92827, both exit 0 at Xapiand:faf31a50635b (`none` level) |
+| Models, round 1 | `bundle_model.py` job 261117-024523-dd3b4d and `verdict_model.py` job 261117-024526-a92827, both exit 0 at Xapiand:faf31a50635b |
+| Models, round 2 | pending |
 
 ## Result
 
-Design revision 2 of Xapiand `docs/design/cluster-release.md` on `quest/xapiand/group-core`:
+Round 2 (re-check B7, B8, N10-N15), on top of round 1's revision 2 (B1-B6):
 
-- B1: two positions (file set from P_b, strata skips at or below P_H), fail closed if P_b > P_H,
-  capture on the apply chore, sync and strata commit before publication, reads wait for P_H (D16).
-  New beyond the review: file effects run whatever strata answers (D3), and the capture moves
-  strata's position to P_b when the last entries had no strata operation (D16 step 1).
-- B2: retire at apply, unlink after a bundle without the file publishes (D12, D16 step 5).
-- B3: the bundle's opaque application-state section (D16's table).
-- B4: (b), the `quorum` answer carries apply's verdict, with the ready point and pending versions
-  (D3, D4, Q10).
-- B5/N2/N7: catalog owns the lifetime (D11); A7 as quiescence's consumer check; D18 off-loop apply.
+- B7: retryable answers (`no_space`, owed verdicts, a stage-1 throw) keep strata's position
+  (`strata-nospace-position`, which quest 5 lands after) and retry the strata write alone; the
+  file effects ran once and the application state updates after the definite answer; a third
+  throw at one entry fences the replica. Definite, position-moving answers: `accepted`,
+  `version_conflict`, `schema_conflict`, `fields_conflict`, `invalid` (N12: replicas share
+  strata's caps). D3, D18.
+- B8: re-submission from the original request for leader-chosen expectations only, at most three
+  placements, a deposed proposer forwards once to the leader, then a retryable 503. D3, Q10.
+- N11: the mark retries like an entry, so a capture and a close wait out `no_space`. N13: the
+  application state is verdict-independent. N15: a stalled leader holds its group's `quorum`
+  answers and hands leadership to a follower applied past the entry after one election timeout.
 
-Models (`docs/design/cluster-release/`):
+Models (`docs/design/cluster-release/`), jobs below:
 
-- `bundle_model.py`: `fixed` and `sync-late` fail 0 of 1,098 crash points each (7 scripts, power
-  loss and process crash, a second crash before and halfway through replay); every broken variant
-  fails some: a1-literal 56, eager-delete 11, counter-from-dir 26, publish-first 26,
-  commit-after-publish 22, capture-mid 170, verdict-gated 8, read-early 52, no-mark 72.
-- `verdict_model.py`, 360 schedules: (a) at commit acknowledges a refused write in 348 (applied
-  prepare), 156 (pending), 0 (pending plus ready point), 259 (a predictor missing the fields
-  mark), fencing every replica in each; (b) with the verdict: 0 false acknowledgements, 0 fences,
-  0 merges answered 409 under all four, re-proposals 552, 121, 0, 547.
+- `bundle_model.py`: 9 scripts; `fixed` and `sync-late` fail 0 of 1,416 crash points each; every
+  broken variant fails some: a1-literal 80, eager-delete 13, counter-from-dir 26, publish-first
+  34, commit-after-publish 30, capture-mid 212, verdict-gated 8, read-early 74, no-mark 86,
+  nospace-moves 36, retry-whole 40, appstate-gated 74.
+- `verdict_model.py`, two voters with their own applied state: (a) acknowledges a refused write
+  and fences in 2,442 / 1,092 / 0 / 1,813 of 2,520 schedules (applied, pending, ready point, the
+  fields-mark gap); (b) over 20,160 schedules under all four rules: 0 false acknowledgements, 0
+  fences, 0 merges answered 409, 0 unanswered, 0 divergent verdicts, `invalid` never
+  re-submitted, no request past three placements; re-submissions 35,296 / 6,328 / 0 / 24,040,
+  deposed-proposer forwards 9,128 / 0 / 0 / 9,296, merges answered 503 2,152 / 112 / 0 / 1,680.
 
 ## Rulings I made
 
@@ -119,3 +94,7 @@ Models (`docs/design/cluster-release/`):
 - Models live in `docs/design/cluster-release/` (as `sortable-encoding/sizes.py` does), not in the
   reviewer's scratch, so the review reruns them at this commit.
 - Added the `docs/design` paths to this worktree's sparse checkout to edit the design.
+- Three placements per request: the third covers a leader change plus one predictor miss; with
+  the ready point and pending versions the model never needs a second.
+- A stage-1 throw retries twice, the third fences: a transient allocation failure clears, a
+  damaged segment repairs by install.

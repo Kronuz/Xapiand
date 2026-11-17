@@ -7,15 +7,19 @@ its own barrier), so recovery has every entry above the latest published bundle.
 after every atomic step of each script, under power loss (unsynced bytes and directory entries are
 lost) and process crash (nothing written is lost), recovers, replays to the log's end, and compares
 the logical digest (documents with versions, resolved through their blob locators; the live files;
-the volume counter) with an uncrashed run of the same log. Reads open once applied reaches strata's
+the volume counter, the application state) with an uncrashed run of the same log, which also
+stands for another replica: its retries repeat only strata's write, as a replica that never hit
+`no_space` would. Reads open once applied reaches strata's
 head P_H; at that point every document strata holds must resolve as in an uncrashed run through P_H.
 
 Rules of `fixed` (D16): the bundle is captured on the apply chore between two entries (position P_b,
 file lengths, the application state section); files and the directory are synced and strata commits
 before the bundle publishes; a retired file is unlinked only after a bundle that omits it publishes;
-file effects run whatever strata answers, before strata's write; recovery opens strata at its head
-P_H, fails closed if P_b > P_H, truncates and deletes to the bundle, and replays from P_b while
-strata skips at or below P_H.
+file effects run whatever strata answers, before strata's write, and the application state updates
+after it whatever it answered; a retryable answer (`no_space`) leaves strata's position and is
+retried with strata's write alone; the capture moves strata's position to P_b; recovery opens
+strata at its head P_H, fails closed if P_b > P_H, truncates and deletes to the bundle, and replays
+from P_b while strata skips at or below P_H.
 
 Variants that must fail somewhere (each breaks one rule):
   a1-literal          replay the application from P_H instead of P_b
@@ -27,6 +31,9 @@ Variants that must fail somewhere (each breaks one rule):
   verdict-gated       file effects run only when strata accepts or skips the write
   read-early          reads open at P_b instead of P_H
   no-mark             the capture leaves strata's position behind P_b after entries strata never saw
+  nospace-moves       a no_space moves strata's position, so the retry is skipped (strata 491a1bdc, B7)
+  retry-whole         a retry re-runs the whole entry, its file effects included
+  appstate-gated      the application state updates only when strata does not answer `skipped`
 `fixed` and `sync-late` (files synced after strata's commit, still before publication) must fail
 nowhere, with a second crash inside recovery (before replay, and halfway through it).
 Exit status 0 when every variant behaves as stated.
@@ -58,11 +65,17 @@ SCRIPTS = {
     # A write strata refuses (expected version 0, the id exists) between a checkpoint and a strata commit.
     "refused": [("put", "a", b"AAAA"), ("ckpt",), ("put", "a", b"RRRR", 0), ("put", "b", b"BBBB"), ("scommit",),
                 ("put", "c", b"CCCC")],
+    # A write whose first strata attempt answers no_space on this replica, retried once space frees.
+    "nospace": [("put", "a", b"AAAA"), ("ckpt",), ("put", "b", b"BBBB", None, "nospace"), ("scommit",),
+                ("put", "c", b"CCCC", None, "nospace"), ("ckpt",), ("put", "d", b"DDDD")],
+    # A checkpoint right after entries strata never saw (chunks), for the capture's mark.
+    "mark": [("put", "a", b"AAAA"), ("ckpt",), ("chunk", "y", 0, b"ZZ"), ("ckpt",), ("chunk", "y", 2, b"WW"),
+             ("final", "y", "doc2")],
 }
 
 PASS = ("fixed", "sync-late")
 FAIL = ("a1-literal", "eager-delete", "counter-from-dir", "publish-first", "commit-after-publish", "capture-mid",
-        "verdict-gated", "read-early", "no-mark")
+        "verdict-gated", "read-early", "no-mark", "nospace-moves", "retry-whole", "appstate-gated")
 SEMANTIC = ("eager-delete", "verdict-gated")  # variants whose uncrashed run differs from fixed's
 
 
@@ -128,6 +141,8 @@ class Node:
         self.uploads: dict[str, str] = {}
         self.retired: set[str] = set()
         self.mid = False  # capture-mid: a checkpoint waits for the next put's file write
+        self.nputs = 0  # application state: puts applied, which rotates the volume every third
+        self.spaced: set[int] = set()  # entries whose first strata attempt answered no_space
 
     # --- strata ------------------------------------------------------------------------------
     def strata_verdict(self, pos: int, key: str, expected: int | None) -> str:
@@ -178,7 +193,23 @@ class Node:
                 if self.mid:
                     self.mid = False
                     yield from self.checkpoint()
-                self.strata_apply(pos, op[1], ("blob", self.cur, off, len(op[2])), expected)
+                value = ("blob", self.cur, off, len(op[2]))
+                if "nospace" in op[4:] and pos not in self.spaced:
+                    # A retryable refusal (no_space, an owed verdict, a stage-1 throw): the position
+                    # stays unless the variant reproduces strata 491a1bdc's no_space path (B7).
+                    self.spaced.add(pos)
+                    if self.variant == "nospace-moves":
+                        self.strata_applied = pos
+                    yield
+                    if self.variant == "retry-whole":
+                        yield from self.apply(pos, op)
+                        return
+                v = self.strata_apply(pos, op[1], value, expected)
+                # The application state after the strata write (D18), whatever strata answered (N13).
+                if self.variant != "appstate-gated" or v != "skipped":
+                    self.nputs += 1
+                    if self.nputs % 3 == 0:
+                        self.cur = None  # rotation at an entry the log decides (D12)
         elif kind == "rotate":
             self.cur = None
         elif kind == "upload":
@@ -220,7 +251,8 @@ class Node:
         if self.variant != "no-mark":
             self.strata_applied = max(self.strata_applied, self.applied)
         bundle = {"pos": self.applied, "fs": {n: len(self.disk.data[n]) for n in live},
-                  "app": {"counter": self.counter, "cur": self.cur, "uploads": dict(self.uploads)}}
+                  "app": {"counter": self.counter, "cur": self.cur, "uploads": dict(self.uploads),
+                          "nputs": self.nputs}}
         yield
         if self.variant not in ("publish-first", "sync-late"):
             yield from self.sync_files(live)
@@ -268,7 +300,7 @@ class Node:
         p_h, docs, versions = self.head
         self.docs, self.versions = copy.deepcopy(docs), dict(versions)
         self.strata_applied = p_h
-        b = self.bundle or {"pos": 0, "fs": {}, "app": {"counter": 0, "cur": None, "uploads": {}}}
+        b = self.bundle or {"pos": 0, "fs": {}, "app": {"counter": 0, "cur": None, "uploads": {}, "nputs": 0}}
         if b["pos"] > p_h:
             raise Failed(f"fail closed: P_b {b['pos']} > P_H {p_h}")
         for name, length in b["fs"].items():
@@ -286,6 +318,7 @@ class Node:
         self.retired, self.mid = set(), False
         app = b["app"]
         self.counter, self.cur, self.uploads = app["counter"], app["cur"], dict(app["uploads"])
+        self.nputs, self.spaced = app["nputs"], set()
         if self.variant == "counter-from-dir":
             vols = [int(n.split("-")[1]) for n in self.disk.data if n.startswith("vol-")]
             self.counter = max(vols) + 1 if vols else 0
@@ -324,7 +357,7 @@ class Node:
         live |= {v[1] for v in self.docs.values() if v[0] == "blob"}
         live |= {n for n in self.disk.data if n.startswith("stage-") and n not in self.retired}
         files = tuple(sorted((n, bytes(self.disk.data.get(n, b"<gone>"))) for n in live))
-        return self.reads(), files, self.counter
+        return self.reads(), files, self.counter, self.nputs
 
 
 def oracle(variant: str, log: list[tuple]) -> Node:
