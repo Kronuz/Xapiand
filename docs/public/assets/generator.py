@@ -25,6 +25,7 @@ from __future__ import absolute_import, unicode_literals
 
 import json
 import random
+import sys
 from collections import OrderedDict
 
 from faker import Faker
@@ -76,7 +77,7 @@ class Personality(BaseProvider):
     lastnames = ["Adams", "Allen", "Anderson", "Andrews", "Armstrong", "Atkinson", "Austin", "Bailey", "Baker", "Ball", "Barker", "Barnes", "Barrett", "Bates", "Baxter", "Bell", "Bennett", "Berry", "Black", "Booth", "Bradley", "Brooks", "Brown", "Burke", "Burns", "Burton", "Butler", "Byrne", "Campbell", "Carr", "Carter", "Chambers", "Chapman", "Clark", "Clarke", "Cole", "Collins", "Cook", "Cooke", "Cooper", "Cox", "Cunningham", "Davidson", "Davies", "Davis", "Dawson", "Day", "Dean", "Dixon", "Doyle", "Duncan", "Edwards", "Elliott", "Ellis", "Evans", "Fisher", "Fletcher", "Foster", "Fox", "Francis", "Fraser", "Gallagher", "Gardner", "George", "Gibson", "Gill", "Gordon", "Graham", "Grant", "Gray", "Green", "Griffiths", "Hall", "Hamilton", "Harper", "Harris", "Harrison", "Hart", "Harvey", "Hawkins", "Hayes", "Henderson", "Hill", "Holland", "Holmes", "Hopkins", "Houghton", "Howard", "Hudson", "Hughes", "Hunt", "Hunter", "Hussain", "Jackson", "James", "Jenkins", "John", "Johnson", "Johnston", "Jones", "Jordan", "Kaur", "Kelly", "Kennedy", "Khan", "King", "Knight", "Lane", "Lawrence", "Lawson", "Lee", "Lewis", "Lloyd", "Lowe", "Macdonald", "Marsh", "Marshall", "Martin", "Mason", "Matthews", "May", "Mccarthy", "Mcdonald", "Miller", "Mills", "Mitchell", "Moore", "Morgan", "Morris", "Moss", "Murphy", "Murray", "Newman", "Nicholson", "Owen", "Palmer", "Parker", "Parry", "Patel", "Pearce", "Pearson", "Perry", "Phillips", "Poole", "Porter", "Powell", "Price", "Read", "Rees", "Reid", "Reynolds", "Richards", "Richardson", "Riley", "Roberts", "Robertson", "Robinson", "Rogers", "Rose", "Ross", "Russell", "Ryan", "Saunders", "Scott", "Sharp", "Shaw", "Simpson", "Smith", "Spencer", "Stevens", "Stewart", "Stone", "Sutton", "Taylor", "Thomas", "Thompson", "Thomson", "Turner", "Walker", "Wallace", "Walsh", "Ward", "Watson", "Watts", "Webb", "Wells", "West", "White", "Wilkinson", "Williams", "Williamson", "Willis", "Wilson", "Wood", "Woods", "Wright", "Young"]
 
     def personality(self, first_name=None, last_name=None, gender=None):
-        personality_type = self.random_element({'positive': 0.75, 'negative': 0.25})
+        personality_type = self.random_element(OrderedDict((('positive', 0.75), ('negative', 0.25))))
         if personality_type == 'positive':
             return self.positive_personality(first_name=first_name, last_name=last_name, gender=gender)
         else:
@@ -355,10 +356,35 @@ STYLE_HAIRSTYLE = {
 }
 
 
+SEED = 20261116
+
+
+def refresh_personalities(path):
+    """Rewrites every personality text of accounts.json in place (same records,
+    names and fields), from the fixed SEED, so the output is reproducible."""
+    fake = Faker()
+    fake.add_provider(Personality)
+    random.seed(SEED)
+    Faker.seed(SEED)
+    with open(path) as f:
+        docs = json.load(f, object_pairs_hook=OrderedDict)
+    for x in docs:
+        gender = 'female' if x.get('gender', x.get('#gender')) in ('F', 'female') else 'male'
+        x['personality']['_value'] = fake.personality(
+            first_name=x['name']['firstName'], last_name=x['name']['lastName'], gender=gender)
+    with open(path, 'w') as f:
+        json.dump(docs, f, indent=2, separators=(', ', ': '))
+
+
 def main():
+    if sys.argv[1:2] == ['--personality']:
+        refresh_personalities(sys.argv[2])
+        return
     fake = Faker()
     fake.add_provider(Personality)
     fake.add_provider(Fruit)
+    random.seed(SEED)
+    Faker.seed(SEED)
 
     with open('accounts.json') as f:
         docs = json.load(f, object_pairs_hook=OrderedDict)
