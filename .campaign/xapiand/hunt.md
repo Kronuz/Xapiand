@@ -181,3 +181,8 @@ quest starts (name it) or is dropped with a reason.
 - N3 journal: `covers` is `record_sequence_` by construction on the Journal path, so the supersede guard can't fire there; bench/fuzz/placement pass `sequence - 1` and never exercise a refusal. Add a refusal case to the fuzz target.
 - N4 journal: sealers can starve while staged records fill every turn (unlikely at 64 MiB segments). Bound it or document it.
 - N5 journal: a sealer calling `commit()` from inside itself is not refused.
+
+## group-core design review follow-ups (2026-11-17)
+
+- journal `Host::close_group` (host.h:321-328) forgets every record after the sequence it is given without checking it is the group's last; the turn-seal supersede guard covers only `TurnLog::append`. Route to consensus-quiescence or a journal fix (tell Detent).
+- At rf = 1, group-core's `ack=none` and `ack=quorum` wait for the same barrier (unlike document-gate's `ack=none`); quest 10's A4 (Q14, journal at `none` at least as fast as the WAL's async default) likely loses on single-client latency. Decide with turn-log-parity's Q3 work.
