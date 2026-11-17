@@ -1,40 +1,35 @@
 # p2-intersection: journal
 
-State: working
+State: waiting on jobs 261117-025847-5389cc 261117-025850-78b1d9 261117-025857-03282d 261117-025904-c44dfb 261117-025910-5aa1df 261117-025917-919ac8 261117-025924-b146ca 261117-025930-78ee6d 261117-030019-277d60 261117-030032-f81a57 and CI run 44070056329
 Quest: .campaign/xapiand/quests/p2-intersection.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Code at prospect:5227e00 (quest branch pushed): P2 bits 1+2 applied to include/prospect/reader.hh with no switch (patch's reader.hh hunks only; galloping and block filter left out; `count_below` removed as unused). Tests test/intersection_test.cc, mutants test/intersection_mutants.py (7 mutants, one job each).
 
 ## Next
 
-1. <step>
+1. Read the jobs: build-test 261117-025847-5389cc; mutant jobs (each passes when the mutant is caught); A2 261117-030019-277d60; A3 261117-030032-f81a57; CI run 44070056329 (`gh run view`).
+2. Fill the Evidence rows, state the A3 gain and A/A spread in Result, then set ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261117-025847-5389cc (ctest `intersection`); mutants 0-6 as --fails-without jobs 261117-025850-78b1d9, -025857-03282d, -025904-c44dfb, -025910-5aa1df, -025917-919ac8, -025924-b146ca, -025930-78ee6d |
+| A2 | job 261117-030019-277d60 (`~/.scratch/p2-intersection/parity.sh`: dump counted and uncounted vs main's binary eef601d, verify, over the 962 gate queries, track-p's 1M index) |
+| A3 | job 261117-030032-f81a57 (`~/.scratch/p2-intersection/ab.sh`: exclusive, 7 rounds, A/A = copy of main, driver track-p's classes_ab.py) |
+| A4 | CI run 44070056329 on prospect:5227e00 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Pending the jobs.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The A/B driver bench/quick/classes_ab.py is on track-p, not in this branch or file set; the job runs track-p's copy by path, and the main binary and 1M index are track-p's scratch (`.scratch/bin/main`, built from eef601d, same sha as its A/A copy).
+- Removed `count_below` (no caller left); one mechanism.
