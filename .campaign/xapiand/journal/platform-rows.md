@@ -36,6 +36,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
+| A3 | manual: the lead checked both runs at 26d4a14f6: all 14 rows pass on arm64 and FreeBSD; earlier failures were fixed upstream (reactor:2ef28dc, system:563880a, lua-memory-bound) |
+| A2 | `docs/dev/platforms.md`: "43983942361" |
+| A1 | `docs/dev/freebsd.md`: "Run 43983942535" |
 | <A1> | <from `campaign brief`> |
 
 ## Result
