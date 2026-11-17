@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: waiting on jobs 261116-191254-7eda99 261116-191255-64e1c6 261116-191255-aaf381 and the A9 install job; next: the e2e failures give the exact doc counts the regenerated fixtures moved; set them, no loosening
+State: waiting on jobs 261116-203022-cfa948 261116-203023-d1015e 261116-203023-eb84bf and the A9 install job; all 16 e2e disagreements were the regenerated fixtures' text, set to the server's exact values
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,7 @@ license); they stay as the owner's test data under the lead's ruling, and the le
 
 | Criterion | Evidence |
 |---|---|
-| A1 | the e2e check (jobs 261116-152727-4477fa); `docs/public/assets/Lenna.jpg` is removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history documents and `.campaign/`, no code, harness or doc example; the store-api lengths and digests match `docs/public/assets/sample.png` (checked); example sizes corrected |
+| A1 | the e2e check (job 261116-203023-d1015e, at the head with the fixtures' exact doc numbers); `docs/public/assets/Lenna.jpg` is removed in `Xapiand:4ecda589a`; `git grep -i lenna` matches only history documents and `.campaign/`; the store-api lengths and digests match `docs/public/assets/sample.png` (checked) |
 | A2 | `ARCHITECTURE.md` licensing note, `README.md` license section and `AGENTS.md` carry no GPL claim; the sortable-encoding quest already landed on master, so this branch does not touch them (verified by `git grep -i gpl` on the three files, no hit) |
 | A3 | [decision] owner's ruling 2026-11-16: `docs/discussions` is fully MIT; `docs/discussions/LICENSE` and `docs/discussions/README.md` here, identical in the blog copy (Kronuz.github.io:afd643d, `cmp` of both files equal) |
 | A4 | [decision] D98 (the owner's `mime.types` kept, h5bp MIT and nginx BSD-2 credited) and D97 as revised (all 18 stopword lists kept as on master with one `THIRD-PARTY-NOTICES` entry per source and its license text): `mime.types`, `stopwords/`, `THIRD-PARTY-NOTICES`, `docs/status/license-audit.md` rows A17 and A18 |
@@ -35,7 +35,7 @@ license); they stay as the owner's test data under the lead's ruling, and the le
 | A6 | [decision] the owner's ruling: plain `MIT` metadata (ledger row A26); `NOTICE` carries the notices |
 | A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
-| A9 | the build-test check (job 261116-191254-7eda99) and the DESTDIR install job after it (notice files, mime.types, stopwords staged) |
+| A9 | the build-test check (job 261116-203022-cfa948) and the DESTDIR install job after it (notice files, mime.types, stopwords staged) |
 
 ## Result
 
@@ -61,3 +61,4 @@ discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-not
 + Fixtures ruling (lead, delegated by the owner): the accounts fixtures are regenerated with the rewritten `generator.py` so no third-party text remains. I regenerate only the personality text (`generator.py --personality`, fixed `SEED`; same 1000 records, names and fields), because a full regeneration would change every name, id and coordinate the docs examples cite. Docs and e2e numbers that depended on the text are set to the exact new values from a local docs e2e run (no assertion loosened).
 + D97 reopened (lead, owner): restored `stopwords/` to master's 18 lists, removed the Snowball stopword section from `cmake/generate_third_party_notices.py` and `THIRD-PARTY-NOTICES`, and reverted the `far` wording in the stop-words and phrase pages. The earlier Snowball entry above is superseded. A17 stays open until the provenance check reports. Stop-word e2e counts are unchanged from master (they are still the old values; fixtures regeneration may move them).
 + D97 revised (lead, 5093d680c): the 18 lists stay as on master; `THIRD-PARTY-NOTICES` gets Lucene (Apache-2.0, with the full text from `prospect-src/LICENSES`), Savoy BSD (text from Lucene's stemmer headers), Snowball BSD-3, stopwords-iso MIT and the SMART attribution; audit A17 closed. Stop-word e2e counts stay at master's. I will not kill processes by pattern again (my earlier `pkill -f e2e_capture.sh` was machine-wide).
++ Fixture numbers: the 16 failing e2e assertions (text-queries grammar x5, simple, phrase x4, near x3, love-and-hate, default-operator, stop-words) were all the regenerated personality text; stopwords and mime.types are master's. I probed a local node with the fixtures (my own PID, killed by it) and set each number and id list to the server's exact output, no loosening. Examples whose words vanished changed query: `adventurous creative` replaces `ambitious adventurous` (the grammar and near pages), the phrase `these come alongside a habit of` replaces `these days are few and far between` on the phrase page, and the simple-query prose names the stem family (responsiveness, responsible, responsibility). `exploration.md`'s sample document starts with the new text.
