@@ -9,15 +9,25 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+A1 (P2), performance assignment, code in prospect worktree `prospect-wt/xapiand/track-p` (branch
+quest/xapiand/track-p). Setup on the Intel i9-9980HK host: 1M gate corpus
+(`strata-wt/index-size/.scratch/corpus-1000000.json`), 962 gate queries split per class by
+`bench/quick/classes_ab.py split` into `.scratch/q/`; Lucene 10.4 and Tantivy 0.26 single-thread
+engines copied into `.scratch/engines/` and indexed at `.scratch/idx-{lucene,tantivy}`; prospect main
+built at `build-rel` (-march=native, the harness's flags). PISA is not installed on this host.
 
 ## Next
 
-1. <step>
+1. Baseline: `classes_ab.py serve` prospect main vs Lucene vs Tantivy on the intersection classes,
+   exclusive job, 5 rounds.
+2. Profile intersection classes (`sample`); experiments behind a switch: bitset rank directory,
+   galloping across blocks, SIMD count_below / block intersection.
+3. Interleaved A/B with A/A (`classes_ab.py bench`), exclusive, >= 5 rounds; verify + dump parity.
+4. `docs/perf/p2-intersection-simd.md` with the four-axis table.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
