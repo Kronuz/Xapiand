@@ -7579,6 +7579,8 @@
     "lua-name-miss": {
       "accepted": {},
       "after": [],
+      "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
+      "branch": "quest/xapiand/lua-name-miss",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7601,9 +7603,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T18:57:33"
+      "updated": "2026-11-16T18:57:38",
+      "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
       "accepted": {
