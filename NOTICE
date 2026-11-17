@@ -11,6 +11,16 @@ from are fetched from github.com/Kronuz at the pins in CMakeLists.txt.
 Third-party components bundled in the binary and the packages, with their
 licenses and copyright notices, are listed in THIRD-PARTY-NOTICES.
 
+Modified and configured third-party code
+----------------------------------------
+
+Lua 5.4.7 (MIT, Copyright (C) 1994-2024 Lua.org, PUC-Rio) is built with
+contrib/lua/xapiand-limits.patch, which adds resource-accounting calls to its
+sources; the patch is MIT like the rest of Xapiand. RapidJSON (MIT, Copyright
+(C) 2015 THL A29 Limited, a Tencent company, and Milo Yip) is used unmodified;
+the build only sets its default parse flags. Their license texts are in
+THIRD-PARTY-NOTICES.
+
 Elasticsearch
 -------------
 

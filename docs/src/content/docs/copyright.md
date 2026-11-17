@@ -15,6 +15,15 @@ licenses and copyright notices, are listed in `THIRD-PARTY-NOTICES`. Every
 package installs `LICENSE`, `NOTICE` and `THIRD-PARTY-NOTICES` into
 `share/doc/xapiand`.
 
+### Modified and configured third-party code
+
+_Lua_ 5.4.7 (MIT, Copyright &copy; 1994-2024 Lua.org, PUC-Rio) is built with
+`contrib/lua/xapiand-limits.patch`, which adds resource-accounting calls to its
+sources; the patch is MIT like the rest of Xapiand. _RapidJSON_ (MIT, Copyright
+&copy; 2015 THL A29 Limited, a Tencent company, and Milo Yip) is used
+unmodified; the build only sets its default parse flags. Their license texts are
+in `THIRD-PARTY-NOTICES`.
+
 ### Elasticsearch
 
 The Python client in `contrib/python/xapiand-py` is a fork of _elasticsearch-py_,

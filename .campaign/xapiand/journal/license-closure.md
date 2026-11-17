@@ -34,11 +34,7 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 4. A5 generator.py fixtures: tables are rewritten in new words; the `accounts.*` fixtures keep the phrases they
    were generated with. Decide whether to regenerate them (changes every account's text and the docs examples
    built on it); recommendation: keep. (`el_cerrito.png` is decided: see Rulings.)
-5. A6 package metadata (`.github/workflows/release.yml:181,247`, `freebsd.yml:98`, `Dockerfile:65`,
-   `contrib/homebrew/xapiand.rb:40`; none in my file set): keep `MIT`, or the SPDX expression
-   `MIT AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND Zlib AND Apache-2.0 AND Unicode-3.0` (Homebrew:
-   `all_of`). Recommendation: the expression for deb, rpm and Homebrew; Docker label keeps MIT plus the notice
-   files. Needs a lead edit outside this quest's files.
+5. (Decided, see Rulings.) A6: nothing left for this quest.
 
 ## Evidence
 
@@ -49,7 +45,7 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 | A3 | [decision] owner's ruling 2026-11-16: `docs/discussions` is fully MIT; `docs/discussions/LICENSE` and `docs/discussions/README.md` here, identical in the blog copy (Kronuz.github.io:afd643d, `cmp` of both files equal) |
 | A4 | [decision] Blocked on 2 and 3 (owner); `mime.types` regenerated, stopword comparison in `docs/status/license-audit.md` |
 | A5 | [decision] owner's ruling 2026-11-16 on `docs/public/assets/el_cerrito.png`: keep as is (ledger row A19 in `docs/status/license-audit.md`); `docs/public/assets/generator.py` tables rewritten, fixtures pending (Blocked on 4) |
-| A6 | [decision] Blocked on 5 (owner) |
+| A6 | [decision] owner's ruling 2026-11-16: package license metadata stays plain `MIT`; the audited metadata already says MIT in `.github/workflows/release.yml` (two places), `.github/workflows/freebsd.yml`, `Dockerfile` and `contrib/homebrew/xapiand.rb`, so no packaging edit; third-party notices in `NOTICE` (new section on Lua's patch and RapidJSON) and `THIRD-PARTY-NOTICES` |
 | A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
 | A9 | the build-test check (job 261116-152727-9c07ec) and install job 261116-152739-cb18f2 |
@@ -71,3 +67,4 @@ discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-not
 + store-api example sizes updated; the offsets in that illustrative JSON are left as they were.
 + Owner's ruling (2026-11-16, via the lead): `el_cerrito.png` is kept unchanged. The trixel overlay is the owner's (his tool, Xapiand's HTM code); the basemap is Google Maps under Google's terms with "Map data ©2019 Google" visible; docs-only asset, outside the binary and the MIT source license. An earlier ruling to redraw it was reversed before any redraw work was committed.
 + Owner's ruling (2026-11-16, via the lead): `docs/discussions` is the owner's own code and fully MIT. The lead added the same LICENSE and README to the blog copy (Kronuz.github.io:afd643d). The `gmendezb-pages` copy is in a work repository, outside this quest; the owner handles it.
++ Owner's ruling (2026-11-16, via the lead): A6 package license metadata is plain `MIT`; third-party notices (Lua's patch, RapidJSON, the rest) live in the root `NOTICE`. The metadata is already MIT in every package file, so nothing changed there; `NOTICE` and `docs/src/content/docs/copyright.md` gained a short "Modified and configured third-party code" section. I did not edit `docs/status/license-audit.md` for this (another contributor writes it); its A26 ledger row still says the owner decides, to update when that contributor reports.
