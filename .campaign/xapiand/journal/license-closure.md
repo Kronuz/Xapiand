@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: ready for review (master merged at 0ae4f966d; checks reused from c0f8d23c5f41, passed: build-test cfa948, e2e d1015e, no-xapian eb84bf, install 03b690)
+State: ready for review (fixes for review CHANGES F1-F3, F5-F7, F10 at the pushed head; jobs: build-test 261116-212229-7bfdbe, e2e 261116-212229-30c98e, no-xapian 261116-212229-d375b4, regen, install)
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
