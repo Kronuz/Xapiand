@@ -17194,19 +17194,59 @@
         "harness/restore_stall_*",
         "docs/perf/restore-stall.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T00:57:33",
+          "commit": "195f43359306eeecafd8d75fe53b569ab6af318f",
+          "criteria": {
+            "A1": "261116-210404-041813 (passed at 5959edc933b1; only merges from main since), 261116-210407-7db50a (passed at 5959edc933b1; only merges from main since), 261116-210418-1113ac (passed at 5959edc933b1; only merges from main since)",
+            "A2": "261116-210404-041813 (passed at 5959edc933b1; only merges from main since), 261116-210407-7db50a (passed at 5959edc933b1; only merges from main since)",
+            "A3": "261116-210401-f0ed04 (passed at 5959edc933b1; only merges from main since); fails without: 261116-153503-8232b1, 261116-153509-f2b0ec, 261116-163130-1875e5, 261116-163130-006d68, 261116-173647-493966, 261116-173649-1899c9",
+            "A4": "docs/perf/restore-stall.md, \"Fix: the results in one buffer\" and \"Fix, round 2: the 8 ms left\" (with the exclusive table)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "3198212335487034c809f3c97eeaa608d55bfa3b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-210410-fb14c1",
+              "level": "light",
+              "seconds": 1860.5,
+              "state": "done",
+              "what": "restore-free-off-loop check build-test at 319821233548"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "3198212335487034c809f3c97eeaa608d55bfa3b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-210410-820eb0",
+              "level": "light",
+              "seconds": 764.5,
+              "state": "done",
+              "what": "restore-free-off-loop check e2e at 319821233548"
+            }
+          ],
+          "final": true,
+          "from": "a8a30e1998963f00ed5a99112a934084380802fa",
+          "reason": "",
+          "tested": "d11b948fa7b0237c538dab0c6db90f7e15acdc70"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T22:51:08",
-      "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
+      "updated": "2026-11-17T00:58:37",
+      "worktree": ""
     },
     "restore-mixed-sign-integers": {
       "accepted": {},
