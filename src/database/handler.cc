@@ -2993,6 +2993,9 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 			co_await checkpoint();
 		}
 	}
+	if (db_handler.budget != nullptr) {
+		db_handler.budget->rearm_light(STREAM_SLICES);   // the takes' slices are not the apply's: it starts light
+	}
 	co_await apply_run();   // the batch's last run applies before the next batch is read
 }
 

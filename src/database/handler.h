@@ -364,6 +364,8 @@ class DocIndexer {
 	std::vector<std::pair<size_t, size_t>> _at;
 
 public:
+	// The light slices a body chunk gets for its apply, after its objects are taken (D82).
+	static constexpr unsigned STREAM_SLICES = 4;
 	static inline DocIndexerSeams seams;
 	static inline DocIndexerStats stats;   // every RESTORE's, summed; tests reset it
 	// `chores` runs the prepares (the RESTORE's group); `budget` is the request's time slice (null: the work runs
