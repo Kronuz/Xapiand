@@ -13,7 +13,9 @@ closes the three gaps those choices leave against RocksDB and the other engines,
    readers (the design's option 3, or better if a design finds it), at no cost to the gate rows.
 2. Q4: one damaged log block no longer fails indexes whose checkpoint already covers their last
    record; the open reports a possible loss only where one exists (option 2, with the catalog).
-3. Q5: a logged index admits what an unlogged one admits; a transaction over the replicated
+3. Group commit: concurrent writers on one log reach RocksDB's ops/s and p50 (a writer arriving
+   during a barrier no longer waits a whole extra barrier), on one log and on one log per core.
+4. Q5: a logged index admits what an unlogged one admits; a transaction over the replicated
    path's 64 MiB command limit is logged by a direct checkpoint or a chunked command, with its
    stall or cost measured.
 
@@ -31,6 +33,11 @@ closes the three gaps those choices leave against RocksDB and the other engines,
   causes to other indexes on the loop stated (strict jobs)
 - A4 A RocksDB comparison row for each gap (read-your-writes latency, open after damage, a 256 MiB
   transaction) in `docs/perf/`, at par or better, or the honest gap with its cause
+- A6 Group commit at par: with K = 2, 4, 8 concurrent writers on one index's sync rows, ops/s and
+  p50/p99 at par with RocksDB or better (document-gate measured K=4 at 99 against 121-144 ops/s,
+  p50 40 ms against 21 ms, job 261117-034940-b2b9c3; a writer arriving during a barrier waits a
+  whole next barrier); and the same with one log per core against one shared log, so D104's
+  per-core choice is confirmed or revised on numbers (exclusive jobs at both commits)
 - A5 [artifact] `docs/design/standalone-turn-log.md` records Q3-Q5 as closed, with the mechanisms
 
 ## Decisions
