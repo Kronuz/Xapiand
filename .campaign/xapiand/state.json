@@ -20315,25 +20315,69 @@
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
           "level": "light",
-          "minutes": 30,
+          "minutes": 40,
           "name": "suite"
         }
       ],
       "consumes": [],
       "files": [
+        "src/server/search_views.cc",
+        "src/server/lanes*",
+        "src/loop*",
+        "src/scheduler*",
+        "tests/test_loop_yield.cc",
         "harness/lua_bounds.py",
+        "docs/design/loop-scheduling.md",
         "docs/dev/t10-flood-limit.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T23:45:00",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 40,
+                "name": "suite"
+              }
+            ]
+          ],
+          "lenses": [
+            [],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "rescoped from a harness limit to the scheduling fix the exploration found; risk rises to normal",
+          "risk": [
+            "low",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": []
+        }
+      ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
-      "risk": "low",
+      "risk": "normal",
       "status": "active",
-      "title": "T10's flood p99 limit scales with the host's cost per call",
-      "updated": "2026-11-16T21:51:31",
+      "title": "An over-slice turn counts every slice it spent",
+      "updated": "2026-11-16T23:45:00",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
