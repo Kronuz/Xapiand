@@ -14820,16 +14820,43 @@
         "harness/thread_stacks.sh",
         "harness/run_all.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T18:19:24",
+          "commit": "ce8e9f08593f4269eaa0c2f0dad7f87938465be9",
+          "criteria": {
+            "A1": "`docs/dev/freebsd.md`: \"Run 43983942535\"",
+            "A2": "`docs/dev/platforms.md`: \"43983942361\"",
+            "A3": "manual: the lead checked both runs at 26d4a14f6: all 14 rows pass on arm64 and FreeBSD; earlier failures were fixed upstream (reactor:2ef28dc, system:563880a, lua-memory-bound)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c5a5d06b0649dfc279cedd3853c1e674b71cc332",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-164820-2e5e1f",
+              "level": "light",
+              "seconds": 539.8,
+              "state": "done",
+              "what": "platform-rows check suite at c5a5d06b0649"
+            }
+          ],
+          "final": true,
+          "from": "c6380001d649ae252f1069b4236b16087a53997f",
+          "reason": "",
+          "tested": "c5a5d06b0649dfc279cedd3853c1e674b71cc332"
+        }
+      ],
       "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "7c's rows pass on FreeBSD and arm64 in CI",
-      "updated": "2026-11-16T08:59:05",
+      "updated": "2026-11-16T18:19:24",
       "worktree": "../Xapiand-wt/xapiand/platform-rows"
     },
     "pool-concurrency": {
