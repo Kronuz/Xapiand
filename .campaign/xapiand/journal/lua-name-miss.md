@@ -1,6 +1,6 @@
 # lua-name-miss: journal
 
-State: waiting on jobs 261116-200146-ecb2eb 261116-200151-314f45 261116-200155-3846f1 261116-200158-58b4cd
+State: ready for review
 Quest: .campaign/xapiand/quests/lua-name-miss.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
