@@ -12680,10 +12680,15 @@
         "src/database/**",
         "src/engine/**",
         "src/server/search_views.cc",
+        "src/index_pattern.h",
+        "src/index_pattern.cc",
         "tests/**",
         "harness/**",
         "docs/design/name-index.md",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/reference-guide/api.md"
       ],
       "history": [
         {
@@ -12859,7 +12864,7 @@
       "risk": "high",
       "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T07:49:53",
+      "updated": "2026-11-17T08:21:54",
       "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
