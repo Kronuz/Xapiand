@@ -33,7 +33,7 @@ namespace ops. Seal mutants at 395644a7 all killed (M-j, M-k, M-a, M-c, M-h).
    261117-034943-316356 (strict). M5 is read from the rows' p99/p99.9/p99.99 (no separate writer
    wait histogram). Group commit of several writers on one index is not a kv_strata mode; the
    N-log row's L=1, K>1 cases are group commit across indexes on one log.
-4. msg (lead): Q1/Q2 ruled D104, closed in the design (strata:0ad... "design: close Q1 and Q2
+4. msg (lead): Q1/Q2 ruled D104, closed in the design (strata:3fc7fad4, "design: close Q1 and Q2
    under D104"); reopen-at-open noted in Built.
 
 ## Blocked on
