@@ -1,6 +1,6 @@
 # p2-intersection: journal
 
-State: waiting on jobs 261117-060112-e8ad6a 261117-060113-7e021c 261117-060117-dae932 261117-060120-35e79c 261117-060124-c1060f 261117-060127-884294 261117-060130-ae26ae 261117-060133-4f8a73 261117-060137-f668dd 261117-060144-9cd5a2 261117-060147-f69839 261117-060150-8546f2 and CI at prospect:eafd2ea
+State: waiting on jobs 261117-065609-561d97 (build-test), mutants 261117-065612-0ce8b7..065656-e2b644, A2 261117-065703-06c7aa, probe 261117-065716-5491a6, A/B 261117-065724-58ce08, and CI at prospect:387a47f
 Quest: .campaign/xapiand/quests/p2-intersection.md (the lead's; never edit it)
 
 ## Doing
@@ -19,10 +19,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261117-060112-e8ad6a; mutants at eafd2ea as --fails-without jobs 261117-060113-7e021c (0), -060117-dae932 (1), -060124-c1060f (3), -060127-884294 (4), -060130-ae26ae (5), -060133-4f8a73 (6), -060137-f668dd (7); mutant 2 (-060120-35e79c, skip the first probe) is equivalent: the compare finds the same slot, so it is not claimed |
-| A2 | job 261117-060144-9cd5a2 (dump counted and uncounted vs main, verify, 962 gate queries, 1M) |
-| A3 | long lists: 261117-060150-8546f2 (exclusive, 7 rounds, A/A); short lists (R1): 261117-060147-f69839 (strict, the reviewer's run.sh, no row above the A/A) |
-| A4 | CI at prospect:eafd2ea (run id to read) |
+| A1 | build-test 261117-065609-561d97; mutants 0-9 at 387a47f as --fails-without jobs 261117-065612-0ce8b7, -065615-08dbde, -065619-923e47, -065623-f316a1, -065627-79ac60, -065631-d68413, -065636-91fca7, -065642-233ca5, -065649-9f6bb4, -065656-e2b644 (read each; any that survived is named in Result) |
+| A2 | job 261117-065703-06c7aa (dump counted and uncounted vs main, verify, 962 gate queries, 1M) |
+| A3 | long lists: 261117-065724-58ce08 (exclusive, 7 rounds, A/A); short lists (R1): 261117-065716-5491a6 (exclusive, run.sh); variant C measured earlier at c3a9fa9, job 261117-065517-ce9053: every case within the A/A (sparse50&blocks2000 1.039 [0.905-1.088], A/A [0.863-1.026]) |
+| A4 | CI at prospect:387a47f (run id to read) |
 
 ## Result
 
@@ -34,3 +34,4 @@ In process at 1M, b/a over 7 rounds: intersection_2/3/gt3 and intersection_union
 - Removed `count_below` (no caller left); one mechanism.
 - Fix (ebd1c13): the failure was the test's, not bit 2's: term "dense" reached ordinal 1147 with 1100 documents. reader.hh is unchanged since 5227e00, so the earlier mutant jobs (run on a failing baseline) are void and were rerun. Failing at 5227e00: build-test 261117-025847-5389cc; passing at the fix: pending 261117-034554-d8f846.
 - R1 (eafd2ea): find_in_block probes the next four slots from pos_, then compares branch-free up to buf_len_ rounded up to 16. R2: the dead single-posting fill is removed; mutants 1 and 3 of the earlier set were equivalent, and mutant 2 now is. R3: static_assert beside bits_rank_.
+- R1 round 2 (c3a9fa9): the compare alone left sparse50&blocks2000 at 1.237 (far targets scan the block from 0). Final variant: probe 4 slots from pos_, bisect branch-free (main's search) when more than 32 slots remain, else compare from the 16-slot row. Only this variant was measured at exclusive (261117-065517-ce9053: all 7 cases within the A/A).
