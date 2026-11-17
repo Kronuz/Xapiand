@@ -1252,7 +1252,10 @@ static void test_a_restores_objects_are_freed_off_its_loop() {
 	});
 	eventually([&] { return set.load(); }, 10s);
 	std::fprintf(stderr, "  the loop freed %zu blocks restoring %d objects\n", freed.load(), objects);
+#if !defined(__SANITIZE_ADDRESS__) && !(defined(__has_feature) && __has_feature(address_sanitizer))
+	// The sanitizer's allocator moves the per-object count; the release-build test job checks this bound.
 	CHECK_LT(freed.load(), std::size_t{objects * 50});   // 34 per object measured; 75 with the trees on the loop
+#endif
 }
 
 int main() {
