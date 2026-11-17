@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: working
+State: waiting on jobs 261117-140026-dba8cc 261117-141714-e0904c 261117-141718-c0035a 261117-141721-81b492 261117-141725-aa9027
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -34,6 +34,21 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
    Variants (`PROSPECT_EXPERIMENT_P7`): bit 1, the term's bulk top-k with excluded clauses
    probed only for hits that could enter; bit 2, nested exclusions counted apart by windows so
    a counted top-k takes the bulk path; bit 4, term-minus-term counted by windows too.
+   Done: prototype prospect:983b064 (`docs/perf/p7-exclusion.patch`; the worktree's search.hh
+   carries it uncommitted, equal to the patch). Parity of bits 1, 1+2, 1+4: `verify` 0
+   mismatches and `dump` counted/uncounted byte-identical over the 962 gate queries
+   (`.scratch/p7/parity.sh`), and on the 12 short-list negations. Local screen (loaded host)
+   of bit 1 on the 19 negated queries: `TOP_10` 0.52, `TOP_100` 0.81, `TOP_1000` 0.89,
+   `TOP_100_COUNT` 0.96 of main.
+   Test: prospect:080e0a7 (search_test `negations()`, `test/negation_mutants.py`); mutant 1
+   caught locally.
+   Pending: A/B 261117-140026-dba8cc (exclusive; `.scratch/p7/job-ab.sh`: a main, c A/A copy,
+   b1/b3/b5 bits 1, 1+2, 1+4; targets negated 2/3, guards terms, intersection 2, phrase 2,
+   union 2, then the short-list probe per case); search_test with the patch e0904c; mutants
+   0-2 c0035a, 81b492, aa9027 (--fails-without, bit 1).
+   Next: score the A/B by the rule; if a bit keeps, run the engines comparison against
+   Tantivy over `serve` for it, mutant 3, and (bits 2/4 kept) their own mutants; write
+   `docs/perf/p7-exclusion.md`.
 1. Disk: host at 96%; P9/P13 builds and `.scratch/idx-p13` removed.
 
 ## Blocked on
