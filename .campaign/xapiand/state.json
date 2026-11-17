@@ -19426,19 +19426,47 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T16:37:39",
+          "commit": "ed134bf4e646dddc38927faf9ccee3e521c1f2d4",
+          "criteria": {
+            "A1": "261116-161041-958417 (passed at 7376bd7a3381; only merges from main since); fails without: 261116-152435-db3a1a",
+            "A2": "261116-161041-958417 (passed at 7376bd7a3381; only merges from main since); fails without: 261116-152435-db3a1a",
+            "A3": "261116-161044-420e84 (the suite check), 261116-152427-5d1269 (passed at 7376bd7a3381; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-161044-420e84",
+              "level": "light",
+              "seconds": 271.0,
+              "state": "done",
+              "what": "strict-text check suite at 7376bd7a3381"
+            }
+          ],
+          "final": true,
+          "from": "33d69428a72c32bb179f765109c55b6d93a5671b",
+          "reason": "",
+          "tested": "ed134bf4e646dddc38927faf9ccee3e521c1f2d4"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T16:10:55",
-      "worktree": "../Xapiand-wt/xapiand/strict-text"
+      "updated": "2026-11-16T16:37:46",
+      "worktree": ""
     },
     "strict-values": {
       "accepted": {

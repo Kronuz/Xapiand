@@ -161,11 +161,51 @@ not_exact(std::string_view field, FieldType type, const MsgPack& value, std::str
 }
 
 
+// Whether `text` is exactly a JSON number: -?(0|[1-9][0-9]*)(.[0-9]+)?([eE][+-]?[0-9]+)?
+bool
+json_number_text(std::string_view text) noexcept
+{
+	std::size_t i = 0;
+	const auto n = text.size();
+	const auto digits = [&] {
+		const auto start = i;
+		while (i < n && text[i] >= '0' && text[i] <= '9') {
+			++i;
+		}
+		return i - start;
+	};
+	if (i < n && text[i] == '-') {
+		++i;
+	}
+	if (i < n && text[i] == '0') {
+		++i;
+	} else if (digits() == 0) {
+		return false;
+	}
+	if (i < n && text[i] == '.') {
+		++i;
+		if (digits() == 0) {
+			return false;
+		}
+	}
+	if (i < n && (text[i] == 'e' || text[i] == 'E')) {
+		++i;
+		if (i < n && (text[i] == '+' || text[i] == '-')) {
+			++i;
+		}
+		if (digits() == 0) {
+			return false;
+		}
+	}
+	return i == n;
+}
+
+
 // The number a text spells, read as JSON reads one (int64, else uint64, else double); undefined when it spells none.
 MsgPack
 number_of(std::string_view text)
 {
-	if (!Cast::bare_number_text(text)) {
+	if (!json_number_text(text)) {
 		return MsgPack();
 	}
 	int errno_save;
