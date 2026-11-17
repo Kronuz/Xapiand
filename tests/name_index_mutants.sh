@@ -52,7 +52,7 @@ case $mutant in
 			'	const std::string all = "*";' ;;
 	no-index)      # the search walks whatever the names hold
 		mutate src/server/search_views.cc \
-			'		if (index.complete()) {' \
+			'		if (indexes.complete()) {' \
 			'		if (false) {' ;;
 	no-hook)       # the catalog's resolve adds no names
 		mutate src/database/pool.cc \
