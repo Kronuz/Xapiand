@@ -1,6 +1,6 @@
 # license-closure: journal
 
-State: waiting on jobs 261116-152727-9c07ec 261116-152727-4477fa 261116-152728-04a92c 261116-152739-cb18f2
+State: waiting on jobs 261116-185812-48bf6d
 Quest: .campaign/xapiand/quests/license-closure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -48,7 +48,7 @@ Owner decisions (each is reversible; nothing below was changed unless stated):
 | A6 | [decision] owner's ruling 2026-11-16: package license metadata stays plain `MIT`; the audited metadata already says MIT in `.github/workflows/release.yml` (two places), `.github/workflows/freebsd.yml`, `Dockerfile` and `contrib/homebrew/xapiand.rb`, so no packaging edit; third-party notices in `NOTICE` (new section on Lua's patch and RapidJSON) and `THIRD-PARTY-NOTICES` |
 | A7 | the no-xapian check (job 261116-152728-04a92c); the same `git grep` prints nothing locally |
 | A8 | `docs/status/license-audit.md`: the RapidJSON row (unmodified upstream, one compile definition), the Lua row (the owner's patch) and the license closure ledger |
-| A9 | the build-test check (job 261116-152727-9c07ec) and install job 261116-152739-cb18f2 |
+| A9 | the build-test check (job 261116-152727-9c07ec) and the DESTDIR install job 261116-185812-48bf6d (stages the three notice files, mime.types and the stopwords) |
 
 ## Result
 
@@ -68,3 +68,4 @@ discussions license. Mechanism notes: none new (`docs/mechanisms/third-party-not
 + Owner's ruling (2026-11-16, via the lead): `el_cerrito.png` is kept unchanged. The trixel overlay is the owner's (his tool, Xapiand's HTM code); the basemap is Google Maps under Google's terms with "Map data ©2019 Google" visible; docs-only asset, outside the binary and the MIT source license. An earlier ruling to redraw it was reversed before any redraw work was committed.
 + Owner's ruling (2026-11-16, via the lead): `docs/discussions` is the owner's own code and fully MIT. The lead added the same LICENSE and README to the blog copy (Kronuz.github.io:afd643d). The `gmendezb-pages` copy is in a work repository, outside this quest; the owner handles it.
 + Owner's ruling (2026-11-16, via the lead): A6 package license metadata is plain `MIT`; third-party notices (Lua's patch, RapidJSON, the rest) live in the root `NOTICE`. The metadata is already MIT in every package file, so nothing changed there; `NOTICE` and `docs/src/content/docs/copyright.md` gained a short "Modified and configured third-party code" section. I did not edit `docs/status/license-audit.md` for this (another contributor writes it); its A26 ledger row still says the owner decides, to update when that contributor reports.
++ A9 install check: the install rules were right; my check was wrong. `XAPIAND_DATA_PATH` is the absolute `/usr/local/share/xapiand`, so `cmake --install --prefix` ignores the prefix for mime.types and stopwords and wrote them to the real `/usr/local/share/xapiand` (same content as the tree's: `cmp` equal). The check now uses `DESTDIR`, which stages under `build/stage/usr/local/share`. CMakeLists.txt needs no change.
