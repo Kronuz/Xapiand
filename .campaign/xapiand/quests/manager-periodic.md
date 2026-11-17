@@ -5,27 +5,17 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The shutdown retry (try_shutdown every 5 s once an asap shutdown is requested) runs as a
+control::Periodic task on the control loop, like housekeeping, so src/manager.cc no longer uses
+reactor::PeriodicTimer. Detent's reactor-on-wheel (its D76) removes PeriodicTimer from reactor
+once no Kronuz repository uses it.
 
-## Acceptance criteria
+## Criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- A1 The suite passes at the landed code, the shutdown tests included (gate check `suite`).
+- A2 [artifact] `src/manager.cc` holds no PeriodicTimer: `grep -n PeriodicTimer src/manager.cc` prints nothing.
+- A3 [manual] The lead read the diff: the task starts once however often shutdown_impl runs, and it stops with housekeeping at teardown.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing; it is one small change.
