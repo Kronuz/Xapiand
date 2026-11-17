@@ -4141,6 +4141,8 @@
         "phase4-gate",
         "manifest-log"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/document-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -4186,6 +4188,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/document-gate",
       "landed": [],
       "lenses": [
         "durability"
@@ -4195,9 +4198,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-08T22:35:42"
+      "updated": "2026-11-16T19:44:10",
+      "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
       "accepted": {},
