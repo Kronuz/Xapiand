@@ -2988,7 +2988,9 @@
         "detent:consensus-transport",
         "detent:consensus-driver",
         "detent:consensus-driver",
-        "detent:transport-connection"
+        "detent:transport-connection",
+        "detent:transport-groups",
+        "detent:rpc-lane-codec"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3177,7 +3179,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T00:49:26",
+      "updated": "2026-11-17T04:27:58",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
@@ -4297,10 +4299,12 @@
         "docs/perf/**",
         "docs/mechanisms/**",
         "include/strata/core/**",
-        "test/**",
+        "test/*.cc",
+        "test/fixtures/**",
         "CMakeLists.txt",
         "docs/design/standalone-turn-log.md",
-        "fuzz/**"
+        "fuzz/**",
+        "cmake/check_core_includes.cmake"
       ],
       "history": [
         {
@@ -4342,7 +4346,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-16T20:42:21",
+      "updated": "2026-11-17T02:05:26",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -5865,12 +5869,49 @@
       "worktree": ""
     },
     "group-core": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-17T03:06:14",
+          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "blobs": {},
+          "by": "review",
+          "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "criteria": "8382fed6c73acdd9",
+          "diffs": {},
+          "findings": {
+            "B10": {
+              "jobs": [
+                {
+                  "cmd": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-core/docs/design/cluster-release/bundle_model.py",
+                  "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-030555-450eb8",
+                  "level": "none",
+                  "seconds": 4.2,
+                  "state": "done",
+                  "what": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-c at 491a1bdc2aa1"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "7a8ed667b8dc903725be55b09e5fccbaf7f1d2e2",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:journal-driver",
         "detent:consensus-driver",
-        "detent:consensus-quiescence"
+        "detent:consensus-quiescence",
+        "detent:journal-host-guards",
+        "strata-nospace-position"
       ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/group-core",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5912,8 +5953,10 @@
         "include/strata/group/**",
         "test/group/**",
         "CMakeLists.txt",
-        "docs/mechanisms/replication-group.md"
+        "docs/mechanisms/replication-group.md",
+        "docs/REPLICATION.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
       "lenses": [
         "correctness",
@@ -5927,9 +5970,10 @@
       ],
       "repo": "../strata",
       "risk": "critical",
-      "status": "planned",
+      "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-15T23:04:50"
+      "updated": "2026-11-17T03:06:14",
+      "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
       "accepted": {},
@@ -13190,6 +13234,38 @@
       "updated": "2026-11-12T03:19:59",
       "worktree": ""
     },
+    "p2-intersection": {
+      "accepted": {},
+      "after": [],
+      "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+      "branch": "quest/xapiand/p2-intersection",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 90,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/reader.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/p2-intersection",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "active",
+      "title": "Branch-free block compare and per-word rank in intersections",
+      "updated": "2026-11-17T02:56:39",
+      "worktree": "../prospect-wt/xapiand/p2-intersection"
+    },
     "perf-watch-peek": {
       "accepted": {
         "correctness": {
@@ -19647,6 +19723,38 @@
       "title": "Field-aware strata index",
       "updated": "2026-11-08T13:25:27"
     },
+    "strata-nospace-position": {
+      "accepted": {},
+      "after": [
+        "document-gate"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "test/index_refusal_test.cc",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A refused apply never moves strata's position",
+      "updated": "2026-11-17T02:54:34"
+    },
     "strata-pins-2026-11": {
       "accepted": {},
       "after": [],
@@ -20419,9 +20527,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
-      "title": "A long Lua call yields at each slice, so it turns heavy",
-      "updated": "2026-11-17T01:19:18",
+      "status": "review",
+      "title": "A script call runs in the heavy lane",
+      "updated": "2026-11-17T03:37:53",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
@@ -20974,6 +21082,8 @@
     "track-p": {
       "accepted": {},
       "after": [],
+      "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+      "branch": "quest/xapiand/track-p",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -21015,6 +21125,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/track-p",
       "landed": [],
       "lenses": [
         "correctness"
@@ -21024,12 +21135,145 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-08T22:35:58"
+      "updated": "2026-11-17T02:00:33",
+      "worktree": "../prospect-wt/xapiand/track-p"
+    },
+    "turn-log-parity": {
+      "accepted": {},
+      "after": [
+        "document-gate"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/**",
+        "test/*.cc",
+        "test/fixtures/**",
+        "bench/kv/**",
+        "docs/design/standalone-turn-log.md",
+        "docs/perf/**",
+        "docs/mechanisms/**",
+        "fuzz/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
+      "updated": "2026-11-17T02:22:54"
     },
     "turn-seal": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-17T02:52:40",
+          "base": "8d0af7ae10235c13fcdebad7ded3100abde4139b",
+          "blobs": {
+            "CHANGELOG.md": "100644:68ba9ac4fb841675397560a3a16c971b10fd309d",
+            "CMakeLists.txt": "100644:58039497d38c63015f1b1fa7948015c70c7456f1",
+            "bench/turn_bench.cc": "100644:af5b0f77e82812dea5cbcfe60496155040668be0",
+            "docs/mechanisms/turn-seal.md": "100644:0b2864be6560dfd9ce3ff72a51b60e8f4b35d91d",
+            "fuzz/fuzz_turn_log.cc": "100644:f5cfb14090426baa0c134f4766df71b662cf8022",
+            "include/journal/journal.h": "100644:385f85e1edb97f8de939f052a2e639be2279cab1",
+            "include/journal/turn_driver.h": "100644:97931b4880ee7c5fb1f01e79f6fd6245d367f902",
+            "include/journal/turn_log.h": "100644:648deeca07a389b43547d902b17ae54ebfcf6c7e",
+            "test/placement_test.cc": "100644:f36134d0762b172dcdc6aa95b558828e714ef8b7",
+            "test/turn_log_power_test.cc": "100644:eaad71e0c230c0786fa681c6b1ec4db7598be2db",
+            "test/turn_log_test.cc": "100644:cc8f428431ffd58d061fcb3f0c8aa35192d83d1f",
+            "test/turn_seal_mutants.sh": "100644:288152867d3da5a5b97808c14165d95d56e28123",
+            "test/turn_seal_test.cc": "100644:0f404a482b3f4bb653906ddaa8e96c74e3ca4ffa"
+          },
+          "by": "review",
+          "commit": "555b69fa425621682c42bd8a52d3353a25300222",
+          "criteria": "103ac4e92c0d9c8f",
+          "diffs": {
+            "CHANGELOG.md": "4af08f8b932d0b88",
+            "CMakeLists.txt": "f9f20fcdb21be8da",
+            "bench/turn_bench.cc": "c8d236be20b373f6",
+            "docs/mechanisms/turn-seal.md": "d5df7d5db6b30815",
+            "fuzz/fuzz_turn_log.cc": "2195495f75d124ef",
+            "include/journal/journal.h": "eecb446b72abf599",
+            "include/journal/turn_driver.h": "a9825bd62318e4eb",
+            "include/journal/turn_log.h": "101b7568e1e7006c",
+            "test/placement_test.cc": "646e91091945c57b",
+            "test/turn_log_power_test.cc": "b0093b2fbd76fab8",
+            "test/turn_log_test.cc": "e8b57232b60bd9d5",
+            "test/turn_seal_mutants.sh": "f454fae0fc065150",
+            "test/turn_seal_test.cc": "9c0b3445eb7eb7b4"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'test -x build-t/journal_turn_seal_test || exit 127; cd build-t && for c in budget full_size staged_room bound; do ./journal_turn_seal_test $c | grep -q \"^$c: ok\" || { echo FAIL $c; exit 1; }; done'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022227-105658",
+                  "level": "light",
+                  "seconds": 1.7,
+                  "state": "done",
+                  "what": "A3 budget staged_room"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer\" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address >/dev/null && cmake --build build-asan -j4 --target journal_turn_seal_test && cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest --output-on-failure -j4 -R journal_turn_seal'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022301-f1ed5e",
+                  "level": "light",
+                  "seconds": 48.1,
+                  "state": "done",
+                  "what": "turn-seal ASan (F2 wake_after_run)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F3": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'test -x build-t/journal_turn_seal_test || exit 127; cd build-t && for c in unseal_owner lock_order wake_threads wake_after_run unseal_threads; do ./journal_turn_seal_test $c | grep -q \"^$c: ok\" || { echo FAIL $c; exit 1; }; done'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022243-b05cb2",
+                  "level": "light",
+                  "seconds": 5.4,
+                  "state": "done",
+                  "what": "A8 unseal wake"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "7af8b6af3987c33e335b61da299adb49ccf9cea1",
+          "reviewed": "b08212fe7ef5d5c976bc0429f0c5d72928fbb89a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "7c08540c312044c21215c831ab455fd0777f1efd",
       "branch": "quest/xapiand/turn-seal",
@@ -21066,10 +21310,54 @@
         "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/turn-seal",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T02:52:48",
+          "commit": "555b69fa425621682c42bd8a52d3353a25300222",
+          "criteria": {
+            "A1": "261117-022222-ec9746 (passed at 7549bf61579a; only merges from main since)",
+            "A2": "261117-022232-4ebd89 (passed at 7549bf61579a; only merges from main since); fails without: 261117-020600-2e3287, 261117-022305-03393d",
+            "A3": "261117-022227-105658 (passed at 7549bf61579a; only merges from main since); fails without: 261117-022313-4f355d",
+            "A4": "261117-022210-100fa8 (the tsan check); tsan 261117-022210-100fa8 (`forget_*`)",
+            "A5": "`docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16",
+            "A6": "261117-022210-60ccdf (the build-test check); build-test 261117-022210-60ccdf",
+            "A7": "261117-022238-349505 (passed at 7549bf61579a; only merges from main since); fails without: 261117-020256-25ba10, 261117-020603-a0abbc, 261117-022309-097d1d",
+            "A8": "261117-022243-b05cb2 (passed at 7549bf61579a; only merges from main since), 261117-022301-f1ed5e (passed at 7549bf61579a; only merges from main since); fails without: 261117-022317-0065a2, 261117-022322-bc38d9"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+              "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-022210-60ccdf",
+              "level": "light",
+              "seconds": 124.4,
+              "state": "done",
+              "what": "turn-seal check build-test at 7549bf61579a"
+            },
+            {
+              "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+              "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-022210-100fa8",
+              "level": "light",
+              "seconds": 105.5,
+              "state": "done",
+              "what": "turn-seal check tsan at 7549bf61579a"
+            }
+          ],
+          "final": true,
+          "from": "8d0af7ae10235c13fcdebad7ded3100abde4139b",
+          "reason": "",
+          "tested": "555b69fa425621682c42bd8a52d3353a25300222"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -21077,9 +21365,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-16T21:53:41",
+      "updated": "2026-11-17T02:52:51",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
