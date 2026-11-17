@@ -13199,6 +13199,38 @@
       "updated": "2026-11-12T03:19:59",
       "worktree": ""
     },
+    "p2-intersection": {
+      "accepted": {},
+      "after": [],
+      "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+      "branch": "quest/xapiand/p2-intersection",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 90,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/reader.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/p2-intersection",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "active",
+      "title": "Branch-free block compare and per-word rank in intersections",
+      "updated": "2026-11-17T02:56:39",
+      "worktree": "../prospect-wt/xapiand/p2-intersection"
+    },
     "perf-watch-peek": {
       "accepted": {
         "correctness": {
