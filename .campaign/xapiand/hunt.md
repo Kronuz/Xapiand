@@ -197,3 +197,7 @@ quest starts (name it) or is dropped with a reason.
 - F3 (explained: P2's stack sample shows reactor-0 inside the flooders' `str_find_aux`/`match`, the light-lane starvation t10-flood-limit fixes; drop once it lands) master (9ae4f7957) stopped answering every request during a scripted RESTORE beside 2 Lua flooders on one reactor: RESTORE and both flooders' PUTs timed out at 300 s (probe P1, job 261117-034526-66767d; P2 261117-042554-2e8d5a samples stacks on a stall). Pre-existing; find the hang.
 - F6: TSan race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239); failed CI run 44056420626 at code-identical 37eda4ed0. Flaky; can turn any landing's CI red.
 - F4/F5 nits: stale comment at handler.cc:473; two `LightOnExit` structs for one mechanism.
+
+## p2-intersection follow-up (2026-11-17)
+
+- Adaptive in-block search (prospect reader.hh `find_in_block`): the 128-slot branch-free compare gave 0.80-0.92 on the 1M intersection rows (A/B 261117-034629-5eeca5) but 1.5-2.3x on short tails and 1.24x on sparse-in-long (probes 261117-053908-cd8c4d, 261117-065316-b2628d); the landed probe/bisect/compare-from-row variant (prospect:387a47f) is neutral on short lists but keeps only 0.90-1.03 on long ones (261117-065724-58ce08). Find a selector (expected skip distance, list density, block fill) that gets both; measure with the reviewer's tiny_bench probe plus the 1M A/B, exclusive.
