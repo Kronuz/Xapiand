@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: working
+State: waiting on jobs 261117-092109-383ae4 261117-092115-ad33ee 261117-092124-2768e6
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,15 +18,17 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A7 (P9), `docs/perf/p9-planner.md` (prospect:b09132d: baseline ranking, plan, rule). Baseline
-   261117-075402-484d70 checked: 7 rounds, 150 rows (15 classes x 5 commands x 2 engines), no
-   crash. P3's rows all win vs Tantivy (terms 0.69-0.95, unions 0.37-0.85); P9's lose
-   (intersection 2 TOP_100/1000/100_COUNT 1.08/1.15/1.18, negated 1.15-1.64). Prototype in the
-   worktree (search.hh, `PROSPECT_EXPERIMENT_P9`): bit 1 windowed top-k (fresh copy's fill, then
-   score only matches) when prefer_windows(); bit 2 match first in collect_block. Next: build
-   (`.scratch/p9/build-variant.sh`), screen (`.scratch/p9/screen.sh`, strict), parity
-   (`.scratch/parity.sh p9-N`), patch into docs/perf, deciding A/B with A/A as a job.
-1. P2's after-vs-Tantivy table is in `docs/perf/p2-intersection.md` (prospect:b09132d) from 484d70.
+0. A7 (P9), `docs/perf/p9-planner.md` + `p9-planner.patch` (prospect:4f6f4df). Experiments, screens
+   in process under strict, parity clean for every variant (verify 0, dumps identical):
+   1. Windowed top-k (bit 1): loser, 1.12-1.34 at every top-k row.
+   2. Match first (bit 2): TOP_100/1000 0.93-0.95, TOP_10 1.04-1.11 (loses): mixed.
+   3. Adaptive (bit 4: lead scores first only while min - rest > ALPHA x lead bound): screen
+      0.86-1.05, noisy host. Deciding jobs: 383ae4 A/B (main, bit 4 at ALPHA 0 and 0.5, A/A,
+      exclusive), ad33ee engines over serve (index clones idx-prospect-b/-d), 2768e6 ctest with
+      the patch at bit 4. When they land: rule per the plan, four axes (reader-only: indexing and
+      disk unchanged; memory by /usr/bin/time), verdict. Keep: fold into search.hh without the
+      switch is a landing for the lead. Two experiments left in the budget.
+1. Disk: host at 96% (40 GB free); idx-p13 (570 MB) and build-p9-* can go once P9 is decided.
 
 ## Blocked on
 
