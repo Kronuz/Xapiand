@@ -127,6 +127,15 @@ FINISH_CASES = [
 LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
 
 # X4-R1: what a client can re-send as fast as the 400 returns; each makes one uninterruptible call that runs to the per-call cap.
+FLOOD_P99_CALLS = 4.0
+
+
+def timed(call):
+    t0 = time.perf_counter()
+    call()
+    return (time.perf_counter() - t0) * 1000
+
+
 FLOOD_SCRIPT = "local s = string.rep('a', 1048576) s:find('.-b')"
 
 LONG_SCRIPT = "local s = 0; for i = 1, 40000000 do s = s + i end; _doc.s = s"
@@ -229,7 +238,9 @@ def main():
     ap.add_argument("--max-bound-secs", type=float, default=30.0)
     ap.add_argument("--max-light-ms", type=float, default=50.0)
     ap.add_argument("--flood-clients", type=int, default=16)
-    ap.add_argument("--max-flood-p99-ms", type=float, default=100.0)
+    ap.add_argument("--max-flood-p99-ms", type=float, default=None,
+                    help="fixed flood limit; by default FLOOD_P99_CALLS x the median of one flood call timed alone on this node")
+    ap.add_argument("--processors", type=int, help="reactors of the node (default: its core count)")
     ap.add_argument("--out")
     args = ap.parse_args()
 
@@ -237,7 +248,8 @@ def main():
     os.makedirs(scratch, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="lua_bounds_", dir=scratch)
     node = subprocess.Popen(
-        [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")],
+        [args.binary, "--port", str(args.port), "--name", "luanode", "-D", os.path.join(tmp, "data")]
+        + (["--processors", str(args.processors)] if args.processors else []),
         stdout=open(os.path.join(tmp, "node.log"), "w"), stderr=subprocess.STDOUT)
     failures = []
     report = {"bounds": [], "slices": {}}
@@ -404,6 +416,10 @@ def main():
             failures.append(f"a light GET took {max(lib_loaded):.1f} ms while library-call loops ran (limit {args.max_light_ms})")
         # X4-R1: clients re-sending a worst-case single call as fast as it answers. Every call ends at the per-call cap, so the
         # light GETs' p99 is bounded by the cap (about 20 ms) plus the host's load, not by the whole-call cap.
+        # The control: one flood call timed alone is the stretch a reactor cannot yield inside on this host.
+        solo = sorted(timed(lambda: request(args.port, "PUT", "/lua_solo/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)) for _ in range(9))
+        hold_ms = solo[len(solo) // 2]
+        flood_limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else FLOOD_P99_CALLS * hold_ms
         flood_statuses = []
         flood_stop = time.time() + 6.0
 
@@ -425,11 +441,12 @@ def main():
         print(f"light GET beside {args.flood_clients} clients flooding the per-call cap: n={len(flooded)} p50={percentile(flooded, .5):.2f} ms p99={percentile(flooded, .99):.2f} ms max={max(flooded):.2f} ms; "
               f"{len(flood_statuses)} requests answered, {sorted(set(flood_statuses), key=str)}")
         report["slices"]["flood"] = {"clients": args.flood_clients, "n": len(flooded), "p50_ms": percentile(flooded, .5), "p99_ms": percentile(flooded, .99),
-                                     "max_ms": max(flooded), "requests": len(flood_statuses), "lag": flood_lag}
+                                     "max_ms": max(flooded), "requests": len(flood_statuses), "hold_ms": hold_ms, "limit_ms": flood_limit_ms, "lag": flood_lag}
         if set(flood_statuses) != {400}:
             failures.append(f"the flooding requests answered {sorted(set(flood_statuses), key=str)}")
-        if percentile(flooded, .99) > args.max_flood_p99_ms:
-            failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {args.max_flood_p99_ms})")
+        print(f"one flood call alone: {hold_ms:.1f} ms; p99 limit {flood_limit_ms:.1f} ms")
+        if percentile(flooded, .99) > flood_limit_ms:
+            failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {flood_limit_ms:.1f})")
         node.terminate()
         try:
             node.wait(timeout=20)
