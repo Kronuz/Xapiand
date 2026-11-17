@@ -2986,6 +2986,7 @@
       "accepted": {},
       "after": [
         "detent:consensus-transport",
+        "detent:consensus-driver",
         "detent:consensus-driver"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
@@ -3040,7 +3041,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T19:44:06",
+      "updated": "2026-11-16T19:44:34",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
