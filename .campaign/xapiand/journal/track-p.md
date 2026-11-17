@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: working
+State: waiting on jobs 261117-075402-484d70 261117-075409-260e88
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,7 +19,8 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 ## Next
 
 0. Next item (P3 or P9): fresh 1M baseline on prospect main 0aad777 (merged into the branch at
-   1778b8c), every class vs Lucene/Tantivy over serve, script `.scratch/next/job-baseline.sh`.
+   1778b8c), every class vs Lucene/Tantivy over serve, script `.scratch/next/job-baseline.sh`,
+   job 261117-075402-484d70 (exclusive, queued); build-test check 261117-075409-260e88.
    Rank P3's rows (terms, unions) against P9's (intersections, negated) by prospect/Tantivy; take
    the bigger loser; plan in `docs/perf/` before the runs; prototype; A/B with A/A (exclusive,
    at most 10 minutes per job). Budget about five experiments, stop at the third loser in a row.
