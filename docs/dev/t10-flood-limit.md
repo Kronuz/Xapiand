@@ -33,21 +33,30 @@ A light GET waits for the stretch in progress and, at each of its hops through t
 
 ## Proof
 
-`lua_bounds.py --cost` on a Release build, one reactor, macOS 16 cores, strict holds (master `f65ec4854`, the fix `1036ca25a`; one call alone 20.8 and 22.2 ms, limit 62.5 and 66.5 ms). The light GET's p50 / p99 in ms beside N clients flooding the per-call cap:
+`lua_bounds.py --cost` on a Release build, one reactor, macOS 16 cores, exclusive holds (master `f65ec4854`, the fix at the branch head). One flood call alone took 19.1 ms at master and 21.9 ms at the fix, so the limits are 57.2 and 65.7 ms. The light GET's p50 / p99 in ms beside N clients flooding the per-call cap (jobs afc6c2 and 9ae194):
 
 | clients | master | fix |
 |---|---|---|
-| 1 | 17.9 / 22.8 | 18.2 / 26.3 |
-| 2 | 17.9 / 22.5 | 18.5 / 28.2 |
-| 4 | 33.7 / 47.2 | 17.1 / 45.1 |
-| 8 | 38.0 / 68.3 | 17.1 / 36.0 |
-| 16 | 39.1 / 85.7 | 17.0 / 38.7 |
+| 1 | 14.8 / 19.1 | 18.6 / 27.6 |
+| 2 | 15.2 / 20.0 | 18.1 / 26.7 |
+| 4 | 26.9 / 43.4 | 16.3 / 34.7 |
+| 8 | 32.1 / 60.9 | 17.2 / 37.3 |
+| 16 | 32.8 / 67.8 | 17.2 / 38.2 |
 
-At master the p99 grows with the clients per reactor and passes the limit at 8 and 16 clients; at the fix the p50 stays one stretch and every row is within the limit. GETs served in the window at 16 clients: 111 at master, 285 at the fix. The cost of the lane on a scripted write that does nothing is in "Cost" below.
+At master the p99 grows with the clients per reactor and passes its limit at 8 and 16 clients; at the fix the p50 stays at one stretch, the p99 stays flat from 2 clients up, and every row is within the limit. GETs served in the window at 16 clients: 132 at master, 275 at the fix. With one or two flooders the GET waits a little longer at the fix (p99 27.6 against 19.1 ms): it waits for the stretch in progress and for the heavy turn the drainer runs, where at master the one flooder's stretch alone was in the way.
 
 ## Cost
 
-A tiny scripted write (`_doc.x = (_doc.x or 0) + 1`, no commit, 2,000 serial writes on a keep-alive connection) alone and beside 8 GET-only clients: COST_TABLE
+A tiny scripted write (`_doc.x = (_doc.x or 0) + 1`, no commit, 2,000 serial writes on a keep-alive connection) alone and beside 8 GET-only clients, one reactor. The fix and master alternate in the order M F F M M F M M, then the two sweep runs (exclusive holds, jobs 016422, 79af24, a10581, e8623e, 739b28, ccb986, 0ea9e1, ea75e8, afc6c2, 9ae194; the master runs include an A/A pair). Median and range over the runs, in ms:
+
+| row | master (6 runs) | fix (4 runs) |
+|---|---|---|
+| alone, p50 | 0.649 (0.619 to 0.721) | 0.653 (0.641 to 0.686) |
+| alone, p99 | 1.40 (1.27 to 1.48) | 1.35 (1.31 to 1.45) |
+| beside 8 GET-only clients, p50 | 2.24 (2.20 to 2.49) | 2.25 (2.23 to 2.33) |
+| beside 8 GET-only clients, p99 | 4.54 (4.32 to 6.35) | 4.39 (4.16 to 6.00) |
+
+The fix is inside master's own spread on every row: the heavy-lane hop costs a tiny script nothing measurable, since an idle heavy lane runs at once (the drainer's post is the next handler of the same loop). Earlier runs of the same rows under strict holds, beside the suite's build, showed the fix at p99 65 and 73 ms alone; they were contaminated (master's p99 was stable in the same runs), and the exclusive runs do not reproduce them.
 
 ## Exploration measurements
 
