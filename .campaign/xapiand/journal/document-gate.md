@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: working
+State: waiting on jobs 261117-024952-c870f5 261117-025002-c70c5f 261117-025006-d345af and 12 mutant jobs
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,19 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A1 build, design first steps 1-3 (lead's launch 2026-11-16), at strata:efe25bcd (pushed):
-repin, command codec (D3) with fixtures and fuzz target, logged mode (position with the append,
-open record, sealing through a shim, watcher V, flush rule, replay). Review nits R1-R3, R5 folded
-into the doc; R4 is Q5.
+A1 build, steps 4-5 (lead's resume 2026-11-17), at strata:40f89d0f (pushed): checkpoint (commit()
+as the checkpoint record, I1/I2 under one lease), recovery in open() (eager replay, owed verdicts,
+cross-checks, log_lost/log_mismatch), fail-stop (fence + outcome_unknown), await_durable for group
+commit, kv_strata on a journal::Host. Seal shim kept. Local run of the whole test: all 14 cases ok
+(3.2 s).
 
 ## Next
 
-1. Read jobs: build-test 261116-211612-1ad7b7 (base T2/T4/T9/T11/T12/served, fuzz_command_replay,
-   whole suite after the repin); TSan 261116-211637-83ad1f.
-2. Nit for the next commit: each case prints "ok" even after a CHECK failed; print it only when
-   the case added no failure (left out now so the queued build-test still counts).
-3. Fix whatever they show; then steps 4-5 in the next launch (checkpoint, recovery's cross-checks,
-   join/leave; kv_strata on a host).
+1. Read jobs: build-test 261117-024952-c870f5; TSan 261117-025002-c70c5f; long sweep (200 seeds)
+   261117-025006-d345af; mutants M-a..M-o (12 jobs 261117-025010-4c8220 .. 261117-025050-ee8915,
+   ids in Evidence).
+2. Step 4 rest: D7 join/leave (turn_group attribute in the manifest log, host create/close/reopen
+   group, checkpoint at close), T6; D6.3's closed/none statuses through the Host.
+3. Step 5 rest: run kv_strata sync1/wal1 rows (M2, M3 exclusive), M1 faultfs counter assertion, M4
+   floor, M5 checkpoint stall; docs/perf/standalone-turn-log.md.
 
 ## Blocked on
 
@@ -36,17 +38,36 @@ into the doc; R4 is Q5.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261116-211612-1ad7b7 failed core_includes only (turn_seal.hh includes journal/turn_driver.h), fixed at strata:2b8ca7a6, rerun 261117-020047-53b736 passed (reused at 8b91d151, docs only); TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
+| A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f (pending): build-test 261117-024952-c870f5; TSan 261117-025002-c70c5f; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
 
 strata `docs/design/standalone-turn-log.md` ("Built"); code in `include/strata/core/command.hh`,
 `turn_seal.hh`, `index.hh` (logged mode), `test/standalone_turn_log_test.cc` (T2, T4, T9, T11,
-T12, served), `fuzz/fuzz_command.cc`, fixtures `test/fixtures/command/`. Mutant commits on local
-strata branches `mutant/document-gate/m-j` (9ff37a0a) and `m-k` (1f827405).
+T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`, fixtures
+`test/fixtures/command/`, `bench/kv/kv_strata.cc` (host). Mutant commits on local strata branches
+`mutant/document-gate/m-*` (m-j 9ff37a0a, m-k 1f827405; m-a..m-o on 8855d678, applied by
+`.scratch/mutate.py` in the strata worktree).
 
 ## Rulings I made
+
+- Steps 4-5 (2026-11-17):
+  - Replay runs inside open() (eager, D6.6); the public replay() is gone. The checkpoint record
+    goes through the sealer as a closed record, so the loop alone calls the driver.
+  - Checkpoint triggers built: apply's inline flush and checkpoint_log_bytes (default 64 MiB; off
+    under defer_io, whose host owns flushes). close() does not checkpoint until D7's leave.
+  - M-g not built: commit()'s single writer_scope is the lease span, no apply can enter it;
+    log_state::checkpoint throws if a batch is not yet durable instead. No stepping executor in T1.
+  - Extra mutants for claims this step adds: M-m (fail-stop fence), M-n (head older than the
+    checkpoint), M-o (checkpoint UUID).
+  - M-a is "the checkpoint record made durable before the edit": staged alone it would not reach
+    the log before commit returns in a blocking test.
+  - A fallback open (`to`) commits its older head before attach_log refuses it with log_lost; the
+    next open refuses again (loud). Left as is.
+  - kv_strata: logged rows put indexes in <dir>/<i> and the host in <dir>/host (disk counted);
+    1 MiB command limit, 4 MiB segments (the shipped default would preallocate 129 MiB).
+  - T1 default 8 seeds per crash point (3 s whole test); the job runs 200.
 
 - Edited cmake/check_core_includes.cmake, outside the file set, at the lead's request: journal/turn_driver.h joins the allowlist (journal is already a core library).
 
