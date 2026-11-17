@@ -67,8 +67,9 @@ name is stepped through each pattern's `index_pattern::Glob` one segment at a ti
 wanted pattern accepts it and no exclusion does, which is the walk's rule (D2's set, filtered as
 `Walk::matched` filters). When no wanted pattern is live after a segment of a name, its prefix up to that segment
 is dead, and the scan seeks to the first name past that subtree (`prefix + '0'`, since `0` follows `/`). Plain
-names and exclusions are handled as `expand` handles them. The cost is O(R log N + names read), R the ranges, at
-most 32; the names read are the matches, the names in a range that a pattern rejects, and one per dead subtree.
+names, exclusions and the checks on the items go through `index_pattern::parse`, the one parser the walk uses too.
+The cost is O(R log N + names read), R the ranges, at most 32; the names read are the matches, the names in a
+range that a pattern rejects, and one per dead subtree.
 
 **D7. The same bounds, counted in names.** A lookup counts each name it reads and each seek as a visit, each
 pattern step as `expand` counts it, and the names it lists; past `--max-search-indexes` visits or names, or the
@@ -118,5 +119,3 @@ it at 10^4, 10^5 and 10^6 indexes beside a prefix lookup in the index and the sa
    that every lookup equals the walk over random nested trees (A3), a node over the cap answering a wildcard
    (A4), and the kill during create (A5).
 2. The measurement at 10^4, 10^5 and 10^6 indexes (A2), and front coding of the base if the bytes per index say so.
-3. Starting the build at the node's start rather than at its first pattern, which needs the manager (outside this
-   quest's files).
