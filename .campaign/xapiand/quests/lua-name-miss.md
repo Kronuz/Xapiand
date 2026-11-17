@@ -16,8 +16,7 @@ ClientError naming the script instead, and the docs say what bounds a large scri
   the document unchanged; a test that fails on master (a `--fails-without` job) covers an evicted
   script and one over the byte budget (review job 261116-150120-f8089e's shape).
 - A2 [artifact] `docs/mechanisms/lua-memory.md` states that calls of a script over 16 KiB wait
-  for each other with no bound but the request's cancel (review C2), and the scripting reference
-  states the C1 error.
+  for each other with no bound but the request's cancel (review C2) and the C1 error.
 - A3 The suite passes (the `suite` check).
 
 ## Decisions
