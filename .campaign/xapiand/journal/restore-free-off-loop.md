@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: ready for review (evidence reruns at the merged head Xapiand:a6f6c9bbc queued: 261116-163129-344a10 261116-163129-4fff0e 261116-163130-b509cb 261116-163130-ab4353 261116-163130-1875e5 261116-163130-006d68 261116-163133-9cc384 261116-163133-2c3c88)
+State: fixing F1 F2 F3 (review CHANGES at Xapiand:a6f6c9bbc); jobs queued after the push, ids under Next
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -47,6 +47,21 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
 2. The spin job at Xapiand:a85559290 (261116-152346-3f7758) exited 0 with no data: workdir = output dir, so the
    node's start removed it, and the verdict passed an empty dir. Fixed in Xapiand:395fe52f2; A1's turn bound
    rests on the rerun b509cb.
+
+## Review fixes (correctness review, CHANGES)
+
+- F1: tests/test_loop_yield.cc replaces the whole new/delete family (plain, array, nothrow, aligned, sized), so the
+  nothrow `new` under `std::stable_sort` no longer pairs ASan's allocator with the replaced `delete`. Replacing
+  keeps the count under every build, so the test checks the same thing everywhere. Proof: CI "Unit tests under
+  ASan + UBSan" at the fixed commit; mutant jobs rerun.
+- F2: ABBA round 1 at a6f6c9bbc (344a10) failed A2 (head 5,851/5,522 docs/s, base 6,629/6,532, floor 6,435); round 2
+  (4fff0e) passed. Counted, unattributed (host noise is the reading; src differs only by master's Lua cache). Both
+  rounds rerun with BASE = merged master c6380001d. Recorded in docs/perf/restore-stall.md.
+- F3: the reviewer's probe cases are in harness/restore_stall_items.py (`awkward()`: repeated keys, odd `_id`
+  types and sizes, `_op_type`, script/schema, MessagePack bodies, offset/limit, nested arrays, broken streams, 16 /
+  12,000 / 70,000 results); the items job reruns with them, base vs head.
+- The mutant jobs now use --build (mutate + build) and --fails-without with a command that exits nonzero when the
+  named FAIL line appears (the tool inverts).
 
 ## Blocked on
 

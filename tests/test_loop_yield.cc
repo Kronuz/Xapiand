@@ -81,20 +81,47 @@ void count_delete() noexcept {
 }
 }  // namespace
 
-void* operator new(std::size_t size) {
-	if (void* p = std::malloc(size != 0 ? size : 1)) {
-		return p;
+// The whole family is replaced, so every block pairs with the free that releases it (a sanitizer's own new would not).
+namespace {
+void* alloc(std::size_t size) noexcept {
+	return std::malloc(size != 0 ? size : 1);
+}
+void* alloc_aligned(std::size_t size, std::size_t align) noexcept {
+	void* p = nullptr;
+	return ::posix_memalign(&p, align < sizeof(void*) ? sizeof(void*) : align, size != 0 ? size : 1) == 0 ? p : nullptr;
+}
+void* alloc_or_throw(void* p) {
+	if (p == nullptr) {
+		throw std::bad_alloc();
 	}
-	throw std::bad_alloc();
+	return p;
 }
-void operator delete(void* p) noexcept {
+void release(void* p) noexcept {
 	count_delete();
 	std::free(p);
 }
-void operator delete(void* p, std::size_t) noexcept {
-	count_delete();
-	std::free(p);
-}
+}  // namespace
+
+void* operator new(std::size_t size) { return alloc_or_throw(alloc(size)); }
+void* operator new[](std::size_t size) { return alloc_or_throw(alloc(size)); }
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept { return alloc(size); }
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept { return alloc(size); }
+void* operator new(std::size_t size, std::align_val_t a) { return alloc_or_throw(alloc_aligned(size, static_cast<std::size_t>(a))); }
+void* operator new[](std::size_t size, std::align_val_t a) { return alloc_or_throw(alloc_aligned(size, static_cast<std::size_t>(a))); }
+void* operator new(std::size_t size, std::align_val_t a, const std::nothrow_t&) noexcept { return alloc_aligned(size, static_cast<std::size_t>(a)); }
+void* operator new[](std::size_t size, std::align_val_t a, const std::nothrow_t&) noexcept { return alloc_aligned(size, static_cast<std::size_t>(a)); }
+void operator delete(void* p) noexcept { release(p); }
+void operator delete[](void* p) noexcept { release(p); }
+void operator delete(void* p, std::size_t) noexcept { release(p); }
+void operator delete[](void* p, std::size_t) noexcept { release(p); }
+void operator delete(void* p, const std::nothrow_t&) noexcept { release(p); }
+void operator delete[](void* p, const std::nothrow_t&) noexcept { release(p); }
+void operator delete(void* p, std::align_val_t) noexcept { release(p); }
+void operator delete[](void* p, std::align_val_t) noexcept { release(p); }
+void operator delete(void* p, std::size_t, std::align_val_t) noexcept { release(p); }
+void operator delete[](void* p, std::size_t, std::align_val_t) noexcept { release(p); }
+void operator delete(void* p, std::align_val_t, const std::nothrow_t&) noexcept { release(p); }
+void operator delete[](void* p, std::align_val_t, const std::nothrow_t&) noexcept { release(p); }
 
 namespace {
 

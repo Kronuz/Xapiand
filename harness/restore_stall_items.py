@@ -14,6 +14,7 @@ import asyncio
 import json
 import os
 import re
+import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -24,6 +25,223 @@ MSGPACK_CT = "application/x-msgpack"
 
 def lines(objs: list[dict]) -> bytes:
     return b"".join(json.dumps(o).encode() + b"\n" for o in objs)
+
+
+class Pairs:
+    """A map as ordered pairs, for repeated or non-string keys."""
+
+    def __init__(self, items: list[tuple]) -> None:
+        self.items = items
+
+
+def mp(o: object) -> bytes:
+    """A small MessagePack encoder, enough for the awkward bodies."""
+    if o is None or isinstance(o, bool):
+        return b"\xc0" if o is None else (b"\xc3" if o else b"\xc2")
+    if isinstance(o, int):
+        if 0 <= o < 128:
+            return bytes([o])
+        if -32 <= o < 0:
+            return struct.pack("b", o)
+        if o >= 0:
+            return b"\xcf" + struct.pack(">Q", o) if o >= 2**32 else b"\xce" + struct.pack(">I", o)
+        return b"\xd3" + struct.pack(">q", o)
+    if isinstance(o, float):
+        return b"\xcb" + struct.pack(">d", o)
+    if isinstance(o, str):
+        b = o.encode()
+        n = len(b)
+        if n < 32:
+            return bytes([0xA0 | n]) + b
+        return (b"\xd9" + bytes([n]) if n < 256 else b"\xda" + struct.pack(">H", n)) + b
+    if isinstance(o, list):
+        return (bytes([0x90 | len(o)]) if len(o) < 16 else b"\xdc" + struct.pack(">H", len(o))) + b"".join(
+            mp(x) for x in o
+        )
+    pairs = o if isinstance(o, Pairs) else Pairs(list(o.items()))  # type: ignore[attr-defined]
+    n = len(pairs.items)
+    return (bytes([0x80 | n]) if n < 16 else b"\xde" + struct.pack(">H", n)) + b"".join(
+        mp(k) + mp(v) for k, v in pairs.items
+    )
+
+
+def awkward(fmt: str) -> list[tuple[str, str, bytes, str]]:
+    """Bodies that stress the offset and size bookkeeping of the results: repeated keys, `_id` of every type and size,
+    `_op_type` variants, script and schema objects, MessagePack bodies (repeated and non-string keys), offset and limit,
+    nested arrays, streams that break halfway, and results past the array16 and array32 headers. Every object has an
+    `_id`, so the responses are the same on both binaries."""
+    ix = lambda name, q="?commit&echo": f"/{fmt}-awk-{name}/" + q
+    odd = [
+        "1.5",
+        "true",
+        "null",
+        "[1,2]",
+        '{"a":1}',
+        "-5",
+        "18446744073709551615",
+        '""',
+        '"é…✓"',
+        '"' + "x" * 300 + '"',
+        '"' + "y" * 70000 + '"',
+        "-9223372036854775808",
+        "0",
+        "31",
+        "32",
+        "127",
+        "128",
+        "255",
+        "256",
+        "65535",
+        "65536",
+        "4294967295",
+        "4294967296",
+    ]
+    idn = lambda ids: b"".join(f'{{"_id":{v},"n":1}}\n'.encode() for v in ids)
+    nd = lambda *ls: b"".join(x.encode() + b"\n" for x in ls)
+    mps = lambda objs: b"".join(mp(o) for o in objs)
+    big = lambda n: nd(*[f'{{"_id":"d{i}"}}' for i in range(n)])
+    nd_ct, mp_ct = sl.NDJSON_CT, MSGPACK_CT
+    return [
+        (
+            "dup-top",
+            ix("dup-top"),
+            nd(
+                '{"_id":"d1","n":1,"n":2,"t":"a"}',
+                '{"_id":"d2","_id":"d3","n":5}',
+                '{"n":7,"_id":"d4","n":8,"_id":"d5"}',
+            ),
+            nd_ct,
+        ),
+        (
+            "dup-op-type",
+            ix("dup-op"),
+            nd(
+                '{"_id":"f1","_op_type":"delete","_op_type":"index","n":1}',
+                '{"_id":"f2","_op_type":"index","_op_type":"delete"}',
+            ),
+            nd_ct,
+        ),
+        ("dup-script", ix("dup-script"), nd('{"_id":"g1","n":1,"_script":"_doc.n = 5","_script":"_doc.n = 6"}'), nd_ct),
+        ("odd-ids", ix("odd-ids"), idn(odd), nd_ct),
+        ("odd-ids-comments", ix("odd-ids-c", "?commit&echo&comments"), idn(odd[:9]), nd_ct),
+        (
+            "op-types",
+            ix("op-types"),
+            nd(
+                '{"_id":"i1","_op_type":"index","n":1}',
+                '{"_id":"i2","_op_type":"delete"}',
+                '{"_id":"i4","_op_type":5,"n":1}',
+                '{"_id":"i5","_op_type":"update","n":1}',
+                '{"_id":"i6","_op_type":null}',
+                '{"_id":"i7","_op_type":"create","n":2}',
+                '{"_id":"i8","_op_type":"INDEX","n":2}',
+                '{"_id":"i9","_op_type":["index"]}',
+            ),
+            nd_ct,
+        ),
+        (
+            "script-schema",
+            ix("script-schema"),
+            nd(
+                '{"_id":"j1","n":1}',
+                '{"_id":"j2","_script":"_doc.n = 2","n":0}',
+                '{"_id":"j3","n":3}',
+                '{"_id":"j4","_schema":{"n":{"_type":"integer"}},"n":4}',
+                '{"_id":"j5","n":5}',
+                '{"_id":"j6","_script":"bad (","n":1}',
+                '{"_id":"j7","_schema":5,"n":1}',
+                '{"_id":"j8","_script":5,"n":1}',
+            ),
+            nd_ct,
+        ),
+        (
+            "nested-arrays",
+            ix("nested"),
+            nd(
+                '[{"_id":"k1","n":1},{"_id":"k2","n":2}]',
+                '[1,{"_id":"k3","n":3},"x",{"_id":"k4","n":4}]',
+                "[]",
+                '[[{"_id":"k5"}]]',
+                "5",
+                '"s"',
+                '{"_id":"k6","n":6}',
+            ),
+            nd_ct,
+        ),
+        (
+            "long-error-id",
+            ix("long-err"),
+            nd(
+                '{"_id":"m1","n":"zz"}', '{"_id":"' + "m" * 5000 + '","n":"zz"}', '{"_id":"m3","n":"' + "q" * 400 + '"}'
+            ),
+            nd_ct,
+        ),
+        (
+            "offset-limit",
+            ix("offlim", "?commit&echo&offset=3&limit=5"),
+            nd(*[f'{{"_id":"o{i}","n":{i}}}' for i in range(30)]),
+            nd_ct,
+        ),
+        ("limit-0", ix("lim0", "?commit&echo&limit=0"), nd(*[f'{{"_id":"p{i}","n":{i}}}' for i in range(10)]), nd_ct),
+        (
+            "array-dups",
+            ix("arr-dups"),
+            json.dumps([{"_id": "r1", "n": 1}, {"_id": "r1", "n": 2}, {"_id": "r1", "n": 3}]).encode(),
+            sl.JSON_CT,
+        ),
+        ("mp-basic", ix("mp-basic"), mps([{"_id": f"t{i}", "n": i, "t": "mp"} for i in range(30)]), mp_ct),
+        (
+            "mp-dups",
+            ix("mp-dups"),
+            mp(Pairs([("_id", "u1"), ("n", 1), ("n", 2), ("_id", "u2")])) + mp({"_id": "u3", "n": 3}),
+            mp_ct,
+        ),
+        (
+            "mp-script",
+            ix("mp-script"),
+            mps([{"_id": "v1", "n": 1}, {"_id": "v2", "_script": "_doc.n = 3", "n": 0}, {"_id": "v3", "n": 3}]),
+            mp_ct,
+        ),
+        (
+            "mp-odd-ids",
+            ix("mp-odd"),
+            mps(
+                [
+                    {"_id": v, "n": 1}
+                    for v in [1.5, True, None, [1, 2], {"a": 1}, -5, 2**64 - 1, "", "x" * 300, 2**32, -33, -(2**40)]
+                ]
+            ),
+            mp_ct,
+        ),
+        ("mp-bad-key-first", ix("mp-badkey1"), mp(Pairs([(1, "a"), ("_id", "w1")])) + mp({"_id": "w2", "n": 2}), mp_ct),
+        (
+            "mp-bad-key-mid",
+            ix("mp-badkey2"),
+            mps([{"_id": f"x{i}", "n": i} for i in range(10)])
+            + mp(Pairs([(5, "a"), ("_id", "xbad")]))
+            + mps([{"_id": f"y{i}", "n": i} for i in range(10)]),
+            mp_ct,
+        ),
+        (
+            "break-json",
+            ix("break-json"),
+            nd(
+                *[f'{{"_id":"z{i}","n":{i}}}' for i in range(200)],
+                '{"_id":"zbad","n":',
+                *[f'{{"_id":"zz{i}","n":{i}}}' for i in range(50)],
+            ),
+            nd_ct,
+        ),
+        (
+            "break-mp",
+            ix("break-mp"),
+            mps([{"_id": f"ta{i}", "n": i} for i in range(100)]) + mp({"_id": "tb", "n": 1})[:-3],
+            mp_ct,
+        ),
+        ("n16", ix("n16", "?commit"), big(16), nd_ct),
+        ("n12000", ix("n12000", "?commit"), big(12000), nd_ct),
+        ("n70000", ix("n70000", "?commit"), big(70000), nd_ct),  # a results array32 header
+    ]
 
 
 def cases(fmt: str) -> list[tuple[str, str, bytes, str]]:
@@ -50,7 +268,7 @@ def cases(fmt: str) -> list[tuple[str, str, bytes, str]]:
             (f"sharded-{tag}", three, lines([settings3, *given, *repeated, *failing]), sl.NDJSON_CT),
             (f"sharded-numeric-{tag}", num3, lines([{**settings3, "_id": 1}, *numeric]), sl.NDJSON_CT),
         ]
-    return out
+    return out + [(f"awk-{n}", p, b, ct) for n, p, b, ct in awkward(fmt)]
 
 
 class AcceptConn(sl.Conn):

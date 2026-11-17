@@ -191,6 +191,15 @@ master's 6,686 and 6,711 (6% faster). The spin job of that commit (261116-152346
 probe workdir was its output directory, so the node's start removed both runs, and the verdict passed an empty
 directory. Both are fixed (Xapiand:395fe52f2); the spin rerun at the merged head is in the journal.
 
+Rerun at the merged head (Xapiand:a6f6c9bbc), BASE still Xapiand:49a73300d, exclusive. Round 1 (job
+261116-163129-344a10) FAILED A2: the fix's 5,851 and 5,522 docs/s against master's 6,629 and 6,532 (band floor
+6,435); its p99 passed at 2.29 and 2.63 ms (bound 2.73, a thin margin). Round 2 (261116-163129-4fff0e) passes: p99
+1.48 and 1.49 ms against master's 10.66 and 10.03 (bound 2.77), 7,126 and 7,134 docs/s against 6,733 and 6,680
+(floor 6,627). The dip is in both fix arms and neither master arm; the only source change between the two heads is
+master's Lua cache (`src/lua`, opts), which the RESTORE path does not touch, and the earlier two rounds read 7,077-7,126
+docs/s. It reads as host noise, but nothing attributes it. Round 1 is a counted run, not dropped: A2 rests on the
+reruns below, which move BASE to the merged master (Xapiand:c6380001d) and run both rounds again.
+
 ## 2. The lag probe's 49-82 ms
 
 `LagProbe` (`reactor_lag.h`) re-arms a `steady_timer` and records how late each wake ran. Is its max a floor or a stall?
