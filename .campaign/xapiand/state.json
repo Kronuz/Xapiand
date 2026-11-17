@@ -13261,9 +13261,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Branch-free block compare and per-word rank in intersections",
-      "updated": "2026-11-17T02:56:39",
+      "updated": "2026-11-17T05:35:13",
       "worktree": "../prospect-wt/xapiand/p2-intersection"
     },
     "perf-watch-peek": {
