@@ -186,3 +186,8 @@ quest starts (name it) or is dropped with a reason.
 
 - (taken by detent:journal-host-guards A1) journal `Host::close_group` (host.h:321-328) forgets every record after the sequence it is given without checking it is the group's last; the turn-seal supersede guard covers only `TurnLog::append`. Route to consensus-quiescence or a journal fix (tell Detent).
 - At rf = 1, group-core's `ack=none` and `ack=quorum` wait for the same barrier (unlike document-gate's `ack=none`); quest 10's A4 (Q14, journal at `none` at least as fast as the WAL's async default) likely loses on single-client latency. Decide with turn-log-parity's Q3 work.
+
+## group-core step 1 findings (2026-11-17)
+
+- At consensus's default limits a group checkpoint never gets its admission reservation and waits forever (group-core journal, strata:0d6486006cc3). Size the admission replacement pool to its limits in quest 10, or fail the checkpoint loudly instead of waiting; tell Detent if the default is consensus's.
+- strata's faultfs has no owner lock (`lock_owner`); group-core's `test/group/host_io.hh` adds one locally. Move it into faultfs so every crash harness shares one.
