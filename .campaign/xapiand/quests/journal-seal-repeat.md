@@ -10,7 +10,7 @@ returns nothing or the room is spent, so one turn carries several records from o
 ack=none backlog then drains as fast as barriers allow (document-gate durability F1, D107/D108).
 Detent's lead accepted the contract change (11-17); only strata calls `TurnDriver::seal`.
 
-## Criteria
+## Acceptance criteria
 
 - A1 Several records per turn: tests that check values for three records from one sealer in one
   turn with sequences staged+1, +2, +3; the room exactly met, and exceeded by one byte (the record
