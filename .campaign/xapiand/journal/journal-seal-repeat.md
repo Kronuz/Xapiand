@@ -30,7 +30,7 @@ Nothing.
 | A1 | 261117-093937-b18312 (`repeat`: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants 261117-094035-f25876 (one-call), 261117-094044-57a827 (framing), 261117-094052-389c68 (staged) |
 | A2 | 261117-093949-4732e0 (`repeat_turns`: `first` across groups, two-group alternation 1,2,1,2); mutant 261117-094103-c463ab (rotation) |
 | A3 | 261117-094001-0719c0 (`repeat_throw`, `repeat_unseal`, `repeat_threads`); 261117-094013-27775a (turn tests under TSan, `repeat_threads` included); mutants 261117-094114-d5bc25 (unsealed-again), 261117-094124-60920c (repeat-throw) |
-| A4 | 261117-093933-1b2c95 (build-test: whole suite, crash fixtures included); 261117-094013-27775a (TSan, `-R turn`); 261117-094025-c1a38e (ASan, turn_seal); CI on quest/xapiand/journal-seal-repeat at journal:3c6a468 |
+| A4 | 261117-093933-1b2c95 (build-test: whole suite, crash fixtures included); 261117-094013-27775a (TSan, `-R turn`); 261117-094025-c1a38e (ASan, turn_seal); CI run 44139371364 on quest/xapiand/journal-seal-repeat at journal:3c6a468 (in progress) |
 | A5 | [artifact] journal `docs/mechanisms/turn-seal.md` at journal:3c6a468: "Repeat calls", "What it gets" (room accounting and `first`), "A failing repeat call", lifetime under "One per group", "Later sealed records" and "Fairness" (no per-group cap); CHANGELOG.md 2026-11-17 entry |
 
 ## Result
