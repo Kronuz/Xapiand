@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-113100-ed8f75 261117-113107-dc09de 261117-113110-0f8110 261117-111542-e71d1f 261117-111546-b099bb
+State: waiting on jobs 261117-121855-eefc18 261117-121859-d28384..261117-122035-212d65 (9 mutants) 261117-122103-e51e66
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,13 +18,12 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A1 follow-up (hunt "Adaptive in-block search", prospect reader.hh `find_in_block`): variants
-   in `docs/perf/p2-find-in-block.patch` (`PROSPECT_EXPERIMENT_FIB`): 1 probes then a compare of
-   the remainder from its row (no bisect); 2 a division-free expected-skip selector (far targets
-   skip the probes); 3 = 2 with 32-slot windows; 9 the 128-slot reference. Scripts
-   `prospect-wt/.../track-p/.scratch/fib/` (build, ab, tiny, parity), patch at prospect:8712858.
-   Jobs: ed8f75 (build + 1M A/B), dc09de (tiny probe, default and -march=native), 0f8110
-   (parity). Next: read them, pick the variant, verdict in `docs/perf/p2-intersection.md`.
+0. A1 follow-up, find_in_block selector: FIB 2 kept (expected skip distance, division-free),
+   landed on the branch at prospect:10ac993 with skewed-block tests and 9 mutants; verdict in
+   `docs/perf/p2-intersection.md` "Follow-up". Screens: A/B ed8f75, tiny dc09de, parity 0f8110
+   (all passed). Waiting: build-test eefc18, mutants d28384 ebae52 2b4aee c981c4 230f53 98b81c
+   ef86f3 16a1f0 212d65 (--fails-without), landed A/B + tiny rerun e51e66. Next: add e51e66's
+   rows to the doc; if a row loses or a short-list case leaves its A/A, revert.
 1. P9 reruns e71d1f (A/B) and b099bb (engines) only restore a passing exit; if a rerun shows an
    intersection row beyond its A/A, reopen P9's verdict; else nothing changes.
 2. Disk: host at 96%; `.scratch/idx-p13`, `build-p9-*` can go once the P9 reruns finish.
@@ -89,5 +88,12 @@ for every variant. Patch `docs/perf/p9-planner.patch` is the record.
   reverted (it equals `docs/perf/p13-positions.patch`, which stays as the record).
 - A7: the deciding numbers come from 383ae4 and ad33ee although they exited 1: the failing step was
   the scripts' own file-count check after the tables were complete (padded `wc -l`), not the runs.
+- A1 follow-up: a win also needs its ratio under the A/A's lower bound (as A10's loss rule);
+  a short-list case is within its A/A when its median is inside the A/A's per-round range.
+- A1 follow-up: the selector branch only chooses between two correct paths, so no mutant of it
+  can be caught by values; mutants cover the probes, the row compare and its bounds; the test's
+  skewed blocks take both branches with the estimate wrong each way.
+- A1 follow-up: reader.hh and test/ are outside track-p's file set; the lead directed the landing
+  through track-p (msg of 11-17), so the file set needs widening before `campaign land`.
 - A7: P9 stops after three experiments (two losers and one non-winner); the remaining gap to Tantivy
   is `advance` and scoring every lead document, not evaluation order.
