@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-075713-601c02 261117-075726-9eb435 261117-075737-0c8aec 261117-075748-8a784a 261117-075800-5c7ffa 261117-075821-5866e7 261117-075429-907b22 261117-075430-571f74 261117-075441-a3837d 261117-075442-939866 261117-075442-e8e160 261117-075443-3e1d5f (durability review running at strata:12f59669)
+State: waiting on jobs 261117-082401-124c5c 261117-085159-309a79 (A6 builds; row jobs queued after them, ids in Evidence A6) 261117-075713-601c02 261117-075726-9eb435 261117-075737-0c8aec 261117-075748-8a784a 261117-075800-5c7ffa 261117-075821-5866e7 261117-075429-907b22 261117-075430-571f74 261117-075441-a3837d 261117-075442-939866 261117-075442-e8e160 261117-075443-3e1d5f (durability review running at strata:12f59669)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,7 +31,7 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Blocked on
 
-- Lead or owner, A6 (platform rows): what is owed is every A3 row set on Linux x86_64, FreeBSD
+- (ruled D105: option (b) on own VMs, arm64 by CI smoke now) A6 (platform rows): what is owed is every A3 row set on Linux x86_64, FreeBSD
   x86_64 and arm64: fits1 (13 rows), twox1 (13), big1 (10x: 3 rows, and the 10x rows A3 still
   owes on macOS), sync1 (6), wal1 (3), the N-log group-commit rows, and the A/A on each
   platform. None have run. Options:
@@ -88,7 +88,7 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 | A4 | Four axes per row in `docs/perf/standalone-turn-log.md`: sync throughput ties (0.96-1.05x), M2 261117-055334-a41ea3 one barrier per batch. Misses against 1.0x: group commit 1.2-1.45x slower (turn-log-parity A6), memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
 | A5 | RocksDB 11.11 pinned on lvl-16k-lz4 (calibrated fastest for 100 B and 1 KiB) in every row job above; harness per `docs/perf/rocksdb-fairness-audit.md` |
 | A7 | Queued at 12f59669: fuzz (75 CPU-min each, ASan+UBSan) stored 261117-075713-601c02, manifest_log 261117-075726-9eb435, manifest_log_file 261117-075737-0c8aec, command 261117-075748-8a784a; version rejection and fixtures 261117-075800-5c7ffa; coverage 261117-075821-5866e7. ASan/UBSan and TSan: CI run 44119676721 (linux-asan-ubsan, linux-tsan), in progress; TSan on the turn log's cases passed (A1). Scale statement: [artifact] gate report "Scale" (strata:91366374) |
-| A6 | Blocked on a decision (see "Blocked on"): no platform rows run |
+| A6 | D105, in progress at strata:12f59669. Linux x86_64 VM (Ubuntu 24.04, 4 vCPU, 6 GiB, qemu HVF, virtio disk on APFS; sync rows are VM-virtio): build 261117-082401-124c5c, 261117-084004-25dd82 (dry); rows 261117-084012-f7f0e7 261117-084020-0646a7 261117-084028-41f69b (fits1) 261117-084037-d4e2de 261117-084045-d42d02 261117-084053-6d8351 (sync1) 261117-084100-27be96 (wal1) 261117-084108-5aea78 261117-084116-1c1ae1 261117-084124-d102e4 (twox1) 261117-084131-c8bd5a 261117-084141-f0823b (big1) 261117-084151-53bbf8 (A/A) 261117-084159-a97142 261117-084208-16902d (A/A sync) 261117-084215-47c83b (N-log). FreeBSD 14.4 x86_64 VM (4 vCPU, 3 GiB): build 261117-085159-309a79, 261117-085213-9c43c9 (dry); rows 261117-085221-047b50 261117-085229-320bfa 261117-085238-8443fb (fits1) 261117-085245-45a977 261117-085253-f20138 261117-085301-985f09 (sync1) 261117-085309-9d6302 (wal1) 261117-085316-28849e 261117-085324-76af0f 261117-085331-4b8d71 (twox1) 261117-085338-2e3ee0 261117-085344-122849 (big1) 261117-085351-5b1072 (A/A) 261117-085359-f66f00 261117-085406-ab3240 (A/A sync) 261117-085413-1ba8b7 (N-log). arm64 smoke: CI run 44119676721 at 12f59669, linux-arm64-gcc build and ctest passed (no dispatch: it would cancel the quest's run). arm64 rows owed before Phase 3R's next gate (D105) |
 | A8 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), in progress: every measured row with commit, platform and jobs, and the owed list |
 
 ## Result
@@ -209,3 +209,5 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
   segments (D10).
 - The doc runs about 3,800 words, over the design-doc ceiling, because the assignment needs
   its tests, jobs and questions spelled out; most of the length is tables.
+
+- A6 VMs (2026-11-17, D105): `ListAgents` is not a tool of this contributor; `ps` at start showed only strata's qemu (pid 62276 linux-vm :18772, pid 91575 freebsd-vm :18774); Detent's :18762/:18763 not running. Never touched them. Mine: ~/.scratch/vm-document-gate/{linux,freebsd} (copies of strata's base.img files, qcow2 overlays, own keys and cloud-init seeds, ports 18782/18784; driver `vm.sh`, jobs `vmrows.sh`, queue `submit.sh`). Linux packages came from cloud-init apt, FreeBSD's from pkg (cmake ninja git python3 bash liblz4 zstd). RocksDB: the pinned 11.11 tree tarred from the host, built in the VM. Memory: host 32 GiB with strata's two VMs resident, so mine are 6 and 3 GiB. Both VMs idle while the other's rows run. Shut both down (`vm.sh linux stop`, `vm.sh freebsd stop`) when the last row job ends, then write the rows into the gate report and perf note from ~/.scratch/vm-document-gate/results/*.
