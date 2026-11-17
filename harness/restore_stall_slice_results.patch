@@ -1,0 +1,22 @@
+diff --git a/src/server/search_views.cc b/src/server/search_views.cc
+index 59d40cd28..6d8c22358 100644
+--- a/src/server/search_views.cc
++++ b/src/server/search_views.cc
+@@ -1759,6 +1759,17 @@ restore_database_view(Request& request)
+ 		error = std::current_exception();
+ 	}
+ 
++	// EXPERIMENT (restore-stall): free the results' map trees in slices, not in ~DocIndexer's single turn.
++	if (indexer && !error) {
++		auto& results = const_cast<std::vector<MsgPack>&>(indexer->results());
++		for (std::size_t n = 0; !results.empty(); ++n) {
++			results.pop_back();
++			if ((n & 31) == 31) {
++				co_await request.budget->checkpoint();
++			}
++		}
++	}
++
+ 	// What was indexed before a failure stays: the closing commit runs on every exit.
+ 	if (error && indexer) {
+ 		try {
