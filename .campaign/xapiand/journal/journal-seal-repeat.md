@@ -1,6 +1,6 @@
 # journal-seal-repeat: journal
 
-State: waiting on jobs 261117-103158-aa11a7 261117-103201-cfa134 261117-103206-61c5cc 261117-103212-a8b3aa 261117-103233-d90dfc 261117-103233-7f09bc
+State: waiting on jobs CI 44148860137 (every campaign job at journal:2c0b920 is green)
 Quest: .campaign/xapiand/quests/journal-seal-repeat.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,8 @@ journal:3c6a468 (CI 44139371364, TSan, six mutants).
 
 ## Next
 
-1. Jobs above green and CI green at journal:2c0b920, then State: ready for review.
+1. Jobs green at journal:2c0b920 (build-test, A1, A2, A3, TSan, ASan all exit 0). When CI run
+   44148860137 is green, State: ready for review.
 
 ## Blocked on
 
@@ -30,7 +31,7 @@ Nothing.
 | A1 | 261117-103233-d90dfc (repeat case: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants 261117-094035-f25876 (one-call), 261117-094044-57a827 (framing), 261117-094052-389c68 (staged), each failing its case at journal:3c6a468 |
 | A2 | 261117-103233-7f09bc (repeat_turns: first across groups, two-group alternation 1,2,1,2); mutant 261117-094103-c463ab (rotation) |
 | A3 | 261117-103201-cfa134 (repeat_throw, repeat_unseal, repeat_threads); 261117-103206-61c5cc (turn tests under TSan, the gated repeat_threads included); mutants 261117-094114-d5bc25 (unsealed-again), 261117-094124-60920c (repeat-throw) |
-| A4 | 261117-103158-aa11a7 (build-test: whole suite, crash fixtures included); 261117-103206-61c5cc (TSan); 261117-103212-a8b3aa (ASan, turn_seal); CI on quest/xapiand/journal-seal-repeat at journal:2c0b920 |
+| A4 | 261117-103158-aa11a7 (build-test: whole suite, crash fixtures included); 261117-103206-61c5cc (TSan); 261117-103212-a8b3aa (ASan, turn_seal); CI run 44148860137 at journal:2c0b920 |
 | A5 | [artifact] `docs/mechanisms/turn-seal.md` at journal:2c0b920: sections Repeat calls, What it gets (room accounting and the first flag), A failing repeat call, lifetime under One per group, Later sealed records, and Fairness (no per-group cap); CHANGELOG.md 2026-11-17 entry |
 
 ## Result
