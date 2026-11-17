@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: waiting on jobs 261117-110158-de9685 261117-110158-9cdd8c 261117-110204-e7835e 261117-110254-f71df8 261117-110258-76c693 and 9 mutants
+State: ready for review
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,8 +27,7 @@ fixture 261117-110254-f71df8 (light); A2 bench 261117-110258-76c693 (strict, aft
 
 ## Next
 
-1. When green: bench table into docs/design/name-index.md "Costs"; Evidence from `campaign brief`; ready for review.
-   Then delete ~/.scratch/name-index-bench.
+1. Fold in review findings by id. No new building.
 
 ## Blocked on
 
@@ -44,12 +43,18 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/name-index.md` |
+| A2 | 261117-110258-76c693; fails without: 261117-110228-88596e |
+| A3 | 261117-110158-de9685 (build-test, async_check included), 261117-110158-9cdd8c (e2e), 261117-110204-e7835e; fails without: 261117-110214-031049, 261117-110217-85a114, 261117-110221-d6fa49, 261117-110224-f3f320 |
+| A4 | 261117-110204-e7835e; fails without: 261117-110232-ddea0a, 261117-110235-4fbeb9, 261117-110238-651fe2 |
+| A5 | 261117-110204-e7835e; fails without: 261117-110242-e44601 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Index patterns resolve from `NameIndex`, an in-memory sorted set of the walk's names, built by one walk in a merge
+chore after the first pattern and kept by the catalog's resolve; the walk answers until the build ends. A prefix
+pattern takes 2.1 µs at 10^4 to 10^6 indexes against the walk's 8.2 to 875.6 ms (422,592x faster at 10^6); the build
+takes 167.5 s at 10^6; 16 B per name (261117-110258-76c693). Docs: docs/design/name-index.md,
+docs/mechanisms/wide-search.md. Open: the release gating (owner).
 
 ## Rulings I made
 

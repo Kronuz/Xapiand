@@ -106,9 +106,20 @@ the directory.
 | A resolve | O(log N) shared; O(log N) exclusive for a new name; O(N / 8) bytes amortized at a merge | D3, D4 |
 | The build | one walk of every reachable directory entry, once per process | D5 |
 
-The build's time is the walk's: 100,000 entries took 1.4 s warm and 5 s cold (SR8), and an index directory holds a
-few entries (`strata`, the WAL, its children), so 10^6 indexes are about a minute warm. The quest's A2 jobs measure
-it at 10^4, 10^5 and 10^6 indexes beside a prefix lookup in the index and the same pattern walked.
+Measured (quest name-index A2, job 261117-110258-76c693, strict hold, macOS x86_64, warm, kept trees of N
+top-level indexes each holding `strata`): the pattern `iNNNNNN?` names 10 indexes in the middle; walk and lookup are
+medians of 5 and 2,000 runs.
+
+| Indexes | Build s | Walk ms | Names µs | Faster | Names read | B per name |
+|---:|---:|---:|---:|---:|---:|---:|
+| 10^4 | 0.62 | 8.2 | 2.12 | 3,881× | 11 | 16.0 |
+| 10^5 | 6.20 | 83.6 | 2.10 | 39,813× | 11 | 16.0 |
+| 10^6 | 167.5 | 875.6 | 2.07 | 422,592× | 11 | 16.0 |
+
+The lookup stays at 2.1 µs from 10^4 to 10^6 names, reading the 10 matches and one past the range, while the walk
+grows with N. The build is one walk of every index directory: at 10^6 indexes it takes 167.5 s, the window after
+the node's first pattern during which patterns still walk (D5). A name costs 16 B here (an 8-byte name and its
+8-byte end), so front coding waits.
 
 ## Limits
 
