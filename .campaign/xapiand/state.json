@@ -2988,6 +2988,8 @@
         "detent:consensus-transport",
         "detent:consensus-driver"
       ],
+      "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
+      "branch": "quest/xapiand/consensus-rpc-lane",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3024,6 +3026,7 @@
         "fuzz/rpc*",
         "docs/mechanisms/rpc-lane.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
         "correctness"
@@ -3035,9 +3038,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T15:42:47"
+      "updated": "2026-11-16T19:44:06",
+      "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
       "accepted": {},
