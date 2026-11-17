@@ -1,6 +1,6 @@
 # journal-seal-repeat: journal
 
-State: waiting on jobs 261117-093716-f2fb9d 261117-093720-c440b3 261117-093730-64891f 261117-093740-8488e1 261117-093752-798fd9 261117-093803-66f758
+State: waiting on jobs 261117-093933-1b2c95 261117-093937-b18312 261117-093949-4732e0 261117-094001-0719c0 261117-094013-27775a 261117-094025-c1a38e 261117-094035-f25876 261117-094044-57a827 261117-094052-389c68 261117-094103-c463ab 261117-094114-d5bc25 261117-094124-60920c
 Quest: .campaign/xapiand/quests/journal-seal-repeat.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,54 +9,40 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code, tests, mutants and docs committed at journal:57849ad (branch pushed for CI). Jobs queued;
-the six mutant jobs cannot be queued yet (Blocked on).
+Code, tests, mutants, docs and CHANGELOG at journal:3c6a468 (pushed; CI runs on quest/**). All
+evidence jobs are tagged and queued at that head, the six mutants as `--fails-without`.
 
 ## Next
 
-1. Read the six jobs at journal:57849ad; fix any red case. (Build-test 261117-092826-f9528f at
-   journal:6187a32 failed only `staged_room`, where the edit wrongly counted a repeat call after a
+1. Read the twelve jobs at journal:3c6a468; fix any red one. (Build-test 261117-092826-f9528f at
+   journal:6187a32 failed only `staged_room`, where an edit wrongly counted a repeat call after a
    record that spends the room; fixed in journal:57849ad. Every `repeat*` case passed there.)
-2. Once the quest file's criteria heading is fixed, submit the mutants (commands below).
-3. Check CI on quest/xapiand/journal-seal-repeat at journal:57849ad (A4), then ready for review.
-
-Mutant jobs, from the home checkout (each fails its case at the mutant):
-
-```sh
-for pair in one-call:repeat:A1 framing:repeat:A1 staged:repeat:A1 rotation:repeat_turns:A2 unsealed-again:repeat_unseal:A3 repeat-throw:repeat_throw:A3; do
-  m=${pair%%:*}; rest=${pair#*:}; c=${rest%%:*}; a=${rest##*:}
-  campaign job submit --quest journal-seal-repeat --for $a --fails-without --what "mutant $m fails $c" \
-    --build "sh test/turn_seal_mutants.sh $m && cmake -S . -B build-m -DCMAKE_BUILD_TYPE=RelWithDebInfo >/dev/null && cmake --build build-m -j4 --target journal_turn_seal_test" \
-    -- sh -c "test -x build-m/journal_turn_seal_test || exit 127; cd build-m && ./journal_turn_seal_test $c"
-done
-```
+2. CI green on every platform at journal:3c6a468 (A4), then State: ready for review.
 
 ## Blocked on
 
-The lead: the quest file's criteria are under `## Criteria`, but `campaign` reads
-`## Acceptance criteria` (campaign.py:2600), so every `--for A1..A5` is refused ("has no criterion
-A1 (it has none)") and `--fails-without` needs `--for`. Rename the heading; then the jobs above
-can be tagged. The jobs queued so far carry no `--for`.
+Nothing.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261117-093720-c440b3 (`repeat`: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants one-call, framing, staged pending (Blocked on) |
-| A2 | 261117-093730-64891f (`repeat_turns`: `first` across groups, two-group alternation 1,2,1,2); mutant rotation pending |
-| A3 | 261117-093740-8488e1 (`repeat_throw`, `repeat_unseal`, `repeat_threads`); 261117-093752-798fd9 (turn tests under TSan, `repeat_threads` included); mutants unsealed-again, repeat-throw pending |
-| A4 | 261117-093716-f2fb9d (build-test, whole suite with the crash fixtures); 261117-093752-798fd9 (TSan, `-R turn`); 261117-093803-66f758 (ASan, turn_seal); CI on the pushed branch |
-| A5 | [artifact] journal `docs/mechanisms/turn-seal.md` at journal:57849ad: "Repeat calls", "What it gets" (room accounting, `first`), "A failing repeat call", lifetime under "One per group", "Later sealed records" and "Fairness" (no per-group cap) |
+| A1 | 261117-093937-b18312 (`repeat`: three records at staged+1..+3, rooms checked by value, room met and one byte over); mutants 261117-094035-f25876 (one-call), 261117-094044-57a827 (framing), 261117-094052-389c68 (staged) |
+| A2 | 261117-093949-4732e0 (`repeat_turns`: `first` across groups, two-group alternation 1,2,1,2); mutant 261117-094103-c463ab (rotation) |
+| A3 | 261117-094001-0719c0 (`repeat_throw`, `repeat_unseal`, `repeat_threads`); 261117-094013-27775a (turn tests under TSan, `repeat_threads` included); mutants 261117-094114-d5bc25 (unsealed-again), 261117-094124-60920c (repeat-throw) |
+| A4 | 261117-093933-1b2c95 (build-test: whole suite, crash fixtures included); 261117-094013-27775a (TSan, `-R turn`); 261117-094025-c1a38e (ASan, turn_seal); CI on quest/xapiand/journal-seal-repeat at journal:3c6a468 |
+| A5 | [artifact] journal `docs/mechanisms/turn-seal.md` at journal:3c6a468: "Repeat calls", "What it gets" (room accounting and `first`), "A failing repeat call", lifetime under "One per group", "Later sealed records" and "Fairness" (no per-group cap); CHANGELOG.md 2026-11-17 entry |
 
 ## Result
 
-journal:6187a32 and journal:57849ad: `TurnDriver::seal_turn` (include/journal/turn_driver.h) calls a sealer again with
-the room left and `first = false` while it returns records, charging each `record_cost` before the
-next call; `running_` spans a group's calls and the table is re-checked before each repeat call.
-Contract: journal `docs/mechanisms/turn-seal.md`. Tests: `test/turn_seal_test.cc` cases `repeat*`;
-mutants in `test/turn_seal_mutants.sh`. Existing call-count checks in `budget`, `trigger`,
-and `forget_in_flight` now count the extra repeat call that answers nothing.
-Leaves open: CHANGELOG.md entry (outside the file set); telling Detent's lead to repin on landing.
+journal:6187a32, journal:57849ad and journal:3c6a468: `TurnDriver::seal_turn`
+(include/journal/turn_driver.h) calls a sealer again with the room left and `first = false` while
+it returns records, charging each `record_cost` before the next call; `running_` spans a group's
+calls and the table is re-checked before each repeat call. Contract: journal
+`docs/mechanisms/turn-seal.md` and CHANGELOG.md. Tests: `test/turn_seal_test.cc` cases `repeat*`;
+mutants in `test/turn_seal_mutants.sh`. Existing call-count checks in `budget`, `trigger` and
+`forget_in_flight` now count the extra repeat call that answers nothing. Leaves open: telling
+Detent's lead to repin on landing.
 
 ## Rulings I made
 
@@ -70,9 +56,15 @@ Leaves open: CHANGELOG.md entry (outside the file set); telling Detent's lead to
   nothing; the first group not called, or declining its first call under a share, starts the next
   turn. No per-group cap (the room is the cap); a record needing the whole room waits at most one
   extra turn behind a group that sealed first. Stated in the docs.
-- `forget` between repeat calls is refused by the existing "records staged" guard, since the
-  group's earlier record is pending; the test asserts that rather than a forget-then-skip.
-- CHANGELOG.md is outside the quest's file set: left for the lead (suggested text: "`TurnDriver`
-  calls a sealer again in the same turn while it returns records, with the room left after each
-  `record_cost` and `first = false`; a repeat call's failure leaves earlier records in the turn and
-  fails the next turn; no per-group cap").
+- For the reviewer: `forget` between repeat calls is refused, not honoured. Reason: `forget`
+  already refuses a group with a record staged or in flight (turn_driver.h `forget`, "the group has
+  records staged or in flight"), and after a group's first record of the turn seals, that record
+  is in `pending_`. Honouring the forget would mean either writing a record for a group the log has
+  forgotten (`log_.forget` drops the group, so the turn's record would reopen it or be refused at
+  encode) or dropping a record the sealer already handed over as sealed, which loses it without
+  failing anyone. Refusing keeps the one rule forget has everywhere: close a group only once
+  nothing of it is pending. A consumer closes after the turn's barrier, as `Journal::close` does.
+  The quest's "forgotten between repeat calls is not called again" then holds trivially; the
+  re-check before each repeat call still covers unseal and re-seal, and a forget during a group's
+  first call (nothing of it pending) unregisters it and stops its calls, as before.
+- CHANGELOG.md entry added once the lead put it in the file set (journal:3c6a468).
