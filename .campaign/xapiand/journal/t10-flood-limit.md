@@ -1,6 +1,6 @@
 # t10-flood-limit: journal
 
-State: blocked on lead: the over-slice charge lives in Kronuz/task (outside the file set); prototype jobs running
+State: waiting on jobs 261117-010341-e6d5af 261117-010442-1c2b3f (prototype build and sweep); blocked on lead: the over-slice charge lives in Kronuz/task, outside the file set
 Quest: .campaign/xapiand/quests/t10-flood-limit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
