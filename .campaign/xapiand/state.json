@@ -21209,10 +21209,54 @@
         "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/turn-seal",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T02:52:48",
+          "commit": "555b69fa425621682c42bd8a52d3353a25300222",
+          "criteria": {
+            "A1": "261117-022222-ec9746 (passed at 7549bf61579a; only merges from main since)",
+            "A2": "261117-022232-4ebd89 (passed at 7549bf61579a; only merges from main since); fails without: 261117-020600-2e3287, 261117-022305-03393d",
+            "A3": "261117-022227-105658 (passed at 7549bf61579a; only merges from main since); fails without: 261117-022313-4f355d",
+            "A4": "261117-022210-100fa8 (the tsan check); tsan 261117-022210-100fa8 (`forget_*`)",
+            "A5": "`docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16",
+            "A6": "261117-022210-60ccdf (the build-test check); build-test 261117-022210-60ccdf",
+            "A7": "261117-022238-349505 (passed at 7549bf61579a; only merges from main since); fails without: 261117-020256-25ba10, 261117-020603-a0abbc, 261117-022309-097d1d",
+            "A8": "261117-022243-b05cb2 (passed at 7549bf61579a; only merges from main since), 261117-022301-f1ed5e (passed at 7549bf61579a; only merges from main since); fails without: 261117-022317-0065a2, 261117-022322-bc38d9"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+              "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-022210-60ccdf",
+              "level": "light",
+              "seconds": 124.4,
+              "state": "done",
+              "what": "turn-seal check build-test at 7549bf61579a"
+            },
+            {
+              "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+              "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-022210-100fa8",
+              "level": "light",
+              "seconds": 105.5,
+              "state": "done",
+              "what": "turn-seal check tsan at 7549bf61579a"
+            }
+          ],
+          "final": true,
+          "from": "8d0af7ae10235c13fcdebad7ded3100abde4139b",
+          "reason": "",
+          "tested": "555b69fa425621682c42bd8a52d3353a25300222"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -21220,9 +21264,9 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-17T02:52:40",
+      "updated": "2026-11-17T02:52:51",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
