@@ -26,18 +26,17 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
    1bd2ec engines over serve, cabfbf indexing speed, 37a35e ctest with the patch. When they land:
    write the A/B, engines, four-axis table and verdict into the entry; Rice-from-length stays an
    offline result (-11.0% positions, decode about 12x PFOR's in the screen).
+   Lead's ruling: keep EF only if 3bf776 shows a query-speed win beyond the A/A spread; else record
+   it removed, Rice removed too; no more positions experiments. Then: the next Track P item with
+   the largest measured gap to Tantivy (P3 or P9), from a fresh baseline.
 1. Jobs running/queued: 261117-023209-cd38c4 (before/after vs Lucene/Tantivy over serve, exclusive),
    261117-024522-d2facd (full ctest with the patch at bits 1+2), 261117-024524-7249b7 (build-test).
    Add the after-vs-Tantivy table to `docs/perf/p2-intersection.md` when cd38c4 lands.
-2. Landing (lead): bits 1+2 into `include/prospect/reader.hh` without the switch; see Blocked on.
+2. A1 landing answered (lead): quest p2-intersection (prospect:5227e00) lands bits 1+2.
 
 ## Blocked on
 
-Lead: landing the kept change needs `include/prospect/reader.hh` (outside track-p's file set
-`docs/perf/**, bench/quick/**`). Options: (a) widen the file set or open a P2 landing quest, which
-applies bits 1 and 2 of `docs/perf/p2-intersection.patch` without the `#if`, adds a unit test for
-in-block advance on short tails and bitset ranks, and runs CI (arm64, Linux, FreeBSD) once;
-(b) leave the entry as the verdict only. Recommend (a).
+Nothing.
 
 ## Evidence
 
