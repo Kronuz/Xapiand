@@ -2992,7 +2992,8 @@
         "detent:transport-groups",
         "detent:rpc-lane-codec",
         "detent:transport-identity",
-        "detent:transport-idle-cost"
+        "detent:transport-idle-cost",
+        "detent:peers-retry-flake"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3181,7 +3182,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T07:56:57",
+      "updated": "2026-11-17T08:10:04",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
