@@ -21,7 +21,7 @@ main's time, 14 of 15 rows win, none lose; results byte-identical. This quest la
   finds 0 mismatches (a job)
 - A3 The intersection classes' A/B against main at the landing commit, exclusive, with an A/A,
   at least 5 rounds: no row slower than the A/A spread, and the gain stated (a job)
-- A4 GitHub CI green on every platform (arm64 and Linux included)
+- A4 [manual] GitHub CI green on every platform (arm64 and Linux included)
 
 ## Decisions
 
