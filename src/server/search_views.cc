@@ -508,7 +508,7 @@ static constexpr std::chrono::microseconds REQUEST_SLICE{200};
 // The slices a request spends light, ahead of the heavy lane, before it turns heavy (least attained service,
 // docs/design/loop-scheduling.md D1), and the slices each body chunk of a streamed RESTORE gets light again (D82).
 static constexpr unsigned REQUEST_LIGHT_SLICES = 8;
-static constexpr unsigned REQUEST_STREAM_SLICES = 4;
+static constexpr unsigned REQUEST_STREAM_SLICES = DocIndexer::STREAM_SLICES;
 
 // The URL "kinds" Xapiand's grammar classifies into: a small, fixed set of route
 // keys the declarative table is registered under. They are internal routing tokens

@@ -609,6 +609,7 @@ history is discoverable and a feature can be revived from the exact commit if ne
 ## Licensing note
 
 Xapiand itself is MIT (Copyright © 2026 Germán Méndez Bravo (Kronuz) and © 2015–2020 Dubalu LLC),
-and so is every file in this tree. Its dependencies keep their own licenses, listed in
+and so is every file in this tree, except the files that carry their own notice
+(named in `NOTICE` and `THIRD-PARTY-NOTICES`). Its dependencies keep their own licenses, listed in
 `THIRD-PARTY-NOTICES`; `src/length.{cc,h}` derive from Xapian under Olly Betts' MIT grant.
 If you extract a component to reuse elsewhere, check its provenance there first.

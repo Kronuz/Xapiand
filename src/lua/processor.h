@@ -125,6 +125,9 @@ public:
 	// on it before the next one, its source and its stored params.
 	std::size_t resident_bytes() const;
 
+	// The script's body as it was compiled (a schema stores it, so a name-only declaration survives a restart).
+	std::string_view body() const;
+
 	size_t get_hash() const {
 		return hash;
 	}

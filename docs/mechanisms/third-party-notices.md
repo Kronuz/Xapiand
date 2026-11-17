@@ -26,6 +26,7 @@ permission for `src/length.{cc,h}` are written in by the script.
 
 Rerun the script at every repin and at the release commit; a run against the master pins reproduces the committed file byte for byte.
 
-## Limits
+## Data files
 
-The stopword lists and `mime.types` (installed in every package) have no recorded source, so `THIRD-PARTY-NOTICES` does not cover them (audit A17, A18).
+`mime.types` derives from h5bp's and nginx's tables (MIT, BSD-2-Clause), and each `stopwords/*.txt` list matches an upstream (Lucene, Savoy, Snowball, stopwords-iso, SMART). The script writes their credits and
+license texts into `THIRD-PARTY-NOTICES` from static text (`MIME_TYPES`, `STOPWORD_SOURCES`) and the Apache-2.0 text from `prospect-src/LICENSES`; audit A17 and A18 hold the per-language evidence.

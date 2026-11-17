@@ -2,6 +2,7 @@
   "name": "discussions-worker",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Self-hosted blog comments on Hono + Cloudflare D1.",
   "scripts": {
