@@ -28,6 +28,7 @@ Install rides consensus's credited `SnapshotChannel` and fetch lane, so it lands
 - A5 With Q3 (a): the witness stores the log, never applies, leads only to hand off, and a
   two-data-voter-plus-witness group survives the loss of any one member (simulation-style tests)
 - A6 [decision] cluster-release Q3, pending owner; lead default (a), `rf = 2 + witness`
+- A8 Catch-up after a checkpoint: group-core's voters schedules at seeds 8, 12, 16, 18, 23, 24 and 27 (3 voters), with checkpoints taken while a replica is down, all settle: the lagging replica installs and catches up (D109); plus 40 new seeds of the same shape; a mutant that drops `SnapshotNeeded` fails them
 - A7 [artifact] `docs/mechanisms/group-install.md`
 
 ## Contracts
