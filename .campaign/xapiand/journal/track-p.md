@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-111542-e71d1f 261117-111546-b099bb
+State: waiting on jobs 261117-113100-ed8f75 261117-113107-dc09de 261117-113110-0f8110 261117-111542-e71d1f 261117-111546-b099bb
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,13 +18,16 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A7 (P9) decided: removed (prospect:7754048). Reruns e71d1f (A/B) and b099bb (engines) only
-   restore a passing exit: 383ae4 and ad33ee exited 1 on their own file-count check (macOS
-   `wc -l` pads its number) after complete tables (840 and 375 files); scripts now
-   `set -euo pipefail` and trim the count. If a rerun shows an intersection row beyond its A/A,
-   reopen the verdict; else nothing changes.
-1. Disk: host at 96%; `.scratch/idx-p13`, `idx-prospect-b/-d` (APFS clones) and `build-p9-*` can go.
-2. Track P next items need the lead's pick; P9 stopped at three non-winners.
+0. A1 follow-up (hunt "Adaptive in-block search", prospect reader.hh `find_in_block`): variants
+   in `docs/perf/p2-find-in-block.patch` (`PROSPECT_EXPERIMENT_FIB`): 1 probes then a compare of
+   the remainder from its row (no bisect); 2 a division-free expected-skip selector (far targets
+   skip the probes); 3 = 2 with 32-slot windows; 9 the 128-slot reference. Scripts
+   `prospect-wt/.../track-p/.scratch/fib/` (build, ab, tiny, parity), patch at prospect:8712858.
+   Jobs: ed8f75 (build + 1M A/B), dc09de (tiny probe, default and -march=native), 0f8110
+   (parity). Next: read them, pick the variant, verdict in `docs/perf/p2-intersection.md`.
+1. P9 reruns e71d1f (A/B) and b099bb (engines) only restore a passing exit; if a rerun shows an
+   intersection row beyond its A/A, reopen P9's verdict; else nothing changes.
+2. Disk: host at 96%; `.scratch/idx-p13`, `build-p9-*` can go once the P9 reruns finish.
 
 ## Blocked on
 
