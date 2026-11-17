@@ -13235,7 +13235,50 @@
       "worktree": ""
     },
     "p2-intersection": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T07:39:23",
+          "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
+          "blobs": {
+            "CMakeLists.txt": "100644:a38ed9202aa0a20f7a30a10723c8a9bb60f61521",
+            "include/prospect/reader.hh": "100644:4f0807bd7f7e4ae33d20c159f7dc01d7389fa0be",
+            "test/intersection_mutants.py": "100644:94582d54f4c499d6f6fef59b59e6842a4340e7eb",
+            "test/intersection_test.cc": "100644:877b567ce2a9dd9fd5ed1a0275595960103e97b0"
+          },
+          "by": "review",
+          "commit": "0aad777095c43d29c26a7124358583f4039e3e81",
+          "criteria": "00db2ef4f33d7a87",
+          "diffs": {
+            "CMakeLists.txt": "a6e08cd182720d08",
+            "include/prospect/reader.hh": "31ce878e3b576401",
+            "test/intersection_mutants.py": "a9847eab02a4a92a",
+            "test/intersection_test.cc": "aa17d11e859e9e8c"
+          },
+          "findings": {
+            "R1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'test -x /Users/kronuz/.scratch/campaign/jobs/slots/xapiand-p2-intersection/build-tiny/tiny_bench_new && JOB_SRC=/Users/kronuz/.scratch/campaign/jobs/slots/xapiand-p2-intersection /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-p2-intersection-correctness/run.sh'",
+                  "commit": "0aad777095c43d29c26a7124358583f4039e3e81",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-073743-15805e",
+                  "level": "exclusive",
+                  "seconds": 28.3,
+                  "state": "done",
+                  "what": "sh -c 'test -x /Users/kronuz/.scratch/campaign/jobs/slots/xa at 0aad777095c4"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "d422e42a304f66ecd7abad77fefec9fea6c7f630",
+          "reviewed": "ebd1c1395bcf011faea6598b9c5acc485d13b742",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
       "branch": "quest/xapiand/p2-intersection",
@@ -13255,7 +13298,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/p2-intersection",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -13263,7 +13308,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Branch-free block compare and per-word rank in intersections",
-      "updated": "2026-11-17T05:35:13",
+      "updated": "2026-11-17T07:39:23",
       "worktree": "../prospect-wt/xapiand/p2-intersection"
     },
     "perf-watch-peek": {
