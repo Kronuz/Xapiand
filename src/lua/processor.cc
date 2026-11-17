@@ -928,7 +928,7 @@ Processor::compile_local(const Script& script)
 		return processor;
 	}
 	if (name_body.second.empty()) {
-		THROW(ClientError, "Script {} is not cached; send its '{}'", repr(name_body.first), RESERVED_BODY);
+		THROW(ClientError, "Script {} is not cached; send its '_body'", repr(name_body.first));
 	}
 	return remember(key, std::make_shared<Processor>(name_body.first, name_body.second, MsgPack::MAP()));   // its params come with each call
 }
