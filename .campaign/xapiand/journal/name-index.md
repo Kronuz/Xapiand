@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: waiting on jobs 261117-082412-f109f8 261117-082356-ca5b98 261117-082356-64c350 261117-082416-4d23b7 261117-082420-521d8b and 9 mutants
+State: waiting on jobs 261117-110158-de9685 261117-110158-9cdd8c 261117-110204-e7835e 261117-110254-f71df8 261117-110258-76c693 and 9 mutants
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1 built (xapiand:4fc89cd..b43d399), with the lead's rulings folded in (xapiand:6dcae4a): one item parser,
-`index_pattern::parse` + `merged`, used by the walk and NameIndex; the 400 names its work ("directory entries" or
-"index names"); options.md, changelog.md and api.md say so. Not compiled locally (host loaded).
+Lead findings at b43d399 fixed in xapiand:8987bea (master merged: xapiand:291ec89):
+1. async_check: the build's std::thread and its joins are gone. `DatabasePool::build_names` claims the build with
+   one atomic and posts a detached task to the control loop that awaits one `merge` chore of its own IndexChores;
+   `set_control(nullptr)` and `finish()` request its stop, so the shutdown's drain ends it. The 6 lock sites left are
+   classified in harness/async_allowlist.tsv (pool workers only, in-memory, bounded). Local async_check: 0
+   unclassified.
+2. Bench: NAME_INDEX_BENCH_ROOT keeps trees at `~/.scratch/name-index-bench/<N>/`; NAME_INDEX_BENCH_MAKE=1 only
+   makes them (::mkdir, light job); the strict job times them.
 
-Jobs at b43d399: targeted 261117-082412-f109f8 (test_index_pattern, test_node names, over_cap); build-test
-261117-082356-ca5b98; e2e 261117-082356-64c350; A2 benches 261117-082416-4d23b7 (10^4, 10^5) and
-261117-082420-521d8b (10^6), strict. Mutants (--fails-without, after the targeted job): no-parents
-261117-082425-28cde9, keep-slash 261117-082430-ea3fab, drop-delta 261117-082434-4426d7, lose-merge
-261117-082439-942a8a (A3); no-seek 261117-082444-aa8b4a (A2); no-range 261117-082448-a97fae, no-index
-261117-082452-c9b8bb, no-hook 261117-082456-c44e69 (A4); top-build 261117-082501-7bf23f (A5).
+Jobs at 291ec89: build-test 261117-110158-de9685; e2e 261117-110158-9cdd8c; targeted 261117-110204-e7835e (A3-A5);
+fixture 261117-110254-f71df8 (light); A2 bench 261117-110258-76c693 (strict, after the fixture). Mutants
+(--fails-without, after targeted): no-parents 261117-110214-031049, keep-slash 261117-110217-85a114, drop-delta
+261117-110221-d6fa49, lose-merge 261117-110224-f3f320 (A3); no-seek 261117-110228-88596e (A2); no-range
+261117-110232-ddea0a, no-index 261117-110235-4fbeb9, no-hook 261117-110238-651fe2 (A4); top-build
+261117-110242-e44601 (A5).
 
 ## Next
 
-1. Fix any failure among the jobs above; bench numbers into docs/design/name-index.md "Costs"; Evidence table;
-   State ready for review. No new building after that (lead, 250k tokens).
+1. When green: bench table into docs/design/name-index.md "Costs"; Evidence from `campaign brief`; ready for review.
+   Then delete ~/.scratch/name-index-bench.
 
 ## Blocked on
 
@@ -55,3 +60,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - R3 The lookup keeps `--max-search-indexes` as its bound, counting names read and seeks as visits (D7); `_all`
   over the cap stays 400. The walk gate does not apply to lookups.
 - R4 Resolve adds on open as well as create, so an index copied in while running is listed once opened (D3).
+- R5 The build is a detached task of the control loop awaiting one `merge` chore (lead finding 1, phase 7c D13). No
+  request awaits it; patterns walk until it ends. With no control loop nothing is posted. Clearing the control stops it.
+- R6 The names' 6 lock sites stay, classified `allow`: taken only on pool workers (resolve's open chore, the build
+  chore, a lookup's query chore), no I/O or await under them; loops touch only atomics.
