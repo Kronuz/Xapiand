@@ -358,6 +358,34 @@
       "closed": "answered detent:drivers-task-wheel: A5 OK at task:a30bb0f; adapter notes for Xapiand's adoption",
       "id": "msg-48",
       "text": "drivers-task-wheel: msg-1 (your A5 review of task:627aca3) is fixed in task:a30bb0f on quest/detent/drivers-task-wheel. X1: drive(done, may_wait) sleeps with no deadline when nothing is armed and may_wait() holds; drive(done) defaults to 'a timer is armed' (lost-wake cases unchanged). ARCHITECTURE.md 'Schedulers' maps your BlockingScheduler::drive(done) to drive([&]{return done;}, []{return true;}) inside HostScope, post_demoted as post. Test blocking_test wakes-unarmed (post/post_call at 20 ms; 5,000 rounds with the post around the sleep decision, TSan), mutant unarmed-returns kills it. X4 static drop_timer (no call into a dead inline/blocking scheduler; test late, ASan mutant). X5 asio arm after close now asserts; cancel keeps the allowance (control closed-arm). X7 blocking arm/cancel assert runs_here() (control offthread-cancel). X8 fixed: each drive pass runs what was queued when it began, then expires (test starve). Jobs queued at a30bb0f; please re-check A5."
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-52",
+      "text": "detent:consensus-driver started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-53",
+      "text": "detent:consensus-driver started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-54",
+      "text": "detent:consensus-driver started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-16T15:42:35",
+      "by": "campaign detent",
+      "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
+      "id": "msg-55",
+      "text": "detent:consensus-driver started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
     }
   ],
   "quests": {
@@ -2957,7 +2985,8 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver"
       ],
       "checks": [
         {
@@ -3008,7 +3037,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T10:28:41"
+      "updated": "2026-11-16T15:42:47"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -5755,7 +5784,8 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-driver"
       ],
       "checks": [
         {
@@ -5816,7 +5846,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-16T10:28:31"
+      "updated": "2026-11-16T15:42:54"
     },
     "group-sim": {
       "accepted": {},
@@ -7328,8 +7358,8 @@
     "lua-memory-bound": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-16T15:08:27",
-          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "at": "2026-11-16T15:38:18",
+          "base": "e35bf2e28b855076f28f4c7ab06ce0dbaf16de74",
           "blobs": {
             "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
             "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
@@ -7344,8 +7374,8 @@
             "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
           },
           "by": "review",
-          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
-          "criteria": "125f23c275731226",
+          "commit": "f99c8bb0aba34d26739af792af6f6128da1284bf",
+          "criteria": "3fcf0d8a9c465d88",
           "diffs": {
             "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
             "docs/mechanisms/lua-memory.md": "51593a74bd065914",
@@ -7366,8 +7396,8 @@
           "verdict": "APPROVE"
         },
         "security": {
-          "at": "2026-11-16T15:08:56",
-          "base": "94a9a1b443e0a88f8d36e759e76827023f85ae70",
+          "at": "2026-11-16T15:38:37",
+          "base": "e35bf2e28b855076f28f4c7ab06ce0dbaf16de74",
           "blobs": {
             "docs/mechanisms/lua-bounds.md": "100644:91af2054ad14fd8724c5f6b095ffc3f76baae234",
             "docs/mechanisms/lua-memory.md": "100644:9e2d1d09776449499046c9900d49463994983a1b",
@@ -7382,8 +7412,8 @@
             "tests/test_lua.cc": "100644:a1211f44b137b3aea40c8cf14d52b5168251bbbf"
           },
           "by": "review",
-          "commit": "fa306169f7bcab68ee18b87f20b789d9b4eb2585",
-          "criteria": "125f23c275731226",
+          "commit": "f99c8bb0aba34d26739af792af6f6128da1284bf",
+          "criteria": "3fcf0d8a9c465d88",
           "diffs": {
             "docs/mechanisms/lua-bounds.md": "394dd08266637acc",
             "docs/mechanisms/lua-memory.md": "51593a74bd065914",
@@ -7500,20 +7530,51 @@
         "tests/test_lua*.cc",
         "docs/mechanisms/lua*.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-16T15:57:52",
+          "commit": "31896dd7118fdc39c46bf8bc63c1503374bcc644",
+          "criteria": {
+            "A1": "261116-150830-1f8040 (passed at fa306169f7bc; only merges from main since), 261116-150830-42f3f8 (passed at fa306169f7bc; only merges from main since)",
+            "A2": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since)",
+            "A3": "261116-133011-8e97be (passed at bac328dec1c4; only merges from main since)",
+            "A4": "261116-132958-07dd8f (passed at bac328dec1c4; only merges from main since), 261116-133012-9b0137 (passed at bac328dec1c4; only merges from main since); fails without: 261116-101214-ce0a1e",
+            "A5": "manual: the lead checked the rows branch at dc8988e42 (master + platform-rows + quest head ff85dcd34): arm64 run 43960602513 and FreeBSD run 43960602117 both green, T10 included; the control without this quest (FreeBSD 43960604601) fails T10's library-call loops",
+            "A6": "261116-133001-b680b7 (the suite check)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ff85dcd34bf899c72bd8aa053f5bc3eec3ca2aee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261116-133001-b680b7",
+              "level": "light",
+              "seconds": 309.7,
+              "state": "done",
+              "what": "lua-memory-bound check suite at ff85dcd34bf8"
+            }
+          ],
+          "final": true,
+          "from": "f7f3d249bf7ee34364fe58cc1c52c325610ec058",
+          "reason": "",
+          "tested": "f99c8bb0aba34d26739af792af6f6128da1284bf"
+        }
+      ],
       "lenses": [
         "correctness",
         "security"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Lua memory has a node-wide bound below host RAM",
-      "updated": "2026-11-16T15:08:56",
-      "worktree": "../Xapiand-wt/xapiand/lua-memory-bound"
+      "updated": "2026-11-16T15:58:01",
+      "worktree": ""
     },
     "manifest-log": {
       "accepted": {
@@ -17375,7 +17436,9 @@
     },
     "shard-rpc": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-driver"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -17427,7 +17490,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The node-to-node shard service",
-      "updated": "2026-11-15T23:05:13"
+      "updated": "2026-11-16T15:42:58"
     },
     "shared-reader-core": {
       "accepted": {},
@@ -19286,16 +19349,41 @@
       "worktree": ""
     },
     "strict-text": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T16:10:55",
+          "base": "31c9ee7919b144f7ceea65f43add563caf716176",
+          "blobs": {
+            "CMakeLists.txt": "100644:43b1040e9bcba12f1a12a4e89ed286f59db30b82",
+            "src/aggregations/bucket.cc": "100644:81ebd0a490fcdeacbdd5417c924a0e4eba86d5c2",
+            "src/serialize.cc": "100644:e24be6b24d2d1716a6e26dc9f56a3552203d3cba",
+            "tests/test_strict_text.cc": "100644:fe01a351a69d91374af0492ec398b1185e292fb5"
+          },
+          "by": "review",
+          "commit": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "criteria": "6af5f2350116ce68",
+          "diffs": {
+            "CMakeLists.txt": "e4ab380916f7463b",
+            "src/aggregations/bucket.cc": "e226d1341c7f6fdb",
+            "src/serialize.cc": "39051cf668a00732",
+            "tests/test_strict_text.cc": "2576359fc18c16e3"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8d59f72536f6582b28fa382517a5ef3e93dfaa08",
+          "reviewed": "7376bd7a338100a82eb3a73dcf22d7e15690fa72",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "31c9ee7919b144f7ceea65f43add563caf716176",
       "branch": "quest/xapiand/strict-text",
       "checks": [
         {
-          "cmd": "campaign:build-test",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
           "level": "light",
-          "minutes": 30,
-          "name": "build-test"
+          "minutes": 40,
+          "name": "suite"
         }
       ],
       "consumes": [],
@@ -19307,18 +19395,49 @@
         "src/aggregations/**",
         "tests/test_serialise*.cc",
         "tests/test_strict*.cc",
-        "harness/strict_*"
+        "harness/strict_*",
+        "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-16T16:10:30",
+          "checks": [
+            [
+              {
+                "cmd": "campaign:build-test",
+                "level": "light",
+                "minutes": 30,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 40,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "the build-test check's command 'campaign:build-test' does not exist (job d05e50 exit 127); the suite check other quests use replaces it",
+          "voided": [],
+          "weakened": [
+            "gate check build-test removed"
+          ]
+        }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:22:10",
+      "updated": "2026-11-16T16:10:55",
       "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {

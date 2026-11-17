@@ -42,7 +42,6 @@
 
 #define NUM_SHARDS               5                // Default number of database shards per index
 
-#define SCRIPTS_CACHE_SIZE           100          // Scripts cache
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
 #define WAL_WRITER_CACHE_SIZE        100          // Wal writer cache
 #define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
@@ -172,8 +171,8 @@ parseOptions(int argc, char** argv)
 		app.add_option("--schema-pool-size", schema_pool_size, "Maximum number of schemas in schema pool.");
 		std::size_t schema_versions_size = SCHEMAS_VERSIONS_CACHE_SIZE;
 		app.add_option("--schema-versions-size", schema_versions_size, "Maximum number of versions of schema in cache.");
-		std::size_t scripts_cache_size = SCRIPTS_CACHE_SIZE;
-		app.add_option("--scripts-cache-size", scripts_cache_size, "Cache size for scripts.");
+		std::size_t scripts_cache_size = opts_t{}.scripts_cache_size;
+		app.add_option("--scripts-cache-size", scripts_cache_size, "Compiled scripts each thread keeps (their bytes are also capped at 64 MiB a thread).");
 		std::size_t resolver_cache_size = RESOLVER_CACHE_SIZE;
 		app.add_option("--resolver-cache-size", resolver_cache_size, "Cache size for index resolver.");
 		std::size_t wal_writer_cache_size = WAL_WRITER_CACHE_SIZE;
