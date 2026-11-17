@@ -13237,7 +13237,7 @@
     "p2-intersection": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-17T07:39:23",
+          "at": "2026-11-17T07:44:45",
           "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
           "blobs": {
             "CMakeLists.txt": "100644:a38ed9202aa0a20f7a30a10723c8a9bb60f61521",
@@ -13247,7 +13247,7 @@
           },
           "by": "review",
           "commit": "0aad777095c43d29c26a7124358583f4039e3e81",
-          "criteria": "00db2ef4f33d7a87",
+          "criteria": "eab819fc98150694",
           "diffs": {
             "CMakeLists.txt": "a6e08cd182720d08",
             "include/prospect/reader.hh": "31ce878e3b576401",
@@ -13308,7 +13308,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Branch-free block compare and per-word rank in intersections",
-      "updated": "2026-11-17T07:39:23",
+      "updated": "2026-11-17T07:44:45",
       "worktree": "../prospect-wt/xapiand/p2-intersection"
     },
     "perf-watch-peek": {
