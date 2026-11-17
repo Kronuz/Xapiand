@@ -3025,7 +3025,11 @@
         "include/consensus/transport/**",
         "test/transport/rpc*",
         "fuzz/rpc*",
-        "docs/mechanisms/rpc-lane.md"
+        "docs/mechanisms/rpc-lane.md",
+        "CMakeLists.txt",
+        "fuzz/fuzz_decoders.cc",
+        "test/transport/peers_test.cc",
+        "docs/design/rpc-lane*"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
@@ -3041,7 +3045,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T19:44:34",
+      "updated": "2026-11-16T20:04:50",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
