@@ -17061,7 +17061,55 @@
       "updated": "2026-11-08T15:39:15"
     },
     "restore-free-off-loop": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T22:51:08",
+          "base": "c6380001d649ae252f1069b4236b16087a53997f",
+          "blobs": {
+            "docs/perf/restore-stall.md": "100644:e4971b5b2d864a69bd0f283e9587a1a91c6d7258",
+            "harness/restore_stall_ab.sh": "100755:4807d58e6fda0a7db7d217f42325a16b80530247",
+            "harness/restore_stall_build.sh": "100755:c329619a93c11981d45258c6b73011584be1bf6e",
+            "harness/restore_stall_items.py": "100755:f3c5757e472591e24b986f68459b63c031971d85",
+            "harness/restore_stall_probe.py": "100755:c2accfed5212865713b7d597dfa9e774bbcf2f6b",
+            "harness/restore_stall_profile.py": "100755:8d52867908c51c6ff776740f3ef0a37e9c0976d3",
+            "harness/restore_stall_reactor_lag.patch": "100644:25e16c3f2c06a8cdc81dfbaabe8b17727323934f",
+            "harness/restore_stall_slice_results.patch": "100644:d3bd8f54c9a827b20516b07e9ed555b5d814dabf",
+            "harness/restore_stall_stalls.py": "100755:9345be1b839047410851198a2809117456364382",
+            "harness/restore_stall_table.py": "100755:1520975d8b92ee6d0038bc72385d82dd5069f330",
+            "harness/restore_stall_verdict.py": "100755:a937fecdd2e14d4e14038de3a790bebd648a00cb",
+            "src/database/handler.cc": "100644:61c7ef0bccc3630ab7f21395ca90c9d517c3d326",
+            "src/database/handler.h": "100644:e0a49a75f01d6635d48c864bb95d9c632bc4e4dd",
+            "src/server/search_views.cc": "100644:10931115c0e4cd8fd02972ce0171c8d9ec5037d3",
+            "tests/test_loop_yield.cc": "100644:02a768baeacab787d29b3e27dd0a1d8ec7a724c0"
+          },
+          "by": "review",
+          "commit": "5959edc933b14bba99792e44f29042c25cac68b1",
+          "criteria": "bda33671661cbf03",
+          "diffs": {
+            "": "2d509866427bd13b",
+            "docs/perf/restore-stall.md": "b68f12f6bf7cdc1d",
+            "harness/restore_stall_ab.sh": "08571f49f614b566",
+            "harness/restore_stall_build.sh": "e4ad48938203ef61",
+            "harness/restore_stall_items.py": "8eb3d4e5e5a3426f",
+            "harness/restore_stall_probe.py": "b63379a49f1d76f3",
+            "harness/restore_stall_profile.py": "180af40b903a7320",
+            "harness/restore_stall_reactor_lag.patch": "c64dd5ec9205bfb1",
+            "harness/restore_stall_slice_results.patch": "80d3a038d7069b67",
+            "harness/restore_stall_stalls.py": "d0b78345aedb4c42",
+            "harness/restore_stall_table.py": "23f512cd821a4800",
+            "harness/restore_stall_verdict.py": "d2ecc7d837f14b70",
+            "src/database/handler.cc": "32728253a921f6e5",
+            "src/database/handler.h": "fa46fd2f80ca9c52",
+            "src/server/search_views.cc": "a5623f7694e2bb6f",
+            "tests/test_loop_yield.cc": "be4c5164ac723d68"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dad5165a46a784bc531cfd2febcfb2fa7721bde9",
+          "reviewed": "3198212335487034c809f3c97eeaa608d55bfa3b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "ceb05856963b4075c80043b9ea832bed1148fa56",
       "branch": "quest/xapiand/restore-free-off-loop",
@@ -17091,7 +17139,9 @@
         "docs/perf/restore-stall.md"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -17099,7 +17149,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Free a RESTORE chunk's results without holding the loop",
-      "updated": "2026-11-16T09:59:09",
+      "updated": "2026-11-16T22:51:08",
       "worktree": "../Xapiand-wt/xapiand/restore-free-off-loop"
     },
     "restore-mixed-sign-integers": {

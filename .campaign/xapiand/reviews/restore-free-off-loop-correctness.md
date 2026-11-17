@@ -92,3 +92,59 @@ Xapiand:33d69428a, the merged master, release).
   awaiter resumes with `task::cancelled` and the objects are freed on the loop by unwinding.
 - Linux or arm64 timing: the quest's numbers are macOS, as its note says (Limits).
 - The mid-body client-gone count on a release head: one ASan sample differs from base by speed (see Q3).
+
+## Round 2 (the fix rounds since a6f6c9bbc)
+
+Commit: Xapiand:319821233548 (the diff 25a3a4850..319821233 in src and tests; b776266cf adds only the journal)
+Verdict: APPROVE
+Date: 2026-11-16
+
+F1 is closed: `test_loop_yield` replaces the whole new/delete family (tests/test_loop_yield.cc:84-125, every
+block pairs with `free`), and ASan ran the test 5 of 5 at this commit (261116-210401-f0ed04, exit 0). The new
+production line is one rearm; I answer the three questions on it and find no blocker.
+
+### Evidence I relied on
+
+- 261116-210401-f0ed04 (Debug ASan x5, 319821233, exit 0): F1's fix, and the 5-of-5 pass of the chunk-entry check
+  that failed 5 of 5 at the old head.
+- 261116-210404-041813 and 261116-210407-7db50a (ABBA, 319821233): trivial GET during a sustained RESTORE, p99 head
+  1.49-1.71 ms against base 10.32-10.86 (bound 2.8); p99.9 head 2.31-3.37 against base 19.09-20.32; max head
+  4.51-7.56 against base 21.49-23.47; docs/s head 6,956-7,073 against base 6,678-6,749. Read from the job logs.
+- 261116-210418-1113ac (spin), 261116-210410-fb14c1 (build-test), 261116-210410-820eb0 (e2e): all at 319821233.
+
+### What I checked myself
+
+- Q1, light lane under sustained RESTORE: no, it cannot wait longer than master allows. By the code
+  (handler.cc:2996-2998, task.hh `budget::rearm_light`): the rearm sets `spent_` to 4 and marks the scope light,
+  exactly what the chunk's start does (search_views.cc:1702), so a chunk gets at most 3 light slices in its takes
+  and 3 in its apply (6, where one budget gave 3 before the takes spent any). A light slice is a requeue at the
+  tail of the ordinary posts, at most one slice (200 us) long, and the light lane's rule that a light resumption
+  waits behind at most one heavy turn per pass is untouched. The cost is 3 more light slices (0.6 ms) per chunk,
+  against about 0.7 s of RESTORE per 5,000-object chunk at 7,000 docs/s: under 0.1% of the loop. On a build where
+  the takes spend nothing (release), the rearm changes `spent_` from 4 to 4 and nothing else. A non-stream body
+  (the JSON array path, search_views.cc:1714-1722) calls `index` once, so the extra is one rearm per request. The
+  null budget (handler.cc:1126, the restore from a file) is guarded. The ABBA numbers above measure it directly,
+  at the head and under the same sustained RESTORE as the base: p99, p99.9 and max all stay far under the base's.
+  I did not write a probe: the job logs already contain the measurement the suspicion needs.
+- Q2, the shared constant: `DocIndexer::STREAM_SLICES` has two users, handler.cc:2997 and search_views.cc:511, and
+  `REQUEST_STREAM_SLICES` has one use, the chunk-start rearm at search_views.cc:1702. `REQUEST_LIGHT_SLICES` (8) is
+  separate and all four of its uses are budget constructors. Consistent. The test keeps its own copy (N1).
+- Q3, skipping the count under sanitizers: sound. It drops only the 50-per-object free bound in
+  `test_a_restores_objects_are_freed_off_its_loop` (the one assertion the allocator moves); the byte-identity, the
+  results-as-one-buffer bound (200 frees for 2,000 objects, still checked under ASan) and the ASan/TSan runs of
+  the request path stay. The bound stays checked where the allocator is the platform's: the release "Build + unit
+  + smoke" job runs `test_loop_yield` (fb14c1, exit 0), and the mutants 1875e5 and 006d68 (release) show it fails
+  without the fix. The macro covers GCC's `__SANITIZE_*` and clang's `__has_feature`, both asan and tsan.
+
+### Findings
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| N1 | no | nit | `tests/test_loop_yield.cc:423` keeps `stream_slices = 4` as a literal ("REQUEST_STREAM_SLICES") beside `light_slices = 8`; the test already includes `database/handler.h`, so it can read `DocIndexer::STREAM_SLICES` and cannot drift from the constant now that it is public. | file:line | `constexpr unsigned stream_slices = DocIndexer::STREAM_SLICES;`. |
+| N2 | no | gap | The rearm at the final apply is caught only where the takes spend slices (ASan, TSan): on a release build `spent_` is 4 both with and without the line, so the chunk-entry check passes without it. No mutant of the line was run. | handler.cc:2996, test_loop_yield.cc:1191 | Optional: a mutant job on the ASan build without the rearm, to confirm 1191 fails. |
+| N3 | no | nit | docs/design/loop-scheduling.md:18 says each chunk is light for its first 4 slices; a chunk now gets 4 for its takes and again 4 for its apply. | file:line | One clause in D82. |
+
+### Not run
+
+- A mutant of the rearm line (N2); a heavy-saturated search mix with the head's apply rearm (the quest's A1 is
+  the trivial GET, and the extra is 0.6 ms of light time per chunk by the arithmetic above).
