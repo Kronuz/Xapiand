@@ -7604,7 +7604,9 @@
         "src/lua/**",
         "src/script*",
         "tests/test_lua*.cc",
-        "docs/mechanisms/lua*.md"
+        "docs/mechanisms/lua*.md",
+        "src/database/schema.*",
+        "tests/test_schema*.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -7613,9 +7615,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "active",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T19:25:36",
+      "updated": "2026-11-16T19:54:16",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
