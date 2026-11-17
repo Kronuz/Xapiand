@@ -20,9 +20,16 @@ commit, kv_strata on a journal::Host. Seal shim kept. Local run of the whole tes
 1. Read jobs: build-test 261117-024952-c870f5; TSan 261117-025002-c70c5f; long sweep (200 seeds)
    261117-025006-d345af; mutants M-a..M-o (12 jobs 261117-025010-4c8220 .. 261117-025050-ee8915,
    ids in Evidence).
-2. Step 4 rest: D7 join/leave (turn_group attribute in the manifest log, host create/close/reopen
+2. Lead (2026-11-17): turn-seal landed at journal:555b69f. Repin journal to 555b69f and replace the
+   shim (turn_seal.hh) with TurnDriver::seal/unseal/wake. Contract changes to fold in and record
+   in the design's Built: unseal waits for the running sealer call of its (group, owner); every
+   checkpoint record carries `covers` (the sequence it supersedes through, refused below the
+   record before it); seal/forget and sealers run on the loop's thread (attach_log must hop to
+   it); one record per group per turn (the closed-record queue may stay, sealing one per turn);
+   no watcher: V and acks move on durable() / journal::run.
+3. Step 4 rest: D7 join/leave (turn_group attribute in the manifest log, host create/close/reopen
    group, checkpoint at close), T6; D6.3's closed/none statuses through the Host.
-3. Step 5 rest: run kv_strata sync1/wal1 rows (M2, M3 exclusive), M1 faultfs counter assertion, M4
+4. Step 5 rest: run kv_strata sync1/wal1 rows (M2, M3 exclusive), M1 faultfs counter assertion, M4
    floor, M5 checkpoint stall; docs/perf/standalone-turn-log.md.
 
 ## Blocked on
