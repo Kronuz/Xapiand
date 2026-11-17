@@ -429,7 +429,7 @@ task::task<void> spend(task::budget& b) {
 }
 
 // The seam's job, set by each test before its requests.
-enum class Mode { none, heavy_then_light, spend_heavy, spend_heavy_and_throw, record_entry, record_chunks };
+enum class Mode { none, heavy_then_light, spend_heavy, spend_heavy_and_throw, record_entry, record_chunks, overrun };
 std::atomic<Mode> mode{Mode::none};
 
 // heavy_then_light: the RESTOREs that enter first spin slices until `stop`; once `light_armed`, the next one spends
@@ -447,7 +447,13 @@ std::atomic<bool> light_went_heavy{false};
 // after each of its spent slices.
 std::atomic<int> entered_heavy{-1};
 std::mutex chunks_mtx;
-std::vector<std::pair<unsigned, std::vector<bool>>> chunks;
+std::vector<std::pair<unsigned, std::vector<std::pair<bool, bool>>>> chunks;   // per slice: heavy lane, spent() >= light_slices
+
+// overrun: one turn that does not yield for `overrun_slices` slices, then one checkpoint: the slices it charged and the lane after.
+constexpr unsigned overrun_slices = 10;
+std::atomic<unsigned> overrun_before{0};
+std::atomic<unsigned> overrun_charged{0};
+std::atomic<int> overrun_heavy{-1};
 
 task::task<void> seam(DatabaseHandler& db) {
 	auto& b = *db.budget;
@@ -493,11 +499,20 @@ task::task<void> seam(DatabaseHandler& db) {
 		case Mode::record_entry:
 			entered_heavy = task::current().heavy() ? 1 : 0;
 			co_return;
+		case Mode::overrun: {
+			overrun_before = b.spent();
+			// An uncooperative call: the whole stretch runs before the budget is looked at once.
+			for (const auto until = std::chrono::steady_clock::now() + overrun_slices * std::chrono::microseconds(200); std::chrono::steady_clock::now() < until;) { }
+			co_await b.checkpoint();
+			overrun_charged = b.spent() - overrun_before.load();
+			overrun_heavy = task::current().heavy() ? 1 : 0;
+			co_return;
+		}
 		case Mode::record_chunks: {
-			std::pair<unsigned, std::vector<bool>> chunk{b.spent(), {}};
+			std::pair<unsigned, std::vector<std::pair<bool, bool>>> chunk{b.spent(), {}};
 			for (unsigned i = 0; i < light_slices; ++i) {
 				co_await spend(b);
-				chunk.second.push_back(task::current().heavy());
+				chunk.second.push_back({task::current().heavy(), b.spent() >= light_slices});
 			}
 			{
 				std::lock_guard<std::mutex> lk(chunks_mtx);
@@ -528,6 +543,8 @@ public:
 		light_waited_most = -1;
 		light_went_heavy = false;
 		entered_heavy = -1;
+		overrun_charged = 0;
+		overrun_heavy = -1;
 		chunks.clear();
 		mode = m;
 		DocIndexer::seams.after_placement = seam;
@@ -1156,6 +1173,20 @@ static void test_a_request_after_a_heavy_one_starts_light() {
 }
 
 
+// A turn that overruns the slice is charged every slice it ran (docs/design/loop-scheduling.md D1): ceil(turn / slice), not
+// one. A stretch of 10 slices that never yields, seen once at the checkpoint, charges at least 10 and enters the heavy lane
+// at once (light_slices is 8); charged as one slice it leaves the request light.
+static void test_an_over_slice_turn_is_charged_every_slice_it_ran() {
+	CHECK_EQ(http_call("RESTORE", "/laneover/?commit", R"([{"_id":"w","n":1}])") / 100, 2);   // the schema exists after it
+	lanes::Seam seam(lanes::Mode::overrun);
+	CHECK_EQ(http_call("RESTORE", "/laneover/", R"([{"_id":"a","n":2}])") / 100, 2);
+	std::fprintf(stderr, "  a stretch of %u slices charged %u; the request then ran %s\n", lanes::overrun_slices, lanes::overrun_charged.load(),
+		lanes::overrun_heavy.load() == 1 ? "heavy" : "light");
+	CHECK_GE(lanes::overrun_charged.load(), lanes::overrun_slices);
+	CHECK_EQ(lanes::overrun_heavy.load(), 1);
+}
+
+
 // Each body chunk of a streamed RESTORE starts light (D81) for REQUEST_STREAM_SLICES of its own slices (D82): the
 // rearm runs before the chunk's children start. Without it the RESTORE stays heavy from its 8th slice on, so every
 // later chunk's first slice is a heavy turn.
@@ -1183,11 +1214,11 @@ static void test_each_chunk_of_a_streamed_restore_starts_light() {
 	for (const auto& [spent, heavy] : lanes::chunks) {
 		std::string seen;
 		for (std::size_t j = 0; j < heavy.size(); ++j) {
-			seen += heavy[j] ? 'H' : 'l';
-			lanes_by_count = lanes_by_count && heavy[j] == (spent + j + 1 >= lanes::light_slices);
+			seen += heavy[j].first ? 'H' : 'l';
+			lanes_by_count = lanes_by_count && heavy[j].first == heavy[j].second;
 		}
 		std::fprintf(stderr, "  a chunk entered with %u slices spent; lanes of its slices %s\n", spent, seen.c_str());
-		first_light = first_light && !heavy.empty() && !heavy[0];
+		first_light = first_light && !heavy.empty() && !heavy[0].first;
 		CHECK_LE(spent, lanes::light_slices - lanes::stream_slices);
 	}
 	CHECK_TRUE(first_light);       // every chunk's first spent slice runs light
@@ -1285,6 +1316,7 @@ int main() {
 	test_schema_changes_commit_in_input_order();
 	test_a_light_request_runs_ahead_of_heavy_turns();
 	test_a_request_after_a_heavy_one_starts_light();
+	test_an_over_slice_turn_is_charged_every_slice_it_ran();
 	test_each_chunk_of_a_streamed_restore_starts_light();
 	test_a_restores_results_are_freed_as_one_buffer();
 	test_a_restores_objects_are_freed_off_its_loop();
