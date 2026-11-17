@@ -6679,7 +6679,8 @@
         "include/journal/turn_driver.h",
         "test/**",
         "docs/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-seal-repeat",
       "landed": [],
@@ -6695,7 +6696,7 @@
       "risk": "high",
       "status": "active",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T09:13:24",
+      "updated": "2026-11-17T09:38:41",
       "worktree": "../journal-wt/xapiand/journal-seal-repeat"
     },
     "key-field": {
