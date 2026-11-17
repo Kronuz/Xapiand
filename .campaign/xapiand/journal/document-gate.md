@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-053808-828075 261117-053809-785b59 261117-053813-188303 261117-053816-89350c 261117-053837-28f268 261117-053837-a2fba7 261117-053837-309a68 261117-053855-33a5e4 261117-053858-25929d 261117-053901-da726f 261117-053905-5fd8ef 261117-053908-02532a 261117-053911-ae5217 261117-053915-f65b74 261117-034940-b2b9c3
+State: waiting on jobs 261117-055209-094ff8 261117-055212-dc6fc0 261117-055220-ecd5d0 261117-055212-624015 261117-055212-556ecf 261117-055212-f28b3a 261117-055213-a1333d 261117-055245-3aecbb 261117-055253-80fcf5 261117-055301-8578af 261117-055310-7264db 261117-055320-5ca39d 261117-055327-074989 261117-055334-a41ea3
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,27 +9,28 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-The sync batch fix at strata:5e7d1178 (pushed). kv_strata's engine moved to
-`bench/kv/kv_strata.hh`; a sync phase's writes join one transaction applied at durable() (RocksDB's
-WriteBatch is one synced write), split only at the 1 MiB command limit; on_phase turns batching
-on for sync phases only (the load runs at none). `test/kv_strata_batch_test.cc` runs the engine
-over faultfs (host and index on separate filesystems) with its served loop: 32 batches of 16
-writes (duplicates and an erase inside) give 32 records, 32 barriers, 32 writes, and a 1.6 MiB
-batch splits into two records. Mutant M-r (strata:21df4764, branch mutant/document-gate/m-r):
-batching off, each write its own transaction. run.py's `aa` takes a set; `syncaa` is sync1's
-fillrandom b100, ycsb_a b1, fillrandom b1. Not built locally (light slots were held by a pending
-exclusive); the jobs' build is the first.
+The sync batch fix at strata:193e6e32 (pushed; fix strata:5e7d1178, test host fix 193e6e32).
+kv_strata's engine moved to `bench/kv/kv_strata.hh`; a sync phase's writes join one transaction
+applied at durable() (RocksDB's WriteBatch is one synced write), split only at the 1 MiB command
+limit; on_phase turns batching on for sync phases only (the load runs at none).
+`test/kv_strata_batch_test.cc` runs the engine over faultfs (host and index on separate
+filesystems, the host's owner lock a token) with its served loop. Local run: 32 batches of 16
+writes (duplicates and an erase inside): 32 records, 32 barriers, 32 writes; the 1.6 MiB batch
+splits into two records. Mutant M-r (strata:a949a8b9, branch mutant/document-gate/m-r, batching
+off) locally: 48 records, 48 barriers, the per-batch check fails. run.py's `aa` takes a set;
+`syncaa` is sync1's fillrandom b100, ycsb_a b1, fillrandom b1. The 5e7d1178 jobs failed to
+compile the test (faultfs namespace) and were replaced.
 
 ## Next
 
-1. Jobs at strata:5e7d1178: build-test 261117-053808-828075; batch test 261117-053809-785b59;
-   M-r fails-without 261117-053813-188303; batch test TSan 261117-053816-89350c; seal TSan
-   (served, T4, T12, T3, T8) 261117-053837-28f268; t6w TSan 261117-053837-a2fba7; T6+t6w+T5
-   261117-053837-309a68. M-d at its mutant (f55 base) 261117-052940-986f82.
-   Rows, exclusive, after the batch test: sync1 a/b/c 261117-053855-33a5e4,
-   261117-053858-25929d, 261117-053901-da726f; wal1 t3 261117-053905-5fd8ef; A/A syncaa x/y
-   261117-053908-02532a, 261117-053911-ae5217; M2 strict 261117-053915-f65b74. N-log (old code,
-   batch 1 rows, unaffected) 261117-034940-b2b9c3 running.
+1. Jobs at strata:193e6e32: build-test 261117-055209-094ff8; batch test 261117-055212-dc6fc0;
+   M-r fails-without 261117-055220-ecd5d0; batch test TSan 261117-055212-624015; seal TSan
+   (served, T4, T12, T3, T8) 261117-055212-556ecf; t6w TSan 261117-055212-f28b3a; T6+t6w+T5
+   261117-055213-a1333d. M-d at its mutant (f55 base) 261117-052940-986f82.
+   Rows, exclusive, after the batch test: sync1 a/b/c 261117-055245-3aecbb,
+   261117-055253-80fcf5, 261117-055301-8578af; wal1 t3 261117-055310-7264db; A/A syncaa x/y
+   261117-055320-5ca39d, 261117-055327-074989; M2 strict 261117-055334-a41ea3. N-log (old code,
+   batch-1 rows, unaffected by the fix) 261117-034940-b2b9c3.
 2. Write docs/perf/standalone-turn-log.md from those rows: four-axis table, the honest gap (D103,
    D104), the ack=none window (Q3: one barrier plus one write, ~21 ms on macOS). Prior rows at
    9d7c7710 (before the fix) as the before column: sync1 261117-033324-78da56 (fillrandom b100
