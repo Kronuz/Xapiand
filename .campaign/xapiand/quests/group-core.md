@@ -29,15 +29,23 @@ driver's quorum-probe read (D4), and closes only after a checkpoint covers its a
   set, the application state) equals a replay from empty of the recovered log's committed
   commands; reads open only at P_H and match that replay through it. Mutants, each
   `--fails-without`: replay the file set from P_H; unlink at apply; publish before the files sync;
-  capture inside an entry's apply; file effects gated on strata's verdict (the `crash` gate check,
+  capture inside an entry's apply; file effects gated on strata's verdict; the application state gated on strata's verdict; skip
+  the capture's mark (`no-mark`); commit strata after publication; a retry that re-runs the whole
+  entry. The run also covers a checkpoint right after chunks or NoOps and a write whose first
+  strata attempt answers `no_space` (the `crash` gate check,
   jobs)
 - A2 Three and five voters in process: every `quorum`-acknowledged entry survives any one crash, and digests
   are equal after every schedule (a job)
+  One replica's storage budget refuses at allowance growth and then frees, and digests stay equal; a
+  mutant that re-runs the whole entry on retry fails it; seeds and crash points stated.
 - A3 `ack=none` completes at `ProposalPlaced` and `quorum` when the proposer applies its
   placement, with apply's verdict; with the followers' appends held, `none` completes and `quorum`
-  does not; two merges to one id and a conditional write with an election between, every
-  schedule: no acknowledged success refused, no merge answered 409, the conditional write's answer
-  matches its effect, and no re-proposal; mutants that acknowledge at commit and that prepare
+  does not; two merges to one id, a conditional write and an invalid document with an election between,
+  every schedule: no acknowledged success refused, no merge answered 409, the conditional write's
+  answer matches its effect, the invalid one answered 400 and never submitted again, and no second
+  submission; with a predictor that misses the fields mark, every request answered within three
+  placements (503 after the third), a deposed proposer's refused merge forwarded once and answered
+  by the leader; a leader stalled on `no_space` hands leadership to a follower applied past it; mutants that acknowledge at commit and that prepare
   before the ready point fail (tests)
 - A4 On a leader partitioned away and deposed, `read_applied` after `Driver::read` never returns a
   state older than a committed write; a mutant that skips the probe fails (`--fails-without`, a
