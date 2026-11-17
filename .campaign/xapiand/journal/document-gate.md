@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-020047-53b736
+State: working
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,8 +25,8 @@ into the doc; R4 is Q5.
 
 ## Blocked on
 
-- Owner (design Q1-Q5): per-core logs on macOS, the wal1 label, read-your-writes under
-  ack=none, a tolerant open after log damage, the 64 MiB command limit (R4). Defaults in the doc.
+- Owner (design Q1, Q2): per-core logs on macOS, the wal1 label. Q3-Q5 ruled option 1 (D103,
+  Xapiand:1935c388d), closed in the doc at strata:8b91d151; quest turn-log-parity follows.
 - Journal (Detent reviews): `TurnDriver::seal`. The shim (strata `turn_seal.hh`) shows the
   contract needs four things beyond seal(group, fn): unseal by owner, a thread-safe wake for an
   open record's first transaction, the turn budget's room passed to the sealer, and a lock order
@@ -36,7 +36,7 @@ into the doc; R4 is Q5.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261116-211612-1ad7b7 failed core_includes only (turn_seal.hh includes journal/turn_driver.h), fixed at strata:2b8ca7a6, rerun 261117-020047-53b736; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
+| A1 | build-test 261116-211612-1ad7b7 failed core_includes only (turn_seal.hh includes journal/turn_driver.h), fixed at strata:2b8ca7a6, rerun 261117-020047-53b736 passed (reused at 8b91d151, docs only); TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
