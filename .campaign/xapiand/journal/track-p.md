@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-023209-cd38c4 261117-024522-d2facd 261117-024524-7249b7
+State: working
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,6 +18,10 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
+0. A10 (P13), performance assignment, same worktree and host: plan, rule and offline tool committed
+   (prospect `docs/perf/p13-positions.md`, `bench/quick/p13_positions.cc`); prototype EF-per-block
+   behind `PROSPECT_EXPERIMENT_P13` built (`.scratch/bin/p13`), 1M variant index building at
+   `.scratch/idx-p13`; next: parity (dump/verify), then the exclusive A/B and engines jobs.
 1. Jobs running/queued: 261117-023209-cd38c4 (before/after vs Lucene/Tantivy over serve, exclusive),
    261117-024522-d2facd (full ctest with the patch at bits 1+2), 261117-024524-7249b7 (build-test).
    Add the after-vs-Tantivy table to `docs/perf/p2-intersection.md` when cd38c4 lands.
