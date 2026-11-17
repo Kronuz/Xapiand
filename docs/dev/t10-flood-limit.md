@@ -1,6 +1,6 @@
 # T10 flood row: what its p99 limit measures
 
-Status: exploration (explore/t10-flood), not landed.
+Status: the script call runs in the heavy lane (`docs/design/loop-scheduling.md` D7); the flood row's limit is derived from that rule.
 
 ## Finding
 
@@ -23,10 +23,32 @@ The flood requests are classed light, so they share the light FIFO with the GET 
 
 Measured (hold t10-sweep, 1 reactor, flood clients 1 / 2 / 4 / 8 / 16, one call 22.4 ms per call of throughput; the run shared the machine with 12 light holds): GET p50 0.4 / 20.5 / 20.9 / 44.0 / 44.1 ms, p99 22.5 / 24.3 / 46.7 / 87.4 / 133.5 ms. With 2 clients the GET waits one call, with 16 up to 6; on 2 reactors, 16 clients: p99 122.5 ms (5.4 calls of 22.6 ms). The wait grows with the clients per reactor, so a fixed multiple of one call cannot bound it. The FreeBSD VM (2 reactors, 16 clients, 8 per reactor) reached 7.2 of at most 8 queued ahead; CPU steal widens each stretch but does not explain the count (the macOS runs show the same growth with no steal).
 
+## Why the fix is a lane, not an accounting change
+
+Charging an over-slice turn as `ceil(turn / slice)` slices cannot help: a flood request runs its one call in its first light turn and ends, so the charge lands after the stretch. The count hook cannot cut the stretch either. It fires only between VM instructions, and the flood call (`s:find('.-b')`) is one C call of about 3.2 x 10^6 matcher steps with none inside; a library call is yieldable only through `lua_yieldk` with a continuation, and the matcher's `.-` expansion has no restart point. So a call enters the heavy lane before its first turn (D7), and the request returns to the lane it had when the call ends.
+
 ## Limit that follows the rule
 
-`(ceil(clients / reactors) + 1) x one call alone`, the reactor count read from the node's own `xapiand_reactor_lag` loops: 9 x 21.5 = 193 ms for the FreeBSD run (155 passes). This bounds the current scheduler, not the intended one. The scheduler fix is to count an over-slice turn as `ceil(turn / REQUEST_SLICE)` slices (or its overrun against the budget), so a flood request turns heavy after one call and a GET waits for one heavy turn per pass (about 2 stretches); the limit then becomes `3 x one call` with no per-reactor term. That changes D1 of loop-scheduling and is the light-share quest's to decide.
+A light GET waits for the stretch in progress and, at each of its hops through the loop (its read, its database chore), for at most one heavy turn per pass (D3): k = 2 heavy turns beside the one in progress, so `(k + 1) x one flood call timed alone on the node`, with no term in the number of clients or reactors. `harness/lua_bounds.py` states it (`FLOOD_STRETCHES = 2`) in the T10 row and in `--cost --check`.
 
 ## Proof
 
-Sweep: `.scratch/t10/sweep.py`, log `.scratch/t10/sweep.log`. The limit's code was checked on macOS (Release `Xapiand:33d69428a`, 1 reactor: p99 89 ms against 17 x 22.3 = 379 ms; 2 reactors: 28 ms against 203 ms). FreeBSD needs CI.
+`lua_bounds.py --cost` on a Release build, one reactor, macOS 16 cores, strict holds (master `f65ec4854`, the fix `1036ca25a`; one call alone 20.8 and 22.2 ms, limit 62.5 and 66.5 ms). The light GET's p50 / p99 in ms beside N clients flooding the per-call cap:
+
+| clients | master | fix |
+|---|---|---|
+| 1 | 17.9 / 22.8 | 18.2 / 26.3 |
+| 2 | 17.9 / 22.5 | 18.5 / 28.2 |
+| 4 | 33.7 / 47.2 | 17.1 / 45.1 |
+| 8 | 38.0 / 68.3 | 17.1 / 36.0 |
+| 16 | 39.1 / 85.7 | 17.0 / 38.7 |
+
+At master the p99 grows with the clients per reactor and passes the limit at 8 and 16 clients; at the fix the p50 stays one stretch and every row is within the limit. GETs served in the window at 16 clients: 111 at master, 285 at the fix. The cost of the lane on a scripted write that does nothing is in "Cost" below.
+
+## Cost
+
+A tiny scripted write (`_doc.x = (_doc.x or 0) + 1`, no commit, 2,000 serial writes on a keep-alive connection) alone and beside 8 GET-only clients: COST_TABLE
+
+## Exploration measurements
+
+The exploration's rows before the fix, kept for the record (hold t10-sweep, 1 reactor, flood clients 1 / 2 / 4 / 8 / 16, one call 22.4 ms): GET p50 0.4 / 20.5 / 20.9 / 44.0 / 44.1 ms, p99 22.5 / 24.3 / 46.7 / 87.4 / 133.5 ms; FreeBSD run 44027025303 (2 reactors, 16 clients): p99 155 ms with one call 21.5 ms alone, 7.2 calls, the limit of 128.8 that the earlier multiple had derived.
