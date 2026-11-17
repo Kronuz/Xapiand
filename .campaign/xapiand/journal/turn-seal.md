@@ -1,6 +1,6 @@
 # turn-seal: journal
 
-State: working
+State: waiting on jobs 261117-020854-dd72e2 (A1, A3, A8 tagged cases), then ready for review
 Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 
 ## Doing
@@ -8,8 +8,7 @@ Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 journal:b08212f (pushed): build-test 261117-020559-d9967e (40/40) and tsan 261117-020559-c74944
 green; mutants killed, `--fails-without`: A2 261117-020600-2e3287, A7 261117-020603-a0abbc. The
 jobs at journal:4e0e523 failed on a test build error (`room` shadowed); fixed in journal:01387e7,
-along with the budget case's `firsts` and the sequence mutant's anchor. Next: tagged A1/A3/A8 jobs,
-then ready for review.
+along with the budget case's `firsts` and the sequence mutant's anchor. Tagged A1/A3/A8 job 261117-020854-dd72e2 queued; Evidence filled.
 
 ## Next
 
@@ -28,14 +27,14 @@ R8 made `covers` mandatory, so checkpoint callers outside the file set needed on
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
+| A1 | 261117-020854-dd72e2 (`crash`, faultfs at every sync point); also in build-test 261117-020559-d9967e |
 | A2 | mutant 261117-020600-2e3287 (`sequence` fails without the check); plain case in build-test 261117-020559-d9967e |
-| A3 | pending |
+| A3 | 261117-020854-dd72e2 (`budget`, `full_size`, `bound`); also in build-test 261117-020559-d9967e |
 | A4 | tsan 261117-020559-c74944 (`forget_*`) |
 | A5 | `docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16 |
 | A6 | build-test 261117-020559-d9967e, 40/40 |
 | A7 | mutant 261117-020603-a0abbc (`supersede` fails without the guard); plain case in build-test 261117-020559-d9967e |
-| A8 | pending |
+| A8 | 261117-020854-dd72e2 (`unseal_owner`, `lock_order`, `wake_threads`, `unseal_threads`); wake under TSan: tsan 261117-020559-c74944 |
 
 ## Result
 
