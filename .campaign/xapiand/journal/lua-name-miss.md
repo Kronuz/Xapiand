@@ -1,6 +1,6 @@
 # lua-name-miss: journal
 
-State: waiting on jobs 261116-195523-625a45 261116-195526-63a363 261116-195543-4751c6 261116-195533-dc4c74
+State: waiting on jobs 261116-200146-ecb2eb superseded 261116-195526-63a363: running at fd392712a09d, stopped for 261116-200151-314f45 superseded 261116-195543-4751c6: queued at fd392712a09d, cancelled for 261116-200155-3846f1 261116-200158-58b4cd
 Quest: .campaign/xapiand/quests/lua-name-miss.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,10 +27,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261116-195523-625a45; fails without the refusal 261116-195543-4751c6 |
-| A4 | 261116-195523-625a45; fails without the schema fix 261116-195526-63a363 |
+| A1 | 261116-200146-ecb2eb; fails without the refusal superseded 261116-195543-4751c6: queued at fd392712a09d, cancelled for 261116-200155-3846f1 |
+| A4 | 261116-200146-ecb2eb; fails without the schema fix superseded 261116-195526-63a363: running at fd392712a09d, stopped for 261116-200151-314f45 |
 | A2 | docs/mechanisms/lua-memory.md (unbounded wait; C1 error) |
-| A3 | suite 261116-195533-dc4c74 |
+| A3 | suite 261116-200158-58b4cd |
 
 ## Result
 
