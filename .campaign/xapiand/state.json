@@ -7662,7 +7662,34 @@
       "worktree": ""
     },
     "lua-name-miss": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T20:45:54",
+          "base": "aa037cecfc1e2b6636822284c9caee2109c6cf90",
+          "blobs": {
+            "docs/mechanisms/lua-memory.md": "100644:3f6d4457dfcaddcaa3393ebe3a8281f45349be9d",
+            "src/lua/processor.cc": "100644:eb3120e041da7d8c4939b2ecc3626bb195dc6f68",
+            "src/lua/processor.h": "100644:91c7ac5301d294b7b04aaf3e0453f9638de1c65d",
+            "src/script.cc": "100644:969ca335618f07908701e3ef97174aa7de8b7974",
+            "tests/test_lua.cc": "100644:b969ae0328e0a4ce61135de8e2f409c121a4e552"
+          },
+          "by": "review",
+          "commit": "c7e3d16d9bb7acfa3bd9946e509cd4b8dc158edc",
+          "criteria": "e73f634c2b9868c2",
+          "diffs": {
+            "docs/mechanisms/lua-memory.md": "5cd3988952a1f7b4",
+            "src/lua/processor.cc": "17fb370d3c61734e",
+            "src/lua/processor.h": "4d430e4b715207ae",
+            "src/script.cc": "b5f54c27ef4bb6f3",
+            "tests/test_lua.cc": "cfec19ba9fabfe4a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d71438f016956acc1ff7ee91e9640aa1932d1d75",
+          "reviewed": "4e4f647b3506fba6aec36712efac17bcc702b430",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
       "branch": "quest/xapiand/lua-name-miss",
@@ -7684,7 +7711,9 @@
         "tests/test_schema*.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -7692,7 +7721,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T19:54:16",
+      "updated": "2026-11-16T20:45:54",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
