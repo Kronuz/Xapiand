@@ -20456,7 +20456,57 @@
       "worktree": ""
     },
     "t10-flood-limit": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T04:58:35",
+          "base": "348e7e813e74980f7af6a108ae651fad3309c2d2",
+          "blobs": {
+            "docs/design/loop-scheduling.md": "100644:a5c65c5b74f4f4a7344a0cc062927ff8e842363a",
+            "docs/dev/t10-flood-limit.md": "100644:e62169daa2337908c9913fe60b625e1d9c1f9e82",
+            "docs/mechanisms/lua-bounds.md": "100644:743fe044e8a999ab7013711d9584337ba0f26dca",
+            "harness/lua_bounds.py": "100644:f68ba824a58e1dff3f47875a58f74e63794325dc",
+            "src/lua/processor.cc": "100644:479cb6b5e59b75ce742f865d55ffed66e428f762",
+            "tests/test_lua.cc": "100644:ef9744103f4443e4b324785b850b32acb63f306c"
+          },
+          "by": "review",
+          "commit": "9f51efd8ffcc45ebb97ed481fe514e01915ed7e1",
+          "criteria": "8b7b3d6ae4aea5dd",
+          "diffs": {
+            "docs/design/loop-scheduling.md": "a2526d3671018da9",
+            "docs/dev/t10-flood-limit.md": "1a6c7cc1682bdced",
+            "docs/mechanisms/lua-bounds.md": "780bbd59ed50148a",
+            "harness/lua_bounds.py": "3b251393ef9a9083",
+            "src/lua/processor.cc": "fcf595d498162b7f",
+            "tests/test_lua.cc": "f0b6afae11561d26"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-t10-flood-limit-correctness/run_p2.sh",
+                  "commit": "e817fdc2be894891e81fd3db25b7a587bb8dfe54",
+                  "docs": [
+                    "docs/dev/t10-flood-limit.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-042554-2e8d5a",
+                  "level": "strict",
+                  "seconds": 122.1,
+                  "state": "done",
+                  "what": "review P2: scripted RESTORE beside 2 flooders, does the node stall (master base vs fix)"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "c92f9519d7757160bbe9132d1b264a32645f9fc7",
+          "reviewed": "e817fdc2be894891e81fd3db25b7a587bb8dfe54",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "b10e26aa021524b7b049f83d692fbce55240e98e",
       "branch": "quest/xapiand/t10-flood-limit",
@@ -20529,7 +20579,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A script call runs in the heavy lane",
-      "updated": "2026-11-17T03:37:53",
+      "updated": "2026-11-17T04:58:35",
       "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
     },
     "t11-barriers": {
