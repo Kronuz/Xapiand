@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-122058-8a1058 261117-122105-d69a24 261117-122114-58e309 261117-122123-3b0f9a 261117-122132-b7e7f7 261117-122140-f6bc36 261117-122146-4905bb 261117-122153-b3653c 261117-122200-8f7079 261117-122207-91af71 261117-122213-71b50f 261117-122219-ff1809 (F1 fix round at strata:3d5ecedb; the first submission exited 127, zsh passed the flags as one word; resubmitted by .scratch/submit-f1.sh)
+State: waiting on jobs 261117-134744-7f0c17 261117-134753-33fc2a 261117-134801-f716c7 261117-134809-8409da 261117-134818-6068ec 261117-134824-199dc8 261117-134834-f21397 261117-134842-7d024d (F1 fix round 2 at strata:cc8ba3aa)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,7 +22,12 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
    261117-122132-b7e7f7 (lag), M-v 261117-122140-f6bc36 (t9o); review probe 261117-122146-4905bb;
    exclusive rows vs RocksDB: wal1 t3 261117-122153-b3653c, sync1 261117-122200-8f7079
    261117-122207-91af71 261117-122213-71b50f, N-log (K=4 on 1 log) 261117-122219-ff1809. When
-   they finish: write the wal1 cost of the cap, the probe's lag, N2's p99.99 and the group-commit
+   Round 1 at 3d5ecedb: TSan sets passed, M-s and M-t killed; build-test 261117-122058-8a1058
+   failed t9o (test premise, see Rulings), so M-v's kill proved nothing and the rows skipped.
+   Round 2 at strata:cc8ba3aa: build-test 261117-134744-7f0c17, M-v (rebuilt, df87b29f)
+   261117-134753-33fc2a, probe 261117-134801-f716c7, wal1 261117-134809-8409da, sync1
+   261117-134818-6068ec 261117-134824-199dc8 261117-134834-f21397, N-log 261117-134842-7d024d.
+   When they finish: write the wal1 cost of the cap, the probe's lag, N2's p99.99 and the group-commit
    rows into docs/perf/standalone-turn-log.md; fill Evidence.
    A6 VM rows to rerun at the fix commit: wal1 and sync1 and N-log on Linux and FreeBSD
    (261117-084100-27be96, 261117-084037-d4e2de, 261117-084045-d42d02, 261117-084053-6d8351,
@@ -153,6 +158,9 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
   - N4: t9o stages a version-2 batch, a version-2 checkpoint and a HardState record into the
     group and expects `unsupported_index` at open; replay now refuses a non-batch record past
     the front checkpoint (it skipped them). M-v (the skip) fails t9o.
+  - t9o's first version staged the record and opened the index on the same host: a host's
+    records() are what it recovered at its own open, so the record was never replayed and open
+    succeeded. The code was right; the test now stages, then opens on a new host.
 
 - Sync batch (2026-11-17):
   - A sync batch is one transaction: the fair mapping of RocksDB's WriteBatch (both make a batch
