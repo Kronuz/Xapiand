@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-173647-493966 261116-173649-1899c9 261116-173711-8e1b0c 261116-173713-f9cc67 261116-173716-2ec07a 261116-173718-ee8f9b 261116-173701-649dc3 261116-173701-c65330 and CI run 43996880543 at 25a3a4850
+State: waiting on jobs 261116-210401-f0ed04 (Debug ASan x5) 261116-210404-041813 261116-210407-7db50a (ABBA) 261116-210410-fb14c1 261116-210410-820eb0 and the spin job, at Xapiand:319821233
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -66,6 +66,11 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
   12,000 / 70,000 results); the items job reruns with them, base vs head.
 - The mutant jobs now use --build (mutate + build) and --fails-without with a command that exits nonzero when the
   named FAIL line appears (the tool inverts).
+
+- Debug ASan flake (head 5 of 5 failing, master 0 of 5; 261116-200859-7ea5c1, 261116-200903-a6749c): the take loop's
+  per-object checkpoints spend slices on a slow build, so a chunk reached its apply with 5 slices spent. The final
+  apply now rearms the budget to DocIndexer::STREAM_SLICES (Xapiand:319821233); bound unchanged. Proof: 261116-210401-f0ed04
+  (5 runs), ABBA 261116-210404-041813 and 261116-210407-7db50a at the new commit.
 
 ## Blocked on
 
