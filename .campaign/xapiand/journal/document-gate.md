@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261117-055209-094ff8 261117-055212-dc6fc0 261117-055220-ecd5d0 261117-055212-624015 261117-055212-556ecf 261117-055212-f28b3a 261117-055213-a1333d 261117-055245-3aecbb 261117-055253-80fcf5 261117-055301-8578af 261117-055310-7264db 261117-055320-5ca39d 261117-055327-074989 261117-055334-a41ea3
+State: waiting on jobs 261117-055209-094ff8 261117-055220-ecd5d0 261117-055245-3aecbb 261117-055253-80fcf5 261117-055301-8578af 261117-055310-7264db 261117-055320-5ca39d 261117-055327-074989 261117-055334-a41ea3
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,14 +23,18 @@ compile the test (faultfs namespace) and were replaced.
 
 ## Next
 
-1. Jobs at strata:193e6e32: build-test 261117-055209-094ff8; batch test 261117-055212-dc6fc0;
-   M-r fails-without 261117-055220-ecd5d0; batch test TSan 261117-055212-624015; seal TSan
-   (served, T4, T12, T3, T8) 261117-055212-556ecf; t6w TSan 261117-055212-f28b3a; T6+t6w+T5
-   261117-055213-a1333d. M-d at its mutant (f55 base) 261117-052940-986f82.
-   Rows, exclusive, after the batch test: sync1 a/b/c 261117-055245-3aecbb,
+1. Passed at strata:193e6e32: batch test 261117-055212-dc6fc0 (32 batches: 32 records, 32
+   barriers, 32 writes); batch test TSan 261117-055212-624015; seal TSan (served, T4, T12, T3,
+   T8) 261117-055212-556ecf; t6w TSan 261117-055212-f28b3a; T6+t6w+T5 261117-055213-a1333d.
+   M-d killed at its mutant 261117-052940-986f82. Pending: build-test 261117-055209-094ff8, M-r
+   fails-without 261117-055220-ecd5d0. Rows, exclusive: sync1 a/b/c 261117-055245-3aecbb,
    261117-055253-80fcf5, 261117-055301-8578af; wal1 t3 261117-055310-7264db; A/A syncaa x/y
-   261117-055320-5ca39d, 261117-055327-074989; M2 strict 261117-055334-a41ea3. N-log (old code,
-   batch-1 rows, unaffected by the fix) 261117-034940-b2b9c3.
+   261117-055320-5ca39d, 261117-055327-074989; M2 strict 261117-055334-a41ea3.
+   N-log done 261117-034940-b2b9c3 (7db7a919, batch 1, unaffected by the fix): K=1 ties
+   (48.5/47.6 against 47.8/45.1 ops/s); group commit on one log K=4 99 against 121-144 ops/s,
+   K=8 186 against 228-247 (1.2-1.45x slower, strata p50 40 ms against RocksDB's 21 ms at K=4:
+   a writer arriving during a barrier waits for it and the next); L logs per core worse (K=4 L=4
+   62-64, K=8 L=8 119-123): a gap for the perf note, turn-log-parity's.
 2. Write docs/perf/standalone-turn-log.md from those rows: four-axis table, the honest gap (D103,
    D104), the ack=none window (Q3: one barrier plus one write, ~21 ms on macOS). Prior rows at
    9d7c7710 (before the fix) as the before column: sync1 261117-033324-78da56 (fillrandom b100
@@ -65,6 +69,7 @@ compile the test (faultfs namespace) and were replaced.
 | A1 | steps 1-3: build-test 261117-020047-53b736 passed; TSan 261116-211637-83ad1f passed; M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 killed. Steps 4-5 at strata:40f89d0f: build-test 261117-024952-c870f5 (running); TSan 261117-025002-c70c5f passed (served, T4, T12, T3, T8); killed so far: M-a (exit 1), M-b (exit 134, abort), M-c, M-d (exit 1); the rest running or queued; T1 200-seed sweep 261117-025006-d345af; fails-without: M-a 261117-025010-4c8220 (T1), M-b 261117-025013-a6cec4 (T1), M-c 261117-025017-0b218d (T4), M-d 261117-025020-93f7da (T5), M-e 261117-025024-24bfef (T7), M-f 261117-025028-47bf98 (T10), M-h 261117-025032-8fc28b (T7b), M-i 261117-025035-d9bfa2 (T7b), M-l 261117-025039-d9b68d (T8), M-m 261117-025043-a4a6fc (T3), M-n 261117-025046-ec1d6e (T5), M-o 261117-025050-ee8915 (T5) |
 | A1 (D7, M1, strata:9d7c7710) | pending: build-test 261117-033227-678742; TSan 261117-033250-38d2df; T1 sweep 261117-033250-f42f82; fails-without M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-d 261117-033240-5df553, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3 |
 | A1 (step 6 seal, strata:395644a7) | TSan 261117-030338-64ed0e passed; killed: M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2 |
+| A1 (sync batch, strata:193e6e32) | batch test 261117-055212-dc6fc0 passed; TSan 261117-055212-624015 passed; seal TSan 261117-055212-556ecf, t6w TSan 261117-055212-f28b3a, T6+t6w+T5 261117-055213-a1333d passed; M-d 261117-052940-986f82 killed; pending build-test 261117-055209-094ff8, M-r 261117-055220-ecd5d0 |
 | A2-A8 | <no evidence yet> |
 
 ## Result
