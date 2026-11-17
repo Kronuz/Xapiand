@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261116-211612-1ad7b7 261116-211626-0daa5f 261116-211632-9ff248 261116-211637-83ad1f
+State: waiting on jobs 261116-211612-1ad7b7 261116-211637-83ad1f
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,9 +16,11 @@ into the doc; R4 is Q5.
 
 ## Next
 
-1. Read jobs: build-test 261116-211612-1ad7b7; M-j 261116-211626-0daa5f (fails-without, T12);
-   M-k 261116-211632-9ff248 (fails-without, T4); TSan 261116-211637-83ad1f.
-2. Fix whatever they show; then steps 4-5 in the next launch (checkpoint, recovery's cross-checks,
+1. Read jobs: build-test 261116-211612-1ad7b7 (base T2/T4/T9/T11/T12/served, fuzz_command_replay,
+   whole suite after the repin); TSan 261116-211637-83ad1f.
+2. Nit for the next commit: each case prints "ok" even after a CHECK failed; print it only when
+   the case added no failure (left out now so the queued build-test still counts).
+3. Fix whatever they show; then steps 4-5 in the next launch (checkpoint, recovery's cross-checks,
    join/leave; kv_strata on a host).
 
 ## Blocked on
@@ -34,7 +36,7 @@ into the doc; R4 is Q5.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261116-211612-1ad7b7 (pending); M-j 261116-211626-0daa5f, M-k 261116-211632-9ff248 (fails-without, pending); TSan 261116-211637-83ad1f (pending) |
+| A1 | build-test 261116-211612-1ad7b7 (pending); M-j 261116-211626-0daa5f done, killed by T12's CHECK at test:253 (c's position {2,1}); M-k 261116-211632-9ff248 done, killed by T4's CHECKs at test:337-338 (refresh returned, b and c visible before the barrier); TSan 261116-211637-83ad1f (pending) |
 | A2-A8 | <no evidence yet> |
 
 ## Result
