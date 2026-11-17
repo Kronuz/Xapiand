@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: fixing F1, F2 (correctness review, round 1 of 2)
+State: waiting on jobs 261117-124521-4bdb34 261117-124522-f50a08 261117-124524-bb4872 261117-124540-0da619 261117-124543-44a244 and 11 mutants
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,8 +30,13 @@ Correctness review (.campaign/xapiand/reviews/name-index-correctness.md, CHANGES
 
 ## Next
 
-1. Submit at the fix: targeted tests, mutants no-closed and skip-unreadable (--fails-without), the reviewer's
-   oracle.sh and emfile.sh, and build-test and e2e via `campaign verify`. Then ready for review.
+1. Jobs at 74faa0d: build-test 261117-124521-4bdb34; e2e 261117-124522-f50a08; targeted 261117-124524-bb4872;
+   review probes oracle 261117-124540-0da619, emfile 261117-124543-44a244. Mutants: no-closed 261117-124528-4ae707
+   (F1), skip-unreadable 261117-124532-538de8 (F2), no-seek 261117-124536-b9339b, no-parents 261117-124554-af9429,
+   keep-slash 261117-124558-1a5727, drop-delta 261117-124602-aed1e3, lose-merge 261117-124605-ff8815, no-range
+   261117-124609-74470b, no-index 261117-124613-d1d955, no-hook 261117-124617-c3436e, top-build
+   261117-124620-59c725. Local probes before submitting: oracle has 0 differences and 0 refusals; emfile is 5 of 5
+   incomplete with no silent miss. When green: Evidence from `campaign brief`; ready for review.
 
 ## Blocked on
 
