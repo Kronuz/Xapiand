@@ -17,8 +17,7 @@ Nothing; ready for review.
 
 ## Blocked on
 
-Nothing. The accounts fixtures keep sentences built from the old phrase tables (fantasynamegenerators.com, no
-license); they stay as the owner's test data under the lead's ruling, and the lead is told in the report.
+Nothing. (The review's F4 stopword terms, F8 Lenna in git history and F9 the prometheus-cpp install are the lead's.)
 
 ## Evidence
 
@@ -58,3 +57,4 @@ Blocker 3 and the owner's actions are closed, with the rulings D97 (revised), D9
 + D97 reopened (lead, owner): restored `stopwords/` to master's 18 lists, removed the Snowball stopword section from `cmake/generate_third_party_notices.py` and `THIRD-PARTY-NOTICES`, and reverted the `far` wording in the stop-words and phrase pages. The earlier Snowball entry above is superseded. A17 stays open until the provenance check reports. Stop-word e2e counts are unchanged from master (they are still the old values; fixtures regeneration may move them).
 + D97 revised (lead, 5093d680c): the 18 lists stay as on master; `THIRD-PARTY-NOTICES` gets Lucene (Apache-2.0, with the full text from `prospect-src/LICENSES`), Savoy BSD (text from Lucene's stemmer headers), Snowball BSD-3, stopwords-iso MIT and the SMART attribution; audit A17 closed. Stop-word e2e counts stay at master's. I will not kill processes by pattern again (my earlier `pkill -f e2e_capture.sh` was machine-wide).
 + Fixture numbers: the 16 failing e2e assertions (text-queries grammar x5, simple, phrase x4, near x3, love-and-hate, default-operator, stop-words) were all the regenerated personality text; stopwords and mime.types are master's. I probed a local node with the fixtures (my own PID, killed by it) and set each number and id list to the server's exact output, no loosening. Examples whose words vanished changed query: `adventurous creative` replaces `ambitious adventurous` (the grammar and near pages), the phrase `these come alongside a habit of` replaces `these days are few and far between` on the phrase page, and the simple-query prose names the stem family (responsiveness, responsible, responsibility). `exploration.md`'s sample document starts with the new text.
++ Security review CHANGES (`Xapiand:bb59b0e74`): fixed F1 (ARCHITECTURE wording, NOTICE and copyright.md line for el_cerrito.png), F2 (Olly Betts line on `utils/serialize.py` and in the notice generator, per the lead's ruling), F3 (Kitware BSD-3 in `FindGTest.cmake` and `FindPackageTools.cmake`, in the notices and the ledger), F5 (the stale Blocked on), F6 (MIT header on `xapiand/sortable.py`), F7 (`license` in both docs/discussions package.json files), F10 (ledger rows for the brand images and the oldtests polygons). All inside the file set.

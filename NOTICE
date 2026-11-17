@@ -21,6 +21,13 @@ sources; the patch is MIT like the rest of Xapiand. RapidJSON (MIT, Copyright
 the build only sets its default parse flags. Their license texts are in
 THIRD-PARTY-NOTICES.
 
+Google Maps
+-----------
+
+docs/public/assets/el_cerrito.png is a Google Maps screenshot ("Map data
+©2019 Google", under Google's terms) with Xapiand's HTM trixels drawn over it;
+the trixel overlay is Xapiand's, and the image as a whole is not MIT.
+
 Elasticsearch
 -------------
 
