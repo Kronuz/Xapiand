@@ -1,6 +1,6 @@
 # lua-name-miss: journal
 
-State: waiting on jobs 261116-185848-8436ca 261116-185852-7c38a4 261116-185855-542955
+State: ready for review
 Quest: .campaign/xapiand/quests/lua-name-miss.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Fix in compile_local (processor.cc): empty body on a miss throws ClientError nam
 
 ## Next
 
-1. When jobs pass, set ready for review.
+1. Review.
 
 ## Blocked on
 
@@ -27,9 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pass 261116-185848-8436ca; fails without the fix (master processor.cc) 261116-185852-7c38a4 |
+| A1 | pass 261116-191106-ac85b9; fails without the fix (master processor.cc) 261116-185852-7c38a4 |
 | A2 | docs/mechanisms/lua-memory.md (unbounded wait; C1 error) |
-| A3 | suite 261116-185855-542955 |
+| A3 | suite 261116-191113-863775 |
 
 ## Result
 
