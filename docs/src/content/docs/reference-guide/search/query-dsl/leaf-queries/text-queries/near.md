@@ -19,7 +19,7 @@ SEARCH /bank/
 {
   "_query": {
     "personality": {
-      "_near": "adventurous ambitious"
+      "_near": "adventurous creative"
     }
   }
 }
@@ -53,7 +53,7 @@ pm.test("near query size", function() {
 ```js
 pm.test("near query values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [282, 494];
+  var expected = [100, 523];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
