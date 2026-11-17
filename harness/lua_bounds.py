@@ -127,7 +127,6 @@ FINISH_CASES = [
 LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
 
 # X4-R1: what a client can re-send as fast as the 400 returns; each makes one uninterruptible call that runs to the per-call cap.
-FLOOD_P99_CALLS = 6.0
 
 
 def timed(call):
@@ -419,7 +418,11 @@ def main():
         # The control: one flood call timed alone is the stretch a reactor cannot yield inside on this host.
         solo = sorted(timed(lambda: request(args.port, "PUT", "/lua_solo/doc?commit", script_doc(FLOOD_SCRIPT, x=1), timeout=60)) for _ in range(9))
         hold_ms = solo[len(solo) // 2]
-        flood_limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else FLOOD_P99_CALLS * hold_ms
+        # Flood requests spend one slice each (a call is one unyielded stretch), so they are light and share the light FIFO:
+        # a light GET waits behind the flooders queued on its reactor, each one stretch, plus the one in progress.
+        reactors = len({k.split('loop="')[1] for k in lag_buckets(args.port) if 'loop="http' in k}) or 1
+        queued = -(-args.flood_clients // reactors)
+        flood_limit_ms = args.max_flood_p99_ms if args.max_flood_p99_ms is not None else (queued + 1) * hold_ms
         flood_statuses = []
         flood_stop = time.time() + 6.0
 
@@ -444,7 +447,7 @@ def main():
                                      "max_ms": max(flooded), "requests": len(flood_statuses), "hold_ms": hold_ms, "limit_ms": flood_limit_ms, "lag": flood_lag}
         if set(flood_statuses) != {400}:
             failures.append(f"the flooding requests answered {sorted(set(flood_statuses), key=str)}")
-        print(f"one flood call alone: {hold_ms:.1f} ms; p99 limit {flood_limit_ms:.1f} ms")
+        print(f"one flood call alone: {hold_ms:.1f} ms; {queued} flooders per reactor ({reactors}); p99 limit {flood_limit_ms:.1f} ms")
         if percentile(flooded, .99) > flood_limit_ms:
             failures.append(f"light GET p99 {percentile(flooded, .99):.1f} ms beside the flood (limit {flood_limit_ms:.1f})")
         node.terminate()
