@@ -1,6 +1,6 @@
 # restore-free-off-loop: journal
 
-State: waiting on jobs 261116-152341-b40b49 261116-152344-390c05 261116-152346-3f7758 261116-152349-798018 261116-153509-f2b0ec 261116-152404-9e4b93 (round 1 building both binaries at 15:46)
+State: ready for review (evidence reruns at the merged head Xapiand:a6f6c9bbc queued: 261116-163129-344a10 261116-163129-4fff0e 261116-163130-b509cb 261116-163130-ab4353 261116-163130-1875e5 261116-163130-006d68 261116-163133-9cc384 261116-163133-2c3c88)
 Quest: .campaign/xapiand/quests/restore-free-off-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -41,13 +41,12 @@ and the strict A/B (harness/restore_stall_build.sh + restore_stall_ab.sh, verdic
 
 ## Next
 
-1. Jobs at Xapiand:a85559290 (BASE = master Xapiand:49a73300d): exclusive ABBA rounds 261116-152341-b40b49
-   (rs-abba1) and 261116-152344-390c05 (rs-abba2), spin 261116-152346-3f7758 (A1 turns); items byte-identity
-   261116-152349-798018 (A3); mutants 261116-153503-8232b1 (master's handler: results test fails) and
-   261116-153509-f2b0ec (round-1 handler.cc: objects-off-loop test fails; the first pair, 261116-152359-61089b and
-   261116-152402-172aef, failed on a zsh `$M:s` expansion of the commit); build-test 261116-152404-9e4b93, e2e
-   261116-152405-fc88a5 (done, exit 0). None chained with --after.
-2. Put the A/B rounds' numbers in docs/perf/restore-stall.md's round-2 section (it cites the screening runs).
+1. Reruns at Xapiand:a6f6c9bbc (master merged again, BASE kept at Xapiand:49a73300d): ABBA 261116-163129-344a10,
+   261116-163129-4fff0e; spin 261116-163130-b509cb (now with its own workdir); items 261116-163130-ab4353;
+   mutants 261116-163130-1875e5, 261116-163130-006d68; build-test 261116-163133-9cc384; e2e 261116-163133-2c3c88.
+2. The spin job at Xapiand:a85559290 (261116-152346-3f7758) exited 0 with no data: workdir = output dir, so the
+   node's start removed it, and the verdict passed an empty dir. Fixed in Xapiand:395fe52f2; A1's turn bound
+   rests on the rerun b509cb.
 
 ## Blocked on
 
@@ -68,19 +67,18 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261116-152341-b40b49, 261116-152344-390c05 (ABBA p99, exclusive); 261116-152346-3f7758 (spin turns): queued |
-| A2 | 261116-152341-b40b49, 261116-152344-390c05: queued |
-| A3 | e2e 261116-152405-fc88a5 passed; build-test 261116-152404-9e4b93; items 261116-152349-798018; mutant 261116-153503-8232b1 done (results test fails without round 1), mutant 261116-153509-f2b0ec queued (--fails-without) |
-| A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" and "Fix, round 2: the 8 ms left" |
+| A1 | At Xapiand:a85559290, exclusive ABBA against master Xapiand:49a73300d: 261116-152341-b40b49 PASS (p99 1.44/1.61 ms, master 10.90/10.67, bound 2.76), 261116-152344-390c05 PASS (1.58/1.66, master 10.11/10.24, bound 2.77). Spin 261116-152346-3f7758 recorded nothing (harness bug, fixed). Reruns at a6f6c9bbc: 261116-163129-344a10, 261116-163129-4fff0e, spin 261116-163130-b509cb |
+| A2 | 261116-152341-b40b49 PASS (7,088 docs/s, master 6,686, floor 6,542), 261116-152344-390c05 PASS (7,119, master 6,711, floor 6,576); reruns 261116-163129-344a10, 261116-163129-4fff0e |
+| A3 | At a85559290: e2e 261116-152405-fc88a5, build-test 261116-152404-9e4b93, items 261116-152349-798018 (byte-identical), mutants 261116-153503-8232b1 (master's handler fails the results test), 261116-153509-f2b0ec (round-1 handler fails the off-loop test), all passed. Reruns at a6f6c9bbc: 261116-163133-2c3c88, 261116-163133-9cc384, 261116-163130-ab4353, 261116-163130-1875e5, 261116-163130-006d68 |
+| A4 | docs/perf/restore-stall.md, "Fix: the results in one buffer" and "Fix, round 2: the 8 ms left" (with the exclusive table) |
 
 ## Result
 
-DocIndexer's results are one packed MessagePack buffer plus (offset, size) per object
-(src/database/handler.{h,cc}); results() builds the response array once. Before, each result was a
-MsgPack whose zone mallocs 8 KB eagerly: 5,000 x 8 KB freed in ~DocIndexer's one turn. Responses
-byte-identical (A3 job). Timing numbers pending the strict jobs; note docs/perf/restore-stall.md.
-The msgpack library's eager 8 KB first chunk (every MsgPack value) is the lead's hunt.md row,
-not this quest's.
+Round 1: DocIndexer's results are one packed MessagePack buffer plus (offset, size) per object
+(src/database/handler.{h,cc}). Round 2: the loop no longer builds or frees each object's MsgPack tree (raw
+`reads_stored`, the run freed in a chore, a checkpoint per taken object), and the probe runs its RESTORE client in
+its own process (the round-1 8 ms was mostly the client's own stall). Exclusive ABBA: p99 1.44-1.66 ms against
+master 10.1-10.9 ms (bound 2.76-2.77), 7,088-7,119 against 6,686-6,711 docs/s. Note: docs/perf/restore-stall.md.
 
 ## Rulings I made
 

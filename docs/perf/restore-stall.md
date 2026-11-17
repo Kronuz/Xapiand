@@ -171,7 +171,25 @@ few turns over 4 ms left hold no RESTORE frame: their captures are the spin prob
 `tests/test_loop_yield.cc` `test_a_restores_objects_are_freed_off_its_loop` counts the blocks the loop frees in a
 2,000-object RESTORE.
 
-The deciding numbers are the exclusive A/B jobs in the quest's journal.
+The deciding A/B, `quiet exclusive`, two ABBA rounds of round 2 (Xapiand:a85559290) against master
+(Xapiand:49a73300d), the RESTORE client in its own process (jobs 261116-152341-b40b49 and 261116-152344-390c05):
+
+| Round | Arm | trivial p99 (A/A) | RESTORE-phase p99 | p99.9 | max | loop lag p99.9 | docs/s |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 1 | master | 1.38 | 10.90 | 18.88 | 21.15 | 16,384 us | 6,734 |
+| 1 | fix | 1.38 | 1.44 | 2.71 | 5.59 | 1,792 us | 7,100 |
+| 1 | fix | 1.38 | 1.61 | 3.29 | 5.32 | 1,792 us | 7,077 |
+| 1 | master | 1.37 | 10.67 | 19.17 | 22.49 | 16,384 us | 6,638 |
+| 2 | master | 1.39 | 10.11 | 17.60 | 20.01 | 16,384 us | 6,666 |
+| 2 | fix | 1.42 | 1.58 | 2.58 | 4.96 | 1,536 us | 7,112 |
+| 2 | fix | 1.39 | 1.66 | 2.49 | 5.60 | 1,792 us | 7,126 |
+| 2 | master | 1.43 | 10.24 | 18.68 | 25.28 | 16,384 us | 6,756 |
+
+A1's bound is 2x the A/A idle p99: 2.76 and 2.77 ms. The fix's p99 is 1.44-1.66 ms against master's 10.1-10.9 ms
+(6.6x lower), its loop lag p99.9 1.5-1.8 ms against 16.4 ms, and its RESTORE 7,088 and 7,119 docs/s against
+master's 6,686 and 6,711 (6% faster). The spin job of that commit (261116-152346-3f7758) recorded nothing: its
+probe workdir was its output directory, so the node's start removed both runs, and the verdict passed an empty
+directory. Both are fixed (Xapiand:395fe52f2); the spin rerun at the merged head is in the journal.
 
 ## 2. The lag probe's 49-82 ms
 
@@ -220,7 +238,8 @@ call and run it as a chore, with the gauge cached for a scrape interval. Not mea
 - 5,000-document chunks (27 chunks in 20 s); a chunk of 20,000 would make one longer turn four times less often.
 - The stall sampler walks frame pointers from a signal, so it names the frame that held the loop, not the 1.5 ms it
   stalled for; the gap log gives the length. Captures are about one per 1.5 ms of stall, so a turn under 3 ms is not seen.
-- The p99 left after the slice (5.6-5.8 ms) is not attributed.
+- The p99 left after the slice (5.6-5.8 ms), and the 8 ms after round 1, were measured by the probe with its RESTORE
+  client inline; round 2 shows most of it was that client's own stall.
 - The `sample` run's latencies (p99 107 ms) are the sampler's, discarded.
 
 ## Reproduce
