@@ -27,10 +27,12 @@
 #include <sys/stat.h>
 
 #include <algorithm>               // for std::sort, std::unique, std::any_of
+#include <cerrno>                  // for errno, ENOENT, ENOTDIR
 #include <cstdint>                 // for std::uint32_t
 #include <iterator>                // for std::make_move_iterator
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::to_string
+#include <system_error>            // for std::system_error
 
 #include "engine/error.h"          // for Error, errc
 #include "index_path.h"            // for index_path::valid
@@ -264,17 +266,28 @@ match(std::string_view pattern, std::string_view name, std::size_t& steps)
 
 namespace {
 
+// A directory that could not be opened: empty, unless `unreadable` says to fail and it is not gone (D110).
+void
+unopened(const std::string& dir, Unreadable unreadable)
+{
+	const int error = errno;
+	if (unreadable == Unreadable::fail && error != ENOENT && error != ENOTDIR) {
+		throw std::system_error(error, std::generic_category(), "cannot read " + dir);
+	}
+}
+
 // Whether a directory is an index, for one that is not read for what is in it: it holds `strata` (an index of one shard)
 // or a shard `.__N`, which may be any of the node's shards of the index. `entry()` is called for each entry it reads.
 template <typename Entry>
 bool
-holds_index(const std::string& dir, Entry&& entry)
+holds_index(const std::string& dir, Unreadable unreadable, Entry&& entry)
 {
 	if (is_directory(dir + "/strata") || is_directory(dir + "/.__1")) {
 		return true;
 	}
 	DirPtr dirp(::opendir(dir.c_str()));
 	if (!dirp) {
+		unopened(dir, unreadable);
 		return false;
 	}
 	while (const dirent* ent = ::readdir(dirp.get())) {
@@ -297,8 +310,8 @@ holds_index(const std::string& dir, Entry&& entry)
 // and calls `checkpoint` before each.
 class Walk {
 public:
-	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, std::vector<std::string>& out)
-		: wanted_count_(wanted.size()), bounds_(bounds), checkpoint_(checkpoint), out_(out)
+	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, Unreadable unreadable, std::vector<std::string>& out)
+		: wanted_count_(wanted.size()), bounds_(bounds), checkpoint_(checkpoint), unreadable_(unreadable), out_(out)
 	{
 		for (const auto& pattern : wanted) {
 			globs_.emplace_back(pattern);
@@ -375,6 +388,7 @@ private:
 	{
 		DirPtr dirp(::opendir(dir.c_str()));
 		if (!dirp) {
+			unopened(dir, unreadable_);
 			return false;
 		}
 		struct Child {
@@ -415,7 +429,7 @@ private:
 			const auto name = rel + child.name;
 			const auto below = step(level, child.name);
 			const bool inside = deeper(below);
-			const bool is_index = inside ? scan(path, name + "/", below) : holds_index(path, [this] { visit(); });
+			const bool is_index = inside ? scan(path, name + "/", below) : holds_index(path, unreadable_, [this] { visit(); });
 			if (child.matches && is_index) {
 				out_.push_back(name);
 				if (out_.size() > bounds_.names) {
@@ -430,6 +444,7 @@ private:
 	std::size_t wanted_count_;
 	Bounds bounds_;
 	const Checkpoint& checkpoint_;
+	Unreadable unreadable_;
 	std::vector<std::string>& out_;
 	std::size_t visits_ = 0;
 	std::size_t steps_ = 0;
@@ -508,13 +523,13 @@ merged(Items& parsed, std::vector<std::string>& found, const Bounds& bounds)
 
 
 std::vector<std::string>
-expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint)
+expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint, Unreadable unreadable)
 {
 	auto parsed = parse(items, bounds, walk_work);
 	std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
 	if (!parsed.wanted.empty()) {
 		try {
-			Walk(parsed.wanted, parsed.excluded, bounds, checkpoint, found).run(trimmed(root));   // stops at the bounds
+			Walk(parsed.wanted, parsed.excluded, bounds, checkpoint, unreadable, found).run(trimmed(root));   // stops at the bounds
 		} catch (const OutOfBudget&) {
 			too_much_work(bounds.visits, walk_work);
 		}

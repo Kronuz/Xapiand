@@ -33,7 +33,7 @@ DatabaseHandler::match
   in memory: each wanted pattern's literal prefix is a range, and a subtree no pattern can match below is skipped with
   one seek, so a prefix pattern reads O(log N + its names) instead of the directory. The node's first pattern starts
   its build (one unbounded walk, a `merge` chore of the work pool that a task of the control loop awaits), the catalog's resolve adds each index it opens or creates,
-  and until the build ends patterns walk as below. Each name read and each seek counts against
+  and until the build ends patterns walk as below. Each name read counts against
   `--max-search-indexes`. Design: `docs/design/name-index.md`.
 - **A pattern is an automaton over segments.** `index_pattern::Glob` makes a position of each segment of the pattern (a run
   of `**` is one) and a set of live positions of the path read so far: a segment moves each live position to the next if it

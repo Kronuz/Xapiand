@@ -59,8 +59,11 @@ public:
 	bool claim() noexcept;
 	void unclaim() noexcept;
 	// Builds over `root` on this thread: one unbounded walk, merged with what resolve added meanwhile. False when
-	// the index was stopped first; a failure of the walk is thrown.
+	// the index was stopped first, or a directory could not be read for any reason but being gone (failure() says
+	// which); the names then stay incomplete and a later build tries again (ruling D110).
 	bool build(const std::string& root);
+	// Why the last build failed to read the data directory; empty when it did not. Read by the build's claimer.
+	const std::string& failure() const noexcept { return failure_; }
 	// Asks a running build to stop at its next directory entry; no build is claimed after it. It never waits.
 	void request_stop() noexcept;
 
@@ -68,7 +71,7 @@ public:
 	bool complete() const noexcept { return complete_.load(std::memory_order_acquire); }
 
 	// The names `items` stand for, as index_pattern::expand gives them over the tree the index holds (D6), under the
-	// same bounds: each name read and each seek is a visit (D7).
+	// same bounds: each name read is a visit and a seek is none, so it never reads more than the walk (D7).
 	std::vector<std::string> expand(std::span<const std::string> items, const index_pattern::Bounds& bounds, const index_pattern::Checkpoint& checkpoint = {}) const;
 
 	// The names it holds, and the heap they take.
@@ -100,4 +103,5 @@ private:
 	std::atomic<bool> complete_{false};
 	std::atomic<bool> building_{false};
 	std::atomic<bool> stopped_{false};
+	std::string failure_;   // the claimer's
 };

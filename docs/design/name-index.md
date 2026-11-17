@@ -61,7 +61,9 @@ chore of its own group on the work pool, where the walk runs (phase 7c D13: the 
 loop, and its blocking work a chore). No request awaits it: the search that started it, and every pattern until it ends, walks
 under the same bounds. A resolve during the build is never lost: an index on disk before the build started is found
 by it, and one made after is added by its resolve. A failed build is logged and unclaimed, so the next pattern
-starts it again; with no control loop nothing is posted and patterns walk. Clearing the control (`set_control(nullptr)`,
+starts it again; with no control loop nothing is posted and patterns walk. The build's walk takes a directory it
+cannot open as empty only when it is gone (ENOENT, ENOTDIR); any other error (EMFILE, EIO, EACCES) fails the build
+(ruling D110), since a passing fault frozen into the names would hide indexes until the next start. Clearing the control (`set_control(nullptr)`,
 `finish()`) stops a running build at its next directory entry, so the shutdown's drain of the detached tasks ends it.
 
 **D6. A lookup is ranges, a merged scan and seeks past dead subtrees.** For each wanted pattern its literal
@@ -70,14 +72,19 @@ prefixes are sorted and one that extends another is dropped, so the ranges are d
 name is stepped through each pattern's `index_pattern::Glob` one segment at a time; a name is listed when a
 wanted pattern accepts it and no exclusion does, which is the walk's rule (D2's set, filtered as
 `Walk::matched` filters). When no wanted pattern is live after a segment of a name, its prefix up to that segment
-is dead, and the scan seeks to the first name past that subtree (`prefix + '0'`, since `0` follows `/`). Plain
-names, exclusions and the checks on the items go through `index_pattern::parse`, the one parser the walk uses too.
-The cost is O(R log N + names read), R the ranges, at most 32; the names read are the matches, the names in a
-range that a pattern rejects, and one per dead subtree.
+is dead, and the scan seeks to the first name past that subtree (`prefix + '0'`, since `0` follows `/`). A dead
+prefix that is itself a name is kept on a stack until the scan reaches its subtree, since names such as `a!` sort
+between `a` and `a/`; one that is no name is found by the first name below it. A name steps only the segments it
+does not share with the last name stepped, as the walk steps a directory once for all below it. Plain names,
+exclusions and the checks on the items go through `index_pattern::parse`, the one parser the walk uses too. The
+cost is O(R log N + names read), R the ranges, at most 32; the names read are the matches, the names in a range
+that a pattern rejects, and one per dead prefix that is no name.
 
-**D7. The same bounds, counted in names.** A lookup counts each name it reads and each seek as a visit, each
-pattern step as `expand` counts it, and the names it lists; past `--max-search-indexes` visits or names, or the
-steps, it raises the same `errc::invalid` (400) as the walk. So `_all` on a node over the cap is still refused,
+**D7. The same bounds, counted in names.** A lookup counts one visit per name it reads, each pattern step as
+`expand` counts it, and the names it lists; a seek counts nothing. Each name read stands for a distinct entry the
+walk reads in a directory it enters (the name's own, or that of its first dead prefix that is no name), so a lookup
+never reads more than the walk and never refuses a pattern the walk answers; past `--max-search-indexes` visits or
+names, or the steps, it raises the same `errc::invalid` (400) as the walk. So `_all` on a node over the cap is still refused,
 while `w00*` on a node of 10^6 indexes reads only the `w00` range. A lookup holds the shared lock for its scan and
 runs in a query chore, never on a reactor. The lock is taken on the work pool's workers alone (resolve's open chore,
 the build's chore, a lookup's query chore); a loop reads only the `complete()` and `claim()` atomics, and no section
@@ -125,7 +132,7 @@ the node's first pattern during which patterns still walk (D5). A name costs 16 
 
 | Limit | Value | Mechanism | Reason |
 |---|---|---|---|
-| Names read by one lookup | `--max-search-indexes` | D7: each name read and each seek is a visit | the work of one lookup has a number, as a walk's does |
+| Names read by one lookup | `--max-search-indexes` | D7: each name read is a visit, a seek none | the work of one lookup has a number, at most the walk's |
 | Names listed | `--max-search-indexes` | D7 | the runaway cap, unchanged |
 | Delta before a merge | max(1,024, base / 8) names | D4 | a create's amortized cost stays a few names' bytes; the delta stays small beside the base |
 | Builds at once | 1 per node | D5: claimed by one atomic, run as one `merge` chore, claimed again only after a failure | the build is a whole walk and holds one worker of the pool |

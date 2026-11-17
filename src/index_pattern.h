@@ -144,6 +144,11 @@ struct Bounds {
 // Called before each directory entry the walk reads, on the walking thread; it may throw to stop the walk.
 using Checkpoint = std::function<void()>;
 
+// What the walk does with a directory it cannot open: `skip` takes it as empty, as a search's walk does; `fail`
+// throws std::system_error unless it is gone (ENOENT, ENOTDIR), so the names' build never takes a passing fault
+// (EMFILE, EIO, EACCES) for an empty directory (ruling D110).
+enum class Unreadable { skip, fail };
+
 // What each source of names counts as its work, for the 400 that names it.
 inline constexpr const char* walk_work = "directory entries";
 inline constexpr const char* names_work = "index names";
@@ -177,6 +182,6 @@ std::vector<std::string> merged(Items& parsed, std::vector<std::string>& found, 
 // directories entry by entry. The names are sorted and have no repeats. It reads the file system and blocks, so it runs
 // off a reactor. Raises errc::invalid (a 400) when a pattern is longer than `max_pattern_size`, there are more than
 // `max_patterns` of them, the names pass `bounds.names` or the walk reads more than `bounds.visits` entries.
-std::vector<std::string> expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint = {});
+std::vector<std::string> expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint = {}, Unreadable unreadable = Unreadable::skip);
 
 }  // namespace index_pattern

@@ -23,10 +23,11 @@
 
 #include "database/name_index.h"
 
-#include <algorithm>               // for std::sort, std::all_of, std::max
+#include <algorithm>               // for std::sort, std::all_of, std::max, std::min, std::mismatch
 #include <iterator>                // for std::next
 #include <limits>                  // for std::numeric_limits
 #include <string>                  // for std::string
+#include <system_error>            // for std::system_error
 #include <utility>                 // for std::move
 
 #include "index_path.h"            // for index_path::valid
@@ -68,6 +69,23 @@ literal_prefix(std::string_view pattern) noexcept
 		prefix.remove_suffix(1);
 	}
 	return prefix;
+}
+
+// Whether `name` is in the subtree of `prefix`: it starts with `prefix + '/'`.
+bool
+below(std::string_view name, std::string_view prefix) noexcept
+{
+	return name.size() > prefix.size() && name.starts_with(prefix) && name[prefix.size()] == '/';
+}
+
+// Whether `name` sorts past the subtree of `prefix`, at or after `prefix + '0'` ('0' follows '/').
+bool
+past(std::string_view name, std::string_view prefix) noexcept
+{
+	if (!name.starts_with(prefix)) {
+		return name > prefix;
+	}
+	return name.size() > prefix.size() && static_cast<unsigned char>(name[prefix.size()]) >= '0';
 }
 
 }  // namespace
@@ -224,10 +242,14 @@ NameIndex::build(const std::string& root)
 			if (stopped_.load(std::memory_order_relaxed)) {
 				throw Stopped{};
 			}
-		});
+		}, index_pattern::Unreadable::fail);
 	} catch (const Stopped&) {
 		return false;
+	} catch (const std::system_error& exc) {
+		failure_ = exc.what();   // a directory it could not read: the names stay incomplete (D110)
+		return false;
 	}
+	failure_.clear();
 	Base fresh;
 	std::size_t bytes = 0;
 	for (const auto& name : found) {
@@ -369,28 +391,58 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 			return accepted;
 		};
 
+		// A lookup reads no more than the walk would (D7): one visit per name, which stands for the walk's entry of the
+		// name or of the first prefix of it no pattern can match below; a seek counts nothing. A name steps only the
+		// segments it does not share with the last one stepped (`levels`, `ends`), as the walk steps an entry once
+		// for everything below it.
+		std::vector<Level> levels;          // the level after each segment of `stepped`
+		std::vector<std::size_t> ends;      // where each of those segments ends
+		std::string_view stepped;
+		// Names read below which no wanted pattern matches, whose subtrees are still ahead (the walk never enters
+		// them); the last one's subtree comes first.
+		std::vector<std::string_view> closed;
 		std::string seek;
 		std::shared_lock<std::shared_mutex> lk(mtx_);
 		Cursor cursor(base_, delta_);
+		const auto skip = [&](std::string_view prefix) {   // past its subtree, [prefix + '/', prefix + '0')
+			seek.assign(prefix).push_back('0');
+			cursor.seek(seek);
+		};
 		for (const auto range : ranges) {
-			visit();
 			cursor.seek(range);
+			closed.clear();
 			while (!cursor.done()) {
 				const auto name = cursor.name();
 				if (!name.starts_with(range)) {
 					break;
 				}
+				while (!closed.empty() && past(name, closed.back())) {
+					closed.pop_back();
+				}
+				if (!closed.empty() && below(name, closed.back())) {
+					skip(closed.back());
+					closed.pop_back();
+					continue;
+				}
 				visit();
-				// The name's segments, one step of every pattern each; a prefix no wanted pattern can match below is
-				// a subtree to skip: its names are those in [prefix + '/', prefix + '0').
-				Level level = start;
+				// The segments it shares with `stepped`, the last one always stepped anew.
+				const auto common = static_cast<std::size_t>(std::mismatch(name.begin(), name.begin() + static_cast<std::ptrdiff_t>(std::min(name.size(), stepped.size())), stepped.begin()).first - name.begin());
+				std::size_t shared = 0;
+				while (shared < ends.size() && ends[shared] < name.size() && ends[shared] <= common && name[ends[shared]] == '/') {
+					++shared;
+				}
+				levels.resize(shared);
+				ends.resize(shared);
+				Level level = shared == 0 ? start : levels.back();
 				std::size_t dead = std::string_view::npos;
-				for (std::size_t from = 0;;) {
+				for (std::size_t from = shared == 0 ? 0 : ends.back() + 1;;) {
 					const auto cut = name.find('/', from);
 					const auto segment = name.substr(from, cut == std::string_view::npos ? cut : cut - from);
 					for (std::size_t i = 0; i < globs.size(); ++i) {
 						level[i] = globs[i].step(level[i], segment, steps);
 					}
+					levels.push_back(level);
+					ends.push_back(cut == std::string_view::npos ? name.size() : cut);
 					if (cut == std::string_view::npos) {
 						break;
 					}
@@ -400,10 +452,9 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 					}
 					from = cut + 1;
 				}
+				stepped = name;
 				if (dead != std::string_view::npos) {
-					visit();
-					seek.assign(name.substr(0, dead)).push_back('0');
-					cursor.seek(seek);
+					skip(name.substr(0, dead));   // a prefix that is no name: this visit was its entry
 					continue;
 				}
 				if (matched(level)) {
@@ -411,6 +462,9 @@ NameIndex::expand(std::span<const std::string> items, const index_pattern::Bound
 					if (found.size() > bounds.names) {
 						index_pattern::too_many(bounds.names);
 					}
+				}
+				if (!live(level)) {
+					closed.push_back(name);
 				}
 				cursor.next();
 			}

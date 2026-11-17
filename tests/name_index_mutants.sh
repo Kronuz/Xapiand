@@ -5,7 +5,7 @@
 # when the mutant does not apply or build, which never counts as killed. The mutated sources are restored on exit.
 set -u
 mutant=$1 target=$2 test=$3
-trap 'git checkout -- src/database/name_index.cc src/database/pool.cc src/server/search_views.cc' EXIT
+trap 'git checkout -- src/database/name_index.cc src/database/pool.cc src/server/search_views.cc src/index_pattern.cc' EXIT
 
 mutate() {   # mutate FILE OLD NEW: replaces the one OLD text in FILE, or fails
 	python3 - "$1" "$2" "$3" <<'EOF' || { echo "MUTATION NOT APPLIED: $mutant"; exit 126; }
@@ -58,6 +58,14 @@ case $mutant in
 		mutate src/database/pool.cc \
 			'		names_.opened(path);' \
 			'		(void)0;' ;;
+	no-closed)     # a dead name's subtree is read name by name, each counted: more visits than the walk's entries
+		mutate src/database/name_index.cc \
+			'					closed.push_back(name);' \
+			'					(void)0;' ;;
+	skip-unreadable)   # the build takes a directory it cannot open for an empty one
+		mutate src/index_pattern.cc \
+			'	if (unreadable == Unreadable::fail && error != ENOENT && error != ENOTDIR) {' \
+			'	if (false) {' ;;
 	*) echo "unknown mutant $mutant"; exit 126 ;;
 esac
 

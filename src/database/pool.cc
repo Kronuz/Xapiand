@@ -710,6 +710,8 @@ run_names_build(WorkPool& pool, NameIndex& names, std::string root)
 		co_await chores.run(engine::ChoreClass::merge, [&] {
 			if (names.build(root)) {
 				L_NOTICE("The index names are complete: {} names", names.size());
+			} else if (!names.failure().empty()) {
+				L_ERR("The index names could not be built; patterns walk the data directory: {}", names.failure());
 			}
 		});
 	} catch (const task::cancelled&) {

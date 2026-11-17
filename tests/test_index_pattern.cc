@@ -26,6 +26,7 @@
 
 #include "test_harness.h"
 
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -34,6 +35,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cerrno>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -859,14 +861,14 @@ void test_the_delta_merges_into_the_base() {
 	fs::remove_all(root);
 }
 
-// The visits of one lookup: each name read and each seek.
+// The visits of one lookup: each name read.
 std::size_t lookups(const NameIndex& index, const Names& items) {
 	std::size_t calls = 0;
 	index.expand(items, {100000, 100000}, [&] { ++calls; });
 	return calls;
 }
 
-// A prefix pattern reads its range alone, and a subtree no pattern can match below costs one seek (A2's mechanism).
+// A prefix pattern reads its range alone, and a subtree no pattern can match below is passed with a seek (A2's mechanism).
 void test_a_prefix_pattern_reads_its_range() {
 	Wide wide(1000);   // i1000 .. i1999
 	NameIndex index;
@@ -874,7 +876,13 @@ void test_a_prefix_pattern_reads_its_range() {
 	CHECK_TRUE(index.expand(Names{"i101*"}, {100, 100}) == expand(wide.root, Names{"i101*"}, {100, 2000}));
 	CHECK_LE(lookups(index, {"i101*"}), std::size_t{12});    // a seek and its 10 names, not the 1,000 the walk reads
 	CHECK_LE(lookups(index, {"i101?", "i102?"}), std::size_t{24});
-	CHECK_EQ(lookups(index, {"q*"}), std::size_t{1});
+	CHECK_EQ(lookups(index, {"q*"}), std::size_t{0});
+	for (int i = 0; i < 500; ++i) {   // below `j`, which is no index: its first name stands for it, the rest are skipped
+		const auto key = "j/c" + std::to_string(i);
+		fs::create_directories(wide.root + key + "/strata");
+		index.opened(key);
+	}
+	CHECK_EQ(lookups(index, {"j*"}), std::size_t{1});
 	for (int i = 0; i < 500; ++i) {
 		const auto key = "i1500/c" + std::to_string(i);
 		fs::create_directories(wide.root + key + "/strata");
@@ -895,6 +903,124 @@ void test_the_names_answer_over_the_cap() {
 	CHECK_THROW(index.expand(Names{"_all"}, {50, 50}), engine::Error);          // the cap on names stays
 	CHECK_THROW(index.expand(Names{"*0", "-i1*"}, {50, 50}), engine::Error);    // so does the cap on the names read
 	CHECK_THROW(index.expand(Names{"i1*"}, {50, 1000}), engine::Error);
+}
+
+// The outcome of an expansion: its names, or the text of its 400.
+struct Answer {
+	bool refused = false;
+	std::string text;
+	Names names;
+};
+template <typename F>
+Answer answer(F&& f) {
+	Answer a;
+	try {
+		a.names = f();
+	} catch (const engine::Error& e) {
+		a.refused = true;
+		a.text = e.reason();
+	}
+	return a;
+}
+
+// D7: under any cap, the names never refuse what the walk answers, since a lookup reads one name per entry the walk
+// reads; when both refuse and the names refuse for their work, the walk refuses for its work too (names that refuse
+// for listing past the cap may meet a walk that read past it first). Over the random trees of A3 at caps 1 to 40, and over
+// indexes that each hold a nested one (D22), where the walk reads one entry per index and never enters it.
+void test_the_names_never_refuse_what_the_walk_answers() {
+	const auto bound = [](const std::string& text) { return text.find("indexes (--max-search-indexes)") != std::string::npos ? 'n' : 'w'; };
+	std::size_t cases = 0, refused = 0, both = 0;
+	for (unsigned seed = 1; seed <= 100; ++seed) {
+		RandomTree tree(seed);
+		const auto count = std::uniform_int_distribution<int>(1, 24)(tree.rng);
+		for (int i = 0; i < count; ++i) {
+			tree.make(tree.key());
+		}
+		tree.noise();
+		CHECK_TRUE(tree.index.build(tree.root));
+		for (int round = 0; round < 15; ++round) {
+			const auto items = tree.items();
+			for (std::size_t cap = 1; cap <= 40; cap += 3) {
+				const index_pattern::Bounds small(cap, cap);
+				const auto walked = answer([&] { return expand(tree.root, items, small); });
+				const auto indexed = answer([&] { return tree.index.expand(items, small); });
+				++cases;
+				if (!walked.refused) {
+					if (indexed.refused || indexed.names != walked.names) {
+						std::string text;
+						for (const auto& item : items) {
+							text += " " + item;
+						}
+						std::fprintf(stderr, "  seed %u, cap %zu, items%s: the walk lists %zu names, the index: %s\n", seed, cap, text.c_str(), walked.names.size(), indexed.refused ? indexed.text.c_str() : "other names");
+					}
+					CHECK_FALSE(indexed.refused);
+					CHECK_TRUE(indexed.names == walked.names);
+				} else if (indexed.refused) {
+					++both;
+					if (bound(indexed.text) == 'w') {
+						CHECK_EQ(bound(walked.text), 'w');
+					}
+				}
+				refused += walked.refused ? 1 : 0;
+			}
+		}
+	}
+	std::fprintf(stderr, "  %zu cases, %zu refused by the walk, %zu by both\n", cases, refused, both);
+	CHECK_GT(refused, cases / 20);   // the caps bite
+	CHECK_LT(refused, cases - cases / 20);
+
+	const std::string root = "names_nested_root/";
+	fs::remove_all(root);
+	const std::size_t n = 50;
+	for (std::size_t k = 0; k < n; ++k) {
+		fs::create_directories(root + "i" + std::to_string(100 + k) + "/strata");
+		fs::create_directories(root + "i" + std::to_string(100 + k) + "/c/strata");
+	}
+	NameIndex nested;
+	CHECK_TRUE(nested.build(root));
+	const index_pattern::Bounds cap(n, n);
+	const auto walked = expand(root, Names{"i*"}, cap);   // n entries
+	CHECK_EQ(walked.size(), n);
+	CHECK_TRUE(nested.expand(Names{"i*"}, cap) == walked);
+	fs::remove_all(root);
+}
+
+// D110: a directory the build cannot read (here EMFILE, the descriptors all taken) fails the build instead of
+// reading as empty, so the names stay incomplete; a build once the fault is gone lists what the walk lists.
+void test_an_unreadable_directory_fails_the_build() {
+	const std::string root = "names_unreadable_root/";
+	fs::remove_all(root);
+	for (int g = 0; g < 20; ++g) {
+		fs::create_directories(root + "g" + std::to_string(g) + "/i/strata");
+	}
+	NameIndex index;
+	struct rlimit saved;
+	CHECK_EQ(::getrlimit(RLIMIT_NOFILE, &saved), 0);
+	struct rlimit low = saved;
+	low.rlim_cur = std::min<rlim_t>(saved.rlim_cur, 4096);
+	CHECK_EQ(::setrlimit(RLIMIT_NOFILE, &low), 0);
+	std::vector<int> taken;
+	for (int fd; (fd = ::dup(2)) >= 0; ) {   // every descriptor the limit allows
+		taken.push_back(fd);
+	}
+	CHECK_EQ(errno, EMFILE);
+	const bool built = index.build(root);
+	for (const int fd : taken) {
+		::close(fd);
+	}
+	CHECK_EQ(::setrlimit(RLIMIT_NOFILE, &saved), 0);
+	CHECK_FALSE(built);
+	CHECK_FALSE(index.complete());
+	CHECK_FALSE(index.failure().empty());
+	const index_pattern::Bounds big(100000, 100000);
+	CHECK_TRUE(index.build(root));
+	CHECK_TRUE(index.complete());
+	CHECK_TRUE(index.failure().empty());
+	CHECK_EQ(index.expand(Names{"**"}, big).size(), std::size_t{20});
+	CHECK_TRUE(index.expand(Names{"**"}, big) == expand(root, Names{"**"}, big));
+	// A directory that is gone reads as empty: the walk raced a removal, not a fault.
+	CHECK_TRUE(expand(root + "missing/", Names{"**"}, big, {}, index_pattern::Unreadable::fail).empty());
+	fs::remove_all(root);
 }
 
 // One build is claimed at a time, again after one that did not end well, never after one that did; a stopped index
@@ -1025,6 +1151,8 @@ int main(int argc, char** argv) {
 		{"test_the_delta_merges_into_the_base", test_the_delta_merges_into_the_base},
 		{"test_a_prefix_pattern_reads_its_range", test_a_prefix_pattern_reads_its_range},
 		{"test_the_names_answer_over_the_cap", test_the_names_answer_over_the_cap},
+		{"test_the_names_never_refuse_what_the_walk_answers", test_the_names_never_refuse_what_the_walk_answers},
+		{"test_an_unreadable_directory_fails_the_build", test_an_unreadable_directory_fails_the_build},
 		{"test_one_build_is_claimed_at_a_time", test_one_build_is_claimed_at_a_time},
 		{"bench_name_index", bench_name_index},   // only with NAME_INDEX_BENCH
 	};
