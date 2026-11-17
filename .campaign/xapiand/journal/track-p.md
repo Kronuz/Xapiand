@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-121855-eefc18 261117-123155-1419b0 261117-121941-230f53 261117-121958-98b81c 261117-122016-ef86f3 261117-122028-16a1f0 261117-122035-212d65 261117-122103-e51e66
+State: ready for review
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,13 +18,11 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A1 follow-up, find_in_block selector: FIB 2 kept (expected skip distance, division-free),
-   landed on the branch at prospect:10ac993 with skewed-block tests and 9 mutants; verdict in
-   `docs/perf/p2-intersection.md` "Follow-up". Screens: A/B ed8f75, tiny dc09de, parity 0f8110
-   (all passed). Waiting: build-test eefc18, mutants d28384 ebae52 2b4aee c981c4 230f53 98b81c
-   ef86f3 16a1f0 212d65 (--fails-without; 0, 2, 3 caught; 1's ebae52 lost its runner,
-   resubmitted as 1419b0), landed A/B + tiny rerun e51e66. Next: add e51e66's
-   rows to the doc; if a row loses or a short-list case leaves its A/A, revert.
+0. A1 follow-up, find_in_block selector: decided, removed (prospect:f197b3d reverts 10ac993;
+   branch source equals main). FIB 2 screened as a win (ed8f75, tiny dc09de, parity 0f8110);
+   the landing-commit rerun e51e66 did not repeat it beyond the A/A on the target rows (no row
+   wins in both sessions). Suite eefc18 passed and six mutants were caught at 10ac993 (now moot).
+   Verdict in `docs/perf/p2-intersection.md` "Follow-up". Nothing pending.
 1. P9 reruns e71d1f (A/B) and b099bb (engines) only restore a passing exit; if a rerun shows an
    intersection row beyond its A/A, reopen P9's verdict; else nothing changes.
 2. Disk: host at 96%; `.scratch/idx-p13`, `build-p9-*` can go once the P9 reruns finish.
@@ -94,7 +92,7 @@ for every variant. Patch `docs/perf/p9-planner.patch` is the record.
 - A1 follow-up: the selector branch only chooses between two correct paths, so no mutant of it
   can be caught by values; mutants cover the probes, the row compare and its bounds; the test's
   skewed blocks take both branches with the estimate wrong each way.
-- A1 follow-up: reader.hh and test/ are outside track-p's file set; the lead directed the landing
-  through track-p (msg of 11-17), so the file set needs widening before `campaign land`.
+- A1 follow-up: removed, per the lead's rule: the gain must hold beyond the A/A at the landing
+  commit; it held on three rows there, but none of the screen's three, so no row replicated.
 - A7: P9 stops after three experiments (two losers and one non-winner); the remaining gap to Tantivy
   is `advance` and scoring every lead document, not evaluation order.
