@@ -56,7 +56,7 @@ pm.test("Love and Hate size", function() {
 ```js
 pm.test("Love and Hate values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [24, 37, 268, 340, 378, 380, 400, 448, 479, 492];
+  var expected = [98, 194, 240, 354, 403, 409, 453, 503, 523, 577];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

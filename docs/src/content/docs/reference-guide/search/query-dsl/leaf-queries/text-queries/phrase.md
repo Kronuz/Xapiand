@@ -24,14 +24,14 @@ plain words.
 #### Example
 
 In the following example, we will retrieve documents with the exact phrase,
-including the stop words `these`, `are`, `few`, `and` `far` and `between`.
+including the stop words `these`, `come`, `a` and `of`.
 
 ```rest
 SEARCH /bank/
 
 {
   "_query": {
-    "personality": "\"these days are few and far between\""
+    "personality": "\"these come alongside a habit of\""
   }
 }
 ```
@@ -59,7 +59,7 @@ SEARCH /bank/
 {
   "_query": {
     "personality": {
-      "_phrase": "these days are few and far between"
+      "_phrase": "these come alongside a habit of"
     }
   }
 }
@@ -93,7 +93,7 @@ pm.test("phrase query size", function() {
 ```js
 pm.test("phrase query values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [26, 39, 44, 52, 60, 72, 82, 90, 119, 156];
+  var expected = [5, 9, 23, 56, 58, 65, 100, 119, 125, 155];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
