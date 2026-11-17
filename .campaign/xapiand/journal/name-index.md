@@ -1,6 +1,6 @@
 # name-index: journal
 
-State: working
+State: waiting on jobs 261117-080546-47c0ee 261117-082004-d0df9b 261117-082004-b9960c 261117-080833-2abb8f 261117-080839-4055d7
 Quest: .campaign/xapiand/quests/name-index.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,8 +14,8 @@ resolve's hook (src/database/pool.cc), the search's use (src/server/search_views
 tests/test_index_pattern.cc (A3 property, A4 unit, bench for A2) and tests/test_node.cc (A4 node, A5 kill),
 mutants in tests/name_index_mutants.sh. Not compiled locally (host loaded); jobs below build it.
 
-Jobs: 261117-080546-47c0ee targeted build + new tests (at 4fc89cd); build-test 261117-080830-d0bdd7 and e2e
-261117-080830-465be1 (at acde48f); A2 benches 261117-080833-2abb8f (10^4, 10^5) and 261117-080839-4055d7 (10^6),
+Jobs: 261117-080546-47c0ee targeted build + new tests (at 4fc89cd); build-test 261117-082004-d0df9b and e2e
+261117-082004-b9960c (at 9b8e411; the acde48f pair was cancelled); A2 benches 261117-080833-2abb8f (10^4, 10^5) and 261117-080839-4055d7 (10^6),
 strict, after the targeted job.
 
 ## Next
