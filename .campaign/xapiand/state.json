@@ -20719,7 +20719,10 @@
         "test/turn_driver*",
         "test/turn_seal*",
         "docs/mechanisms/turn-seal.md",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "CMakeLists.txt",
+        "include/journal/journal.h",
+        "test/turn_seal*"
       ],
       "journal": "../Xapiand-wt/xapiand/turn-seal",
       "landed": [],
@@ -20735,7 +20738,7 @@
       "risk": "high",
       "status": "active",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-16T20:53:51",
+      "updated": "2026-11-16T21:43:25",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
