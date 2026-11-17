@@ -8006,6 +8006,8 @@
     "manager-periodic": {
       "accepted": {},
       "after": [],
+      "base": "9e3151e16f7af08deaa44adc4982bc14509dcca8",
+      "branch": "quest/xapiand/manager-periodic",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -8025,9 +8027,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "manager.cc's shutdown retry runs as a control::Periodic task",
-      "updated": "2026-11-17T07:53:27"
+      "updated": "2026-11-17T07:53:39",
+      "worktree": "../Xapiand-wt/xapiand/manager-periodic"
     },
     "manifest-log": {
       "accepted": {
