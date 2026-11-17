@@ -127,7 +127,7 @@ FINISH_CASES = [
 LIB_LOOP = "local s = string.rep('abcdefgh', 1048576); for i = 1, 150 do s:find('b', 1, true) end; local u = 0; for i = 1, 100 do u = u + #s:sub(1, 1000000):upper() end; _doc.u = u"
 
 # X4-R1: what a client can re-send as fast as the 400 returns; each makes one uninterruptible call that runs to the per-call cap.
-FLOOD_P99_CALLS = 4.0
+FLOOD_P99_CALLS = 6.0
 
 
 def timed(call):
