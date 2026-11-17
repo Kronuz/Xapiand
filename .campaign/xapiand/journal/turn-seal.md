@@ -1,18 +1,20 @@
 # turn-seal: journal
 
-State: working
+State: waiting on jobs 261116-213841-f1e2c2 261116-213842-954d55 261116-213905-1bce9a 261116-213908-a0987f
 Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 
 ## Doing
 
-Dev job 261116-211933-50e55d (build + `turn_seal|driver|turn_log` at journal:e61906e) queued; fix
-what it shows, then the evidence jobs. msg (lead, A7) folded in at journal:e61906e.
+At journal:ba827e1: build-test 261116-213841-f1e2c2, tsan 261116-213842-954d55, mutants A2
+261116-213905-1bce9a (`sequence`) and A7 261116-213908-a0987f (`supersede`), `--fails-without`, own
+slots. Dev job 261116-211933-50e55d (journal:e61906e) found three test bugs (bound at zero room, a
+temporary Sentinel, forget_threads never idle for group 1), fixed in journal:fe9025f. Lead's A7
+and A8 messages folded in (journal:e61906e, journal:fe9025f).
 
 ## Next
 
-1. Green dev job, then `campaign verify turn-seal` (build-test, tsan) and per-criterion jobs:
-   A1 `crash`, A2 `sequence` + mutant (`--fails-without`, own slot), A3 `budget full_size bound`,
-   A4 `forget_*` under TSan, A7 `supersede` + mutant (`--fails-without`, own slot).
+1. When green: tagged jobs A1 `crash`, A2 `sequence`, A3 `budget full_size bound`, A7
+   `supersede`, A8 `unseal_owner lock_order wake_threads` (the wake under TSan rides the tsan check).
 2. Fill Evidence, push the branch, set ready for review.
 
 ## Blocked on
@@ -33,6 +35,7 @@ change; landing needs the set amended.
 | A5 | `docs/mechanisms/turn-seal.md`, `CHANGELOG.md` 2026-11-16 |
 | A6 | pending |
 | A7 | pending |
+| A8 | pending |
 
 ## Result
 
@@ -63,5 +66,13 @@ contract `docs/mechanisms/turn-seal.md`.
   before it. Unset keeps every caller (Journal, Host, fuzz, bench, tests) unchanged, so the guard
   bites only callers that state coverage; strata standalone must set it. Making it mandatory would
   touch `journal.h` (outside the file set): say if you want that.
+- R9 A8 matched to strata:efe25bcd's shim where sound: `seal(group, fn, owner)` replaces and
+  returns the last staged sequence (the shim returns last durable; staged is what the next record
+  follows); `unseal(group, owner)`; `wake()` any thread; `fn(room, first)` with room in
+  `record_cost` units (strata's `turn_framed_bytes` is stricter, so its check stays safe). Not
+  matched: the shim's watcher, `await`, `serve`/`stop` (strata uses `durable()` and `run()` per D4),
+  its several records per group per turn (the quest says one), and its any-thread `unseal`, whose
+  "a turn in progress may still call them" would let a destroyed index's sealer run; mine is
+  loop-confined and no call starts after it returns. strata must call `unseal` on the loop.
 - R7 `commit()` with nothing pending calls the sealers and throws "no records to write" only when
   nothing was pending, owed, or sealed. `stage()` from inside a sealer is refused.
