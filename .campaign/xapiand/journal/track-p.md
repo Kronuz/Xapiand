@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-121855-eefc18 261117-121859-d28384..261117-122035-212d65 (9 mutants) 261117-122103-e51e66
+State: waiting on jobs 261117-121855-eefc18 261117-123155-1419b0 261117-121941-230f53 261117-121958-98b81c 261117-122016-ef86f3 261117-122028-16a1f0 261117-122035-212d65 261117-122103-e51e66
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,7 +22,8 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
    landed on the branch at prospect:10ac993 with skewed-block tests and 9 mutants; verdict in
    `docs/perf/p2-intersection.md` "Follow-up". Screens: A/B ed8f75, tiny dc09de, parity 0f8110
    (all passed). Waiting: build-test eefc18, mutants d28384 ebae52 2b4aee c981c4 230f53 98b81c
-   ef86f3 16a1f0 212d65 (--fails-without), landed A/B + tiny rerun e51e66. Next: add e51e66's
+   ef86f3 16a1f0 212d65 (--fails-without; 0, 2, 3 caught; 1's ebae52 lost its runner,
+   resubmitted as 1419b0), landed A/B + tiny rerun e51e66. Next: add e51e66's
    rows to the doc; if a row loses or a short-list case leaves its A/A, revert.
 1. P9 reruns e71d1f (A/B) and b099bb (engines) only restore a passing exit; if a rerun shows an
    intersection row beyond its A/A, reopen P9's verdict; else nothing changes.
