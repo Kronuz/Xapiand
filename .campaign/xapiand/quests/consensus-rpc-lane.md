@@ -18,14 +18,15 @@ opens connections between any two nodes, not only those sharing a group. Detent'
 - A1 Calls with deadlines and cancellation over shared connections; a full group credit does not
   delay an RPC, and a full RPC credit does not delay a heartbeat (the `reader_test` shape, with a
   control that shares one credit and fails): tests with values, run as a job
-- A2 A 4 GiB streamed body crosses under the lane's credit while a heartbeat on the same connection
+- A2 A 4 GiB streamed body crosses under the lane's credit while a heartbeat between the same two nodes (on Control; the body rides Bulk, design D1)
   keeps every gap under the 1 s minimum election timeout (async-drivers D10); the job states the
   largest gap and the throughput, and a control sending the body as one frame fails
   (`--fails-without`)
 - A3 A call between two nodes that share no group connects, completes and is accounted to no group
   (a test)
-- A4 Detent's history fetch is expressed as one method, with its existing test passing over the
-  lane (a test)
+- A4 The three Xapiand method shapes the design names (D9) run over the transport's lane with
+  streamed bodies, each with a test; the real remote search over prospect runs on this lane in
+  `shard-rpc` (Xapiand), not here (a test)
 - A5 Under the load that broke `detent:consensus-fetch-macos` on macOS, a streamed body's bytes
   equal the source's SHA-256 over 1,000 calls with zero errors (a job on macOS, and on Linux in CI)
 - A6 One CPU-hour of fuzzing on the lane's frame decoder, zero findings (the `fuzz` milestone check)
@@ -33,11 +34,23 @@ opens connections between any two nodes, not only those sharing a group. Detent'
 
 ## Contracts
 
-Provides `consensus:rpc-lane` (wire): the lane's frames (method id, call id, deadline, cancel,
-credit grant, body chunk, end, error), versioned through the `DTHL0001` hello's range. Consumes
-`consensus:transport` from Detent's quest. `format-freeze` reviews these bytes.
+Consumes `consensus:rpc-lane` (wire) from `detent:consensus-transport`, whose A7 builds the lane's
+frames, call table, versioning through the `DTHL0002` hello and lane-only connections; this repo's
+`docs/design/rpc-lane.md` stays the one spec of those bytes, with every decision marked by who builds
+it. This quest provides streamed request bodies and Xapiand's methods on top and changes no byte:
+the request-direction fields (`Call.total`, request `Body` and `Credit`) are in version 1.
+`format-freeze` reviews these bytes.
 
 ## Decisions
+
+- Lead (2026-11-16, design review F4): a call racing an idle close or shutdown is settled by a
+  `Drain` frame carrying the last accepted call id (HTTP/2 GOAWAY's shape), sent before any close;
+  Detent's transport quest builds it with the other frames.
+
+- Scope (Detent's lead, 2026-11-16): `detent:consensus-transport` owns the request/response lane
+  and moves fetch onto it (criterion A7 holds T1-T8 and `Drain`). This quest adds streamed request bodies and
+  Xapiand's methods on top, and never ports today's `Peers` fetch (D102: no building on code about
+  to be deleted).
 
 - Design D9: one transport between nodes; a second TLS listener or HTTP between nodes is
   rejected.

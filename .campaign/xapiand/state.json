@@ -3011,7 +3011,7 @@
           "name": "tsan"
         },
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+          "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
           "later": true,
           "level": "light",
           "minutes": 70,
@@ -3025,7 +3025,142 @@
         "include/consensus/transport/**",
         "test/transport/rpc*",
         "fuzz/rpc*",
-        "docs/mechanisms/rpc-lane.md"
+        "docs/mechanisms/rpc-lane.md",
+        "CMakeLists.txt",
+        "fuzz/fuzz_decoders.cc",
+        "test/transport/peers_test.cc",
+        "docs/design/rpc-lane*",
+        "CHANGELOG.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-16T20:04:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: the old command built without CONSENSUS_FUZZ, so it passed without fuzzing (design Q3)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        },
+        {
+          "at": "2026-11-16T21:04:04",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "CC=clang CXX=clang++ cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "cmake -B build-fuzz -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCONSENSUS_FUZZ=ON && cmake --build build-fuzz -j4 && ctest --test-dir build-fuzz --output-on-failure --no-tests=error -R rpc_stream_fuzz",
+                "later": true,
+                "level": "light",
+                "minutes": 70,
+                "name": "fuzz"
+              }
+            ]
+          ],
+          "reason": "strengthens: LLVM clang with libFuzzer and the stream fuzzer's name (design Q2)",
+          "voided": [],
+          "weakened": [
+            "deferred check fuzz changed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
@@ -3041,7 +3176,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-16T19:44:34",
+      "updated": "2026-11-16T21:04:04",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
@@ -4159,7 +4294,12 @@
         "docs/gates/document-profile.md",
         "bench/kv/**",
         "docs/perf/**",
-        "docs/mechanisms/**"
+        "docs/mechanisms/**",
+        "include/strata/core/**",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/design/standalone-turn-log.md",
+        "fuzz/**"
       ],
       "history": [
         {
@@ -4201,7 +4341,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-16T19:44:10",
+      "updated": "2026-11-16T20:42:21",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -6859,9 +6999,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "An MIT source and binary release",
-      "updated": "2026-11-16T19:44:18",
+      "updated": "2026-11-16T21:06:33",
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
@@ -7587,7 +7727,34 @@
       "worktree": ""
     },
     "lua-name-miss": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-16T20:45:54",
+          "base": "aa037cecfc1e2b6636822284c9caee2109c6cf90",
+          "blobs": {
+            "docs/mechanisms/lua-memory.md": "100644:3f6d4457dfcaddcaa3393ebe3a8281f45349be9d",
+            "src/lua/processor.cc": "100644:eb3120e041da7d8c4939b2ecc3626bb195dc6f68",
+            "src/lua/processor.h": "100644:91c7ac5301d294b7b04aaf3e0453f9638de1c65d",
+            "src/script.cc": "100644:969ca335618f07908701e3ef97174aa7de8b7974",
+            "tests/test_lua.cc": "100644:b969ae0328e0a4ce61135de8e2f409c121a4e552"
+          },
+          "by": "review",
+          "commit": "c7e3d16d9bb7acfa3bd9946e509cd4b8dc158edc",
+          "criteria": "e73f634c2b9868c2",
+          "diffs": {
+            "docs/mechanisms/lua-memory.md": "5cd3988952a1f7b4",
+            "src/lua/processor.cc": "17fb370d3c61734e",
+            "src/lua/processor.h": "4d430e4b715207ae",
+            "src/script.cc": "b5f54c27ef4bb6f3",
+            "tests/test_lua.cc": "cfec19ba9fabfe4a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "d71438f016956acc1ff7ee91e9640aa1932d1d75",
+          "reviewed": "4e4f647b3506fba6aec36712efac17bcc702b430",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "2ed95a6b3f150b7fb416da09f752643840ac0484",
       "branch": "quest/xapiand/lua-name-miss",
@@ -7609,7 +7776,9 @@
         "tests/test_schema*.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -7617,7 +7786,7 @@
       "risk": "normal",
       "status": "active",
       "title": "A name-only script request that misses the cache answers an error",
-      "updated": "2026-11-16T19:54:16",
+      "updated": "2026-11-16T20:45:54",
       "worktree": "../Xapiand-wt/xapiand/lua-name-miss"
     },
     "manifest-log": {
@@ -19918,6 +20087,36 @@
       "updated": "2026-11-12T13:16:29",
       "worktree": ""
     },
+    "t10-flood-limit": {
+      "accepted": {},
+      "after": [],
+      "base": "b10e26aa021524b7b049f83d692fbce55240e98e",
+      "branch": "quest/xapiand/t10-flood-limit",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/lua_bounds.py",
+        "docs/dev/t10-flood-limit.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "T10's flood p99 limit scales with the host's cost per call",
+      "updated": "2026-11-16T21:51:31",
+      "worktree": "../Xapiand-wt/xapiand/t10-flood-limit"
+    },
     "t11-barriers": {
       "accepted": {},
       "after": [],
@@ -20521,6 +20720,60 @@
       "status": "planned",
       "title": "Track P, the performance research items without a verdict",
       "updated": "2026-11-08T22:35:58"
+    },
+    "turn-seal": {
+      "accepted": {},
+      "after": [],
+      "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+      "branch": "quest/xapiand/turn-seal",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -S . -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R turn",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "journal:turn-log"
+      ],
+      "files": [
+        "include/journal/turn_driver.h",
+        "include/journal/turn_log.h",
+        "include/journal/journal.h",
+        "test/turn_driver*",
+        "test/turn_seal*",
+        "test/turn_log_test.cc",
+        "test/turn_log_power_test.cc",
+        "test/placement_test.cc",
+        "fuzz/fuzz_turn_log.cc",
+        "bench/turn_bench.cc",
+        "docs/mechanisms/turn-seal.md",
+        "CHANGELOG.md",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/turn-seal",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:turn-seal"
+      ],
+      "repo": "/Users/kronuz/code/Kronuz/journal",
+      "risk": "high",
+      "status": "active",
+      "title": "TurnDriver::seal: one sealed record per group per turn",
+      "updated": "2026-11-16T21:53:41",
+      "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
       "accepted": {
