@@ -48,7 +48,7 @@ the request-direction fields (`Call.total`, request `Body` and `Credit`) are in 
   Detent's transport quest builds it with the other frames.
 
 - Scope (Detent's lead, 2026-11-16): `detent:consensus-transport` owns the request/response lane
-  and moves fetch onto it (criterion A7 holds T1-T7). This quest adds streamed request bodies and
+  and moves fetch onto it (criterion A7 holds T1-T8 and `Drain`). This quest adds streamed request bodies and
   Xapiand's methods on top, and never ports today's `Peers` fetch (D102: no building on code about
   to be deleted).
 
