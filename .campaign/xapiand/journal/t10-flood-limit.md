@@ -1,6 +1,6 @@
 # t10-flood-limit: journal
 
-State: waiting on jobs 261117-012336-f0fe7e 261117-012822-eec143 261117-012828-5d02bf
+State: waiting on jobs 261117-013727-5859b4 261117-013730-0581d4 261117-013736-919aea 261117-013747-427f04
 Quest: .campaign/xapiand/quests/t10-flood-limit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ marks the scope light on every exit if it was light on entry (a heavy request st
 harness commit (`lua_bounds.py --cost`, derived limit), 1036ca25a (docs: D7, lua-bounds.md).
 A1 restated for the lead: the script call enters heavy and leaves light, with values (the lane of every resume of a 200,000-iteration
 call; heavy request stays heavy; error and bound leave light) on a two-lane test scheduler, plus a mutant that stays light.
-Jobs: f0fe7e builds and runs test_lua and test_loop_yield; eec143 (master, strict) and 5d02bf (fix, strict, `--check`) run
+Jobs (f0fe7e failed on a wrong binary path, eec143/5d02bf were cancelled by me for the same path error; resubmitted as 5859b4 tests, 0581d4 master cost, 919aea fix cost, 427f04 mutant): f0fe7e builds and runs test_lua and test_loop_yield; eec143 (master, strict) and 5d02bf (fix, strict, `--check`) run
 `lua_bounds.py --cost` on a Release build: tiny scripted write idle and beside 8 GET-only clients, then the 1/2/4/8/16 sweep against
 (2 + 1) x one flood call. Their logs: /Users/kronuz/.scratch/t10-flood-limit/cost-{master,fix}.{log,json}.
 
