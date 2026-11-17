@@ -38,6 +38,7 @@ closes the three gaps those choices leave against RocksDB and the other engines,
   p50 40 ms against 21 ms, job 261117-034940-b2b9c3; a writer arriving during a barrier waits a
   whole next barrier); and the same with one log per core against one shared log, so D104's
   per-core choice is confirmed or revised on numbers (exclusive jobs at both commits)
+- A7 Atomic large batches: a kv batch past the 1 MiB command limit is all-or-nothing across a crash, like RocksDB's WriteBatch (document-gate durability F2: 20 of 20 split batches took two or more barriers); a power-loss sweep over the split proves it, with a mutant
 - A5 [artifact] `docs/design/standalone-turn-log.md` records Q3-Q5 as closed, with the mechanisms
 
 ## Decisions
