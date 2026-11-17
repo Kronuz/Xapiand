@@ -13,8 +13,8 @@ dump (`harness/thread_stacks.sh`), the FreeBSD job prints each failed row's log.
 
 | Platform | Run | Rows |
 |---|---|---|
-| arm64 | [43847919086](https://github.com/Kronuz/Xapiand/actions/runs/43847919086) at Xapiand:c85a1f6fd | 13 of 14 pass; `t1_census` waits for reactor:2ef28dc (reactor threads name themselves) |
-| FreeBSD | [43847919063](https://github.com/Kronuz/Xapiand/actions/runs/43847919063) at Xapiand:c85a1f6fd | 11 of 14 pass; `t2_e2e_asan` and `t10_lua_asan` wait for system:563880a; `t10_lua` is open |
+| arm64 | [43983942361](https://github.com/Kronuz/Xapiand/actions/runs/43983942361) at Xapiand:26d4a14f6 | all rows pass |
+| FreeBSD | [43983942535](https://github.com/Kronuz/Xapiand/actions/runs/43983942535) at Xapiand:26d4a14f6 | all rows pass |
 
 Findings:
 

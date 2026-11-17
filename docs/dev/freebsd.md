@@ -53,10 +53,8 @@ remain in the completed run.
 
 The job also builds an ASan+UBSan tree (`--parallel 2`: the pool.cc compile is
 killed by the VM's memory at 4) and runs `harness/gate7c_rows.sh` as `nobody`.
-[Run 43847919063](https://github.com/Kronuz/Xapiand/actions/runs/43847919063)
-at Xapiand:c85a1f6fd passes 11 of 14 rows (the suite's 40 CTest cases, the T1
-census through `procstat -t`, crash, overload, shutdown and gate-tool rows).
-`t2_e2e_asan` and `t10_lua_asan` fail on a UBSan abort in `system`'s
-`get_total_virtual_memory` (fixed in system:563880a, awaiting the repin);
-`t10_lua` answers 400 for two of four library-call loops. See
+[Run 43983942535](https://github.com/Kronuz/Xapiand/actions/runs/43983942535)
+at Xapiand:26d4a14f6 passes every row: the suite, the T1 census through
+`procstat -t`, crash, overload, shutdown, gate-tool, e2e ASan and T10 Lua rows.
+See
 `docs/dev/platforms.md`.
