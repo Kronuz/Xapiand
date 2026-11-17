@@ -191,3 +191,9 @@ quest starts (name it) or is dropped with a reason.
 
 - At consensus's default limits a group checkpoint never gets its admission reservation and waits forever (group-core journal, strata:0d6486006cc3). Size the admission replacement pool to its limits in quest 10, or fail the checkpoint loudly instead of waiting; tell Detent if the default is consensus's.
 - strata's faultfs has no owner lock (`lock_owner`); group-core's `test/group/host_io.hh` adds one locally. Move it into faultfs so every crash harness shares one.
+
+## t10-flood-limit correctness review follow-ups (2026-11-17)
+
+- F3: master (9ae4f7957) stopped answering every request during a scripted RESTORE beside 2 Lua flooders on one reactor: RESTORE and both flooders' PUTs timed out at 300 s (probe P1, job 261117-034526-66767d; P2 261117-042554-2e8d5a samples stacks on a stall). Pre-existing; find the hang.
+- F6: TSan race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239); failed CI run 44056420626 at code-identical 37eda4ed0. Flaky; can turn any landing's CI red.
+- F4/F5 nits: stale comment at handler.cc:473; two `LightOnExit` structs for one mechanism.
