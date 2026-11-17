@@ -460,6 +460,9 @@ class DatabasePool {
 
 	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
 
+	// Posts `t` to the control loop, counted as detached; false, leaving `t`, when there is none.
+	bool post_detached(task::task<void>& t);
+
 	// Starts the catalog's shutdown once; what it awaits ends on the thread that releases the last pin or chore.
 	Shutdown& begin_shutdown();
 
@@ -490,12 +493,20 @@ public:
 		return names_;
 	}
 
+	// Starts the names' build over `root` as a task of the control loop, unless one runs, one ended well, or there
+	// is no control loop (D5). It never waits: until the build ends, patterns walk.
+	void build_names(const std::string& root);
+
 	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).
 	std::size_t soft_open() const noexcept {
 		return soft_open_;
 	}
 
+	// A null control also stops the names' build: it is a task of the control loop (name-index D5).
 	void set_control(engine::Host* control) noexcept {
+		if (control == nullptr) {
+			names_.request_stop();
+		}
 		control_.store(control, std::memory_order_release);
 	}
 

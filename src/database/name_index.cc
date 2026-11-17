@@ -24,14 +24,12 @@
 #include "database/name_index.h"
 
 #include <algorithm>               // for std::sort, std::all_of, std::max
-#include <exception>               // for std::exception
 #include <iterator>                // for std::next
 #include <limits>                  // for std::numeric_limits
 #include <string>                  // for std::string
 #include <utility>                 // for std::move
 
 #include "index_path.h"            // for index_path::valid
-#include "log.h"                   // for L_ERR, L_NOTICE
 
 
 namespace {
@@ -139,12 +137,6 @@ private:
 	std::size_t i_;
 	Delta::const_iterator j_;
 };
-
-
-NameIndex::~NameIndex()
-{
-	stop();
-}
 
 
 std::vector<std::string>
@@ -259,30 +251,29 @@ NameIndex::build(const std::string& root)
 }
 
 
-void
-NameIndex::start(const std::string& root)
+bool
+NameIndex::claim() noexcept
 {
-	if (complete() || building_.load(std::memory_order_acquire) || stopped_.load(std::memory_order_acquire)) {
-		return;
+	if (complete() || stopped_.load(std::memory_order_acquire)) {
+		return false;
 	}
-	std::lock_guard<std::mutex> lk(build_mtx_);
-	if (complete() || building_.load(std::memory_order_acquire) || stopped_.load(std::memory_order_acquire)) {
-		return;
+	bool idle = false;
+	if (!building_.compare_exchange_strong(idle, true, std::memory_order_acq_rel)) {
+		return false;
 	}
-	if (builder_.joinable()) {
-		builder_.join();   // a build that failed: this one starts it again
+	// A build that ended well between the check and the claim stored complete_ before it unclaimed.
+	if (complete()) {
+		unclaim();
+		return false;
 	}
-	building_.store(true, std::memory_order_release);
-	builder_ = std::thread([this, root] {
-		try {
-			if (build(root)) {
-				L_NOTICE("The index names are complete: {} names", size());
-			}
-		} catch (const std::exception& exc) {
-			L_ERR("The index names could not be built; patterns walk the data directory: {}", exc.what());
-		}
-		building_.store(false, std::memory_order_release);
-	});
+	return true;
+}
+
+
+void
+NameIndex::unclaim() noexcept
+{
+	building_.store(false, std::memory_order_release);
 }
 
 
@@ -290,17 +281,6 @@ void
 NameIndex::request_stop() noexcept
 {
 	stopped_.store(true, std::memory_order_release);
-}
-
-
-void
-NameIndex::stop()
-{
-	request_stop();
-	std::lock_guard<std::mutex> lk(build_mtx_);
-	if (builder_.joinable()) {
-		builder_.join();
-	}
 }
 
 

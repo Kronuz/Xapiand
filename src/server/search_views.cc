@@ -2354,7 +2354,7 @@ expand_paths(Request& request, bool patterns)
 		// The names of the node's indexes answer once built; the first pattern starts the build, and until it ends
 		// the patterns walk the data directory (docs/design/name-index.md, D5).
 		auto& indexes = pool.names();
-		indexes.start(Endpoint::cwd);
+		pool.build_names(Endpoint::cwd);
 		if (indexes.complete()) {
 			co_await chores.run(engine::ChoreClass::query, [&] {
 				names = indexes.expand(paths, {cap, cap}, checkpoint);

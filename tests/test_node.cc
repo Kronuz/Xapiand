@@ -1219,7 +1219,7 @@ static const char* const names_crash_dir = "node_names_crash_data";
 		std::_Exit(2);
 	}
 	auto& names = manager()->database_pool->names();
-	names.start(Endpoint::cwd);
+	manager()->database_pool->build_names(Endpoint::cwd);
 	if (!eventually([&] { return names.complete(); }, 30s)) {
 		std::_Exit(3);
 	}

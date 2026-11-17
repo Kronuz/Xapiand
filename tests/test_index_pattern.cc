@@ -26,6 +26,7 @@
 
 #include "test_harness.h"
 
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -896,46 +897,77 @@ void test_the_names_answer_over_the_cap() {
 	CHECK_THROW(index.expand(Names{"i1*"}, {50, 1000}), engine::Error);
 }
 
-// A stopped index builds nothing and starts no build.
-void test_a_stopped_build_ends() {
+// One build is claimed at a time, again after one that did not end well, never after one that did; a stopped index
+// builds nothing and claims no build.
+void test_one_build_is_claimed_at_a_time() {
 	Wide wide(50);
 	NameIndex index;
-	index.request_stop();
-	CHECK_FALSE(index.build(wide.root));
-	CHECK_FALSE(index.complete());
-	index.start(wide.root);
-	index.stop();
-	CHECK_FALSE(index.complete());
+	CHECK_TRUE(index.claim());
+	CHECK_FALSE(index.claim());   // one runs
+	index.unclaim();
+	CHECK_TRUE(index.claim());    // it failed: a later pattern starts it again
+	CHECK_TRUE(index.build(wide.root));
+	index.unclaim();
+	CHECK_FALSE(index.claim());   // complete
+	NameIndex stopped;
+	stopped.request_stop();
+	CHECK_FALSE(stopped.claim());
+	CHECK_FALSE(stopped.build(wide.root));
+	CHECK_FALSE(stopped.complete());
 }
 
 // A2: a prefix pattern that names 10 of N top-level indexes, answered by the walk and by the names. Runs only when
-// NAME_INDEX_BENCH lists the counts (`10000,100000`); prints one row per count.
+// NAME_INDEX_BENCH lists the counts (`10000,100000`); prints one row per count. With NAME_INDEX_BENCH_ROOT the trees
+// are kept there (`<root>/<N>/`, made once, `<root>/<N>.made` once complete); NAME_INDEX_BENCH_MAKE=1 only makes them,
+// so a light job makes the 10^6 tree and a strict one times it. Without a root each tree is made and removed here.
 void bench_name_index() {
 	const char* counts = std::getenv("NAME_INDEX_BENCH");
 	if (counts == nullptr) {
 		return;
 	}
+	const char* kept = std::getenv("NAME_INDEX_BENCH_ROOT");
+	const bool make_only = std::getenv("NAME_INDEX_BENCH_MAKE") != nullptr;
 	using clock = std::chrono::steady_clock;
 	const auto seconds = [](clock::duration d) { return std::chrono::duration<double>(d).count(); };
 	const auto median = [](std::vector<double> v) { std::sort(v.begin(), v.end()); return v[v.size() / 2]; };
-	const std::string root = "names_bench_root/";
 	std::fprintf(stderr, "  %9s %9s %9s %12s %12s %12s %11s %8s\n", "indexes", "mkdir s", "build s", "walk ms", "names us", "faster", "names read", "B/name");
 	for (std::string_view rest = counts; !rest.empty(); ) {
 		const auto comma = rest.find(',');
 		const auto n = static_cast<std::size_t>(std::stoull(std::string(rest.substr(0, comma))));
 		rest = comma == std::string_view::npos ? std::string_view() : rest.substr(comma + 1);
-		fs::remove_all(root);
+		const std::string root = kept != nullptr ? std::string(kept) + "/" + std::to_string(n) + "/" : std::string("names_bench_root/");
+		const std::string made_mark = kept != nullptr ? std::string(kept) + "/" + std::to_string(n) + ".made" : std::string();
 		char name[32];
 		auto began = clock::now();
-		for (std::size_t i = 0; i < n; ++i) {
-			std::snprintf(name, sizeof(name), "i%07zu/strata", i);
-			fs::create_directories(root + name);
+		double made = 0;
+		if (kept == nullptr || !fs::exists(made_mark)) {
+			if (kept != nullptr && !make_only) {
+				std::fprintf(stderr, "  %9zu: no tree at %s; make it with NAME_INDEX_BENCH_MAKE=1\n", n, root.c_str());
+				CHECK_TRUE(false);
+				continue;
+			}
+			fs::remove_all(root);
+			fs::create_directories(root);
+			for (std::size_t i = 0; i < n; ++i) {
+				std::snprintf(name, sizeof(name), "i%07zu", i);
+				const auto dir = root + name;
+				CHECK_EQ(::mkdir(dir.c_str(), 0755), 0);
+				CHECK_EQ(::mkdir((dir + "/strata").c_str(), 0755), 0);
+			}
+			made = seconds(clock::now() - began);
+			if (kept != nullptr) {
+				std::ofstream(made_mark) << n << "\n";
+			}
 		}
-		const auto made = seconds(clock::now() - began);
+		if (make_only) {
+			std::fprintf(stderr, "  %9zu %9.2f\n", n, made);
+			continue;
+		}
 		NameIndex index;
 		began = clock::now();
 		CHECK_TRUE(index.build(root));
 		const auto built = seconds(clock::now() - began);
+		CHECK_EQ(index.size(), n);
 		std::snprintf(name, sizeof(name), "i%06zu?", n / 20);   // 10 names in the middle
 		const Names items{name};
 		const index_pattern::Bounds bounds(n * 4, n * 4);
@@ -957,7 +989,9 @@ void bench_name_index() {
 		CHECK_TRUE(walked == indexed);
 		const auto walk_ms = median(walks), names_us = median(lookups_us);
 		std::fprintf(stderr, "  %9zu %9.2f %9.2f %12.3f %12.3f %11.0fx %11zu %8.1f\n", n, made, built, walk_ms, names_us, walk_ms * 1e3 / names_us, read, static_cast<double>(index.bytes()) / static_cast<double>(n));
-		fs::remove_all(root);
+		if (kept == nullptr) {
+			fs::remove_all(root);
+		}
 	}
 }
 
@@ -991,7 +1025,7 @@ int main(int argc, char** argv) {
 		{"test_the_delta_merges_into_the_base", test_the_delta_merges_into_the_base},
 		{"test_a_prefix_pattern_reads_its_range", test_a_prefix_pattern_reads_its_range},
 		{"test_the_names_answer_over_the_cap", test_the_names_answer_over_the_cap},
-		{"test_a_stopped_build_ends", test_a_stopped_build_ends},
+		{"test_one_build_is_claimed_at_a_time", test_one_build_is_claimed_at_a_time},
 		{"bench_name_index", bench_name_index},   // only with NAME_INDEX_BENCH
 	};
 	for (const auto& c : cases) {

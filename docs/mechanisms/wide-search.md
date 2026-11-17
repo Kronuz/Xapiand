@@ -32,7 +32,7 @@ DatabaseHandler::match
 - **The name index answers first.** Once built, a pattern resolves from `NameIndex`, the walk's names kept sorted
   in memory: each wanted pattern's literal prefix is a range, and a subtree no pattern can match below is skipped with
   one seek, so a prefix pattern reads O(log N + its names) instead of the directory. The node's first pattern starts
-  its build (one unbounded walk on a thread of its own), the catalog's resolve adds each index it opens or creates,
+  its build (one unbounded walk, a `merge` chore of the work pool that a task of the control loop awaits), the catalog's resolve adds each index it opens or creates,
   and until the build ends patterns walk as below. Each name read and each seek counts against
   `--max-search-indexes`. Design: `docs/design/name-index.md`.
 - **A pattern is an automaton over segments.** `index_pattern::Glob` makes a position of each segment of the pattern (a run

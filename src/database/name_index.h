@@ -27,13 +27,11 @@
 #include <cstddef>                 // for std::size_t
 #include <cstdint>                 // for std::uint64_t
 #include <functional>              // for std::less
-#include <mutex>                   // for std::mutex
 #include <set>                     // for std::set
 #include <shared_mutex>            // for std::shared_mutex
 #include <span>                    // for std::span
 #include <string>                  // for std::string
 #include <string_view>             // for std::string_view
-#include <thread>                  // for std::thread
 #include <vector>                  // for std::vector
 
 #include "index_pattern.h"         // for index_pattern::Bounds, index_pattern::Checkpoint
@@ -45,7 +43,6 @@
 class NameIndex {
 public:
 	NameIndex() = default;
-	~NameIndex();   // stops a running build and waits for it
 
 	NameIndex(const NameIndex&) = delete;
 	NameIndex& operator=(const NameIndex&) = delete;
@@ -57,15 +54,15 @@ public:
 	// Adds the names of an index directory that a resolve found or made (D3).
 	void opened(std::string_view key);
 
-	// Starts the build over `root` on a thread of its own, unless one runs, one ended well, or the index stopped (D5).
-	void start(const std::string& root);
+	// Claims the build (D5): false when one runs, one ended well, or the index stopped. The claimer runs build()
+	// off the loops (the pool's chore) and then unclaim(), so a build that failed is claimed again by a later pattern.
+	bool claim() noexcept;
+	void unclaim() noexcept;
 	// Builds over `root` on this thread: one unbounded walk, merged with what resolve added meanwhile. False when
 	// the index was stopped first; a failure of the walk is thrown.
 	bool build(const std::string& root);
-	// Asks a running build to stop at its next directory entry; no build starts after it. It never waits.
+	// Asks a running build to stop at its next directory entry; no build is claimed after it. It never waits.
 	void request_stop() noexcept;
-	// Stops a running build and waits for its thread.
-	void stop();
 
 	// Whether a build ended well: from then on every name the walk lists is here.
 	bool complete() const noexcept { return complete_.load(std::memory_order_acquire); }
@@ -95,13 +92,12 @@ private:
 	bool contains(std::string_view name) const;
 	void merge_delta();   // under the exclusive lock
 
+	// Taken only on the pool's workers (the resolve's open chore, the build's chore, a search's query chore); a loop
+	// reads the atomics alone.
 	mutable std::shared_mutex mtx_;
 	Base base_;     // disjoint from delta_
 	Delta delta_;
 	std::atomic<bool> complete_{false};
-
-	std::mutex build_mtx_;
-	std::thread builder_;          // under build_mtx_
 	std::atomic<bool> building_{false};
 	std::atomic<bool> stopped_{false};
 };

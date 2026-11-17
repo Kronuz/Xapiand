@@ -296,7 +296,7 @@ with more shards than the batch is a batch of its own.
   than that many directory entries to find their indexes, whether the entries match or not (`*,-*` matches nothing and
   reads the whole tree, and the directories of nested indexes count as well): the same number bounds the names and the work. A pattern goes only into the directories it can still match below (`logs/2026/*` reads `logs` and `logs/2026`), a `**` goes everywhere. A data directory with more entries in one
   directory than the cap cannot be walked by a wildcard until the node's index names are built. The first pattern starts
-  that build (one walk of the data directory, on a thread of its own), and from then on a pattern reads index names
+  that build (one walk of the data directory, in the background), and from then on a pattern reads index names
   instead of directory entries: each name under its prefix and each subtree it skips counts against the cap, so
   `logs-2026*` is served on a node with millions of indexes. Matching the names has a budget too
   (4,096 steps per entry the cap allows, so patterns that backtrack over long names answer `400` rather than hold a

@@ -54,11 +54,15 @@ bytes) amortized. A lookup reads both in one merged order. Front coding (names s
 would cut the base further; it waits for the A2 numbers.
 
 **D5. Complete after one walk; the walk is the fallback until then.** The first pattern a node serves starts the
-build on a thread of its own: one unbounded walk (`expand(root, {"**"})`, every directory a pattern could reach),
-whose names become the base, merged with what resolve added meanwhile. A resolve during the build is never lost:
-an index on disk before the build started is found by it, and one made after is added by its resolve. Until the
-build ends, and after it fails (logged; the next pattern starts it again), patterns walk as before, under the same
-bounds. `DatabasePool::finish()` stops a running build at its next directory entry.
+build: one unbounded walk (`expand(root, {"**"})`, every directory a pattern could reach), whose names become the
+base, merged with what resolve added meanwhile. `DatabasePool::build_names` claims the build with one atomic
+(`NameIndex::claim`), so it never waits, and posts it to the control loop as a detached task that awaits one `merge`
+chore of its own group on the work pool, where the walk runs (phase 7c D13: the control plane is coroutines on its
+loop, and its blocking work a chore). No request awaits it: the search that started it, and every pattern until it ends, walks
+under the same bounds. A resolve during the build is never lost: an index on disk before the build started is found
+by it, and one made after is added by its resolve. A failed build is logged and unclaimed, so the next pattern
+starts it again; with no control loop nothing is posted and patterns walk. Clearing the control (`set_control(nullptr)`,
+`finish()`) stops a running build at its next directory entry, so the shutdown's drain of the detached tasks ends it.
 
 **D6. A lookup is ranges, a merged scan and seeks past dead subtrees.** For each wanted pattern its literal
 prefix is the bytes before its first `*`, `?` or class `[...]`, less a trailing `/` (`a/**` matches `a`). The
@@ -75,7 +79,9 @@ range that a pattern rejects, and one per dead subtree.
 pattern step as `expand` counts it, and the names it lists; past `--max-search-indexes` visits or names, or the
 steps, it raises the same `errc::invalid` (400) as the walk. So `_all` on a node over the cap is still refused,
 while `w00*` on a node of 10^6 indexes reads only the `w00` range. A lookup holds the shared lock for its scan and
-runs in a query chore, never on a reactor; it skips the walk gate (one walk at a time, `--search-walk-queue`),
+runs in a query chore, never on a reactor. The lock is taken on the work pool's workers alone (resolve's open chore,
+the build's chore, a lookup's query chore); a loop reads only the `complete()` and `claim()` atomics, and no section
+does I/O or awaits (`harness/async_allowlist.tsv` classifies each); it skips the walk gate (one walk at a time, `--search-walk-queue`),
 which bounds the walks only.
 
 **D8. Crash behavior: nothing to recover.** Nothing of the index is written. After a kill at any point of a create
@@ -111,7 +117,7 @@ it at 10^4, 10^5 and 10^6 indexes beside a prefix lookup in the index and the sa
 | Names read by one lookup | `--max-search-indexes` | D7: each name read and each seek is a visit | the work of one lookup has a number, as a walk's does |
 | Names listed | `--max-search-indexes` | D7 | the runaway cap, unchanged |
 | Delta before a merge | max(1,024, base / 8) names | D4 | a create's amortized cost stays a few names' bytes; the delta stays small beside the base |
-| Builds at once | 1 per node | D5: one thread, started once, restarted only after a failure | the build is a whole walk |
+| Builds at once | 1 per node | D5: claimed by one atomic, run as one `merge` chore, claimed again only after a failure | the build is a whole walk and holds one worker of the pool |
 
 ## Steps
 
