@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-112639-0e3525 261117-112642-eee4a9 261117-112645-377e63 261117-112648-9a2926 261117-112650-2e5ea4 261117-112653-d75991 261117-112656-b5bed0 261117-112659-a0922c 261117-112702-5fc7d8 261117-112704-eaa423 261117-112707-8d20d3 261117-112710-55af69 261117-112713-54e643 261117-112713-a33261 261117-112714-70e657 261117-112716-5eea20 261117-112719-032b88
+State: waiting on jobs 261117-132452-78690b 261117-132452-34527b 261117-132510-faa8a2 261117-132517-62b8d5 261117-132523-1e7db7 261117-132530-ad8ab3 261117-132538-e38f12 261117-132602-c8b02d 261117-132608-869a06
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,19 +9,33 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 3. A2's settle failures diagnosed; D109 (a) built (msg-2).
-A3's write path built (`submit.hh`, D106) with its test and mutants; jobs queued at strata:1e88eb3f
-(Evidence). Found: the step-2 mutant jobs run with `group_voters_test 1` were vacuous (seed 1
-alone never spends space, so "some replica stalled on space" failed every run, mutant or not):
-quorum-at-placement 261117-085711-59939a, close-keeps-waiters 261117-085705-587d4d,
-read-skips-probe 261117-085718-358fc4 prove nothing. Fixed at strata:94def77f (the check counts
-only when a storage schedule ran; `0` runs the named cases alone) and rerun with `0`. Old-commit
-jobs cancelled or superseded.
+Step 4: A5 (the part before detent:consensus-quiescence), A6, A10 built at strata:29f928ad;
+Evidence for A1-A4 filled from step 3's green jobs at strata:1e88eb3f; jobs queued (Evidence).
+
+- A6, `test/group/footprint_test.cc` (ctest `group_footprint`): COUNT lone voters on real
+  directories (PosixIO), one loop and chore, frames counted (`TASK_COUNT_FRAMES`). Local, 32
+  groups: per idle open group 3 descriptors (index 2, the bare index's; file-set directory 1),
+  17.9 KB heap (bare index 5.1 KB; `sizeof(group)` 3,216 B), 0 threads, 0 timers, 1 frame (the
+  index's, as bare), 0 IO in flight; an idle minute 0 resumes; a close 9.1 syncs and 330-670 ms
+  (macOS full flushes); closed 9.2 KB, 2 descriptors (its two directories, the host's); destroyed
+  1.5 KB left (consensus's closed row, the host table). At 1,000 groups (syncs through PosixIO's
+  seam skipped, `GROUP_FOOTPRINT_NOSYNC`): 3 descriptors, 17.5 KB, 0 threads, 0 timers, an idle
+  minute 0 resumes and 0.19 us CPU per group; 185 s to open (strata and journal still flush
+  directly). Mutants close-keeps-index, files-keep-handle (killed locally).
+- A10 and A5, `test/group/lifetime_test.cc` (ctest `group_lifetime`): `held`, threads: A's apply
+  blocked inside an entry, B on the same loop answers 5 `quorum` writes, a read and a checkpoint;
+  then 60 writes, 9 reads, 3 checkpoints against B's apply, for TSan. `points`: checkpoint,
+  close and read_applied started at every event of a run (apply first: 46; commits first, ranges
+  queued: 41); oracle in the file's head; crossings counted, each at least 1 (capture past its
+  start 34 runs, close with entries applied after it started 86, read waiting on apply 86).
+  Mutants apply-on-loop, close-uncovered (killed locally); capture-on-loop and read-on-loop
+  survive without TSan (capture-on-loop fails only the crossing count), so their jobs run
+  `held` under TSan. read-on-loop may survive there too: strata's index takes concurrent reads,
+  so a loop-side read is not a race on the index; if it survives, drop it (Rulings).
 
 ## Next
 
-1. Read step 3's jobs (Evidence); fix failures; fill Evidence for A2-A4. Push for CI (lead)
-   once green: the asan job and linux-x86_64-gcc were CI's two failures at 0d64860.
+1. Read step 4's jobs (Evidence); fix failures. Push for CI (lead).
 2. A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
    `write_paths`, mutants ack-at-commit, prepare-before-ready, pending-ignored, lift-the-bound,
    no-forward, resubmit-invalid). Left: a leader stalled on `no_space` hands leadership to a
@@ -50,8 +64,12 @@ jobs cancelled or superseded.
    - Mutants (`mutants.py`, `--target=group_voters_test`, each a `--fails-without` job):
      acknowledge-at-commit, prepare-before-ready, lift-the-bound (`max_placements` unbounded),
      forward-twice or no-forward, resubmit-invalid.
-3. A4's applied-before-write mutant (see Rulings), A5 close racing `Committed`, A6, A10; A7 after
-   `detent:consensus-quiescence`.
+3. A4's applied-before-write mutant (see Rulings).
+4. After detent:consensus-quiescence lands: A5's `TurnLog::read` finds none after close and the
+   in-process reopen (msg-1), A6's quiescent groups, A7. A6's catalog part (strata's catalog owns
+   the group's and index's lifetime; a catalog close of an idle group publishes a bundle covering
+   applied) is not built: the catalog has no group hook yet.
+5. A8: the owner's decision (cluster-release Q2); nothing to build.
 
 ## Messages
 
@@ -82,6 +100,20 @@ jobs cancelled or superseded.
 
 ## Blocked on
 
+- Lead: A6's `exclusive` job at 10^4 groups (my rule is light jobs only). Command, at
+  strata:29f928ad: `campaign job submit --quest group-core --for A6 --level exclusive --minutes 30
+  --env GROUP_FOOTPRINT_NOSYNC=1 --env GROUP_FOOTPRINT_WAVE=8 --build "cmake -B build
+  -DCMAKE_BUILD_TYPE=Release && cmake --build build --target group_footprint_test -j4" --
+  build/group_footprint_test 10000 100`. 1,000 groups took 185 s on a loaded host, so 10^4 may
+  pass 30 minutes; 5,000 is the fallback.
+- A6's budget (decision, lead or owner): the quest names the index's 2 descriptors; an idle
+  group holds 3, the third its file set's directory (a PosixIO the host hands it). Options:
+  (a) count it: 3 per group; (b) the file set opens its directory per use (an IO factory in
+  `group`'s constructor): 2 idle, one more open per write and sync; (c) the file set lives in
+  the index's directory under a prefix, its recovery scoped to it: 2, no extra opens, strata
+  must leave foreign names alone. Recommend (c) if strata's open never deletes unknown names,
+  else (a). Changes `strata:group`'s constructor, so not mine.
+
 - A2's settle failures: ruled (a), PLAN.md D109 (lead, msg-2); group-install takes the seven
   seeds as its A8. Root cause and proof under Messages, msg-2.
 - detent:consensus-quiescence: in-process reopen after close and recovery over the retired
@@ -97,16 +129,16 @@ jobs cancelled or superseded.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | queued: build-test 261117-041324-e0772a, crash (ctest `group_crash_lone_voter`) 261117-041324-825bcd, TSan 261117-041429-1aa7a2; `--fails-without` mutants: replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. Locally at strata:e7bb6c70: 174 script events, 175 crash points, 2,527 second crashes, 0 failures; all ten mutants killed |
-| A1 (step 2, strata:466dbece) | queued: build-test 261117-085649-7369d7, crash 261117-085649-593d4f, ASan+LSan (Homebrew LLVM, lone voter every 10th crash point plus seconds, voters 4) 261117-085742-96a255. Local ASan+LSan at every 25th crash point: 196 script events, 8 crash points, 112 second crashes, ok, no leaks |
-| A2 | queued: 40 schedules per voter count 261117-085749-e0c12d, TSan 261117-085735-f77e18; `--fails-without` append-on-retry 261117-085651-94cdb1; hunt row (default limits) admission-waits 261117-085659-d135d4. Local probe at strata:466dbece's tree: 4 schedules, 4 crashes, 113 acknowledged, 129 entries applied, 201 stalled chore steps, ok |
-| A3 (part) | ack levels (none at ProposalPlaced, quorum waits with appends held): quorum-at-placement 261117-085711-59939a; close answers `closed`: close-keeps-waiters 261117-085705-587d4d |
-| A4 (part) | deposed leader's `read_applied` never answers the older state: read-skips-probe 261117-085718-358fc4 |
+| A1 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
+| A2 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
+| A3 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
+| A4 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
+| A5 (part) | queued at strata:29f928ad: build-test 261117-132452-78690b, crash 261117-132452-34527b, TSan 261117-132510-faa8a2; `--fails-without` close-uncovered 261117-132517-62b8d5. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
+| A6 (part) | queued at strata:29f928ad: build-test 261117-132452-78690b (ctest `group_footprint`, 64 groups); `--fails-without` close-keeps-index 261117-132530-ad8ab3, files-keep-handle 261117-132538-e38f12. Left: the exclusive 10^4 job (Blocked on), quiescent groups (consensus-quiescence), the catalog close |
+| A7 | waits on detent:consensus-quiescence (in-process reopen, `TurnLog::read` after close) |
+| A8 | [decision] the owner's (cluster-release Q2); lead default (a) |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
-| A2 (step 3, strata:1e88eb3f, D109) | queued: voters 40 schedules, gated 261117-112714-70e657; TSan 261117-112716-5eea20; ASan+LSan 261117-112719-032b88; gate build-test 261117-112713-54e643, crash 261117-112713-a33261; `--fails-without` install-silent 261117-112707-8d20d3, checkpoint-ungated (14 schedules) 261117-112710-55af69. Local at ef4bde08: seeds 1-4 at 3 and 5 voters ok, 47 gated checkpoints, the seven install seeds named. Diagnosis: `~/.scratch/group-core/census-40-seeds.txt`, `~/.scratch/group-core/seed27-installs.txt` |
-| A3 (step 3, strata:1e88eb3f) | queued: named cases alone (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0, quorum-at-placement 261117-112659-a0922c, close-keeps-waiters 261117-112702-5fc7d8. Local: write path 3 voters 32 requests, 19 placements, 19 forwards, 1 superseded, 12 answered 503 (stale: 39 placements, 22 answered 503); 5 voters 32, 24, 19, 2, 6 (stale 48, 18) |
-| A4 (step 3) | `--fails-without` read-skips-probe 261117-112704-eaa423 (step 2's was vacuous) |
-| A5-A8, A10 | none yet |
+| A10 | queued at strata:29f928ad: build-test 261117-132452-78690b (ctest `group_lifetime`), TSan 261117-132510-faa8a2; `--fails-without` apply-on-loop 261117-132523-1e7db7, capture-on-loop (TSan) 261117-132602-c8b02d, read-on-loop (TSan) 261117-132608-869a06 |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
@@ -117,6 +149,19 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- A6: "of its own" is measured against a bare index holding the same document (2 descriptors,
+  5.1 KB, 1 pooled task block: the index holds one), so the group's own is the difference; the
+  journal host may open a turn-log file meanwhile (at most 2 descriptors, never per group).
+  Timers are the loop's armed entries, at most consensus's rows' (0 for an idle lone voter).
+- A6 at scale skips the syncs PosixIO issues through its seam (counted, not issued): they change
+  no count, only the time. strata's and the journal's own flushes still run.
+- Found (hunt row candidate, Detent's): 64 lone voters opened at once on one host all fail
+  `open` with "storage fenced outside worker" and fence (`GROUP_FOOTPRINT_WAVE=64
+  group_footprint_test 64`); 8 at once open fine. Not chased; the footprint opens 8 at a time.
+- A10's `points` counts its crossings (capture past its start, close with entries applied after
+  it started, read waiting on apply) and fails if any is zero: with apply first, entries commit
+  one per turn and are applied at once, so none queued; commits first makes ranges queue.
 
 - A3 (D106) split: the group gives the ready point (prepare runs on the chore once applied
   reaches `Driver::read`'s index) and the leader's pending commands (its term's, prepared and
