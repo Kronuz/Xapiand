@@ -1,6 +1,6 @@
 # turn-seal: journal
 
-State: waiting on jobs (fix round 1 at journal:7549bf6, pushed)
+State: ready for the durability re-review: fix round 1 at journal:7549bf6 (pushed), every job green
 Quest: .campaign/xapiand/quests/turn-seal.md (the lead's; never edit it)
 
 ## Doing
@@ -25,7 +25,9 @@ journal:b08212f: the new tests against the old driver.
 
 ## Next
 
-1. When the jobs finish: fix any red, else ready for the durability reviewer's re-check.
+1. The durability reviewer re-checks F1-F3 at journal:7549bf6. All 14 jobs ended as expected:
+   probes exit 0; build-test 42/42, tsan 18/18, ASan 16/16; the three fails-without jobs fail
+   on the pre-fix header (F2 with ASan's heap-use-after-free in `woken`).
 
 ## Blocked on
 
