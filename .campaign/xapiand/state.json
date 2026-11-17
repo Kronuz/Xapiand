@@ -19355,10 +19355,10 @@
       "branch": "quest/xapiand/strict-text",
       "checks": [
         {
-          "cmd": "campaign:build-test",
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
           "level": "light",
-          "minutes": 30,
-          "name": "build-test"
+          "minutes": 40,
+          "name": "suite"
         }
       ],
       "consumes": [],
@@ -19373,6 +19373,34 @@
         "harness/strict_*",
         "CMakeLists.txt"
       ],
+      "history": [
+        {
+          "at": "2026-11-16T16:10:30",
+          "checks": [
+            [
+              {
+                "cmd": "campaign:build-test",
+                "level": "light",
+                "minutes": 30,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 40,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "the build-test check's command 'campaign:build-test' does not exist (job d05e50 exit 127); the suite check other quests use replaces it",
+          "voided": [],
+          "weakened": [
+            "gate check build-test removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -19382,7 +19410,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Numeric text and _term aggregations read exactly (D92 follow-ups C5, C6)",
-      "updated": "2026-11-16T15:35:22",
+      "updated": "2026-11-16T16:10:30",
       "worktree": "../Xapiand-wt/xapiand/strict-text"
     },
     "strict-values": {
