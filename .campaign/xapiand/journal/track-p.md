@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-032048-bef4fe 261117-032504-3bf776 261117-032507-1bd2ec 261117-032510-cabfbf 261117-032521-37a35e 261117-023209-cd38c4
+State: working
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,21 +18,14 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A10 (P13): prospect `docs/perf/p13-positions.md` (plan, rule, offline bytes), tool
-   `bench/quick/p13_positions.cc`, prototype `docs/perf/p13-positions.patch` (EF per block when
-   smaller, header 0xC0|l, `PROSPECT_EXPERIMENT_P13=1`), variant 1M index `.scratch/idx-p13`
-   (positions 342.13 MB vs 348.09, file 570.32 vs 576.29 MB, -1.04%), parity clean (dump both,
-   verify 0 mismatches, 962 queries). Jobs: bef4fe decode microbench, 3bf776 A/B (deciding),
-   1bd2ec engines over serve, cabfbf indexing speed, 37a35e ctest with the patch. When they land:
-   write the A/B, engines, four-axis table and verdict into the entry; Rice-from-length stays an
-   offline result (-11.0% positions, decode about 12x PFOR's in the screen).
-   Lead's ruling: keep EF only if 3bf776 shows a query-speed win beyond the A/A spread; else record
-   it removed, Rice removed too; no more positions experiments. Then: the next Track P item with
-   the largest measured gap to Tantivy (P3 or P9), from a fresh baseline.
-1. Jobs running/queued: 261117-023209-cd38c4 (before/after vs Lucene/Tantivy over serve, exclusive),
-   261117-024522-d2facd (full ctest with the patch at bits 1+2), 261117-024524-7249b7 (build-test).
-   Add the after-vs-Tantivy table to `docs/perf/p2-intersection.md` when cd38c4 lands.
-2. A1 landing answered (lead): quest p2-intersection (prospect:5227e00) lands bits 1+2.
+0. Next item (P3 or P9): fresh 1M baseline on prospect main 0aad777 (merged into the branch at
+   1778b8c), every class vs Lucene/Tantivy over serve, script `.scratch/next/job-baseline.sh`.
+   Rank P3's rows (terms, unions) against P9's (intersections, negated) by prospect/Tantivy; take
+   the bigger loser; plan in `docs/perf/` before the runs; prototype; A/B with A/A (exclusive,
+   at most 10 minutes per job). Budget about five experiments, stop at the third loser in a row.
+1. The same baseline is P2's after-vs-Tantivy (bits 1+2 landed at 0aad777): add its intersection
+   rows to `docs/perf/p2-intersection.md`. Job 261117-023209-cd38c4 failed (two serve sides on one
+   index: journal directory lock), so it is not evidence.
 
 ## Blocked on
 
@@ -59,6 +52,12 @@ main beats Lucene on every intersection row; Tantivy leads main at TOP_100/TOP_1
 (1.10-1.30). Prototype: `docs/perf/p2-intersection.patch`; driver `bench/quick/classes_ab.py`.
 Not measured: arm64, Linux, FreeBSD, the gate VM's 5M, PISA (not on this host).
 
+A10 (P13): `docs/perf/p13-positions.md` (prospect:e8ea840), removed. EF per block: segment
+-1.04%, phrase rows 0.99-1.10 of main with four losing (job 261117-032504-3bf776, A/A from main's
+copy), serve agrees (261117-032507-1bd2ec), indexing +2.6% (261117-032510-cabfbf), decode 2.0-2.5x
+PFOR's (261117-032048-bef4fe), ctest 52/52 with the patch (261117-032521-37a35e). Rice from length:
+-6.6% of the segment at 16x PFOR's decode, removed offline. Main vs Tantivy on phrases 1.10-1.40.
+
 ## Rulings I made
 
 - A10: proximity is not measured: prospect's harness queries have no proximity class (no NEAR in
@@ -77,3 +76,6 @@ Not measured: arm64, Linux, FreeBSD, the gate VM's 5M, PISA (not on this host).
   64 bytes per iterator and one store per word at load.
 - Stopped at four experiments: two non-winners in a row after the kept ones; the profile's
   remainder is the conjunction's scoring loop and the collector, not P2's mechanisms.
+- A10: verdict by the plan's rule, the A/A band read as the A/A run's interval: a row loses when its
+  lower bound is over 1.0 and its ratio over the A/A's upper bound. The worktree's applied patch was
+  reverted (it equals `docs/perf/p13-positions.patch`, which stays as the record).
