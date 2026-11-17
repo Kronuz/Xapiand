@@ -21077,7 +21077,102 @@
       "updated": "2026-11-17T02:22:54"
     },
     "turn-seal": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-17T02:26:56",
+          "base": "7c08540c312044c21215c831ab455fd0777f1efd",
+          "blobs": {
+            "CHANGELOG.md": "100644:68ba9ac4fb841675397560a3a16c971b10fd309d",
+            "CMakeLists.txt": "100644:58039497d38c63015f1b1fa7948015c70c7456f1",
+            "bench/turn_bench.cc": "100644:af5b0f77e82812dea5cbcfe60496155040668be0",
+            "docs/mechanisms/turn-seal.md": "100644:0b2864be6560dfd9ce3ff72a51b60e8f4b35d91d",
+            "fuzz/fuzz_turn_log.cc": "100644:f5cfb14090426baa0c134f4766df71b662cf8022",
+            "include/journal/journal.h": "100644:385f85e1edb97f8de939f052a2e639be2279cab1",
+            "include/journal/turn_driver.h": "100644:97931b4880ee7c5fb1f01e79f6fd6245d367f902",
+            "include/journal/turn_log.h": "100644:648deeca07a389b43547d902b17ae54ebfcf6c7e",
+            "test/placement_test.cc": "100644:f36134d0762b172dcdc6aa95b558828e714ef8b7",
+            "test/turn_log_power_test.cc": "100644:eaad71e0c230c0786fa681c6b1ec4db7598be2db",
+            "test/turn_log_test.cc": "100644:cc8f428431ffd58d061fcb3f0c8aa35192d83d1f",
+            "test/turn_seal_mutants.sh": "100644:288152867d3da5a5b97808c14165d95d56e28123",
+            "test/turn_seal_test.cc": "100644:0f404a482b3f4bb653906ddaa8e96c74e3ca4ffa"
+          },
+          "by": "review",
+          "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+          "criteria": "103ac4e92c0d9c8f",
+          "diffs": {
+            "CHANGELOG.md": "4af08f8b932d0b88",
+            "CMakeLists.txt": "f9f20fcdb21be8da",
+            "bench/turn_bench.cc": "c8d236be20b373f6",
+            "docs/mechanisms/turn-seal.md": "d5df7d5db6b30815",
+            "fuzz/fuzz_turn_log.cc": "2195495f75d124ef",
+            "include/journal/journal.h": "eecb446b72abf599",
+            "include/journal/turn_driver.h": "a9825bd62318e4eb",
+            "include/journal/turn_log.h": "101b7568e1e7006c",
+            "test/placement_test.cc": "646e91091945c57b",
+            "test/turn_log_power_test.cc": "b0093b2fbd76fab8",
+            "test/turn_log_test.cc": "e8b57232b60bd9d5",
+            "test/turn_seal_mutants.sh": "f454fae0fc065150",
+            "test/turn_seal_test.cc": "9c0b3445eb7eb7b4"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'test -x build-t/journal_turn_seal_test || exit 127; cd build-t && for c in budget full_size staged_room bound; do ./journal_turn_seal_test $c | grep -q \"^$c: ok\" || { echo FAIL $c; exit 1; }; done'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022227-105658",
+                  "level": "light",
+                  "seconds": 1.7,
+                  "state": "done",
+                  "what": "A3 budget staged_room"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer\" -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address >/dev/null && cmake --build build-asan -j4 --target journal_turn_seal_test && cd build-asan && ASAN_OPTIONS=detect_leaks=0 ctest --output-on-failure -j4 -R journal_turn_seal'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022301-f1ed5e",
+                  "level": "light",
+                  "seconds": 48.1,
+                  "state": "done",
+                  "what": "turn-seal ASan (F2 wake_after_run)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F3": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'test -x build-t/journal_turn_seal_test || exit 127; cd build-t && for c in unseal_owner lock_order wake_threads wake_after_run unseal_threads; do ./journal_turn_seal_test $c | grep -q \"^$c: ok\" || { echo FAIL $c; exit 1; }; done'",
+                  "commit": "7549bf61579a96436bcba97954cea9738a1cfb90",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-022243-b05cb2",
+                  "level": "light",
+                  "seconds": 5.4,
+                  "state": "done",
+                  "what": "A8 unseal wake"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "7af8b6af3987c33e335b61da299adb49ccf9cea1",
+          "reviewed": "b08212fe7ef5d5c976bc0429f0c5d72928fbb89a",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "7c08540c312044c21215c831ab455fd0777f1efd",
       "branch": "quest/xapiand/turn-seal",
@@ -21127,7 +21222,7 @@
       "risk": "high",
       "status": "review",
       "title": "TurnDriver::seal: one sealed record per group per turn",
-      "updated": "2026-11-17T02:08:20",
+      "updated": "2026-11-17T02:26:56",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
     "unpin-after-kick": {
