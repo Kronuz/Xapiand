@@ -284,6 +284,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D99 | 2026-11-16 | `docs/discussions` is the owner's own code and fully MIT (license audit A9). Its LICENSE and README are in Xapiand and in Kronuz.github.io (Kronuz.github.io:afd643d), byte-identical. The third copy, linkedin-sandbox/gmendezb-pages, is a work repository and is the owner's to handle. Owner. |
 | D100 | 2026-11-16 | The `el_cerrito.png` screenshot is kept and credited as a Google Maps basemap (license audit A19). The accounts fixtures are regenerated with the rewritten `generator.py` at a fixed seed (A21), so no fantasynamegenerators.com text remains, and the doc examples use the server's exact numbers. Owner (screenshot); lead, delegated by the owner (fixtures). |
 | D101 | 2026-11-16 | Package license metadata is plain `MIT` (license audit A26). Third-party notices live in NOTICE and THIRD-PARTY-NOTICES. Owner. |
+| D102 | 2026-11-17 | Owner approved starting group-core (critical), on Detent's landed Driver at consensus:57745e8; a design review precedes building. A8 (release level set) keeps the lead default (a) until cluster-release Q2 is answered. | owner |
 
 ## Pending owner
 
