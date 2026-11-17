@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: ready for review
+State: working
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,14 +18,23 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A1 follow-up, find_in_block selector: decided, removed (prospect:f197b3d reverts 10ac993;
-   branch source equals main). FIB 2 screened as a win (ed8f75, tiny dc09de, parity 0f8110);
-   the landing-commit rerun e51e66 did not repeat it beyond the A/A on the target rows (no row
-   wins in both sessions). Suite eefc18 passed and six mutants were caught at 10ac993 (now moot).
-   Verdict in `docs/perf/p2-intersection.md` "Follow-up". Nothing pending.
-1. P9 reruns e71d1f (A/B) and b099bb (engines) only restore a passing exit; if a rerun shows an
-   intersection row beyond its A/A, reopen P9's verdict; else nothing changes.
-2. Disk: host at 96%; `.scratch/idx-p13`, `build-p9-*` can go once the P9 reruns finish.
+0. A5 (P7), chosen by gap (track-p umbrella: never set ready for review). Latest comparison at
+   main is job 261117-075402-484d70 at prospect:0aad777 (main unchanged since), over `serve`
+   against Tantivy 0.26. Rows still slower (prospect/Tantivy): negated 2 `TOP_100` 1.183,
+   `TOP_1000` 1.155, `TOP_100_COUNT` 1.637, `COUNT` 1.147; negated 3 1.177, 1.176, 1.199, 1.279;
+   phrases 1.16-1.28 (`TOP_10` 1.00-1.13); intersection 2 1.080/1.145/1.175; intersection 3
+   1.078/1.132 (`TOP_1000`, `TOP_100_COUNT`); intersection_union `TOP_1000` up to 1.175.
+   Why P7: the largest ratios are the negations, and they point at P7 (membership probes on the
+   excluded terms, left "not applied" in `p7-membership-probes.md`). Phrases point at P8/P5:
+   six read-path trims already lost (`phrases-explore.md`, `phrase-speed.md`) and what remains is
+   a format change (pair postings or P8's prefilter section), too large for this budget. P3,
+   P11 and P21 have no losing row (terms and unions win). Cause found on main: a negation's
+   top-k has no bulk path; it walks every included posting, steps the excluded terms to it and
+   scores it (`+jordan -country` `TOP_100` 422 us against `jordan` alone 83 us).
+   Variants (`PROSPECT_EXPERIMENT_P7`): bit 1, the term's bulk top-k with excluded clauses
+   probed only for hits that could enter; bit 2, nested exclusions counted apart by windows so
+   a counted top-k takes the bulk path; bit 4, term-minus-term counted by windows too.
+1. Disk: host at 96%; P9/P13 builds and `.scratch/idx-p13` removed.
 
 ## Blocked on
 
