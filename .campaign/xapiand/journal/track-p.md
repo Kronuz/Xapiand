@@ -18,12 +18,15 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-1. Baseline: `classes_ab.py serve` prospect main vs Lucene vs Tantivy on the intersection classes,
-   exclusive job, 5 rounds.
-2. Profile intersection classes (`sample`); experiments behind a switch: bitset rank directory,
-   galloping across blocks, SIMD count_below / block intersection.
-3. Interleaved A/B with A/A (`classes_ab.py bench`), exclusive, >= 5 rounds; verify + dump parity.
-4. `docs/perf/p2-intersection-simd.md` with the four-axis table.
+1. Jobs 261117-021317-afb4da (baseline vs Lucene/Tantivy, serve) and 261117-021758-5aded6 (deciding
+   A/B: main, A/A, bit 1, bits 1+2; intersection and guard classes) queued, exclusive.
+2. With their numbers: write the Result and four-axis table in `docs/perf/p2-intersection.md`.
+3. Landing bit 1 (and 2 if it pays) needs `include/prospect/reader.hh`, outside the file set: Blocked on.
+
+Screens so far (`quiet strict`, 5 rounds, per-query best vs main; parity clean for 3 and 11):
+bits 1+2 0.80-0.89 on every intersection class and command, guard classes 0.82-1.0, terms ~1.0;
+bit 1 alone 0.84-0.96; bit 2 alone 0.93-1.06 (noise); bit 4 (gallop) 0.95-1.11, a loser; bit 8
+(block filter for counted conjunctions) over 1+2: 0.95-1.06, neutral.
 
 ## Blocked on
 
