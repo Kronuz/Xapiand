@@ -45,7 +45,7 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Blocked on
 
-- D107 step 1 (F1), 2026-11-17: journal cc95ba6 (= journal main) cannot carry several records
+- (ruled by the lead: option (c); backpressure built, packing waits for Detent's journal change) D107 step 1 (F1), 2026-11-17: journal cc95ba6 (= journal main) cannot carry several records
   per sealer call. `Sealer` is `optional<TurnRecord>(room, first)`, one record at the group's
   staged + 1; `seal_turn` (turn_driver.h:451-506) calls each group's sealer once per turn, and
   `room` budgets that one record. Merging closed records into one strata record would move
