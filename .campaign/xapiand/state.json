@@ -26209,10 +26209,9 @@
       "consumes": [],
       "files": [
         "src/**",
-        "tests/**",
         "docs/**",
-        "CMakeLists.txt",
-        "cmake/**"
+        "cmake/**",
+        "tests/test_xapiand_final_release*"
       ],
       "history": [
         {
@@ -26253,7 +26252,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-08T22:36:02"
+      "updated": "2026-11-18T05:36:21"
     },
     "xapiand-on-strata": {
       "accepted": {},
