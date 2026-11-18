@@ -12876,8 +12876,8 @@
     "name-index": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-17T18:19:40",
-          "base": "6a140ea4de266edc98c808c62c98e1c6aff31b05",
+          "at": "2026-11-17T22:33:51",
+          "base": "6bbffede01545fe978cd12e6a43c8c797a5e59a8",
           "blobs": {
             "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
             "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
@@ -12886,7 +12886,7 @@
             "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
             "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
             "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
-            "src/database/name_index.cc": "100644:9a17ab7fe24e019f290577033bf638465c4d337b",
+            "src/database/name_index.cc": "100644:e0472e06d4dffbc8c8ed8bbd7bc90f1183c7e7fb",
             "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
             "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
             "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
@@ -12898,7 +12898,7 @@
             "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
           },
           "by": "review",
-          "commit": "df61d9f73a9ceb258bd290334cba2699d026c9af",
+          "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
           "criteria": "aa0933b13ed947a5",
           "diffs": {
             "docs/design/name-index.md": "9c936384a09909e3",
@@ -12908,7 +12908,7 @@
             "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
             "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
             "harness/wide_search_check.py": "fd5852edb54d5f25",
-            "src/database/name_index.cc": "d18db159efd2c113",
+            "src/database/name_index.cc": "ab80bd96adf97292",
             "src/database/name_index.h": "26139bc0511637cb",
             "src/database/pool.cc": "034bf855d0c90ab4",
             "src/database/pool.h": "86f45483339a57c4",
@@ -12923,15 +12923,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-oracle bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/oracle.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124540-0da619",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 29.1,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe oracle.sh at the F1 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -12940,15 +12940,15 @@
             "F2": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-emfile bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/emfile.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124543-44a244",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 14.9,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe emfile.sh at the F2 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -13285,7 +13285,7 @@
       "risk": "high",
       "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T19:09:00",
+      "updated": "2026-11-17T22:33:51",
       "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
