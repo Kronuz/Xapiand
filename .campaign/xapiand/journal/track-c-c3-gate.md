@@ -1,6 +1,6 @@
 # track-c-c3-gate: journal
 
-State: waiting on jobs 261118-025944-a6e140 261118-025951-ea8fde 261118-025953-961e8c 261118-025955-8f229e 261118-030028-8b42e8 261118-030029-db899b 261118-030031-7bd707 261118-030042-dd890d 261118-030044-f57019 261118-030045-a0fff5
+State: ready for review
 Quest: .campaign/xapiand/quests/track-c-c3-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,43 +9,31 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs queued at consensus main b7f48b2414d8 (jobs run in the consensus repo with --repo/--commit; scripts
-~/.scratch/c3-gate/{body.sh,vm.sh}: body.sh build|rows|mutant|mutant-unit is the same everywhere; vm.sh
-boots document-gate's VM (found stopped, stops on exit, refuses a running one), syncs `git archive` of
-consensus, runs body.sh). Per platform: build, rows (ctest consensus_consensus = T5 core rows,
-consensus_driver = Driver::repair rows, consensus_simulation = T2 + Driver simulation), mutant
-(tools/mutants.sh filtered to 'repair below base_index', 400 seeds x 10000 steps), macOS also
-mutant-unit (--fails-without: consensus_test built at the mutant).
-macOS: build a6e140, rows ea8fde, mutant 961e8c, mutant-unit 8f229e.
-FreeBSD (18784): build 8b42e8, rows db899b, mutant 7bd707.
-Linux (18782): build dd890d (after hybrid-go-no-go's last VM job 148235), rows f57019, mutant a0fff5.
-docs/gates/track-c-c3.md in the strata worktree has the skeleton; fill rows from the job logs.
+Report written: docs/gates/track-c-c3.md in the strata worktree (strata:5cab3e7b). macOS rows green. FreeBSD
+and Linux VM rows are resubmitted jobs (the lead said not to wait): FreeBSD rows dba12c, mutant 9d13e2;
+Linux build 71911d, rows 3bd680, mutant 031f8b. Fold their results into the doc when they finish.
 
 ## Next
 
-1. When jobs finish: read logs (campaign job show/log), fill docs/gates/track-c-c3.md, rerun a failed row once to separate flake from bug.
-2. Run `campaign verify track-c-c3-gate --for A1` (strata check suite at the docs commit), commit, mark ready for review.
+1. When the VM jobs finish, fill their cells in the gate doc; the architect's review is the lead's (A3).
 
 ## Blocked on
 
-Nothing. One finding for the lead: Driver::repair forwards `Repair` to Core, and T5's rows and the mutant live at Core::step(Repair) (consensus_test, simulation_test); Driver-level coverage is one lone-voter row (driver_test `rows`) and the Driver simulation never repairs. See the gate doc, "Where the rows run".
+Nothing. Finding for the lead: Driver::repair forwards `Repair` to Core; T5's rows and the mutant are caught at Core::step(Repair). Driver-level coverage is one lone-voter row, and the Driver simulation never repairs. A Driver-level repair-below-base_index row belongs to a consensus quest.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | macOS: ea8fde, 961e8c, 8f229e (fails-without). FreeBSD: db899b (T5, T2 ok; Driver row failed on a lost binary), rerun dba12c and mutant 9d13e2 queued. Linux: 71911d, 3bd680, 031f8b queued. |
+| A2 | docs/gates/track-c-c3.md (strata:5cab3e7b), each row with its job id |
+| A3 | the lead's architect review: docs/reviews/track-c-c3.md |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+macOS at consensus b7f48b2414d8: T5's rows (8 boundaries restored, 39,611 checks, 0 failures), the Driver rows (124 checks), T2 (200 seeds x 10,000 steps, 1,081 repairs) and the Driver simulation pass; the mutant "repair below base_index" fails the unit suite and the simulation (first at seed 1). VM rows pending as above.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Ran jobs in the consensus repo (--repo, --commit pinned to main's sha) with an inline-filtered tools/mutants.sh; the mutant is judged by the script's own unit/membership/simulation report.
+- vm.sh rebuilds missing targets and syncs before stopping the VM (FreeBSD lost its last-linked binary to poweroff).
