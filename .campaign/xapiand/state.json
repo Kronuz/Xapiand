@@ -9181,6 +9181,8 @@
     "loop-yield-race": {
       "accepted": {},
       "after": [],
+      "base": "9c1abd919b2d5be719f035a0c652896b5b81224c",
+      "branch": "quest/xapiand/loop-yield-race",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -9201,9 +9203,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Fix test_loop_yield's TSan race (F6) and the strata search timing bound",
-      "updated": "2026-11-18T08:51:08"
+      "updated": "2026-11-18T08:51:13",
+      "worktree": "../Xapiand-wt/xapiand/loop-yield-race"
     },
     "lua-memory-bound": {
       "accepted": {
