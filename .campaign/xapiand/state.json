@@ -22606,12 +22606,12 @@
       "milestone": "Track D",
       "needs": [],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4); the single-node release first, then 7b (2026-10-29, D9)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Track D, distribution",
-      "updated": "2026-11-09T04:14:35"
+      "updated": "2026-11-18T02:29:37"
     },
     "track-p": {
       "accepted": {},
