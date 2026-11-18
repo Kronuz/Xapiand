@@ -174,6 +174,8 @@ static std::vector<std::string> accepted_stem_languages() {
 // Names the schema refuses (remove-not-refuse: none appears in docs either).
 static const std::vector<std::string_view> removed_stem_languages{
 	"earlyenglish",  // stems 2,849 of 36,534 words unlike english (job 261118-002220-8a7a7f)
+	"english_lovins",  // Xapian 2.1.0 refuses it too (release-rows A4); lovins stays
+	"english_porter",  // likewise; porter stays
 };
 
 // A refused name gets a 400 that names the accepted languages, each of which the schema accepts

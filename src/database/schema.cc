@@ -1628,7 +1628,7 @@ specification_t default_spc;
 // The stem_language names _get_stem_language accepts, as a refusal names them.
 static constexpr std::string_view stem_language_names =
 	"armenian, hy, basque, eu, catalan, ca, danish, da, dutch, nl, kraaij_pohlmann, english, en, "
-	"english_lovins, lovins, english_porter, porter, finnish, fi, french, fr, german, de, "
+	"lovins, porter, finnish, fi, french, fr, german, de, "
 	"german2, hungarian, hu, italian, it, norwegian, nb, nn, no, portuguese, pt, romanian, ro, russian, "
 	"ru, spanish, es, swedish, sv, turkish, tr, none";
 
@@ -1650,9 +1650,7 @@ _get_stem_language(std::string_view str_stem_language)
 		hhl("kraaij_pohlmann"),
 		hhl("english"),
 		hhl("en"),
-		hhl("english_lovins"),
 		hhl("lovins"),
-		hhl("english_porter"),
 		hhl("porter"),
 		hhl("finnish"),
 		hhl("fi"),
@@ -1738,15 +1736,7 @@ _get_stem_language(std::string_view str_stem_language)
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case _.fhhl("english_lovins"): {
-			static const std::pair<bool, const std::string> en{ false, "en" };
-			return en;
-		}
 		case _.fhhl("lovins"): {
-			static const std::pair<bool, const std::string> en{ false, "en" };
-			return en;
-		}
-		case _.fhhl("english_porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
