@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261118-131125-16ca52 261118-131131-7b9c3b
+State: waiting on jobs 261118-150608-5ad670
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,17 +15,32 @@ A2 row were skipped behind the failed post-D2 profile (062628-76934e: `sample` f
 was block-buffered; profile.sh now runs `python3 -u`). Merged master (Xapiand:4f03a9fbd; master changed tests and
 harness only, no src, so bins/base still is main's server). Branch pushed for CI.
 
-Suite 261118-112223-56c3f7 (A3, A4) passed at 4f03a9fbd. A2 row 261118-112224-c75c29 failed on the rig: it ran in a
-fresh checkout with no bins/base. `.scratch/build-arms.sh` now builds both arms in the job (base from
-`--ref base=f722ff939`, master's merge-base; lanes at head), writes bins/arms.sha, creates wide2500 if missing, and
-gate2.sh checks the sums first. Requeued in slot xapiand-cheap-reopen: A2 row 261118-131125-16ca52 (exclusive, pool
-200 and 5000, ABAB x2); profile 261118-131131-7b9c3b (strict, after the row).
+A2 row 261118-131125-16ca52 (exclusive, both arms built in the job by `.scratch/build-arms.sh`, base at
+f722ff939): pool 200 base p50 948/977 ms, lanes 884/888 ms (about 8% faster); pool 5000 base 125/153, lanes
+131/143 ms. Lanes alone is 6.5x off pool 5000, so A2 is not met by D1 alone.
+
+Profile 261118-145656-a26428 (strict, beside 6 light holds, so its absolute times are inflated; 7b9c3b wrote no
+sample because profile.sh looked for an `xapiand` process and BIN is bins/lanes; it now samples the gate's server
+child). Over 8.26 s of pool-200 searches with lanes:
+- The wall is a serial chain: `run_open` holds 6,278 thread-ms in 8,262 ms, 0.76 opens in flight on 8 lanes.
+  search_batch still awaits each pin before the next, so the lanes sit idle; D3 is what fills them.
+- Each open's time: strata `basic_index::open` 57% (3,548), the Xapiand payload `open_blocking` 27% (1,717: WAL
+  864, DataStorage 1,006 inclusive), the directory's PosixIO open 13% (813).
+- By leaf, `open(2)`/`close(2)` are 3,934 thread-ms, over half the busy time. Their callers: strata `recover`'s
+  per-file `open_existing(n)->size()` 1,707 (27% of run_open, the largest single item), the directory open 673,
+  the WAL 574, DataStorage 411, load_files 263, scan_directory 211.
+
+Experiment H3 (job 261118-150608-5ad670, exclusive): lanes vs lanes + D3 as a probe (`.scratch/concurrent-pin.patch`
+over head, built by `.scratch/build-d3.sh`, never landed while the lead defers D3), pool 200 and 5000, ABAB x2.
+It targets the serial chain. If it wins and the lanes fill, the CPU half follows (H4): recover's sizes from
+`io_->inspect_entry(n)` (one `fstatat` on the directory descriptor, already in completion's PosixIO) instead of
+an open, fstat and close per file, about a quarter of each open.
 
 ## Next
 
-1. Read the A2 row: lanes alone (no D3). If lanes pool 200 is over 2x of lanes pool 5000, record the number; the
-   quest then waits for wide-search-loop and D3 (hunt.md).
-2. Read profile 261118-131131-7b9c3b (sample of lanes at pool 200).
+1. Read H3 261118-150608-5ad670: lanes + D3 at pool 200 against lanes at pool 5000 (target within 2x). Experiment
+   budget: H1, H2, H3 used of about five; stop at the third loser in a row.
+2. H4 (recover sizes by fstatat, a strata probe patch over .deps-perf/strata-src) if H3 leaves CPU the limit.
 3. Per-index memory at 2,500 open from the row's pool-5000 arms, lanes vs main.
 
 ## Blocked on
@@ -48,7 +63,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
-| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52 queued |
+| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 ms vs pool 5000 131/143 ms (not met) |
 | A3 | pending: suite 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
 | A4 | pending: suite 261118-112223-56c3f7; CI on the pushed branch |
 
