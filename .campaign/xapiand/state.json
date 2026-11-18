@@ -1613,7 +1613,7 @@
         "src/database/pool.*",
         "src/engine/strata/**",
         "docs/design/cheap-reopen.md",
-        "tests/**"
+        "tests/test_cheap_reopen*"
       ],
       "landed": [],
       "lenses": [
@@ -1626,7 +1626,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-13T16:18:29"
+      "updated": "2026-11-18T05:36:18"
     },
     "ci-quest-branches": {
       "accepted": {},
