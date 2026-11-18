@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-151125-7ccde6 261117-151128-1d419f 261117-151132-fc01a3 261117-151136-c0239c 261117-151139-b815a7 261117-151143-991952 261117-151147-f41da5 261117-151150-e05468 261117-151154-9b1fbc 261117-151158-264d61 261117-151202-2b5482 261117-151206-b86dca 261117-151209-3cedb9 261117-151213-6093d5 261117-151216-02b5d8 261117-151220-00850f 261117-151220-79527f 261117-134414-aaeddb 261117-134414-ef6998 261117-134421-e77835 261117-134428-8708d8 261117-134435-94dd84 261117-134456-196914 261117-134505-949822
+State: waiting on jobs 261117-174709-007299 261117-174709-c75fb1 261117-174721-76cffc 261117-174725-f04c3b 261117-174730-8a0b8c 261117-174734-de0aa7 261117-174738-0c9f4a
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,10 +9,37 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, c99372d4; jobs
-queued at c99372d4 (Evidence).
-Step 4's jobs at b98362b7 kept, except the A6 mutants and the TSan job, superseded at 1b1601be
-(the tests they run changed).
+Step 6 (A6 closed and destroyed, lead's step after c99372d4's jobs), strata:47e7f140; jobs
+queued (Evidence). Step 5's jobs at c99372d4: 11 mutants killed, TSan, build-test, crash green.
+
+- Closed was a measurement bug, not the close. The 10^4 job (261117-151206-b86dca) closed 100
+  of 10,000 and divided the "closed (all)" row by all 10,000, so 9,900 open groups' index
+  descriptor and frame read as 0.99 per group (0.80 = 400/500 at 500, 3cedb9). Its checks
+  subtracted the open ones and passed. From its own numbers a closed group held 0 descriptors,
+  0 frames and 3,559 B ((12,370 x 10^4 - 12,459 x 9,900) / 100; 3,565 B at 500); "destroyed
+  6,742 B" mixed 9,900 groups destroyed open (their rows stay open in the Driver, about 6.8 KB)
+  with 100 closed ones (about 1.2 KB). Fixed in the test (strata:47e7f140): closed and destroyed
+  rows are per closed group, the closed ones destroyed first.
+- Second measurement bug: "bare index, closed 1,928 B" was the test's own vector of bare
+  indexes, cleared but not freed (malloc_history at phase bare-closed: 2,048 B per index under
+  that vector, 3 B of strata's). Freed now. The frame pool is off in the footprint build
+  (`TASK_FRAME_POOL=0`, one TU, ODR-safe: every dependency is header-only).
+- Split: bare rows, as many as groups closed, checkpoint once and close as a group does
+  (`close_row`); "consensus row, closed" is consensus's and the journal's part; the group's
+  own closed = closed - row - index closed; ours after destroy = destroyed - row - index closed.
+  Checks: closed ours <= sizeof(group) + own_heap; destroyed ours <= 16 B (the loop's bucket
+  array); every destroyed group leaves its loop's table (mutant destroy-keeps-member).
+  Local, before the row checkpoint and the vector fix (64 groups, 32 closed): closed 3,628 B,
+  0.02 descriptors (host turn log), 0 frames; closed and destroyed 1,045 B; a row closed without
+  a checkpoint 1,417 B. Numbers at 47e7f140 come from the jobs; the host's light slots were
+  held behind an exclusive, so nothing ran locally at the fix.
+- `footprint_owners.py --at PHASE [--base PHASE] [--closes N]`: owners at any phase
+  (bare-closed, before, idle, closed, destroyed, rows-closed), or past another.
+- Timing: strict at 500 and 1,000, 10 closes each (1,500 hit the 10-minute cap: about 311 ms
+  per open under load). Flat in N: compare the idle minute's CPU (total, not per group: 0.149
+  and 0.155 ms at 10^4 and 500 at c99372d4) and the open's ms per group.
+
+Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, c99372d4.
 
 - A6, one directory per group: the file set lives in the index's directory under `app.`
   (`bundle_detail::prefix`; bundle names cap at 251 so the on-disk name fits NAME_MAX); strata
@@ -56,8 +83,10 @@ Step 4's jobs at b98362b7 kept, except the A6 mutants and the TSan job, supersed
 
 ## Next
 
-1. Read step 5's and step 4's jobs (State, Evidence); fix failures; fill A6's numbers at 5,000
-   (counts) and 1,500 (timing). Push for CI (lead).
+1. Read step 6's jobs (State): closed (0 descriptors, 0 frames, heap by owner), destroyed split
+   (ours, consensus's row: Detent's consensus-quiescence heap criterion), timing at 500 and
+   1,000 flat in N; fix failures (if `gone_slack` 16 B is off, read the row's mirror first:
+   `footprint_owners.py --at destroyed --base before --closes N`). Push for CI (lead).
 2. A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
    `write_paths`, mutants ack-at-commit, prepare-before-ready, pending-ignored, lift-the-bound,
    no-forward, resubmit-invalid). Left: a leader stalled on `no_space` hands leadership to a
@@ -148,7 +177,7 @@ Step 4's jobs at b98362b7 kept, except the A6 mutants and the TSan job, supersed
 | A3 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
 | A4 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
 | A5 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
-| A6 (part) | Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
+| A6 (part) | Queued at strata:47e7f140 (closed and destroyed per closed group, consensus's closed row): build-test 261117-174709-007299, crash 261117-174709-c75fb1, counts at 10^4 with 1,000 closed (light, 60 min) 261117-174721-76cffc, strict 500 261117-174725-f04c3b and 1,000 261117-174730-8a0b8c (10 closes each), `--fails-without` destroy-keeps-member 261117-174734-de0aa7; TSan 261117-174738-0c9f4a (A1-A3, A5, A10). Before: green at c99372d4 (step 5 mutants, 151206 counts, 3cedb9 timing at 500; 6093d5 at 1,500 stopped at its cap, invalid). Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
 | A7 | waits on detent:consensus-quiescence (in-process reopen, `TurnLog::read` after close) |
 | A8 | [decision] the owner's (cluster-release Q2); lead default (a) |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
@@ -183,6 +212,12 @@ proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, com
   5.1 KB, 1 pooled task block: the index holds one), so the group's own is the difference; the
   journal host may open a turn-log file meanwhile (at most 2 descriptors, never per group).
   Timers are the loop's armed entries, at most consensus's rows' (0 for an idle lone voter).
+- A6 closed and destroyed rows are per closed group; consensus's part is a bare row that
+  checkpoints once and closes as a group does, so the group's own is the difference. The
+  footprint runs with task's frame pool off: the pool caches up to 1,024 frames per size class
+  per thread, bounded and not per group, and with it on a freed frame stays in the heap count.
+- Timing jobs at 500 and 1,000 close 10 groups (the close's cost comes from the 10^4 job's
+  1,000) and close as many bare rows, so each fits the strict 10-minute cap.
 - A6 at scale skips the syncs PosixIO issues through its seam (counted, not issued): they change
   no count, only the time. strata's and the journal's own flushes still run.
 - Found (hunt row candidate, Detent's): 64 lone voters opened at once on one host all fail
