@@ -1,6 +1,6 @@
 # faultlab-core: journal
 
-State: waiting on jobs 261118-005949-37fe70 261118-005953-3d76e7 261118-005958-a9f786 261118-010550-5b5cd0
+State: waiting on jobs 261118-013958-ae8b13 261118-013959-ab422e 261118-014000-1550fd 261118-014001-993d1c
 Quest: .campaign/xapiand/quests/faultlab-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Nothing: steps 1-6 done; remaining A1/A4 mutant jobs queued.
+Review fixes at faultlab:f296ffb (correctness review CHANGES at a5dcc10): F1, F2, N3, N7 done; jobs queued.
 
 ## Next
 
-1. Lead: create github.com/Kronuz/faultlab and push, for A6's CI half (no remote here); add the
+1. On resume: submit the N7 mutants (scenario-eq: faultlab_scenario_test; events-utf8:
+   faultlab_events_test; both fail locally) once the four queued jobs finish.
+2. Lead: create github.com/Kronuz/faultlab and push, for A6's CI half (no remote here); add the
    cpp-libraries AGENTS.md catalog entry; launch the correctness review.
 
 Worktree: /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-core (faultlab repo, branch quest/xapiand/faultlab-core).
@@ -41,8 +43,9 @@ checked what), and answer each message by its id (msg-N).
 | A1 | 261118-010005-2aea3a; fails without: 261118-005949-37fe70 (additions), 261118-005953-3d76e7 (forced-skips-draw) |
 | A2 | 261118-010005-2aea3a; fails without: 261118-003136-4b6402 (stream-shift) |
 | A3 | 261118-010005-2aea3a; fails without: 261118-003131-9c42c3 (no-sector-cut) |
-| A4 | 261118-010005-2aea3a; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates), 261118-010550-5b5cd0 (kill-keeps-leases) |
+| A4 | 261118-010005-2aea3a, at the review fixes 261118-013958-ae8b13; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates), 261118-010550-5b5cd0 (kill-keeps-leases), 261118-014000-1550fd (fold-after-cut, F1), 261118-014001-993d1c (sync-durable-mapped, F2) |
 | A5 | 261118-010005-2aea3a; fails without: 261118-005504-2f7a32 (recorder-bytes), 261118-005516-67f979 (proxy-close-swallows), 261118-005529-db2445 (selftest monotonic, seal) |
+| Review | correctness CHANGES at a5dcc10, fixed at f296ffb; the reviewer's probes (run.sh) at the fix: 261118-013959-ab422e |
 | A6 | [artifact] faultlab:a5dcc10 README.md, docs/api.md, docs/mechanisms/crash-model.md, examples/demo.cc (run by CTest). CI: open, see Blocked on. |
 
 ## Result
@@ -61,6 +64,35 @@ New repo faultlab (branch quest/xapiand/faultlab-core, 8 commits):
 - Finding R7: unaligned CrashIO appends reach states no sector pick does.
 
 Open: CI (needs the repo), the cpp-libraries catalog entry, consumer moves (later quests).
+
+## Review findings (correctness, at a5dcc10)
+
+- F1 fixed (f296ffb): fold() applies nothing once power_off_after has run out. Test "a store made
+  after the power cut never survives a crash" (after power_off_after(0) and after a power-off EIO,
+  sectors=fresh); mutant fold-after-cut, job 261118-014000-1550fd.
+- F2 fixed per the lead's (a) (f296ffb): inode::unmapped holds each mapped sector's bytes without
+  the stores; File::sync writes those as durable, so a crash tears the store. A write_at over the
+  whole sector ends it (a partial write_at updates the unmapped bytes, so the synced write stays),
+  an ordering point that stages the file ends it (the design's "ordered as a write made there",
+  which A4's ordering test needs), a truncate cuts it, a failed sync's drop clears it. Tests "File::sync
+  leaves a mapped sector tearable..." and "a truncate cuts a mapped sector's unmapped bytes" (the
+  latter fails without truncate_unmapped, checked locally); mutant sync-durable-mapped, job
+  261118-014001-993d1c. crash-model.md and api.md say so. Seeds without mappings draw nothing new
+  (A2 unchanged).
+- N1: the lead files a follow-up quest; F3 kept.
+- N2: see R11.
+- N3 fixed: faultfs.h's rebuild comment, crash-model.md and api.md say a size or epoch pick
+  changes how many coins follow.
+- N4 noted: scenarios 3 (lost pages) and 4 (truncation) reach 2 states each over 64 seeds; a richer
+  table belongs to N1's follow-up, re-recorded from strata before strata's faultfs goes.
+- N5 noted: size_pick::sector also cuts between sizes on a pure shrink; it only adds states, and the
+  design's wording allows it. Left as is.
+- N6 noted: the A1-A4 mutants sit on 4923aa4; faultfs.h gained only model_access since. The F1/F2
+  mutants sit on f296ffb.
+- N7 fixed: parse refuses '=' inside a value in scenario.h and scenario.py (line() could not print
+  it back); events.h refuses strings that are not UTF-8 (overlong, surrogate, truncated, > U+10FFFF)
+  and writes UTF-8 raw. Mutants scenario-eq and events-utf8 fail their tests locally; jobs pending
+  (Next 1).
 
 ## Rulings I made
 
@@ -91,3 +123,7 @@ Open: CI (needs the repo), the cpp-libraries catalog entry, consumer moves (late
 - R10 proxy.Mesh: heal(a=None, b=None) keeps heal(node); fault events go to any object with
   fault(kind, **args) (history.Recorder has one). Python suites need 3.12 (`type` aliases): CI's
   FreeBSD job installs python312.
+- R11 (N2, the lead's ruling): A3's CrashIO half covers block appends, since storage writes whole
+  blocks (storage.h:565, 988, 1356); unaligned appends are R7's finding, not a gap of A3.
+- R12 (F2): an ordering point that stages a file ends its mapped sectors' tearability, so A4's
+  "never past an ordering point they followed" holds; File::sync alone never does.
