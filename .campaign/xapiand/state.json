@@ -7269,7 +7269,8 @@
         "test/group/**",
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md",
-        "docs/REPLICATION.md"
+        "docs/REPLICATION.md",
+        "include/strata/core/index.hh"
       ],
       "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
@@ -7287,7 +7288,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-17T03:06:14",
+      "updated": "2026-11-18T13:20:22",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
