@@ -21,6 +21,13 @@ build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, bu
 | 261118-022616-80ea60 | strict | A2 before | 2,500 gate, SR3 |
 | 261118-022618-928443 | strict | A3 before | starve probe 16,64 clients |
 | 261118-022620-4ad293 | strict | A2 before | 10,000 gate + `sample` 15 s |
+| 261118-024337-7a9aec | light | probe | build-probe: Xapiand:c33b7cc79 + `harness/wide_search_callsites.patch` |
+
+Drafted (Xapiand:c33b7cc79): `src/database/wide_search.{h,cc}`, `wide_search::Pins` (node-wide FIFO bound on
+indexes pinned by wide-search batches, sized to the pool's soft_open) and `wide_search::resolve` (per-name budget
+checkpoint). Their call sites are outside the file set: `harness/wide_search_callsites.patch` applies them to
+`src/server/search_views.cc` (resolve loop) and `src/database/handler.cc` (`search_batch`: take pins, checkpoint per
+shard) for probe jobs only.
 
 ## Next
 
