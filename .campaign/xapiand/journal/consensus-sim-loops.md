@@ -1,6 +1,6 @@
 # consensus-sim-loops: journal
 
-State: working (heal stall fixed; A1-A4 jobs next)
+State: waiting on jobs 261118-043759-fb1514 261118-043801-c7b62e 261118-043804-897f01 261118-043806-d63cec 261118-043818-1a72cb 261118-043821-13551b 261118-043823-ba706f
 Quest: .campaign/xapiand/quests/consensus-sim-loops.md (the lead's; never edit it)
 
 ## Doing
@@ -32,9 +32,11 @@ seed 1 (a fence, through Driver::repair; the only change is the Core's check), a
 
 ## Next
 
-1. Measure s/seed; submit A1 (10,000 seeds x 1,000 steps, split into <=30-minute light jobs),
-   A2 and A3 `--fails-without` jobs (`driver_mutants.py NAME build/mutant`, compile as
-   tools/mutants.sh does, run `SIM_DRIVER_SEEDS=N ... 0 1000 1`), and `campaign verify` for A4.
+1. When the jobs finish: paste `campaign brief`'s Evidence table; from the four A1 logs, sum
+   "images restored" and "below the checkpoint" (both must be > 0; at 60 seeds locally they were
+   10 and 26, at seeds 1001-1050 8 and 14) and the busy-at-stop rounds (msg-71).
+2. Landing waits on detent:consensus-close-fenced (the spin fix); then rerun the full seed set,
+   expecting 0 busy-at-stop rounds.
 
 ## Blocked on
 
@@ -44,10 +46,10 @@ Nothing; msg-71 (the Driver spin) is Detent's and is counted, not hidden.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending; power cuts on all seeds, busy stopping rounds counted (Detent msg-71) |
-| A2 | pending |
-| A3 | pending |
-| A4 | pending |
+| A1 | jobs 261118-043759-fb1514, 261118-043801-c7b62e, 261118-043804-897f01, 261118-043806-d63cec: seeds 1-10,000 x 1,000 steps (2,500 each) at consensus e0715bb; power cuts on all seeds; stopping-loop busy rounds counted, not failed (Detent msg-71) |
+| A2 | job 261118-043818-1a72cb (`--fails-without`): `ack-before-turn-barrier`, Driver sim only, 200 seeds x 1,000 steps |
+| A3 | job 261118-043821-13551b (`--fails-without`): `repair-below-base`, Driver sim only, 200 seeds x 1,000 steps; coverage: A1 summaries' "images restored" and "below the checkpoint" |
+| A4 | build-test 261118-043823-ba706f; CI on the quest branch |
 
 ## Result
 
