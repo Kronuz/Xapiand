@@ -35,7 +35,8 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   (xapiand_resident_memory_bytes and xapiand_databases before and after). It prints each loop's lag over the timed
   searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor), its max read from the window's
   histogram. --create-only creates the indexes and stops; --reuse searches the indexes an earlier run left in OUTDIR,
-  so a light job can create them and a strict one time the searches. Run it under `quiet strict`; the servers use
+  so a light job can create them and a strict one time the searches. --sample S writes the node's call graph over the
+  first S seconds of the timed searches to OUTDIR/sample.txt (`sample` on macOS, perf_sample.py on Linux). Run it under `quiet strict`; the servers use
   ports PORT and PORT + 1 and keep their data under OUTDIR; both are killed on exit.
 """
 
@@ -66,6 +67,7 @@ ap.add_argument("--runs", type=int, default=30)
 ap.add_argument("--pool", type=int, default=0)
 ap.add_argument("--create-only", action="store_true")
 ap.add_argument("--reuse", action="store_true")
+ap.add_argument("--sample", type=int, default=0, help="seconds to sample the node's stacks over the timed searches")
 args = ap.parse_args()
 BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
 DATA = os.path.join(OUT, "data")
@@ -298,6 +300,22 @@ def metric(name: str) -> float:
     return -1.0
 
 
+def sample(pid: int, secs: int, path: str) -> subprocess.Popen[bytes]:
+    """Records the node's call graph for secs seconds in the background."""
+    if sys.platform == "darwin":
+        cmd = ["sample", str(pid), str(secs), "-file", path]
+    else:
+        cmd = [
+            sys.executable,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "perf_sample.py"),
+            str(pid),
+            str(secs),
+            path,
+            "--fp",
+        ]
+    return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
+
 def gate() -> None:
     count = args.indexes
     if not args.reuse:
@@ -315,9 +333,12 @@ def gate() -> None:
     times = []
     total = None
     lag0: dict[str, object] = {}
+    sampler = None
     for run in range(args.runs + 1):
         if run == 1:
             lag0 = stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())
+            if args.sample:
+                sampler = sample(node.pid, args.sample, os.path.join(OUT, "sample.txt"))
         t0 = time.perf_counter()
         status, raw = call("SEARCH", path, body)
         dt = (time.perf_counter() - t0) * 1000
@@ -333,6 +354,8 @@ def gate() -> None:
                 f"{per / 1024:.1f} KiB per open index (first search {dt:.0f} ms)",
                 flush=True,
             )
+    if sampler is not None:
+        sampler.wait()
     lag = stall_load.lag_delta(lag0, stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())) if lag0 else {}
     for loop, v in sorted(lag.items(), key=lambda kv: -(kv[1]["p99_us"] or 0)):
         print(
