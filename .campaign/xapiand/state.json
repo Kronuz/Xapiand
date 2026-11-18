@@ -3602,6 +3602,8 @@
     "consensus-sim-loops": {
       "accepted": {},
       "after": [],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/consensus-sim-loops",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3615,6 +3617,7 @@
         "test/driver_simulation.cc",
         "test/driver_mutants.py"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-sim-loops",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -3622,9 +3625,10 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
-      "updated": "2026-11-18T02:55:50"
+      "updated": "2026-11-18T02:56:34",
+      "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
     },
     "core-lifecycle-tests": {
       "accepted": {},
