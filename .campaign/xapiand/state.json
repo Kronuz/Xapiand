@@ -2658,14 +2658,16 @@
       "needs": [
         "cluster-harness",
         "faultlab-design",
-        "faultlab-core"
+        "faultlab-core",
+        "faultlab-netlab",
+        "faultlab-disklab"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-17T23:01:04"
+      "updated": "2026-11-18T06:32:07"
     },
     "cold-tier-item5": {
       "accepted": {},
