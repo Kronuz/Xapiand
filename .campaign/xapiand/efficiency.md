@@ -316,3 +316,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 ## 2026-11-18 04:00 hourly
 - Landed: none. Light slots 89% used (drains 0); 86 jobs ended, 18 failed (Detent dns-threads 6, reopen-closed 5+2 timeout; ours: c3-gate FreeBSD harness, flow-bench 3), 19 skipped behind hybrid C1 chain failure.
 - Runs: flow-bench ~227k (driver cannot pipeline: Detent filed driver-pipeline); sim-loops ~275k (Driver spin after shutdown: Detent fixing in close-fenced A6; heal stall on 10/24 seeds under investigation); coverage-areas ~328k (6 src bugs filed). Weekly 65%, burn 1.17%/h.
+## 2026-11-18 05:00 hourly
+- Landed: none (test-glob CI green on all 4 at 7d0cf6f6f; build-test running). Detent landed consensus:91564ba (wave-open).
+- Runs: c3-gate review ~150k (CHANGES, F1 real: base-term check untested, mutant P1 survived all suites) -> consensus-c3-rows ~81k; hybrid fix ~134k (ES bbq caps recall@10 0.64, rescore oversample 20 = 0.9735); sim-loops ~311k (heal stall = 2 sim bugs; reserve gap to Detent worker-release A5); wide-search ~300k+159k (cause: resolver misses + one mutex; sampler distorted lag, rebaselined).
+- Host: light 73% used, 92 jobs ended, 20 failed. Disk 96 GiB. Weekly 65%, 1.15%/h.
