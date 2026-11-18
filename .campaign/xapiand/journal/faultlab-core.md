@@ -9,22 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 3: recorder.h (F10) + tests.
+Step 6: README.md and docs/ (A6).
 
 ## Next
 
-1. recorder.h (F10) + tests (A5 verify).
-2. scenario.h, events.h (F11, F12).
-3. Python half: history.py (monotonic, seal, set-aside), proxy.py, scenario.py; selftest, proxy_test (A5).
-4. README, docs/ (A6).
-5. Remaining mutant jobs: additions (A1, policy), fold-mutates, kill-keeps-leases (A4), forced-skips-draw (A1).
+1. README.md, docs/ (API, mechanisms), examples/demo.cc.
+2. Remaining mutant jobs: additions (A1, policy), forced-skips-draw (A1), fold-mutates, kill-keeps-leases (A4).
+3. CI (A6) needs the GitHub repo: the lead creates it at landing; until then CI evidence is open.
 
 Worktree: /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-core (faultlab repo, branch quest/xapiand/faultlab-core).
-Done: step 1 faultlab:bfce6a8; step 2 faultlab:d9d420b, faultlab:(policy stream test) — tests faultfs, policy, seeds, sector green locally.
-Mutants are local refs mutant/faultlab-core/<name> (one commit on step 2's head each), made by
-.scratch/mutant.sh; all seven fail their test locally (.scratch/check_mutants.sh).
-Jobs: verify build-test 261118-003124-8f88ab (A1-A4); fails-without: link-orphan 261118-003126-596e36 (A4),
-no-sector-cut 261118-003131-9c42c3 (A3), stream-shift 261118-003136-4b6402 (A2).
+Done (faultlab commits): skeleton bfce6a8; faultfs d9d420b, 4923aa4, 4d9f951; recorder e607680;
+scenario/events 854eda0; Python half 58880e6. Local: Release ctest 14/14, ASan+UBSan C++ 5/5 (before
+the Python half), ruff and pyrefly strict clean.
+Mutants are local refs mutant/faultlab-core/<name> (.scratch/mutant.sh); each fails its test locally.
+Jobs: build-test 261118-003124-8f88ab (A1-A4, at 4923aa4, exit 0); link-orphan 261118-003126-596e36 (A4),
+no-sector-cut 261118-003131-9c42c3 (A3), stream-shift 261118-003136-4b6402 (A2), all failed as required;
+build-test 261118-005459-889c2a (A1-A5, head 58880e6); recorder-bytes 261118-005504-2f7a32 (A5),
+proxy-close-swallows 261118-005516-67f979 (A5), selftest monotonic+seal mutants 261118-005529-db2445 (A5).
 
 ## Blocked on
 
@@ -65,3 +66,13 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   CrashIO reaches sizes at write boundaries and byte tears that no faultfs pick reaches (176 of 200
   random sequences in a probe). Real filesystems can leave write-boundary sizes; for the lead/owner
   if a later consumer needs them (size_pick would need a write-boundary cut).
+- R8 recorder: event 0 is "start" (the shadow before any call); calls are serialized under one
+  mutex; owner.lock creation through the recorder is an event; a shadow that refuses what the real
+  IO did throws logic_error ("the shadow diverged"). load() syncs everything; materialize() needs a
+  missing or empty directory and makes it 0700, files 0600.
+- R9 history.py: `durable: true` on a read marks its node for the monotonic check; reads at level
+  `seal` (a new read level) carry numbers and get the seal check, not prefix or linearizable;
+  check() keeps returning strings, so Xapiand's checklist moves by path only (step 4).
+- R10 proxy.Mesh: heal(a=None, b=None) keeps heal(node); fault events go to any object with
+  fault(kind, **args) (history.Recorder has one). Python suites need 3.12 (`type` aliases): CI's
+  FreeBSD job installs python312.
