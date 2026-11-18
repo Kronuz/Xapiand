@@ -38,3 +38,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## State (contributor)
+Waiting on jobs 261117-184755-fff446 (strict; A1 timing of the retained slow units and the nested catch-all family k x n at main's matcher).
+Hypothesis 1 (experiment 1 of 3): non-final catch-all backtracking (radix_router.h match(), CatchAll case) is exponential in nested catch-alls: O(n^k).
+Committed radix-router:c2542f5 (fuzz/slow_repro.cc, fuzz/regressions/). Next: read job output; if it confirms, fix by memoizing failed (node, suffix-offset) states, then A2-A5.
