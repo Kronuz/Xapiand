@@ -5019,6 +5019,45 @@
       "updated": "2026-11-16T15:03:59",
       "worktree": ""
     },
+    "faultlab-seam": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "completion:io"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "planned",
+      "title": "completion's four faultlab seam additions (F8)",
+      "updated": "2026-11-17T22:35:41"
+    },
     "field-table": {
       "accepted": {},
       "after": [],
