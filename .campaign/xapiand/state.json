@@ -393,6 +393,13 @@
       "closed": "journal-sync-seam is the change group-core asked for; group-core keeps its journal pin and repins with consensus-quiescence",
       "id": "msg-97",
       "text": "detent:journal-sync-seam started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:04:00",
+      "by": "campaign detent",
+      "closed": "a test flake fix in consensus transport; consensus-rpc-lane is not started and group-core keeps its consensus pin until the quiescence repin",
+      "id": "msg-98",
+      "text": "detent:connection-slow-reader-flake started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
