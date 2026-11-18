@@ -15204,12 +15204,12 @@
         "track-c"
       ],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4), after the single-node release (2026-10-29, D9); starts after Track C's C1 to C4 pass (strata docs/PLAN.md Phase 3R)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-09T04:14:28"
+      "updated": "2026-11-18T02:29:42"
     },
     "phase4-gate": {
       "accepted": {},
