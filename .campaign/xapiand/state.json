@@ -5056,6 +5056,8 @@
     "faultlab-seam": {
       "accepted": {},
       "after": [],
+      "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+      "branch": "quest/xapiand/faultlab-seam",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5077,6 +5079,7 @@
         "test/**",
         "docs/mechanisms/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-seam",
       "landed": [],
       "lenses": [
         "correctness"
@@ -5088,9 +5091,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "completion's four faultlab seam additions (F8)",
-      "updated": "2026-11-17T22:35:41"
+      "updated": "2026-11-17T22:41:33",
+      "worktree": "../completion-wt/xapiand/faultlab-seam"
     },
     "field-table": {
       "accepted": {},
