@@ -1,12 +1,12 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs 261118-000128-f4c57b and the C1 chain (Doing)
+State: waiting on jobs 261118-002035-ee3342 and the C1 chain above (last: 261118-002307-8cf59d)
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
 
 A1: the C1 rerun at 100 and 1,000 tenants of 1,000 vectors, queued as jobs. Harness in strata
-`bench/hybrid/` at strata:ba14ec11 (`c1.py` driver, `c1_strata.cc` strata arm, `setup.sh`,
+`bench/hybrid/` at strata:a950f1a4 (`c1.py` driver, `c1_strata.cc` strata arm, `setup.sh`,
 `CMakeLists.txt`); baselines installed under the worktree's `.scratch/c1` (setup log there).
 
 Local smoke at 5 tenants (light hold, busy host, 2 s idle; not evidence) ran every system end to
@@ -14,22 +14,29 @@ end: recall@10 1.0 for strata, pgvector, Qdrant and LanceDB, 0.63 for Elasticsea
 num_candidates 50); idle footprint strata 4 MB, pgvector 17 MB, Qdrant 70 MB, LanceDB 73 MB,
 Elasticsearch 8,728 MB (8 GiB heap).
 
-Jobs (each row waits on its load, each load on the row before; the disk holds one system's
-1,000-tenant data at a time, so `row` removes it):
+First dry run 261118-000128-f4c57b (light, strata:8b64cca8): strata, pgvector, LanceDB and
+Elasticsearch passed end to end at 100 tenants; Qdrant's load died on one "Connection reset by
+peer" (pooled keep-alive; the server logged nothing). Fix strata:a950f1a4: idempotent requests
+are resent up to twice, counted as `resets` in each result; a local Qdrant load at 100 then
+passed (0 resets, so the reset is intermittent and not reproduced). The first chain was
+cancelled and resubmitted at strata:a950f1a4.
+
+Jobs at strata:a950f1a4 (each row waits on its load, each load on the row before; the disk
+holds one system's 1,000-tenant data at a time, so `row` removes it):
 
 | What | Load (light) | Row (exclusive, A1) |
 |---|---|---|
-| dry run, every system at 100 (light, 8b64cca8) | 261118-000128-f4c57b | |
-| strata 100 | 261118-000217-1b2d99 | 261118-000222-daaa02 |
-| lance 100 | 261118-000228-b02de5 | 261118-000232-455a6e |
-| pg 100 | 261118-000237-45bc8b | 261118-000241-b5b8ea |
-| qdrant 100 | 261118-000246-72534e | 261118-000250-c3e06a |
-| es 100 | 261118-000254-4dc53b | 261118-000258-e12173 |
-| strata 1000 | 261118-000304-ed9a17 | 261118-000309-f80aab |
-| lance 1000 | 261118-000314-30a389 | 261118-000318-4a0dcd |
-| pg 1000 | 261118-000323-3324e0 | 261118-000327-8ad2ec |
-| qdrant 1000 | 261118-000332-ad86a6 | 261118-000336-691a42 |
-| es 1000 | 261118-000341-8b10b1 | 261118-000345-676fcd |
+| dry run, every system at 100 (light) | 261118-002035-ee3342 | |
+| strata 100 | 261118-002047-0c409b | 261118-002058-6f8d05 |
+| lance 100 | 261118-002109-c9afb4 | 261118-002118-5a1485 |
+| pg 100 | 261118-002129-e8cd60 | 261118-002135-26fb7a |
+| qdrant 100 | 261118-002144-1e4364 | 261118-002149-bf06b5 |
+| es 100 | 261118-002157-464fb9 | 261118-002203-0d60b7 |
+| strata 1000 | 261118-002212-539667 | 261118-002220-bdb10a |
+| lance 1000 | 261118-002226-aaa88b | 261118-002230-90cd99 |
+| pg 1000 | 261118-002235-ff002b | 261118-002240-bc2024 |
+| qdrant 1000 | 261118-002247-19421d | 261118-002254-5cba4c |
+| es 1000 | 261118-002302-f0e537 | 261118-002307-8cf59d |
 
 Results land in `.scratch/c1/results/SYS-N.json` (and `-load.json`); job logs carry the same JSON.
 
