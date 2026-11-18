@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: working
+State: blocked on lead: the call sites are outside the file set (src/server/search_views.cc, src/database/handler.cc)
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -47,12 +47,26 @@ Read so far (src = master, build-prof):
 
 ## Next
 
-1. Read the samples: which frames hold http loops (per-name resolve, sort, search_batch pins, engine::search, merge).
-2. Write the attribution and the bound in docs/design/wide-search-loop.md; implement in the file set.
+1. After the lead's ruling: apply `harness/wide_search_callsites.patch` on the branch (or the owning quest does),
+   delete the patch, rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
+   at the landed code, then CI (A4) and the correctness review.
+2. Running, read when done: 261118-043346-9d63ea (A2 before, 10,000, unsampled), 261118-045057-0e3792 (probe 10,000).
 
 ## Blocked on
 
-Nothing.
+1. The bound needs two call sites outside this quest's files (lead):
+   - `src/server/search_views.cc` `resolve_index_endpoints`: its per-name loop becomes
+     `co_await wide_search::resolve(paths, writable, settings, *request.budget)` (light-share holds `src/server/*`).
+   - `src/database/handler.cc` `DatabaseHandler::search_batch`: take `wide_search::pins()` for a wide search's batch
+     and checkpoint the budget per shard.
+   Both are in `harness/wide_search_callsites.patch` (+21/-19 lines). Options: (a) add both files to this quest's
+   set, ordered after or coordinated with light-share's `search_views.cc` edits; (b) light-share applies the
+   `search_views.cc` hunk, this quest takes `handler.cc`; (c) land `wide_search.{h,cc}` and tests now (no behavior
+   change) and move the call sites to a follow-up. Recommendation: (a); the hunk is a 19-line block light-share does
+   not touch (its edits are scheduling), so a rebase conflict is unlikely.
+2. Open, not this quest's (doc "Open"): the resolver cache of 100 entries makes every wide-search name a settings
+   load, and `resolve_index_lru_mtx` is a loop-blocking `std::mutex`. Recommendation: a follow-up quest on
+   `src/index_resolver_lru.*`; the probe shows slicing alone brings S2 within 1.3x of T5's bound.
 
 ## Evidence
 
@@ -62,16 +76,30 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | `docs/design/wide-search-loop.md` (Attribution: jobs 261118-043331-286e1f, 261118-022616-80ea60) |
+| A2 | before: 261118-022616-80ea60 (2,500: window max 98 ms bucket); 10,000 in 261118-043346-9d63ea; after: blocked |
+| A3 | before: 261118-022618-928443 (64 names: light max 1,153 ms, loops 1.8-2.1 s); after: blocked |
+| A4 | suite 261118-034210-a84949 at Xapiand:b46f8e262 (44/44, test_wide_search with the Pins tests); CI pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Attribution done: the stall is per-name resolution (each name a resolver-cache miss that decodes its settings
+document on the loop, one turn for the whole list); under concurrency the misses contend on the resolver's
+`std::mutex`. Mechanism in the set: `src/database/wide_search.{h,cc}` (`wide_search::resolve`, sliced;
+`wide_search::Pins`, node-wide FIFO bound on pinned indexes), tests in `tests/test_wide_search.cc`, design in
+`docs/design/wide-search-loop.md`. Probe (call sites patched, job 261118-043334-e2a804 against master 043331-286e1f):
+SR3 2,500 loops' max 98-229 ms -> 0.6-1.5 ms buckets; S2 64 names light p99 83.8 -> 5.3 ms, max 1,819 -> 26 ms.
+Harness: `wide_search_check.py` (`--sample`, creation resume), `wide_search_starve.py` (S2 probe),
+`wide_search_stalls.py` + `wide_search_reactor_stalls.patch` (stall attribution).
 
 ## Rulings I made
 
 - R1. S2's probe is `harness/wide_search_starve.py` (the review's `wide_starve.py` under the file set's glob), with
   `--create-only/--reuse`; its verdict is T5's bound on the name-list phases: light p99 <= 2x alone p99 + 1 ms.
 - R2. A2's "within T4's slice" is read as R23 of x7-gate: every loop's window max at the 1,024 us edge.
+- R3. macOS `sample` suspends the node for seconds (11.7-20 s lag in 9e4e4d, 1d4a33, 400442), so sampled runs are
+  not SR3 evidence; attribution uses the reactor watchdog instead. 400442 (10,000 before) is replaced by 9d63ea.
+- R4. The slot's `.deps/reactor-src` carries `wide_search_reactor_stalls.patch` from 261118-043329-3f59f9 on: inert
+  unless `XAPIAND_LAG_SPIN` is set (one getenv at loop start). Evidence jobs after it say so in their `what`.
+- R5. Pins apply only to searches wider than one batch: a single-batch search pinning would queue light searches
+  behind wide batches; single-batch searches stay bounded by admission.
