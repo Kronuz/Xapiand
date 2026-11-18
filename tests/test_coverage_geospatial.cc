@@ -613,7 +613,40 @@ void test_map_errors() {
 
 }  // namespace
 
-TEST_MAIN(
-	test_point, test_multipoint, test_circle, test_circle_extremes, test_convex, test_polygon, test_graham_scan,
-	test_multicircle, test_multiconvex, test_multipolygon, test_collection, test_intersection, test_ewkt_forms,
-	test_ewkt_errors, test_inputs_that_surface_a_format_error, test_geometry_errors, test_map_forms, test_map_errors)
+// Each test runs guarded: an exception that escapes one is a failed check naming it, not an abort of the whole run.
+int main() {
+	const struct { const char* name; void (*run)(); } tests[] = {
+		{ "test_point", test_point },
+		{ "test_multipoint", test_multipoint },
+		{ "test_circle", test_circle },
+		{ "test_circle_extremes", test_circle_extremes },
+		{ "test_convex", test_convex },
+		{ "test_polygon", test_polygon },
+		{ "test_graham_scan", test_graham_scan },
+		{ "test_multicircle", test_multicircle },
+		{ "test_multiconvex", test_multiconvex },
+		{ "test_multipolygon", test_multipolygon },
+		{ "test_collection", test_collection },
+		{ "test_intersection", test_intersection },
+		{ "test_ewkt_forms", test_ewkt_forms },
+		{ "test_ewkt_errors", test_ewkt_errors },
+		{ "test_inputs_that_surface_a_format_error", test_inputs_that_surface_a_format_error },
+		{ "test_geometry_errors", test_geometry_errors },
+		{ "test_map_forms", test_map_forms },
+		{ "test_map_errors", test_map_errors },
+	};
+	for (const auto& t : tests) {
+		try {
+			t.run();
+		} catch (const std::exception& e) {
+			std::fprintf(stderr, "  FAIL: %s threw %s: %s\n", t.name, typeid(e).name(), e.what());
+			++testh::failures;
+		}
+	}
+	if (testh::failures != 0) {
+		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
+		return 1;
+	}
+	std::printf("OK: %d checks passed\n", testh::checks);
+	return 0;
+}
