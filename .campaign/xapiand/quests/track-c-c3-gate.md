@@ -20,6 +20,8 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
+- C3 passes at the Core level: `Driver::repair` only forwards and touches no log state (review F3, 11-18); Driver-level repair rows are owed to consensus-sim-loops A3, repair liveness to its A5. The gate also waits on consensus-c3-rows (review F1, F2).
+
 <Decisions made, and by whom; open questions, naming the owner or the lead.>
 
 ## May land early

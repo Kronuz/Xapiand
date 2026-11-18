@@ -5,16 +5,15 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Close track-c-c3-gate's review findings F1 and F2 (`.campaign/xapiand/reviews/track-c-c3-gate-correctness.md`): T5's rows cover the base branch of the repair term check (core.h:642, `b.index == base_index_ ? b.term != base_term_`) and the commit bound, each with a mutant in `tools/mutants.sh` that the unit suite kills.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
+- A1 After the base is raised (consensus_test.cc:1111), a repair at `{through, term_at(through)+1}` answers `InvalidRepair`; mutant P1 (the base term check removed) fails consensus_test: a test and a `--fails-without` job
+- A2 A repair at a boundary in (commit, last_index] is refused and one in (applied, commit] is accepted, in a row named for the commit bound; mutant P2 (the commit bound removed) fails that row: a test and a `--fails-without` job
+- A3 P1 and P2 are in `tools/mutants.sh`, and the build-test check passes
 
-- A1 <criterion>: <evidence>
+The review's probe is `.scratch/review-track-c-c3-gate-correctness/mutants-extra.sh` in the Xapiand home.
 
 ## Contracts
 
