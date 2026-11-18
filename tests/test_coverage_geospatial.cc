@@ -635,7 +635,10 @@ int main() {
 		{ "test_map_forms", test_map_forms },
 		{ "test_map_errors", test_map_errors },
 	};
+	std::fprintf(stderr, "MAIN\n");
 	for (const auto& t : tests) {
+		std::fprintf(stderr, "RUN %s\n", t.name);
+		std::fflush(stderr);
 		try {
 			t.run();
 		} catch (const std::exception& e) {
