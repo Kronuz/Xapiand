@@ -3022,7 +3022,6 @@
       "after": [
         "detent:consensus-transport",
         "detent:consensus-driver",
-        "detent:consensus-driver",
         "detent:transport-connection",
         "detent:transport-groups",
         "detent:rpc-lane-codec",
@@ -3031,7 +3030,8 @@
         "detent:peers-retry-flake",
         "detent:transport-groups-ci",
         "detent:transport-feed-scan",
-        "detent:consensus-wave-open"
+        "detent:consensus-wave-open",
+        "detent:reader-yield-stall"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3220,7 +3220,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T19:05:33",
+      "updated": "2026-11-17T21:16:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
