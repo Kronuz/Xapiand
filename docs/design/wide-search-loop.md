@@ -9,7 +9,26 @@ A search over thousands of indexes stalls an HTTP loop for 49-100 ms at 2,500 in
 (x7-gate SR3), and 64 clients sending such searches by name list push every loop's lag into the 1-2 s bucket, with a
 light GET's p99 at 86.9 ms (security S2). This note attributes the stall and chooses the bound.
 
-ATTRIBUTION
+## Attribution
+
+A reactor watchdog (`harness/wide_search_reactor_stalls.patch`, env `XAPIAND_LAG_SPIN=20000`) signals a loop whose
+turn passes 20 ms and walks its stack every 1.5 ms while it stays stalled; `harness/wide_search_stalls.py` symbolizes
+the captures. Job 261118-043331-286e1f, master's `src`, 2,000 indexes for S2 and 2,500 for SR3, macOS x86_64:
+
+- **SR3, one client.** The loops stall in `IndexResolverLRU` resolving the search's names: each name misses the
+  resolver's cache (`--resolver-cache-size`, 100 entries, against 2,500 names), so each loads its settings document
+  from `.xapiand/indexes` and decodes it on the loop (`load_settings`, `decode_stored_frame`, `decompress_zstd_into`).
+  `resolve_index_endpoints` in `search_views.cc` awaits the names one after another and nothing in the chain
+  suspends, so the whole list is one turn: 2,500 names hold a loop 87-91 ms (job 261118-022616-80ea60), 10,000 up
+  to 393 ms (x7-gate). The batches' pins and searches are not where the loops stall: no capture holds
+  `search_batch` or `strata::search`.
+- **S2, 64 clients.** The same misses, taken by 16 loops at once, meet on the resolver's one `std::mutex`
+  (`resolve_index_lru_mtx`, taken 3 to 5 times a name: `resolve_index_settings`, `cached_settings`,
+  `store_settings`). A loop blocked on it is a thread blocked: of 19,659 captures, 9,000 hold the resolver's lock
+  paths and most of the rest end in `__psynch_mutexwait`. Every loop's lag reaches the 1.3-2.6 s buckets and a light
+  GET's max 1.8-2.9 s.
+
+So the stall is per-name resolution, not per-index work, and concurrency turns its cost into lock contention.
 
 ## Decisions
 
