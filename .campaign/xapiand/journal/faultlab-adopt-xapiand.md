@@ -1,6 +1,6 @@
 # faultlab-adopt-xapiand: journal
 
-State: waiting on jobs 261118-073836-d84056 (control at cc65385b2, pre-adoption), 261118-063444-7192ac, 261118-063447-891e3d
+State: waiting on jobs 261118-075629-e032e7 (A1), 261118-063447-891e3d (A2)
 Quest: .campaign/xapiand/quests/faultlab-adopt-xapiand.md (the lead's; never edit it)
 
 ## Doing
@@ -27,10 +27,15 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | jobs 261118-063444-7192ac, 261118-063529-314e40 |
+| A1 | job 261118-075629-e032e7 (build at own commit; selftest, check --nodes 1, check --nodes 3 --expect-fail ...); control d84056 at cc65385b2 fails membership identically (pre-existing) |
 | A2 | job 261118-063447-891e3d |
 
 ## Msg: 314e40 failed (RED membership: each node sees 1/3)
 
 314e40 is NOT evidence. Control d84056 runs the same build+check at cc65385b2 (branch point, old
 harness). Green => adoption broke peer wiring (fix + failing-without test); red => pre-existing, report.
+
+## Attribution
+
+314e40 RED membership is pre-existing: control d84056 at cc65385b2 (old harness) fails identically
+(each node 1/3, all lead). A1 reworked by the lead; e032e7 is the A1 job.
