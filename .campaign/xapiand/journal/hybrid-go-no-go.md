@@ -5,8 +5,10 @@ Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
 
-A1, step 1: the C1 rerun harness in strata `bench/hybrid/` (quest branch, main merged at
-strata:762b748b) and a light dry run at the smallest tenant count.
+A1, step 1: the C1 rerun harness in strata `bench/hybrid/` (strata:8b64cca8; main merged at
+strata:762b748b): `c1.py` (driver), `c1_strata.cc` (strata arm, builds clean with
+`cmake -S bench/hybrid -B build-c1`), `setup.sh` (baselines into `.scratch/c1`). Next: a local
+smoke at a few tenants, then the light dry-run job at 100 tenants.
 
 ## Next
 
