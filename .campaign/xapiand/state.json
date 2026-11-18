@@ -20642,10 +20642,8 @@
       "consumes": [],
       "files": [
         "src/database/schema.cc",
-        "src/stemmer*",
-        "tests/test_stem*",
-        "tests/test_strict_text.cc",
-        "docs/**"
+        "tests/test_stem_parity.sh",
+        "tests/test_strict_text.cc"
       ],
       "history": [
         {
@@ -20684,7 +20682,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T00:37:45",
+      "updated": "2026-11-18T01:59:49",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
