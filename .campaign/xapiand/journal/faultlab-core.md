@@ -9,15 +9,22 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Step 2: include/faultlab/faultfs.h from strata:491a1bd core/faultfs.hh with F2-F7, tests for A1-A4.
 
 ## Next
 
-1. <step>
+1. faultfs.h + tests (A1 forced coins, A2 strata seed table, A3 sector probe vs journal MemoryIO and storage CrashIO, A4 link/lease/map_shared).
+2. recorder.h (F10) + tests (A5 verify).
+3. scenario.h, events.h (F11, F12).
+4. Python half: history.py (monotonic, seal, set-aside), proxy.py, scenario.py; selftest, proxy_test (A5).
+5. README, docs/ (A6).
+
+Worktree: /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-core (faultlab repo, branch quest/xapiand/faultlab-core).
+Step 1 done: faultlab:bfce6a8 (CMake, CI, test/check.h).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
