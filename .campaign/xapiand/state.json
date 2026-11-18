@@ -5857,6 +5857,20 @@
         "README.md",
         "CMakeLists.txt"
       ],
+      "history": [
+        {
+          "at": "2026-11-18T06:49:04",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1) and a mutant killed (A2)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
       "landed": [],
       "lenses": [],
@@ -5864,10 +5878,10 @@
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
-      "risk": "normal",
+      "risk": "low",
       "status": "active",
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
-      "updated": "2026-11-18T06:48:12",
+      "updated": "2026-11-18T06:49:04",
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
