@@ -305,3 +305,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: none this hour. Created github.com/Kronuz/faultlab (D95). Detent A4 for consensus-wave-open confirmed by job 261118-003837-3e3d58 (64 open, 0 fenced).
 - Runs: faultlab-core contributor ~141k (6 steps, 10 mutants); stemmer-names contributor ~152k; hunt-lua-fetch fixes ~122k total; hybrid-go-no-go contributor ~250k (harness, then sent back: recall, env, cold). Reviewers in flight: faultlab-core.
 - Host: light slots 61% used; machine near idle 35 min behind a pending strict and the perf suite hold (drain). Disk 20 GiB (VM grew 9 to 17 GB for C1). Weekly 59%, burn 1.13%/h.
+## 2026-11-18 02:00 hourly
+- Landed: Xapiand:7b94f4638 hunt-lua-fetch (merge 1a4dd2fef); faultlab:5ec8a9e faultlab-core (new repo); faultlab:a452a8c guard; agent-campaign:4d1ed02/8181de6/d6fa0f7 (status 26-38 s to 1.9 s); cpp-libraries:260b9df catalog.
+- Runs: perf agent ~245k (commands 10-20x faster, suite 1,059 to 357-658 s); faultlab-core reviewer ~224k (2 blockers, real); faultlab-core contributor ~206k total; stemmer-names ~152k (parked on owner A1). Started: test-glob (lead), light-share, wide-search-loop, coverage-areas.
+- Host: light slots 50% used, idle-beside-runnable 47 min (drains); disk 34 GiB (Detent freed 14). Weekly 61%, burn 1.14%/h.
