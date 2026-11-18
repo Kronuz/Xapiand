@@ -1,6 +1,6 @@
 # stemmer-names: journal
 
-State: waiting on jobs 261118-003708-0842d7 261118-003712-6c88e6 261118-003721-65702e
+State: waiting on jobs 261118-024858-f4b47c 261118-024902-cbb6ac 261118-024903-704f38
 Quest: .campaign/xapiand/quests/stemmer-names.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -36,8 +36,8 @@ stem_parity 2cc69d4d1e91, snowball-data vocabularies as release-rows A4 used):
 | Criterion | Evidence |
 |---|---|
 | A1 | D118 (PLAN.md Decisions) |
-| A2 | 261118-003712-6c88e6 (queued) |
-| A3 | 261118-003708-0842d7 build-test, 261118-003721-65702e mutant (queued) |
+| A2 | 261118-024902-cbb6ac (queued, head 3ba079814; earlier 261118-003712-6c88e6 at pre-rebase) |
+| A3 | 261118-024858-f4b47c build-test, 261118-024903-704f38 mutant at 95104c4b2 (head's tests, pre-removal schema; scratch branch mut-stemmer-names) (queued) |
 
 ## Result
 
