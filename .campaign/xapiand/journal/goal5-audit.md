@@ -1,15 +1,15 @@
 # goal5-audit: journal
 
-State: waiting on jobs 261118-030453-e7e654
+State: waiting on jobs 261118-112239-70bd05 (build-test), 261118-112418-cceb31 (A2 at the merged head) and consensus CI run 44379704962
 Quest: .campaign/xapiand/quests/goal5-audit.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing: the audit is committed (consensus:42cb3cf); the A2 grep job runs at it.
+Merged consensus main (42019eb) into the branch; re-pinned the consensus row to it and moved CN11/CN12 (host_transport.h:296, :565, bound cite :561-572). Pushed consensus:ac323fe. Jobs and CI are running.
 
 ## Next
 
-1. When 261118-030453-e7e654 passes, paste `campaign brief`'s table and set ready for review.
+1. When 261118-112418-cceb31 and 261118-112239-70bd05 pass and CI run 44379704962 ends, paste `campaign brief`'s table and set ready for review.
 
 ## Blocked on
 
@@ -35,7 +35,13 @@ Findings (no bound):
 Changing in Detent: CN6 (consensus-close-fenced), CN7 (consensus-worker-release), JN7 (journal-reopen-closed).
 Observations (bounded): O1 task frame pool 33 MiB/thread worst case; O2 TurnLog::reclaim has no fixed per-turn segment count; O3 completion fallback thread even with native io_uring; O4 Host::group_io sweeps all ranges_ per call.
 
+## CI attribution
+
+The earlier failure at 42cb3cf is not reproduced on the branch: the quest changes only docs/GOAL5-AUDIT.md. Main control: consensus main at 42019eb (run 44357306609) fails the same way without the quest: linux-x86_64-gcc consensus_transport_groups_test (groups_test.cc:1620 backlog, "the owed records merged") and linux-tsan consensus_transport_connection_test (connection_test.cc:693 read_slowly; the known detent:connection-slow-reader-flake). Run 44379704962 on the merged head: tsan, asan-ubsan, clang, macos-x86_64 green so far (tsan passes there, so that one flakes); the gcc jobs decide. No `sync_data_files` error seen in either run.
+
 ## Rulings I made
+
+- Merge, not rebase: consensus main merged into the branch; the audit's consensus pin moves to main 42019ebb7c1f, since the only include/ change (host_transport.h) moved two audited sites and the grep still finds 70 sites each with a row.
 
 - Scope is library code (include/, top-level headers); tests, benches, fuzz, examples, tools excluded.
 - Spawned task roots count as deferred-destruction sites (teardown destroys suspended ones), so each spawn site has a row.
