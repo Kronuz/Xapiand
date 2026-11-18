@@ -236,7 +236,9 @@ def check() -> None:
         if not ok:
             failures.append(f"cap {width}")
     # A pattern reads every entry of the data directory (14 indexes and the node's own), so at a cap of 7 each is over it,
-    # whatever it matches: the cap bounds the walk's work, not only the names.
+    # whatever it matches: the cap bounds the walk's work, not only the names. The first pattern starts the build of the
+    # name index and walks; once it is built a pattern reads names instead, each name and each range's seek counted
+    # against the same cap (docs/design/name-index.md, D7), so these stay over it.
     for pattern in (
         "/w000*,w001*,w002*,w003*,w004*,w005*,w006*/",
         "/_all/",
@@ -245,7 +247,7 @@ def check() -> None:
         "/*,-*/",
     ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
-        ok = status == 400 and b"--max-search-indexes" in raw and b"directory entries" in raw
+        ok = status == 400 and b"--max-search-indexes" in raw and (b"directory entries" in raw or b"index names" in raw)
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
         if not ok:
             failures.append(f"cap pattern {pattern}")

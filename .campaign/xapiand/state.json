@@ -386,6 +386,55 @@
       "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
       "id": "msg-55",
       "text": "detent:consensus-driver started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T18:48:33",
+      "by": "campaign detent",
+      "closed": "journal-sync-seam is the change group-core asked for; group-core keeps its journal pin and repins with consensus-quiescence",
+      "id": "msg-97",
+      "text": "detent:journal-sync-seam started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:04:00",
+      "by": "campaign detent",
+      "closed": "a test flake fix in consensus transport; consensus-rpc-lane is not started and group-core keeps its consensus pin until the quiescence repin",
+      "id": "msg-98",
+      "text": "detent:connection-slow-reader-flake started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:04:11",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane now lands after detent:transport-feed-scan; group-core keeps its consensus pin until the quiescence repin",
+      "id": "msg-99",
+      "text": "detent:transport-feed-scan started and may change files your consensus-rpc-lane changes (order them with --after detent:transport-feed-scan, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:04:42",
+      "by": "campaign detent",
+      "closed": "consensus-wave-open fixes group-core's 64-open failure; consensus-rpc-lane now lands after it; group-core repins with quiescence",
+      "id": "msg-100",
+      "text": "detent:consensus-wave-open started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-wave-open, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:53:30",
+      "by": "campaign detent",
+      "closed": "journal-turn-bound only bounds a turn to a segment; group-core's driver use is unchanged; group-core repins journal after it lands if its 10^4 open run needs it",
+      "id": "msg-101",
+      "text": "detent:journal-turn-bound started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T21:15:36",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane now lands after detent:reader-yield-stall and builds against its brief; group-core only consumes the driver API and repins after it lands if needed",
+      "id": "msg-102",
+      "text": "detent:reader-yield-stall started and may change files your consensus-rpc-lane changes (order them with --after detent:reader-yield-stall, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T22:33:33",
+      "by": "campaign detent",
+      "closed": "consensus-close-fenced is the D115 contract group-core asked for; group-core repins after it lands (hunt row); consensus-rpc-lane builds against its brief",
+      "id": "msg-103",
+      "text": "detent:consensus-close-fenced started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -2987,14 +3036,16 @@
       "after": [
         "detent:consensus-transport",
         "detent:consensus-driver",
-        "detent:consensus-driver",
         "detent:transport-connection",
         "detent:transport-groups",
         "detent:rpc-lane-codec",
         "detent:transport-identity",
         "detent:transport-idle-cost",
         "detent:peers-retry-flake",
-        "detent:transport-groups-ci"
+        "detent:transport-groups-ci",
+        "detent:transport-feed-scan",
+        "detent:consensus-wave-open",
+        "detent:reader-yield-stall"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3183,7 +3234,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T08:29:21",
+      "updated": "2026-11-17T21:16:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "core-lifecycle-tests": {
@@ -4852,6 +4903,40 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-core": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "completion:io"
+      ],
+      "files": [
+        "**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "faultlab-seam"
+      ],
+      "provides": [
+        "faultlab:faultfs"
+      ],
+      "repo": "../faultlab",
+      "risk": "high",
+      "status": "planned",
+      "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
+      "updated": "2026-11-17T22:35:59"
+    },
     "faultlab-design": {
       "accepted": {
         "design": {
@@ -4967,6 +5052,49 @@
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
       "updated": "2026-11-16T15:03:59",
       "worktree": ""
+    },
+    "faultlab-seam": {
+      "accepted": {},
+      "after": [],
+      "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+      "branch": "quest/xapiand/faultlab-seam",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-seam",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "completion:io"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "active",
+      "title": "completion's four faultlab seam additions (F8)",
+      "updated": "2026-11-17T22:41:33",
+      "worktree": "../completion-wt/xapiand/faultlab-seam"
     },
     "field-table": {
       "accepted": {},
@@ -6440,9 +6568,95 @@
       "title": "http, reactor, http-log and prism without the offload path (L3)",
       "updated": "2026-11-08T15:40:22"
     },
-    "hunt-radix-router": {
+    "hunt-lua-fetch": {
       "accepted": {},
+      "after": [
+        "name-index"
+      ],
+      "base": "94290424a08ab5ddfff8d5d73e6266ce6d3eb547",
+      "branch": "quest/xapiand/hunt-lua-fetch",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand",
+          "level": "light",
+          "minutes": 30,
+          "name": "build"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "contrib/lua/**",
+        "CMakeLists.txt",
+        ".github/workflows/**",
+        "cmake/Modules/FindGTest.cmake",
+        "cmake/Modules/ExternalProjectInstall.cmake",
+        "THIRD-PARTY-NOTICES*",
+        "cmake/generate_third_party_notices.py",
+        "tests/lua_patch_drift.cmake",
+        "tests/lua_fetch.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Lua sources fetch without lua.org resets",
+      "updated": "2026-11-17T22:30:54",
+      "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
+    },
+    "hunt-radix-router": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T22:43:13",
+          "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
+          "blobs": {
+            ".gitignore": "100644:265b799ca42952dc3a4c9dbe02deff0e36cbbe00",
+            "bench/ab.cc": "100644:17cf65e2b5e83c55fb1eeb18b0a4bd824f258bb2",
+            "bench/ab.sh": "100755:b9086fc3e6543d36520a1749dac4d812ae1cfffa",
+            "bench/ab3.sh": "100644:b945f15dce7d35f2464121bb036bed6bcfb58fdb",
+            "docs/NESTED_CATCHALLS.md": "100644:404d997eea1e0ca8245abd0d5fbf88b4d8106f80",
+            "fuzz/diff.cc": "100644:33da63ece28774ed447b2eeb090a7b6c5a46bc9b",
+            "fuzz/radix_router_main.h": "100644:49d08ce7023d5867328e0d57035f6b2dbb97e741",
+            "fuzz/radix_router_v1.h": "100644:1dbcd698e93a52aefbb26068ec8f26268ccd1598",
+            "fuzz/regressions/slow-unit-3e22b8dbcc2ed66d801e86ea79727fd027e7ba1a": "100644:1177814a306861f073dc5adf7f977aceb346f53e",
+            "fuzz/regressions/slow-unit-45913e3d5aaba9dc526cbe37367e342ad3c0725d": "100644:345337972c5720ec96cc39510ef37fdcc2599fb8",
+            "fuzz/regressions/slow-unit-5ca20a210ccc1c4da7944ed21a5c5b7a504a3808": "100644:bf6337123cc6a0ee998b70b43cb246543f2f0840",
+            "fuzz/regressions/slow-unit-6693c5d390e25a99503121b37f67a6fdd956f458": "100644:3761af643a32ae27be9e026c708b6abd6af73dab",
+            "fuzz/regressions/slow-unit-b675c44fad563055b6b520b3e5badddb00b45ade": "100644:219222d2a22ff3633101c0c11ccc3cc8362a2b34",
+            "fuzz/slow_repro.cc": "100644:ea4637866333d2d27596274d608a394914d4ac69",
+            "radix_router.h": "100644:b5ad05af36056b0d2a24a791ccb16a4176944552",
+            "test/test.cc": "100644:4be2fb989e633af80fe05be1c3057699e2f0481a"
+          },
+          "by": "review",
+          "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "criteria": "a44a206428c1b32c",
+          "diffs": {
+            "": "43503392ca802d60",
+            ".gitignore": "f9e5ef394416a19a",
+            "bench/ab.cc": "f27075a521d485ba",
+            "bench/ab.sh": "878a8b3a67afe299",
+            "bench/ab3.sh": "5eae11d8cae9575d",
+            "docs/NESTED_CATCHALLS.md": "9a222da11baaeb03",
+            "fuzz/diff.cc": "6a777c570bfda5a7",
+            "fuzz/radix_router_main.h": "aa5fabb1d8bdfe24",
+            "fuzz/radix_router_v1.h": "bb1562f711090621",
+            "fuzz/slow_repro.cc": "c5f7a042100617dc",
+            "radix_router.h": "95131ace101ac411",
+            "test/test.cc": "91cb3321efe15859"
+          },
+          "findings": {},
+          "note": "",
+          "review": "b1a034bfaf4bb9abf9db5b8fc36719f45af718c9",
+          "reviewed": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
+      "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
+      "branch": "quest/xapiand/hunt-radix-router",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6455,16 +6669,20 @@
       "files": [
         "**"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-radix-router",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/radix-router",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "radix-router: bound slow matching inputs found by fuzzing",
-      "updated": "2026-11-17T18:45:42"
+      "updated": "2026-11-17T22:43:13",
+      "worktree": "../radix-router-wt/xapiand/hunt-radix-router"
     },
     "hybrid-go-no-go": {
       "accepted": {},
@@ -12789,8 +13007,8 @@
     "name-index": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-17T18:19:40",
-          "base": "6a140ea4de266edc98c808c62c98e1c6aff31b05",
+          "at": "2026-11-17T22:33:51",
+          "base": "6bbffede01545fe978cd12e6a43c8c797a5e59a8",
           "blobs": {
             "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
             "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
@@ -12799,7 +13017,7 @@
             "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
             "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
             "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
-            "src/database/name_index.cc": "100644:9a17ab7fe24e019f290577033bf638465c4d337b",
+            "src/database/name_index.cc": "100644:e0472e06d4dffbc8c8ed8bbd7bc90f1183c7e7fb",
             "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
             "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
             "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
@@ -12811,7 +13029,7 @@
             "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
           },
           "by": "review",
-          "commit": "df61d9f73a9ceb258bd290334cba2699d026c9af",
+          "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
           "criteria": "aa0933b13ed947a5",
           "diffs": {
             "docs/design/name-index.md": "9c936384a09909e3",
@@ -12821,7 +13039,7 @@
             "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
             "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
             "harness/wide_search_check.py": "fd5852edb54d5f25",
-            "src/database/name_index.cc": "d18db159efd2c113",
+            "src/database/name_index.cc": "ab80bd96adf97292",
             "src/database/name_index.h": "26139bc0511637cb",
             "src/database/pool.cc": "034bf855d0c90ab4",
             "src/database/pool.h": "86f45483339a57c4",
@@ -12836,15 +13054,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-oracle bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/oracle.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124540-0da619",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 29.1,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe oracle.sh at the F1 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -12853,15 +13071,15 @@
             "F2": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-emfile bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/emfile.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124543-44a244",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 14.9,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe emfile.sh at the F2 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -12872,6 +13090,106 @@
           "review": "75d937ffc017a16ae8a69bcdf8f2a766cdec7400",
           "reviewed": "291ec897101dbfa20733d1cffcba4f689acecc59",
           "verdict": "CHANGES"
+        },
+        "design": {
+          "at": "2026-11-17T19:08:53",
+          "base": "6bbffede01545fe978cd12e6a43c8c797a5e59a8",
+          "blobs": {
+            "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
+            "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
+            "docs/src/content/docs/changelog.md": "100644:58fa085e7f9f15640c1e7d48c01665305b49d1bf",
+            "docs/src/content/docs/options.md": "100644:af35d460a2f7c25abdec11259196f01a67080d16",
+            "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
+            "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
+            "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
+            "src/database/name_index.cc": "100644:e0472e06d4dffbc8c8ed8bbd7bc90f1183c7e7fb",
+            "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
+            "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
+            "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
+            "src/index_pattern.cc": "100644:2bb92b1c1fdf31d4686e7df4a68817a8a6880344",
+            "src/index_pattern.h": "100644:cb0df952b0ae5e6e924bc15887474e2426036078",
+            "src/server/search_views.cc": "100644:a108e8bf868c70356cdba1f545d7bd3a01522961",
+            "tests/name_index_mutants.sh": "100755:206e35b9b2970962801ca6330fa01beb85e4521b",
+            "tests/test_index_pattern.cc": "100644:d4789f818bec572e5541ecce4eea61b0aaedaaff",
+            "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
+          },
+          "by": "review",
+          "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+          "criteria": "aa0933b13ed947a5",
+          "diffs": {
+            "docs/design/name-index.md": "9c936384a09909e3",
+            "docs/mechanisms/wide-search.md": "f537cdad33562d79",
+            "docs/src/content/docs/changelog.md": "3285a849aee75f91",
+            "docs/src/content/docs/options.md": "29097e864454671f",
+            "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
+            "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
+            "harness/wide_search_check.py": "fd5852edb54d5f25",
+            "src/database/name_index.cc": "ab80bd96adf97292",
+            "src/database/name_index.h": "26139bc0511637cb",
+            "src/database/pool.cc": "034bf855d0c90ab4",
+            "src/database/pool.h": "86f45483339a57c4",
+            "src/index_pattern.cc": "618943fe8007cba7",
+            "src/index_pattern.h": "cba13677e3260d86",
+            "src/server/search_views.cc": "ed97dede2bccbd94",
+            "tests/name_index_mutants.sh": "028ada85486c9d41",
+            "tests/test_index_pattern.cc": "1cf215a0075d5abb",
+            "tests/test_node.cc": "16ec13dad8fbeff8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "1bc4591b1fb0bc86671792d07ca93468e5cffba4",
+          "reviewed": "",
+          "verdict": "APPROVE"
+        },
+        "durability": {
+          "at": "2026-11-17T19:09:00",
+          "base": "6bbffede01545fe978cd12e6a43c8c797a5e59a8",
+          "blobs": {
+            "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
+            "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
+            "docs/src/content/docs/changelog.md": "100644:58fa085e7f9f15640c1e7d48c01665305b49d1bf",
+            "docs/src/content/docs/options.md": "100644:af35d460a2f7c25abdec11259196f01a67080d16",
+            "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
+            "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
+            "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
+            "src/database/name_index.cc": "100644:e0472e06d4dffbc8c8ed8bbd7bc90f1183c7e7fb",
+            "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
+            "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
+            "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
+            "src/index_pattern.cc": "100644:2bb92b1c1fdf31d4686e7df4a68817a8a6880344",
+            "src/index_pattern.h": "100644:cb0df952b0ae5e6e924bc15887474e2426036078",
+            "src/server/search_views.cc": "100644:a108e8bf868c70356cdba1f545d7bd3a01522961",
+            "tests/name_index_mutants.sh": "100755:206e35b9b2970962801ca6330fa01beb85e4521b",
+            "tests/test_index_pattern.cc": "100644:d4789f818bec572e5541ecce4eea61b0aaedaaff",
+            "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
+          },
+          "by": "review",
+          "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+          "criteria": "aa0933b13ed947a5",
+          "diffs": {
+            "docs/design/name-index.md": "9c936384a09909e3",
+            "docs/mechanisms/wide-search.md": "f537cdad33562d79",
+            "docs/src/content/docs/changelog.md": "3285a849aee75f91",
+            "docs/src/content/docs/options.md": "29097e864454671f",
+            "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
+            "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
+            "harness/wide_search_check.py": "fd5852edb54d5f25",
+            "src/database/name_index.cc": "ab80bd96adf97292",
+            "src/database/name_index.h": "26139bc0511637cb",
+            "src/database/pool.cc": "034bf855d0c90ab4",
+            "src/database/pool.h": "86f45483339a57c4",
+            "src/index_pattern.cc": "618943fe8007cba7",
+            "src/index_pattern.h": "cba13677e3260d86",
+            "src/server/search_views.cc": "ed97dede2bccbd94",
+            "tests/name_index_mutants.sh": "028ada85486c9d41",
+            "tests/test_index_pattern.cc": "1cf215a0075d5abb",
+            "tests/test_node.cc": "16ec13dad8fbeff8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e5f6a891cbd14481a2ec2e67fc6be262b401951f",
+          "reviewed": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+          "verdict": "APPROVE"
         }
       },
       "after": [
@@ -13085,21 +13403,71 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T22:34:02",
+          "commit": "f36175c564d8d8c4ee096157c0d76a2cc6626bbf",
+          "criteria": {
+            "A1": "`docs/design/name-index.md`",
+            "A2": "261117-182056-98ff05, 261117-211000-af5385; fails without: 261117-082444-aa8b4a, 261117-110228-88596e, 261117-124536-b9339b",
+            "A3": "261117-182100-25609d (the build-test check), 261117-182100-25609d, 261117-182100-a7b005, 261117-210955-f5e031; fails without: 261117-082425-28cde9, 261117-082430-ea3fab, 261117-082434-4426d7, 261117-082439-942a8a, 261117-110214-031049, 261117-110217-85a114, 261117-110221-d6fa49, 261117-110224-f3f320, 261117-124528-4ae707, 261117-124532-538de8, 261117-124554-af9429, 261117-124558-1a5727, 261117-124602-aed1e3, 261117-124605-ff8815",
+            "A4": "261117-210955-f5e031; fails without: 261117-082448-a97fae, 261117-082452-c9b8bb, 261117-082456-c44e69, 261117-110232-ddea0a, 261117-110235-4fbeb9, 261117-110238-651fe2, 261117-124609-74470b",
+            "A5": "261117-210955-f5e031; fails without: 261117-082501-7bf23f, 261117-110242-e44601"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-25609d",
+              "level": "light",
+              "seconds": 1645.0,
+              "state": "done",
+              "what": "name-index check build-test at 1f78c77321f9"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-a7b005",
+              "level": "light",
+              "seconds": 421.4,
+              "state": "done",
+              "what": "name-index check e2e at 1f78c77321f9"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "5863333fb37a6074ce886dc21d44e260cf6393a5",
+          "later": [
+            "261117-223403-d393e2"
+          ],
+          "reason": "",
+          "tested": "4c17cc39279bf1e26934ae6973d669826c2a257f"
+        }
+      ],
       "lenses": [
         "design",
         "durability",
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T18:19:40",
-      "worktree": "../Xapiand-wt/xapiand/name-index"
+      "updated": "2026-11-17T22:34:05",
+      "worktree": ""
     },
     "no-stalls": {
       "accepted": {},

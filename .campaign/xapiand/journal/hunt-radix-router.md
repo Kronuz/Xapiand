@@ -80,6 +80,6 @@ Rulings I made: flag counts any '*' pairs (conservative: includes final catch-al
 | A2 | 261117-212239-e86d08 (bound test, k=6 n=64 and k=8 n=4096 < 100 ms); fails without: 261117-212234-a4772a |
 | A3 | 261117-212244-bb5fb1 (differential vs main, both flag states, corpus + artifacts) |
 | A4 | 261117-212248-c7a142 exclusive 8 rounds: fix/main 0.920 [0.892, 0.949], A/A 0.996 |
-| A5 | [artifact] radix-router docs/NESTED_CATCHALLS.md (k=8 n=4096 and fixed times from strict job 261117-223915-4d91ac, pending) |
+| A5 | `docs/NESTED_CATCHALLS.md` |
 Why 8% faster: plain matcher source is main's; disassembly sizes (nm, Apple clang -O2) show dispatch 880 B with match inlined vs 224 B in main's build. Code generation, not logic; not claimed as a win.
 F1 confirmation: A2 test covers k=8 n=4096; the earlier reviewer probe measured 6.0 ms at the loop-return fix.

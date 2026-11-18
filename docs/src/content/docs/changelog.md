@@ -143,6 +143,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run). A search sees the index as of the moment it started.
 - **Too many searches of one index at once answer `503`.** Each index admits a fixed number of concurrent readers
   (16 per HTTP loop plus the pool's workers); a search that finds the index at its cap answers `503` instead of waiting.
+- **Index patterns resolve from the node's index names.** The node's first pattern builds a sorted list of its index
+  names (one walk of the data directory), which every index the node opens or creates joins. From then on a pattern
+  reads the names under its prefix instead of the data directory, so a node with more indexes than
+  `--max-search-indexes` answers `logs-2026*`; a pattern that reads more index names than the cap answers `400` naming
+  "index names". The list is rebuilt at each start, so nothing new is written.
 - **A search over many indexes reads them in batches.** A search holds at most `--concurrent-search-indexes` shards open
   at once (by default a loop's share of the database pool) and merges each batch's best hits as the batch ends, so a
   search over thousands of indexes is served. Hits, order, weights, totals and aggregations do not depend on the batch

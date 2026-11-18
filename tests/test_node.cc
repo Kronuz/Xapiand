@@ -80,6 +80,7 @@
 #include "engine/error.h"
 #include "engine/sync.h"
 #include "http_asio.h"
+#include "index_pattern.h"
 #include "index_resolver_lru.h"
 #include "manager.h"
 #include "opts.h"
@@ -1174,6 +1175,117 @@ static void test_a_put_whose_client_half_closes_completes_durably() {
 	CHECK_EQ(restart.code, 0);
 	if (restart.code != 0) {
 		std::fprintf(stderr, "%s\n", read_file("node_half_close_restart.log").c_str());
+	}
+}
+
+// ---- a kill during create, and the names after the restart (docs/design/name-index.md, D8) ----
+
+static const int names_crash_port = free_port();
+static const char* const names_crash_dir = "node_names_crash_data";
+
+// The child: creates indexes one after another, nested and sharded ones among them, until it is killed. The name of
+// each whose PUT answered is appended to `done_path` once it has.
+[[noreturn]] static void names_crash_child(const char* log_path, const char* done_path, int round) {
+	std::freopen(log_path, "a", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	const auto done = std::filesystem::absolute(done_path).string();
+	RunningNode node(names_crash_dir, std::to_string(names_crash_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	for (int i = 0;; ++i) {
+		const auto name = "crash/r" + std::to_string(round) + "/t" + std::to_string(i / 3) + (i % 3 == 1 ? "/u" : i % 3 == 2 ? "/s" : "");
+		// Every third one has two shards: its directory holds `.__1` and `.__2`, not `strata`.
+		const auto response = i % 3 == 2
+			? http_call(names_crash_port, "PUT", "/" + name + "/", R"({"_settings":{"number_of_shards":2,"number_of_replicas":0}})")
+			: http_call(names_crash_port, "PUT", "/" + name + "/1", R"({"n":1})");
+		if (response.rfind("HTTP/1.1 2", 0) == 0) {
+			if (FILE* file = std::fopen(done.c_str(), "a")) {
+				std::fprintf(file, "%s\n", name.c_str());
+				std::fclose(file);
+			}
+		}
+	}
+}
+
+// The restart: the names, once built, list exactly what the walk lists over what the kills left, every index whose
+// create answered among them.
+[[noreturn]] static void names_crash_restart_child(const char* log_path, const char* done_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	const auto done = read_file(done_path);
+	RunningNode node(names_crash_dir, std::to_string(names_crash_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	auto& names = manager()->database_pool->names();
+	manager()->database_pool->build_names(Endpoint::cwd);
+	if (!eventually([&] { return names.complete(); }, 30s)) {
+		std::_Exit(3);
+	}
+	const index_pattern::Bounds big(1000000, 1000000);
+	const auto walked = index_pattern::expand(Endpoint::cwd, std::vector<std::string>{"**"}, big);
+	if (names.expand(std::vector<std::string>{"**"}, big) != walked) {
+		std::fprintf(stderr, "THE NAMES DIFFER from the walk's %zu names\n", walked.size());
+		std::_Exit(4);
+	}
+	std::size_t created = 0;
+	for (std::size_t from = 0; from < done.size(); ) {
+		auto eol = done.find('\n', from);
+		eol = eol == std::string::npos ? done.size() : eol;
+		const auto name = done.substr(from, eol - from);
+		from = eol + 1;
+		if (!std::binary_search(walked.begin(), walked.end(), name)) {
+			std::fprintf(stderr, "MISSING %s, whose create answered\n", name.c_str());
+			std::_Exit(5);
+		}
+		++created;
+	}
+	for (const char* pattern : {"crash/*", "crash/*/*", "crash/**/u", "crash/r1/t1*", "crash/r?/*/s", "**/t?"}) {
+		const std::vector<std::string> items{pattern};
+		if (names.expand(items, big) != index_pattern::expand(Endpoint::cwd, items, big)) {
+			std::fprintf(stderr, "PATTERN %s differs\n", pattern);
+			std::_Exit(6);
+		}
+	}
+	std::fprintf(stderr, "NAMES %zu, created %zu\n", walked.size(), created);
+	std::_Exit(created == 0 ? 7 : 0);
+}
+
+// A5: a kill during create leaves the names consistent with the data directory after the restart. Three rounds of
+// creates are each killed while they run; then a node restarts on what they left and its names are the walk's.
+static void test_a_kill_during_create_leaves_the_names_consistent() {
+	const char* log_path = "node_names_crash.log";
+	const char* done_path = "node_names_crash.done";
+	std::filesystem::remove_all(names_crash_dir);
+	std::filesystem::remove(log_path);
+	std::filesystem::remove(done_path);
+	std::mt19937 rng(20261117);
+	for (int round = 0; round < 3; ++round) {
+		std::fflush(nullptr);
+		const pid_t pid = ::fork();
+		if (pid == 0) {
+			names_crash_child(log_path, done_path, round);
+		}
+		CHECK(pid > 0);
+		// Kill it a moment after its creates have begun, at a point no one chose.
+		const auto lines = [&] { const auto text = read_file(done_path); return static_cast<std::size_t>(std::count(text.begin(), text.end(), '\n')); };
+		const auto before = lines();
+		const auto began = std::chrono::steady_clock::now();
+		while (lines() < before + 5 && std::chrono::steady_clock::now() - began < 60s) {
+			std::this_thread::sleep_for(5ms);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(std::uniform_int_distribution<int>(0, 40)(rng)));
+		::kill(pid, SIGKILL);
+		int status = 0;
+		::waitpid(pid, &status, 0);
+		CHECK(WIFSIGNALED(status));
+	}
+	const auto restart = run_child([&] { names_crash_restart_child("node_names_crash_restart.log", done_path); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_names_crash_restart.log").c_str());
 	}
 }
 
@@ -3428,6 +3540,30 @@ static void test_numeric_text_with_white_space_is_no_number() {
 }
 
 
+// A4: a node with more indexes than --max-search-indexes answers a narrow wildcard from its names, where the walk
+// alone reads past the cap; an index made after the build is listed through the catalog's resolve.
+static void test_a_node_over_the_cap_answers_a_wildcard() {
+	Watchdog watchdog("a node over the cap answers a wildcard", 120s);
+	for (int i = 0; i < 30; ++i) {
+		CHECK(success(call("PUT", "/over_cap/i" + std::to_string(100 + i) + "/1?commit", R"({"n":1})")));
+	}
+	const auto saved = opts.max_search_indexes;
+	opts.max_search_indexes = 20;
+	auto& names = manager()->database_pool->names();
+	call("COUNT", "/over_cap/i10*/?q=n:1");   // a pattern starts the build
+	CHECK(eventually([&] { return names.complete(); }, 30s));
+	CHECK_THROW(index_pattern::expand(Endpoint::cwd, std::vector<std::string>{"over_cap/i10*"}, {20, 20}), engine::Error);
+	auto reply = call("COUNT", "/over_cap/i10*/?q=n:1");
+	CHECK_EQ(reply.status, 200);
+	CHECK_EQ(field_of(reply, "total").as_u64(), 10u);
+	CHECK(success(call("PUT", "/over_cap/i10x/1?commit", R"({"n":1})")));
+	reply = call("COUNT", "/over_cap/i10*/?q=n:1");
+	CHECK_EQ(reply.status, 200);
+	CHECK_EQ(field_of(reply, "total").as_u64(), 11u);
+	CHECK_EQ(call("COUNT", "/_all/?q=n:1").status, 400);   // the cap on the names a search reads stays
+	opts.max_search_indexes = saved;
+}
+
 int main(int argc, char** argv) {
 	const std::string filter = argc > 1 ? argv[1] : "";
 	auto wanted = [&](const char* name) { return filter.empty() || std::string(name).find(filter) != std::string::npos; };
@@ -3446,6 +3582,7 @@ int main(int argc, char** argv) {
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},
+		{"test_a_kill_during_create_leaves_the_names_consistent", test_a_kill_during_create_leaves_the_names_consistent},
 	};
 	for (const auto& f : forked) {
 		if (std::getenv("SKIP_FORKED") != nullptr || !wanted(f.name)) {
@@ -3510,6 +3647,7 @@ int main(int argc, char** argv) {
 		{"test_the_admission_peaks_rise_under_load", test_the_admission_peaks_rise_under_load},
 		{"test_head_has_no_body_and_options_lists_the_routed_verbs", test_head_has_no_body_and_options_lists_the_routed_verbs},
 		{"test_a_new_index_gets_the_replicas_asked_below_and_above_the_default", test_a_new_index_gets_the_replicas_asked_below_and_above_the_default},
+		{"test_a_node_over_the_cap_answers_a_wildcard", test_a_node_over_the_cap_answers_a_wildcard},
 		{"test_exact_reads_a_value_as_its_type", test_exact_reads_a_value_as_its_type},
 		{"test_writes_take_only_exact_values", test_writes_take_only_exact_values},
 		{"test_searches_take_only_exact_values", test_searches_take_only_exact_values},

@@ -57,3 +57,21 @@ Scripts in `/Users/kronuz/code/Kronuz/Xapiand/.scratch/review-hunt-radix-router-
 - No strict timing; the scale numbers are light-hold wall times, used only for their growth ratio.
 - No sanitizer other than TSan, and only on macOS clang; ASan/UBSan and Linux are CI's.
 - Did not rerun A2, A3 or A4, nor check the A5 note beyond its bound claim.
+
+## Re-check
+
+Commit: radix-router:234c236
+Verdict: APPROVE
+Date: 2026-11-17
+
+Scope: `git log 2aa9b22..234c236`. F1 is fixed: in `match_memo`, a memoized failed state now ends the catch-all's loop. Lookups use the memoized matcher only when `nested_` is set, i.e. after a pattern with 2+ `*` was inserted. Otherwise `find()` runs the plain `match`/`dispatch`, which differ from main's only by one blank line (awk extract and diff, run by hand).
+
+1. **The flag is exact.** `add_route` reaches a node below a catch-all only by consuming that catch-all's sigil from the same pattern. That is the `n = n->catchall.get()` step, taken only for a `*` in the pattern being inserted. An edge split in `descend_static` moves `catchall` to the new child, which keeps ancestry. So patterns with one `*` each that share nodes can never put a catch-all below another catch-all. A `*` cannot appear in static text or in a wildcard name, because `descend_static` stops at it and `add_route` throws on it. So counting `*` per pattern over-approximates nesting by nothing. A flag left set after a throwing insert only selects the memoized matcher, which agrees with the plain one.
+2. **Both matchers agree, including when the flag flips mid-way.** 261117-224037-60671d: `diff2.cc`, with lookups interleaved after every insert, compared against main's header over 4 seeds x 7.1M lookups. It found zero differences in value, capture names, capture text or pointers. Of those lookups, 6.2M ran the memoized matcher and 0.93M the plain one.
+3. **The linear bound holds in the memoized matcher.** 261117-224042-2bff5b `run.sh scale`: time grows about 2x per doubling of n for k=2, 4 and 8. At k=8 n=4096 (8 KB path) it takes 5.1 ms, against 1.21 s at 2aa9b22. The suite's new k=8 n=4096 < 0.1 s check (bound test e86d08, fails-without a4772a) now carries F1's test, which also closes F2.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | nit | The Memo comment still says "lookups with a single catch-all never touch the set". This is true, but such lookups now never reach `match_memo` at all. | `radix_router.h` Memo comment | Optional rewording. |
+
+Not run in the re-check: strict timing, other sanitizers and platforms (CI's), and the A4 exclusive A/B (taken from the lead's job).
