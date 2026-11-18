@@ -21,18 +21,25 @@
  */
 
 // D92 follow-ups: numeric text reads as JSON numbers do (review C5), and the _term filter
-// aggregation reads values through Serialize::exact like a search (review C6).
+// aggregation reads values through Serialize::exact like a search (review C6). Every
+// stem_language the schema accepts builds a snowball stemmer; tests/test_stem_parity.sh reads
+// the "stem_language NAME stemmer STORED" lines this prints.
 
 #include "test_harness.h"
 
+#include <algorithm>
+#include <cstdio>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "aggregations/aggregations.h"
 #include "database/schema.h"
 #include "exception_engine.h"
 #include "msgpack.h"
 #include "serialize.h"
+#include "snowball.hh"
 
 static bool refuses(FieldType type, const char* text) {
 	try {
@@ -92,4 +99,97 @@ static void test_term_filter_reads_exactly() {
 	CHECK(filter_refuses(list));
 }
 
-TEST_MAIN(test_numeric_text_is_a_json_number, test_term_filter_reads_exactly)
+// The first "_stem_language" value under obj, or nullptr.
+static const MsgPack* find_stem_language(const MsgPack& obj) {
+	if (!obj.is_map()) { return nullptr; }
+	for (auto it = obj.begin(); it != obj.end(); ++it) {
+		if (it->str_view() == "_stem_language") { return &it.value(); }
+		if (const auto* found = find_stem_language(it.value())) { return found; }
+	}
+	return nullptr;
+}
+
+static MsgPack text_field(std::string_view stem_language) {
+	return MsgPack({ { "body", MsgPack({ { "_type", "text" }, { "_stem_language", stem_language } }) } });
+}
+
+// The stemmer name the schema stores for a text field with stem_language `name`.
+static std::string stored_stemmer(std::string_view name) {
+	Schema schema(Schema::get_initial_schema(), nullptr, "");
+	schema.update(text_field(name));
+	const auto* found = find_stem_language(schema.get_schema());
+	return found != nullptr ? std::string(found->str_view()) : std::string();
+}
+
+// nb and nn stem as norwegian, german2 as german (Xapian 2.1.0's stems over snowball-data's
+// vocabularies: jobs 261118-002155-22aee4, 261118-002203-9c6e13, 261118-002212-d6a754).
+static void test_stem_aliases_store_their_stemmer() {
+	CHECK_EQ(stored_stemmer("nb"), "norwegian");
+	CHECK_EQ(stored_stemmer("nn"), "norwegian");
+	CHECK_EQ(stored_stemmer("NB"), "norwegian");
+	CHECK_EQ(stored_stemmer("german2"), "german");
+	CHECK_EQ(stored_stemmer("no"), "no");
+	CHECK_EQ(stored_stemmer("dutch"), "dutch");
+	CHECK_EQ(snowball::stemmer(stored_stemmer("nb"))("aabakken"), "aabakk");
+	CHECK_EQ(snowball::stemmer(stored_stemmer("german2"))("aalglatten"), "aalglatt");
+	// The stored schema takes the alias again: it names the same stemmer.
+	Schema first(Schema::get_initial_schema(), nullptr, "");
+	first.update(text_field("nn"));
+	Schema second(first.get_modified_schema(), nullptr, "");
+	bool threw = false;
+	try {
+		second.update(text_field("nn"));
+	} catch (const ClientError&) {
+		threw = true;
+	}
+	CHECK_FALSE(threw);
+}
+
+// The refusal of `name`'s message, or "" when the schema accepts it.
+static std::string stem_refusal(std::string_view name) {
+	try {
+		stored_stemmer(name);
+	} catch (const ClientError& exc) {
+		return std::string(exc.get_message());
+	}
+	return {};
+}
+
+// The names a refusal lists as accepted.
+static std::vector<std::string> accepted_stem_languages() {
+	const auto message = stem_refusal("klingon");
+	const std::string_view marker = "the accepted languages are: ";
+	const auto at = message.find(marker);
+	std::vector<std::string> names;
+	if (at == std::string::npos) { return names; }
+	std::string_view rest = std::string_view(message).substr(at + marker.size());
+	while (!rest.empty()) {
+		const auto comma = rest.find(", ");
+		names.emplace_back(rest.substr(0, comma));
+		rest = comma == std::string_view::npos ? std::string_view() : rest.substr(comma + 2);
+	}
+	return names;
+}
+
+// Names the schema refuses (remove-not-refuse: none appears in docs either).
+static const std::vector<std::string_view> removed_stem_languages{
+};
+
+// A refused name gets a 400 that names the accepted languages, each of which the schema accepts
+// and stores as a stemmer snowball builds.
+static void test_stem_refusal_names_the_accepted() {
+	const auto names = accepted_stem_languages();
+	CHECK_GT(names.size(), 40u);
+	for (const auto& name : names) {
+		CHECK_EQ(stem_refusal(name), "");
+		const auto stemmer = stored_stemmer(name);
+		std::printf("stem_language %s stemmer %s\n", name.c_str(), stemmer.c_str());
+		if (!stemmer.empty()) { CHECK(!snowball::stemmer::canonical(stemmer).empty()); }
+	}
+	for (const auto name : removed_stem_languages) {
+		CHECK_NE(stem_refusal(name), "");
+		CHECK(std::find(names.begin(), names.end(), name) == names.end());
+	}
+}
+
+TEST_MAIN(test_numeric_text_is_a_json_number, test_term_filter_reads_exactly, test_stem_aliases_store_their_stemmer, test_stem_refusal_names_the_accepted)

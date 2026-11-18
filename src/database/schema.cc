@@ -1625,6 +1625,14 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
 specification_t default_spc;
 
 
+// The stem_language names _get_stem_language accepts, as a refusal names them.
+static constexpr std::string_view stem_language_names =
+	"armenian, hy, basque, eu, catalan, ca, danish, da, dutch, nl, kraaij_pohlmann, english, en, "
+	"earlyenglish, english_lovins, lovins, english_porter, porter, finnish, fi, french, fr, german, de, "
+	"german2, hungarian, hu, italian, it, norwegian, nb, nn, no, portuguese, pt, romanian, ro, russian, "
+	"ru, spanish, es, swedish, sv, turkish, tr, none";
+
+
 static inline const std::pair<bool, const std::string>&
 _get_stem_language(std::string_view str_stem_language)
 {
@@ -1869,6 +1877,22 @@ _get_stem_language(std::string_view str_stem_language)
 			return _;
 		}
 	}
+}
+
+
+// The name snowball's stemmer takes for a stem_language: nb and nn stem as norwegian, and german2
+// as german, word for word with Xapian 2.1.0 over snowball-data's vocabularies.
+static std::string
+_get_stemmer_name(std::string_view stem_language)
+{
+	auto name = strings::lower(stem_language);
+	if (name == "nb" || name == "nn") {
+		return "norwegian";
+	}
+	if (name == "german2") {
+		return "german";
+	}
+	return name;
 }
 
 
@@ -7096,7 +7120,7 @@ Schema::feed_stem_language(const MsgPack& prop_obj)
 	L_CALL("Schema::feed_stem_language({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_string()) {
-		specification.stem_language = prop_obj.str();
+		specification.stem_language = _get_stemmer_name(prop_obj.str_view());
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_LANGUAGE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -8029,10 +8053,10 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& prop_ob
 		auto str_stem_language = prop_obj.str_view();
 		const auto& stem = _get_stem_language(str_stem_language);
 		if (stem.second != "unknown") {
-			specification.stem_language = stem.second.empty() ? stem.second : str_stem_language;
+			specification.stem_language = stem.second.empty() ? stem.second : _get_stemmer_name(str_stem_language);
 			specification.aux_stem_language = stem.second;
 		} else {
-			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_stem_language));
+			THROW(ClientError, "{}: {} is not supported; the accepted languages are: {}", repr(prop_name), repr(str_stem_language), stem_language_names);
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
@@ -8609,7 +8633,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& pro
 
 	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_language = strings::lower(prop_obj.str_view());
+			const auto _stem_language = _get_stemmer_name(prop_obj.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
