@@ -1354,9 +1354,10 @@ public:
 	std::string description() const override { return "BlockingSpy"; }
 };
 
-// While a spy is held inside see() for a second, every shard is read through its view: a write, a refresh,
-// a commit and a delete on each shard all finish meanwhile, and the held search still sees the state it
-// started with. (Reads once took the shard's lock for the whole search, and these waited for it: phase 7c D6.)
+// While a spy is held inside see(), every shard is read through its view: a write, a refresh, a commit and a
+// delete on each shard all finish meanwhile, and the held search still sees the state it started with. The spy
+// is released only after the writers return, so a write that waited for the search would never return.
+// (Reads once took the shard's lock for the whole search, and these waited for it: phase 7c D6.)
 void test_view_holds_nothing_impl() {
 	Index strata;
 	Model model;
@@ -1375,7 +1376,6 @@ void test_view_holds_nothing_impl() {
 		result = engine::sync_wait(engine::search(order, request));
 	});
 	spy.inside.get_future().wait();
-	const auto begin = std::chrono::steady_clock::now();
 	std::atomic<int> finished{0};
 	std::vector<std::thread> writers;
 	for (std::size_t s = 0; s < 3; ++s) {
@@ -1397,13 +1397,11 @@ void test_view_holds_nothing_impl() {
 	}
 	for (auto& writer : writers) { writer.join(); }
 	const int during = finished.load();
-	const auto elapsed = std::chrono::steady_clock::now() - begin;
-	// Hold the search a second in all: the writes above did not wait for it.
-	std::this_thread::sleep_for(std::chrono::seconds(1) - std::min<std::chrono::steady_clock::duration>(elapsed, std::chrono::seconds(1)));
+	const int seen_during = spy.seen.load();
 	release.set_value();
 	searcher.join();
 	CHECK_EQ(during, 15);
-	CHECK_TRUE(elapsed < std::chrono::milliseconds(800));
+	CHECK_EQ(seen_during, 1);   // the search was still held inside its first see()
 	CHECK_EQ(result.hits.size(), 60u);
 	CHECK_EQ(result.estimated, 60u);
 	CHECK_EQ(spy.seen.load(), 60);
