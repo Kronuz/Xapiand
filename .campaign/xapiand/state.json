@@ -20695,9 +20695,9 @@
       "reason": "D118: owner ruled A1",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T02:39:21",
+      "updated": "2026-11-18T02:47:57",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
