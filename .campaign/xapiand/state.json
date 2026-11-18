@@ -6487,6 +6487,8 @@
     "hunt-lua-fetch": {
       "accepted": {},
       "after": [],
+      "base": "94290424a08ab5ddfff8d5d73e6266ce6d3eb547",
+      "branch": "quest/xapiand/hunt-lua-fetch",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand",
@@ -6508,9 +6510,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Lua sources fetch without lua.org resets",
-      "updated": "2026-11-17T22:20:29"
+      "updated": "2026-11-17T22:21:42",
+      "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
       "accepted": {},
