@@ -7005,6 +7005,8 @@
     "hybrid-go-no-go": {
       "accepted": {},
       "after": [],
+      "base": "98ce743f5fc4ca9318e0eec52433b49ecd004298",
+      "branch": "quest/xapiand/hybrid-go-no-go",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -7048,6 +7050,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/hybrid-go-no-go",
       "landed": [],
       "lenses": [],
       "milestone": "the strata lane",
@@ -7058,9 +7061,10 @@
       "reason": "its blocker landed",
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The hybrid-search go/no-go run",
-      "updated": "2026-11-17T23:08:16"
+      "updated": "2026-11-17T23:28:11",
+      "worktree": "../strata-wt/xapiand/hybrid-go-no-go"
     },
     "idle-index": {
       "accepted": {},
