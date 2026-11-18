@@ -23001,6 +23001,8 @@
         "consensus-flow-bench",
         "detent:journal-faultfs"
       ],
+      "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+      "branch": "quest/xapiand/track-c-gates",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -23016,6 +23018,7 @@
         "docs/reviews/track-c-c2*.md",
         "docs/reviews/track-c-c4*.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/track-c-gates",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -23023,9 +23026,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T02:55:54"
+      "updated": "2026-11-18T08:19:27",
+      "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
       "accepted": {},
