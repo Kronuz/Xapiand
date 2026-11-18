@@ -2313,14 +2313,15 @@
       "milestone": "",
       "needs": [
         "cluster-harness",
-        "faultlab-design"
+        "faultlab-design",
+        "faultlab-core"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-16T14:23:56"
+      "updated": "2026-11-17T23:01:04"
     },
     "cold-tier-item5": {
       "accepted": {},
