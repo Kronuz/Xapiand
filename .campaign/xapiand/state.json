@@ -5281,7 +5281,123 @@
       "updated": "2026-11-08T15:39:22"
     },
     "faultlab-core": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T01:49:09",
+          "base": "d8381c10ed015cb93d6a7beb63b907059c057d37",
+          "blobs": {
+            ".github/workflows/ci.yml": "100644:86d050c995d9db7a65d03cd6bfae2f0cf5029de0",
+            ".gitignore": "100644:65c21aa965df8a2b492b457ec56e7316a6738c19",
+            "CMakeLists.txt": "100644:ea17571682f79ddb23f724cbc23fedb4cd1bf545",
+            "README.md": "100644:16dc0bd84913775c6c03cb45e327d2556fa964da",
+            "docs/api.md": "100644:f408db570d9b6a0edde4fa12328637efd57f3fcd",
+            "docs/mechanisms/crash-model.md": "100644:19c99acc0eec144e04a2498da9e93639e4a09b92",
+            "examples/demo.cc": "100644:7ca2b701fc41aea458f0c67988553e6a94928510",
+            "include/faultlab/events.h": "100644:b98a04cafa1d9a9ddbd2cf7aace7d912a714b5dc",
+            "include/faultlab/faultfs.h": "100644:1ca9e873e681f0a6eced2c392d4af3c1176fae22",
+            "include/faultlab/recorder.h": "100644:3e13e6ec286dff2ef7a3ba24d550a926f3fe2d4b",
+            "include/faultlab/scenario.h": "100644:197aeb650c41df479ca976f70d79e236285a0404",
+            "python/faultlab/__init__.py": "100644:51c37fd3df8f6756889ad5a48c49f51887d80f63",
+            "python/faultlab/history.py": "100755:05f15c1444bb281c9d33f554ec107c13d53fca51",
+            "python/faultlab/proxy.py": "100755:d2cb3183819b0ba3356075769d2f493fdce6b377",
+            "python/faultlab/scenario.py": "100755:c7b6f4b36a39863203922e8e85651367d0e018c5",
+            "python/pyrefly.toml": "100644:c10edd05feb1cc85b37cab2d6592ad5a944e24a8",
+            "python/ruff.toml": "100644:f11cf6352dfc837980e09493a5bed577741bf2b6",
+            "python/tests/proxy_test.py": "100755:257587454db1160a9b664611f1a8848bd76b61a4",
+            "python/tests/scenario_test.py": "100755:361ba18b8d3e6b3bec10507be141ad111a6a90f2",
+            "python/tests/selftest.py": "100755:be8e6a5971ef58fbb72e1648080d7f1f60fa5b28",
+            "test/check.h": "100644:389f1654c44eb80b40e712da610daaace45631c1",
+            "test/events_test.cc": "100644:48f66ed1881a2742e0a4b1e8eccf2f3714f60181",
+            "test/faultfs_test.cc": "100644:660b655dc429d4461bad643036382a2c77580a9a",
+            "test/policy_test.cc": "100644:bdf59e5e45dea75c9d814e20583d59575c604060",
+            "test/recorder_test.cc": "100644:55c18fb54f9ec65922cde8157b37430365928e11",
+            "test/scenario_test.cc": "100644:aa255b8fba69b6cf6fc6223bda960f7b113a80ba",
+            "test/sector_test.cc": "100644:4d4dfaa1911b7a126048502b6f9975d96e5886da",
+            "test/seed_scenarios.h": "100644:5974076b928e6b75f5e7d056a99fa86e167e12e5",
+            "test/seeds_test.cc": "100644:8be59fd238291c0d1bcbf74a1371d9cea799f52a",
+            "test/strata_seeds.inc": "100644:3e65d1579b98622e54b32d152170e1317f205956",
+            "test/tools/strata_seeds.cc": "100644:437e621242da8d0c77ab3cb8cb748f6a6059f313",
+            "test/tools/strata_seeds.sh": "100755:65ee9765137de7e3a6812294f469b1f0507784e4"
+          },
+          "by": "review",
+          "commit": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa",
+          "criteria": "956efaeeccc3fc27",
+          "diffs": {
+            ".github/workflows/ci.yml": "793d076aa46be62e",
+            ".gitignore": "38871f109ee4f8e7",
+            "CMakeLists.txt": "9ae50fc833d1741d",
+            "README.md": "d028c548508d668f",
+            "docs/api.md": "9cb9f120aec9a77f",
+            "docs/mechanisms/crash-model.md": "5e6e58726f243587",
+            "examples/demo.cc": "00d4b36ac1d587a0",
+            "include/faultlab/events.h": "3fc53c8f7520d64e",
+            "include/faultlab/faultfs.h": "76763098283dcd2f",
+            "include/faultlab/recorder.h": "f6e9c9a8114467a0",
+            "include/faultlab/scenario.h": "8ae1fc8c31ca2302",
+            "python/faultlab/__init__.py": "99d6b06a26300048",
+            "python/faultlab/history.py": "8d0dd1872cbf8f81",
+            "python/faultlab/proxy.py": "ee0121e2cd8c1e63",
+            "python/faultlab/scenario.py": "77a9ca2ad122850c",
+            "python/pyrefly.toml": "12df97badef6b7fb",
+            "python/ruff.toml": "f5cfa6189ff8a049",
+            "python/tests/proxy_test.py": "f85189070f756175",
+            "python/tests/scenario_test.py": "4b2ed3ff2e379068",
+            "python/tests/selftest.py": "f272284b349a9e2d",
+            "test/check.h": "6aafe856c229e880",
+            "test/events_test.cc": "466ecc511f309864",
+            "test/faultfs_test.cc": "37a1b239408383a3",
+            "test/policy_test.cc": "98d75410437c88c5",
+            "test/recorder_test.cc": "2c81dd1755fb2be0",
+            "test/scenario_test.cc": "3beffc22717a2106",
+            "test/sector_test.cc": "9b245185c04a51de",
+            "test/seed_scenarios.h": "f036aba3ec763e60",
+            "test/seeds_test.cc": "47d23d19279296f9",
+            "test/strata_seeds.inc": "c2666936e46e44f6",
+            "test/tools/strata_seeds.cc": "03e80153cd7139b2",
+            "test/tools/strata_seeds.sh": "a67c2f6828ce4e65"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-faultlab-core-correctness/run.sh",
+                  "commit": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261118-014822-7646e1",
+                  "level": "light",
+                  "seconds": 39.2,
+                  "state": "done",
+                  "what": "correctness review probes at the F1/F2 fix at 5ec8a9e74fde"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261118-014732-efdd1e",
+                  "level": "light",
+                  "seconds": 26.2,
+                  "state": "done",
+                  "what": "faultlab-core check build-test at 5ec8a9e74fde"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "abaa150bdd2a3cc169c9ec27c7b560d95fc7635b",
+          "reviewed": "a5dcc10ac03cc3aef68efb980ebcb36b351a0fba",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "d8381c10ed015cb93d6a7beb63b907059c057d37",
       "branch": "quest/xapiand/faultlab-core",
@@ -5315,7 +5431,7 @@
       "risk": "high",
       "status": "active",
       "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
-      "updated": "2026-11-18T00:07:24",
+      "updated": "2026-11-18T01:49:09",
       "worktree": "../faultlab-wt/xapiand/faultlab-core"
     },
     "faultlab-design": {
