@@ -16961,9 +16961,9 @@
         "src/opts.*",
         "src/main.cc",
         "src/database/pool.*",
-        "tests/**",
         "docs/src/**",
-        "harness/**"
+        "harness/**",
+        "tests/test_pool_from_memory*"
       ],
       "landed": [],
       "lenses": [],
@@ -16974,7 +16974,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The open-index pool is sized from memory, not a fixed 200",
-      "updated": "2026-11-13T16:18:27"
+      "updated": "2026-11-18T05:36:19"
     },
     "pool-sweep-wait": {
       "accepted": {},
