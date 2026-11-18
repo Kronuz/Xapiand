@@ -67,3 +67,8 @@ Waiting on jobs at 69d3dbf: A2 261117-200150-9ef2b1, fails-without (vs 2aa9b22 h
 Suspect from reading, to be measured: Memo held an unordered_set by value (constructed+destroyed per find). Now a lazy unique_ptr. Diagnostic three-way strict job (main / 69d3dbf / current / A/A) 261117-203844-3a7578 tells whether it was that or the extra argument.
 Jobs at a38040a: A2 261117-203849-6f4be8, fails-without 261117-203854-3d433a, A3 261117-203902-44f8af, A4 exclusive 261117-203906-3e8d00.
 If not in the A/A band: kept old loop for non-nested is already the structure; next lever is dropping the memo argument via a separate nested-path function (not done).
+
+## Re-plan: two matchers (radix-router:bd8172c)
+insert() sets nested_ when a pattern has 2+ '*'; find() runs main's plain matcher (unchanged) unless set, else out-of-line find_memo. Test for flag + agreement on a mixed set. Note updated; its A4 and k=8 n=4096 numbers come from the jobs below (fill when done).
+Jobs at bd8172c: A2 261117-212239-e86d08, fails-without 261117-212234-a4772a (2aa9b22 header + stub accessor), A3 261117-212244-bb5fb1, A4 exclusive 261117-212248-c7a142, timing (k=8 n=64/4096) 261117-212252-612504.
+Rulings I made: flag counts any '*' pairs (conservative: includes final catch-all); set even if insert throws.
