@@ -1004,9 +1004,8 @@
         "src/manager.cc",
         "src/database/pool.cc",
         "src/database/pool.h",
-        "tests/**",
         "docs/src/content/docs/**",
-        "CMakeLists.txt"
+        "tests/test_barrier_warning*"
       ],
       "history": [
         {
@@ -1096,12 +1095,11 @@
         "barrier-warning-strata"
       ],
       "provides": [],
-      "reason": "its blocker landed",
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-17T23:08:12",
+      "updated": "2026-11-18T05:36:11",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
