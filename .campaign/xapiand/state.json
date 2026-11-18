@@ -22625,6 +22625,40 @@
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
       "updated": "2026-11-18T02:55:51"
     },
+    "track-c-gates": {
+      "accepted": {},
+      "after": [
+        "consensus-hello-limits",
+        "consensus-sim-loops",
+        "consensus-flow-bench",
+        "detent:journal-faultfs"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/gates/track-c-c2.md",
+        "docs/gates/track-c-c4.md",
+        "docs/reviews/track-c-c2*.md",
+        "docs/reviews/track-c-c4*.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "planned",
+      "title": "C2 report completed and C4 report written at consensus and journal main",
+      "updated": "2026-11-18T02:55:54"
+    },
     "track-d": {
       "accepted": {},
       "after": [],
