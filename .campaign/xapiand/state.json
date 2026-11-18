@@ -4724,7 +4724,6 @@
         }
       },
       "after": [
-        "phase4-gate",
         "manifest-log"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
@@ -4793,7 +4792,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-17T23:33:07",
+      "updated": "2026-11-18T02:39:19",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
