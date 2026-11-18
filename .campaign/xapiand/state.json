@@ -772,6 +772,49 @@
         "quest": "detent:groups-upload-stall"
       },
       "text": "detent:groups-upload-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T06:56:01",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-109",
+      "items": {
+        "faultlab-disklab": "frees docs/** for faultlab-disklab"
+      },
+      "settles": {
+        "start": [
+          "faultlab-disklab"
+        ]
+      },
+      "text": "faultlab-netlab landed: unlocks frees docs/** for faultlab-disklab"
+    },
+    {
+      "at": "2026-11-18T07:24:15",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash, so this change can't break it in flight; the journal repin row in hunt.md (after journal:4d364f1) picks up journal-group-io-cost's driver change when it lands",
+      "id": "msg-110",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-group-io-cost"
+      },
+      "text": "detent:journal-group-io-cost started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T07:34:43",
+      "by": "campaign detent",
+      "closed": "transport-idle-budget writes only bench/transport_idle.cc and docs/perf/**: no transport or driver source, so rpc-lane and group-core are unaffected; the one overlap with flow-bench (docs/perf/flow*) is docs, and Detent was asked to narrow to docs/perf/transport-idle*",
+      "id": "msg-111",
+      "settles": {
+        "ours": [
+          "consensus-flow-bench",
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:transport-idle-budget"
+      },
+      "text": "detent:transport-idle-budget started and may change files your consensus-flow-bench changes (order them with --after detent:transport-idle-budget, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -2333,7 +2376,8 @@
         "detent:journal-reopen-closed",
         "detent:consensus-dns-threads",
         "detent:consensus-worker-release",
-        "detent:consensus-close-fenced"
+        "detent:consensus-close-fenced",
+        "detent:journal-group-io-cost"
       ],
       "checks": [
         {
@@ -2382,7 +2426,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T04:36:04"
+      "updated": "2026-11-18T07:24:43"
     },
     "cluster-harness": {
       "accepted": {
@@ -5477,7 +5521,11 @@
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "loop-yield-race"
+      ],
+      "base": "cc65385b2ec45310eb0f85e2ae1faae62311f6b9",
+      "branch": "quest/xapiand/faultlab-adopt-xapiand",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -5499,9 +5547,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand harness/cluster uses faultlab history and proxy; its copies go (migration step 4)",
-      "updated": "2026-11-18T06:32:05"
+      "updated": "2026-11-18T09:06:03",
+      "worktree": "../Xapiand-wt/xapiand/faultlab-adopt-xapiand"
     },
     "faultlab-core": {
       "accepted": {
@@ -5807,6 +5856,8 @@
     "faultlab-disklab": {
       "accepted": {},
       "after": [],
+      "base": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+      "branch": "quest/xapiand/faultlab-disklab",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
@@ -5819,19 +5870,65 @@
       "files": [
         "python/faultlab/disklab.py",
         "python/tests/disklab_test.py",
-        "tools/vm/**",
-        "docs/**"
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
       ],
-      "landed": [],
+      "history": [
+        {
+          "at": "2026-11-18T07:32:38",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1, A2) and a mutant killed (A3)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T07:37:36",
+          "commit": "adc4fc291632919446c651d348530a4e430071e3",
+          "criteria": {
+            "A1": "261118-073241-96587f",
+            "A2": "261118-073241-96587f",
+            "A3": "261118-073241-632ce6; fails without: 261118-073108-b7211a",
+            "A4": "261118-073241-30fded"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+              "commit": "adc4fc291632919446c651d348530a4e430071e3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-073241-30fded",
+              "level": "light",
+              "seconds": 18.5,
+              "state": "done",
+              "what": "faultlab-disklab check build-test at adc4fc291632"
+            }
+          ],
+          "final": true,
+          "from": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+          "reason": "",
+          "tested": "adc4fc291632919446c651d348530a4e430071e3"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
-      "risk": "normal",
-      "status": "planned",
+      "risk": "low",
+      "status": "landed",
       "title": "disklab: dm-log-writes replay to any flush mark, dm-delay, dm-flakey, in a Linux VM (design F15)",
-      "updated": "2026-11-18T06:32:02"
+      "updated": "2026-11-18T07:37:41",
+      "worktree": ""
     },
     "faultlab-netlab": {
       "accepted": {},
@@ -5851,19 +5948,63 @@
         "python/faultlab/netlab.py",
         "python/tests/netlab_test.py",
         "docs/**",
-        "README.md"
+        "README.md",
+        "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-18T06:49:04",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1) and a mutant killed (A2)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T06:56:00",
+          "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+          "criteria": {
+            "A1": "261118-064831-83d62a",
+            "A2": "261118-064832-635f88; fails without: 261118-064401-e15efd",
+            "A3": "261118-064831-83d62a",
+            "A4": "261118-064821-90af61"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+              "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-064821-90af61",
+              "level": "light",
+              "seconds": 20.9,
+              "state": "done",
+              "what": "faultlab-netlab check build-test at 8f893c18a8ec"
+            }
+          ],
+          "final": true,
+          "from": "a452a8c5e79655293d114d77c2ebc54af5fb0505",
+          "reason": "",
+          "tested": "8f893c18a8ec8df2c490631be122ddadde4aabd6"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
-      "risk": "normal",
-      "status": "active",
+      "risk": "low",
+      "status": "landed",
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
-      "updated": "2026-11-18T06:32:31",
+      "updated": "2026-11-18T06:56:01",
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
@@ -9037,6 +9178,64 @@
       "status": "landed",
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
       "updated": "2026-11-12T12:17:10",
+      "worktree": ""
+    },
+    "loop-yield-race": {
+      "accepted": {},
+      "after": [],
+      "base": "9c1abd919b2d5be719f035a0c652896b5b81224c",
+      "branch": "quest/xapiand/loop-yield-race",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_loop_yield.cc",
+        "tests/test_engine_search_strata.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-18T10:01:13",
+          "commit": "c79d539d5deac15481b80385b4ce9c3145e18212",
+          "criteria": {
+            "A1": "261118-085546-726c47; fails without: 261118-085535-5b48c7",
+            "A2": "261118-085607-269ff5",
+            "A3": "261118-085558-3ca281"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "9d56c48f8cc7cf097d411f0dcdadbe00fa719209",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-085558-3ca281",
+              "level": "light",
+              "seconds": 455.4,
+              "state": "done",
+              "what": "loop-yield-race check build-test at 9d56c48f8cc7"
+            }
+          ],
+          "final": true,
+          "from": "da2cd1e25d8df7007151fc20c150e9c4dc7d52a1",
+          "reason": "",
+          "tested": "bca3bb2872e0db3b49f3a414c4c45c24a88614e9"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Fix test_loop_yield's TSan race (F6) and the strata search timing bound",
+      "updated": "2026-11-18T10:02:10",
       "worktree": ""
     },
     "lua-memory-bound": {
@@ -22862,6 +23061,8 @@
         "consensus-flow-bench",
         "detent:journal-faultfs"
       ],
+      "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+      "branch": "quest/xapiand/track-c-gates",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -22877,6 +23078,7 @@
         "docs/reviews/track-c-c2*.md",
         "docs/reviews/track-c-c4*.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/track-c-gates",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -22884,9 +23086,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T02:55:54"
+      "updated": "2026-11-18T08:19:27",
+      "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
       "accepted": {},

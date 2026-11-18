@@ -9,7 +9,7 @@ Migration step 4 of cpp-libraries `docs/design/faultlab.md`: Xapiand's harness/c
 
 ## Acceptance criteria
 
-- A1 The cluster harness's checks pass on faultlab's copies: the harness self-test and one cluster run as jobs
+- A1 The cluster harness's checks behave as on master with faultlab's copies: one job runs faultlab's self-test, `run.sh check --nodes 1` (every item passes) and `run.sh check --nodes 3 --expect-fail membership,read,search,aggregations,failover,replay` (multi-node membership is master's known gap until cluster-gate; the run passes only if exactly those items fail), building xapiand at the job's own commit
 - A2 `git grep -l 'class Link\|def check_linearizable' harness/` finds nothing in Xapiand: a job
 
 ## Contracts
