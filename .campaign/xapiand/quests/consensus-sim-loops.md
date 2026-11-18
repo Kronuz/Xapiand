@@ -11,7 +11,8 @@ The `Driver` simulation runs hosts of two to four loops with at least eight mult
 
 - A1 T2's budget at several loops per host (seeds and steps stated), every oracle green: jobs
 - A2 A mutant that acknowledges a record before its own loop's turn barrier is killed: a `--fails-without` job
-- A3 The build-test check passes, and CI is green
+- A3 The Driver simulation issues repairs (at and below the commit cursor, through `Driver::repair`), and T2's repair-below-`base_index` mutant is killed through the Driver, not only at `Core::step` (track-c-c3-gate finding, 11-18): a `--fails-without` job
+- A4 The build-test check passes, and CI is green
 
 ## Contracts
 
