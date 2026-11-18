@@ -1,77 +1,38 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs: macOS dry run 261118-044427-383589, then the VM chain of 14 (261118-044444-9eed59 ... 261118-044504-13047d, Doing). Strata:3e8dcb93.
+State: waiting on jobs 261118-112804-365541 (build-test at strata:ff10ac80); A1 rows read, verdict written (A3); A2 and A4 open (Blocked on). Strata:ff10ac80.
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
 
-A1: C1 rerun at 100 and 1,000 tenants of 1,000 vectors, deciding rows in document-gate's Linux
-VM (lead, 2026-11-18). Harness strata:ed42f792, `bench/hybrid/`: `c1.py`, `c1_strata.cc`,
-`vm.sh` (VM wrapper: boots 8 vCPU / 16 GiB on SSH 18782, syncs the checkout, builds
-c1_strata, runs, copies results to the worktree's `.scratch/c1-vm/`, stops the VM on every
-exit), `setup.sh` (macOS dry-run installs).
+Results read and written up (strata:ff10ac80): `docs/design/hybrid-search/c1-rerun.md` (table,
+jobs, raw JSON in `c1-rerun/`) and the fit verdict's "C1 rerun (2026-11-18)" in
+`docs/design/hybrid-search.md`. Main merged (strata:40788b0e, no rebase).
 
-Lead's corrections, folded in at strata:ed42f792:
-1. Recall: each ANN system's search parameter is tuned at load to recall@10 >= 0.95 on 200
-   queries (Elasticsearch num_candidates 50 to 1,000, then rescore oversample 10; Qdrant
-   hnsw_ef 128 to 1,024), saved as `SYS-N-tune.json`; every pass records recall@10 and a row
-   below 0.95 fails. pgvector (shared table), LanceDB (flat) and strata are exact.
-2. Environment: services in Docker at C1's images (Qdrant v1.20.0, pgvector 0.8.7-pg17,
-   Elasticsearch 9.5.5), LanceDB 0.40.0, strata built in the VM. macOS native is a dry run only,
-   labelled `env: macos-dry-run` in its results.
-3. Cold: in the VM the page cache is dropped (`echo 3 > drop_caches` as root) after the 30 s
-   idle and before the first pass, which is then `cold`; without a drop (macOS) it is
-   `first_warm`.
+Reading (100 / 1,000 tenants of 1,000 vectors, VM):
+1. Warm p99: strata 1.26 / 1.32 ms; 3.1x faster than Qdrant (100), 4.4x / 5.6x than pgvector,
+   7.6x than ES (100), 10.2x / 10.6x than LanceDB.
+2. Idle anon: strata 3.4 MB at both; pgvector 4.3; Qdrant 46 (+382 MB mapped); LanceDB 72; ES 8,802.
+3. Cold p99: strata 11.9 / 12.9 ms; Qdrant 4.0 (100; its mapped pages survive drop_caches), so
+   3.0x slower than Qdrant, 1.3x / 1.6x faster than pgvector, 1.3x / 1.7x than LanceDB, 4.4x than ES.
+4. Recommendation: go on steps 1 to 4, cold p99 the condition (A2: i8 codes read cold).
 
-Superseded: the macOS chain at strata:a950f1a4 (cancelled); its dry run 261118-002035-ee3342
-was replaced by the one below. First dry run 261118-000128-f4c57b (strata:8b64cca8): all but
-Qdrant passed (one connection reset; resend fix strata:a950f1a4).
-
-Jobs (each row waits on its load, each load on the row before):
-
-| What | Load + tune (light) | Row (exclusive, A1) |
-|---|---|---|
-| macOS dry run, every system at 100 (not evidence) | 261118-002809-0a06e7 | |
-| VM setup | 261118-002817-ca72e9 | |
-| strata 100 | 261118-002825-8d62f7 | 261118-002831-fab1cd |
-| lance 100 | 261118-002841-6e58d7 | 261118-002847-822bcf |
-| pg 100 | 261118-002854-03f894 | 261118-002859-39b455 |
-| qdrant 100 | 261118-002908-5c7ce8 | 261118-002914-68b7f1 |
-| es 100 | 261118-002922-74866d | 261118-002927-fc4e42 |
-| strata 1000 | 261118-002934-0bbebe | 261118-002938-82a6af |
-| lance 1000 | 261118-002946-0cc4c0 | 261118-002951-87a425 |
-| pg 1000 | 261118-002957-1432d6 | 261118-003001-d27a1c |
-| qdrant 1000 | 261118-003005-18f90e | 261118-003009-c2aab9 |
-| es 1000 | 261118-003014-529248 | 261118-003018-148235 |
-
-Harness fixes (strata:72990a82, strata:3e8dcb93), after the 11-18 failures:
-1. Dry run 261118-002809-0a06e7, Qdrant 409: a qdrant from the cancelled dry run (pid 96461,
-   still up; I could not stop it) held the port, so the new row talked to it. Fixed: `load` drops
-   the collection first (idempotent), a busy port is refused (`assert_free`), `C1_PORT_OFFSET`
-   moves the ports (the new dry run uses 100). Qdrant load probe on macOS, 100 tenants: 158 s,
-   tuned hnsw_ef 128 at recall@10 1.0.
-2. ES recall 0.8892 (dry run) from C1's default bbq_hnsw: recall@10 is 0.63 at num_candidates up
-   to 10,000, and m 32 / ef_construction 200 gives the same (filtered kNN at 1% selectivity scans
-   the quantized vectors). Rescore oversample at num_candidates 1,000: 10 0.8955, 15 0.9475, 20
-   0.9735, 25 0.9865, 30 0.994, 100 1.0 (100 tenants, 200 queries; int8/f32 variants not
-   needed, run stopped). Ladder now: 50, 1000, then oversample 20, 30, 100. Bar stays 0.95.
-3. VM dry run 261118-000128-f4c57b was macOS (log above): Qdrant connection reset, ES 0.5655,
-   both superseded. VM qdrant load 261118-002908-5c7ce8 hit its 12 minute bound with no log
-   (cause unknown; vm.sh now copies logs back on TERM too, and the bound is 20). If it hangs
-   again its log is in `.scratch/c1-vm/logs/qdrant-100.log`.
-
-Resubmitted chain (`.scratch/c1-vm-jobs2.txt`): strata/lance/pg 100 rows stay at ed42f792
-(fab1cd, 822bcf, 39b455: harness change touches neither); track-c-c3-gate's VM job
-261118-030042-dd890d waits on the old last job 148235 and needs resubmitting after the new
-last, 261118-044504-13047d (lead's).
+Failures attributed (also in c1-rerun.md):
+1. 261118-000128-f4c57b: first dry run ran on macOS; Qdrant reset (fixed a950f1a4), ES recall
+   0.5655 (fixed 3e8dcb93). Not evidence.
+2. 261118-002809-0a06e7: macOS dry run, Qdrant 409 from a stale Qdrant on the port (fixed 72990a82).
+3. 261118-044500-19572d: VM powered off from outside 5.5 min into Qdrant's 1,000 load: console
+   (`~/.scratch/vm-document-gate/linux/console.log`) shows a clean systemd shutdown begun while
+   the SSH session was open, no OOM or panic; no campaign job drove the VM in 10:10-10:16. Its
+   chain (qdrant row c7b37f, es load 2593f7, es row 13047d) was skipped.
+Timeout 261118-002908-5c7ce8 (Qdrant 100 load, 12 min, no log): rerun 9eed59 loaded in 95.5 s.
 
 ## Next
 
-1. When the rows finish: tabulate into strata `docs/perf/c1-strata-tenants.md` (jobs, commits,
-   VM, recall and tuned parameter beside every row; "warm" wherever no cache drop; 10,000
-   tenants out until disk allows) and the fit verdict's C1 reading. Rerun failed links with
-   `campaign job rerun`.
-2. A2: optimization experiments, each a before/after at named commits.
+1. Lead: rerun 19572d, c7b37f, 2593f7, 13047d (`campaign job rerun --commit 3e8dcb934251 ...`);
+   my rerun was refused by the permission classifier. Then fold their rows into c1-rerun.md.
+2. A2: before/after of an `i8` code column read cold against today's `f32` stored values.
+3. Push the branch for CI (contributors do not push).
 
 ## Setup (stated before installing)
 
@@ -93,22 +54,32 @@ builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 
 ## Blocked on
 
-Nothing.
+1. A4: the owner's go or no-go and Q1 to Q6 (recommendation: go on steps 1 to 4, cold p99 the
+   condition; Q2 to Q6 stand as ruled 2026-10-27, Q1 is this decision).
+2. A2: not run. Options: (a) an `i8` code-column prototype in bench/hybrid, cold and warm
+   before/after at named commits (recommended, a few hours); (b) defer A2 to step 4's gate rows.
+3. Qdrant and ES at 1,000 tenants: rerun needs the lead (Next 1).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <no evidence yet> |
+| A1 | 261118-002831-fab1cd, 261118-002847-822bcf, 261118-002859-39b455, 261118-044446-7f14e4, 261118-044448-81dd25, 261118-044452-9ca15f, 261118-044455-07f613, 261118-044458-428db2 (Qdrant and ES at 1,000 missing) |
 | A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
+| A3 | strata:ff10ac80 `docs/design/hybrid-search.md` (C1 rerun) and `docs/design/hybrid-search/c1-rerun.md` |
 | A4 | <no evidence yet> |
 
 ## Result
 
-<pending>
+Partial: A1 rows at 100 (all five) and 1,000 (strata, pgvector, LanceDB) and A3 in strata:ff10ac80
+(`docs/design/hybrid-search/c1-rerun.md`). A2 and A4 open.
 
 ## Rulings I made
+
+- Results live in `docs/design/hybrid-search/c1-rerun.md` (the quest's file set), not
+  `docs/perf/`; raw JSON beside it in `c1-rerun/`.
+- Warm is the second warm pass (C1's convention), the first pass's p99 shown beside it; ES idle
+  CPU right after start (28.4 s) is startup work, so its after-queries 0.52 s is quoted too.
 
 - Tenant counts at 1,000 vectors × 768-d float32: 100 and 1,000 (3 GB raw). 10,000 tenants
   (30 GB raw per system) is out until disk allows (27 GiB free on the host, which holds the VM's
