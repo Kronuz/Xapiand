@@ -7212,16 +7212,46 @@
         "tests/lua_patch_drift.cmake",
         "tests/lua_fetch.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T01:58:17",
+          "commit": "1a4dd2fef961df0b5657cefbde33dbc8df38237c",
+          "criteria": {
+            "A1": "261118-003603-344583 (passed at c782b4aa5501; only merges from main since); fails without: 261118-003611-d5ca9d",
+            "A2": "261118-003603-344583 (passed at c782b4aa5501; only merges from main since)",
+            "A3": "261118-003617-575c64 (passed at c782b4aa5501; only merges from main since)",
+            "A4": "261118-011622-9bceea",
+            "A5": "261118-003617-575c64; CI green on CI, arm64 and FreeBSD at b85e00a05"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand",
+              "commit": "c782b4aa5501faee7555b2f732ec8767ffcb1aca",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-003617-575c64",
+              "level": "light",
+              "seconds": 177.8,
+              "state": "done",
+              "what": "hunt-lua-fetch check build at c782b4aa5501"
+            }
+          ],
+          "final": true,
+          "from": "58ed4fdd3d12f649a12511a3c1b26a6d49d0a180",
+          "reason": "",
+          "tested": "7b94f4638b67b5c0a03fd36bd1736806aab514e0"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Lua sources fetch without lua.org resets",
-      "updated": "2026-11-17T22:30:54",
+      "updated": "2026-11-18T01:59:04",
       "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
