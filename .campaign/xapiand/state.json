@@ -5510,10 +5510,46 @@
         "docs/mechanisms/**"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-seam",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T00:06:27",
+          "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+          "criteria": {
+            "A1": "261117-233707-d62aef",
+            "A2": "261117-233707-d62aef; fails without: 261117-225514-824e0a, 261117-225518-f0c92a, 261117-225523-3d93fa, 261117-233714-a0d968",
+            "A3": "261117-233707-d62aef; fails without: 261117-225527-89b0bf",
+            "A4": "261117-233707-d62aef; fails without: 261117-225533-b70e70, 261117-225538-f6cdcf, 261117-233733-fcb23e",
+            "A5": "261117-233707-d62aef"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-233707-d62aef",
+              "level": "light",
+              "seconds": 327.7,
+              "state": "done",
+              "what": "faultlab-seam check build-test at d8b538c6778f"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+          "reason": "",
+          "tested": "d8b538c6778f0a1b969e42c8428995d1d29d4731"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -5521,10 +5557,10 @@
       ],
       "repo": "../completion",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "completion's four faultlab seam additions (F8)",
-      "updated": "2026-11-18T00:06:10",
-      "worktree": "../completion-wt/xapiand/faultlab-seam"
+      "updated": "2026-11-18T00:06:34",
+      "worktree": ""
     },
     "field-table": {
       "accepted": {},
