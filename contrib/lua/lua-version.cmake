@@ -18,10 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# The Lua release Xapiand builds, the hash of its tarball, and the hash of xapiand-limits.patch, which
-# carries every change to its sources. CMakeLists.txt fetches with these and tests/lua_patch_drift.cmake
-# checks them, so a changed Lua fails the build's tests.
-# The URL list tries lua.org, then its official PUC-Rio mirror, which serves the same tarball.
-set(XAPIAND_LUA_URL "https://www.lua.org/ftp/lua-5.4.7.tar.gz" "https://www.tecgraf.puc-rio.br/lua/mirror/ftp/lua-5.4.7.tar.gz")
-set(XAPIAND_LUA_TARBALL_SHA256 "9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30")
-set(XAPIAND_LUA_PATCH_SHA256 "cbee79a9874b15525d4c55986b265465056d90ce7686a2946cab7e1a57bf4df4")
+# The Lua release Xapiand builds (github.com/lua/lua tag v5.4.7, pinned by commit) and the hash of
+# xapiand-limits.patch, which carries every change to its sources. CMakeLists.txt fetches with these and
+# tests/lua_patch_drift.cmake checks them, so a changed Lua fails the build's tests.
+set(XAPIAND_LUA_COMMIT "1ab3208a1fceb12fca8f24ba57d6e13c5bff15e3")
+set(XAPIAND_LUA_PATCH_SHA256 "9426b7b87f6a3960df64cdb4e633fdd2a9b15566c20b895930becf4a1f48b022")

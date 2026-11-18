@@ -40,7 +40,7 @@ BUNDLED = [
     ("CLI11", "BSD-3-Clause", "cli11-src", "file", "LICENSE"),
     ("lz4 (lib/, with xxHash)", "BSD-2-Clause", "lz4-src", "file", "lib/LICENSE"),
     ("prometheus-cpp", "MIT", "prometheus_cpp-src", "file", "LICENSE"),
-    ("Lua", "MIT", "lua-src", "lua", "src/lua.h"),
+    ("Lua", "MIT", "lua-src", "lua", "lua.h"),
     ("libyaml", "MIT", "libyaml-src", "file", "License"),
     ("Snowball (via snowball)", "BSD-3-Clause", "snowball-src", "file", "LICENSE-SNOWBALL"),
     ("Unicode Character Database tables (via unicode)", "Unicode-3.0", "unicode-src", "file", "LICENSE-UNICODE"),
@@ -199,7 +199,8 @@ def main(deps, out):
         elif mode == "lua":
             t = (base / path).read_text(encoding="utf-8")
             m = re.search(r"/\*{20,}\n(\* Copyright.*?)\n\*{20,}/", t, re.S)
-            section(name, spdx, re.sub(r"(?m)^\* ?", "", m.group(1)))
+            commit = re.search(r'XAPIAND_LUA_COMMIT "(\w+)"', (root / "contrib/lua/lua-version.cmake").read_text(encoding="utf-8")).group(1)
+            section(name, spdx, "Source: https://github.com/lua/lua at v5.4.7, commit %s\n\n" % commit + re.sub(r"(?m)^\* ?", "", m.group(1)))
         else:
             if d == "asio-src":
                 body = copyright_lines((base / path).read_text(encoding="utf-8")) + "\nBoost Software License, Version 1.0 (asio/LICENSE_1_0.txt)."
@@ -223,7 +224,7 @@ def main(deps, out):
             "Copyright (c) 2006-2012 Olly Betts, who granted the MIT license for src/length.{cc,h}.\n"
             "contrib/python/xapiand-py/xapiand/utils/serialize.py is a port of the same routines and "
             "carries his copyright line (it is not in any package).")
-    section("cmake/Modules/FindGTest.cmake and FindPackageTools.cmake (CMake)", "BSD-3-Clause", KITWARE)
+    section("cmake/Modules/FindPackageTools.cmake (CMake)", "BSD-3-Clause", KITWARE)
     section("mime.types (h5bp server-configs-nginx, from nginx)", "MIT AND BSD-2-Clause", MIME_TYPES)
     for name, spdx, body in STOPWORD_SOURCES:
         section(name, spdx, body.replace("@APACHE@", (deps / "prospect-src/LICENSES/Apache-2.0.txt").read_text(encoding="utf-8")))

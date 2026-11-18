@@ -18,44 +18,54 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Fails when the Lua Xapiand builds is not the pinned tarball plus xapiand-limits.patch: the tarball's
-# hash, the patch's hash, the patch applying to the tarball, and then every file of the built tree
-# (not only the patched ones) equal to the patched tarball's, with no file added or missing.
-# Run: cmake -DLUA_SRC=... -DLUA_TARBALL=... -DPATCH=... -DVERSION_FILE=... -DWORK=... -P lua_patch_drift.cmake
+# Fails when the Lua Xapiand builds is not the pinned lua/lua commit plus xapiand-limits.patch: the
+# checkout's commit, the patch's hash, the patch applying to the pristine commit, and then every file of
+# the built tree (not only the patched ones) equal to the patched commit's, with no file added or missing.
+# LUA_COMMIT overrides the pin (to show that a wrong one fails).
+# Run: cmake -DLUA_SRC=... -DPATCH=... -DVERSION_FILE=... -DWORK=... -P lua_patch_drift.cmake
 include("${VERSION_FILE}")
+if (LUA_COMMIT)
+	set(XAPIAND_LUA_COMMIT "${LUA_COMMIT}")
+endif ()
 
-function(expect_hash file expected what)
-	file(SHA256 "${file}" got)
-	if (NOT got STREQUAL expected)
-		message(FATAL_ERROR "lua drift: ${what}: sha256 ${got}, expected ${expected}")
-	endif ()
-endfunction()
+execute_process(COMMAND git -C "${LUA_SRC}" rev-parse HEAD OUTPUT_VARIABLE head OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE rc)
+if (NOT rc EQUAL 0 OR NOT head STREQUAL XAPIAND_LUA_COMMIT)
+	message(FATAL_ERROR "lua drift: the Lua checkout is at '${head}', the pin is ${XAPIAND_LUA_COMMIT}")
+endif ()
+file(SHA256 "${PATCH}" got)
+if (NOT got STREQUAL XAPIAND_LUA_PATCH_SHA256)
+	message(FATAL_ERROR "lua drift: xapiand-limits.patch: sha256 ${got}, expected ${XAPIAND_LUA_PATCH_SHA256}")
+endif ()
 
-expect_hash("${LUA_TARBALL}" "${XAPIAND_LUA_TARBALL_SHA256}" "the Lua tarball")
-expect_hash("${PATCH}" "${XAPIAND_LUA_PATCH_SHA256}" "xapiand-limits.patch")
+# A pristine copy of the pinned commit, then the patch.
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xzf "${LUA_TARBALL}" WORKING_DIRECTORY "${WORK}" RESULT_VARIABLE rc)
-if (NOT rc EQUAL 0)
-	message(FATAL_ERROR "lua drift: cannot unpack the tarball")
+set(tree "${WORK}/tree")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_directory "${LUA_SRC}" "${tree}" RESULT_VARIABLE rc)
+execute_process(COMMAND git -C "${tree}" checkout -q -- . RESULT_VARIABLE rc2)
+execute_process(COMMAND git -C "${tree}" clean -fdxq RESULT_VARIABLE rc3)
+if (NOT rc EQUAL 0 OR NOT rc2 EQUAL 0 OR NOT rc3 EQUAL 0)
+	message(FATAL_ERROR "lua drift: cannot restore the pinned commit's files")
 endif ()
-set(tree "${WORK}/lua-5.4.7")
 execute_process(COMMAND patch -p1 -i "${PATCH}" WORKING_DIRECTORY "${tree}" RESULT_VARIABLE rc OUTPUT_QUIET)
 if (NOT rc EQUAL 0)
-	message(FATAL_ERROR "lua drift: xapiand-limits.patch does not apply to the pinned tarball")
+	message(FATAL_ERROR "lua drift: xapiand-limits.patch does not apply to the pinned commit")
 endif ()
-
-file(GLOB expected RELATIVE "${tree}/src" "${tree}/src/*")
-file(GLOB built RELATIVE "${LUA_SRC}/src" "${LUA_SRC}/src/*")
+file(GLOB_RECURSE expected RELATIVE "${tree}" "${tree}/*")
+file(GLOB_RECURSE built RELATIVE "${LUA_SRC}" "${LUA_SRC}/*")
+list(FILTER expected EXCLUDE REGEX "^\\.git/|\\.orig$")
+list(FILTER built EXCLUDE REGEX "^\\.git/")
 list(SORT expected)
 list(SORT built)
 if (NOT expected STREQUAL built)
-	message(FATAL_ERROR "lua drift: the built tree's files differ from the patched tarball's:\n  built: ${built}\n  expected: ${expected}")
+	message(FATAL_ERROR "lua drift: the built tree's files differ from the patched commit's:\n  built: ${built}\n  expected: ${expected}")
 endif ()
-set(patched 0)
 foreach (name IN LISTS expected)
-	file(SHA256 "${tree}/src/${name}" want)
-	expect_hash("${LUA_SRC}/src/${name}" "${want}" "the built src/${name}")
+	file(SHA256 "${tree}/${name}" want)
+	file(SHA256 "${LUA_SRC}/${name}" got)
+	if (NOT got STREQUAL want)
+		message(FATAL_ERROR "lua drift: the built ${name}: sha256 ${got}, expected ${want}")
+	endif ()
 endforeach ()
 list(LENGTH expected count)
 message(STATUS "lua drift: the build compiles the pinned Lua with the limits patch (${count} files identical)")

@@ -133,7 +133,7 @@ lz4 (lib/, with xxHash)
 License: BSD-2-Clause
 
 LZ4 Library
-Copyright (c) 2011-2020, Yann Collet
+Copyright (c) 2011-2016, Yann Collet
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -192,6 +192,8 @@ SOFTWARE.
 Lua
 ---
 License: MIT
+
+Source: https://github.com/lua/lua at v5.4.7, commit 1ab3208a1fceb12fca8f24ba57d6e13c5bff15e3
 
 Copyright (C) 1994-2024 Lua.org, PUC-Rio.
 
@@ -724,8 +726,8 @@ Copyright (c) 2006-2012 Olly Betts, who granted the MIT license for src/length.{
 contrib/python/xapiand-py/xapiand/utils/serialize.py is a port of the same routines and carries his copyright line (it is not in any package).
 
 
-cmake/Modules/FindGTest.cmake and FindPackageTools.cmake (CMake)
-----------------------------------------------------------------
+cmake/Modules/FindPackageTools.cmake (CMake)
+--------------------------------------------
 License: BSD-3-Clause
 
 Copyright 2000-2026 Kitware, Inc. and Contributors

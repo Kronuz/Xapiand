@@ -1,6 +1,6 @@
-diff -ru a/src/ldo.c b/src/ldo.c
---- a/src/ldo.c
-+++ b/src/ldo.c
+diff -ru a/ldo.c b/ldo.c
+--- a/ldo.c
++++ b/ldo.c
 @@ -484,6 +484,7 @@
  */
  void luaD_poscall (lua_State *L, CallInfo *ci, int nres) {
@@ -17,9 +17,9 @@ diff -ru a/src/ldo.c b/src/ldo.c
        for (i = 0; i < narg1; i++)  /* move down function and arguments */
          setobjs2s(L, ci->func.p + i, func + i);
        func = ci->func.p;  /* moved-down function */
-diff -ru a/src/lgc.c b/src/lgc.c
---- a/src/lgc.c
-+++ b/src/lgc.c
+diff -ru a/lgc.c b/lgc.c
+--- a/lgc.c
++++ b/lgc.c
 @@ -541,7 +541,7 @@
  
  static lu_mem traversetable (global_State *g, Table *h) {
@@ -29,9 +29,9 @@ diff -ru a/src/lgc.c b/src/lgc.c
    TString *smode;
    markobjectN(g, h->metatable);
    if (mode && ttisshrstring(mode) &&  /* is there a weak mode? */
-diff -ru a/src/lstring.c b/src/lstring.c
---- a/src/lstring.c	2024-06-13 15:15:09
-+++ b/src/lstring.c	2026-11-02 03:21:52
+diff -ru a/lstring.c b/lstring.c
+--- a/lstring.c	2024-06-13 15:15:09
++++ b/lstring.c	2026-11-02 03:21:52
 @@ -34,9 +34,10 @@
  int luaS_eqlngstr (TString *a, TString *b) {
    size_t len = a->u.lnglen;
@@ -46,9 +46,9 @@ diff -ru a/src/lstring.c b/src/lstring.c
  }
  
  
-diff -ru a/src/lstrlib.c b/src/lstrlib.c
---- a/src/lstrlib.c
-+++ b/src/lstrlib.c
+diff -ru a/lstrlib.c b/lstrlib.c
+--- a/lstrlib.c
++++ b/lstrlib.c
 @@ -103,7 +103,8 @@
    size_t start = posrelatI(luaL_checkinteger(L, 2), l);
    size_t end = getendpos(L, 3, -1, l);
@@ -368,9 +368,9 @@ diff -ru a/src/lstrlib.c b/src/lstrlib.c
            if (form[2] == '\0')  /* no modifiers? */
              luaL_addvalue(&b);  /* keep entire string */
            else {
-diff -ru a/src/ltablib.c b/src/ltablib.c
---- a/src/ltablib.c	2024-06-13 15:15:10
-+++ b/src/ltablib.c	2026-11-02 03:21:53
+diff -ru a/ltablib.c b/ltablib.c
+--- a/ltablib.c	2024-06-13 15:15:10
++++ b/ltablib.c	2026-11-02 03:21:53
 @@ -73,6 +73,7 @@
        /* check whether 'pos' is in [1, e] */
        luaL_argcheck(L, (lua_Unsigned)pos - 1u < (lua_Unsigned)e, 2,
@@ -411,9 +411,9 @@ diff -ru a/src/ltablib.c b/src/ltablib.c
    for (; i < e; i++) {  /* push arg[i..e - 1] (to avoid overflows) */
      lua_geti(L, 1, i);
    }
-diff -ru a/src/ltm.c b/src/ltm.c
---- a/src/ltm.c	2024-06-13 15:15:10
-+++ b/src/ltm.c	2026-11-02 03:21:52
+diff -ru a/ltm.c b/ltm.c
+--- a/ltm.c	2024-06-13 15:15:10
++++ b/ltm.c	2026-11-02 03:21:52
 @@ -260,6 +260,7 @@
    int nextra = ci->u.l.nextraargs;
    if (wanted < 0) {
@@ -422,9 +422,9 @@ diff -ru a/src/ltm.c b/src/ltm.c
      checkstackGCp(L, nextra, where);  /* ensure stack space */
      L->top.p = where + nextra;  /* next instruction will need top */
    }
-diff -ru a/src/lua.h b/src/lua.h
---- a/src/lua.h
-+++ b/src/lua.h
+diff -ru a/lua.h b/lua.h
+--- a/lua.h
++++ b/lua.h
 @@ -56,7 +56,14 @@
  
  typedef struct lua_State lua_State;
@@ -440,9 +440,9 @@ diff -ru a/src/lua.h b/src/lua.h
  /*
  ** basic types
  */
-diff -ru a/src/luaconf.h b/src/luaconf.h
---- a/src/luaconf.h
-+++ b/src/luaconf.h
+diff -ru a/luaconf.h b/luaconf.h
+--- a/luaconf.h
++++ b/luaconf.h
 @@ -746,7 +746,7 @@
  ** (It must fit into max(size_t)/32 and max(int)/2.)
  */
@@ -452,9 +452,9 @@ diff -ru a/src/luaconf.h b/src/luaconf.h
  #else
  #define LUAI_MAXSTACK		15000
  #endif
-diff -ru a/src/lutf8lib.c b/src/lutf8lib.c
---- a/src/lutf8lib.c	2024-06-13 15:15:10
-+++ b/src/lutf8lib.c	2026-11-02 03:21:54
+diff -ru a/lutf8lib.c b/lutf8lib.c
+--- a/lutf8lib.c	2024-06-13 15:15:10
++++ b/lutf8lib.c	2026-11-02 03:21:54
 @@ -104,6 +104,7 @@
                     "initial position out of bounds");
    luaL_argcheck(L, --posj < (lua_Integer)len, 3,
@@ -479,9 +479,9 @@ diff -ru a/src/lutf8lib.c b/src/lutf8lib.c
    if (n == 0) {
      /* find beginning of current byte sequence */
      while (posi > 0 && iscontp(s + posi)) posi--;
-diff -ru a/src/lvm.c b/src/lvm.c
---- a/src/lvm.c
-+++ b/src/lvm.c
+diff -ru a/lvm.c b/lvm.c
+--- a/lvm.c
++++ b/lvm.c
 @@ -380,6 +380,7 @@
    size_t rl1 = tsslen(ts1);  /* real length */
    const char *s2 = getstr(ts2);
