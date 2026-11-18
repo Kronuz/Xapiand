@@ -22524,8 +22524,6 @@
       "consumes": [],
       "files": [
         "docs/design/track-c.md",
-        "docs/gates/track-c*.md",
-        "docs/reviews/track-c*.md",
         "docs/design/peer-transport.md",
         "docs/reviews/peer-transport*.md",
         "docs/status/peer-transport.md"
@@ -22571,7 +22569,7 @@
       "risk": "high",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-18T02:56:02",
+      "updated": "2026-11-18T02:56:40",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
