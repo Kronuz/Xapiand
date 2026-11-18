@@ -36,8 +36,10 @@ So the stall is per-name resolution, not per-index work, and concurrency turns i
 with a `task::budget` checkpoint before each, the request's budget: after `REQUEST_LIGHT_SLICES` slices the search
 runs in the heavy lane (loop-scheduling D2), so a light request on the same loop waits at most one slice behind it.
 
-**D2. A batch's pins and engine reads yield between shards.** `DatabaseHandler::search_batch` checkpoints the request's
-budget before each shard it pins and each engine it refreshes, so a batch of K indexes is K short steps, not one turn.
+**D2. A batch's pins and engine reads yield between shards.** No capture holds them today; the checkpoints keep a
+batch of K indexes K short steps when K is large (`--concurrent-search-indexes`, or the pool at 5,000, where x7-gate
+measured 115-131 ms p99.9 with nothing reopening). `DatabaseHandler::search_batch` checkpoints the request's budget before each shard it pins and each engine it
+refreshes.
 
 **D3. A node-wide bound on the indexes wide searches pin at once.** `wide_search::Pins` holds the pool's soft_open
 (what the pool keeps open): a batch of a search wider than one batch takes its indexes' count before it pins them and
@@ -49,6 +51,28 @@ Why the pool's soft_open: one wide search per loop holds K = soft_open / loops, 
 together before, now a ceiling instead of a sum that grows with the clients (S2: 64 searches each held their batch).
 The alternative, a count of wide searches at once, bounds the same thing less precisely: a batch is whole indexes, so
 its width varies with the shards per index.
+
+## Measured (probe build: master `src` plus the call-site patch)
+
+| Row | master | probe | Jobs |
+|---|---|---|---|
+| SR3, 2,500 indexes: http loops' window max | 131-229 ms buckets (87-91 ms in 80ea60) | 640 / 1,536 us buckets (max since start 624 / 1,305 us) | 043331-286e1f, 043334-e2a804 |
+| SR3, 2,500: p99 lag, search p50 | 640-768 us, 10.7 s | 384-448 us, 1.28 s | same |
+| S2, 64 clients by names: light GET p99 / max | 83.8 / 1,819 ms | 5.3 / 26.3 ms | same |
+| S2, 64 by names: loops' window max | 1.57 s buckets | 115-131 ms buckets | same |
+| Stall captures (>= 20 ms), S2 phase | 19,659 | 308 | same |
+
+The host was shared (strict holds beside light ones) and moved between runs (alone p99 0.8-2.5 ms), so these are the
+probe's direction, not the gate's numbers: A2 and A3 are rerun at the landed code. What remains in S2 is the
+resolver's lock and its misses, which slicing makes short but does not remove: see Open.
+
+## Open
+
+- The resolver's cache holds 100 entries, so a search over more names than that misses every one and reads each
+  index's settings document; a cache sized to the indexes a node serves (or settings kept beside the pool's names)
+  would remove the per-name load. `src/index_resolver_lru.*` and `src/opts.cc`, outside this quest.
+- `resolve_index_lru_mtx` is a `std::mutex` taken on the loops; a sharded or read-mostly lock would remove the
+  contention that remains under concurrency.
 
 ## Limits
 
