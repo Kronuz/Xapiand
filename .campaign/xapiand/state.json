@@ -1459,7 +1459,7 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-12T01:52:33",
@@ -1509,8 +1509,8 @@
       "risk": "high",
       "status": "landed",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T01:52:35",
-      "worktree": "../strata-wt/xapiand/barrier-warning-strata"
+      "updated": "2026-11-18T03:09:26",
+      "worktree": ""
     },
     "behavior-changes-audit": {
       "accepted": {},
