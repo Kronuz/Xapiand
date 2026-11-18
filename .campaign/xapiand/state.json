@@ -6486,7 +6486,9 @@
     },
     "hunt-lua-fetch": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "name-index"
+      ],
       "base": "94290424a08ab5ddfff8d5d73e6266ce6d3eb547",
       "branch": "quest/xapiand/hunt-lua-fetch",
       "checks": [
@@ -6518,7 +6520,7 @@
       "risk": "low",
       "status": "active",
       "title": "Lua sources fetch without lua.org resets",
-      "updated": "2026-11-17T22:30:40",
+      "updated": "2026-11-17T22:30:54",
       "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
