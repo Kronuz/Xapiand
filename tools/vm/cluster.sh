@@ -22,6 +22,7 @@
 # cluster.sh -- the cluster harness's VM tier (harness/cluster/vm/README.md).
 #
 #   cluster.sh check [--nodes N] [--out DIR]       A1: up, multicast between every pair, a replay of a planted write, down
+#   cluster.sh netcheck [--nodes 3]                netlab's shapes and partitions on the L2 (guest/net.py)
 #   cluster.sh run [--nodes N] [--out DIR] -- CMD  up, CMD with CLUSTER_VM_RUN set, collect into DIR, down
 #   cluster.sh up [--nodes N] [--timeout S]        boot N guests (default 3); prints the run directory
 #   cluster.sh ssh I [CMD...]                      a shell or a command on guest I of $CLUSTER_VM_RUN
@@ -74,9 +75,9 @@ one_shot() {
 }
 
 case "${1:-}" in
-	check) shift; one_shot "$@" -- "$PY" -E -s "$VM/vm.py" check ;;
+	check | netcheck) what=$1; shift; one_shot "$@" -- "$PY" -E -s "$VM/vm.py" "$what" ;;
 	run) shift; one_shot "$@" ;;
 	up | down | sweep | collect) vm "$@" ;;
 	ssh) shift; exec "$PY" -E -s "$VM/vm.py" ssh "$@" ;;
-	*) sed -n '22,34p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+	*) sed -n '22,35p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

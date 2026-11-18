@@ -42,6 +42,20 @@ process that opened it. A power cut is `stop` (unmount; the log ends) and then `
 mounts the state the cut leaves at a mark or entry; faultlab's `docs/mechanisms/disklab.md` has the
 log and replay mechanics.
 
+**Network faults.** `guest/net.py` builds faultlab netlab's `Shape` into the guest's `l2` egress: a
+prio qdisc with one band per peer, peer j's address sent by a u32 filter to a band whose netem carries
+that direction's delay, loss, reorder, duplicate and rate, while multicast stays unshaped. A partition
+adds the peer's address to an nftables set whose input rule drops it, as netlab drops where a packet
+arrives, so TCP retransmits after heal; run it on both guests to cut both directions.
+`tools/vm/cluster.sh netcheck` proves a 50 ms shape on 1 to 2 and not on 1 to 3, and a partition of
+1 and 2 that leaves 1 and 3 talking until heal.
+
+```sh
+tools/vm/cluster.sh ssh 1 sudo python3 -I /opt/cluster/guest/net.py shape 2 --ms 50 --loss 0.01
+tools/vm/cluster.sh ssh 1 sudo python3 -I /opt/cluster/guest/net.py partition 2   # and on 2: partition 1
+tools/vm/cluster.sh ssh 1 sudo python3 -I /opt/cluster/guest/net.py heal
+```
+
 **Parking.** `up` starts a guardian (`vm.py guard`) in its own session; it starts one keeper per guest
 (`vm.py keep`), and each keeper runs one QEMU and stops it when the guardian's pipe closes. The guardian
 closes every pipe, waits for the keepers, deletes the overlays and seeds and records the reason in

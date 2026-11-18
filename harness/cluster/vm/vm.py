@@ -45,6 +45,7 @@ import tarfile
 import threading
 import time
 from collections.abc import Callable, Sequence
+from math import inf
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -574,6 +575,54 @@ def check(run: Path, out: Path, seconds: float, repeat: int, fill_mb: int) -> in
     return 0 if ok else 1
 
 
+def ping(run: Path, source: int, target: int, count: int = 10) -> tuple[float, float]:
+    """Packet loss (0 to 1) and average round trip (ms, or inf when none came back) from guest to guest."""
+    out = subprocess.run(
+        [*ssh_argv(run, source), f"ping -n -q -c {count} -i 0.2 -W 1 {L2}.{target}"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    ).stdout
+    loss = next((float(word.rstrip("%")) / 100 for word in out.split(", ") if word.endswith("packet loss")), 1.0)
+    rtt = next((float(line.split("=")[1].split("/")[1]) for line in out.splitlines() if line.startswith("rtt")), inf)
+    return loss, rtt
+
+
+def netcheck(run: Path) -> int:
+    """netlab's shapes on the L2: a 50 ms delay from guest 1 to 2 shows in their round trip and not in
+    1 to 3's, and a partition of 1 and 2 drops their packets and leaves 1 and 3 talking until heal."""
+    net = f"sudo python3 -I {GUEST}/guest/net.py"
+    ok = True
+
+    def expect(what: str, passed: bool, seen: str) -> None:
+        nonlocal ok
+        ok &= passed
+        print(f"{'ok  ' if passed else 'FAIL'} {what}: {seen}", flush=True)
+
+    base = ping(run, 1, 2)
+    expect("baseline 1->2", base[0] == 0 and base[1] < 10, f"loss {base[0]:.0%}, rtt {base[1]:.2f} ms")
+    ssh(run, 1, f"{net} shape 2 --ms 50")
+    shaped, other = ping(run, 1, 2), ping(run, 1, 3)
+    expect("shape 1->2 50 ms", shaped[0] == 0 and 50 <= shaped[1] < 60, f"rtt {shaped[1]:.2f} ms")
+    expect("1->3 unshaped", other[0] == 0 and other[1] < 10, f"rtt {other[1]:.2f} ms")
+    ssh(run, 1, f"{net} partition 2")
+    ssh(run, 2, f"{net} partition 1")
+    cut, other = ping(run, 1, 2, 5), ping(run, 1, 3, 5)
+    expect("partition 1|2", cut[0] == 1, f"loss {cut[0]:.0%}")
+    expect("1->3 through the partition", other[0] == 0, f"loss {other[0]:.0%}")
+    ssh(run, 1, f"{net} heal")
+    ssh(run, 2, f"{net} heal 1")
+    healed = ping(run, 1, 2, 5)
+    expect("heal 1|2", healed[0] == 0, f"loss {healed[0]:.0%}, rtt {healed[1]:.2f} ms")
+    for index in (1, 2):
+        ssh(run, index, f"{net} clear")
+    cleared = ping(run, 1, 2)
+    expect("clear 1->2", cleared[0] == 0 and cleared[1] < 10, f"rtt {cleared[1]:.2f} ms")
+    print(f"netcheck {'PASS' if ok else 'FAIL'}", flush=True)
+    return 0 if ok else 1
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="vm.py", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -603,6 +652,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--seconds", type=float, default=10)
     p.add_argument("--repeat", type=int, default=5, help="replays to each mark per guest")
     p.add_argument("--fill", type=int, default=128, help="MiB written and synced before the plant")
+    p = sub.add_parser("netcheck", help="netlab's shapes and partitions on the L2 (3 guests or more)")
+    p.add_argument("--run", **run_arg)
     p = sub.add_parser("guard")
     p.add_argument("run", type=Path)
     p = sub.add_parser("keep")
@@ -644,6 +695,8 @@ def main(argv: list[str]) -> int:
     if args.command == "collect":
         collect(run, args.out, args.paths)
         return 0
+    if args.command == "netcheck":
+        return netcheck(run)
     if args.command == "check":
         return check(run, args.out, args.seconds, args.repeat, args.fill)
     return 2
