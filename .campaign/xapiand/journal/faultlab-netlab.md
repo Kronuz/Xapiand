@@ -1,16 +1,15 @@
 # faultlab-netlab: journal
 
-State: waiting on jobs 261118-064359-d81166 261118-064401-e15efd 261118-064403-31cd75 261118-064404-807b9c
+State: ready for review
 Quest: .campaign/xapiand/quests/faultlab-netlab.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at faultlab:b762f1c: A2 test and its mutant (refs/mutants/netlab-a2-delay-event, faultlab:6bc239e,
-delay writes no event), A1+A3 live run in the VM, build-test check.
+Nothing: every criterion has its job at faultlab:b762f1c.
 
 ## Next
 
-1. Paste the evidence table when the jobs finish; then ready for review.
+1. Review; CI after the lead registers the test and pushes (Blocked on).
 
 ## Blocked on
 
@@ -25,10 +24,17 @@ The lead, for CI (A4):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-064403-31cd75 (first run 261118-064217-267405: every A1 row ok) |
-| A2 | 261118-064359-d81166; mutant 261118-064401-e15efd |
+| A1 | 261118-064403-31cd75 |
+| A2 | 261118-064359-d81166; fails without: 261118-064401-e15efd |
 | A3 | 261118-064403-31cd75 |
-| A4 | build-test 261118-064404-807b9c; CI: see Blocked on |
+| A4 | 261118-064404-807b9c; CI: see Blocked on |
+
+Live run at b762f1c (261118-064403-31cd75): delay 50 ms each way adds 102.2 ms to a round trip
+(base 0.43); loss 10% loses 10.27% of 10,000; duplicate 10% duplicates 10.01%; reorder 25% makes
+19.21% overtake their predecessor (p(1-p) = 18.75), delay alone 0; cap 20 Mb/s gives 19.13 Mb/s
+TCP goodput; partition, isolate, heal, reset as specified. Teardown clean after close, exit,
+SIGTERM, SIGHUP, SIGINT; SIGKILL's 3 namespaces removed by sweep and by the next lab; listing
+after equals before.
 
 First live run (faultlab:dac334f, Ubuntu 24.04, kernel 6.8, in the VM): delay 50 ms each way adds
 104.3 ms to a round trip (base 0.37); loss 10% loses 9.35% of 10,000; duplicate 10% duplicates
