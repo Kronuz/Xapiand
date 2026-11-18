@@ -2285,7 +2285,9 @@
     },
     "cluster-gate": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "goal5-audit"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -2333,7 +2335,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T02:29:25"
+      "updated": "2026-11-18T02:56:01"
     },
     "cluster-harness": {
       "accepted": {
