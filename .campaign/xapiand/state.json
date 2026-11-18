@@ -12761,7 +12761,93 @@
       "updated": "2026-11-08T15:40:38"
     },
     "name-index": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T18:19:40",
+          "base": "6a140ea4de266edc98c808c62c98e1c6aff31b05",
+          "blobs": {
+            "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
+            "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
+            "docs/src/content/docs/changelog.md": "100644:58fa085e7f9f15640c1e7d48c01665305b49d1bf",
+            "docs/src/content/docs/options.md": "100644:af35d460a2f7c25abdec11259196f01a67080d16",
+            "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
+            "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
+            "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
+            "src/database/name_index.cc": "100644:9a17ab7fe24e019f290577033bf638465c4d337b",
+            "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
+            "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
+            "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
+            "src/index_pattern.cc": "100644:2bb92b1c1fdf31d4686e7df4a68817a8a6880344",
+            "src/index_pattern.h": "100644:cb0df952b0ae5e6e924bc15887474e2426036078",
+            "src/server/search_views.cc": "100644:a108e8bf868c70356cdba1f545d7bd3a01522961",
+            "tests/name_index_mutants.sh": "100755:206e35b9b2970962801ca6330fa01beb85e4521b",
+            "tests/test_index_pattern.cc": "100644:d4789f818bec572e5541ecce4eea61b0aaedaaff",
+            "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
+          },
+          "by": "review",
+          "commit": "df61d9f73a9ceb258bd290334cba2699d026c9af",
+          "criteria": "aa0933b13ed947a5",
+          "diffs": {
+            "docs/design/name-index.md": "9c936384a09909e3",
+            "docs/mechanisms/wide-search.md": "f537cdad33562d79",
+            "docs/src/content/docs/changelog.md": "3285a849aee75f91",
+            "docs/src/content/docs/options.md": "29097e864454671f",
+            "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
+            "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
+            "harness/wide_search_check.py": "fd5852edb54d5f25",
+            "src/database/name_index.cc": "d18db159efd2c113",
+            "src/database/name_index.h": "26139bc0511637cb",
+            "src/database/pool.cc": "034bf855d0c90ab4",
+            "src/database/pool.h": "86f45483339a57c4",
+            "src/index_pattern.cc": "618943fe8007cba7",
+            "src/index_pattern.h": "cba13677e3260d86",
+            "src/server/search_views.cc": "ed97dede2bccbd94",
+            "tests/name_index_mutants.sh": "028ada85486c9d41",
+            "tests/test_index_pattern.cc": "1cf215a0075d5abb",
+            "tests/test_node.cc": "16ec13dad8fbeff8"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-oracle bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/oracle.sh'",
+                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-124540-0da619",
+                  "level": "light",
+                  "seconds": 29.1,
+                  "state": "done",
+                  "what": "review probe oracle.sh at the F1 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-emfile bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/emfile.sh'",
+                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-124543-44a244",
+                  "level": "light",
+                  "seconds": 14.9,
+                  "state": "done",
+                  "what": "review probe emfile.sh at the F2 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "75d937ffc017a16ae8a69bcdf8f2a766cdec7400",
+          "reviewed": "291ec897101dbfa20733d1cffcba4f689acecc59",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "x-pool"
       ],
@@ -12976,7 +13062,8 @@
       "landed": [],
       "lenses": [
         "design",
-        "durability"
+        "durability",
+        "correctness"
       ],
       "milestone": "Phase 8",
       "needs": [],
@@ -12985,7 +13072,7 @@
       "risk": "high",
       "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T08:21:54",
+      "updated": "2026-11-17T18:19:40",
       "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
