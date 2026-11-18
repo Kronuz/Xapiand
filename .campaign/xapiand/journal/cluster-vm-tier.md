@@ -1,6 +1,6 @@
 # cluster-vm-tier: journal
 
-State: waiting on jobs 261118-115433-265d2c 261118-115435-6123e3 261118-115436-e3d7ad 261118-115437-6ea361 261118-115443-e7a755
+State: ready for review
 Quest: .campaign/xapiand/quests/cluster-vm-tier.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,29 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First runs (lead's msg, jobs 261118-105737-42100a, -110425-fe0bf4, -110246-645dd6):
-- Replay works: in all 3 guests the planted write was absent at `before` (5/5) and present at
-  `after` (5/5), log about 158 MiB, 0.343 s median per replay (max 0.993, 30 replays; light job,
-  host at load 600+, not the A1 timing).
-- Multicast failed: no guest heard any other. Cause, reproduced on the host: QEMU's
-  `-netdev socket,mcast` sends from a socket bound to the group address, and macOS refuses that
-  sendto with EADDRNOTAVAIL (`~/.scratch/cluster-vm-mcast/t.py`). Fix: `-netdev dgram` per guest
-  to a learning hub in the guardian (host unit check: flood, learned unicast, stranger dropped).
-- netcheck crashed parsing "100% packet loss"; it now parses with a regex.
-- park_test: 4 cases passed (caller's group SIGKILL, SIGTERM with journal collected, guardian
-  SIGKILL, then sweep), each parked within 1 s. keeper_kill's `up` then spent minutes in hdiutil
-  at load 600+ until the 30-min deadline. Seeds are now cached per root and key, hdiutil, qemu-img
-  and the guardian start are bounded, and the cases run as two jobs.
-
-Queued at Xapiand:d5bd31053: dev check 261118-115433-265d2c, netcheck 261118-115435-6123e3,
-park_test 261118-115436-e3d7ad and 261118-115437-6ea361, A1 exclusive 261118-115443-e7a755
-(after the dev check).
+Ready for review. Queued at Xapiand:fb026cc9e: net_test 261118-135912-244d58, net_test on the
+pre-fix net.py (exit 0 when it fails) 261118-135921-f6d2e5, netcheck 261118-135913-76ff29, check
+suite 261118-135922-9079eb; A1 rerun at the head (guest/net.py changed, so the guests' code did).
 
 ## Next
 
-1. Read the five jobs. If multicast still misses, check's output now has each guest's
-   `ip -br addr`, route and l2 counters.
-2. A1 green, then a correctness review.
+1. Correctness review (the lead's).
 
 ## Blocked on
 
@@ -39,24 +23,35 @@ Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-115443-e7a755 (exclusive, Xapiand:d5bd31053): each of 3 guests heard both others over the hub L2; in each, the planted write was absent at `before` 5/5 and present at `after` 5/5; 0.194 s median per replay, 0.525 s max, 30 replays, log about 158 MiB. Rerun at the head queued (net.py changed since) |
+
+Other jobs: dev check 261118-115433-265d2c passed; park_test 261118-115436-e3d7ad (caller's group
+SIGKILL, SIGTERM, guardian SIGKILL then sweep) and 261118-115437-6ea361 (keeper SIGKILL, down,
+deadline) passed. netcheck 261118-115435-6123e3 failed: net.py named prio bands in decimal and tc
+reads hex (1:11 is band 17 of 16); fixed in Xapiand:fb026cc9e with net_test.py, which fails on the
+old net.py.
+
+Messages: the lead's two course corrections (multicast failure, netcheck failure) are answered by
+Xapiand:d5bd31053 and Xapiand:fb026cc9e and the jobs above.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`tools/vm/cluster.sh` (check, netcheck, run, up, ssh, collect, down, sweep) and
+`harness/cluster/vm/` (vm.py host side; guest/disk.py, probe.py, net.py, net_test.py; park_test.sh).
+How it works: `harness/cluster/vm/README.md`. A replay costs 0.194 s median (0.525 s max) over a
+158 MiB log, against D14's 5 to 10 s estimate, so 60 replays take about 12 s of a run, not 10 min.
+Open: the hub relays in Python, so its throughput for D14's large uploads is unmeasured; netlab's
+per-peer shapes are proven by netcheck only once 261118-135913-76ff29 passes.
 
 ## Rulings I made
 
 - Guests boot overlays on document-gate's pristine `base.img` (its own `disk.qcow2` also backs on it),
   with a seed that installs nothing: python3, dmsetup, losetup and mkfs.ext4 ship in the image.
+- The L2 is a learning hub in the guardian over `-netdev dgram`: `-netdev socket,mcast` cannot send
+  on macOS (EADDRNOTAVAIL from a socket bound to the group).
+- Seeds are cached per root and key (one instance-id per guest index; overlays are fresh each run).
 - Overlays use `cache=unsafe`: deleted at park; power loss is modeled in the guest by dm-log-writes.
 - One disk server per guest owns the disklab, since a lab lives as long as its opener.
 - SSH ports skip 18782 and 18784 (document-gate) even when free; the L2's host UDP port is the first
