@@ -1,6 +1,6 @@
 --- a/reactor_lag.h
 +++ b/reactor_lag.h
-@@ -44,7 +44,115 @@
+@@ -44,7 +44,139 @@
  #include <cstddef>
  #include <cstdint>
  #include <memory>
@@ -15,9 +15,13 @@
 +#include <unistd.h>
 +#include <mach-o/dyld.h>
 +#include <sys/ucontext.h>
++#include <mach/mach.h>
++#include <time.h>
 +
 +
-+// ---- restore-stall experiment (env XAPIAND_LAG_SPIN=<threshold_us>): a sleep-free probe and a stall sampler ----
++// ---- stall experiment (env XAPIAND_LAG_SPIN=<threshold_us>): a beat timer every XAPIAND_LAG_BEAT_US (250) and a
++// stall sampler. Each late beat prints its gap and the loop thread's CPU time over it: CPU near the gap is a long
++// turn, CPU far below it is a thread off CPU (preempted, or blocked in a lock or a system call). ----
 +namespace spin_probe {
 +inline constexpr int kFrames = 40;
 +inline void* g_frames[kFrames];
@@ -47,20 +51,37 @@
 +	std::uint64_t threshold_us;
 +	int id;
 +	std::atomic<std::int64_t> beat_ns{0};
++	std::atomic<std::int64_t> beat_cpu_ns{0};
++	std::uint64_t beat_us = 250;
++	asio::steady_timer timer{io};
 +	std::atomic<bool> stopping{false};
 +	std::atomic<bool> have_tid{false};
 +	pthread_t tid{};
 +	std::thread watchdog;
 +	Spin(asio::io_context& i, std::uint64_t t, int n) : io(i), threshold_us(t), id(n) {}
 +	static std::int64_t now_ns() { return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
++	static std::int64_t self_cpu_ns() { timespec ts{}; clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts); return ts.tv_sec * 1'000'000'000LL + ts.tv_nsec; }
++	// The loop thread's CPU time, read from the watchdog.
++	std::int64_t loop_cpu_ns() const {
++		thread_basic_info_data_t info{};
++		mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
++		if (thread_info(pthread_mach_thread_np(tid), THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &count) != KERN_SUCCESS) { return -1; }
++		return (info.user_time.seconds + info.system_time.seconds) * 1'000'000'000LL + (info.user_time.microseconds + info.system_time.microseconds) * 1000LL;
++	}
 +	void run() {
 +		const auto now = now_ns();
++		const auto cpu = self_cpu_ns();
 +		const auto prev = beat_ns.exchange(now);
++		const auto prev_cpu = beat_cpu_ns.exchange(cpu);
 +		if (!have_tid.load()) { tid = pthread_self(); g_lo = reinterpret_cast<std::uintptr_t>(pthread_get_stackaddr_np(tid)) - pthread_get_stacksize_np(tid); g_hi = reinterpret_cast<std::uintptr_t>(pthread_get_stackaddr_np(tid)); have_tid.store(true); }
 +		if (prev != 0 && static_cast<std::uint64_t>(now - prev) / 1000 >= threshold_us) {
-+			std::fprintf(stderr, "SPIN loop=%d at_ns=%lld gap_us=%lld\n", id, static_cast<long long>(now), static_cast<long long>((now - prev) / 1000));
++			std::fprintf(stderr, "SPIN loop=%d at_ns=%lld gap_us=%lld cpu_us=%lld\n", id, static_cast<long long>(now), static_cast<long long>((now - prev) / 1000), static_cast<long long>((cpu - prev_cpu) / 1000));
 +		}
-+		if (!stopping.load()) { asio::post(io, [self = shared_from_this()] { self->run(); }); }
++		if (!stopping.load()) { arm(); }
++	}
++	void arm() {
++		timer.expires_after(std::chrono::microseconds(beat_us));
++		timer.async_wait([self = shared_from_this()](const std::error_code& ec) { if (!ec) { self->run(); } });
 +	}
 +	void start() {
 +		struct sigaction sa{};
@@ -69,6 +90,7 @@
 +		sigemptyset(&sa.sa_mask);
 +		sigaction(SIGUSR2, &sa, nullptr);
 +		std::fprintf(stderr, "SPIN loop=%d image_base=%p threshold_us=%llu\n", id, static_cast<const void*>(_dyld_get_image_header(0)), static_cast<unsigned long long>(threshold_us));
++		if (const char* b = std::getenv("XAPIAND_LAG_BEAT_US")) { beat_us = std::strtoull(b, nullptr, 10); }
 +		asio::post(io, [self = shared_from_this()] { self->run(); });
 +		watchdog = std::thread([this] {
 +			std::int64_t last_sig = 0;
@@ -79,6 +101,8 @@
 +				const auto age = (now - beat_ns.load()) / 1000;
 +				if (age >= static_cast<std::int64_t>(threshold_us) && now - last_sig > 1'500'000) {
 +					last_sig = now;
++					const auto cpu = loop_cpu_ns();
++					const auto oncpu_us = cpu < 0 ? -1 : (cpu - beat_cpu_ns.load()) / 1000;
 +					g_n.store(-1);
 +					pthread_kill(tid, SIGUSR2);
 +					for (int w = 0; w < 200 && g_n.load(std::memory_order_acquire) < 0; ++w) { std::this_thread::sleep_for(std::chrono::microseconds(10)); }
@@ -86,7 +110,7 @@
 +					if (n > 0) {
 +						std::fprintf(stderr, "STALL loop=%d at_ns=%lld age_us=%lld frames=", id, static_cast<long long>(now), static_cast<long long>(age));
 +						for (int i = 0; i < n; ++i) { std::fprintf(stderr, "%s%p", i ? "," : "", g_frames[i]); }
-+						std::fprintf(stderr, "\n");
++						std::fprintf(stderr, " cpu_us=%lld\n", static_cast<long long>(oncpu_us));
 +					}
 +				}
 +			}
@@ -109,14 +133,14 @@
 +// A loop that stops stops its spin, so its run() runs out of work and returns.
 +inline void maybe_stop(asio::io_context& io) {
 +	for (auto& spin : spins()) {
-+		if (&spin->io == &io) { spin->stopping.store(true); }
++		if (&spin->io == &io) { spin->stopping.store(true); asio::post(io, [spin] { spin->timer.cancel(); }); }
 +	}
 +}
 +}  // namespace spin_probe
  
  namespace reactor {
  
-@@ -115,10 +223,12 @@
+@@ -115,10 +247,12 @@
  	// Arms the timer at the idle interval; the first wake picks the interval from the activity seen.
  	void start() {
  		if (state_->started.exchange(true)) { return; }
