@@ -16,36 +16,11 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 
 ## Next
 
-0. F1 fix round (D107, lead's option (c)), strata:94d73236 (code) and 3d5ecedb (docs). Jobs:
-   build-test 261117-122058-8a1058; TSan lag+served+T4+T12+T3+T8+t6w 261117-122105-d69a24;
-   batch TSan 261117-122114-58e309; mutants (fails-without) M-s 261117-122123-3b0f9a, M-t
-   261117-122132-b7e7f7 (lag), M-v 261117-122140-f6bc36 (t9o); review probe 261117-122146-4905bb;
-   exclusive rows vs RocksDB: wal1 t3 261117-122153-b3653c, sync1 261117-122200-8f7079
-   261117-122207-91af71 261117-122213-71b50f, N-log (K=4 on 1 log) 261117-122219-ff1809. When
-   Round 1 at 3d5ecedb: TSan sets passed, M-s and M-t killed; build-test 261117-122058-8a1058
-   failed t9o (test premise, see Rulings), so M-v's kill proved nothing and the rows skipped.
-   Round 2 at strata:cc8ba3aa: build-test 261117-134744-7f0c17, M-v (rebuilt, df87b29f)
-   261117-134753-33fc2a, probe 261117-134801-f716c7, wal1 261117-134809-8409da, sync1
-   261117-134818-6068ec 261117-134824-199dc8 261117-134834-f21397, N-log 261117-134842-7d024d.
-   Done: perf note and gate report at strata:db443563.
-   A6 VM rows to rerun at the fix commit: wal1 and sync1 and N-log on Linux and FreeBSD
-   (261117-084100-27be96, 261117-084037-d4e2de, 261117-084045-d42d02, 261117-084053-6d8351,
-   261117-084215-47c83b, 261117-085309-9d6302, 261117-085245-45a977, 261117-085253-f20138,
-   261117-085301-985f09, 261117-085413-1ba8b7) and the A/A sync pairs; fits1, twox1, big1 and the
-   none-tier A/A do not use the log and stay valid. A7's fuzz jobs (codec and manifest log) stay
-   valid; the version-rejection/fixtures job too (command.hh unchanged); coverage reruns.
-1. Reruns at strata:12f59669: build-test 261117-075429-907b22, served TSan 261117-075430-571f74,
-   T6+t6w+T5 261117-075441-a3837d, t6w TSan 261117-075442-939866, batch test
-   261117-075442-e8e160, batch TSan 261117-075443-3e1d5f. CI run 44119676721 (in progress).
-2. A7 at 12f59669: fuzz, Homebrew LLVM 23 with ASan+UBSan, 3 workers for 25 min (75 CPU-min)
-   each: stored (format 14) 261117-075713-601c02, manifest_log 261117-075726-9eb435,
-   manifest_log_file 261117-075737-0c8aec, command 261117-075748-8a784a. Version rejection and
-   fixtures (index, format14, manifest_log, directory, standalone_turn_log, corpus replays)
-   261117-075800-5c7ffa. Coverage (llvm-cov over every test, per header; llvm-cov keeps one
-   binary's counters per inline instantiation, so it undercounts) 261117-075821-5866e7. The
-   scale statement is in the gate report (strata:91366374, docs only). ASan/UBSan and TSan: CI's
-   linux-asan-ubsan and linux-tsan in run 44119676721.
-3. The durability review's findings. Don't change reviewed code unless a rerun fails.
+1. Review of the F1 fix at strata:db443563 (code cc8ba3aa). M-v rerun 261117-180849-82b11b
+   queued (its first run lost its runner).
+2. The lead's: A7 reruns at the head (`campaign job rerun` ids under Evidence A7); A6 VM rows at
+   the fix commit, every row set (the 12f59669 ones were cancelled or skipped).
+3. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
 ## Blocked on
 
