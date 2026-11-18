@@ -1,6 +1,6 @@
 # faultlab-core: journal
 
-State: working
+State: waiting on jobs 261118-005949-37fe70 261118-005953-3d76e7 261118-005958-a9f786 261118-010550-5b5cd0
 Quest: .campaign/xapiand/quests/faultlab-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -41,7 +41,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | 261118-010005-2aea3a; fails without: 261118-005949-37fe70 (additions), 261118-005953-3d76e7 (forced-skips-draw) |
 | A2 | 261118-010005-2aea3a; fails without: 261118-003136-4b6402 (stream-shift) |
 | A3 | 261118-010005-2aea3a; fails without: 261118-003131-9c42c3 (no-sector-cut) |
-| A4 | 261118-010005-2aea3a; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates) |
+| A4 | 261118-010005-2aea3a; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates), 261118-010550-5b5cd0 (kill-keeps-leases) |
 | A5 | 261118-010005-2aea3a; fails without: 261118-005504-2f7a32 (recorder-bytes), 261118-005516-67f979 (proxy-close-swallows), 261118-005529-db2445 (selftest monotonic, seal) |
 | A6 | [artifact] faultlab:a5dcc10 README.md, docs/api.md, docs/mechanisms/crash-model.md, examples/demo.cc (run by CTest). CI: open, see Blocked on. |
 
