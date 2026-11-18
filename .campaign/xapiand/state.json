@@ -8249,8 +8249,8 @@
         "src/server/*",
         "src/database/pool.*",
         "src/manager.*",
-        "harness/**",
-        "tests/**",
+        "harness/light_share*",
+        "tests/test_light_share*",
         "docs/design/light-share.md"
       ],
       "landed": [],
@@ -8264,7 +8264,7 @@
       "risk": "high",
       "status": "active",
       "title": "Light requests keep their bound under heavy load",
-      "updated": "2026-11-18T02:20:00",
+      "updated": "2026-11-18T02:20:16",
       "worktree": "../Xapiand-wt/xapiand/light-share"
     },
     "linux-sanitizers": {
