@@ -5853,8 +5853,9 @@
       "files": [
         "python/faultlab/disklab.py",
         "python/tests/disklab_test.py",
-        "tools/vm/**",
-        "docs/**"
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-disklab",
       "landed": [],
@@ -5866,7 +5867,7 @@
       "risk": "normal",
       "status": "active",
       "title": "disklab: dm-log-writes replay to any flush mark, dm-delay, dm-flakey, in a Linux VM (design F15)",
-      "updated": "2026-11-18T07:19:32",
+      "updated": "2026-11-18T07:32:34",
       "worktree": "../faultlab-wt/xapiand/faultlab-disklab"
     },
     "faultlab-netlab": {
