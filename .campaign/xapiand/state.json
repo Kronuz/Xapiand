@@ -15721,7 +15721,6 @@
       ],
       "milestone": "Phase 7b",
       "needs": [
-        "release",
         "phase3r",
         "track-d"
       ],
@@ -15731,7 +15730,7 @@
       "risk": "critical",
       "status": "blocked",
       "title": "Phase 7b, shards become groups",
-      "updated": "2026-11-08T22:56:40"
+      "updated": "2026-11-18T02:29:20"
     },
     "phase7c-design": {
       "accepted": {},
