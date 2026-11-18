@@ -69,13 +69,14 @@
 using namespace std::chrono_literals;
 
 // operator delete calls on one thread while `counting` (the test's own), to count the blocks a destruction frees.
+// Every thread frees, pool timers included, so the thread is read atomically after the acquire of `counting`.
 namespace {
 std::atomic<bool> counting{false};
-pthread_t counted_thread;
+std::atomic<pthread_t> counted_thread;
 std::size_t deletes_counted = 0;
 
 void count_delete() noexcept {
-	if (counting.load(std::memory_order_relaxed) && pthread_equal(pthread_self(), counted_thread)) {
+	if (counting.load(std::memory_order_acquire) && pthread_equal(pthread_self(), counted_thread.load(std::memory_order_relaxed))) {
 		++deletes_counted;
 	}
 }
@@ -1234,13 +1235,23 @@ static void test_a_restores_objects_are_freed_off_its_loop() {
 	for (int i = 1; i <= objects; ++i) {
 		body += R"({"_id":"f)" + std::to_string(i) + R"(","n":)" + std::to_string(i) + R"(,"a":"x","b":"y","c":"z"})" "\n";
 	}
+	// A thread ordered to the counting loop by nothing frees once counting starts, as a pool timer's thread does.
+	std::atomic<bool> started{false};
+	std::thread unordered([&] {
+		while (!started.load(std::memory_order_relaxed)) {
+			std::this_thread::yield();
+		}
+		count_delete();
+	});
 	std::atomic<bool> set{false};
 	asio::post(XapiandManager::manager()->http_service->reactor(0).io(), [&] {
 		counted_thread = pthread_self();
 		deletes_counted = 0;
 		counting = true;
+		started.store(true, std::memory_order_relaxed);
 		set = true;
 	});
+	unordered.join();
 	eventually([&] { return set.load(); }, 10s);
 	CHECK_EQ(http_call("RESTORE", "/offloopfree/?commit", body, "application/x-ndjson") / 100, 2);
 	std::atomic<std::size_t> freed{0};
