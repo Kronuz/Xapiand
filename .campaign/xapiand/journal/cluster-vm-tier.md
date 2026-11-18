@@ -11,7 +11,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 Ready for review. Queued at Xapiand:fb026cc9e: net_test 261118-135912-244d58, net_test on the
 pre-fix net.py (exit 0 when it fails) 261118-135921-f6d2e5, netcheck 261118-135913-76ff29, check
-suite 261118-135922-9079eb; A1 rerun at the head (guest/net.py changed, so the guests' code did).
+suite 261118-135922-9079eb; A1 rerun 261118-140248-721145 at Xapiand:1edfc348c (guest/net.py changed since e7a755).
 
 ## Next
 
@@ -25,7 +25,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-115443-e7a755 (exclusive, Xapiand:d5bd31053): each of 3 guests heard both others over the hub L2; in each, the planted write was absent at `before` 5/5 and present at `after` 5/5; 0.194 s median per replay, 0.525 s max, 30 replays, log about 158 MiB. Rerun at the head queued (net.py changed since) |
+| A1 | 261118-115443-e7a755 (exclusive, Xapiand:d5bd31053): each of 3 guests heard both others over the hub L2; in each, the planted write was absent at `before` 5/5 and present at `after` 5/5; 0.194 s median per replay, 0.525 s max, 30 replays, log about 158 MiB. Rerun 261118-140248-721145 at Xapiand:1edfc348c queued (net.py changed since) |
 
 Other jobs: dev check 261118-115433-265d2c passed; park_test 261118-115436-e3d7ad (caller's group
 SIGKILL, SIGTERM, guardian SIGKILL then sweep) and 261118-115437-6ea361 (keeper SIGKILL, down,
