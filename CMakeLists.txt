@@ -1893,7 +1893,8 @@ endif ()
 if (BUILD_TESTS)
 		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
 		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
-		foreach (VAR_TEST string debounce_or_run range_terms xapian_data_guard)
+		set(XAPIAND_PURE_TESTS string debounce_or_run range_terms xapian_data_guard)
+		foreach (VAR_TEST ${XAPIAND_PURE_TESTS})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1902,10 +1903,18 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
-		# Unit tests that exercise Xapiand code: link the object libraries the way
-		# a real component does. Revived from oldtests/ one module at a time as they
-		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialize_list endpoint serialize generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialize quarantine root_routes aggregation_shards manager_fd_count strict_text)
+		# Every other tests/test_*.cc exercises Xapiand code: it links the object
+		# libraries a real component does and registers by its file name.
+		file(GLOB XAPIAND_LINKED_TESTS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/test_*.cc")
+		set(XAPIAND_LINKED_TEST_NAMES)
+		foreach (TEST_SOURCE ${XAPIAND_LINKED_TESTS})
+			get_filename_component(TEST_NAME "${TEST_SOURCE}" NAME_WE)
+			string(REGEX REPLACE "^test_" "" TEST_NAME "${TEST_NAME}")
+			if (NOT TEST_NAME IN_LIST XAPIAND_PURE_TESTS AND NOT TEST_NAME STREQUAL "stubs" AND NOT TEST_NAME STREQUAL "text")
+				list(APPEND XAPIAND_LINKED_TEST_NAMES "${TEST_NAME}")
+			endif ()
+		endforeach ()
+		foreach (VAR_TEST ${XAPIAND_LINKED_TEST_NAMES})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1928,6 +1937,9 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# Loop-lag bounds hold only without parallel neighbors.
+		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)
 
 		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
 

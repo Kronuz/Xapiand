@@ -736,6 +736,100 @@
       "closed": "journal-reopen-closed is the fix we asked for (a closed id recovers in the live Host); group-core repins journal in its D115 follow-up",
       "id": "msg-105",
       "text": "detent:journal-reopen-closed started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T03:08:04",
+      "by": "campaign detent",
+      "closed": "detent:consensus-dns-threads is goal5-audit's G5-C1 fix, filed at our request; consensus-rpc-lane and group-core pick it up at their next consensus repin",
+      "id": "msg-106",
+      "text": "detent:consensus-dns-threads started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-dns-threads, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T05:36:36",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-107",
+      "items": {
+        "cheap-reopen": "frees src/database/pool.*, src/engine/strata/**, docs/design/cheap-reopen.md, tests/test_cheap_reopen* for cheap-reopen"
+      },
+      "settles": {
+        "start": [
+          "cheap-reopen"
+        ]
+      },
+      "text": "set light-share: unlocks frees src/database/pool.*, src/engine/strata/**, docs/design/cheap-reopen.md, tests/test_cheap_reopen* for cheap-reopen"
+    },
+    {
+      "at": "2026-11-18T05:57:27",
+      "by": "campaign detent",
+      "closed": "detent:groups-upload-stall is a library fix; consensus-rpc-lane and group-core take it at their next consensus repin",
+      "id": "msg-108",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-stall"
+      },
+      "text": "detent:groups-upload-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T06:56:01",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-109",
+      "items": {
+        "faultlab-disklab": "frees docs/** for faultlab-disklab"
+      },
+      "settles": {
+        "start": [
+          "faultlab-disklab"
+        ]
+      },
+      "text": "faultlab-netlab landed: unlocks frees docs/** for faultlab-disklab"
+    },
+    {
+      "at": "2026-11-18T07:24:15",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash, so this change can't break it in flight; the journal repin row in hunt.md (after journal:4d364f1) picks up journal-group-io-cost's driver change when it lands",
+      "id": "msg-110",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-group-io-cost"
+      },
+      "text": "detent:journal-group-io-cost started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T07:34:43",
+      "by": "campaign detent",
+      "closed": "transport-idle-budget writes only bench/transport_idle.cc and docs/perf/**: no transport or driver source, so rpc-lane and group-core are unaffected; the one overlap with flow-bench (docs/perf/flow*) is docs, and Detent was asked to narrow to docs/perf/transport-idle*",
+      "id": "msg-111",
+      "settles": {
+        "ours": [
+          "consensus-flow-bench",
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:transport-idle-budget"
+      },
+      "text": "detent:transport-idle-budget started and may change files your consensus-flow-bench changes (order them with --after detent:transport-idle-budget, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T10:44:49",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-112",
+      "items": {
+        "cluster-vm-tier": "frees harness/cluster/vm/** for cluster-vm-tier"
+      },
+      "settles": {
+        "start": [
+          "cluster-vm-tier"
+        ]
+      },
+      "text": "faultlab-adopt-xapiand landed: unlocks frees harness/cluster/vm/** for cluster-vm-tier"
     }
   ],
   "quests": {
@@ -903,6 +997,9 @@
       "risk": "low",
       "status": "blocked",
       "title": "The Architecture and Design book",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:40:14"
     },
     "automata": {
@@ -994,9 +1091,8 @@
         "src/manager.cc",
         "src/database/pool.cc",
         "src/database/pool.h",
-        "tests/**",
         "docs/src/content/docs/**",
-        "CMakeLists.txt"
+        "tests/test_barrier_warning*"
       ],
       "history": [
         {
@@ -1086,12 +1182,11 @@
         "barrier-warning-strata"
       ],
       "provides": [],
-      "reason": "its blocker landed",
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-17T23:08:12",
+      "updated": "2026-11-18T05:36:11",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
@@ -1449,7 +1544,7 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/barrier-warning-strata",
+      "journal": "",
       "landed": [
         {
           "at": "2026-11-12T01:52:33",
@@ -1499,8 +1594,8 @@
       "risk": "high",
       "status": "landed",
       "title": "strata wires full-flush ordering and the barrier warning",
-      "updated": "2026-11-12T01:52:35",
-      "worktree": "../strata-wt/xapiand/barrier-warning-strata"
+      "updated": "2026-11-18T03:09:26",
+      "worktree": ""
     },
     "behavior-changes-audit": {
       "accepted": {},
@@ -1592,6 +1687,8 @@
     "cheap-reopen": {
       "accepted": {},
       "after": [],
+      "base": "6715452bb0d72cc4daf7079c081c6f40ca2b85b2",
+      "branch": "quest/xapiand/cheap-reopen",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -1605,7 +1702,9 @@
         "src/database/pool.*",
         "src/engine/strata/**",
         "docs/design/cheap-reopen.md",
-        "tests/**"
+        "tests/test_cheap_reopen*",
+        "tests/test_pool.cc",
+        "tests/test_node.cc"
       ],
       "landed": [],
       "lenses": [
@@ -1616,9 +1715,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-13T16:18:29"
+      "updated": "2026-11-18T06:31:41",
+      "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
       "accepted": {},
@@ -1999,11 +2099,10 @@
       ],
       "files": [
         "src/**",
-        "tests/**",
         "harness/**",
-        "CMakeLists.txt",
         "docs/mechanisms/cjk-words.md",
-        "docs/src/content/docs/**"
+        "docs/src/content/docs/**",
+        "tests/test_cjk_words*"
       ],
       "history": [
         {
@@ -2093,12 +2192,11 @@
         "cjk-segmenter"
       ],
       "provides": [],
-      "reason": "its blocker landed",
       "repo": ".",
       "risk": "normal",
       "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-17T23:08:07",
+      "updated": "2026-11-18T05:36:16",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
@@ -2223,6 +2321,9 @@
       "risk": "low",
       "status": "blocked",
       "title": "Phase 8b's closing benchmark, run once and published",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:40:13"
     },
     "cluster-api": {
@@ -2286,7 +2387,13 @@
     "cluster-gate": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport"
+        "goal5-audit",
+        "detent:journal-reopen-closed",
+        "detent:consensus-dns-threads",
+        "detent:consensus-worker-release",
+        "detent:consensus-close-fenced",
+        "detent:journal-group-io-cost",
+        "detent:journal-group-io-sweep"
       ],
       "checks": [
         {
@@ -2335,7 +2442,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-16T10:28:23"
+      "updated": "2026-11-18T11:17:28"
     },
     "cluster-harness": {
       "accepted": {
@@ -2495,9 +2602,7 @@
     },
     "cluster-membership": {
       "accepted": {},
-      "after": [
-        "detent:consensus-transport"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -2546,13 +2651,11 @@
       "risk": "high",
       "status": "planned",
       "title": "Node identity, --join, certificates, keepalives, /:nodes",
-      "updated": "2026-11-15T23:05:23"
+      "updated": "2026-11-18T02:55:56"
     },
     "cluster-migration": {
       "accepted": {},
-      "after": [
-        "detent:consensus-transport"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -2589,11 +2692,13 @@
       "risk": "high",
       "status": "planned",
       "title": "One node to a cluster and back, without loss",
-      "updated": "2026-11-16T10:28:28"
+      "updated": "2026-11-18T02:55:57"
     },
     "cluster-vm-tier": {
       "accepted": {},
       "after": [],
+      "base": "eb950b074efcd8d3fc091cf610302d04a6ac4f96",
+      "branch": "quest/xapiand/cluster-vm-tier",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2615,14 +2720,17 @@
       "needs": [
         "cluster-harness",
         "faultlab-design",
-        "faultlab-core"
+        "faultlab-core",
+        "faultlab-netlab",
+        "faultlab-disklab"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-17T23:01:04"
+      "updated": "2026-11-18T10:46:39",
+      "worktree": "../Xapiand-wt/xapiand/cluster-vm-tier"
     },
     "cold-tier-item5": {
       "accepted": {},
@@ -3333,6 +3441,107 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "consensus-c3-rows": {
+      "accepted": {},
+      "after": [],
+      "base": "8876195e782558e38c5ec30183453837cb31bdfe",
+      "branch": "quest/xapiand/consensus-c3-rows",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/consensus_test.cc",
+        "tools/mutants.sh"
+      ],
+      "journal": "../Xapiand-wt/xapiand/consensus-c3-rows",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "low",
+      "status": "active",
+      "title": "C3 rows: a repair at the base with another term is refused; the commit bound has its own row",
+      "updated": "2026-11-18T04:46:57",
+      "worktree": "../consensus-wt/xapiand/consensus-c3-rows"
+    },
+    "consensus-flow-bench": {
+      "accepted": {},
+      "after": [],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/consensus-flow-bench",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "bench/flow*",
+        "test/flow_bench*",
+        "docs/perf/flow*"
+      ],
+      "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "active",
+      "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
+      "updated": "2026-11-18T04:02:20",
+      "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
+    },
+    "consensus-hello-limits": {
+      "accepted": {},
+      "after": [
+        "detent:transport-feed-scan"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/transport*",
+        "src/transport*",
+        "src/host*",
+        "include/consensus/host*",
+        "test/transport*",
+        "test/host*",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "consensus:hello"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
+      "updated": "2026-11-18T02:57:38"
+    },
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
@@ -3539,6 +3748,39 @@
       "updated": "2026-11-17T21:16:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
+    "consensus-sim-loops": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-close-fenced"
+      ],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/consensus-sim-loops",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/driver_simulation.cc",
+        "test/driver_mutants.py"
+      ],
+      "journal": "../Xapiand-wt/xapiand/consensus-sim-loops",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "active",
+      "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
+      "updated": "2026-11-18T04:04:27",
+      "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
+    },
     "core-lifecycle-tests": {
       "accepted": {},
       "after": [],
@@ -3631,6 +3873,8 @@
     "coverage-areas": {
       "accepted": {},
       "after": [],
+      "base": "ea544737d678d1a8dc94417d670538a7e7ddc9e9",
+      "branch": "quest/xapiand/coverage-areas",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -3652,9 +3896,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T02:20:25"
+      "updated": "2026-11-18T02:21:59",
+      "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "cr1-fix": {
       "accepted": {},
@@ -4723,7 +4968,6 @@
         }
       },
       "after": [
-        "phase4-gate",
         "manifest-log"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
@@ -4792,7 +5036,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-17T23:33:07",
+      "updated": "2026-11-18T02:39:19",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -5294,6 +5538,66 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-adopt-xapiand": {
+      "accepted": {},
+      "after": [
+        "loop-yield-race"
+      ],
+      "base": "cc65385b2ec45310eb0f85e2ae1faae62311f6b9",
+      "branch": "quest/xapiand/faultlab-adopt-xapiand",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/cluster/**"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-18T10:43:28",
+          "commit": "66f4fa597b98fdeb8c688c0602a8310020516f60",
+          "criteria": {
+            "A1": "261118-063444-7192ac (passed at f730dfa30a55; only merges from main since), 261118-075629-e032e7 (passed at f730dfa30a55; only merges from main since)",
+            "A2": "261118-063447-891e3d (passed at f730dfa30a55; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "f730dfa30a55ba1c8e6959fc67c8068e5de316e5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-085046-bc581b",
+              "level": "light",
+              "seconds": 282.8,
+              "state": "done",
+              "what": "faultlab-adopt-xapiand check suite at f730dfa30a55"
+            }
+          ],
+          "final": true,
+          "from": "40a757e5a08530121712bc774ddf8c48ed28c56b",
+          "reason": "",
+          "tested": "64761f626aa1adbd62d6ba1eac801eb2ca097af0"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [
+        "faultlab-core"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "Xapiand harness/cluster uses faultlab history and proxy; its copies go (migration step 4)",
+      "updated": "2026-11-18T10:44:49",
+      "worktree": ""
+    },
     "faultlab-core": {
       "accepted": {
         "correctness": {
@@ -5594,6 +5898,160 @@
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
       "updated": "2026-11-16T15:03:59",
       "worktree": ""
+    },
+    "faultlab-disklab": {
+      "accepted": {},
+      "after": [],
+      "base": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+      "branch": "quest/xapiand/faultlab-disklab",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "python/faultlab/disklab.py",
+        "python/tests/disklab_test.py",
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-18T07:32:38",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1, A2) and a mutant killed (A3)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T07:37:36",
+          "commit": "adc4fc291632919446c651d348530a4e430071e3",
+          "criteria": {
+            "A1": "261118-073241-96587f",
+            "A2": "261118-073241-96587f",
+            "A3": "261118-073241-632ce6; fails without: 261118-073108-b7211a",
+            "A4": "261118-073241-30fded"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+              "commit": "adc4fc291632919446c651d348530a4e430071e3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-073241-30fded",
+              "level": "light",
+              "seconds": 18.5,
+              "state": "done",
+              "what": "faultlab-disklab check build-test at adc4fc291632"
+            }
+          ],
+          "final": true,
+          "from": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+          "reason": "",
+          "tested": "adc4fc291632919446c651d348530a4e430071e3"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "landed",
+      "title": "disklab: dm-log-writes replay to any flush mark, dm-delay, dm-flakey, in a Linux VM (design F15)",
+      "updated": "2026-11-18T07:37:41",
+      "worktree": ""
+    },
+    "faultlab-netlab": {
+      "accepted": {},
+      "after": [],
+      "base": "a452a8c5e79655293d114d77c2ebc54af5fb0505",
+      "branch": "quest/xapiand/faultlab-netlab",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "python/faultlab/netlab.py",
+        "python/tests/netlab_test.py",
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-18T06:49:04",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1) and a mutant killed (A2)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
+      "landed": [
+        {
+          "at": "2026-11-18T06:56:00",
+          "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+          "criteria": {
+            "A1": "261118-064831-83d62a",
+            "A2": "261118-064832-635f88; fails without: 261118-064401-e15efd",
+            "A3": "261118-064831-83d62a",
+            "A4": "261118-064821-90af61"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+              "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-064821-90af61",
+              "level": "light",
+              "seconds": 20.9,
+              "state": "done",
+              "what": "faultlab-netlab check build-test at 8f893c18a8ec"
+            }
+          ],
+          "final": true,
+          "from": "a452a8c5e79655293d114d77c2ebc54af5fb0505",
+          "reason": "",
+          "tested": "8f893c18a8ec8df2c490631be122ddadde4aabd6"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "landed",
+      "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
+      "updated": "2026-11-18T06:56:01",
+      "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
       "accepted": {
@@ -6344,6 +6802,9 @@
       "risk": "normal",
       "status": "blocked",
       "title": "Carried follow-ups: root routes, the WAL view, fuzz_lua",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-18T02:01:45",
       "worktree": "../Xapiand-wt/xapiand/gate-prep-followups"
     },
@@ -6635,6 +7096,36 @@
       "updated": "2026-11-09T19:10:05",
       "worktree": ""
     },
+    "goal5-audit": {
+      "accepted": {},
+      "after": [],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/goal5-audit",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/GOAL5-AUDIT.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/goal5-audit",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "active",
+      "title": "Goal 5 audit of completion, journal, consensus, task, wheel: every thread and reclamation path bounded",
+      "updated": "2026-11-18T02:56:32",
+      "worktree": "../consensus-wt/xapiand/goal5-audit"
+    },
     "group-core": {
       "accepted": {
         "design": {
@@ -6745,7 +7236,6 @@
     "group-install": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
         "detent:consensus-driver"
       ],
       "checks": [
@@ -6807,7 +7297,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-16T15:42:54"
+      "updated": "2026-11-18T02:56:00"
     },
     "group-sim": {
       "accepted": {},
@@ -7900,6 +8390,9 @@
       "risk": "normal",
       "status": "blocked",
       "title": "The library performance issues the cpp-libraries gate filed",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:41:43"
     },
     "license-audit": {
@@ -8246,9 +8739,7 @@
       ],
       "consumes": [],
       "files": [
-        "src/server/*",
-        "src/database/pool.*",
-        "src/manager.*",
+        "src/manager.cc",
         "harness/light_share*",
         "tests/test_light_share*",
         "docs/design/light-share.md"
@@ -8264,7 +8755,7 @@
       "risk": "high",
       "status": "active",
       "title": "Light requests keep their bound under heavy load",
-      "updated": "2026-11-18T02:20:16",
+      "updated": "2026-11-18T05:36:36",
       "worktree": "../Xapiand-wt/xapiand/light-share"
     },
     "linux-sanitizers": {
@@ -8733,6 +9224,64 @@
       "status": "landed",
       "title": "test_loop_yield's RESTORE loop share holds on any core count",
       "updated": "2026-11-12T12:17:10",
+      "worktree": ""
+    },
+    "loop-yield-race": {
+      "accepted": {},
+      "after": [],
+      "base": "9c1abd919b2d5be719f035a0c652896b5b81224c",
+      "branch": "quest/xapiand/loop-yield-race",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_loop_yield.cc",
+        "tests/test_engine_search_strata.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-18T10:01:13",
+          "commit": "c79d539d5deac15481b80385b4ce9c3145e18212",
+          "criteria": {
+            "A1": "261118-085546-726c47; fails without: 261118-085535-5b48c7",
+            "A2": "261118-085607-269ff5",
+            "A3": "261118-085558-3ca281"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "9d56c48f8cc7cf097d411f0dcdadbe00fa719209",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-085558-3ca281",
+              "level": "light",
+              "seconds": 455.4,
+              "state": "done",
+              "what": "loop-yield-race check build-test at 9d56c48f8cc7"
+            }
+          ],
+          "final": true,
+          "from": "da2cd1e25d8df7007151fc20c150e9c4dc7d52a1",
+          "reason": "",
+          "tested": "bca3bb2872e0db3b49f3a414c4c45c24a88614e9"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "landed",
+      "title": "Fix test_loop_yield's TSan race (F6) and the strata search timing bound",
+      "updated": "2026-11-18T10:02:10",
       "worktree": ""
     },
     "lua-memory-bound": {
@@ -13576,11 +14125,10 @@
       "consumes": [],
       "files": [
         "src/**",
-        "tests/**",
         "harness/**",
-        "CMakeLists.txt",
         "docs/mechanisms/more-like-this.md",
-        "docs/src/content/docs/**"
+        "docs/src/content/docs/**",
+        "tests/test_more_like_this*"
       ],
       "history": [
         {
@@ -13673,7 +14221,7 @@
       "risk": "high",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-08T22:56:38"
+      "updated": "2026-11-18T05:36:15"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
@@ -14477,7 +15025,7 @@
       "risk": "low",
       "status": "dropped",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-13T21:25:02",
+      "updated": "2026-11-18T03:09:34",
       "worktree": ""
     },
     "open-one-flush": {
@@ -15203,12 +15751,12 @@
         "track-c"
       ],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4), after the single-node release (2026-10-29, D9); starts after Track C's C1 to C4 pass (strata docs/PLAN.md Phase 3R)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-09T04:14:28"
+      "updated": "2026-11-18T02:29:42"
     },
     "phase4-gate": {
       "accepted": {},
@@ -15351,6 +15899,9 @@
       "risk": "high",
       "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-11T18:45:07",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
@@ -15604,7 +16155,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Phase 6, async backends and tuning",
-      "updated": "2026-11-08T22:56:39"
+      "updated": "2026-11-18T05:36:22"
     },
     "phase7b": {
       "accepted": {},
@@ -15718,17 +16269,16 @@
       ],
       "milestone": "Phase 7b",
       "needs": [
-        "release",
         "phase3r",
         "track-d"
       ],
       "provides": [],
-      "reason": "the owner: 7b follows the single-node release (2026-10-29, D9)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": ".",
       "risk": "critical",
-      "status": "blocked",
+      "status": "planned",
       "title": "Phase 7b, shards become groups",
-      "updated": "2026-11-08T22:56:40"
+      "updated": "2026-11-18T02:29:45"
     },
     "phase7c-design": {
       "accepted": {},
@@ -16424,9 +16974,7 @@
     },
     "placement-repair": {
       "accepted": {},
-      "after": [
-        "detent:consensus-transport"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -16473,7 +17021,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-16T10:28:35"
+      "updated": "2026-11-18T02:55:58"
     },
     "placement-root": {
       "accepted": {},
@@ -16783,9 +17331,9 @@
         "src/opts.*",
         "src/main.cc",
         "src/database/pool.*",
-        "tests/**",
         "docs/src/**",
-        "harness/**"
+        "harness/**",
+        "tests/test_pool_from_memory*"
       ],
       "landed": [],
       "lenses": [],
@@ -16796,7 +17344,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The open-index pool is sized from memory, not a fixed 200",
-      "updated": "2026-11-13T16:18:27"
+      "updated": "2026-11-18T05:36:19"
     },
     "pool-sweep-wait": {
       "accepted": {},
@@ -17981,7 +18529,7 @@
       "risk": "high",
       "status": "dropped",
       "title": "A search opens an index with no lock and no flush; the first write upgrades",
-      "updated": "2026-11-13T21:25:04",
+      "updated": "2026-11-18T03:09:37",
       "worktree": ""
     },
     "reclaim-backlog": {
@@ -18178,6 +18726,9 @@
       "risk": "high",
       "status": "blocked",
       "title": "Recovery tooling, the strata command-line tool",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-09T04:14:32"
     },
     "release": {
@@ -18194,7 +18745,8 @@
         "barrier-warning",
         "release-rows",
         "format-freeze",
-        "more-like-this"
+        "more-like-this",
+        "cluster-gate"
       ],
       "checks": [
         {
@@ -18306,7 +18858,10 @@
       "risk": "critical",
       "status": "blocked",
       "title": "The rename and the first Xapian-free release",
-      "updated": "2026-11-08T22:56:40"
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-18T02:29:15"
     },
     "release-rows": {
       "accepted": {
@@ -19351,9 +19906,7 @@
     },
     "shard-groups": {
       "accepted": {},
-      "after": [
-        "detent:consensus-transport"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -19426,7 +19979,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "Shards across nodes: routing, members, replicas, linearizable reads",
-      "updated": "2026-11-16T10:28:38"
+      "updated": "2026-11-18T02:55:59"
     },
     "shard-rpc": {
       "accepted": {},
@@ -20692,12 +21245,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "owner: per-name ruling (A1); branch ready at its head, rebase on resume",
+      "reason": "D118: owner ruled A1",
       "repo": ".",
       "risk": "normal",
-      "status": "blocked",
+      "status": "active",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T02:00:09",
+      "updated": "2026-11-18T02:47:57",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
@@ -22280,17 +22833,45 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T05:35:31",
+          "commit": "20d227d7be91ede90c2ab440cce796689c8bc63f",
+          "criteria": {
+            "A1": "261118-052127-1653c7",
+            "A2": "261118-052126-01b33f",
+            "A3": "261118-035605-95f3cd"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "7d0cf6f6f03d9e18ef51eb121383b7e4e0b00ff0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-035605-95f3cd",
+              "level": "light",
+              "seconds": 488.6,
+              "state": "done",
+              "what": "test-glob check build-test at 7d0cf6f6f03d"
+            }
+          ],
+          "final": true,
+          "from": "52b9b246638e903646ec2bab908be7b9eff50014",
+          "reason": "",
+          "tested": "7e451b42f63329d9306bbeaed1db2908fbf3a259"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Linked unit tests register by file name, not by a CMakeLists.txt list",
-      "updated": "2026-11-18T02:02:02",
-      "worktree": "../Xapiand-wt/xapiand/test-glob"
+      "updated": "2026-11-18T05:35:51",
+      "worktree": ""
     },
     "threadpool-phase7c-l2": {
       "accepted": {},
@@ -22385,7 +22966,16 @@
     },
     "track-c": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "consensus-hello-limits",
+        "consensus-sim-loops",
+        "track-c-c3-gate",
+        "goal5-audit",
+        "consensus-flow-bench",
+        "track-c-gates"
+      ],
+      "base": "c5b571ab98ec7fd8b8683d1c1fef40db1f7fb721",
+      "branch": "quest/xapiand/track-c",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -22397,8 +22987,6 @@
       "consumes": [],
       "files": [
         "docs/design/track-c.md",
-        "docs/gates/track-c*.md",
-        "docs/reviews/track-c*.md",
         "docs/design/peer-transport.md",
         "docs/reviews/peer-transport*.md",
         "docs/status/peer-transport.md"
@@ -22431,6 +23019,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/track-c",
       "landed": [],
       "lenses": [
         "correctness",
@@ -22439,12 +23028,12 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4); the single-node release first, then 7b (2026-10-29, D9)",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-08T22:35:57"
+      "updated": "2026-11-18T02:56:40",
+      "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
       "accepted": {},
@@ -22476,6 +23065,77 @@
       "status": "landed",
       "title": "Track C's C1, membership changes and voter roles",
       "updated": "2026-11-08T15:39:09"
+    },
+    "track-c-c3-gate": {
+      "accepted": {},
+      "after": [
+        "consensus-c3-rows"
+      ],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/track-c-c3-gate",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/gates/track-c-c3.md",
+        "docs/reviews/track-c-c3.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/track-c-c3-gate",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "review",
+      "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
+      "updated": "2026-11-18T04:44:41",
+      "worktree": "../strata-wt/xapiand/track-c-c3-gate"
+    },
+    "track-c-gates": {
+      "accepted": {},
+      "after": [
+        "consensus-hello-limits",
+        "consensus-sim-loops",
+        "consensus-flow-bench",
+        "detent:journal-faultfs"
+      ],
+      "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+      "branch": "quest/xapiand/track-c-gates",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/gates/track-c-c2.md",
+        "docs/gates/track-c-c4.md",
+        "docs/reviews/track-c-c2*.md",
+        "docs/reviews/track-c-c4*.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/track-c-gates",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "active",
+      "title": "C2 report completed and C4 report written at consensus and journal main",
+      "updated": "2026-11-18T08:19:27",
+      "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
       "accepted": {},
@@ -22605,12 +23265,12 @@
       "milestone": "Track D",
       "needs": [],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4); the single-node release first, then 7b (2026-10-29, D9)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Track D, distribution",
-      "updated": "2026-11-09T04:14:35"
+      "updated": "2026-11-18T02:29:37"
     },
     "track-p": {
       "accepted": {},
@@ -23398,6 +24058,8 @@
     "wide-search-loop": {
       "accepted": {},
       "after": [],
+      "base": "e3582203c19c3191218ff6dde560592ae1a67406",
+      "branch": "quest/xapiand/wide-search-loop",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -23410,6 +24072,9 @@
       "files": [
         "src/query_dsl.cc",
         "src/database/wide_search*",
+        "src/server/search_views.cc",
+        "src/database/handler.cc",
+        "src/index_resolver_lru.*",
         "harness/wide_search*",
         "tests/test_wide_search*",
         "docs/design/wide-search-loop.md"
@@ -23423,9 +24088,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-18T02:20:20"
+      "updated": "2026-11-18T04:54:46",
+      "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
       "accepted": {},
@@ -25917,10 +26583,9 @@
       "consumes": [],
       "files": [
         "src/**",
-        "tests/**",
         "docs/**",
-        "CMakeLists.txt",
-        "cmake/**"
+        "cmake/**",
+        "tests/test_xapiand_final_release*"
       ],
       "history": [
         {
@@ -25961,7 +26626,7 @@
       "risk": "high",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-08T22:36:02"
+      "updated": "2026-11-18T05:36:21"
     },
     "xapiand-on-strata": {
       "accepted": {},
