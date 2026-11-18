@@ -297,3 +297,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Runs: faultlab-seam contributor ~192k (done, completion:924c6a6, in review); hunt-lua-fetch explorer ~108k (fix: shared scratch dir in lua_fetch.sh); phase6-split design ~170k (9 quests, Q1/Q2 to owner); radix re-check reviewer ~108k (approve); radix contributor ~127k.
 - Started: faultlab-seam, hybrid-go-no-go (A1 C1 rerun). Unblocked by hand: cjk-words, barrier-warning, hybrid-go-no-go (stale blocks; tool fix in hunt.md). Closed 41 stale Detent start notices.
 - Host: light slots 57% used, drains 19 min, idle-beside-runnable 33 min; disk 26 GiB free; load 6-11. Weekly quota 56%, burn 1.11%/h.
+## 2026-11-18 00:00 hourly
+- Landed: completion:d8b538c (faultlab-seam; F8 members; review CHANGES then F1 fixed with holes mutant a0d968 failing without it). Merged design: xapiand:861f25094 phase6 split (review CHANGES, re-check APPROVE).
+- Runs: faultlab-seam reviewer ~143k (1 blocker, real ENOSPC bug); fix round ~214k total for contributor; phase6 designer ~213k total, reviewer ~215k total (3 blockers, all real); faultlab-core contributor started.
+- Host: light slots 65% used, drains 12 min, idle-beside-runnable 37 min; load 15-18; disk 29 GiB after prune (slots are 80 of 103 GB). Weekly 58%, burn 1.13%/h.
