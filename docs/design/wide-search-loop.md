@@ -64,20 +64,49 @@ its width varies with the shards per index.
 | Stall captures (>= 20 ms), S2 phase | 19,659 | 308 | same |
 
 The host was shared (strict holds beside light ones) and moved between runs (alone p99 0.8-2.5 ms), so these are the
-probe's direction, not the gate's numbers: A2 and A3 are rerun at the landed code. What remains in S2 is the
-resolver's lock and its misses, which slicing makes short but does not remove, and at 10,000 indexes turns of 7-10 ms
-that no capture has attributed yet (T4's edge is 1 ms): see Open.
+probe's direction, not the gate's numbers: the branch's rows below replace them.
 
-## Open
+## Branch measured (call sites in, Xapiand:8e5040da8 src; master src = the same tree with 8e5040da8 reverted)
 
-- At 10,000 indexes the probe still has 6.6-9.2 ms turns on the HTTP loops (0e3792); a stall capture at 10,000 at 5 ms
-  attributes them before the A2 rerun.
+Both arms run binaries with the same reactor (the stall sampler inert). Exclusive holds are the host alone.
 
-- The resolver's cache holds 100 entries, so a search over more names than that misses every one and reads each
-  index's settings document; a cache sized to the indexes a node serves (or settings kept beside the pool's names)
-  would remove the per-name load. `src/index_resolver_lru.*` and `src/opts.cc`, outside this quest.
-- `resolve_index_lru_mtx` is a `std::mutex` taken on the loops; a sharded or read-mostly lock would remove the
-  contention that remains under concurrency.
+| Row | master | branch | Jobs |
+|---|---|---|---|
+| SR3 10,000, exclusive: http loops' max since start | 322 / 373 ms | 2.07 / 2.07 ms | 051433-c76a1c, 051434-89f2f5 |
+| SR3 10,000, exclusive: http loops' p99 | 384 / 448 us | 1,536 / 2,048 us | same |
+| SR3 10,000, exclusive: search p50, first search | 4.8 s, 16.3 s | 5.5 s, 6.1 s | same |
+| SR3 10,000, strict: http loops' max since start | 318 / 634 ms | 2.06 / 2.10 ms | 051431-0d7e48, 050300-6ee958 |
+| S2 64 by names, strict: light GET p99 / max | 1.28 / 1,140 ms | 1.69 / 3.39 ms | 051429-5d9b36, 050258-4c6f40 |
+| S2 64 by pattern, strict: light GET p99 / max | 17.6 / 1,674 ms | 1.86 / 18.7 ms | same |
+| S2 64: loops' window max | 1.5-2.1 s buckets | 5-6 ms buckets | same |
+
+The control loop, which runs no search, sits at a 2,048-2,560 us p99 in every run, and the http loops of the
+probe's idle phase at 2,048 us: an idle loop's wake on this host (macOS x86_64) is late by up to 2.5 ms. The
+branch's remaining max at 10,000 is that floor: of the late beats over 2 ms at 10,000 (job 050303-e61fcf, a 250 us
+beat on every loop), 40 of 42 are off CPU (the thread preempted), the other two the node's start; with the beat
+keeping the loops awake their p99 is 512 us. One reading disagrees: master's exclusive run has its http loops at a
+384-448 us p99, so whether the branch's 1.5-2 ms p99 is the idle wake or many short turns is decided by the
+exclusive A/B with the beat on (jobs in the journal). The resolver's `std::mutex` is still taken on the loops; at
+64 clients the branch meets T5, so it stays.
+
+Two hypotheses measured and dropped:
+
+- A resolver cache sized past the search (`--resolver-cache-size 100000`) changes nothing measurable: SR3 10,000
+  max 3.5 / 2.9 ms against 2.06 / 2.10 ms, S2 names light p99 1.65 against 1.69 ms (050301-091601, 050259-a1757e).
+  The misses' cost is sliced, so `src/index_resolver_lru.*` stays as it is.
+- The 6.6-9.2 ms turns of the probe build at 10,000 (045057-0e3792) were the probe patch's; the branch's call sites
+  do not show them (above).
+
+## search_batch for concurrent pins (cheap-reopen D3)
+
+A change that pins a batch concurrently keeps three things of `DatabaseHandler::search_batch`:
+
+1. The hold first: a search wider than one batch takes `wide_search::pins().take(end - begin, token)` before any pin,
+   and keeps it until the batch's searches end. Concurrent pins never exceed the hold, so the node-wide bound stands.
+2. A budget checkpoint per shard on the loop: launch the pins from a loop that checkpoints before each launch (and
+   before each `engine_for_read`), so a batch of K never runs K launches or K resumptions in one turn.
+3. Cancellation through the request's token: a batch waiting in the line leaves it when its request is cancelled;
+   pins already started are released by their `lock_shard`s.
 
 ## Limits
 
