@@ -1,43 +1,47 @@
 # consensus-sim-loops: journal
 
-State: working (investigating a loop spin at a power cut)
+State: working (attributing a heal stall that needs checkpoints plus repairs)
 Quest: .campaign/xapiand/quests/consensus-sim-loops.md (the lead's; never edit it)
 
 ## Doing
 
-Investigating a loop spin. Repro (consensus `ecb2a37`, Release build in the worktree's
-`build/`): `NOCP=1 NORP=1 SIM_DRIVER_SEEDS=1 ./consensus_simulation_test 0 1000 1` (also seed 2)
-spins node 2's loop 1 at step 944, in `crash()` (pick 855: `shut(n, true)`), with checkpoints and
-repairs off. It appeared once the network delivers one message per group per delivery step (8-10x
-the old traffic); the earlier, lighter run passed 10 seeds with 22 crashes. Hypothesis to test
-next: after the power cut fails a loop's turn driver, a group still `awaiting_turn()` is
-re-watched on the failed driver every step (`Driver::step` -> `watch`), so the loop never idles.
-If confirmed it is in `include/consensus/driver.h` (or journal's TurnDriver), outside this file set.
+Spin confirmed and reported (Detent msg-71). Repro at consensus `ecb2a37`:
+`SIM_DRIVER_SEEDS=1 build/consensus_simulation_test 0 1000 2` -> "node 3 loop 0 spins".
+Cause: `include/consensus/driver.h:647` (`step` re-watches while `awaiting_turn()`) with `:928`
+(`watch` waits on `turns_.durable(..., shutdown_.token())`): after `shutdown()` (`:942`) every
+watch throws `task::cancelled` at once and its callback re-queues the group, so the loop never
+idles until the barrier lands. Shown with an instrumented scratch driver.h: groups at IOPending,
+awaiting_turn 1, turn driver not failed, watch woken 600,000 times with task cancelled. It hit
+16 of seeds 1-24, so a seed list would exclude most seeds. Ruling instead (consensus `a8304d4`):
+a stopping loop gets a 10,000-step budget and its busy rounds are counted in the report
+("rounds a stopping loop stayed busy (Detent msg-71)"), so power cuts stay on every seed.
 
-Fixed in the simulation so far: repair replay ordering (the range after a repair may precede the
-caller's resume; a cancelled repair still completes), and heal re-proposes when another term's
-entry took its placement.
+Open: with that, 10 of seeds 1-24 fail heal ("did not apply a new entry ... after healing"; the
+leader's heal proposal never completes). Seeds 1 3 7 8 13 18 19 20 21 23. All 10 pass with
+checkpoints off (checkpoint() draws no randomness, so the schedule is otherwise the same) and
+all pass with repairs off: the stall needs both. Suspect a checkpoint racing a repair (the epoch
+moves under an in-flight capture) leaves the Worker's checkpoint phase blocking proposals; not yet
+attributed to sim or Worker.
 
 ## Next
 
-1. Confirm or refute the re-watch hypothesis at the repro (one diagnostic: count `watch` per
-   group during `shut`); if it is the Driver's, report it under Blocked on with the repro.
-2. Then seeds with checkpoints and repairs on; strip the DBG/NOCP/NORP/spin_report diagnostics.
-3. Measure s/seed, then submit A1 (10,000 seeds x 1,000 steps, split into <=30-minute light jobs),
+1. Attribute the heal stall at seed 3: is a checkpoint call live on the stalled leader, and was a
+   repair accepted while it was in flight? If the sim issued a repair it should not have, gate it;
+   if the Worker stalls on a refused capture, report it like msg-71.
+2. Measure s/seed; submit A1 (10,000 seeds x 1,000 steps, split into <=30-minute light jobs),
    A2 (`ack-before-turn-barrier`) and A3 (`repair-below-base`) `--fails-without` jobs (build the
-   simulation against `driver_mutants.py NAME build/mutant` as tools/mutants.sh does; run
-   `SIM_DRIVER_SEEDS=N consensus_simulation_test 0 1000 1` so only the Driver simulation runs),
-   and `campaign verify` for A4.
+   simulation against `driver_mutants.py NAME build/mutant` as tools/mutants.sh does; run with
+   `SIM_DRIVER_SEEDS=N ... 0 1000 1`), and `campaign verify` for A4.
 
 ## Blocked on
 
-Nothing yet (see Doing: the spin may be a Driver bug outside the file set).
+Nothing; msg-71 (the Driver spin) is Detent's and is counted, not hidden.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
+| A1 | pending; power cuts on all seeds, busy stopping rounds counted (Detent msg-71) |
 | A2 | pending |
 | A3 | pending |
 | A4 | pending |
