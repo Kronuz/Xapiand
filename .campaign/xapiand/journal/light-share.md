@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: waiting on jobs 261118-112144-650d76 261118-112147-f7cdd0 261118-112151-1f9d36 261118-112154-12be10 261118-112158-d26d97
+State: waiting on jobs 261118-135313-0d4d30 261118-135314-eb475b 261118-135315-63667c 261118-135316-88308e
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -50,7 +50,13 @@ The share cuts worst-loop lag p99 by 33-42% (still 1.8-2x the 1.024 ms bound) an
 X2 (T10, 4 loops): flood p99 0.85 ms for `off` and 12 alike (the 48 ms of the gate does not reproduce here); the
 only failure is a 140.9 ms max of one light GET in `off` (limit 50), while 12 shows 37 and 266 ms maxima: noise.
 
-Rerun, exclusive (waits for the A4 hold): X1b 261118-112144-650d76 (off 8 12 off 8 12), X2 261118-112147-f7cdd0
+Reruns 650d76, f7cdd0, 1f9d36, 12be10 measured nothing: submitted without `--slot`, they ran in a fresh checkout
+without `build-ls` (stall_load/lua_bounds tracebacks, "build-ls/bin/xapiand: No such file"); the harnesses hid it
+(X1b exited 0 with empty medians). Fixed: `light_share_ab.sh`, `light_share_t12.sh`, the new `light_share_t10.sh` and
+`light_share_report.py` exit nonzero on a failed arm, a missing binary or no rows. Resubmitted with `--slot
+light-share` (the slot that holds build-ls) at 85d17ff346b2: X1b 261118-135313-0d4d30, X2a 261118-135314-eb475b
+(off 12 off), X2b 261118-135315-63667c (8 off 8), X3 261118-135316-88308e. Suite d26d97 passed at 34710b05b2da (A5
+evidence; harness-only commits since). Superseded list: X1b 261118-112144-650d76 (off 8 12 off 8 12), X2 261118-112147-f7cdd0
 (off 12 off) and 261118-112151-1f9d36 (8 off 8), X3 261118-112154-12be10 (T12: off 12 8 off), suite
 261118-112158-d26d97. Provisional verdict from X1: the share does not win; the verdict stands on the reruns.
 
