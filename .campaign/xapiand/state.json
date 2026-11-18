@@ -800,6 +800,21 @@
         "quest": "detent:journal-group-io-cost"
       },
       "text": "detent:journal-group-io-cost started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T07:34:43",
+      "by": "campaign detent",
+      "closed": "transport-idle-budget writes only bench/transport_idle.cc and docs/perf/**: no transport or driver source, so rpc-lane and group-core are unaffected; the one overlap with flow-bench (docs/perf/flow*) is docs, and Detent was asked to narrow to docs/perf/transport-idle*",
+      "id": "msg-111",
+      "settles": {
+        "ours": [
+          "consensus-flow-bench",
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:transport-idle-budget"
+      },
+      "text": "detent:transport-idle-budget started and may change files your consensus-flow-bench changes (order them with --after detent:transport-idle-budget, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
