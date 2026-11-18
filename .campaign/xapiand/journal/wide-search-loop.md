@@ -64,26 +64,18 @@ Read so far (src = master, build-prof):
 
 ## Next
 
-1. Read the session-2 jobs; fix each miss's measured cause; then rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
+1. Read the session-2 jobs. Decision table: if the 100,000-entry cache arm clears a miss, the cause is the resolver
+   (redesign `src/index_resolver_lru.*`: sharded locks, one entry per index, a cap >= `--max-search-indexes`
+   (100,000) so the widest admitted search resolves from cache, its memory stated); if late beats are mostly off CPU
+   with the control loop lagging too, the miss is host scheduling, not a loop turn (exclusive rerun decides); if on
+   CPU, the symbolized stacks name the turn to slice. Then rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
    at the landed code, then CI (A4) and the correctness review.
 2. 10,000 indexes: master 9d63ea loops' max 395 / 475 ms; probe 0e3792 6.6 / 9.2 ms, still over T4's 1,024 us.
    Next experiment: stall capture at 10,000 with XAPIAND_LAG_SPIN=5000 on build-probe to attribute those turns.
 
 ## Blocked on
 
-1. The bound needs two call sites outside this quest's files (lead):
-   - `src/server/search_views.cc` `resolve_index_endpoints`: its per-name loop becomes
-     `co_await wide_search::resolve(paths, writable, settings, *request.budget)` (light-share holds `src/server/*`).
-   - `src/database/handler.cc` `DatabaseHandler::search_batch`: take `wide_search::pins()` for a wide search's batch
-     and checkpoint the budget per shard.
-   Both are in `harness/wide_search_callsites.patch` (+21/-19 lines). Options: (a) add both files to this quest's
-   set, ordered after or coordinated with light-share's `search_views.cc` edits; (b) light-share applies the
-   `search_views.cc` hunk, this quest takes `handler.cc`; (c) land `wide_search.{h,cc}` and tests now (no behavior
-   change) and move the call sites to a follow-up. Recommendation: (a); the hunk is a 19-line block light-share does
-   not touch (its edits are scheduling), so a rebase conflict is unlikely.
-2. Open, not this quest's (doc "Open"): the resolver cache of 100 entries makes every wide-search name a settings
-   load, and `resolve_index_lru_mtx` is a loop-blocking `std::mutex`. Recommendation: a follow-up quest on
-   `src/index_resolver_lru.*`; the probe shows slicing alone brings S2 within 1.3x of T5's bound.
+Nothing. (Session 1's call-site blocker is resolved: the lead widened the set; applied in Xapiand:ca68b2e39.)
 
 ## Evidence
 
