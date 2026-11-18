@@ -6443,6 +6443,8 @@
     "hunt-radix-router": {
       "accepted": {},
       "after": [],
+      "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
+      "branch": "quest/xapiand/hunt-radix-router",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6455,6 +6457,7 @@
       "files": [
         "**"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-radix-router",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -6462,9 +6465,10 @@
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/radix-router",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "radix-router: bound slow matching inputs found by fuzzing",
-      "updated": "2026-11-17T18:45:42"
+      "updated": "2026-11-17T18:46:50",
+      "worktree": "../radix-router-wt/xapiand/hunt-radix-router"
     },
     "hybrid-go-no-go": {
       "accepted": {},
