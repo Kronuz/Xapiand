@@ -19,11 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""wide_search_stalls.py BIN LOG...: what a loop was running when it stalled.
+"""wide_search_stalls.py BIN LOG... [--max-age US]: what a loop was running when it stalled.
 
 Reads the STALL captures that `harness/restore_stall_reactor_lag.patch` prints (env XAPIAND_LAG_SPIN=<threshold us>)
 into a node's log, symbolizes their frames against BIN (`atos` on macOS, `addr2line` elsewhere) and prints, for each
-function, the stalls whose stack holds it, then the longest stalls' stacks.
+function, the stalls whose stack holds it, the nearest frame of the binary to each stall's leaf and its caller chain
+(what called into a lock or a system call), then the longest stalls' stacks. --max-age drops captures older than US
+(a node that hangs at its stop is captured every 1.5 s).
 """
 
 import collections
@@ -31,7 +33,13 @@ import re
 import subprocess
 import sys
 
-BIN, LOGS = sys.argv[1], sys.argv[2:]
+args = sys.argv[1:]
+MAX_AGE = 1 << 62
+if "--max-age" in args:
+    i = args.index("--max-age")
+    MAX_AGE = int(args[i + 1])
+    del args[i : i + 2]
+BIN, LOGS = args[0], args[1:]
 STALL = re.compile(r"STALL loop=(\d+) at_ns=(\d+) age_us=(\d+) frames=((?:0x[0-9a-f]+,?)+)")
 BASE = re.compile(r"SPIN loop=\d+ image_base=(0x[0-9a-f]+)")
 
@@ -41,7 +49,7 @@ for log in LOGS:
     for line in open(log, errors="replace"):
         if m := BASE.match(line):
             base = m.group(1)
-        elif m := STALL.match(line):
+        elif (m := STALL.match(line)) and int(m.group(3)) <= MAX_AGE:
             stalls.append((int(m.group(1)), int(m.group(3)), [a for a in m.group(4).split(",") if a]))
 print(f"{len(stalls)} stalls captured in {len(LOGS)} logs")
 if not stalls or base is None:
@@ -72,6 +80,14 @@ for _, _, frames in stalls:
 print("stalls holding each function (top 40):")
 for fn, n in holding.most_common(40):
     print(f"  {n:4d} {fn}")
+known = set(name)
+leaf: collections.Counter[str] = collections.Counter()
+for _, _, frames in stalls:
+    mine = [name[a] for a in frames if a in known and not name[a].startswith("0x")]
+    leaf[" <- ".join(mine[:4])] += 1
+print("nearest frames of the binary to the leaf (top 25):")
+for chain, n in leaf.most_common(25):
+    print(f"  {n:4d} {chain[:400]}")
 for loop, age, frames in sorted(stalls, key=lambda s: -s[1])[:8]:
     print(f"loop {loop} stalled {age} us:")
     for a in frames[:24]:
