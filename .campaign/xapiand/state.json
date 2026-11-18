@@ -5854,7 +5854,8 @@
         "python/faultlab/netlab.py",
         "python/tests/netlab_test.py",
         "docs/**",
-        "README.md"
+        "README.md",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
       "landed": [],
@@ -5866,7 +5867,7 @@
       "risk": "normal",
       "status": "active",
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
-      "updated": "2026-11-18T06:32:31",
+      "updated": "2026-11-18T06:48:12",
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
