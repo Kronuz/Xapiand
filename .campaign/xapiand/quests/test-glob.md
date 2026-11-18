@@ -5,16 +5,13 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Every `tests/test_*.cc` that links Xapiand code is built and registered by its file name: CMakeLists.txt globs them (CONFIGURE_DEPENDS) minus the pure-unit list, `test_stubs.cc` and `test_text.cc`, instead of listing each name. A quest that adds a linked test no longer edits CMakeLists.txt, so quests stop overlapping on it and on `tests/**`.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The same test set is registered: `ctest -N` names before and after are identical (a job printing both)
+- A2 A new `tests/test_<name>.cc` is built and run with no CMakeLists.txt edit (a job that adds a throwaway test in its checkout and sees it in `ctest -N`)
+- A3 The build-test check passes, and CI is green
 
 ## Contracts
 
