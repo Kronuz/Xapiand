@@ -320,3 +320,6 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: none (test-glob CI green on all 4 at 7d0cf6f6f; build-test running). Detent landed consensus:91564ba (wave-open).
 - Runs: c3-gate review ~150k (CHANGES, F1 real: base-term check untested, mutant P1 survived all suites) -> consensus-c3-rows ~81k; hybrid fix ~134k (ES bbq caps recall@10 0.64, rescore oversample 20 = 0.9735); sim-loops ~311k (heal stall = 2 sim bugs; reserve gap to Detent worker-release A5); wide-search ~300k+159k (cause: resolver misses + one mutex; sampler distorted lag, rebaselined).
 - Host: light 73% used, 92 jobs ended, 20 failed. Disk 96 GiB. Weekly 65%, 1.15%/h.
+## 2026-11-18 06:00 hourly
+- Landed: Xapiand:7e451b42f test-glob (merge 20d227d7b). Started cheap-reopen. D124: ccache 15->40 GB, strata VMs stopped (swap 16.3 -> 2.8 GB), tool throughput agent running.
+- Host: light 60% used; 110 jobs ended, 14 failed. At 06:19 the hybrid C1 chain holds the host exclusively (7 exclusive VM rows x ~10 min), load 4.9, 45 queued behind it. Disk 110 GiB. Weekly 66%, 1.15%/h.
