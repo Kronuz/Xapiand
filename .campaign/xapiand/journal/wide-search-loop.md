@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-112500-d8889b 112959-e5f703 113018-3774af 113037-a28a54 113056-647326 113058-7cb4e4 113452-f9ea27 113513-265869 114932-476f73 114952-b7e8e8 115012-d054e8 115147-90db6b 115151-19c8d0 115153-2a8c6a 115155-b64c38
+State: waiting on jobs 261118-132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112 132935-f1f8e1 132936-f7bb71
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,25 +20,32 @@ port 18782); on macOS each http loop's max is no worse than the same run's contr
 rise, and longer turns fail A2 on either OS. `harness/wide_search_vm.sh` (Xapiand:57818c369) boots the VM under a mkdir
 lock, builds both arms (master = 8e5040da8's src reverted), creates the indexes, runs SR3, and stops it on exit.
 
+Session-3 first submissions failed or were redone: the VM build 114932-476f73 hit the 6 GiB guest's OOM killer at
+-j4 (chain skipped; Xapiand:d3411d2aa builds at -j2); A3 113018/113056 and the macOS 2,500 and beat jobs ran in a fresh
+checkout without the slot's binaries and data (now `--slot wide-search-loop`); suite 112500-d8889b failed test_node
+(`test_a_put_whose_client_half_closes_completes_durably`, test_node.cc:1169/1175), unrelated to search; f7bb71 runs
+it at master to show whether it is pre-existing.
+
 | Job | Level | For | What |
 |---|---|---|---|
-| 261118-112500-d8889b | light | A4 | suite at 700ffc0c3 |
-| 261118-112959-e5f703 | exclusive | A2 macOS before | SR3 2,500, build-prof (master src) |
-| 261118-113037-a28a54 | exclusive | A2 macOS after | SR3 2,500, build-probe (branch src) |
-| 261118-051433-c76a1c | exclusive | A2 macOS before | SR3 10,000 master src (reused at 700ffc0c3: only merges since) |
+| 261118-132935-f1f8e1 | light | A4 | suite 261118-132935-f1f8e1 (pending; 112500-d8889b failed test_node, master control 132936-f7bb71); CI running |
+| 261118-132936-f7bb71 | light | | test_node at master (pre-existing check) |
+| 261118-132928-09c53e | exclusive | A2 macOS before | SR3 2,500, build-prof (master src) |
+| 261118-132932-c9dd00 | exclusive | A2 macOS after | SR3 2,500, build-probe (branch src) |
+| 261118-051433-c76a1c | exclusive | A2 macOS before | SR3 10,000 master src (reused: only merges since) |
 | 261118-051434-89f2f5 | exclusive | A2 macOS after | SR3 10,000 branch src (reused likewise) |
-| 261118-113018-3774af | strict | A3 before | starve 64, master src, exits on T5's verdict |
-| 261118-113056-647326 | strict | A3 after | starve 64, branch src, exits on T5's verdict |
-| 261118-113058-7cb4e4 | strict | A1 | attribution rerun of 043331-286e1f at 700ffc0c3 |
-| 261118-113452-f9ea27 | exclusive | R6 p99 | SR3 10,000 master src, XAPIAND_LAG_SPIN=1000000 (250 us beat keeps loops awake) |
-| 261118-113513-265869 | exclusive | R6 p99 | same, branch src |
-| 261118-114932-476f73 | light | | VM: apt deps, build branch and master arms |
-| 261118-114952-b7e8e8 | light | | VM: create 2,500 gate indexes |
-| 261118-115012-d054e8 | light | | VM: create 10,000 gate indexes |
-| 261118-115147-90db6b | strict | A2 Linux before | SR3 2,500, master src |
-| 261118-115151-19c8d0 | strict | A2 Linux after | SR3 2,500, branch src |
-| 261118-115153-2a8c6a | strict | A2 Linux before | SR3 10,000, master src |
-| 261118-115155-b64c38 | strict | A2 Linux after | SR3 10,000, branch src |
+| 261118-132929-bb97fa | strict | A3 before | starve 64, master src, exits on T5's verdict |
+| 261118-132933-243767 | strict | A3 after | starve 64, branch src, exits on T5's verdict |
+| 261118-113058-7cb4e4 | strict | A1 | attribution rerun at 700ffc0c3 (done) |
+| 261118-132931-6328f9 | exclusive | R6 p99 | SR3 10,000 master src, XAPIAND_LAG_SPIN=1000000 (250 us beat keeps loops awake) |
+| 261118-132934-2ba112 | exclusive | R6 p99 | same, branch src |
+| 261118-132813-32aa11 | light | | VM: apt deps, build both arms at -j2 |
+| 261118-132819-66b8f7 | light | | VM: create 2,500 gate indexes |
+| 261118-132826-b0ada4 | light | | VM: create 10,000 gate indexes |
+| 261118-132830-475ea9 | strict | A2 Linux before | SR3 2,500, master src |
+| 261118-132836-3c231e | strict | A2 Linux after | SR3 2,500, branch src |
+| 261118-132842-a03818 | strict | A2 Linux before | SR3 10,000, master src |
+| 261118-132847-f885d2 | strict | A2 Linux after | SR3 10,000, branch src |
 
 macOS builds are the session-2 binaries (f5a684 build-probe, 692132 build-prof): the tool matched them at 700ffc0c3.
 
@@ -83,7 +90,7 @@ build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, bu
 | 261118-024337-7a9aec | light | probe | build-probe: Xapiand:c33b7cc79 + `harness/wide_search_callsites.patch` |
 | 261118-025903-1d4a33 | strict | probe | 2,500 gate + sample on build-probe |
 | 261118-025905-94c734 | strict | probe | starve 16,64 on build-probe |
-| 261118-034210-a84949 | light | A4 | suite (first try 0f4689 timed out in configure, fresh slot) |
+| 261118-034210-a84949 | light | A4 | suite 261118-132935-f1f8e1 (pending; 112500-d8889b failed test_node, master control 132936-f7bb71); CI running |
 
 Drafted (Xapiand:c33b7cc79): `src/database/wide_search.{h,cc}`, `wide_search::Pins` (node-wide FIFO bound on
 indexes pinned by wide-search batches, sized to the pool's soft_open) and `wide_search::resolve` (per-name budget
@@ -120,9 +127,9 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured); attribution rerun 261118-113058-7cb4e4 |
-| A2 | Linux: 115147-90db6b / 115151-19c8d0 (2,500), 115153-2a8c6a / 115155-b64c38 (10,000), pending. macOS 10,000: 051433-c76a1c before (max 322 / 373 ms), 051434-89f2f5 after (2.07 / 2.07 ms, control 2,560 us bucket); 2,500: 112959-e5f703, 113037-a28a54 pending |
-| A3 | 261118-113018-3774af before, 261118-113056-647326 after (pending); session-2 reads: 051429-5d9b36 vs 050258-4c6f40 |
-| A4 | suite 261118-112500-d8889b (pending); CI running |
+| A2 | Linux: 132830-475ea9 / 132836-3c231e (2,500), 132842-a03818 / 132847-f885d2 (10,000), pending. macOS 10,000: 051433-c76a1c before (max 322 / 373 ms), 051434-89f2f5 after (2.07 / 2.07 ms, control 2,560 us bucket); 2,500: 132928-09c53e, 132932-c9dd00 pending |
+| A3 | 261118-132929-bb97fa before, 261118-132933-243767 after (pending); session-2 reads: 051429-5d9b36 vs 050258-4c6f40 |
+| A4 | suite 261118-132935-f1f8e1 (pending; 112500-d8889b failed test_node, master control 132936-f7bb71); CI running |
 
 ## Result
 
