@@ -133,7 +133,7 @@ lz4 (lib/, with xxHash)
 License: BSD-2-Clause
 
 LZ4 Library
-Copyright (c) 2011-2020, Yann Collet
+Copyright (c) 2011-2016, Yann Collet
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
