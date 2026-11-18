@@ -512,6 +512,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-66",
       "text": "detent:journal-host-guards started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:33",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-67",
+      "text": "detent:transport-groups started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-groups) or narrow the files"
     }
   ],
   "quests": {
