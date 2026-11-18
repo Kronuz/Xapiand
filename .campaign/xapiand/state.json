@@ -743,6 +743,21 @@
       "closed": "detent:consensus-dns-threads is goal5-audit's G5-C1 fix, filed at our request; consensus-rpc-lane and group-core pick it up at their next consensus repin",
       "id": "msg-106",
       "text": "detent:consensus-dns-threads started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-dns-threads, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T05:36:36",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-107",
+      "items": {
+        "cheap-reopen": "frees src/database/pool.*, src/engine/strata/**, docs/design/cheap-reopen.md, tests/test_cheap_reopen* for cheap-reopen"
+      },
+      "settles": {
+        "start": [
+          "cheap-reopen"
+        ]
+      },
+      "text": "set light-share: unlocks frees src/database/pool.*, src/engine/strata/**, docs/design/cheap-reopen.md, tests/test_cheap_reopen* for cheap-reopen"
     }
   ],
   "quests": {
@@ -1600,6 +1615,8 @@
     "cheap-reopen": {
       "accepted": {},
       "after": [],
+      "base": "6715452bb0d72cc4daf7079c081c6f40ca2b85b2",
+      "branch": "quest/xapiand/cheap-reopen",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -1624,9 +1641,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-18T05:36:18"
+      "updated": "2026-11-18T05:36:43",
+      "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
       "accepted": {},
