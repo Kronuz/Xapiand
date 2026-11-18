@@ -305,6 +305,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D120 | 2026-11-18 | document-gate no longer waits on phase4-gate: Phase 4 changes nothing the gate proves; it lands when its own evidence is green. | owner | this conversation, 2026-11-18 |
 | D121 | 2026-11-18 | Phase 6 (approved split): A1 reads "one async backend plus strict verified reads" (the pool chore backend first; a second backend only if the fault target is missed); the 1 ms latency rows run on the Mac under `quiet exclusive`, plus one QEMU host-priority probe with a 512 µs bar; serving memory and disk rows get their quests in Phase 6's own planning. | owner | this conversation, 2026-11-18 |
 | D122 | 2026-11-18 | Disk: remove build slots of landed or stale quests, `~/.scratch/preflight`, and rebuildable indexes and build dirs inside the strata Linux VM guest (then trim); Detent's cited evidence stays. | owner | this conversation, 2026-11-18 |
+| D123 | 2026-11-18 | Track C reconciliation (strata:f2358007), lead rulings: `cluster-gate` lands after `goal5-audit` (the libraries were adopted before the audit); R19's 64 KiB unsent-bytes bound is replaced by the bound the host transport states, proven by T7's control-frame gap (`consensus-flow-bench`); quests waiting on the dropped `detent:consensus-transport` no longer do. Six quests carry the owed items. | lead | strata `docs/design/track-c.md` |
 
 ## Pending owner
 

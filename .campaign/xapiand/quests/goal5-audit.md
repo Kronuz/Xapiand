@@ -5,16 +5,12 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`docs/GOAL5-AUDIT.md` in `consensus` lists, for `completion`, `journal`, `consensus`, `task` and `wheel`, every thread, deferred reclamation and retirement path with its bound, or names a finding filed as a quest of the owning library (Track C A8, from strata `docs/design/track-c.md`, "Reconciliation (2026-11-18)" (strata:f2358007)). `cluster-gate` lands after it (D123).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] `docs/GOAL5-AUDIT.md`: each library at a named commit, each site with its bound or a filed quest
+- A2 A grep job listing thread creation and deferred-destruction sites at the audited commits, each matched to an audit row: a job
 
 ## Contracts
 

@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`docs/gates/track-c-c2.md` completed and `docs/gates/track-c-c4.md` written from jobs at `consensus` and `journal` main, with the architect's review of each (Track C A9, from strata `docs/design/track-c.md`, "Reconciliation (2026-11-18)" (strata:f2358007)).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [artifact] `docs/gates/track-c-c2.md`: C2's rows rerun at today's journal and consensus, each with its job id
+- A2 [artifact] `docs/gates/track-c-c4.md`: C4's rows from consensus-hello-limits and consensus-flow-bench, each with its job id
+- A3 [artifact] The architect's review of each approves: `docs/reviews/track-c-c2.md`, `docs/reviews/track-c-c4.md`
 
 ## Contracts
 

@@ -5,16 +5,14 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+T7 on the host transport: one group's replication throughput at 0, 1 and 10 ms of added round trip, pipelined against `pipeline = 1`; 100 groups on one connection with one follower's barrier slowed 10x; the longest control-frame gap behind Bulk, which stands as R19's evidence (D123). Track C A5, from strata `docs/design/track-c.md`, "Reconciliation (2026-11-18)" (strata:f2358007). T7's snapshot row waits for `group-install`.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Throughput at 0, 1 and 10 ms added RTT, pipelined against `pipeline = 1`: exclusive jobs on the Linux VM with netem
+- A2 100 groups on one connection, one follower's barrier slowed 10x: the other groups' throughput and the slow group's unsent bytes stay within the transport's stated bound: exclusive jobs
+- A3 The longest control-frame gap behind Bulk traffic, against the bound the transport states (R19): a job
+- A4 [artifact] `docs/perf/flow-control.md` with each row's job id
 
 ## Contracts
 

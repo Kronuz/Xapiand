@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The `Driver` simulation runs hosts of two to four loops with at least eight multi-voter groups per host, so groups share and do not share turn logs (Track C A2, from strata `docs/design/track-c.md`, "Reconciliation (2026-11-18)" (strata:f2358007)).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 T2's budget at several loops per host (seeds and steps stated), every oracle green: jobs
+- A2 A mutant that acknowledges a record before its own loop's turn barrier is killed: a `--fails-without` job
+- A3 The build-test check passes, and CI is green
 
 ## Contracts
 

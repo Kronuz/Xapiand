@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+C3's gate report: T5's rows and T2's repair-below-`base_index` mutant at `consensus` main through `Driver::repair`, on macOS, Linux and FreeBSD, with the architect's review (Track C A4, from strata `docs/design/track-c.md`, "Reconciliation (2026-11-18)" (strata:f2358007)).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 T5's rows and the repair mutant pass at consensus main on macOS, Linux (VM) and FreeBSD (VM): jobs
+- A2 [artifact] `docs/gates/track-c-c3.md` reports each row with its job id
+- A3 [artifact] The architect's review approves: `docs/reviews/track-c-c3.md`
 
 ## Contracts
 
