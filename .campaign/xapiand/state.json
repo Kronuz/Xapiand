@@ -2007,11 +2007,10 @@
       ],
       "files": [
         "src/**",
-        "tests/**",
         "harness/**",
-        "CMakeLists.txt",
         "docs/mechanisms/cjk-words.md",
-        "docs/src/content/docs/**"
+        "docs/src/content/docs/**",
+        "tests/test_cjk_words*"
       ],
       "history": [
         {
@@ -2101,12 +2100,11 @@
         "cjk-segmenter"
       ],
       "provides": [],
-      "reason": "its blocker landed",
       "repo": ".",
       "risk": "normal",
       "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-17T23:08:07",
+      "updated": "2026-11-18T05:36:16",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
