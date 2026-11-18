@@ -2293,7 +2293,9 @@
     "cluster-gate": {
       "accepted": {},
       "after": [
-        "goal5-audit"
+        "goal5-audit",
+        "detent:journal-reopen-closed",
+        "detent:consensus-dns-threads"
       ],
       "checks": [
         {
@@ -2342,7 +2344,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T02:56:01"
+      "updated": "2026-11-18T03:08:25"
     },
     "cluster-harness": {
       "accepted": {
