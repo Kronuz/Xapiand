@@ -9,18 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on build-test 261118-003708-0842d7 (A3), A2 parity 261118-003712-6c88e6, A3 mutant
-261118-003721-65702e (--fails-without at 5a49687e4, before the removals).
+Rebased onto master (clean). Resubmitted build-test, A2 parity and the A3 mutant at the rebased head.
 
 ## Next
 
-1. Fold job results; A1 awaits the owner's ruling (lead's defaults applied, see Rulings).
+1. Fold job results into the table below; then ready for review.
 
 ## Blocked on
 
-The owner (A1): serve-or-remove per name. Defaults applied: nb, nn, german2 served as aliases;
-earlyenglish, english_lovins, english_porter removed, each removal its own commit
-(ffb7329de earlyenglish; 1d244d20b english_lovins + english_porter) so an overrule drops one.
+Nothing. A1 ruled: PLAN.md D118 (nb, nn, german2 aliases; earlyenglish, english_lovins, english_porter
+removed), matching the branch's removals.
 
 ## Evidence
 
@@ -37,7 +35,7 @@ stem_parity 2cc69d4d1e91, snowball-data vocabularies as release-rows A4 used):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | owner's ruling pending |
+| A1 | D118 (PLAN.md Decisions) |
 | A2 | 261118-003712-6c88e6 (queued) |
 | A3 | 261118-003708-0842d7 build-test, 261118-003721-65702e mutant (queued) |
 
