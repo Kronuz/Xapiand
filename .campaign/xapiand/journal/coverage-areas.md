@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-134556-e47048
+State: waiting on jobs 261118-150347-6b0c44
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+0000. diag2 e47048 showed only the expected (caught) throws. Suspect for geospatial: test_ewkt_forms re-parses geometry->toEWKT() outside a try (an InvalidArgument from a reprint the LLVM 22 libc++ formats differently); the test now catches and prints it. diag3 6b6c44... = 261118-150347-6b0c44 prints that text and the backtrace of the aggregations std::system_error at exit (break -E c++ -O std::__1::system_error). Then fix, rerun coverage (campaign job rerun f9ba50-style) and the suite at the new head.
 
 000. 11-18 later: A2 job 8aa284 done (registry: idle 120 B, first reader 440 B, 194 readers 15,800 B per open index; 128 readers 10,360 B); df194f ctest -N done (the 4 coverage tests register). Diag 477ffe reproduced both aborts in the instrumented build but its lldb printed no backtrace; diag2 e47048 breaks on every C++ throw and prints bts (aggregations: a mutex at exit, suspect static destruction; geospatial: uncaught InvalidArgument, only ewkt.cc and multivalue throw it, CHECK_THROW swallows all so it is an unprotected call). Fix cause (product bug => test that fails without), rerun coverage + suite, record A1/A2/A3 rows.
 
