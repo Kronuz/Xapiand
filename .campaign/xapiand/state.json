@@ -449,6 +449,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-57",
       "text": "detent:consensus-transport started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T00:39:17",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-58",
+      "text": "detent:consensus-transport started and changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
