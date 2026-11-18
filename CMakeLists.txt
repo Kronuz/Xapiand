@@ -481,8 +481,8 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166   SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 4b669b6c065e209f503e5f3ec839a0634dd13edf)
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG d48a28e50a915f772f254a6641cda100029bb31f)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG df0ebc885c3e72e139a35dd4e34f5c731f02b4bd)
@@ -987,8 +987,8 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # travels with that standalone library.
 ########################################################################
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166    SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
 # its sources populated, not its own CMake (its root has none anyway).
 FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1  SOURCE_SUBDIR do-not-configure)
@@ -1034,21 +1034,23 @@ if(LUA)
 	# src/*.c (minus the interpreter/compiler driver mains).
 	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
+	# lua/lua is flat (sources at its root); v5.4.7 pinned by commit.
 	FetchContent_Declare(lua
-		URL ${XAPIAND_LUA_URL}
-		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
+		GIT_REPOSITORY https://github.com/lua/lua.git
+		GIT_TAG ${XAPIAND_LUA_COMMIT}
+		GIT_SHALLOW TRUE
 		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
 	FetchContent_MakeAvailable(lua)
-	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/src/*.c")
+	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/*.c")
 	list(REMOVE_ITEM LUA_SRC_LIST
-		"${lua_SOURCE_DIR}/src/lua.c"
-		"${lua_SOURCE_DIR}/src/luac.c"
-		"${lua_SOURCE_DIR}/src/onelua.c")
+		"${lua_SOURCE_DIR}/lua.c"
+		"${lua_SOURCE_DIR}/luac.c"
+		"${lua_SOURCE_DIR}/onelua.c")
 	add_library(LUA_OBJ OBJECT ${LUA_SRC_LIST})
-	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}/src")
+	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}")
 
-	include_directories(BEFORE "${lua_SOURCE_DIR}/src")
+	include_directories(BEFORE "${lua_SOURCE_DIR}")
 endif()
 
 
@@ -1945,7 +1947,6 @@ if (BUILD_TESTS)
 		if (LUA)
 			add_test(NAME test_lua_patch_drift COMMAND ${CMAKE_COMMAND}
 				-DLUA_SRC=${lua_SOURCE_DIR}
-				-DLUA_TARBALL=${lua_SOURCE_DIR}/../lua-subbuild/lua-populate-prefix/src/lua-5.4.7.tar.gz
 				-DPATCH=${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch
 				-DVERSION_FILE=${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake
 				-DWORK=${CMAKE_BINARY_DIR}/lua-drift
