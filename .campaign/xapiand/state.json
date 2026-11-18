@@ -5283,6 +5283,8 @@
     "faultlab-core": {
       "accepted": {},
       "after": [],
+      "base": "d8381c10ed015cb93d6a7beb63b907059c057d37",
+      "branch": "quest/xapiand/faultlab-core",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5297,6 +5299,7 @@
       "files": [
         "**"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-core",
       "landed": [],
       "lenses": [
         "correctness"
@@ -5310,9 +5313,10 @@
       ],
       "repo": "../faultlab",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
-      "updated": "2026-11-17T22:35:59"
+      "updated": "2026-11-18T00:07:24",
+      "worktree": "../faultlab-wt/xapiand/faultlab-core"
     },
     "faultlab-design": {
       "accepted": {
