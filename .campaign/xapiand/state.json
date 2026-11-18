@@ -3641,8 +3641,8 @@
       ],
       "consumes": [],
       "files": [
-        "tests/**",
-        "harness/**",
+        "tests/test_coverage_*",
+        "harness/coverage*",
         "docs/dev/coverage.md"
       ],
       "landed": [],
@@ -3654,7 +3654,7 @@
       "risk": "low",
       "status": "planned",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-13T20:23:35"
+      "updated": "2026-11-18T02:20:25"
     },
     "cr1-fix": {
       "accepted": {},
