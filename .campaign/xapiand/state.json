@@ -3361,7 +3361,8 @@
       "files": [
         "bench/flow*",
         "test/flow_bench*",
-        "docs/perf/flow*"
+        "docs/perf/flow*",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
       "landed": [],
@@ -3373,7 +3374,7 @@
       "risk": "normal",
       "status": "active",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T03:21:00",
+      "updated": "2026-11-18T04:01:59",
       "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
     },
     "consensus-hello-limits": {
