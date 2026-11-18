@@ -5478,6 +5478,8 @@
     "faultlab-adopt-xapiand": {
       "accepted": {},
       "after": [],
+      "base": "cc65385b2ec45310eb0f85e2ae1faae62311f6b9",
+      "branch": "quest/xapiand/faultlab-adopt-xapiand",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -5499,9 +5501,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand harness/cluster uses faultlab history and proxy; its copies go (migration step 4)",
-      "updated": "2026-11-18T06:32:05"
+      "updated": "2026-11-18T06:32:37",
+      "worktree": "../Xapiand-wt/xapiand/faultlab-adopt-xapiand"
     },
     "faultlab-core": {
       "accepted": {
