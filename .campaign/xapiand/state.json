@@ -22672,7 +22672,9 @@
     },
     "track-c-c3-gate": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "consensus-c3-rows"
+      ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/track-c-c3-gate",
       "checks": [
@@ -22698,7 +22700,7 @@
       "risk": "normal",
       "status": "review",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T04:21:12",
+      "updated": "2026-11-18T04:44:41",
       "worktree": "../strata-wt/xapiand/track-c-c3-gate"
     },
     "track-c-gates": {
