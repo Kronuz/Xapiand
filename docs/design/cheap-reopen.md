@@ -1,7 +1,7 @@
 # Cheap reopen: an evicted index reopens near the cost of finding it open
 
-Status: design, measured at main 4adce97ce (strata 397c02d5). D2 is built (Xapiand:bd6e5d50c); D1, D3 and D4 wait
-for the file sets and quests named under "What is left".
+Status: measured at main 4adce97ce (strata 397c02d5). D1 and D2 are built on quest/xapiand/cheap-reopen; D3 waits
+for wide-search-loop (it holds `search_batch`), D4's strata half is a follow-up, its Xapiand half is refused.
 
 ## Problem
 
@@ -59,22 +59,28 @@ parallelize eight ways. The first search at pool 5000 (2,500 cold opens) went fr
 
 - **D1. Lanes: a catalog per pool partition.** strata's cold-tier design already says it (D4, "the catalog, one per
   pool partition"): a partition is the unit of one lane, and one budget (`resource_budget`) serves the process.
-  DatabasePool holds P catalogs, picks one by the key's hash, and splits soft_open between them; P is the work
-  pool's thread count, capped at 8 until a measurement says otherwise. This replaces H2's probe, which breaks the
+  DatabasePool holds P catalogs, picks one by the high bits of the key's multiplied hash (the catalog shards its
+  slots by the key's own hash, which the pick must not correlate with), and splits soft_open between them. P is
+  the work pool's threads, at most 8, and at most one partition per 16 indexes of soft_open, so a small pool is
+  one partition and behaves as before; the default pool (200) on 8 or more threads is 8 partitions of 25.
+  The budget is the process's: each partition's sweep hears its soft-cap crossings, and a descriptor overage
+  is relieved by every partition's pass, not split (soft_open sits under the descriptors' cap, so it is rare). This replaces H2's probe, which breaks the
   catalog's single-lane assumption. Rejected: a multi-lane group inside one catalog (strata would have to make
   every transition safe beside another, which D4 avoids by partitioning).
 - **D2. The directory's open is its existence check** (built, Xapiand:bd6e5d50c): resolve opens `<index>/strata`
   once and maps ENOENT or ENOTDIR to `index_not_created`, instead of a stat and then the open. About 7% of a
   reopen's CPU. A permission error now fails the pin as itself, not as a missing index.
 - **D3. A search pins its batch concurrently**: H1's `when_all` in `search_batch`. Alone it gains nothing; with D1
-  it is how the lanes fill.
+  it is how the lanes fill. Deferred by the lead: wide-search-loop is changing `search_batch` to yield per index;
+  this follows it (hunt.md). Without D3 a search still opens one index at a time; D1 alone moves closes and the
+  other reactor's search into their own lanes.
 - **D4. Fewer path walks per reopen** (CPU, about 40% of a reopen):
   - strata, its own quest: `recover` takes each file's size from one `fstatat` on the directory descriptor (or the
     scan's own attributes: `getattrlistbulk` on macOS) instead of `open`+`fstat`+`close`; and the catalog keeps a
     closed index's recovered log state in its ghost entry, so a reopen whose manifest log has the same inode and
     size skips the scan and the parse (about 25% of a reopen; bounded by the ghost, half of soft_open).
-  - Xapiand: the WAL and DataStorage scan the same directory once per open, together (about 20%). Both are code
-    the plan replaces, so this is a single shared scan, not an optimization of either.
+  - Xapiand: the WAL and DataStorage scan the same directory once per open (about 20%). Refused by the lead: both
+    are code the plan replaces.
 - **Not chosen: keeping evicted indexes warm.** Warm keeps the index and its directory lock, so it is bounded by
   descriptors like open (soft_open already counts warm); it does not help a loop wider than the pool. Sizing the
   pool from memory is quest pool-from-memory.

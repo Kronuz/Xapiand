@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -85,11 +86,12 @@ engine::doccount doc_count(Shard& shard) {
 void evict(DatabasePool& pool, IndexPin pin, const std::string& path) {
 	const auto slot = PoolTestAccess::slot(pin);
 	pin.release();
-	CHECK_TRUE(pool.catalog().begin_demote(slot));
-	pool.catalog().wait_chores();
-	CHECK_TRUE(pool.catalog().begin_close(slot));
-	pool.catalog().wait_chores();
-	for (const auto& view : pool.catalog().snapshot()) {
+	auto& catalog = pool.catalog(path);
+	CHECK_TRUE(catalog.begin_demote(slot));
+	catalog.wait_chores();
+	CHECK_TRUE(catalog.begin_close(slot));
+	catalog.wait_chores();
+	for (const auto& view : catalog.snapshot()) {
 		CHECK_TRUE(view.key != path);
 	}
 }
@@ -163,7 +165,41 @@ void test_an_evicted_index_reopens_at_its_last_commit() {
 	Shard shard(pin_index(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(doc_count(shard), 2u);
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_EQ(pool.catalog().stats().opens, 3u);
+	CHECK_EQ(pool.catalog(path).stats().opens, 3u);
+}
+
+// A pool of 200 on 8 threads is 8 partitions of 25 (D1): each key lives in its own partition's catalog only, the
+// keys spread over all of them, and an index evicted from its partition reopens there.
+void test_a_wide_pool_spreads_keys_over_its_partitions() {
+	DatabasePool pool(control_loop(), 200, 8);
+	CHECK_EQ(pool.partitions(), 8u);
+	constexpr int keys = 64;
+	std::vector<std::string> paths;
+	for (int i = 0; i < keys; ++i) {
+		paths.push_back(fresh(("wide" + std::to_string(i)).c_str()));
+		Shard shard(pin_index(pool, paths.back(), WRITE), WRITE);
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i), std::to_string(i))));
+		CHECK_TRUE(engine::sync_wait(shard.commit()));
+	}
+	std::size_t used = 0;
+	std::uint64_t opens = 0;
+	for (std::size_t p = 0; p < pool.partitions(); ++p) {
+		const auto n = pool.partition(p).stats().opens;
+		opens += n;
+		used += n != 0;
+		for (const auto& view : pool.partition(p).snapshot()) {
+			CHECK_TRUE(&pool.catalog(view.key) == &pool.partition(p));
+		}
+	}
+	CHECK_EQ(opens, static_cast<std::uint64_t>(keys));
+	CHECK_EQ(used, pool.partitions());
+	CHECK_EQ(pool.count().first, static_cast<std::size_t>(keys));
+	auto& home = pool.catalog(paths[5]);
+	const auto before = home.stats().opens;
+	evict(pool, pin_index(pool, paths[5], DB_OPEN), paths[5]);
+	Shard shard(pin_index(pool, paths[5], DB_OPEN), DB_OPEN);
+	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "5");
+	CHECK_EQ(home.stats().opens, before + 1);
 }
 
 
@@ -173,6 +209,7 @@ int main() {
 		{"test_a_crashed_index_reopens_at_its_last_commit", test_a_crashed_index_reopens_at_its_last_commit},   // first: it forks
 		{"test_a_missing_index_is_not_found_and_not_made", test_a_missing_index_is_not_found_and_not_made},
 		{"test_an_evicted_index_reopens_at_its_last_commit", test_an_evicted_index_reopens_at_its_last_commit},
+		{"test_a_wide_pool_spreads_keys_over_its_partitions", test_a_wide_pool_spreads_keys_over_its_partitions},
 	};
 	for (const auto& c : cases) {
 		const int before = testh::failures;

@@ -28,6 +28,8 @@
 #include <condition_variable>     // for std::condition_variable
 #include <coroutine>              // for std::suspend_never
 #include <filesystem>             // for std::filesystem
+#include <functional>             // for std::hash
+#include <iterator>               // for std::make_move_iterator
 #include <optional>               // for std::optional
 #include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
@@ -493,6 +495,7 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 struct DatabasePool::Shutdown {
 	std::mutex mtx;
 	std::condition_variable cv;
+	std::size_t pending = 0;  // the partitions whose shutdown has not ended
 	bool done = false;
 	bool reported = false;
 	std::vector<std::string> failed;  // the keys whose commit failed: their WAL replays them at the next open
@@ -546,7 +549,7 @@ rethrow_pin_failure(const std::string& path)
 
 
 IndexCatalog::host
-DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
+DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 {
 	IndexCatalog::host h;
 	h.exec = executor_.get();
@@ -606,9 +609,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 	h.commit = [](ShardEndpoint& entry, prospect::index&) {
 		entry.commit_blocking();
 	};
-	// A warm index holds one descriptor, so the pool keeps no more open than the descriptors' soft cap (D11).
-	soft_open_ = std::min<std::size_t>(database_pool_size, budget_->soft(strata::resource::descriptors));
-	h.soft_open = soft_open_;
+	h.soft_open = soft_open;
 	const auto set = [](std::uint64_t& field, std::chrono::nanoseconds value) {
 		if (value.count() > 0) {
 			field = static_cast<std::uint64_t>(value.count());
@@ -638,8 +639,30 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
 	timer_ = std::make_shared<Timer>(timers);
 	budget_ = std::make_unique<strata::resource_budget>();
-	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size, sweep));
-	catalog_->start();
+	// A warm index holds one descriptor, so the pool keeps no more open than the descriptors' soft cap (D11).
+	soft_open_ = std::min<std::size_t>(database_pool_size, budget_->soft(strata::resource::descriptors));
+	// One lane per partition (cheap-reopen D1); each keeps its share of soft_open, the first ones the remainder.
+	const std::size_t partitions = std::max<std::size_t>(1, std::min<std::size_t>({work_pool_->threads(), 8, soft_open_ / 16}));
+	catalogs_.reserve(partitions);
+	for (std::size_t i = 0; i < partitions; ++i) {
+		catalogs_.push_back(std::make_unique<IndexCatalog>(make_host(soft_open_ / partitions + (i < soft_open_ % partitions ? 1 : 0), sweep)));
+	}
+	for (auto& catalog : catalogs_) {
+		catalog->start();
+	}
+}
+
+
+IndexCatalog&
+DatabasePool::catalog(std::string_view key) noexcept
+{
+	if (catalogs_.size() == 1) {
+		return *catalogs_.front();
+	}
+	// The high bits of a multiplied hash: the catalog shards its slots by the key's own hash, which this must not
+	// correlate with.
+	const auto h = static_cast<std::uint64_t>(std::hash<std::string_view>{}(key)) * 0x9E3779B97F4A7C15ULL;
+	return *catalogs_[static_cast<std::size_t>((h >> 32) % catalogs_.size())];
 }
 
 
@@ -663,7 +686,7 @@ DatabasePool::~DatabasePool()
 	}
 	lk.unlock();
 	timer_->close();
-	catalog_.reset();
+	catalogs_.clear();
 }
 
 
@@ -673,14 +696,17 @@ DatabasePool::begin_shutdown()
 	std::lock_guard<std::mutex> lk(shutdown_mtx_);
 	if (!shutdown_) {
 		shutdown_ = std::make_shared<Shutdown>();
-		// Resumed inline by whoever releases the last pin or ends the last chore (no scheduler is current here).
-		[](IndexCatalog& catalog, std::shared_ptr<Shutdown> state) -> Detached {
-			auto result = co_await catalog.shutdown();
-			std::lock_guard<std::mutex> lk(state->mtx);
-			state->failed = std::move(result.uncommitted);
-			state->done = true;
-			state->cv.notify_all();
-		}(*catalog_, shutdown_);
+		shutdown_->pending = catalogs_.size();
+		// Each resumed inline by whoever releases its last pin or ends its last chore (no scheduler is current here).
+		for (auto& catalog : catalogs_) {
+			[](IndexCatalog& catalog, std::shared_ptr<Shutdown> state) -> Detached {
+				auto result = co_await catalog.shutdown();
+				std::lock_guard<std::mutex> lk(state->mtx);
+				state->failed.insert(state->failed.end(), result.uncommitted.begin(), result.uncommitted.end());
+				state->done = --state->pending == 0;
+				state->cv.notify_all();
+			}(*catalog, shutdown_);
+		}
 	}
 	return *shutdown_;
 }
@@ -792,7 +818,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 		// A finishing node serves the indexes it has open and opens no more: a resident pin finds the index open (or
 		// owed) and keeps it so while the request pin is taken; it applies nothing, so it never meets a debt.
 		try {
-			resident = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, cancel);
+			resident = co_await catalog(key).pin_chore(key, false, strata::open_intent::resident, cancel);
 		} catch (...) {
 			rethrow_pin_failure(key);
 		}
@@ -801,7 +827,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 		}
 	}
 	try {
-		co_return IndexPin(co_await catalog_->pin_request(key, use, intent, std::move(cancel)), *this);
+		co_return IndexPin(co_await catalog(key).pin_request(key, use, intent, std::move(cancel)), *this);
 	} catch (...) {
 		rethrow_pin_failure(key);
 	}
@@ -815,7 +841,7 @@ DatabasePool::pin_chore(const Endpoint& endpoint, task::cancel_token cancel)
 
 	const std::string key = endpoint.path;
 	try {
-		auto pinned = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, std::move(cancel));
+		auto pinned = co_await catalog(key).pin_chore(key, false, strata::open_intent::resident, std::move(cancel));
 		if (!pinned) {
 			co_return IndexPin();
 		}
@@ -833,7 +859,8 @@ void
 IndexPin::reopen() noexcept
 {
 	if (pin_) {
-		pool_->catalog_->reopen(std::move(pin_));
+		auto& catalog = pool_->catalog(pin_.payload().path);
+		catalog.reopen(std::move(pin_));
 	}
 }
 
@@ -877,15 +904,17 @@ std::vector<std::string>
 DatabasePool::busy()
 {
 	std::vector<std::string> lines;
-	if (catalog_->shutting_down()) {
-		for (const auto& holder : catalog_->shutdown_report()) {
-			lines.push_back(strings::format("{} ({}, {} pin{}, {})", repr(holder.key), state_name(static_cast<strata::slot_state>(holder.state)), holder.pins, holder.pins == 1 ? "" : "s", hold_name(holder.why)));
+	for (auto& catalog : catalogs_) {
+		if (catalog->shutting_down()) {
+			for (const auto& holder : catalog->shutdown_report()) {
+				lines.push_back(strings::format("{} ({}, {} pin{}, {})", repr(holder.key), state_name(static_cast<strata::slot_state>(holder.state)), holder.pins, holder.pins == 1 ? "" : "s", hold_name(holder.why)));
+			}
+			continue;
 		}
-		return lines;
-	}
-	for (const auto& slot : catalog_->snapshot()) {
-		if (slot.pins != 0 || (slot.state != strata::slot_state::open && slot.state != strata::slot_state::owed && slot.state != strata::slot_state::failed)) {
-			lines.push_back(strings::format("{} ({}, {} pin{})", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s"));
+		for (const auto& slot : catalog->snapshot()) {
+			if (slot.pins != 0 || (slot.state != strata::slot_state::open && slot.state != strata::slot_state::owed && slot.state != strata::slot_state::failed)) {
+				lines.push_back(strings::format("{} ({}, {} pin{})", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s"));
+			}
 		}
 	}
 	return lines;
@@ -897,8 +926,13 @@ DatabasePool::flush(task::cancel_token cancel)
 {
 	L_CALL("DatabasePool::flush()");
 
-	// Every key the catalog has, pinned resident and committed, one at a time: a task holds one turn at most.
-	for (auto& slot : catalog_->snapshot()) {
+	// Every key the catalogs have, pinned resident and committed, one at a time: a task holds one turn at most.
+	std::vector<IndexCatalog::slot_view> slots;
+	for (auto& catalog : catalogs_) {
+		auto part = catalog->snapshot();
+		slots.insert(slots.end(), std::make_move_iterator(part.begin()), std::make_move_iterator(part.end()));
+	}
+	for (auto& slot : slots) {
 		if (cancel.requested()) {
 			throw task::cancelled{};   // the request left: the keys after it are not pinned
 		}
@@ -954,10 +988,12 @@ DatabasePool::count()
 
 	size_t endpoints_count = 0;
 	size_t databases_count = 0;
-	for (const auto& slot : catalog_->snapshot()) {
-		++endpoints_count;
-		if (slot.state == strata::slot_state::open || slot.state == strata::slot_state::owed) {
-			++databases_count;
+	for (auto& catalog : catalogs_) {
+		for (const auto& slot : catalog->snapshot()) {
+			++endpoints_count;
+			if (slot.state == strata::slot_state::open || slot.state == strata::slot_state::owed) {
+				++databases_count;
+			}
 		}
 	}
 	return std::make_pair(endpoints_count, databases_count);
@@ -984,10 +1020,12 @@ DatabasePool::dump_databases(int level) const
 	ret += __repr__();
 	ret.push_back('\n');
 
-	for (const auto& slot : catalog_->snapshot()) {
-		ret += indent + indent;
-		ret += strings::format(STEEL_BLUE + "<Index {} ({}, {} pin{})>", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s");
-		ret.push_back('\n');
+	for (const auto& catalog : catalogs_) {
+		for (const auto& slot : catalog->snapshot()) {
+			ret += indent + indent;
+			ret += strings::format(STEEL_BLUE + "<Index {} ({}, {} pin{})>", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s");
+			ret.push_back('\n');
+		}
 	}
 	return ret;
 }

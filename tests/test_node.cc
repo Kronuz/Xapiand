@@ -1496,7 +1496,7 @@ static void test_a_search_batch_pins_a_repeated_index_once() {
 	endpoints.add(again);
 	REQUIRE(endpoints.size() == 2u);
 	const auto pins = [&] {
-		for (const auto& slot : pool.catalog().snapshot()) {
+		for (const auto& slot : pool.catalog(key).snapshot()) {
 			if (slot.key == key) {
 				return slot.pins;
 			}
@@ -2337,12 +2337,20 @@ static std::size_t holder_of(const Endpoints& endpoints, const std::string& term
 
 // Replaces every shard's open index by a fresh open of what its last commit left, as a restart does.
 static void reopen_index(const std::string& index) {
-	const auto before = manager()->database_pool->catalog().stats().replaces;
+	auto& pool = *manager()->database_pool;
+	const auto replaces = [&] {
+		std::uint64_t n = 0;
+		for (std::size_t i = 0; i < pool.partitions(); ++i) {
+			n += pool.partition(i).stats().replaces;
+		}
+		return n;
+	};
+	const auto before = replaces();
 	const auto endpoints = endpoints_of(index);
 	for (const auto& endpoint : endpoints) {
-		pin_index(*manager()->database_pool, endpoint.path, WRITE).reopen();
+		pin_index(pool, endpoint.path, WRITE).reopen();
 	}
-	CHECK(eventually([&] { return manager()->database_pool->catalog().stats().replaces >= before + endpoints.size(); }));
+	CHECK(eventually([&] { return replaces() >= before + endpoints.size(); }));
 }
 
 // POSTs a document with `n` and answers its new id (0 when the write failed).
