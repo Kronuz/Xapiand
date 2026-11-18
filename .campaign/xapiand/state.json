@@ -13279,21 +13279,71 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T22:34:02",
+          "commit": "f36175c564d8d8c4ee096157c0d76a2cc6626bbf",
+          "criteria": {
+            "A1": "`docs/design/name-index.md`",
+            "A2": "261117-182056-98ff05, 261117-211000-af5385; fails without: 261117-082444-aa8b4a, 261117-110228-88596e, 261117-124536-b9339b",
+            "A3": "261117-182100-25609d (the build-test check), 261117-182100-25609d, 261117-182100-a7b005, 261117-210955-f5e031; fails without: 261117-082425-28cde9, 261117-082430-ea3fab, 261117-082434-4426d7, 261117-082439-942a8a, 261117-110214-031049, 261117-110217-85a114, 261117-110221-d6fa49, 261117-110224-f3f320, 261117-124528-4ae707, 261117-124532-538de8, 261117-124554-af9429, 261117-124558-1a5727, 261117-124602-aed1e3, 261117-124605-ff8815",
+            "A4": "261117-210955-f5e031; fails without: 261117-082448-a97fae, 261117-082452-c9b8bb, 261117-082456-c44e69, 261117-110232-ddea0a, 261117-110235-4fbeb9, 261117-110238-651fe2, 261117-124609-74470b",
+            "A5": "261117-210955-f5e031; fails without: 261117-082501-7bf23f, 261117-110242-e44601"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-25609d",
+              "level": "light",
+              "seconds": 1645.0,
+              "state": "done",
+              "what": "name-index check build-test at 1f78c77321f9"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-a7b005",
+              "level": "light",
+              "seconds": 421.4,
+              "state": "done",
+              "what": "name-index check e2e at 1f78c77321f9"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "5863333fb37a6074ce886dc21d44e260cf6393a5",
+          "later": [
+            "261117-223403-d393e2"
+          ],
+          "reason": "",
+          "tested": "4c17cc39279bf1e26934ae6973d669826c2a257f"
+        }
+      ],
       "lenses": [
         "design",
         "durability",
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T22:33:51",
-      "worktree": "../Xapiand-wt/xapiand/name-index"
+      "updated": "2026-11-17T22:34:05",
+      "worktree": ""
     },
     "no-stalls": {
       "accepted": {},
