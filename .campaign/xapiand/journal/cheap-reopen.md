@@ -9,15 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Measuring the reopen at main (4adce97ce). Jobs: build 261118-053909-2e29fb (`.scratch/build.sh build-perf`,
+RelWithDebInfo, LTO off, frame pointers), create 261118-053916-954b10 (2,500 indexes in the slot's `wide2500`),
+A2 before 261118-053917-32ddb3 (`.scratch/gate.sh`, pool 200/5000 ABAB, 10 searches each), profile
+261118-053918-1af4e1 (`.scratch/profile.sh`, `sample` 12 s over pool-200 searches; call graph in its sample.txt).
 
 ## Next
 
-1. <step>
+1. Attribute the reopen from the profile: strata open (scan, per-file open+size, manifest read, eager maps), the
+   Xapiand payload (ShardEndpoint, metadata read, WAL check), the close, and the search proper.
+2. Pick the mechanism and write docs/design/cheap-reopen.md.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
