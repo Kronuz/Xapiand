@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-112139-f34646 261118-112141-c954ca 261118-112149-f9ba50
+State: waiting on jobs 261118-131208-df194f 261118-131217-8aa284 261118-131255-477ffe
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+00. Lead 11-18: suite c954ca passed at 674fbdc5a; f34646 hit its deadline (invalid), split into df194f (ctest -N) and 8aa284 (A2 registry bytes, after df194f); f9ba50 (coverage at head) exited 1 because ctest failed in the instrumented build: test_coverage_aggregations aborts after "OK" (std::system_error: mutex lock failed, at exit) and test_coverage_geospatial aborts (uncaught InvalidArgument), both only under harness/coverage.sh's build (LLVM 22 libc++ and -fprofile-instr-generate); an aborted test writes no profile, so both areas show no gain (geospatial 28.6%, aggregations 85.9%). harness/coverage.sh's exit 1 is that ctest failure (STRICT is unset), not the floors. The quest's A1 says each area reaches T13's target, so the floors are targets. Diag job 477ffe builds both under the coverage flags and runs lldb bt; read its log, fix the tests (file set tests/test_coverage_*), rerun the coverage job. Then lua branches (79.6%, +2 needed: tests/test_coverage_lua.cc added), then the rest by distance to floor from coverage-uncovered.txt.
 
 0. Jobs at 674fbdc5a: f34646 (ctest -N registration + ctest -R test_coverage + A2 registry bytes), c954ca (suite, A3), f9ba50 (rerun of d4c5ad: coverage at head, A1 after). Mutants 731f0f, f2de7d, 6b1e21 passed (killed) at ef6548565, same tests. Then step 1 below, docs/dev/coverage.md, Evidence table.
 
