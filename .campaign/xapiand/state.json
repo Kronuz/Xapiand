@@ -787,6 +787,19 @@
         ]
       },
       "text": "faultlab-netlab landed: unlocks frees docs/** for faultlab-disklab"
+    },
+    {
+      "at": "2026-11-18T07:24:15",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash, so this change can't break it in flight; the journal repin row in hunt.md (after journal:4d364f1) picks up journal-group-io-cost's driver change when it lands",
+      "id": "msg-110",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-group-io-cost"
+      },
+      "text": "detent:journal-group-io-cost started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
