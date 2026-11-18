@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261117-174709-007299 261117-174709-c75fb1 261117-174721-76cffc 261117-174725-f04c3b 261117-174730-8a0b8c 261117-174734-de0aa7 261117-174738-0c9f4a
+State: waiting on jobs 261117-220121-0d17ad 261117-220122-3683cd 261117-220123-40de8b 261117-220126-1624db
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,44 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Step 7 (lead's resume step: build-test red at 47e7f140, 261117-174709-007299), strata:88d72629.
+
+- The 64 B "a destroyed group leaves of ours" at 64 groups is the test's chore scheduler, not
+  the group. Counter (`GROUP_FOOTPRINT_SIZES=1`, job 261117-205530-eb24be, live blocks by
+  requested size, groups' window before->destroyed against the rows' rows-before->before plus
+  destroyed->rows-closed): 4096 B blocks groups +2, rows +1 (+4,096 B = 64 B x 64); hash bucket
+  arrays 776 -> 1576 B (97 -> 197 buckets, the loop's and the Driver's tables) +48 B net; the
+  rest under 40 B. Stacks (`GROUP_FOOTPRINT_TRACE=4096`, job 261117-213444-278a4b): both blocks
+  of the groups' window are `std::deque<task::detail::queued_call>::__add_back_capacity` under
+  `group::kick` -> inline_scheduler: task's inline_scheduler queues in a deque that keeps its
+  4 KiB blocks once grown, and no bare row runs on the chore, so the chore queue's first blocks
+  fell in the groups' window. One-off per scheduler (4 B per group at 1,000 closed, hence 10^4
+  passing). Fix (test only): both schedulers' queues are warmed (1,024 no-op tasks each) before
+  any window; mutant cold-schedulers (`--fails-without` 261117-220123-40de8b); threshold
+  `gone_slack` 16 B unchanged. Breakdown with the fix: 261117-220126-1624db.
+- malloc_history (`footprint_owners.py`, jobs 261117-201244-d391d7, 261117-202428-f2baa9) was
+  not usable for this: its phases are separate lldb runs under MallocStackLogging, and their
+  Core/Worker counts disagree with the test's own counter (a closed row's Core read as live).
+  The in-process counter and stack tracer replace it for window attribution; the script keeps
+  `--terms` and a `rows-before` phase.
+- "group, destroyed open: +6,787 B; its row stays open in the Driver": not a group-core leak,
+  and the measurement broke the group's lifetime rule (docs/mechanisms/replication-group.md,
+  Lifetime: destroyed after `close()`, or once fenced and drained). The 6,787 B is consensus's
+  open row (bare row idle 6,880 B at 10^4): `Driver::groups_` holds a row until
+  `Driver::close(id)` and frees it at `~Driver`; even a closed row stays (921-971 B) until a
+  reopen or `~Driver` (driver.h `open`, `close_step`, `~Driver`). That is consensus's contract.
+  The group cannot close its row in a destructor (the close is async: checkpoint, then
+  `Driver::close`), so destroy-while-open stays a precondition, not a refusal. The footprint
+  now fences its open groups before destroying them, as a stopped process does (strata:
+  c0622adf), and labels the row consensus's. Two in-process gaps follow; see Blocked on.
+- `campaign brief` outside the file set: strata `include/strata/core/index.hh` (c99372d4, D112:
+  `create_deferred` public, the first checkpoint commits generation 1; the group's index is
+  created through it). Home, on quest/xapiand/group-core: `.campaign/xapiand/reviews/group-core-
+  design.md` (design reviewer's rounds 1-3, f27c26cb6 edb610078 4f0c74bdb); `docs/design/
+  cluster-release.md`, `docs/design/cluster-release/bundle_model.py`, `verdict_model.py` (the
+  design rounds' revisions answering that review: faf31a506, 904f8c6a7, 2fea83c16). Nothing
+  moved or reverted; the lead decides.
 
 Step 6 (A6 closed and destroyed, lead's step after c99372d4's jobs), strata:47e7f140; jobs
 queued (Evidence). Step 5's jobs at c99372d4: 11 mutants killed, TSan, build-test, crash green.
@@ -151,6 +189,15 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Blocked on
 
+- Lead (not blocking step 7): consensus keeps a row open until `Driver::close(id)`, so two
+  in-process paths leave an open row behind and make a reopen throw ("the group is open on this
+  Driver"): (1) a fenced group destroyed in a live process (a fence never closes the row);
+  (2) `open()` failing after `Driver::open`. Options: (a) the group closes its row on those
+  paths (`Driver::close` after the fence or the failed open; needs consensus to close a fenced
+  row, a Detent question); (b) the catalog (A6's lifetime owner) closes the row of a fenced or
+  failed group before dropping it; (c) only a process stop ends them, as today. Recommend (a)
+  for the failed open (group-core's own) and (b) for fences once the catalog hook exists; ask
+  Detent whether `Driver::close` on a fenced row is supported.
 - Detent (forward): (1) 64 groups opened at once on one host fail with "storage fenced outside
   worker"; bare consensus rows reproduce it, no strata::group involved:
   `GROUP_FOOTPRINT_NOSYNC=1 GROUP_FOOTPRINT_WAVE=64 build/group_footprint_test 64 0` at
@@ -177,7 +224,7 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 | A3 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
 | A4 | green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
 | A5 (part) | queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
-| A6 (part) | Queued at strata:47e7f140 (closed and destroyed per closed group, consensus's closed row): build-test 261117-174709-007299, crash 261117-174709-c75fb1, counts at 10^4 with 1,000 closed (light, 60 min) 261117-174721-76cffc, strict 500 261117-174725-f04c3b and 1,000 261117-174730-8a0b8c (10 closes each), `--fails-without` destroy-keeps-member 261117-174734-de0aa7; TSan 261117-174738-0c9f4a (A1-A3, A5, A10). Before: green at c99372d4 (step 5 mutants, 151206 counts, 3cedb9 timing at 500; 6093d5 at 1,500 stopped at its cap, invalid). Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
+| A6 (part) | Queued at strata:88d72629 (schedulers warmed; open groups fenced before destroy): build-test 261117-220121-0d17ad, crash 261117-220122-3683cd, `--fails-without` cold-schedulers 261117-220123-40de8b, size breakdown 261117-220126-1624db. At 47e7f140: build-test red 261117-174709-007299 (64 B, the chore queue: Doing, step 7); 10^4 counts 261117-174721-76cffc green. Before that, queued at strata:47e7f140 (closed and destroyed per closed group, consensus's closed row): build-test 261117-174709-007299, crash 261117-174709-c75fb1, counts at 10^4 with 1,000 closed (light, 60 min) 261117-174721-76cffc, strict 500 261117-174725-f04c3b and 1,000 261117-174730-8a0b8c (10 closes each), `--fails-without` destroy-keeps-member 261117-174734-de0aa7; TSan 261117-174738-0c9f4a (A1-A3, A5, A10). Before: green at c99372d4 (step 5 mutants, 151206 counts, 3cedb9 timing at 500; 6093d5 at 1,500 stopped at its cap, invalid). Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
 | A7 | waits on detent:consensus-quiescence (in-process reopen, `TurnLog::read` after close) |
 | A8 | [decision] the owner's (cluster-release Q2); lead default (a) |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
@@ -193,6 +240,10 @@ proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, com
 
 ## Rulings I made
 
+- Step 7: the 64 B was the footprint's own chore scheduler (deque blocks kept once grown);
+  fixed in the test by warming both schedulers, threshold unchanged. Destroy-while-open stays a
+  documented precondition (the close is async; a destructor cannot run it); the footprint now
+  fences before destroying, like the other tests.
 - D111's directory: the group owns its one directory (`std::unique_ptr<jn::IO>`) and lets it go
   at close; a reopen is a new group object over the same path, as the tests already did.
 - `own_heap` = 1,024 B is the group's own budget past its index and consensus row (measured 539-
