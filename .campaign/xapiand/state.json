@@ -421,6 +421,13 @@
       "closed": "journal-turn-bound only bounds a turn to a segment; group-core's driver use is unchanged; group-core repins journal after it lands if its 10^4 open run needs it",
       "id": "msg-101",
       "text": "detent:journal-turn-bound started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T21:15:36",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane now lands after detent:reader-yield-stall and builds against its brief; group-core only consumes the driver API and repins after it lands if needed",
+      "id": "msg-102",
+      "text": "detent:reader-yield-stall started and may change files your consensus-rpc-lane changes (order them with --after detent:reader-yield-stall, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
