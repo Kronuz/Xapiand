@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-034144-72af4b 261118-034150-b883f7
+State: waiting on jobs 261118-034144-72af4b 261118-034505-da434f
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Code in consensus worktree `consensus-wt/xapiand/consensus-flow-bench` (branch
 quest/xapiand/consensus-flow-bench). `bench/flow_bench.cc` (modes barrier, one, many, gap),
 `bench/flow_bench.cmake` (adds the target via `CMAKE_PROJECT_consensus_INCLUDE`),
 `bench/flow_bench_vm.sh smoke|a1|a2|a3` (VM 18782, netem on lo; starts/stops the VM only if
-it found it stopped). macOS build + dry run: job 261118-034144-72af4b; VM smoke (dry run, strict): 261118-034150-b883f7.
+it found it stopped). macOS build + dry run: job 261118-034144-72af4b; VM smoke (dry run, strict): 261118-034505-da434f.
 
 ## Next
 
@@ -57,5 +57,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   storage with factor 1.
 - R3 Commit p99 with 3 voters does not see node 2 (leader + node 3 commit), so A2 also
   reports each group's apply latency at node 2, the head-of-line signal.
+- R5 The VM script keeps a marker (~/.scratch/flow-bench-vm-started) for a VM it started, so a
+  job stopped mid-run leaves the VM for the next flow job to stop: superseding a running smoke
+  (261118-034150-b883f7) left the VM up. macOS dry run 261118-034144-72af4b: every mode runs.
 - R4 Unsent bytes of the slow group = entry bytes its leader Core sent to node 2 minus entry
   bytes node 2's loop was handed (sampled every 2 ms): what the transport holds for it.
