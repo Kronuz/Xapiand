@@ -5521,7 +5521,9 @@
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "loop-yield-race"
+      ],
       "base": "cc65385b2ec45310eb0f85e2ae1faae62311f6b9",
       "branch": "quest/xapiand/faultlab-adopt-xapiand",
       "checks": [
@@ -5547,7 +5549,7 @@
       "risk": "low",
       "status": "active",
       "title": "Xapiand harness/cluster uses faultlab history and proxy; its copies go (migration step 4)",
-      "updated": "2026-11-18T06:32:37",
+      "updated": "2026-11-18T09:06:03",
       "worktree": "../Xapiand-wt/xapiand/faultlab-adopt-xapiand"
     },
     "faultlab-core": {
