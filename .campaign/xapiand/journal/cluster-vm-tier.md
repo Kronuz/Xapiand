@@ -9,15 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+First dev run of `tools/vm/cluster.sh check --nodes 3` (light job 261118-105737-42100a) at
+Xapiand:74995cfa6: boots 3 guests, probes multicast, plants and replays.
 
 ## Next
 
-1. <step>
+1. Fix what the dev run shows; then a parking test (caller SIGKILL, guardian SIGKILL, SIGTERM, down)
+   as a light job.
+2. A1 as an exclusive job: `campaign job submit --quest cluster-vm-tier --for A1 --level exclusive
+   --minutes 20 -- tools/vm/cluster.sh check --nodes 3`.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,4 +41,11 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Guests boot overlays on document-gate's pristine `base.img` (its own `disk.qcow2` also backs on it),
+  with a seed that installs nothing: python3, dmsetup, losetup and mkfs.ext4 ship in the image.
+- Overlays use `cache=unsafe`: deleted at park; power loss is modeled in the guest by dm-log-writes.
+- One disk server per guest owns the disklab, since a lab lives as long as its opener.
+- SSH ports skip 18782 and 18784 (document-gate) even when free; the L2's host UDP port is the first
+  SSH port + 10000, so concurrent runs never share a wire.
+- faultlab pinned at a3b71d1 in harness/cluster/vm/.faultlab, separate from run.sh's a452a8c pin
+  (harness/cluster/.faultlab is outside this quest's file set).
