@@ -15,12 +15,14 @@ FetchContent_Declare(lua
 	GIT_REPOSITORY https://github.com/lua/lua.git
 	GIT_TAG \${XAPIAND_LUA_COMMIT}
 	GIT_SHALLOW TRUE
-	PATCH_COMMAND patch -p1 -i "$src/contrib/lua/xapiand-limits.patch")
+	PATCH_COMMAND sh "$src/contrib/lua/apply-patch.sh" "$src/contrib/lua/xapiand-limits.patch")
 FetchContent_MakeAvailable(lua)
 message(STATUS "LUA_SRC=\${lua_SOURCE_DIR}")
 CMAKE
-cmake -S "$work/p" -B "$work/b" > "$work/cfg.log" 2>&1 || { cat "$work/cfg.log"; exit 1; }
-cat "$work/cfg.log"
+cfg() { cmake -S "$work/p" -B "$1" -DFETCHCONTENT_BASE_DIR="$work/deps" > "$work/cfg.log" 2>&1 || { cat "$work/cfg.log"; exit 1; }; cat "$work/cfg.log"; }
+cfg "$work/b"
+echo "lua fetch: second configure over the same deps (the patch is already applied)"
+cfg "$work/b2"
 lua=$(sed -n 's/.*LUA_SRC=//p' "$work/cfg.log")
 drift() { cmake "$@" -DLUA_SRC="$lua" -DPATCH="$src/contrib/lua/xapiand-limits.patch" \
 	-DVERSION_FILE="$src/contrib/lua/lua-version.cmake" -DWORK="$work/drift" -P "$src/tests/lua_patch_drift.cmake"; }

@@ -1039,7 +1039,7 @@ if(LUA)
 		GIT_REPOSITORY https://github.com/lua/lua.git
 		GIT_TAG ${XAPIAND_LUA_COMMIT}
 		GIT_SHALLOW TRUE
-		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
+		PATCH_COMMAND sh "${PROJECT_SOURCE_DIR}/contrib/lua/apply-patch.sh" "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
 	FetchContent_MakeAvailable(lua)
 	# The sources of the 5.4.7 Makefile's liblua.a: no lua.c, luac.c, ltests.c or onelua.c.
