@@ -27,7 +27,11 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-003603-344583; fails without: 261118-003611-d5ca9d |
+| A2 | 261118-003603-344583 |
+| A3 | 261118-003617-575c64 |
+| A4 | 261118-011622-9bceea |
+| A5 | 261118-003617-575c64; CI green on CI, arm64 and FreeBSD at b85e00a05 |
 
 ## Result
 
