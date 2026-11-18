@@ -5857,6 +5857,20 @@
         "README.md",
         "CMakeLists.txt"
       ],
+      "history": [
+        {
+          "at": "2026-11-18T07:32:38",
+          "reason": "test tooling (skill: low = tests, tooling); every fault measured in the VM (A1, A2) and a mutant killed (A3)",
+          "risk": [
+            "normal",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk normal -> low"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/faultlab-disklab",
       "landed": [],
       "lenses": [],
@@ -5864,10 +5878,10 @@
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
-      "risk": "normal",
+      "risk": "low",
       "status": "active",
       "title": "disklab: dm-log-writes replay to any flush mark, dm-delay, dm-flakey, in a Linux VM (design F15)",
-      "updated": "2026-11-18T07:32:34",
+      "updated": "2026-11-18T07:32:38",
       "worktree": "../faultlab-wt/xapiand/faultlab-disklab"
     },
     "faultlab-netlab": {
