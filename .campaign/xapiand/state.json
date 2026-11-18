@@ -22440,12 +22440,12 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
-      "reason": "parked by the owner: distributed work parks behind engine speed (2026-10-20, D4); the single-node release first, then 7b (2026-10-29, D9)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-08T22:35:57"
+      "updated": "2026-11-18T02:29:31"
     },
     "track-c-c1": {
       "accepted": {},
