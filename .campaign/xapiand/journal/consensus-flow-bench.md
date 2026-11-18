@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: working
+State: waiting on jobs 261118-112720-46b10c 261118-113805-593a91 261118-113818-5a98ce 261118-114928-9bef7d 261118-114946-13cf10
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,7 +29,11 @@ passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_M
 
 ## Next
 
-0. Read diag edf7a9: confirm LogFull, find what holds P4 to ~16 commands/s; then rerun a1, a2.
+0. Diag edf7a9 timed out rebuilding in the VM beside light holds (exit 124): e7a453b adds a
+   `build` mode run as its own light job (593a91), diag 5a98ce after it, A1 9bef7d and A2
+   13cf10 (exclusive) after the diag, build-test 46b10c at d511a44 (rerun at the final head).
+   Read diag: confirm LogFull; find what holds P4 below P1 (rtt 0 slower than rtt 10). If the
+   bench changes, resubmit a1/a2 (the new submission replaces the queued ones).
 
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
@@ -81,5 +85,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   beside real fdatasync: the VM's fdatasync is ~100 ms (qemu on APFS full flush), which caps a
   group at one command per leader barrier and hides the transport. Core persists one proposal
   at a time (Propose while busy is Rejected Busy): per-group throughput <= command / leader barrier.
+- R7 The bench ignores SIGPIPE (connection.h: the host's duty on Linux) and sets the retained
+  log limit to 1 GiB (FLOW_LOG_MIB): it never checkpoints, and 64 MiB holds 256 commands.
+- R8 The VM build is its own light job (`flow_bench_vm.sh build`): timed jobs only measure.
 - R4 Unsent bytes of the slow group = entry bytes its leader Core sent to node 2 minus entry
   bytes node 2's loop was handed (sampled every 2 ms): what the transport holds for it.
