@@ -843,6 +843,20 @@
         "quest": "detent:journal-group-io-sweep"
       },
       "text": "detent:journal-group-io-sweep started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T12:53:06",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane now lands --after detent:peers-tsan-timeout; group-core pins consensus by hash and takes the Driver change at its planned repin",
+      "id": "msg-114",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:peers-tsan-timeout"
+      },
+      "text": "detent:peers-tsan-timeout started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-tsan-timeout, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
