@@ -3573,6 +3573,33 @@
       "updated": "2026-11-17T21:16:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
+    "consensus-sim-loops": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/driver_simulation.cc",
+        "test/driver_mutants.py"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
+      "updated": "2026-11-18T02:55:50"
+    },
     "core-lifecycle-tests": {
       "accepted": {},
       "after": [],
