@@ -22386,6 +22386,8 @@
     "track-c": {
       "accepted": {},
       "after": [],
+      "base": "c5b571ab98ec7fd8b8683d1c1fef40db1f7fb721",
+      "branch": "quest/xapiand/track-c",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -22431,6 +22433,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/track-c",
       "landed": [],
       "lenses": [
         "correctness",
@@ -22442,9 +22445,10 @@
       "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-18T02:29:31"
+      "updated": "2026-11-18T02:47:28",
+      "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
       "accepted": {},
