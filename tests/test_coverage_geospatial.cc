@@ -404,10 +404,15 @@ void test_ewkt_forms() {
 		CHECK(geometry->getType() == c.type || (c.type == Geometry::Type::MULTICHULL && geometry->getType() == Geometry::Type::MULTIPOLYGON));
 		const bool has_ranges = !geometry->getRanges(partials, error).empty();
 		// Printing and re-parsing is stable.
-		const auto again = EWKT(geometry->toEWKT()).getGeometry();
-		const bool stable = again->toEWKT() == geometry->toEWKT();
+		std::string reprinted;
+		try {
+			reprinted = EWKT(geometry->toEWKT()).getGeometry()->toEWKT();
+		} catch (const std::exception& e) {
+			std::fprintf(stderr, "  FAIL: '%s' prints as '%s', which does not parse: %s: %s\n", c.text, geometry->toEWKT().c_str(), typeid(e).name(), e.what());
+		}
+		const bool stable = reprinted == geometry->toEWKT();
 		if (!has_ranges || !stable) {
-			std::fprintf(stderr, "  FAIL: '%s' ranges=%d stable=%d type=%d\n  %s\n  %s\n", c.text, has_ranges, stable, static_cast<int>(geometry->getType()), geometry->toEWKT().c_str(), again->toEWKT().c_str());
+			std::fprintf(stderr, "  FAIL: '%s' ranges=%d stable=%d type=%d\n  %s\n  %s\n", c.text, has_ranges, stable, static_cast<int>(geometry->getType()), geometry->toEWKT().c_str(), reprinted.c_str());
 		}
 		CHECK(has_ranges);
 		CHECK(stable);
