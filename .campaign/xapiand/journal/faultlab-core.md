@@ -9,27 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 6: README.md and docs/ (A6).
+Nothing: steps 1-6 done; remaining A1/A4 mutant jobs queued.
 
 ## Next
 
-1. README.md, docs/ (API, mechanisms), examples/demo.cc.
-2. Remaining mutant jobs: additions (A1, policy), forced-skips-draw (A1), fold-mutates, kill-keeps-leases (A4).
-3. CI (A6) needs the GitHub repo: the lead creates it at landing; until then CI evidence is open.
+1. Lead: create github.com/Kronuz/faultlab and push, for A6's CI half (no remote here); add the
+   cpp-libraries AGENTS.md catalog entry; launch the correctness review.
 
 Worktree: /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-core (faultlab repo, branch quest/xapiand/faultlab-core).
 Done (faultlab commits): skeleton bfce6a8; faultfs d9d420b, 4923aa4, 4d9f951; recorder e607680;
-scenario/events 854eda0; Python half 58880e6. Local: Release ctest 14/14, ASan+UBSan C++ 5/5 (before
-the Python half), ruff and pyrefly strict clean.
+scenario/events 854eda0; Python half 58880e6; README, docs, demo a5dcc10. Local: Release ctest
+15/15, ASan+UBSan C++ green (before the Python half), ruff and pyrefly strict clean.
 Mutants are local refs mutant/faultlab-core/<name> (.scratch/mutant.sh); each fails its test locally.
-Jobs: build-test 261118-003124-8f88ab (A1-A4, at 4923aa4, exit 0); link-orphan 261118-003126-596e36 (A4),
-no-sector-cut 261118-003131-9c42c3 (A3), stream-shift 261118-003136-4b6402 (A2), all failed as required;
-build-test 261118-005459-889c2a (A1-A5, head 58880e6); recorder-bytes 261118-005504-2f7a32 (A5),
-proxy-close-swallows 261118-005516-67f979 (A5), selftest monotonic+seal mutants 261118-005529-db2445 (A5).
+Older jobs: build-test 261118-003124-8f88ab (at 4923aa4), 261118-005459-889c2a (at 58880e6).
 
 ## Blocked on
 
-Nothing.
+A6's CI half: the faultlab repo has no GitHub remote, so CI cannot run until the lead creates
+Kronuz/faultlab and pushes (`.github/workflows/ci.yml` calls the shared cmake.yml with
+`freebsd_packages: python312`). Recommendation: create it at landing; land with `--no-ci` only if
+the owner wants it before the repo exists.
 
 ## Evidence
 
@@ -39,13 +38,29 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-010005-2aea3a; fails without: 261118-005949-37fe70 (additions), 261118-005953-3d76e7 (forced-skips-draw) |
+| A2 | 261118-010005-2aea3a; fails without: 261118-003136-4b6402 (stream-shift) |
+| A3 | 261118-010005-2aea3a; fails without: 261118-003131-9c42c3 (no-sector-cut) |
+| A4 | 261118-010005-2aea3a; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates) |
+| A5 | 261118-010005-2aea3a; fails without: 261118-005504-2f7a32 (recorder-bytes), 261118-005516-67f979 (proxy-close-swallows), 261118-005529-db2445 (selftest monotonic, seal) |
+| A6 | [artifact] faultlab:a5dcc10 README.md, docs/api.md, docs/mechanisms/crash-model.md, examples/demo.cc (run by CTest). CI: open, see Blocked on. |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+New repo faultlab (branch quest/xapiand/faultlab-core, 8 commits):
+
+- include/faultlab/faultfs.h: strata's faultfs ported onto completion's journal::IO with
+  directories, link, preallocate, map_shared, try_lease, inspection, owner locks, kill, snapshot,
+  powered_off and crash_policy (A1, A3, A4). All 384 recorded strata seeds rebuild the same state
+  (test/strata_seeds.inc, A2).
+- recorder.h (F10), scenario.h and events.h (F11, F12).
+- python/faultlab: history.py with the monotonic and seal checks, fault-aware reports and the replay
+  line; proxy.py with F14's Mesh interface; scenario.py (A5).
+- CTest runs 15 tests, including the C++ event log read by the Python checker.
+- Docs: README.md, docs/api.md, docs/mechanisms/crash-model.md.
+- Finding R7: unaligned CrashIO appends reach states no sector pick does.
+
+Open: CI (needs the repo), the cpp-libraries catalog entry, consumer moves (later quests).
 
 ## Rulings I made
 
