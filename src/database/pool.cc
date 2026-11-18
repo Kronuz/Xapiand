@@ -567,6 +567,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 			}
 			fs::create_directories(dir);
 		}
+		names_.opened(path);   // the walk lists the index from here on, so the names do (name-index D3)
 		return strata::counted_io::make(op.counts, [&] {
 			return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
 		});
@@ -699,20 +700,64 @@ counted(task::task<void> t, Uncount done)
 	co_await std::move(t);
 }
 
+// The names' build (name-index D5): one walk in a merge chore of its own group, so it holds a worker of the
+// pool and never a loop. Whatever ends it, the build is unclaimed, so a later pattern may start it again.
+task::task<void>
+run_names_build(WorkPool& pool, NameIndex& names, std::string root)
+{
+	IndexChores chores(pool);
+	try {
+		co_await chores.run(engine::ChoreClass::merge, [&] {
+			if (names.build(root)) {
+				L_NOTICE("The index names are complete: {} names", names.size());
+			} else if (!names.failure().empty()) {
+				L_ERR("The index names could not be built; patterns walk the data directory: {}", names.failure());
+			}
+		});
+	} catch (const task::cancelled&) {
+	} catch (...) {
+		L_EXC("The index names could not be built; patterns walk the data directory");
+	}
+	names.unclaim();
+}
+
 }  // namespace
 
 
-void
-DatabasePool::run_detached(task::task<void> t)
+bool
+DatabasePool::post_detached(task::task<void>& t)
 {
 	// Counted before the control is read: a shutdown that clears the control and then sees no task counted
 	// is sure that this call read the empty control.
 	detached_.fetch_add(1);
 	if (auto* control = control_.load()) {
 		control->spawn(counted(std::move(t), Uncount(detached_)));
-		return;
+		return true;
 	}
 	detached_.fetch_sub(1);
+	return false;
+}
+
+
+void
+DatabasePool::build_names(const std::string& root)
+{
+	if (!names_.claim()) {
+		return;
+	}
+	auto t = run_names_build(*work_pool_, names_, root);
+	if (!post_detached(t)) {
+		names_.unclaim();   // no control loop: patterns walk
+	}
+}
+
+
+void
+DatabasePool::run_detached(task::task<void> t)
+{
+	if (post_detached(t)) {
+		return;
+	}
 	// No control left: the task runs here, to its end, on the thread that starts it, which may be the shutdown
 	// thread draining the control loop (a debounced commit fires there).
 	engine::BlockingAllowed blocking("a detached task runs on the thread that starts it once the control is gone");
@@ -866,6 +911,7 @@ DatabasePool::finish()
 	L_CALL("DatabasePool::finish()");
 
 	finished_.store(true);
+	names_.request_stop();   // the names' build is a task of that loop (name-index D5)
 	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
 }
 

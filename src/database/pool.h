@@ -44,6 +44,7 @@
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
 
+#include "database/name_index.h"  // for NameIndex
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include <string_view>         // for std::string_view
 
@@ -454,9 +455,13 @@ class DatabasePool {
 	struct Shutdown;
 	std::mutex shutdown_mtx_;
 	std::shared_ptr<Shutdown> shutdown_;  // under shutdown_mtx_
+	NameIndex names_;  // kept by the catalog's resolve, so it goes after the catalog
 	std::unique_ptr<IndexCatalog> catalog_;
 
 	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
+
+	// Posts `t` to the control loop, counted as detached; false, leaving `t`, when there is none.
+	bool post_detached(task::task<void>& t);
 
 	// Starts the catalog's shutdown once; what it awaits ends on the thread that releases the last pin or chore.
 	Shutdown& begin_shutdown();
@@ -483,12 +488,25 @@ public:
 		return *catalog_;
 	}
 
+	// The names of the indexes under the data directory, for index patterns (docs/design/name-index.md).
+	NameIndex& names() noexcept {
+		return names_;
+	}
+
+	// Starts the names' build over `root` as a task of the control loop, unless one runs, one ended well, or there
+	// is no control loop (D5). It never waits: until the build ends, patterns walk.
+	void build_names(const std::string& root);
+
 	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).
 	std::size_t soft_open() const noexcept {
 		return soft_open_;
 	}
 
+	// A null control also stops the names' build: it is a task of the control loop (name-index D5).
 	void set_control(engine::Host* control) noexcept {
+		if (control == nullptr) {
+			names_.request_stop();
+		}
 		control_.store(control, std::memory_order_release);
 	}
 
