@@ -22,7 +22,7 @@
 """N `xapiand` processes on 127.0.0.1, each with its own ports and data directory, and their faults.
 
 Every node gets an HTTP port and a peer port from the OS, so concurrent runs never share one, and
-node i dials node j through the mesh's link (i, j) (proxy.py), which partitions, resets and caps.
+node i dials node j through the mesh's link (i, j) (faultlab/proxy.py), which partitions, resets and caps.
 The harness's process group owns every node: run.sh kills the group on exit and on timeout.
 """
 
@@ -40,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from proxy import Mesh
+from faultlab.proxy import FaultLog, Mesh
 
 READY_SECONDS = 60.0
 
@@ -135,12 +135,20 @@ class Cluster:
     link addresses this node dials the others by, and {seed} is its link to node 1.
     """
 
-    def __init__(self, binary: Path, root: Path, count: int, node_args: str = "", join_args: str = "") -> None:
+    def __init__(
+        self,
+        binary: Path,
+        root: Path,
+        count: int,
+        node_args: str = "",
+        join_args: str = "",
+        log: FaultLog | None = None,
+    ) -> None:
         self.binary = binary
         self.root = root
         self.node_args = node_args
         self.join_args = join_args
-        self.mesh = Mesh()
+        self.mesh = Mesh(log)
         self.nodes = {i: Node(i, f"node{i}", free_port(), free_port(), root / f"node{i}") for i in range(1, count + 1)}
 
     def __len__(self) -> int:
