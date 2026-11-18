@@ -5774,6 +5774,35 @@
       "updated": "2026-11-16T15:03:59",
       "worktree": ""
     },
+    "faultlab-netlab": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "python/faultlab/netlab.py",
+        "python/tests/netlab_test.py",
+        "docs/**",
+        "README.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "normal",
+      "status": "planned",
+      "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
+      "updated": "2026-11-18T06:32:00"
+    },
     "faultlab-seam": {
       "accepted": {
         "correctness": {
