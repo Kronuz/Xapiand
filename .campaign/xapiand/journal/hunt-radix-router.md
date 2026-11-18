@@ -50,3 +50,7 @@ Waiting on jobs: A2 261117-193212-3690a3, A2 fails-without 261117-193223-6651ac,
 A1 evidence: 261117-184755-fff446. Exposure: Xapiand uses fixed internal tokens, no catch-alls; not reachable by client path.
 Rulings I made: memoize only catch-all continuations (static/param branching is depth-bounded); unordered_set allocated lazily.
 Next: record numbers in A4 and the note when jobs finish.
+
+## Fix round 1
+A4 regression cause (counted, not timed): failing single-catch-all lookups inserted into the heap set (5 of 14 paths in the mix). Gated memo by catch-all nesting; 0 inserts on the mix now.
+Waiting on jobs at the new commit: A2 261117-193713-8b0cc1, fails-without 261117-193724-43d383, A3 261117-193733-999a72, A4 strict 261117-193741-7a68ec.
