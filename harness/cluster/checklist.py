@@ -27,7 +27,7 @@
 4. aggregations: `_doc_count`, `_sum` and `_avg` over 40 documents are exact on every node.
 5. failover: a leader kill elects a new leader, writes resume, and the killed node rejoins.
 6. replay: `kill -9` after 40 uncommitted writes, then a restart; every node serves all 40.
-7. history: every write and get-by-id above, recorded, passes history.py at its own levels.
+7. history: every write and get-by-id above, recorded, passes faultlab/history.py at its own levels.
 
 Exit status: 0 when every item passes (or exactly the --expect-fail items fail), 1 when items fail,
 2 when the harness itself fails (an item raised, a node never answered, the binary is missing, or
@@ -50,8 +50,10 @@ import traceback
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-import history
-from history import Recorder, Value
+sys.path.insert(0, os.environ["FAULTLAB_PYTHON"])  # the pinned faultlab checkout (run.sh)
+
+from faultlab import history
+from faultlab.history import Recorder, Value
 
 from cluster import Cluster, Node, Response, View, request
 
@@ -382,8 +384,9 @@ class Checklist:
 
     def history(self, item: Item) -> None:
         self.recorder.file.flush()
-        ops = history.load(self.recorder.path.read_text().splitlines())
-        violations = history.check(ops)
+        log = history.load_log(self.recorder.path.read_text().splitlines())
+        ops = log.ops
+        violations = history.check(ops, faults=log.faults)
         for violation in violations[:20]:
             item.note(violation)
         keys = len({op.key for op in ops})
@@ -404,8 +407,8 @@ async def orphaned(cluster: Cluster, main: asyncio.Task[object]) -> None:
 
 
 async def run(args: argparse.Namespace, out: Path, missing: list[str]) -> dict[str, Item]:
-    cluster = Cluster(args.bin, out, args.nodes, args.node_args, args.join_args)
     recorder = Recorder(out / "history.jsonl")
+    cluster = Cluster(args.bin, out, args.nodes, args.node_args, args.join_args, recorder)
     checklist = Checklist(cluster, recorder, args)
     items = {name: Item(name) for name in args.items}
     loop = asyncio.get_running_loop()
@@ -434,8 +437,10 @@ async def run(args: argparse.Namespace, out: Path, missing: list[str]) -> dict[s
                 print(f"  skip: {item.skipped}", flush=True)
     finally:
         watchdog.cancel()
-        recorder.close()
-        await cluster.close()
+        try:
+            await cluster.close()
+        finally:
+            recorder.close()
     return items
 
 
