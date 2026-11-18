@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-131208-df194f 261118-131217-8aa284 261118-131255-477ffe
+State: waiting on jobs 261118-134556-e47048
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+000. 11-18 later: A2 job 8aa284 done (registry: idle 120 B, first reader 440 B, 194 readers 15,800 B per open index; 128 readers 10,360 B); df194f ctest -N done (the 4 coverage tests register). Diag 477ffe reproduced both aborts in the instrumented build but its lldb printed no backtrace; diag2 e47048 breaks on every C++ throw and prints bts (aggregations: a mutex at exit, suspect static destruction; geospatial: uncaught InvalidArgument, only ewkt.cc and multivalue throw it, CHECK_THROW swallows all so it is an unprotected call). Fix cause (product bug => test that fails without), rerun coverage + suite, record A1/A2/A3 rows.
 
 00. Lead 11-18: suite c954ca passed at 674fbdc5a; f34646 hit its deadline (invalid), split into df194f (ctest -N) and 8aa284 (A2 registry bytes, after df194f); f9ba50 (coverage at head) exited 1 because ctest failed in the instrumented build: test_coverage_aggregations aborts after "OK" (std::system_error: mutex lock failed, at exit) and test_coverage_geospatial aborts (uncaught InvalidArgument), both only under harness/coverage.sh's build (LLVM 22 libc++ and -fprofile-instr-generate); an aborted test writes no profile, so both areas show no gain (geospatial 28.6%, aggregations 85.9%). harness/coverage.sh's exit 1 is that ctest failure (STRICT is unset), not the floors. The quest's A1 says each area reaches T13's target, so the floors are targets. Diag job 477ffe builds both under the coverage flags and runs lldb bt; read its log, fix the tests (file set tests/test_coverage_*), rerun the coverage job. Then lua branches (79.6%, +2 needed: tests/test_coverage_lua.cc added), then the rest by distance to floor from coverage-uncovered.txt.
 
