@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Two flaky tests stop turning unrelated landings red:
+1. TSan reports a race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239). It failed CI runs 44056420626 and 44344005112, the latter on a harness-only Python change.
+2. `test_engine_search_strata.cc:1406` checks `elapsed < 800 ms`; job 261118-080957-d0cf4c failed it on a loaded host.
+
+Find the cause, not a wider bound. If the race is in src/ rather than in the test, stop, write it under Blocked on with the TSan report, and the lead re-files it at high risk with its files.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 The TSan race is gone: a job runs `test_loop_yield` under TSan 20 times with no report, and the same job at master reproduces it at least once (or the journal shows the race's interleaving forced by a test that fails without the fix).
+- A2 `test_engine_search_strata` no longer depends on wall time under load: the 800 ms check measures what it claims (work counted, or a bound derived from an unloaded control in the same run), shown by a job that passes with 4 parallel CPU burners beside it.
+- A3 The build-test check passes, and CI is green on every platform.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+A timing bound may stay only if the journal states the mechanism it guards and why load can't break it.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

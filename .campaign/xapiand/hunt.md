@@ -195,7 +195,7 @@ quest starts (name it) or is dropped with a reason.
 ## t10-flood-limit correctness review follow-ups (2026-11-17)
 
 - F3 (explained: P2's stack sample shows reactor-0 inside the flooders' `str_find_aux`/`match`, the light-lane starvation t10-flood-limit fixes; drop once it lands) master (9ae4f7957) stopped answering every request during a scripted RESTORE beside 2 Lua flooders on one reactor: RESTORE and both flooders' PUTs timed out at 300 s (probe P1, job 261117-034526-66767d; P2 261117-042554-2e8d5a samples stacks on a stall). Pre-existing; find the hang.
-- F6: TSan race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239); failed CI run 44056420626 at code-identical 37eda4ed0. Flaky; can turn any landing's CI red.
+- F6: TSan race in `test_loop_yield`'s `count_delete` (tests/test_loop_yield.cc:78 against :1239); failed CI run 44056420626 at code-identical 37eda4ed0. Flaky; can turn any landing's CI red. **Quest loop-yield-race (11-18); hit again on CI run 44344005112 (faultlab-adopt-xapiand, Python-only change).**
 - F4/F5 nits: stale comment at handler.cc:473; two `LightOnExit` structs for one mechanism.
 
 ## p2-intersection follow-up (2026-11-17)
