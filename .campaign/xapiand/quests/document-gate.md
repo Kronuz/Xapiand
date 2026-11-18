@@ -23,7 +23,7 @@ From strata `docs/PLAN.md`, "The `document` profile gate (after Phase 4)", and s
 - A3 Gate: the key-value ratchet family on db_bench's workloads (fillseq, fillrandom, readrandom, seekrandom, ...) and YCSB A to F, at data that fits, 2x and 10x an equal memory limit, under each durability tier: exclusive jobs
 - A4 Gate: all four axes per row: throughput and latency percentiles, memory, disk and write amplification, CPU per operation; strata at most 1.0x RocksDB's time and at least 1.0x its throughput (the Phase 6 margins after): exclusive jobs
 - A5 Gate: RocksDB pinned, on its fastest configuration per value-size class, with the harness's fairness audit applied (strata `docs/perf/rocksdb-fairness-audit.md`): jobs
-- A6 Gate: on Linux and FreeBSD, and on arm64 before Phase 3R's next gate: jobs on the Linux VM, the FreeBSD VM and an arm64 host
+- A6 Gate: on Linux and FreeBSD, and on arm64 before Phase 3R's next gate: per VM, one light job runs every set at 2,000 records and checks it (the dry run), and one exclusive job of at most 10 minutes times sync1 and wal1 once against RocksDB, labelled VM-virtio (D114); the host rows carry the trials and A/As
 - A7 Every gate: ASan, UBSan, TSan; one CPU-hour of fuzzing per decoder added or changed (format 14, the manifest log); readers reject unknown versions; fixtures; coverage; the scale statement: jobs
 - A8 [artifact] The gate report, every row with its commit, platform and jobs: `docs/gates/document-profile.md`
 
