@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: working
+State: waiting on jobs 261118-062615-515090 261118-062623-696378 261118-062628-76934e
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
