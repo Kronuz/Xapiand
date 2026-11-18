@@ -910,6 +910,9 @@
       "risk": "low",
       "status": "blocked",
       "title": "The Architecture and Design book",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:40:14"
     },
     "automata": {
@@ -2230,6 +2233,9 @@
       "risk": "low",
       "status": "blocked",
       "title": "Phase 8b's closing benchmark, run once and published",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:40:13"
     },
     "cluster-api": {
@@ -6448,6 +6454,9 @@
       "risk": "normal",
       "status": "blocked",
       "title": "Carried follow-ups: root routes, the WAL view, fuzz_lua",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-18T02:01:45",
       "worktree": "../Xapiand-wt/xapiand/gate-prep-followups"
     },
@@ -8033,6 +8042,9 @@
       "risk": "normal",
       "status": "blocked",
       "title": "The library performance issues the cpp-libraries gate filed",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-08T15:41:43"
     },
     "license-audit": {
@@ -15484,6 +15496,9 @@
       "risk": "high",
       "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-11T18:45:07",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
@@ -18308,6 +18323,9 @@
       "risk": "high",
       "status": "blocked",
       "title": "Recovery tooling, the strata command-line tool",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-09T04:14:32"
     },
     "release": {
@@ -18437,6 +18455,9 @@
       "risk": "critical",
       "status": "blocked",
       "title": "The rename and the first Xapian-free release",
+      "until": [
+        "owner"
+      ],
       "updated": "2026-11-18T02:29:15"
     },
     "release-rows": {
