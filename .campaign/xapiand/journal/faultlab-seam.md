@@ -1,6 +1,6 @@
 # faultlab-seam: journal
 
-State: waiting on jobs 261117-225523-3d93fa 261117-225527-89b0bf 261117-225533-b70e70 261117-225538-f6cdcf
+State: waiting on jobs 261117-233707-d62aef 261117-233714-a0d968 261117-233733-fcb23e
 Quest: .campaign/xapiand/quests/faultlab-seam.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,9 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-completion:a14893a carries F8 (io.h members and defaults, PosixFile/PosixIO overrides, map_test,
-test/io_members_mutant.sh, docs/mechanisms/io-members.md). build-test passed (261117-225504-f6e144, exit 0); preallocate and advise mutants killed
-(exit 1). Four mutant jobs still queued, chained in the quest slot.
+Correctness review CHANGES folded in at completion:d8b538c:
+- F1 (blocking): macOS preallocate fills holes in [offset, min(end, size())) by walking SEEK_HOLE
+  and SEEK_DATA and writing zeros only into holes, then reserves the growth as before. Linux
+  fallocate and posix_fallocate already cover holes (stated in io-members.md). map_test: truncate
+  to N, write mid, preallocate(0, 2N), require allocated_bytes >= 2N on a reserving filesystem.
+  Fails-without: holes mutant 261117-233714-a0d968 (killed in a local pre-check).
+- F2: extended_acl follows Detent's mode_only_acl: unreadable counts as an ACL except macOS ENOENT,
+  FreeBSD EOPNOTSUPP with both fpathconf checks 0, Linux ENODATA/ENOTSUP/EOPNOTSUPP; other
+  platforms true. extended_acl mutant rerun at the fix: 261117-233733-fcb23e.
+- F5: io.h says held and named inspections can differ on the ACL (identify by device and inode);
+  inspection_test.cc:119 now copies named's extended_acl into the held inspection before the
+  compare, so it holds on a file carrying an ACL.
+- F6: io.h says truncating below a live mapping faults. F7: io.h names owner.lock's 0600.
+- F8: reserve's comment no longer claims the size is unchanged after a failure; note says so.
+- F3 (stricter Linux ACLs) kept by the lead's ruling; F4 (link does not check its source; a
+  symlink links itself) left as a note.
+build-test at d8b538c: 261117-233707-d62aef.
 
 ## Next
 
@@ -28,9 +42,9 @@ map_shared stores at File::sync.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261117-225504-f6e144 passed (map_test `defaults()` and static_asserts on every F8 signature) |
-| A2 | build-test; fails-without killed: preallocate 261117-225514-824e0a, advise 261117-225518-f0c92a; queued: map_shared (MAP_PRIVATE) 261117-225523-3d93fa |
+| A2 | build-test 261117-233707-d62aef at d8b538c; holes mutant 261117-233714-a0d968 (F1); fails-without killed: preallocate 261117-225514-824e0a, advise 261117-225518-f0c92a; queued: map_shared (MAP_PRIVATE) 261117-225523-3d93fa |
 | A3 | fails-without: link via renameat 261117-225527-89b0bf |
-| A4 | fails-without: extended_acl 261117-225533-b70e70, create_mode (no fchmod) 261117-225538-f6cdcf |
+| A4 | extended_acl mutant at d8b538c 261117-233733-fcb23e; earlier fails-without: extended_acl 261117-225533-b70e70, create_mode (no fchmod) 261117-225538-f6cdcf |
 | A5 | build-test 261117-225504-f6e144; CI pending the lead's push |
 
 Local pre-check (macOS, clang ASan+UBSan, not evidence): map_test ok; all six mutants killed.
