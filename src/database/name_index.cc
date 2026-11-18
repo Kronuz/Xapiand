@@ -26,6 +26,7 @@
 #include <algorithm>               // for std::sort, std::all_of, std::max, std::min, std::mismatch
 #include <iterator>                // for std::next
 #include <limits>                  // for std::numeric_limits
+#include <mutex>                   // for std::unique_lock
 #include <string>                  // for std::string
 #include <system_error>            // for std::system_error
 #include <utility>                 // for std::move
