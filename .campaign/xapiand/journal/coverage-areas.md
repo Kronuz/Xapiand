@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-154336-725348
+State: waiting on jobs 261118-154955-a62f41
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+0000000. diag5 725348: the preloaded terminate handler never ran; aggregations passed 3/3 (intermittent), geospatial aborted 3/3 with no FAIL and no OK. diag6 a62f41 (at 49e53d251): geospatial prints MAIN and RUN <test> to stderr (no MAIN = static init; last RUN = the test whose noexcept frame throws); aggregations run 20 times, then 20 more with Node::_nodes_mtx/_nodes defined before _local_node in node.cc (experiment on the job's checkout only). Fix node.cc only if the rate goes to 0 of 20; geospatial: the test it names, bisect with the same prints.
 
 000000. diag4 4ba278: geospatial still aborts with every test guarded (catch std::exception), so the InvalidArgument is thrown outside the tests (static init or exit), not in one; aggregations passed under lldb (no abort), so it is not deterministic there. Lead widened the file set to src/node.cc, src/node.h. diag5 725348 preloads a terminate handler (.scratch/tb.cc via DYLD_INSERT_LIBRARIES) that prints backtrace + what() for 3 runs of each; the stack at terminate is the throw site. Then fix (node.cc statics via function-local statics if the mutex is proven) + a test failing without, rerun coverage and suite.
 
