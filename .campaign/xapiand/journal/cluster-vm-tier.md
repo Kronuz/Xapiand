@@ -1,6 +1,6 @@
 # cluster-vm-tier: journal
 
-State: waiting on jobs 261118-105737-42100a 261118-110246-645dd6 261118-110425-fe0bf4 261118-111122-f3c273
+State: waiting on jobs 261118-115433-265d2c 261118-115435-6123e3 261118-115436-e3d7ad 261118-115437-6ea361 261118-115443-e7a755
 Quest: .campaign/xapiand/quests/cluster-vm-tier.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,20 +9,29 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Nothing has run yet: all four jobs sat queued for 15+ minutes behind a pending strict job
-(A4 100K dense round 2). No VM has booted under this quest, so nothing below is proven.
-Dev runs (light, not evidence): check 261118-105737-42100a, park_test 261118-110246-645dd6,
-netcheck 261118-110425-fe0bf4. A1 (exclusive, 10 min, `--after` the dev check):
-261118-111122-f3c273 at Xapiand:2ce58b24f.
+First runs (lead's msg, jobs 261118-105737-42100a, -110425-fe0bf4, -110246-645dd6):
+- Replay works: in all 3 guests the planted write was absent at `before` (5/5) and present at
+  `after` (5/5), log about 158 MiB, 0.343 s median per replay (max 0.993, 30 replays; light job,
+  host at load 600+, not the A1 timing).
+- Multicast failed: no guest heard any other. Cause, reproduced on the host: QEMU's
+  `-netdev socket,mcast` sends from a socket bound to the group address, and macOS refuses that
+  sendto with EADDRNOTAVAIL (`~/.scratch/cluster-vm-mcast/t.py`). Fix: `-netdev dgram` per guest
+  to a learning hub in the guardian (host unit check: flood, learned unicast, stranger dropped).
+- netcheck crashed parsing "100% packet loss"; it now parses with a regex.
+- park_test: 4 cases passed (caller's group SIGKILL, SIGTERM with journal collected, guardian
+  SIGKILL, then sweep), each parked within 1 s. keeper_kill's `up` then spent minutes in hdiutil
+  at load 600+ until the 30-min deadline. Seeds are now cached per root and key, hdiutil, qemu-img
+  and the guardian start are bounded, and the cases run as two jobs.
+
+Queued at Xapiand:d5bd31053: dev check 261118-115433-265d2c, netcheck 261118-115435-6123e3,
+park_test 261118-115436-e3d7ad and 261118-115437-6ea361, A1 exclusive 261118-115443-e7a755
+(after the dev check).
 
 ## Next
 
-1. Read the dev check's log (`campaign job log 261118-105737-42100a`). Likely first-boot risks:
-   QEMU `-netdev socket,mcast` on macOS loopback; dmsetup or the dm-log-writes module missing
-   in the bare base image (then add `apt-get install dmsetup` to provisioning); netplan's
-   scope-link multicast route.
-2. Fix, resubmit; A1 reruns at the fixed head (its `--after` names the old dev check).
-3. Then a correctness review.
+1. Read the five jobs. If multicast still misses, check's output now has each guest's
+   `ip -br addr`, route and l2 counters.
+2. A1 green, then a correctness review.
 
 ## Blocked on
 
