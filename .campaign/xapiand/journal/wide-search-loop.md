@@ -16,12 +16,16 @@ build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, bu
 |---|---|---|---|
 | 261118-022548-0f3ded | light | | build-prof |
 | 261118-022554-5856e1 | light | | create 2,500 gate + 2,000 starve indexes |
-| 261118-022559-f653ff | light | | create 10,000 gate indexes |
+| 261118-022559-f653ff | light | | create 10,000 gate indexes: timed out at 30 min (5,779+ made) |
+| 261118-033556-81775d | light | | completes the 10,000 (`--create-only --reuse`) |
 | 261118-022612-9e4e4d | strict | | 2,500 gate + `sample` 10 s (attribution) |
 | 261118-022616-80ea60 | strict | A2 before | 2,500 gate, SR3 |
 | 261118-022618-928443 | strict | A3 before | starve probe 16,64 clients |
-| 261118-022620-4ad293 | strict | A2 before | 10,000 gate + `sample` 15 s |
+| 261118-033603-400442 | strict | A2 before | 10,000 gate + `sample` 15 s (replaces cancelled 4ad293) |
 | 261118-024337-7a9aec | light | probe | build-probe: Xapiand:c33b7cc79 + `harness/wide_search_callsites.patch` |
+| 261118-025903-1d4a33 | strict | probe | 2,500 gate + sample on build-probe |
+| 261118-025905-94c734 | strict | probe | starve 16,64 on build-probe |
+| 261118-034210-a84949 | light | A4 | suite (first try 0f4689 timed out in configure, fresh slot) |
 
 Drafted (Xapiand:c33b7cc79): `src/database/wide_search.{h,cc}`, `wide_search::Pins` (node-wide FIFO bound on
 indexes pinned by wide-search batches, sized to the pool's soft_open) and `wide_search::resolve` (per-name budget
