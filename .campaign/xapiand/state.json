@@ -6503,7 +6503,11 @@
         "CMakeLists.txt",
         ".github/workflows/**",
         "cmake/Modules/FindGTest.cmake",
-        "cmake/Modules/ExternalProjectInstall.cmake"
+        "cmake/Modules/ExternalProjectInstall.cmake",
+        "THIRD-PARTY-NOTICES*",
+        "cmake/generate_third_party_notices.py",
+        "tests/lua_patch_drift.cmake",
+        "tests/lua_fetch.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -6514,7 +6518,7 @@
       "risk": "low",
       "status": "active",
       "title": "Lua sources fetch without lua.org resets",
-      "updated": "2026-11-17T22:27:03",
+      "updated": "2026-11-17T22:30:40",
       "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
