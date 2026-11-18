@@ -3959,7 +3959,9 @@
       "files": [
         "tests/test_coverage_*",
         "harness/coverage*",
-        "docs/dev/coverage.md"
+        "docs/dev/coverage.md",
+        "src/node.cc",
+        "src/node.h"
       ],
       "landed": [],
       "lenses": [],
@@ -3970,7 +3972,7 @@
       "risk": "low",
       "status": "active",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T02:21:59",
+      "updated": "2026-11-18T15:43:05",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "cr1-fix": {
