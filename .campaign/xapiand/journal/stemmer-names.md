@@ -1,6 +1,6 @@
 # stemmer-names: journal
 
-State: waiting on jobs 261118-003117-68b230 261118-003120-4a78a1 261118-003125-1bdbe0
+State: waiting on jobs 261118-003708-0842d7 261118-003712-6c88e6 261118-003721-65702e
 Quest: .campaign/xapiand/quests/stemmer-names.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on build-test 261118-003117-68b230 (A3), A2 parity 261118-003120-4a78a1 (tests/test_stem_parity.sh at 7591d150f), A3 mutant 261118-003125-1bdbe0 (--fails-without at b6e94d6c0, before the removals).
+Waiting on build-test 261118-003708-0842d7 (A3), A2 parity 261118-003712-6c88e6, A3 mutant
+261118-003721-65702e (--fails-without at 5a49687e4, before the removals).
 
 ## Next
 
@@ -37,8 +38,8 @@ stem_parity 2cc69d4d1e91, snowball-data vocabularies as release-rows A4 used):
 | Criterion | Evidence |
 |---|---|
 | A1 | owner's ruling pending |
-| A2 | 261118-003120-4a78a1 (queued) |
-| A3 | 261118-003117-68b230 build-test, 261118-003125-1bdbe0 mutant (queued) |
+| A2 | 261118-003712-6c88e6 (queued) |
+| A3 | 261118-003708-0842d7 build-test, 261118-003721-65702e mutant (queued) |
 
 ## Result
 
