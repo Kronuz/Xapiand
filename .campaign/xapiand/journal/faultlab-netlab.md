@@ -24,9 +24,9 @@ The lead, for CI (A4):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-064403-31cd75 |
-| A2 | 261118-064359-d81166; fails without: 261118-064401-e15efd |
-| A3 | 261118-064403-31cd75 |
+| A1 | 261118-064831-83d62a |
+| A2 | 261118-064832-635f88; fails without: 261118-064401-e15efd |
+| A3 | 261118-064831-83d62a |
 | A4 | 261118-064404-807b9c; CI: see Blocked on |
 
 Live run at b762f1c (261118-064403-31cd75): delay 50 ms each way adds 102.2 ms to a round trip
