@@ -22495,7 +22495,14 @@
     },
     "track-c": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "consensus-hello-limits",
+        "consensus-sim-loops",
+        "track-c-c3-gate",
+        "goal5-audit",
+        "consensus-flow-bench",
+        "track-c-gates"
+      ],
       "base": "c5b571ab98ec7fd8b8683d1c1fef40db1f7fb721",
       "branch": "quest/xapiand/track-c",
       "checks": [
@@ -22552,12 +22559,11 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-18T02:47:28",
+      "updated": "2026-11-18T02:56:02",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
