@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: blocked on lead: the call sites are outside the file set (src/server/search_views.cc, src/database/handler.cc)
+State: waiting on jobs 261118-050242-f5a684 050258-4c6f40 050259-a1757e 050300-6ee958 050301-091601 050302-0cee31 050303-e61fcf
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,23 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 2 (lead widened the set to the call sites and `src/index_resolver_lru.*`): call sites applied as code
+(Xapiand:ca68b2e39, patch deleted); harnesses take `--node-arg`; the stall sampler beats on a 250 us timer and prints
+the loop thread's CPU time over each late beat (Xapiand:1ccd11a5e): on CPU = a long turn, off CPU = preempted/blocked.
+Open misses: T5 at 64 clients (light p99 5.3 ms vs 4.2 ms), T4 at 10,000 (max lag 6.6-9.2 ms vs 1 ms).
+
+| Job | Level | What |
+|---|---|---|
+| 261118-050242-f5a684 | light | build-probe at 1ccd11a5e (branch src + new sampler) |
+| 261118-050258-4c6f40 | strict | T5 control: starve 64, default cache |
+| 261118-050259-a1757e | strict | T5 hypothesis: starve 64, `--resolver-cache-size 100000` |
+| 261118-050300-6ee958 | strict | T4 control: gate 10,000, default cache |
+| 261118-050301-091601 | strict | T4 hypothesis: gate 10,000, `--resolver-cache-size 100000` |
+| 261118-050302-0cee31 | strict | T5 attribution: starve 64, `XAPIAND_LAG_SPIN=2000` |
+| 261118-050303-e61fcf | strict | T4 attribution: gate 10,000, `XAPIAND_LAG_SPIN=2000` |
+
+Session 1:
 
 Attribution on current master (src unchanged at Xapiand:92bcc001c; harness only). Slot `wide-search-loop`:
 build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, build-wide10k, build-starve2000.
@@ -47,8 +64,7 @@ Read so far (src = master, build-prof):
 
 ## Next
 
-1. After the lead's ruling: apply `harness/wide_search_callsites.patch` on the branch (or the owning quest does),
-   delete the patch, rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
+1. Read the session-2 jobs; fix each miss's measured cause; then rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
    at the landed code, then CI (A4) and the correctness review.
 2. 10,000 indexes: master 9d63ea loops' max 395 / 475 ms; probe 0e3792 6.6 / 9.2 ms, still over T4's 1,024 us.
    Next experiment: stall capture at 10,000 with XAPIAND_LAG_SPIN=5000 on build-probe to attribute those turns.
