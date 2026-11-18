@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-154955-a62f41
+State: waiting on jobs 261118-155851-271f1d
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+00000000. diag6 a62f41: geospatial last line RUN test_ewkt_errors then terminate (InvalidArgument); aggregations aborts 1/20 baseline, 14/20 with _nodes_mtx/_nodes before _local_node (do not land that reorder). Hypothesis to test: the instrumented binaries load two libc++ copies (LLVM 22's via rpath and the system's via a dependency or libSystem), so exception types and std::mutex objects cross ABIs; both aborts only occur under harness/coverage.sh's LLVM toolchain. diag7 271f1d (at ca1cfe7c3): prints the failing EWKT input, otool -L / rpath, and DYLD_PRINT_LIBRARIES. If confirmed, the fix is link flags in harness/coverage.sh (not product); otherwise bisect the noexcept frame.
 
 0000000. diag5 725348: the preloaded terminate handler never ran; aggregations passed 3/3 (intermittent), geospatial aborted 3/3 with no FAIL and no OK. diag6 a62f41 (at 49e53d251): geospatial prints MAIN and RUN <test> to stderr (no MAIN = static init; last RUN = the test whose noexcept frame throws); aggregations run 20 times, then 20 more with Node::_nodes_mtx/_nodes defined before _local_node in node.cc (experiment on the job's checkout only). Fix node.cc only if the rate goes to 0 of 20; geospatial: the test it names, bisect with the same prints.
 
