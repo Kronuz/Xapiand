@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-033049-525386 261118-033616-a53d52
+State: waiting on jobs 261118-033049-525386 261118-033700-728743
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Code in consensus worktree `consensus-wt/xapiand/consensus-flow-bench` (branch
 quest/xapiand/consensus-flow-bench). `bench/flow_bench.cc` (modes barrier, one, many, gap),
 `bench/flow_bench.cmake` (adds the target via `CMAKE_PROJECT_consensus_INCLUDE`),
 `bench/flow_bench_vm.sh smoke|a1|a2|a3` (VM 18782, netem on lo; starts/stops the VM only if
-it found it stopped). macOS build + dry run: job 261118-033049-525386; VM smoke (dry run, strict): 261118-033616-a53d52.
+it found it stopped). macOS build + dry run: job 261118-033049-525386; VM smoke (dry run, strict): 261118-033700-728743.
 
 ## Next
 
