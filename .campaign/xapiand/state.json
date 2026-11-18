@@ -857,6 +857,19 @@
         "quest": "detent:peers-tsan-timeout"
       },
       "text": "detent:peers-tsan-timeout started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-tsan-timeout, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T14:03:04",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash; turn-seal-forget-flake reaches it at the planned journal repin",
+      "id": "msg-115",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:turn-seal-forget-flake"
+      },
+      "text": "detent:turn-seal-forget-flake started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
