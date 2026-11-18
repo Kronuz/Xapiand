@@ -1754,7 +1754,7 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_EQ(indexes.one_catalog(pool).stats().opens, 1u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().opens, 1u);
 }
 
 // A fenced index is replaced by the catalog (XP2, D2, C23): the use whose commit met the fence hands its pin back,
@@ -1777,8 +1777,8 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	}
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_EQ(indexes.one_catalog(pool).stats().replaces, 1u);
-	CHECK_EQ(indexes.one_catalog(pool).stats().opens, 2u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().replaces, 1u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().opens, 2u);
 }
 
 // A document with an `_id` and an `n` in its stored data, as a request's prepare leaves it: `id` 0 for a new numeric
