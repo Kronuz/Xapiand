@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: waiting on jobs 261118-022831-d00944 261118-022842-883d3a 261118-022854-f0e080
+State: waiting on jobs 261118-022831-d00944 261118-022842-883d3a 261118-022854-f0e080 261118-023246-6d98d7
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,10 +20,11 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 - Build: `harness/light_share_build.sh build-ls` (slot `light-share`), job 261118-022831-d00944 (light).
 - X1 261118-022842-883d3a (strict): T4/T5 mix (`harness/light_share_ab.sh`), arms off 12 8 8 12 off.
 - X2 261118-022854-f0e080 (strict): T10 flood (`lua_bounds.py --loops 4`), arms off 12 8 12 off.
+- X3 261118-023246-6d98d7 (strict): T12 loadtest (`harness/light_share_t12.sh`), arms off 12 8 8 12 off.
 
 ## Next
 
-1. Read X1/X2 (`harness/light_share_report.py`); pick the share; T12 (RESTORE, loadtest QPS) at that share.
+1. Read X1-X3 (X1 prints `harness/light_share_report.py`'s table); pick the share from T4/T5/T10 against T12's cost.
 2. Write `docs/design/light-share.md` (A1): where the wait goes, the share chosen, its numbers.
 3. The landing mechanism lives in Kronuz/task (outside the file set): see Blocked on.
 
