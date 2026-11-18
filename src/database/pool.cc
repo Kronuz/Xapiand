@@ -560,17 +560,27 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
 		}
 		const auto dir = (fs::path(path) / "strata").string();
-		std::error_code ec;
-		if (!fs::exists(dir, ec)) {
+		const auto open = [&] {
+			return strata::counted_io::make(op.counts, [&] {
+				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+			});
+		};
+		// The directory's open is its existence check: a reopen pays no separate stat (cheap-reopen D2).
+		std::unique_ptr<kronuz::journal::IO> io;
+		try {
+			io = open();
+		} catch (const std::system_error& exc) {
+			if (exc.code() != std::errc::no_such_file_or_directory && exc.code() != std::errc::not_a_directory) {
+				throw;
+			}
 			if (!op.create) {
 				throw strata::index_not_created("No such database: " + path);
 			}
 			fs::create_directories(dir);
+			io = open();
 		}
 		names_.opened(path);   // the walk lists the index from here on, so the names do (name-index D3)
-		return strata::counted_io::make(op.counts, [&] {
-			return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
-		});
+		return io;
 	};
 	// The options are read at each open, so a test that resizes them affects the indexes opened from then on.
 	h.open_index = [this](kronuz::journal::IO& io, const prospect::index::options&, const IndexCatalog::opening& op) {
