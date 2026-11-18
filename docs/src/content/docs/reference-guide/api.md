@@ -504,7 +504,11 @@ to exclude, for example `test*,-test3`:
   patterns read more than that many directory entries to find them, in the
   directories of an index too. The search goes only into the directories a
   pattern can still match below: `logs/2026/*` reads `logs` and `logs/2026`,
-  and no other directory. A search names at most 32 patterns (globs and
+  and no other directory. Once the node's index names are built (its first
+  pattern starts that), a pattern reads index names instead: each name under
+  the pattern's prefix that it reads counts against the same number, never
+  more than the walk would read, so `logs-2026*` reads only the names that start with `logs-2026`,
+  however many indexes the node holds. A search names at most 32 patterns (globs and
   exclusions together), and an item repeated counts once. A wide search reads
   its indexes in batches; see
   [Searching many indexes](/Xapiand/options#searching-many-indexes).

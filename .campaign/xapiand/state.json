@@ -428,6 +428,300 @@
       "closed": "consensus-rpc-lane now lands after detent:reader-yield-stall and builds against its brief; group-core only consumes the driver API and repins after it lands if needed",
       "id": "msg-102",
       "text": "detent:reader-yield-stall started and may change files your consensus-rpc-lane changes (order them with --after detent:reader-yield-stall, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T22:33:33",
+      "by": "campaign detent",
+      "closed": "consensus-close-fenced is the D115 contract group-core asked for; group-core repins after it lands (hunt row); consensus-rpc-lane builds against its brief",
+      "id": "msg-103",
+      "text": "detent:consensus-close-fenced started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T00:39:17",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-56",
+      "text": "detent:consensus-transport started and may change files your consensus-rpc-lane changes; order them (--after detent:consensus-transport) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T00:39:17",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-57",
+      "text": "detent:consensus-transport started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T00:39:17",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-58",
+      "text": "detent:consensus-transport started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T00:39:17",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-59",
+      "text": "detent:consensus-transport started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T00:39:18",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-60",
+      "text": "detent:consensus-transport started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T00:49:18",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-61",
+      "text": "detent:transport-connection started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-connection) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T00:49:18",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-62",
+      "text": "detent:transport-connection started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T00:49:19",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-63",
+      "text": "detent:transport-connection started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T00:49:19",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-64",
+      "text": "detent:transport-connection started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T00:49:19",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-65",
+      "text": "detent:transport-connection started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T02:53:38",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-66",
+      "text": "detent:journal-host-guards started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:33",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-67",
+      "text": "detent:transport-groups started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-groups) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T04:27:33",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-68",
+      "text": "detent:transport-groups started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:33",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-69",
+      "text": "detent:transport-groups started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:34",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-70",
+      "text": "detent:transport-groups started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:34",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-71",
+      "text": "detent:transport-groups started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:42",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-72",
+      "text": "detent:rpc-lane-codec started and may change files your consensus-rpc-lane changes; order them (--after detent:rpc-lane-codec) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T04:27:43",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-73",
+      "text": "detent:rpc-lane-codec started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:43",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-74",
+      "text": "detent:rpc-lane-codec started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:43",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-75",
+      "text": "detent:rpc-lane-codec started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:44",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-76",
+      "text": "detent:rpc-lane-codec started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:19",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-77",
+      "text": "detent:transport-identity started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-identity) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T07:56:19",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-78",
+      "text": "detent:transport-identity started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:20",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-79",
+      "text": "detent:transport-identity started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:20",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-80",
+      "text": "detent:transport-identity started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:20",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-81",
+      "text": "detent:transport-identity started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:26",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-82",
+      "text": "detent:transport-idle-cost started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-idle-cost) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T07:56:27",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-83",
+      "text": "detent:transport-idle-cost started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:27",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-84",
+      "text": "detent:transport-idle-cost started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:27",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-85",
+      "text": "detent:transport-idle-cost started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T07:56:28",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-86",
+      "text": "detent:transport-idle-cost started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T08:09:54",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-87",
+      "text": "detent:peers-retry-flake started and may change files your consensus-rpc-lane changes; order them (--after detent:peers-retry-flake) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T08:09:55",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-88",
+      "text": "detent:peers-retry-flake started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T08:09:55",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-89",
+      "text": "detent:peers-retry-flake started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T08:09:55",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-90",
+      "text": "detent:peers-retry-flake started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T08:09:56",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-91",
+      "text": "detent:peers-retry-flake started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T08:29:06",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-92",
+      "text": "detent:transport-groups-ci started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-groups-ci) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T08:29:06",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-93",
+      "text": "detent:transport-groups-ci started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
+    },
+    {
+      "at": "2026-11-17T08:29:06",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-94",
+      "text": "detent:transport-groups-ci started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T08:29:07",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-95",
+      "text": "detent:transport-groups-ci started and changes contract consensus:snapshot-channel, which your group-install consumes"
+    },
+    {
+      "at": "2026-11-17T08:29:07",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-96",
+      "text": "detent:transport-groups-ci started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
     }
   ],
   "quests": {
@@ -778,12 +1072,12 @@
         "barrier-warning-strata"
       ],
       "provides": [],
-      "reason": "waits on barrier-warning-strata (the completion pin with full_flush_ordering and barrier_warning), which waits on cold-tier-step2's strata file set",
+      "reason": "its blocker landed",
       "repo": ".",
       "risk": "high",
-      "status": "blocked",
+      "status": "planned",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-10T22:28:53",
+      "updated": "2026-11-17T23:08:12",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
@@ -1785,12 +2079,12 @@
         "cjk-segmenter"
       ],
       "provides": [],
-      "reason": "needs cjk-segmenter (D43)",
+      "reason": "its blocker landed",
       "repo": ".",
       "risk": "normal",
-      "status": "blocked",
+      "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-09T14:22:12",
+      "updated": "2026-11-17T23:08:07",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
@@ -2306,14 +2600,15 @@
       "milestone": "",
       "needs": [
         "cluster-harness",
-        "faultlab-design"
+        "faultlab-design",
+        "faultlab-core"
       ],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-16T14:23:56"
+      "updated": "2026-11-17T23:01:04"
     },
     "cold-tier-item5": {
       "accepted": {},
@@ -4323,7 +4618,96 @@
       "worktree": ""
     },
     "document-gate": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-17T23:33:07",
+          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "blobs": {
+            "CMakeLists.txt": "100644:0a57c425e1da0771dd06b513fd583290e3d98b40",
+            "bench/kv/barriers.py": "100755:2fbf2826f676515882529a73af27c79ae8916646",
+            "bench/kv/floor.c": "100644:ccff3bada96238eee92ee29b96ddc52deac20352",
+            "bench/kv/kv_strata.cc": "100644:7a183f83d37444409451fc95df0b49601945baf5",
+            "bench/kv/kv_strata.hh": "100644:9eab57dbea21fba378802b89f7ec0884356ccd67",
+            "bench/kv/nlog.py": "100755:9bbbb0a6d162397dd9c35d88f53c221a9d5c9031",
+            "bench/kv/run.py": "100644:518999043b34066b0bbb242dcd4a785143fe74ad",
+            "cmake/check_core_includes.cmake": "100644:ed4a1afd8ca9fcf55156d313345951920aee01f1",
+            "docs/design/standalone-turn-log.md": "100644:71590a4d28334680a68f66ac4ddb96cdea340163",
+            "docs/gates/document-profile.md": "100644:69998af2537267f284ab365aabfe52a7f1cb910a",
+            "docs/perf/standalone-turn-log.md": "100644:3f685e4925fc60add694d4151a8b66548ce99448",
+            "fuzz/corpus/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
+            "fuzz/corpus/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
+            "fuzz/corpus/command/checkpoint.bin": "100644:4406dca00e4a8bc59f81e512f0fc6ba0510d14be",
+            "fuzz/corpus/command/cut.bin": "100644:d070a5b079889fc68a5e08179c411f1eea6780e3",
+            "fuzz/corpus/command/overlong.bin": "100644:44b7373184c73e995c976eba5ecd25e72296ce94",
+            "fuzz/corpus/command/version-2.bin": "100644:81d55ac9b9e3968ef604177237dd185522b15bc0",
+            "fuzz/fuzz_command.cc": "100644:368f52c2df3afc7920ea90a1b7b9b69c0dfba4b5",
+            "include/strata/core/command.hh": "100644:a774f7529e85dedefc27506879770cadefc7a684",
+            "include/strata/core/faultfs.hh": "100644:a97042b4e427840e801be9ee6065671bc9abc811",
+            "include/strata/core/files.hh": "100644:d0a389c80fcc1eb67be78ea2b779963dc76b5947",
+            "include/strata/core/index.hh": "100644:6210210cffeb08dcb54d829eba1cce5c2d9988b5",
+            "include/strata/core/reader.hh": "100644:91ae700c88d698c89b6695a219d27cf81773945a",
+            "include/strata/core/turn_seal.hh": "100644:96862834cc41c682c2297a52345c162ff2826526",
+            "test/fixtures/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
+            "test/fixtures/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
+            "test/fixtures/command/checkpoint.bin": "100644:4406dca00e4a8bc59f81e512f0fc6ba0510d14be",
+            "test/kv_strata_batch_test.cc": "100644:5c03e8935f17c3d093391ea5c15043cd69009f42",
+            "test/standalone_turn_log_test.cc": "100644:8a22c82c4263d8b09b3c02901d36ab3c49841c20"
+          },
+          "by": "review",
+          "commit": "db4435636e55398af36e0efdb954752b76c6c6e4",
+          "criteria": "964dd2896d778795",
+          "diffs": {
+            "": "98762c87cd0c34d0",
+            "CMakeLists.txt": "e6af7f9e01a18e1f",
+            "bench/kv/barriers.py": "af0eb3686975fac6",
+            "bench/kv/floor.c": "cc84b0e46bedd6b7",
+            "bench/kv/kv_strata.cc": "7e5dc2588f55be8b",
+            "bench/kv/kv_strata.hh": "752d161e3ace71d9",
+            "bench/kv/nlog.py": "24cabcbd650f5efc",
+            "bench/kv/run.py": "1a827dcf3e7d98dc",
+            "cmake/check_core_includes.cmake": "aaa6dfafd8396acb",
+            "docs/design/standalone-turn-log.md": "82fef7d547ae20d5",
+            "docs/gates/document-profile.md": "e98010b55503854c",
+            "docs/perf/standalone-turn-log.md": "28f1895335917c41",
+            "fuzz/fuzz_command.cc": "6a3a19a0046ab392",
+            "include/strata/core/command.hh": "abfddc5a4b9c49d2",
+            "include/strata/core/faultfs.hh": "424ff2df4840b876",
+            "include/strata/core/files.hh": "7cc0a0731814f0cf",
+            "include/strata/core/index.hh": "8d305d8b4a388ba5",
+            "include/strata/core/reader.hh": "5e37c36ec1ce98c6",
+            "include/strata/core/turn_seal.hh": "893f4edb18d59fdb",
+            "test/kv_strata_batch_test.cc": "a0799baddc9fcf2f",
+            "test/standalone_turn_log_test.cc": "5d22ca1b92497035"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-document-gate-durability/run.sh split wal_window",
+                  "commit": "cc8ba3aa45b0545668dbff2877b53a81a723601b",
+                  "docs": [
+                    "docs/gates/document-profile.md",
+                    "docs/perf/standalone-turn-log.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-134801-f716c7",
+                  "level": "light",
+                  "seconds": 491.5,
+                  "state": "done",
+                  "what": "durability review probe rerun at the fix: wal_window lag, split"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "c951d14bdfc6b20bd348296b8e4956bc9db0916a",
+          "reviewed": "12f59669148d61be1a7b3c22df96bf23d2b9b2fe",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "phase4-gate",
         "manifest-log"
@@ -4394,7 +4778,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-17T02:05:26",
+      "updated": "2026-11-17T23:33:07",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -4896,6 +5280,44 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-core": {
+      "accepted": {},
+      "after": [],
+      "base": "d8381c10ed015cb93d6a7beb63b907059c057d37",
+      "branch": "quest/xapiand/faultlab-core",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "completion:io"
+      ],
+      "files": [
+        "**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-core",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "faultlab-seam"
+      ],
+      "provides": [
+        "faultlab:faultfs"
+      ],
+      "repo": "../faultlab",
+      "risk": "high",
+      "status": "active",
+      "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
+      "updated": "2026-11-18T00:07:24",
+      "worktree": "../faultlab-wt/xapiand/faultlab-core"
+    },
     "faultlab-design": {
       "accepted": {
         "design": {
@@ -5010,6 +5432,138 @@
       "status": "landed",
       "title": "Design faultlab: one crash model, scenarios and labs shared by Xapiand and Detent",
       "updated": "2026-11-16T15:03:59",
+      "worktree": ""
+    },
+    "faultlab-seam": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T00:06:10",
+          "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+          "blobs": {
+            "docs/mechanisms/io-members.md": "100644:44d1d7ba37ada45ead4e8f5c431f5bb2b0946245",
+            "include/completion/io.h": "100644:a20ce56ac989cf3474deeac8865cc6556b7ff9de",
+            "include/completion/posix.h": "100644:ca87156bef5dd7bd026500ad62f42dfd5332bd3f",
+            "test/inspection_test.cc": "100644:cfaf1d82022fc2b0087390bf84dbd01bc814f30c",
+            "test/io_members_mutant.sh": "100755:6a3a44801252614efe76dced7e774e00938f8a22",
+            "test/map_test.cc": "100644:d68dec5f8c5a52a75bd3644a56f3c19b0ad3bd9c"
+          },
+          "by": "review",
+          "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+          "criteria": "d6e818e2da4e11fc",
+          "diffs": {
+            "docs/mechanisms/io-members.md": "14cbc8579861c583",
+            "include/completion/io.h": "c86c45b2ffc44f73",
+            "include/completion/posix.h": "985fb1cffc6d6eb7",
+            "test/inspection_test.cc": "b6ded507a3b1ca50",
+            "test/io_members_mutant.sh": "820138767272f588",
+            "test/map_test.cc": "12f812eb6bdeb315"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-233707-d62aef",
+                  "level": "light",
+                  "seconds": 327.7,
+                  "state": "done",
+                  "what": "faultlab-seam check build-test at d8b538c6778f"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "test/inspection_test.cc"
+            ],
+            "reason": "inspection_test.cc change is F5's test adjustment for files with an ACL; no mechanism"
+          },
+          "note": "",
+          "review": "02d118d9fd29d952900858a8a46b2c1eecbcd0cc",
+          "reviewed": "924c6a608e94b561c256f73247b074d807127812",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+      "branch": "quest/xapiand/faultlab-seam",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/completion/io.h",
+        "include/completion/posix.h",
+        "test/**",
+        "docs/mechanisms/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-seam",
+      "landed": [
+        {
+          "at": "2026-11-18T00:06:27",
+          "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+          "criteria": {
+            "A1": "261117-233707-d62aef",
+            "A2": "261117-233707-d62aef; fails without: 261117-225514-824e0a, 261117-225518-f0c92a, 261117-225523-3d93fa, 261117-233714-a0d968",
+            "A3": "261117-233707-d62aef; fails without: 261117-225527-89b0bf",
+            "A4": "261117-233707-d62aef; fails without: 261117-225533-b70e70, 261117-225538-f6cdcf, 261117-233733-fcb23e",
+            "A5": "261117-233707-d62aef"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-233707-d62aef",
+              "level": "light",
+              "seconds": 327.7,
+              "state": "done",
+              "what": "faultlab-seam check build-test at d8b538c6778f"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+          "reason": "",
+          "tested": "d8b538c6778f0a1b969e42c8428995d1d29d4731"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "completion:io"
+      ],
+      "repo": "../completion",
+      "risk": "high",
+      "status": "landed",
+      "title": "completion's four faultlab seam additions (F8)",
+      "updated": "2026-11-18T00:06:34",
       "worktree": ""
     },
     "field-table": {
@@ -6486,7 +7040,11 @@
     },
     "hunt-lua-fetch": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "name-index"
+      ],
+      "base": "94290424a08ab5ddfff8d5d73e6266ce6d3eb547",
+      "branch": "quest/xapiand/hunt-lua-fetch",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand",
@@ -6499,7 +7057,13 @@
       "files": [
         "contrib/lua/**",
         "CMakeLists.txt",
-        ".github/workflows/**"
+        ".github/workflows/**",
+        "cmake/Modules/FindGTest.cmake",
+        "cmake/Modules/ExternalProjectInstall.cmake",
+        "THIRD-PARTY-NOTICES*",
+        "cmake/generate_third_party_notices.py",
+        "tests/lua_patch_drift.cmake",
+        "tests/lua_fetch.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -6508,12 +7072,58 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Lua sources fetch without lua.org resets",
-      "updated": "2026-11-17T22:20:29"
+      "updated": "2026-11-17T22:30:54",
+      "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T22:43:13",
+          "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
+          "blobs": {
+            ".gitignore": "100644:265b799ca42952dc3a4c9dbe02deff0e36cbbe00",
+            "bench/ab.cc": "100644:17cf65e2b5e83c55fb1eeb18b0a4bd824f258bb2",
+            "bench/ab.sh": "100755:b9086fc3e6543d36520a1749dac4d812ae1cfffa",
+            "bench/ab3.sh": "100644:b945f15dce7d35f2464121bb036bed6bcfb58fdb",
+            "docs/NESTED_CATCHALLS.md": "100644:404d997eea1e0ca8245abd0d5fbf88b4d8106f80",
+            "fuzz/diff.cc": "100644:33da63ece28774ed447b2eeb090a7b6c5a46bc9b",
+            "fuzz/radix_router_main.h": "100644:49d08ce7023d5867328e0d57035f6b2dbb97e741",
+            "fuzz/radix_router_v1.h": "100644:1dbcd698e93a52aefbb26068ec8f26268ccd1598",
+            "fuzz/regressions/slow-unit-3e22b8dbcc2ed66d801e86ea79727fd027e7ba1a": "100644:1177814a306861f073dc5adf7f977aceb346f53e",
+            "fuzz/regressions/slow-unit-45913e3d5aaba9dc526cbe37367e342ad3c0725d": "100644:345337972c5720ec96cc39510ef37fdcc2599fb8",
+            "fuzz/regressions/slow-unit-5ca20a210ccc1c4da7944ed21a5c5b7a504a3808": "100644:bf6337123cc6a0ee998b70b43cb246543f2f0840",
+            "fuzz/regressions/slow-unit-6693c5d390e25a99503121b37f67a6fdd956f458": "100644:3761af643a32ae27be9e026c708b6abd6af73dab",
+            "fuzz/regressions/slow-unit-b675c44fad563055b6b520b3e5badddb00b45ade": "100644:219222d2a22ff3633101c0c11ccc3cc8362a2b34",
+            "fuzz/slow_repro.cc": "100644:ea4637866333d2d27596274d608a394914d4ac69",
+            "radix_router.h": "100644:b5ad05af36056b0d2a24a791ccb16a4176944552",
+            "test/test.cc": "100644:4be2fb989e633af80fe05be1c3057699e2f0481a"
+          },
+          "by": "review",
+          "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "criteria": "a44a206428c1b32c",
+          "diffs": {
+            "": "43503392ca802d60",
+            ".gitignore": "f9e5ef394416a19a",
+            "bench/ab.cc": "f27075a521d485ba",
+            "bench/ab.sh": "878a8b3a67afe299",
+            "bench/ab3.sh": "5eae11d8cae9575d",
+            "docs/NESTED_CATCHALLS.md": "9a222da11baaeb03",
+            "fuzz/diff.cc": "6a777c570bfda5a7",
+            "fuzz/radix_router_main.h": "aa5fabb1d8bdfe24",
+            "fuzz/radix_router_v1.h": "bb1562f711090621",
+            "fuzz/slow_repro.cc": "c5f7a042100617dc",
+            "radix_router.h": "95131ace101ac411",
+            "test/test.cc": "91cb3321efe15859"
+          },
+          "findings": {},
+          "note": "",
+          "review": "b1a034bfaf4bb9abf9db5b8fc36719f45af718c9",
+          "reviewed": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
       "branch": "quest/xapiand/hunt-radix-router",
@@ -6529,22 +7139,56 @@
       "files": [
         "**"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-radix-router",
-      "landed": [],
-      "lenses": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-17T22:45:16",
+          "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "criteria": {
+            "A1": "261117-224255-fbda31",
+            "A2": "261117-212239-e86d08 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md); fails without: 261117-193223-6651ac, 261117-193724-43d383, 261117-194920-33cf0e, 261117-200155-50edce, 261117-203854-3d433a, 261117-212234-a4772a",
+            "A3": "261117-212244-bb5fb1 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md)",
+            "A4": "261117-212248-c7a142 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md)",
+            "A5": "`docs/NESTED_CATCHALLS.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-224254-a6d031",
+              "level": "light",
+              "seconds": 38.4,
+              "state": "done",
+              "what": "hunt-radix-router check build-test at 234c2368773d"
+            }
+          ],
+          "final": true,
+          "from": "7369c62c0d418d8fccf9b608969e883799d85afc",
+          "reason": "",
+          "tested": "234c2368773d1b84e42a0e59dce86176fb15c0c7"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/radix-router",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "radix-router: bound slow matching inputs found by fuzzing",
-      "updated": "2026-11-17T18:46:50",
-      "worktree": "../radix-router-wt/xapiand/hunt-radix-router"
+      "updated": "2026-11-17T22:45:34",
+      "worktree": ""
     },
     "hybrid-go-no-go": {
       "accepted": {},
       "after": [],
+      "base": "98ce743f5fc4ca9318e0eec52433b49ecd004298",
+      "branch": "quest/xapiand/hybrid-go-no-go",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -6588,6 +7232,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/hybrid-go-no-go",
       "landed": [],
       "lenses": [],
       "milestone": "the strata lane",
@@ -6595,12 +7240,13 @@
         "cold-tier-step2"
       ],
       "provides": [],
-      "reason": "parked by the owner (hybrid Q1 'not yet', 2026-10-27; D8): resumes when cold-tier-step2 lands",
+      "reason": "its blocker landed",
       "repo": "../strata",
       "risk": "low",
-      "status": "blocked",
+      "status": "active",
       "title": "The hybrid-search go/no-go run",
-      "updated": "2026-11-08T22:35:44"
+      "updated": "2026-11-17T23:28:11",
+      "worktree": "../strata-wt/xapiand/hybrid-go-no-go"
     },
     "idle-index": {
       "accepted": {},
@@ -12865,8 +13511,8 @@
     "name-index": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-17T18:19:40",
-          "base": "6a140ea4de266edc98c808c62c98e1c6aff31b05",
+          "at": "2026-11-17T22:33:51",
+          "base": "6bbffede01545fe978cd12e6a43c8c797a5e59a8",
           "blobs": {
             "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
             "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
@@ -12875,7 +13521,7 @@
             "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
             "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
             "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
-            "src/database/name_index.cc": "100644:9a17ab7fe24e019f290577033bf638465c4d337b",
+            "src/database/name_index.cc": "100644:e0472e06d4dffbc8c8ed8bbd7bc90f1183c7e7fb",
             "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
             "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
             "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
@@ -12887,7 +13533,7 @@
             "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
           },
           "by": "review",
-          "commit": "df61d9f73a9ceb258bd290334cba2699d026c9af",
+          "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
           "criteria": "aa0933b13ed947a5",
           "diffs": {
             "docs/design/name-index.md": "9c936384a09909e3",
@@ -12897,7 +13543,7 @@
             "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
             "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
             "harness/wide_search_check.py": "fd5852edb54d5f25",
-            "src/database/name_index.cc": "d18db159efd2c113",
+            "src/database/name_index.cc": "ab80bd96adf97292",
             "src/database/name_index.h": "26139bc0511637cb",
             "src/database/pool.cc": "034bf855d0c90ab4",
             "src/database/pool.h": "86f45483339a57c4",
@@ -12912,15 +13558,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-oracle bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/oracle.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124540-0da619",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 29.1,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe oracle.sh at the F1 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -12929,15 +13575,15 @@
             "F2": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-emfile bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/emfile.sh'",
-                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "cmd": "bash -c 'set -e; b=$(find build -name xapiand_test_index_pattern -type f -perm -u+x | head -1); n=$(find build -name xapiand_test_node -type f -perm -u+x | head -1); \"$b\"; \"$n\" names; \"$n\" over_cap'",
+                  "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-124543-44a244",
+                  "job": "261117-210955-f5e031",
                   "level": "light",
-                  "seconds": 14.9,
+                  "seconds": 487.6,
                   "state": "done",
-                  "what": "review probe emfile.sh at the F2 fix"
+                  "what": "name index unit and node tests (F1, F2) at 1f78c77321f9"
                 }
               ],
               "kind": "defect",
@@ -13261,21 +13907,71 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-17T22:34:02",
+          "commit": "f36175c564d8d8c4ee096157c0d76a2cc6626bbf",
+          "criteria": {
+            "A1": "`docs/design/name-index.md`",
+            "A2": "261117-182056-98ff05, 261117-211000-af5385; fails without: 261117-082444-aa8b4a, 261117-110228-88596e, 261117-124536-b9339b",
+            "A3": "261117-182100-25609d (the build-test check), 261117-182100-25609d, 261117-182100-a7b005, 261117-210955-f5e031; fails without: 261117-082425-28cde9, 261117-082430-ea3fab, 261117-082434-4426d7, 261117-082439-942a8a, 261117-110214-031049, 261117-110217-85a114, 261117-110221-d6fa49, 261117-110224-f3f320, 261117-124528-4ae707, 261117-124532-538de8, 261117-124554-af9429, 261117-124558-1a5727, 261117-124602-aed1e3, 261117-124605-ff8815",
+            "A4": "261117-210955-f5e031; fails without: 261117-082448-a97fae, 261117-082452-c9b8bb, 261117-082456-c44e69, 261117-110232-ddea0a, 261117-110235-4fbeb9, 261117-110238-651fe2, 261117-124609-74470b",
+            "A5": "261117-210955-f5e031; fails without: 261117-082501-7bf23f, 261117-110242-e44601"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-25609d",
+              "level": "light",
+              "seconds": 1645.0,
+              "state": "done",
+              "what": "name-index check build-test at 1f78c77321f9"
+            },
+            {
+              "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+              "commit": "1f78c77321f939224ece4aa1afb24a8fd8a4b551",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-182100-a7b005",
+              "level": "light",
+              "seconds": 421.4,
+              "state": "done",
+              "what": "name-index check e2e at 1f78c77321f9"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:AddressSanitizer",
+              "commit": "4c17cc39279bf1e26934ae6973d669826c2a257f",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "5863333fb37a6074ce886dc21d44e260cf6393a5",
+          "later": [
+            "261117-223403-d393e2"
+          ],
+          "reason": "",
+          "tested": "4c17cc39279bf1e26934ae6973d669826c2a257f"
+        }
+      ],
       "lenses": [
         "design",
         "durability",
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T19:09:00",
-      "worktree": "../Xapiand-wt/xapiand/name-index"
+      "updated": "2026-11-17T22:34:05",
+      "worktree": ""
     },
     "no-stalls": {
       "accepted": {},
@@ -19749,6 +20445,8 @@
     "stemmer-names": {
       "accepted": {},
       "after": [],
+      "base": "9ef3466047b91a9b00623463a25e80b194d07c18",
+      "branch": "quest/xapiand/stemmer-names",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -19762,6 +20460,7 @@
         "src/database/schema.cc",
         "src/stemmer*",
         "tests/test_stem*",
+        "tests/test_strict_text.cc",
         "docs/**"
       ],
       "history": [
@@ -19799,9 +20498,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-12T00:08:38"
+      "updated": "2026-11-18T00:37:45",
+      "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
       "accepted": {},

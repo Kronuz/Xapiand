@@ -2341,22 +2341,34 @@ expand_paths(Request& request, bool patterns)
 
 	if (wildcards && patterns) {
 		std::vector<std::string> names;
-		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+		auto& pool = *XapiandManager::manager(true)->database_pool;
+		IndexChores chores(pool.work_pool());
+		// The walk looks at the request between entries, so a client that goes away stops it.
+		const task::cancel_token token = request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{};
+		const auto cap = static_cast<size_t>(opts.max_search_indexes);
+		const auto checkpoint = [&token] {
+			if (token.requested()) {
+				throw task::cancelled{};
+			}
+		};
+		// The names of the node's indexes answer once built; the first pattern starts the build, and until it ends
+		// the patterns walk the data directory (docs/design/name-index.md, D5).
+		auto& indexes = pool.names();
+		pool.build_names(Endpoint::cwd);
+		if (indexes.complete()) {
+			co_await chores.run(engine::ChoreClass::query, [&] {
+				names = indexes.expand(paths, {cap, cap}, checkpoint);
+			});
+			co_return names;
+		}
 		// One walk at a time on the node: the rest wait their turn holding no thread, so the walks hold one worker of the
 		// work pool whatever the clients send, and the writes' chores run beside them. The queue and the wait have bounds.
 		static index_pattern::WalkGate walks(
 			static_cast<std::size_t>(opts.search_walk_queue),
 			std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(opts.search_walk_wait)));
-		// The walk looks at the request between entries, so a client that goes away stops it.
-		const task::cancel_token token = request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{};
 		const auto turn = co_await walks.enter(token);
-		const auto cap = static_cast<size_t>(opts.max_search_indexes);
 		co_await chores.run(engine::ChoreClass::query, [&] {
-			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, [&token] {
-				if (token.requested()) {
-					throw task::cancelled{};
-				}
-			});
+			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, checkpoint);
 		});
 		co_return names;
 	}

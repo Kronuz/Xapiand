@@ -5,18 +5,15 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-Configuring Xapiand fetches the pinned Lua tarball from an ordered list of URLs (lua.org first, then a mirror), each checked against the same SHA256, so a connection reset on one host no longer fails a job or CI run. A local tarball given by `XAPIAND_LUA_URL` (or a file path) still wins. Hunt row: lua.org fetch resets (11-13), 4+ failed jobs (VM 034617, mac 050321-24afc5/c8007c).
+Xapiand fetches Lua like its other dependencies: from git, the Lua team's official https://github.com/lua/lua at v5.4.7, pinned by commit 1ab3208a1fceb12fca8f24ba57d6e13c5bff15e3, not a tarball from lua.org or a mirror (owner, 11-17). The limits patch applies to the repository's flat layout, and the drift check pins the commit, so a changed Lua still fails the build's tests.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 With lua.org unreachable (its URL pointed at a closed local port), configure still fetches Lua from the next URL and the hash matches: a job that fails without the fallback.
-- A2 A tarball whose SHA256 differs from the pin is refused on every URL: a job.
-- A3 The build check passes, and CI is green on every platform.
+- A1 Configure fetches Lua by commit from GitHub and builds, with no lua.org or mirror URL left: a job.
+- A2 The drift check fails on a wrong commit or a changed patch: a job that fails with a wrong pin.
+- A3 The tag's sources match the 5.4.7 release's src/ byte for byte, or each difference is named: a job.
+- A4 Every git dependency is pinned by commit, not by a tag that can move: cppcodec v0.2 is 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166 and CLI11 v2.4.2 is 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9. The unused cmake/Modules/FindGTest.cmake (googletest at `master`, unpinned) and ExternalProjectInstall.cmake are deleted: [artifact] `CMakeLists.txt`.
+- A5 The build check passes, and CI is green on every platform.
 
 ## Contracts
 
@@ -24,7 +21,7 @@ None: the build's own fetch.
 
 ## Decisions
 
-The mirror must be a public, stable URL serving the identical tarball (GitHub release of lua/lua or a Kronuz release asset); no new paid service.
+Owner 11-17: fetch from github.com/lua/lua by commit, the same mechanism as the other dependencies; the tarball URL list goes.
 
 ## May land early
 

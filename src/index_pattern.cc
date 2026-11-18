@@ -27,10 +27,12 @@
 #include <sys/stat.h>
 
 #include <algorithm>               // for std::sort, std::unique, std::any_of
+#include <cerrno>                  // for errno, ENOENT, ENOTDIR
 #include <cstdint>                 // for std::uint32_t
 #include <iterator>                // for std::make_move_iterator
 #include <memory>                  // for std::unique_ptr
 #include <string>                  // for std::to_string
+#include <system_error>            // for std::system_error
 
 #include "engine/error.h"          // for Error, errc
 #include "index_path.h"            // for index_path::valid
@@ -38,19 +40,20 @@
 
 namespace index_pattern {
 
-namespace {
-
-[[noreturn]] void
+void
 too_many(std::size_t limit)
 {
 	throw engine::Error(engine::errc::invalid, "A search can read at most " + std::to_string(limit) + " indexes (--max-search-indexes) and these patterns name more; narrow the index pattern");
 }
 
-[[noreturn]] void
-too_much_work(std::size_t limit)
+void
+too_much_work(std::size_t limit, const char* what)
 {
-	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " directory entries (--max-search-indexes), and spend " + std::to_string(limit * steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
+	throw engine::Error(engine::errc::invalid, "A search can look through at most " + std::to_string(limit) + " " + what + " (--max-search-indexes), and spend " + std::to_string(limit * steps_per_visit) + " steps matching them; these patterns need more; narrow the index pattern");
 }
+
+
+namespace {
 
 // The walk read more entries than its budget.
 struct OutOfBudget { };
@@ -263,17 +266,28 @@ match(std::string_view pattern, std::string_view name, std::size_t& steps)
 
 namespace {
 
+// A directory that could not be opened: empty, unless `unreadable` says to fail and it is not gone (D110).
+void
+unopened(const std::string& dir, Unreadable unreadable)
+{
+	const int error = errno;
+	if (unreadable == Unreadable::fail && error != ENOENT && error != ENOTDIR) {
+		throw std::system_error(error, std::generic_category(), "cannot read " + dir);
+	}
+}
+
 // Whether a directory is an index, for one that is not read for what is in it: it holds `strata` (an index of one shard)
 // or a shard `.__N`, which may be any of the node's shards of the index. `entry()` is called for each entry it reads.
 template <typename Entry>
 bool
-holds_index(const std::string& dir, Entry&& entry)
+holds_index(const std::string& dir, Unreadable unreadable, Entry&& entry)
 {
 	if (is_directory(dir + "/strata") || is_directory(dir + "/.__1")) {
 		return true;
 	}
 	DirPtr dirp(::opendir(dir.c_str()));
 	if (!dirp) {
+		unopened(dir, unreadable);
 		return false;
 	}
 	while (const dirent* ent = ::readdir(dirp.get())) {
@@ -296,8 +310,8 @@ holds_index(const std::string& dir, Entry&& entry)
 // and calls `checkpoint` before each.
 class Walk {
 public:
-	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, std::vector<std::string>& out)
-		: wanted_count_(wanted.size()), bounds_(bounds), checkpoint_(checkpoint), out_(out)
+	Walk(std::span<const std::string> wanted, std::span<const std::string> excluded, const Bounds& bounds, const Checkpoint& checkpoint, Unreadable unreadable, std::vector<std::string>& out)
+		: wanted_count_(wanted.size()), bounds_(bounds), checkpoint_(checkpoint), unreadable_(unreadable), out_(out)
 	{
 		for (const auto& pattern : wanted) {
 			globs_.emplace_back(pattern);
@@ -374,6 +388,7 @@ private:
 	{
 		DirPtr dirp(::opendir(dir.c_str()));
 		if (!dirp) {
+			unopened(dir, unreadable_);
 			return false;
 		}
 		struct Child {
@@ -414,7 +429,7 @@ private:
 			const auto name = rel + child.name;
 			const auto below = step(level, child.name);
 			const bool inside = deeper(below);
-			const bool is_index = inside ? scan(path, name + "/", below) : holds_index(path, [this] { visit(); });
+			const bool is_index = inside ? scan(path, name + "/", below) : holds_index(path, unreadable_, [this] { visit(); });
 			if (child.matches && is_index) {
 				out_.push_back(name);
 				if (out_.size() > bounds_.names) {
@@ -429,6 +444,7 @@ private:
 	std::size_t wanted_count_;
 	Bounds bounds_;
 	const Checkpoint& checkpoint_;
+	Unreadable unreadable_;
 	std::vector<std::string>& out_;
 	std::size_t visits_ = 0;
 	std::size_t steps_ = 0;
@@ -454,55 +470,71 @@ trimmed(const std::string& root)
 }  // namespace
 
 
-std::vector<std::string>
-expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint)
+Items
+parse(std::span<const std::string> items, const Bounds& bounds, const char* what)
 {
-	std::vector<std::string> plain, wanted, excluded, names;
+	Items parsed;
+	std::vector<std::string> plain;
 	for (const auto& item : items) {
 		if (item.size() > max_pattern_size) {
 			throw engine::Error(engine::errc::invalid, "An index pattern is at most " + std::to_string(max_pattern_size) + " bytes");
 		}
 		if (item.size() > 1 && item[0] == '-') {
-			excluded.push_back(item.substr(1));
+			parsed.excluded.push_back(item.substr(1));
 		} else if (is_wildcard(item)) {
-			wanted.push_back(item == "_all" ? std::string("**") : item);
+			parsed.wanted.push_back(item == "_all" ? std::string("**") : item);
 		} else {
 			plain.push_back(item);
 		}
 	}
 	sort_unique(plain);
-	sort_unique(wanted);
-	sort_unique(excluded);
-	if (wanted.size() + excluded.size() > max_patterns) {
+	sort_unique(parsed.wanted);
+	sort_unique(parsed.excluded);
+	if (parsed.wanted.size() + parsed.excluded.size() > max_patterns) {
 		throw engine::Error(engine::errc::invalid, "A search names at most " + std::to_string(max_patterns) + " index patterns (wildcards and exclusions together)");
 	}
-	std::size_t steps = 0;   // a plain name is tested against the exclusions: at most a URL of names, 32 patterns, counted too
-	for (auto& item : plain) {
-		const bool removed = std::any_of(excluded.begin(), excluded.end(), [&](const std::string& pattern) { return match(pattern, item, steps); });
-		if (steps > bounds.steps) {
-			too_much_work(bounds.visits);
+	for (auto& item : plain) {   // tested against the exclusions: at most a URL of names, 32 patterns, counted too
+		const bool removed = std::any_of(parsed.excluded.begin(), parsed.excluded.end(), [&](const std::string& pattern) { return match(pattern, item, parsed.steps); });
+		if (parsed.steps > bounds.steps) {
+			too_much_work(bounds.visits, what);
 		}
 		if (!removed) {
-			names.push_back(std::move(item));
+			parsed.names.push_back(std::move(item));
 		}
 	}
-	if (names.size() > bounds.names) {
+	if (parsed.names.size() > bounds.names) {
 		too_many(bounds.names);
 	}
-	if (!wanted.empty()) {
-		std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
-		try {
-			Walk(wanted, excluded, bounds, checkpoint, found).run(trimmed(root));   // stops at the bounds
-		} catch (const OutOfBudget&) {
-			too_much_work(bounds.visits);
-		}
-		names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
-	}
+	return parsed;
+}
+
+
+std::vector<std::string>
+merged(Items& parsed, std::vector<std::string>& found, const Bounds& bounds)
+{
+	auto names = std::move(parsed.names);
+	names.insert(names.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
 	sort_unique(names);
 	if (names.size() > bounds.names) {
 		too_many(bounds.names);
 	}
 	return names;
+}
+
+
+std::vector<std::string>
+expand(const std::string& root, std::span<const std::string> items, const Bounds& bounds, const Checkpoint& checkpoint, Unreadable unreadable)
+{
+	auto parsed = parse(items, bounds, walk_work);
+	std::vector<std::string> found;   // apart from the plain names, so a name in both counts once
+	if (!parsed.wanted.empty()) {
+		try {
+			Walk(parsed.wanted, parsed.excluded, bounds, checkpoint, unreadable, found).run(trimmed(root));   // stops at the bounds
+		} catch (const OutOfBudget&) {
+			too_much_work(bounds.visits, walk_work);
+		}
+	}
+	return merged(parsed, found, bounds);
 }
 
 }  // namespace index_pattern
