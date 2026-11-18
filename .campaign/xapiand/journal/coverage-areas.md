@@ -9,11 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Harness committed (0ec136187: coverage-uncovered.txt lists uncovered lines/branches per file). Baseline job d4c5ad (A1 "before", ctest + corpora + e2e at 0ec136187) queued. New tests drafted, not yet compiled (hold covareas-t1 queued behind a strict hold): tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc. Local build dir .scratch/build (uncommitted CMakeLists.txt edit = test-glob's, drop it when test-glob lands and rebase).
 
 ## Next
 
-1. <step>
+1. Compile and run the four new tests (cmake --build .scratch/build --target xapiand_test_coverage_*), fix, commit.
+2. With the baseline's coverage-uncovered.txt, target lua, decoders (field_parser, serialize, strata document/pattern/codec), then server and database error paths.
+3. Mutant per area as a --fails-without job; after-coverage job; docs/dev/coverage.md; A2 job = test_coverage_reader_registry output.
 
 ## Blocked on
 
