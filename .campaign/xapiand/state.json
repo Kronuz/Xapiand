@@ -3349,6 +3349,8 @@
     "consensus-c3-rows": {
       "accepted": {},
       "after": [],
+      "base": "8876195e782558e38c5ec30183453837cb31bdfe",
+      "branch": "quest/xapiand/consensus-c3-rows",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3362,6 +3364,7 @@
         "test/consensus_test.cc",
         "tools/mutants.sh"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-c3-rows",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -3369,9 +3372,10 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "C3 rows: a repair at the base with another term is refused; the commit bound has its own row",
-      "updated": "2026-11-18T04:44:39"
+      "updated": "2026-11-18T04:46:57",
+      "worktree": "../consensus-wt/xapiand/consensus-c3-rows"
     },
     "consensus-flow-bench": {
       "accepted": {},
