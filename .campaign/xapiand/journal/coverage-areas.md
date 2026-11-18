@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-153013-4ba278
+State: waiting on jobs 261118-154336-725348
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+000000. diag4 4ba278: geospatial still aborts with every test guarded (catch std::exception), so the InvalidArgument is thrown outside the tests (static init or exit), not in one; aggregations passed under lldb (no abort), so it is not deterministic there. Lead widened the file set to src/node.cc, src/node.h. diag5 725348 preloads a terminate handler (.scratch/tb.cc via DYLD_INSERT_LIBRARIES) that prints backtrace + what() for 3 runs of each; the stack at terminate is the throw site. Then fix (node.cc statics via function-local statics if the mutex is proven) + a test failing without, rerun coverage and suite.
 
 00000. diag3 6b0c44: geospatial aborted with no FAIL text, so not the reprint (the abort is in an earlier test); aggregations: static std::mutex Node::_nodes_mtx (src/node.cc:112) is defined after Node::_local_node (:109), so it is destroyed first; suspect a lock at static destruction (unproven, the -O breakpoint filter did not filter). diag4 4ba278 (at 0b7192e42): geospatial tests now run guarded (names the test that throws); lldb breaks at __throw_system_error. Product fix only if the bt shows a src/ lock at exit; it would be outside the file set (src/node.cc), so ask the lead first.
 
