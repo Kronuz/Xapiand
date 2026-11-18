@@ -5431,7 +5431,60 @@
       "worktree": ""
     },
     "faultlab-seam": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T00:06:10",
+          "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
+          "blobs": {
+            "docs/mechanisms/io-members.md": "100644:44d1d7ba37ada45ead4e8f5c431f5bb2b0946245",
+            "include/completion/io.h": "100644:a20ce56ac989cf3474deeac8865cc6556b7ff9de",
+            "include/completion/posix.h": "100644:ca87156bef5dd7bd026500ad62f42dfd5332bd3f",
+            "test/inspection_test.cc": "100644:cfaf1d82022fc2b0087390bf84dbd01bc814f30c",
+            "test/io_members_mutant.sh": "100755:6a3a44801252614efe76dced7e774e00938f8a22",
+            "test/map_test.cc": "100644:d68dec5f8c5a52a75bd3644a56f3c19b0ad3bd9c"
+          },
+          "by": "review",
+          "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+          "criteria": "d6e818e2da4e11fc",
+          "diffs": {
+            "docs/mechanisms/io-members.md": "14cbc8579861c583",
+            "include/completion/io.h": "c86c45b2ffc44f73",
+            "include/completion/posix.h": "985fb1cffc6d6eb7",
+            "test/inspection_test.cc": "b6ded507a3b1ca50",
+            "test/io_members_mutant.sh": "820138767272f588",
+            "test/map_test.cc": "12f812eb6bdeb315"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-233707-d62aef",
+                  "level": "light",
+                  "seconds": 327.7,
+                  "state": "done",
+                  "what": "faultlab-seam check build-test at d8b538c6778f"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "test/inspection_test.cc"
+            ],
+            "reason": "inspection_test.cc change is F5's test adjustment for files with an ACL; no mechanism"
+          },
+          "note": "",
+          "review": "02d118d9fd29d952900858a8a46b2c1eecbcd0cc",
+          "reviewed": "924c6a608e94b561c256f73247b074d807127812",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "f4c19b1cf8c28973a5c0f5147134fd955546f210",
       "branch": "quest/xapiand/faultlab-seam",
@@ -5470,7 +5523,7 @@
       "risk": "high",
       "status": "active",
       "title": "completion's four faultlab seam additions (F8)",
-      "updated": "2026-11-17T22:41:33",
+      "updated": "2026-11-18T00:06:10",
       "worktree": "../completion-wt/xapiand/faultlab-seam"
     },
     "field-table": {
