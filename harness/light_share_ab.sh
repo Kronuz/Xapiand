@@ -29,15 +29,17 @@ BIN=$(cd "$(dirname "$1")" && pwd)/$(basename "$1"); OUT=$(mkdir -p "$2" && cd "
 ARMS=(); while [ $# -gt 0 ] && [ "$1" != -- ]; do ARMS+=("$1"); shift; done; [ $# -gt 0 ] && shift
 HERE=$(cd "$(dirname "$0")" && pwd)
 echo "commit $(git -C "$HERE" rev-parse --short HEAD), $(sysctl -n hw.ncpu 2>/dev/null || nproc) CPUs"
-i=0
+[ -x "$BIN" ] || { echo "no binary $BIN" >&2; exit 1; }
+i=0; FAILED=0
 for arm in "${ARMS[@]}"; do
 	i=$((i + 1))
 	if [ "$arm" = off ]; then unset LS_HEAVY_SHARE; else export LS_HEAVY_SHARE=$arm; fi
 	python3 "$HERE/stall_load.py" --bin "$BIN" --target 127.0.0.1:18980 --workdir "$OUT/w" --accounts-docs 20000 \
 		--phase both --rate 200 --duration 20 --no-assert --restore-prebuilt 8 "$@" \
 		--out "$OUT/ls-$i-$arm.json" 2> "$OUT/ls-$i-$arm.log"
-	echo "arm $i $arm rc $?"
+	rc=$?; echo "arm $i $arm rc $rc"; [ $rc -eq 0 ] || FAILED=1
 done
 unset LS_HEAVY_SHARE
 rm -rf "$OUT/w"
-python3 "$HERE/light_share_report.py" "$OUT"/ls-*.json
+python3 "$HERE/light_share_report.py" "$OUT"/ls-*.json || FAILED=1
+exit $FAILED

@@ -75,6 +75,7 @@ def row(path: str) -> dict[str, float]:
 
 def main() -> int:
     arms: dict[str, list[dict[str, float]]] = {}
+    n = 0
     print("run".ljust(14) + "".join(c.rjust(11) for c in COLS))
     for path in sorted(
         sys.argv[1:], key=lambda p: int(m[1]) if (m := re.search(r"-(\d+)-", os.path.basename(p))) else 0
@@ -84,6 +85,7 @@ def main() -> int:
             continue
         r = row(path)
         arms.setdefault(m[2], []).append(r)
+        n += 1
         print(
             f"{m[1]}-{m[2]}".ljust(14)
             + "".join(f"{r[c]:11.2f}" if c != "heavy" and c != "restored" else f"{r[c]:11.0f}" for c in COLS)
@@ -91,7 +93,7 @@ def main() -> int:
     print("median by arm (ms; heavy searches and restored docs per loaded phase; heavy_p99 is the worst heavy kind's)")
     for arm, rs in arms.items():
         print(arm.ljust(14) + "".join(f"{statistics.median(r[c] for r in rs):11.2f}" for c in COLS))
-    return 0
+    return 0 if n else 1
 
 
 if __name__ == "__main__":

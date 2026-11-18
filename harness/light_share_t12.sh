@@ -28,7 +28,8 @@ set -u
 BINS=$1; OUT=$(mkdir -p "$2" && cd "$2" && pwd); shift 2
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(dirname "$HERE")
 bin_for() { case $BINS in *=*) tr ',' '\n' <<< "$BINS" | sed -n "s/^$1=//p" ;; *) echo "$BINS" ;; esac; }
-i=0
+for b in $(tr ',' '\n' <<< "$BINS" | sed 's/^[^=]*=//'); do [ -x "$b" ] || { echo "no binary $b" >&2; exit 1; }; done
+i=0; FAILED=0
 for arm in "$@"; do
 	i=$((i + 1)); b=$(bin_for "$arm")
 	case $BINS in *=*) unset LS_HEAVY_SHARE ;; *) if [ "$arm" = off ]; then unset LS_HEAVY_SHARE; else export LS_HEAVY_SHARE=$arm; fi ;; esac
@@ -37,18 +38,21 @@ for arm in "$@"; do
 	for _ in $(seq 120); do curl -s localhost:18993/ > /dev/null && break; sleep 0.5; done
 	python3 "$HERE/loadtest.py" --target localhost:18993 --dataset "$REPO/docs/public/assets/accounts.ndjson" --replicate 20 \
 		--concurrency 16 --duration 8 --trials 1 --datadir "$D" --label "$arm" --out "$OUT/lt-$i-$arm.json" > "$OUT/lt-$i-$arm.log" 2>&1
-	echo "arm $i $arm rc $?"; grep -h "\[index\]\|\[query\]" "$OUT/lt-$i-$arm.log"
-	kill $N; wait $N
+	rc=$?; echo "arm $i $arm rc $rc"; [ $rc -eq 0 ] || FAILED=1; grep -h "\[index\]\|\[query\]" "$OUT/lt-$i-$arm.log"
+	kill $N 2>/dev/null; wait $N 2>/dev/null
 done
 unset LS_HEAVY_SHARE
 rm -rf "$OUT/lt.data"
-python3 - "$OUT" <<'PY'
+python3 - "$OUT" $# <<'PY' || FAILED=1
 import glob, json, os, re, statistics as st, sys
 arms = {}
 for f in glob.glob(os.path.join(sys.argv[1], "lt-*.json")):
     m = re.search(r"lt-(\d+)-([^.]+)\.json$", f)
     d = json.load(open(f))
     arms.setdefault(m[2], []).append((d["index_phase"]["docs_per_sec"], d["query_phase"]["qps"]))
+if sum(len(v) for v in arms.values()) != int(sys.argv[2]):
+    sys.exit("missing arms: a run failed")
 for a, v in arms.items():
     print(f"{a}: RESTORE docs/s {[round(x[0]) for x in v]} median {st.median(x[0] for x in v):.0f}; qps {[round(x[1]) for x in v]} median {st.median(x[1] for x in v):.0f}")
 PY
+exit $FAILED
