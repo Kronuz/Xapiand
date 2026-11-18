@@ -758,6 +758,20 @@
         ]
       },
       "text": "set light-share: unlocks frees src/database/pool.*, src/engine/strata/**, docs/design/cheap-reopen.md, tests/test_cheap_reopen* for cheap-reopen"
+    },
+    {
+      "at": "2026-11-18T05:57:27",
+      "by": "campaign detent",
+      "closed": "detent:groups-upload-stall is a library fix; consensus-rpc-lane and group-core take it at their next consensus repin",
+      "id": "msg-108",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-stall"
+      },
+      "text": "detent:groups-upload-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
