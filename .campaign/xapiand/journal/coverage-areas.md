@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-024354-d4c5ad 261118-035634-731f0f 261118-035636-f2de7d 261118-035637-6b1e21
+State: waiting on jobs 261118-112139-f34646 261118-112141-c954ca 261118-112149-f9ba50
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+0. Jobs at 674fbdc5a: f34646 (ctest -N registration + ctest -R test_coverage + A2 registry bytes), c954ca (suite, A3), f9ba50 (rerun of d4c5ad: coverage at head, A1 after). Mutants 731f0f, f2de7d, 6b1e21 passed (killed) at ef6548565, same tests. Then step 1 below, docs/dev/coverage.md, Evidence table.
 
 1. When d4c5ad is done: read `coverage-uncovered.txt` in its out; target by file: lua (needs ~3 lines, ~5 branches), decoders (field_parser.cc, serialize.cc, strata document/pattern/codec), then server and database error paths; one mutant per area in harness/coverage_mutants.sh and a --fails-without job.
 2. Job: ctest -R test_coverage (plain pass) and the A2 reader-registry output.
