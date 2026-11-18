@@ -35,7 +35,8 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   (xapiand_resident_memory_bytes and xapiand_databases before and after). It prints each loop's lag over the timed
   searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor), its max read from the window's
   histogram. --create-only creates the indexes and stops; --reuse searches the indexes an earlier run left in OUTDIR,
-  so a light job can create them and a strict one time the searches. --sample S writes the node's call graph over the
+  so a light job can create them and a strict one time the searches; both together complete a creation an earlier
+  run left unfinished. --sample S writes the node's call graph over the
   first S seconds of the timed searches to OUTDIR/sample.txt (`sample` on macOS, perf_sample.py on Linux). Run it under `quiet strict`; the servers use
   ports PORT and PORT + 1 and keep their data under OUTDIR; both are killed on exit.
 """
@@ -317,8 +318,26 @@ def sample(pid: int, secs: int, path: str) -> subprocess.Popen[bytes]:
     return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 
+def resume_creation(count: int) -> None:
+    """Completes a creation an earlier run left unfinished: the missing indexes, and again the last ones it made, which
+    may have been cut short (a PUT of the same document replaces it)."""
+    made = sorted(i for i in range(count) if os.path.isdir(os.path.join(DATA, short(i))))
+    redo = set(made[-64:])
+    todo = [i for i in range(count) if i in redo or not os.path.isdir(os.path.join(DATA, short(i)))]
+    node = start("create")
+    t0 = time.time()
+    with concurrent.futures.ThreadPoolExecutor(8) as pool:
+        statuses = list(pool.map(create, todo))
+    assert all(s < 300 for s in statuses), sorted(set(statuses))
+    print(f"created {len(todo)} more indexes ({count} in all) in {round(time.time() - t0)} s", flush=True)
+    stop(node)
+
+
 def gate() -> None:
     count = args.indexes
+    if args.reuse and args.create_only:
+        resume_creation(count)
+        return
     if not args.reuse:
         shutil.rmtree(OUT, ignore_errors=True)
         os.makedirs(DATA)
