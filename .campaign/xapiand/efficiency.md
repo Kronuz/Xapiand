@@ -309,3 +309,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: Xapiand:7b94f4638 hunt-lua-fetch (merge 1a4dd2fef); faultlab:5ec8a9e faultlab-core (new repo); faultlab:a452a8c guard; agent-campaign:4d1ed02/8181de6/d6fa0f7 (status 26-38 s to 1.9 s); cpp-libraries:260b9df catalog.
 - Runs: perf agent ~245k (commands 10-20x faster, suite 1,059 to 357-658 s); faultlab-core reviewer ~224k (2 blockers, real); faultlab-core contributor ~206k total; stemmer-names ~152k (parked on owner A1). Started: test-glob (lead), light-share, wide-search-loop, coverage-areas.
 - Host: light slots 50% used, idle-beside-runnable 47 min (drains); disk 34 GiB (Detent freed 14). Weekly 61%, burn 1.14%/h.
+## 2026-11-18 03:00 hourly
+- Landed: none in Xapiand this hour. agent-campaign:fd0f607 pushed (8 tool fixes; suite 264 OK in 681 s); dotfiles:3c104f0.
+- Runs: tool bundle ~294k (8 fixes, 1 flaky cause found); Track C reconciliation ~194k (9 criteria to 6 quests, 2 owner decisions); goal5-audit ~194k (41 rows, 2 unbounded findings, both taken by Detent); c3-gate ~130k (Driver-level repair gap found); stemmer-names resume ~67k; light-share ~162k (waiting on jobs).
+- Disk 34 to 107 GiB (slots 42 GB, VM trim 37 GB, preflight 9 GB). Host: light 61% used, drains 37 min, idle-beside-runnable 23 min (was 47). Weekly 63%, burn 1.16%/h.
