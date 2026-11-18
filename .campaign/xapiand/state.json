@@ -6608,7 +6608,52 @@
       "worktree": "../Xapiand-wt/xapiand/hunt-lua-fetch"
     },
     "hunt-radix-router": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T22:43:13",
+          "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
+          "blobs": {
+            ".gitignore": "100644:265b799ca42952dc3a4c9dbe02deff0e36cbbe00",
+            "bench/ab.cc": "100644:17cf65e2b5e83c55fb1eeb18b0a4bd824f258bb2",
+            "bench/ab.sh": "100755:b9086fc3e6543d36520a1749dac4d812ae1cfffa",
+            "bench/ab3.sh": "100644:b945f15dce7d35f2464121bb036bed6bcfb58fdb",
+            "docs/NESTED_CATCHALLS.md": "100644:404d997eea1e0ca8245abd0d5fbf88b4d8106f80",
+            "fuzz/diff.cc": "100644:33da63ece28774ed447b2eeb090a7b6c5a46bc9b",
+            "fuzz/radix_router_main.h": "100644:49d08ce7023d5867328e0d57035f6b2dbb97e741",
+            "fuzz/radix_router_v1.h": "100644:1dbcd698e93a52aefbb26068ec8f26268ccd1598",
+            "fuzz/regressions/slow-unit-3e22b8dbcc2ed66d801e86ea79727fd027e7ba1a": "100644:1177814a306861f073dc5adf7f977aceb346f53e",
+            "fuzz/regressions/slow-unit-45913e3d5aaba9dc526cbe37367e342ad3c0725d": "100644:345337972c5720ec96cc39510ef37fdcc2599fb8",
+            "fuzz/regressions/slow-unit-5ca20a210ccc1c4da7944ed21a5c5b7a504a3808": "100644:bf6337123cc6a0ee998b70b43cb246543f2f0840",
+            "fuzz/regressions/slow-unit-6693c5d390e25a99503121b37f67a6fdd956f458": "100644:3761af643a32ae27be9e026c708b6abd6af73dab",
+            "fuzz/regressions/slow-unit-b675c44fad563055b6b520b3e5badddb00b45ade": "100644:219222d2a22ff3633101c0c11ccc3cc8362a2b34",
+            "fuzz/slow_repro.cc": "100644:ea4637866333d2d27596274d608a394914d4ac69",
+            "radix_router.h": "100644:b5ad05af36056b0d2a24a791ccb16a4176944552",
+            "test/test.cc": "100644:4be2fb989e633af80fe05be1c3057699e2f0481a"
+          },
+          "by": "review",
+          "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "criteria": "a44a206428c1b32c",
+          "diffs": {
+            "": "43503392ca802d60",
+            ".gitignore": "f9e5ef394416a19a",
+            "bench/ab.cc": "f27075a521d485ba",
+            "bench/ab.sh": "878a8b3a67afe299",
+            "bench/ab3.sh": "5eae11d8cae9575d",
+            "docs/NESTED_CATCHALLS.md": "9a222da11baaeb03",
+            "fuzz/diff.cc": "6a777c570bfda5a7",
+            "fuzz/radix_router_main.h": "aa5fabb1d8bdfe24",
+            "fuzz/radix_router_v1.h": "bb1562f711090621",
+            "fuzz/slow_repro.cc": "c5f7a042100617dc",
+            "radix_router.h": "95131ace101ac411",
+            "test/test.cc": "91cb3321efe15859"
+          },
+          "findings": {},
+          "note": "",
+          "review": "b1a034bfaf4bb9abf9db5b8fc36719f45af718c9",
+          "reviewed": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "7369c62c0d418d8fccf9b608969e883799d85afc",
       "branch": "quest/xapiand/hunt-radix-router",
@@ -6626,7 +6671,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/hunt-radix-router",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -6634,7 +6681,7 @@
       "risk": "normal",
       "status": "active",
       "title": "radix-router: bound slow matching inputs found by fuzzing",
-      "updated": "2026-11-17T18:46:50",
+      "updated": "2026-11-17T22:43:13",
       "worktree": "../radix-router-wt/xapiand/hunt-radix-router"
     },
     "hybrid-go-no-go": {
