@@ -5872,16 +5872,45 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T06:56:00",
+          "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+          "criteria": {
+            "A1": "261118-064831-83d62a",
+            "A2": "261118-064832-635f88; fails without: 261118-064401-e15efd",
+            "A3": "261118-064831-83d62a",
+            "A4": "261118-064821-90af61"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
+              "commit": "8f893c18a8ec8df2c490631be122ddadde4aabd6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-064821-90af61",
+              "level": "light",
+              "seconds": 20.9,
+              "state": "done",
+              "what": "faultlab-netlab check build-test at 8f893c18a8ec"
+            }
+          ],
+          "final": true,
+          "from": "a452a8c5e79655293d114d77c2ebc54af5fb0505",
+          "reason": "",
+          "tested": "8f893c18a8ec8df2c490631be122ddadde4aabd6"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
-      "updated": "2026-11-18T06:49:04",
+      "updated": "2026-11-18T06:56:01",
       "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
