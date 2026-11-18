@@ -554,6 +554,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-72",
       "text": "detent:rpc-lane-codec started and may change files your consensus-rpc-lane changes; order them (--after detent:rpc-lane-codec) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T04:27:43",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-73",
+      "text": "detent:rpc-lane-codec started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
     }
   ],
   "quests": {
