@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Configuring Xapiand fetches the pinned Lua tarball from an ordered list of URLs (lua.org first, then a mirror), each checked against the same SHA256, so a connection reset on one host no longer fails a job or CI run. A local tarball given by `XAPIAND_LUA_URL` (or a file path) still wins. Hunt row: lua.org fetch resets (11-13), 4+ failed jobs (VM 034617, mac 050321-24afc5/c8007c).
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 With lua.org unreachable (its URL pointed at a closed local port), configure still fetches Lua from the next URL and the hash matches: a job that fails without the fallback.
+- A2 A tarball whose SHA256 differs from the pin is refused on every URL: a job.
+- A3 The build check passes, and CI is green on every platform.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: the build's own fetch.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+The mirror must be a public, stable URL serving the identical tarball (GitHub release of lua/lua or a Kronuz release asset); no new paid service.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Everything; it is low risk.
