@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Rebased onto master (clean). Resubmitted build-test, A2 parity and the A3 mutant at the rebased head.
+Merged master (365fd3b57). Interrupted jobs 261118-024902-cbb6ac and 261118-024903-704f38 lost their runner before starting (infrastructure, not a test failure); A2 resubmitted at the merged head. A3 mutant 261118-003721-65702e (done) and build-test 261118-024858-f4b47c (done) stand; the vocabulary row earlyenglish exit 1 is the expected difference (2,849 differ), which is why it was removed per D118.
 
 ## Next
 
