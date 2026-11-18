@@ -1938,6 +1938,9 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
+		# Loop-lag bounds hold only without parallel neighbors.
+		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)
+
 		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
 
 		# test_serialize reads the pinned sortable's vectors and its exact comparator (design T1).
