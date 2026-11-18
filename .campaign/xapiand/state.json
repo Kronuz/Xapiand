@@ -23173,7 +23173,26 @@
       "updated": "2026-11-08T15:39:09"
     },
     "track-c-c3-gate": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T15:02:18",
+          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "blobs": {
+            "docs/gates/track-c-c3.md": "100644:425d4bb56d62eb1ffcde34dd350546c4f2195976"
+          },
+          "by": "review",
+          "commit": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+          "criteria": "ab0e6001941ab8c1",
+          "diffs": {
+            "docs/gates/track-c-c3.md": "1d4bffc59a627485"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9c68a2ad4fcbe8b70c3ffc5f1ac826b74e84c302",
+          "reviewed": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "consensus-c3-rows"
       ],
@@ -23194,7 +23213,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/track-c-c3-gate",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -23202,7 +23223,7 @@
       "risk": "normal",
       "status": "review",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T04:44:41",
+      "updated": "2026-11-18T15:02:18",
       "worktree": "../strata-wt/xapiand/track-c-c3-gate"
     },
     "track-c-gates": {
