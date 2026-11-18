@@ -11,6 +11,14 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 Harness committed (0ec136187: coverage-uncovered.txt lists uncovered lines/branches per file). Baseline job d4c5ad (A1 "before", ctest + corpora + e2e at 0ec136187) queued. New tests drafted, not yet compiled (hold covareas-t1 queued behind a strict hold): tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc. Local build dir .scratch/build (uncommitted CMakeLists.txt edit = test-glob's, drop it when test-glob lands and rebase).
 
+## Findings (src bugs seen while testing; outside this quest's file set, for the lead)
+
+- F1 src/geospatial/ewkt.cc:314: `THROW(InvalidArgument, "Expected ' ' after of longitude [{}]")` has a `{}` and no argument, so `POINT()`, `POINT(1)`, `MULTIPOINT(1 2 3 4)` throw std::format_error (a 500) instead of an EWKTError (a 400). Pinned as std::exception in test_inputs_that_surface_a_format_error.
+- F2 src/geospatial/convex.cc:373 `Convex::getTrixels` dereferences `circles.begin()` of an empty convex (segfault); a convex whose circles do not intersect simplifies to empty.
+- F3 src/aggregations/aggregations.cc: `_.fhh(kind)` is not a membership test: `{"_aggs":{"x":{"_bogus":{"_field":"age"}}}}` is accepted (it hashes onto a served kind), so the "Aggregation type ... is not valid" error is reachable only by hash luck.
+- F4 src/geospatial/geospatial.cc make_multipolygon: the ARRAY case calls get_data(o) (which reads o as a map), so the nested-array `_latitude`/`_longitude` form is unreachable.
+- F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
+
 ## Next
 
 1. Compile and run the four new tests (cmake --build .scratch/build --target xapiand_test_coverage_*), fix, commit.
