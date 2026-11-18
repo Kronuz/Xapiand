@@ -42,6 +42,7 @@ COLS = (
     "server_p99",
     "lag_p99",
     "heavy",
+    "heavy_p99",
     "restored",
 )
 
@@ -67,6 +68,7 @@ def row(path: str) -> dict[str, float]:
         "server_p99": float(get(ld, "light.probe.all.parts.server.p99_us") or 0) / 1000,
         "lag_p99": max(lags.values()) / 1000 if lags else 0.0,
         "heavy": float(get(ld, "heavy.searches") or 0),
+        "heavy_p99": max((float(v["p99_us"]) for v in (get(ld, "heavy.latency") or {}).values()), default=0.0) / 1000,
         "restored": float(get(ld, "heavy.restored_docs") or 0),
     }
 
@@ -86,7 +88,7 @@ def main() -> int:
             f"{m[1]}-{m[2]}".ljust(14)
             + "".join(f"{r[c]:11.2f}" if c != "heavy" and c != "restored" else f"{r[c]:11.0f}" for c in COLS)
         )
-    print("median by arm (ms; heavy searches and restored docs per loaded phase)")
+    print("median by arm (ms; heavy searches and restored docs per loaded phase; heavy_p99 is the worst heavy kind's)")
     for arm, rs in arms.items():
         print(arm.ljust(14) + "".join(f"{statistics.median(r[c] for r in rs):11.2f}" for c in COLS))
     return 0

@@ -30,8 +30,16 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Blocked on
 
-Nothing yet. Expected: the heavy share is a Kronuz/task change (`task_asio.hh`), outside this file set; Xapiand
-then sets the share in `src/manager.cc`. The lead decides whether this quest may change Kronuz/task.
+Nothing. Lead ruled (2026-11-18): if X1-X3 show the share wins, the Kronuz/task change is its own quest
+(light-share-task, repo ../task, own review); this quest then bumps the pin (CMakeLists.txt's pin line, added to
+the file set after test-glob lands) and sets the slot count in `src/manager.cc`.
+
+## Messages
+
+- Lead (2026-11-18, task change and heavy cost): recorded above. "Report heavy throughput and heavy p99 beside light
+  p99 at each share": `harness/light_share_report.py` now prints `heavy_p99` (worst heavy kind's loaded p99) beside
+  heavy searches; rerun it locally on X1's `$JOB_OUT/ls-*.json` (the job runs the report at its older commit).
+  A share that starves heavy work is not a win: the pick weighs heavy searches, heavy p99 and T12 together.
 
 ## Evidence
 
