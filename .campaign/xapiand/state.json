@@ -23408,11 +23408,10 @@
       ],
       "consumes": [],
       "files": [
-        "src/database/*",
         "src/query_dsl.cc",
-        "src/server/*",
-        "harness/**",
-        "tests/**",
+        "src/database/wide_search*",
+        "harness/wide_search*",
+        "tests/test_wide_search*",
         "docs/design/wide-search-loop.md"
       ],
       "landed": [],
@@ -23426,7 +23425,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-13T20:10:34"
+      "updated": "2026-11-18T02:20:20"
     },
     "write-buffer": {
       "accepted": {},
