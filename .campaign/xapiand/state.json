@@ -7223,7 +7223,8 @@
         "detent:consensus-driver",
         "detent:consensus-quiescence",
         "detent:journal-host-guards",
-        "strata-nospace-position"
+        "strata-nospace-position",
+        "document-gate"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -7288,7 +7289,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-18T13:20:22",
+      "updated": "2026-11-18T13:20:23",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
