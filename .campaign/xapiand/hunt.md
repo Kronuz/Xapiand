@@ -230,3 +230,4 @@ quest starts (name it) or is dropped with a reason.
   - multipolygon array form unreachable (dead code or a missing route: decide)
   - aggregation kind phf accepts unknown kinds (should be 400 naming the kind)
 - detent:driver-pipeline (filed 11-18): Driver pipelining (depth 1/4/16) + Core accepts proposals while one persists. Starts when consensus-flow-bench T7 shows the gap; if it does, cluster-gate after detent:driver-pipeline. Send T7 numbers to Detent when jobs 5edaf4/004ebb/0a37d4 finish.
+- cheap-reopen follow-ups (11-18): (a) strata quest: cheaper file sizes on open and keeping a closed index log state across reopen; (b) concurrent batch pins in handler.cc search_batch after wide-search-loop lands (same function); WAL/DataStorage scan fold refused: replaced code.
