@@ -830,6 +830,19 @@
         ]
       },
       "text": "faultlab-adopt-xapiand landed: unlocks frees harness/cluster/vm/** for cluster-vm-tier"
+    },
+    {
+      "at": "2026-11-18T12:23:35",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash; journal-group-io-sweep (behavior unchanged, amortized sweeps) reaches it at the planned journal repin, and cluster-gate already waits on it",
+      "id": "msg-113",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-group-io-sweep"
+      },
+      "text": "detent:journal-group-io-sweep started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
