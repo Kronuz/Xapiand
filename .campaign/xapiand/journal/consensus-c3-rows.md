@@ -1,6 +1,6 @@
 # consensus-c3-rows: journal
 
-State: waiting on jobs 261118-044855-9d7a74 261118-044856-2cb29b 261118-044857-1a8ab1
+State: waiting on CI at consensus:f3af7f1 (branch pushed; main merged)
 Quest: .campaign/xapiand/quests/consensus-c3-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Rows and mutants committed at consensus:d2a2cc0 (consensus-wt branch). Jobs (after the Busy assertion): build-test 9d7a74 (A3), P1 2cb29b (A1), P2 1a8ab1 (A2). Jobs run .scratch/c3rows-mut.sh in the Xapiand home (applies the mutant to a copy of core.h, builds and runs consensus_test; exit 127 on a build problem).
+Rows and mutants committed at consensus:d2a2cc0, Busy pin at consensus:0a11a90; main merged at consensus:f3af7f1 and the branch pushed. Jobs (after the Busy assertion): build-test 9d7a74 (A3), P1 2cb29b (A1), P2 1a8ab1 (A2). Jobs run .scratch/c3rows-mut.sh in the Xapiand home (applies the mutant to a copy of core.h, builds and runs consensus_test; exit 127 on a build problem).
 
 ## Next
 
-1. Read the job results; if a mutant job shows a pass for the wrong reason, fix.
+1. When CI is green, the quest is ready for review/land. Jobs done: both mutants fail the unit suite (exit 1, as required).
 
 ## Blocked on
 
@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-044855-9d7a74 (build-test, passed at 0a11a9061de6; only merges from main since); fails without: 261118-044856-2cb29b |
+| A2 | 261118-044855-9d7a74 (as above); fails without: 261118-044857-1a8ab1 |
+| A3 | 261118-044855-9d7a74 (as above) |
 
 ## Result
 
