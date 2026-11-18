@@ -20,7 +20,7 @@ build)
 	git show 8e5040da8 -- src | $V ssh 'cd ~/wsl && rm -rf master-tree && cp -R src-tree master-tree && cd master-tree && patch -R -p1 >/dev/null'
 	for arm in branch master; do
 		tree=src-tree; [[ $arm == master ]] && tree=master-tree
-		$V ssh "cd ~/wsl/$tree && export CC=gcc-13 CXX=g++-13 CCACHE_DIR=~/wsl/.ccache && cmake -GNinja -B ~/wsl/build-$arm -DFETCHCONTENT_BASE_DIR=\$HOME/wsl/.deps -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLTO=OFF >/dev/null && ninja -C ~/wsl/build-$arm -j4 xapiand > ~/wsl/build-$arm.log 2>&1 || { grep -A6 'error:' ~/wsl/build-$arm.log | head -40; exit 3; }"
+		$V ssh "cd ~/wsl/$tree && export CC=gcc-13 CXX=g++-13 CCACHE_DIR=~/wsl/.ccache && cmake -GNinja -B ~/wsl/build-$arm -DFETCHCONTENT_BASE_DIR=\$HOME/wsl/.deps -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DLTO=OFF >/dev/null && ninja -C ~/wsl/build-$arm -j${JOBS:-2} xapiand > ~/wsl/build-$arm.log 2>&1 || { grep -E -A6 'error:|Killed' ~/wsl/build-$arm.log | head -40; exit 3; }"
 		$V ssh "ls -la ~/wsl/build-$arm/xapiand ~/wsl/build-$arm/bin/xapiand 2>/dev/null || find ~/wsl/build-$arm -maxdepth 2 -name xapiand -type f"
 	done
 	;;
