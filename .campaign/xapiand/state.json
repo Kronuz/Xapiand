@@ -23133,7 +23133,8 @@
         "consensus-hello-limits",
         "consensus-sim-loops",
         "consensus-flow-bench",
-        "detent:journal-faultfs"
+        "detent:journal-faultfs",
+        "detent:driver-apply-gap"
       ],
       "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
       "branch": "quest/xapiand/track-c-gates",
@@ -23162,7 +23163,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T08:19:27",
+      "updated": "2026-11-18T12:58:47",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
