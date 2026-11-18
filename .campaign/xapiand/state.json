@@ -6727,6 +6727,8 @@
     "goal5-audit": {
       "accepted": {},
       "after": [],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/goal5-audit",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -6739,6 +6741,7 @@
       "files": [
         "docs/GOAL5-AUDIT.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/goal5-audit",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -6746,9 +6749,10 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Goal 5 audit of completion, journal, consensus, task, wheel: every thread and reclamation path bounded",
-      "updated": "2026-11-18T02:55:52"
+      "updated": "2026-11-18T02:56:32",
+      "worktree": "../consensus-wt/xapiand/goal5-audit"
     },
     "group-core": {
       "accepted": {
