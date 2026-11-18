@@ -729,6 +729,13 @@
       "closed": "journal-faultfs moves journal's tests onto faultfs (faultlab step 5); group-core repins journal in its D115 follow-up",
       "id": "msg-104",
       "text": "detent:journal-faultfs started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T02:13:19",
+      "by": "campaign detent",
+      "closed": "journal-reopen-closed is the fix we asked for (a closed id recovers in the live Host); group-core repins journal in its D115 follow-up",
+      "id": "msg-105",
+      "text": "detent:journal-reopen-closed started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
