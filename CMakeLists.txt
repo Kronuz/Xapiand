@@ -1042,11 +1042,13 @@ if(LUA)
 		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
 	FetchContent_MakeAvailable(lua)
-	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/*.c")
-	list(REMOVE_ITEM LUA_SRC_LIST
-		"${lua_SOURCE_DIR}/lua.c"
-		"${lua_SOURCE_DIR}/luac.c"
-		"${lua_SOURCE_DIR}/onelua.c")
+	# The sources of the 5.4.7 Makefile's liblua.a: no lua.c, luac.c, ltests.c or onelua.c.
+	set(LUA_SRC_LIST)
+	foreach(name lapi lcode lctype ldebug ldo ldump lfunc lgc llex lmem lobject lopcodes lparser lstate
+			lstring ltable ltm lundump lvm lzio lauxlib lbaselib lcorolib ldblib liolib lmathlib loadlib
+			loslib lstrlib ltablib lutf8lib linit)
+		list(APPEND LUA_SRC_LIST "${lua_SOURCE_DIR}/${name}.c")
+	endforeach()
 	add_library(LUA_OBJ OBJECT ${LUA_SRC_LIST})
 	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}")
 
