@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: working
+State: waiting on jobs 261118-024354-d4c5ad 261118-035634-731f0f 261118-035636-f2de7d 261118-035637-6b1e21
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Harness committed (0ec136187: coverage-uncovered.txt lists uncovered lines/branches per file). Baseline job d4c5ad (A1 "before", ctest + corpora + e2e at 0ec136187) queued. New tests drafted, not yet compiled (hold covareas-t1 queued behind a strict hold): tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc. Local build dir .scratch/build (uncommitted CMakeLists.txt edit = test-glob's, drop it when test-glob lands and rebase).
+Committed: harness/coverage.sh lists uncovered lines per file (coverage-uncovered.txt); harness/coverage_mutants.sh; tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc (all pass locally, .scratch/build). ef6548565 is a cherry-pick of test-glob's CMake commit so the tests build in jobs; drop it on the rebase onto master once test-glob lands.
+
+Jobs: d4c5ad = A1 "before" (ctest + corpora + E2E coverage at 0ec136187, no new tests); 731f0f geo-km, f2de7d y2j-hex, 6b1e21 agg-depth = --fails-without mutants at ef6548565 (each must exit nonzero = killed).
+
+A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` output (idle 120 B, first reader 440 B, 194 readers 15,800 B per open index; the old fixed registry was 12,416 B for 194 records) as a job once the glob is in.
 
 ## Findings (src bugs seen while testing; outside this quest's file set, for the lead)
 
@@ -22,9 +26,9 @@ Harness committed (0ec136187: coverage-uncovered.txt lists uncovered lines/branc
 
 ## Next
 
-1. Compile and run the four new tests (cmake --build .scratch/build --target xapiand_test_coverage_*), fix, commit.
-2. With the baseline's coverage-uncovered.txt, target lua, decoders (field_parser, serialize, strata document/pattern/codec), then server and database error paths.
-3. Mutant per area as a --fails-without job; after-coverage job; docs/dev/coverage.md; A2 job = test_coverage_reader_registry output.
+1. When d4c5ad is done: read `coverage-uncovered.txt` in its out; target by file: lua (needs ~3 lines, ~5 branches), decoders (field_parser.cc, serialize.cc, strata document/pattern/codec), then server and database error paths; one mutant per area in harness/coverage_mutants.sh and a --fails-without job.
+2. Job: ctest -R test_coverage (plain pass) and the A2 reader-registry output.
+3. After-coverage job (same command as d4c5ad) at the final commit; docs/dev/coverage.md (before/after table, what is open, reader registry bytes); Evidence table.
 
 ## Blocked on
 
