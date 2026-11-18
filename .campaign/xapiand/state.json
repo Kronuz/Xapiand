@@ -5538,8 +5538,35 @@
       "files": [
         "harness/cluster/**"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T10:43:28",
+          "commit": "66f4fa597b98fdeb8c688c0602a8310020516f60",
+          "criteria": {
+            "A1": "261118-063444-7192ac (passed at f730dfa30a55; only merges from main since), 261118-075629-e032e7 (passed at f730dfa30a55; only merges from main since)",
+            "A2": "261118-063447-891e3d (passed at f730dfa30a55; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "f730dfa30a55ba1c8e6959fc67c8068e5de316e5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-085046-bc581b",
+              "level": "light",
+              "seconds": 282.8,
+              "state": "done",
+              "what": "faultlab-adopt-xapiand check suite at f730dfa30a55"
+            }
+          ],
+          "final": true,
+          "from": "40a757e5a08530121712bc774ddf8c48ed28c56b",
+          "reason": "",
+          "tested": "64761f626aa1adbd62d6ba1eac801eb2ca097af0"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "faultlab-core"
@@ -5547,10 +5574,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand harness/cluster uses faultlab history and proxy; its copies go (migration step 4)",
-      "updated": "2026-11-18T09:06:03",
-      "worktree": "../Xapiand-wt/xapiand/faultlab-adopt-xapiand"
+      "updated": "2026-11-18T10:44:49",
+      "worktree": ""
     },
     "faultlab-core": {
       "accepted": {
