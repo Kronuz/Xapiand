@@ -53,7 +53,7 @@ the run a harness error (exit 2), not a failed item.
 
 ### Faults
 
-Scenarios drive `cluster.Cluster` and its `proxy.Mesh` from Python:
+Scenarios drive `cluster.Cluster` and its `faultlab.proxy.Mesh` (pinned in run.sh) from Python:
 
 | Fault | Call | What the node sees |
 |---|---|---|
@@ -112,7 +112,7 @@ One JSON line per invocation and one per completion, in the order they happen:
   acknowledged the write, and its launch, counted from 1, so a restart starts the next. A read
   without a `node` may come from any replica. Other fields are ignored.
 
-The checker (`history.py`) runs three checks on each key:
+The checker (faultlab's `history.py`) runs three checks on each key:
 
 1. `written`: every read returns null or the value of a write that had begun and was not refused.
 2. `prefix`: consistent prefix as cluster-release D4 and durability-modes D10 define it, any
@@ -121,11 +121,11 @@ The checker (`history.py`) runs three checks on each key:
    `quorum` write that completed before another began comes first, each node's launch reads
    monotonically in real time, and a node never reads behind a `quorum` write it acknowledged. A
    restart may go back, never past that. The rules are edges between writes, so the check looks
-   for a cycle; `selftest.py` compares it with every order on 3,000 random histories.
+   for a cycle; faultlab's `selftest.py` compares it with every order on 3,000 random histories.
 3. `linearizable`: the `quorum` writes acknowledged, the writes some read observed, and the reads
    at level `linearizable` linearize. It is Gibbons and Korach's zone test for registers with
    unique writes: exact, and polynomial where a search for a linearization is exponential;
-   `selftest.py` checks it against an exhaustive search on 3,000 random histories. An unread
+   faultlab's `selftest.py` checks it against an exhaustive search on 3,000 random histories. An unread
    `none` or `info` write may be lost; an observed one may commit any time after it began, since
    `none` acknowledges before commit. A write that only `prefix` reads observed is not in this
    check, as D4 scopes linearizability to `quorum` writes and `linearizable` reads.
