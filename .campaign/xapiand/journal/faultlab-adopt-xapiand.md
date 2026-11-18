@@ -1,40 +1,31 @@
 # faultlab-adopt-xapiand: journal
 
-State: working
+State: waiting on jobs 261118-063444-7192ac 261118-063453-ed639b 261118-063447-891e3d
 Quest: .campaign/xapiand/quests/faultlab-adopt-xapiand.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done at xapiand:a835a31c0: run.sh pins faultlab a452a8c into harness/cluster/.faultlab (gitignored,
+cloned from FAULTLAB_REPO, default GitHub); history/proxy/selftest deleted, no shim. cluster.py
+passes the Recorder to Mesh as its fault log; checklist.py uses load_log + check(faults=), and closes
+the cluster before the recorder so a forward task's failure surfaces. ruff, pyrefly clean.
 
 ## Next
 
-1. <step>
+1. Read the jobs; A1 = selftest 7192ac + cluster run ed639b (3 nodes, membership,history); A2 = grep 891e3d.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
-
-## Evidence
-
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
-| Criterion | Evidence |
-|---|---|
-| <A1> | <from `campaign brief`> |
-
-## Result
-
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Nothing.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Jobs use FAULTLAB_REPO=local faultlab checkout (no network assumed); BIN is the home checkout's built xapiand.
+- pyrefly search-path points at .faultlab/python, so pyrefly needs one run.sh call first.
+
+## Evidence
+
+| Criterion | Evidence |
+|---|---|
+| A1 | jobs 261118-063444-7192ac, 261118-063453-ed639b |
+| A2 | job 261118-063447-891e3d |
