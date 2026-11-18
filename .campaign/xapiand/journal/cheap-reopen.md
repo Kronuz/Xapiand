@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261118-063506-98ae6b 261118-063508-79daaf 261118-063511-bec7e0
+State: waiting on jobs 261118-112223-56c3f7 261118-112224-c75c29 261118-112233-3787ac
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-D1 built (Xapiand:0889ae829): one catalog per pool partition. Jobs: suite 261118-063506-98ae6b (A3, A4; supersedes
-062615-515090 at bd6e5d50c), timing build 261118-063508-79daaf (bins/lanes in the slot), A2 row 261118-063511-bec7e0
-(exclusive, `.scratch/gate2.sh`, main bins/base vs lanes at pool 200 and 5000, ABAB x2). The post-D2 profile
-261118-062628-76934e still runs at bd6e5d50c.
+Suite 261118-063506-98ae6b at 0889ae829 failed to compile, introduced here: test_pool.cc:1757,1780-1781 read
+`indexes.one_catalog(pool)`; fixed to `one_catalog(indexes.pool)` (Xapiand:a test fix commit). Its timing build and
+A2 row were skipped behind the failed post-D2 profile (062628-76934e: `sample` found no pid because the gate's output
+was block-buffered; profile.sh now runs `python3 -u`). Merged master (Xapiand:4f03a9fbd; master changed tests and
+harness only, no src, so bins/base still is main's server). Branch pushed for CI.
+
+Queued at 4f03a9fbd: suite 261118-112223-56c3f7 (A3, A4); A2 row 261118-112224-c75c29 (exclusive, builds
+bins/lanes first, base vs lanes at pool 200 and 5000, ABAB x2); profile at head 261118-112233-3787ac (after the row).
 
 ## Next
 
-1. Read the A2 row: lanes alone (no D3). If pool 200 is over 2x of pool 5000, report the number; the quest then
-   waits for wide-search-loop and D3 (hunt.md).
-2. Per-index memory at 2,500 open from the row's pool-5000 arms (the gate's "KiB per open index"), lanes vs main.
+1. Read the A2 row: lanes alone (no D3). If lanes pool 200 is over 2x of lanes pool 5000, record the number; the
+   quest then waits for wide-search-loop and D3 (hunt.md).
+2. `campaign job rerun 261118-060438-5fb87b` once c75c29 has built bins/lanes at head (it profiles build-perf).
+3. Per-index memory at 2,500 open from the row's pool-5000 arms, lanes vs main.
 
 ## Blocked on
 
@@ -40,9 +45,9 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
-| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-063511-bec7e0 pending |
-| A3 | pending: suite 261118-063506-98ae6b (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
-| A4 | pending: suite 261118-063506-98ae6b |
+| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-112224-c75c29 queued |
+| A3 | pending: suite 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
+| A4 | pending: suite 261118-112223-56c3f7; CI on the pushed branch |
 
 ## Result
 
