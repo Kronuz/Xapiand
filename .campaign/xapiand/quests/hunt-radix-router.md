@@ -5,27 +5,34 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Route matching in Kronuz/radix-router costs time bounded by the path's length times a small
+constant, for any input, so a client path cannot make a request's routing slow. The fuzz
+continuation (Codex C4, 11-14) timed out at 333 CPU s of 3,600 on slow matching inputs; their
+class is named, bounded, and kept as regression tests.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The slow input class is found on current main and named: a committed reproducer whose
+  matching time on main is stated, from a strict job (or the note says nothing slow reproduces,
+  and the quest ends with that note).
+- A2 Matching is bounded: a test over the reproducer and a generated family of the class asserts
+  work (nodes visited or steps) at most a stated multiple of path length, and fails without the
+  fix (`--fails-without`).
+- A3 Routes resolve as before: the existing suite and a differential check of the fixed matcher
+  against main over the fuzz corpus give identical results.
+- A4 Ordinary routes cost no more: an A/B of a typical routing table and path mix at main against
+  the fix, with an A/A, as a strict job.
+- A5 [artifact] `docs/` note in radix-router naming the class, the bound and the numbers.
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed: the router's API and route semantics stay as they are.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Exploration assignment: at most three experiments. If the slowness is in the fuzz harness rather
+than the matcher, say so and stop.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
