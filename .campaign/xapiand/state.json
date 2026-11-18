@@ -547,6 +547,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-71",
       "text": "detent:transport-groups started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:42",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-72",
+      "text": "detent:rpc-lane-codec started and may change files your consensus-rpc-lane changes; order them (--after detent:rpc-lane-codec) or narrow the files"
     }
   ],
   "quests": {
