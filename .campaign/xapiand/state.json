@@ -2079,12 +2079,12 @@
         "cjk-segmenter"
       ],
       "provides": [],
-      "reason": "needs cjk-segmenter (D43)",
+      "reason": "its blocker landed",
       "repo": ".",
       "risk": "normal",
-      "status": "blocked",
+      "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-09T14:22:12",
+      "updated": "2026-11-17T23:08:07",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
