@@ -6217,6 +6217,8 @@
     "gate-prep-followups": {
       "accepted": {},
       "after": [],
+      "base": "f785e4f6a8a2ff73450736f067e49643867c3f8a",
+      "branch": "quest/xapiand/gate-prep-followups",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -6332,9 +6334,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Carried follow-ups: root routes, the WAL view, fuzz_lua",
-      "updated": "2026-11-08T22:56:36"
+      "updated": "2026-11-18T02:00:42",
+      "worktree": "../Xapiand-wt/xapiand/gate-prep-followups"
     },
     "gate0-5": {
       "accepted": {},
