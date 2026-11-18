@@ -14622,7 +14622,7 @@
       "risk": "low",
       "status": "dropped",
       "title": "Measure the share of index opens that never write while open",
-      "updated": "2026-11-13T21:25:02",
+      "updated": "2026-11-18T03:09:34",
       "worktree": ""
     },
     "open-one-flush": {
