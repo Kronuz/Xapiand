@@ -20678,11 +20678,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "owner: per-name ruling (A1); branch ready at its head, rebase on resume",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "blocked",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T01:59:49",
+      "updated": "2026-11-18T02:00:09",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
