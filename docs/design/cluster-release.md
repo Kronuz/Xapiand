@@ -672,6 +672,8 @@ Xapiand's requirements beyond the five recorded items (D21; `SHARED_LIBRARY_DECI
 
 ## 9. Questions for the owner
 
+Answered 2026-11-17 (PLAN D113): Q1 (a), Q2 (a), Q3 (a), Q4 as recommended, Q5 (b).
+
 **Q1. The default acknowledgement** (durability-modes Q11).
 
 - (a) `quorum`: survives any `f` failures. A single sequential client pays a journal barrier and a

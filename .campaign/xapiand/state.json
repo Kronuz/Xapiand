@@ -6662,7 +6662,36 @@
       "updated": "2026-11-15T23:05:08"
     },
     "journal-seal-repeat": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T11:58:43",
+          "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+          "blobs": {
+            "CHANGELOG.md": "100644:1f77f39c2e94b9946e47d09e37c31908f7bcbe69",
+            "CMakeLists.txt": "100644:519aef713d287ab4f402a3dccfe7bc8833e20c77",
+            "docs/mechanisms/turn-seal.md": "100644:d5e9079b4be9c8c830c2a6fb0014e74cd031b0c0",
+            "include/journal/turn_driver.h": "100644:8aea707418fe628fa7732c6d5112b1c876cfaa48",
+            "test/turn_seal_mutants.sh": "100644:ce0645f8d06afb819d243d45a8f335a726404570",
+            "test/turn_seal_test.cc": "100644:819fc4d5a7df58b197e4946b996ee9459747f592"
+          },
+          "by": "review",
+          "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "criteria": "995476b6579c7323",
+          "diffs": {
+            "CHANGELOG.md": "a2f5ea10814a8f8a",
+            "CMakeLists.txt": "5fa8a2c7ae47113c",
+            "docs/mechanisms/turn-seal.md": "d8e9b70d0fd76422",
+            "include/journal/turn_driver.h": "992cd26d17e6d959",
+            "test/turn_seal_mutants.sh": "10f1f41c349af7ac",
+            "test/turn_seal_test.cc": "a56d26fe6a1d2d0e"
+          },
+          "findings": {},
+          "note": "",
+          "review": "ab1f195e7ded5b7ca71252a329d5985df2dbb921",
+          "reviewed": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
       "branch": "quest/xapiand/journal-seal-repeat",
@@ -6682,11 +6711,41 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-seal-repeat",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-17T12:09:20",
+          "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+          "criteria": {
+            "A1": "261117-110901-9d1761; fails without: 261117-094035-f25876, 261117-094044-57a827, 261117-094052-389c68, 261117-103648-33ecb9, 261117-103649-0bda71, 261117-103649-5a9afd, 261117-110923-a1e7a9, 261117-110926-0a82cc, 261117-110930-622d76",
+            "A2": "261117-110904-7f8b43; fails without: 261117-094103-c463ab, 261117-103649-e1512d, 261117-110934-39fbbf",
+            "A3": "261117-110912-4385ec, 261117-110908-fa600f, 261117-115626-2642cf; fails without: 261117-094114-d5bc25, 261117-094124-60920c, 261117-103649-d57047, 261117-103650-77d440, 261117-110937-84fdcd, 261117-110941-e5fab6, 261117-110945-9afd4e",
+            "A4": "261117-110859-91c046, 261117-110912-4385ec, 261117-110915-52232d",
+            "A5": "[artifact] `docs/mechanisms/turn-seal.md` at journal:13592a1: sections Repeat calls, What it gets (room accounting and the first flag), A failing repeat call, lifetime under One per group, Later sealed records, and Fairness (no per-group cap); CHANGELOG.md 2026-11-17 entries"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-110859-91c046",
+              "level": "light",
+              "seconds": 110.5,
+              "state": "done",
+              "what": "journal-seal-repeat check build-test at 13592a1675f0"
+            }
+          ],
+          "final": true,
+          "from": "cc95ba636dee73b494daef7bbd8d341505aea9a1",
+          "reason": "",
+          "tested": "13592a1675f0da84c5d2d1a959a8209f52a1d2d9"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -6694,10 +6753,10 @@
       ],
       "repo": "/Users/kronuz/code/Kronuz/journal",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A turn takes several records from one sealer",
-      "updated": "2026-11-17T10:36:41",
-      "worktree": "../journal-wt/xapiand/journal-seal-repeat"
+      "updated": "2026-11-17T12:09:23",
+      "worktree": ""
     },
     "key-field": {
       "accepted": {},
@@ -12702,7 +12761,93 @@
       "updated": "2026-11-08T15:40:38"
     },
     "name-index": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-17T18:19:40",
+          "base": "6a140ea4de266edc98c808c62c98e1c6aff31b05",
+          "blobs": {
+            "docs/design/name-index.md": "100644:d3a42ff1958ccc19b8cea833d3f06a7cb2285b79",
+            "docs/mechanisms/wide-search.md": "100644:c510b2ad197a34ff4c8a5d322522fd233626dae4",
+            "docs/src/content/docs/changelog.md": "100644:58fa085e7f9f15640c1e7d48c01665305b49d1bf",
+            "docs/src/content/docs/options.md": "100644:af35d460a2f7c25abdec11259196f01a67080d16",
+            "docs/src/content/docs/reference-guide/api.md": "100644:0871088bdc08ed49dbcf39df1735e708ae647ad3",
+            "harness/async_allowlist.tsv": "100644:147ea67cbd16f8b813d0d3edf2a90b40e37f8924",
+            "harness/wide_search_check.py": "100755:319ac7a20a64ee2ca9b4752b8ba54f5078bec6d2",
+            "src/database/name_index.cc": "100644:9a17ab7fe24e019f290577033bf638465c4d337b",
+            "src/database/name_index.h": "100644:2a2cc46553bffbd33a46087d25b9b38bde68a9a3",
+            "src/database/pool.cc": "100644:0c812db647e59ee9772fe32845ba67f6ef4a92de",
+            "src/database/pool.h": "100644:8fe8bc2f764e8f8e57a4cc899722b6289a915f72",
+            "src/index_pattern.cc": "100644:2bb92b1c1fdf31d4686e7df4a68817a8a6880344",
+            "src/index_pattern.h": "100644:cb0df952b0ae5e6e924bc15887474e2426036078",
+            "src/server/search_views.cc": "100644:a108e8bf868c70356cdba1f545d7bd3a01522961",
+            "tests/name_index_mutants.sh": "100755:206e35b9b2970962801ca6330fa01beb85e4521b",
+            "tests/test_index_pattern.cc": "100644:d4789f818bec572e5541ecce4eea61b0aaedaaff",
+            "tests/test_node.cc": "100644:51a6cae484a46be6e4b09ad6a9a504877987583d"
+          },
+          "by": "review",
+          "commit": "df61d9f73a9ceb258bd290334cba2699d026c9af",
+          "criteria": "aa0933b13ed947a5",
+          "diffs": {
+            "docs/design/name-index.md": "9c936384a09909e3",
+            "docs/mechanisms/wide-search.md": "f537cdad33562d79",
+            "docs/src/content/docs/changelog.md": "3285a849aee75f91",
+            "docs/src/content/docs/options.md": "29097e864454671f",
+            "docs/src/content/docs/reference-guide/api.md": "b41c5d2ad3e8c955",
+            "harness/async_allowlist.tsv": "6735ea9ac2d063f0",
+            "harness/wide_search_check.py": "fd5852edb54d5f25",
+            "src/database/name_index.cc": "d18db159efd2c113",
+            "src/database/name_index.h": "26139bc0511637cb",
+            "src/database/pool.cc": "034bf855d0c90ab4",
+            "src/database/pool.h": "86f45483339a57c4",
+            "src/index_pattern.cc": "618943fe8007cba7",
+            "src/index_pattern.h": "cba13677e3260d86",
+            "src/server/search_views.cc": "ed97dede2bccbd94",
+            "tests/name_index_mutants.sh": "028ada85486c9d41",
+            "tests/test_index_pattern.cc": "1cf215a0075d5abb",
+            "tests/test_node.cc": "16ec13dad8fbeff8"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-oracle bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/oracle.sh'",
+                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-124540-0da619",
+                  "level": "light",
+                  "seconds": 29.1,
+                  "state": "done",
+                  "what": "review probe oracle.sh at the F1 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'JOB_OUT=$PWD/.probe-emfile bash /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-name-index-correctness/emfile.sh'",
+                  "commit": "e422166eb13a06eb9da356d7b97689c89c997ee6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261117-124543-44a244",
+                  "level": "light",
+                  "seconds": 14.9,
+                  "state": "done",
+                  "what": "review probe emfile.sh at the F2 fix"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "75d937ffc017a16ae8a69bcdf8f2a766cdec7400",
+          "reviewed": "291ec897101dbfa20733d1cffcba4f689acecc59",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "x-pool"
       ],
@@ -12917,7 +13062,8 @@
       "landed": [],
       "lenses": [
         "design",
-        "durability"
+        "durability",
+        "correctness"
       ],
       "milestone": "Phase 8",
       "needs": [],
@@ -12926,7 +13072,7 @@
       "risk": "high",
       "status": "active",
       "title": "Index patterns resolve from an ordered name index",
-      "updated": "2026-11-17T08:21:54",
+      "updated": "2026-11-17T18:19:40",
       "worktree": "../Xapiand-wt/xapiand/name-index"
     },
     "no-stalls": {
@@ -21354,7 +21500,10 @@
       "consumes": [],
       "files": [
         "docs/perf/**",
-        "bench/quick/**"
+        "bench/quick/**",
+        "include/prospect/reader.hh",
+        "include/prospect/search.hh",
+        "test/**"
       ],
       "history": [
         {
@@ -21396,7 +21545,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-17T02:00:33",
+      "updated": "2026-11-17T15:52:12",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "turn-log-parity": {
