@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-112500-d8889b 112959-e5f703 113018-3774af 113037-a28a54 113056-647326 113058-7cb4e4 113452-f9ea27 113513-265869
+State: waiting on jobs 261118-112500-d8889b 112959-e5f703 113018-3774af 113037-a28a54 113056-647326 113058-7cb4e4 113452-f9ea27 113513-265869 114932-476f73 114952-b7e8e8 115012-d054e8 115147-90db6b 115151-19c8d0 115153-2a8c6a 115155-b64c38
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -51,6 +51,6 @@ Harness: `wide_search_check.py` (`--sample`, creation resume), `wide_search_star
   unless `XAPIAND_LAG_SPIN` is set (one getenv at loop start). Evidence jobs after it say so in their `what`.
 - R5. Pins apply only to searches wider than one batch: a single-batch search pinning would queue light searches
   behind wide batches; single-batch searches stay bounded by admission.
-- R6. A2's max reads against the control loop's floor: on this macOS host the control loop (no searches) shows a
+- R6 (ruled by the lead at Xapiand:86a50e08e, see the quest's Decisions). A2's max reads against the control loop's floor: on this macOS host the control loop (no searches) shows a
   2,048-2,560 us p99 in every run, so T4's 1,024 us edge is below what an idle loop's wake reaches here. The branch
   meets the floor (2.07 ms), not 1,024 us; the lead rules whether that is A2's pass or Linux gates it.
