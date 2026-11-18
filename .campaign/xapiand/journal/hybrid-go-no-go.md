@@ -1,6 +1,6 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs 261118-002817-ca72e9 and the VM chain in Doing (last: 261118-003018-148235)
+State: waiting on jobs: macOS dry run 261118-044427-383589, then the VM chain of 14 (261118-044444-9eed59 ... 261118-044504-13047d, Doing). Strata:3e8dcb93.
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
@@ -43,6 +43,27 @@ Jobs (each row waits on its load, each load on the row before):
 | pg 1000 | 261118-002957-1432d6 | 261118-003001-d27a1c |
 | qdrant 1000 | 261118-003005-18f90e | 261118-003009-c2aab9 |
 | es 1000 | 261118-003014-529248 | 261118-003018-148235 |
+
+Harness fixes (strata:72990a82, strata:3e8dcb93), after the 11-18 failures:
+1. Dry run 261118-002809-0a06e7, Qdrant 409: a qdrant from the cancelled dry run (pid 96461,
+   still up; I could not stop it) held the port, so the new row talked to it. Fixed: `load` drops
+   the collection first (idempotent), a busy port is refused (`assert_free`), `C1_PORT_OFFSET`
+   moves the ports (the new dry run uses 100). Qdrant load probe on macOS, 100 tenants: 158 s,
+   tuned hnsw_ef 128 at recall@10 1.0.
+2. ES recall 0.8892 (dry run) from C1's default bbq_hnsw: recall@10 is 0.63 at num_candidates up
+   to 10,000, and m 32 / ef_construction 200 gives the same (filtered kNN at 1% selectivity scans
+   the quantized vectors). Rescore oversample at num_candidates 1,000: 10 0.8955, 15 0.9475, 20
+   0.9735, 25 0.9865, 30 0.994, 100 1.0 (100 tenants, 200 queries; int8/f32 variants not
+   needed, run stopped). Ladder now: 50, 1000, then oversample 20, 30, 100. Bar stays 0.95.
+3. VM dry run 261118-000128-f4c57b was macOS (log above): Qdrant connection reset, ES 0.5655,
+   both superseded. VM qdrant load 261118-002908-5c7ce8 hit its 12 minute bound with no log
+   (cause unknown; vm.sh now copies logs back on TERM too, and the bound is 20). If it hangs
+   again its log is in `.scratch/c1-vm/logs/qdrant-100.log`.
+
+Resubmitted chain (`.scratch/c1-vm-jobs2.txt`): strata/lance/pg 100 rows stay at ed42f792
+(fab1cd, 822bcf, 39b455: harness change touches neither); track-c-c3-gate's VM job
+261118-030042-dd890d waits on the old last job 148235 and needs resubmitting after the new
+last, 261118-044504-13047d (lead's).
 
 ## Next
 
