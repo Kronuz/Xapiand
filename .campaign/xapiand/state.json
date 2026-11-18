@@ -16536,9 +16536,7 @@
     },
     "placement-repair": {
       "accepted": {},
-      "after": [
-        "detent:consensus-transport"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -16585,7 +16583,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-16T10:28:35"
+      "updated": "2026-11-18T02:55:58"
     },
     "placement-root": {
       "accepted": {},
