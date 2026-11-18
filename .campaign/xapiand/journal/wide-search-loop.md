@@ -33,6 +33,18 @@ checkpoint). Their call sites are outside the file set: `harness/wide_search_cal
 `src/server/search_views.cc` (resolve loop) and `src/database/handler.cc` (`search_batch`: take pins, checkpoint per
 shard) for probe jobs only.
 
+Read so far (src = master, build-prof):
+- 80ea60 (A2 before, 2,500, no sampling): http0/http1 window max in the 98,304 us bucket (max since start 87.2 /
+  91.5 ms), p99 2,048 us, p99.9 2,560 / 3,584 us; search p50 16.1 s (host loaded: the opens' `close()` dominate).
+- 928443 (A3 before, 2,000 indexes): 64 clients by names: light p99 0.88 ms, max 1,153 ms, loops max in the
+  1.8-2.1 s buckets; by pattern p99 4.58 ms, max 997 ms. T5 bound 2.61 ms passes on p99 (the searches were slow,
+  p50 54 s); the max is the miss.
+- 9e4e4d / 1d4a33 (`--sample`): macOS `sample` suspends the node ~11.7 s, so a sampled run's lag is invalid; the
+  call graph shows the http loops idle in kevent and the work pool in `run_open` -> `close()`. Not enough samples on
+  the loops to attribute; switched to the reactor stall watchdog (`restore_stall_reactor_lag.patch`,
+  XAPIAND_LAG_SPIN) with `harness/wide_search_stalls.py`: jobs 040712-d69b8d (rebuild), 040719-143d1c (master),
+  040720-9c118f (probe patch).
+
 ## Next
 
 1. Read the samples: which frames hold http loops (per-name resolve, sort, search_batch pins, engine::search, merge).
