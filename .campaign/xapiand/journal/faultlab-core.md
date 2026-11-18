@@ -127,3 +127,7 @@ Open: CI (needs the repo), the cpp-libraries catalog entry, consumer moves (late
   blocks (storage.h:565, 988, 1356); unaligned appends are R7's finding, not a gap of A3.
 - R12 (F2): an ordering point that stages a file ends its mapped sectors' tearability, so A4's
   "never past an ordering point they followed" holds; File::sync alone never does.
+- R13 (CI linux-x86_64-gcc, faultlab_seeds): scenario 5 drew three values as arguments of one
+  call (unspecified order; gcc x86_64 right to left). Fixed at the commit after f296ffb by one draw
+  per statement in the recorded order; table unchanged. Proof: right-to-left draws on macOS give
+  CI's seed-0 fingerprint 0xf07311b0bd96d60c exactly, and 128 failures as CI. Needs a CI push.
