@@ -13,7 +13,7 @@ Nothing has run yet: all four jobs sat queued for 15+ minutes behind a pending s
 (A4 100K dense round 2). No VM has booted under this quest, so nothing below is proven.
 Dev runs (light, not evidence): check 261118-105737-42100a, park_test 261118-110246-645dd6,
 netcheck 261118-110425-fe0bf4. A1 (exclusive, 10 min, `--after` the dev check):
-261118-111122-f3c273 at Xapiand:the journal commit's parent.
+261118-111122-f3c273 at Xapiand:2ce58b24f.
 
 ## Next
 
