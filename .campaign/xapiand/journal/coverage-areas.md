@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Committed: harness/coverage.sh lists uncovered lines per file (coverage-uncovered.txt); harness/coverage_mutants.sh; tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc (all pass locally, .scratch/build). ef6548565 is a cherry-pick of test-glob's CMake commit so the tests build in jobs; drop it on the rebase onto master once test-glob lands.
+Committed: harness/coverage.sh lists uncovered lines per file (coverage-uncovered.txt); harness/coverage_mutants.sh; tests/test_coverage_{geospatial,y2j,aggregations,reader_registry}.cc (all pass locally, .scratch/build). Master merged (test-glob landed); the branch's CMakeLists.txt now equals master's (git diff master -- CMakeLists.txt is empty).
 
 Jobs: d4c5ad = A1 "before" (ctest + corpora + E2E coverage at 0ec136187, no new tests); 731f0f geo-km, f2de7d y2j-hex, 6b1e21 agg-depth = --fails-without mutants at ef6548565 (each must exit nonzero = killed).
 
