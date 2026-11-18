@@ -20445,6 +20445,8 @@
     "stemmer-names": {
       "accepted": {},
       "after": [],
+      "base": "9ef3466047b91a9b00623463a25e80b194d07c18",
+      "branch": "quest/xapiand/stemmer-names",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -20495,9 +20497,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-12T00:08:38"
+      "updated": "2026-11-18T00:20:38",
+      "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
       "accepted": {},
