@@ -15723,12 +15723,12 @@
         "track-d"
       ],
       "provides": [],
-      "reason": "the owner: 7b follows the single-node release (2026-10-29, D9)",
+      "reason": "D117: no single-node release; the cluster ships in the first release",
       "repo": ".",
       "risk": "critical",
-      "status": "blocked",
+      "status": "planned",
       "title": "Phase 7b, shards become groups",
-      "updated": "2026-11-18T02:29:20"
+      "updated": "2026-11-18T02:29:45"
     },
     "phase7c-design": {
       "accepted": {},
