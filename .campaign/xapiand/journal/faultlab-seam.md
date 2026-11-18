@@ -66,3 +66,6 @@ APFS); PosixFile asks CONTIG|ALL then ALL.
    file set), or a `SharedMapping::sync`. Recommendation: leave as is now (Detent's ChangeWriter,
    the one consumer, needs visibility, not durability) and decide when a consumer needs durable
    mapped stores. Lead's call.
+   msg (lead): accepted on condition; done at completion:924c6a6 (io.h states "stores are visible
+   to readers of the file; durability needs `sync` and is not promised on macOS"; note updated).
+   Comment and docs only: the jobs at completion:a14893a may need a rerun at the new head.
