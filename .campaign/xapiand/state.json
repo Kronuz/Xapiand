@@ -22468,17 +22468,45 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T05:35:31",
+          "commit": "20d227d7be91ede90c2ab440cce796689c8bc63f",
+          "criteria": {
+            "A1": "261118-052127-1653c7",
+            "A2": "261118-052126-01b33f",
+            "A3": "261118-035605-95f3cd"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "7d0cf6f6f03d9e18ef51eb121383b7e4e0b00ff0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-035605-95f3cd",
+              "level": "light",
+              "seconds": 488.6,
+              "state": "done",
+              "what": "test-glob check build-test at 7d0cf6f6f03d"
+            }
+          ],
+          "final": true,
+          "from": "52b9b246638e903646ec2bab908be7b9eff50014",
+          "reason": "",
+          "tested": "7e451b42f63329d9306bbeaed1db2908fbf3a259"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Linked unit tests register by file name, not by a CMakeLists.txt list",
-      "updated": "2026-11-18T02:02:02",
-      "worktree": "../Xapiand-wt/xapiand/test-glob"
+      "updated": "2026-11-18T05:35:51",
+      "worktree": ""
     },
     "threadpool-phase7c-l2": {
       "accepted": {},
