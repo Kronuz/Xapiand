@@ -3499,18 +3499,47 @@
         "test/consensus_test.cc",
         "tools/mutants.sh"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-c3-rows",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T14:46:49",
+          "ci_skipped": "owner-approved 2026-11-18: consensus TSan transport tests are flaky (transport_connection slow-reader, detent:connection-slow-reader-flake; transport_peers timeout, detent:peers-tsan-timeout); the quest changes Core repair tests only; all other CI jobs green",
+          "commit": "6a76867f30826b27731b92c9f3122722cf4788e7",
+          "criteria": {
+            "A1": "261118-144151-83ff5c; fails without: 261118-044856-2cb29b",
+            "A2": "261118-144151-83ff5c; fails without: 261118-044857-1a8ab1",
+            "A3": "261118-144151-83ff5c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6a76867f30826b27731b92c9f3122722cf4788e7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-144151-83ff5c",
+              "level": "light",
+              "seconds": 204.9,
+              "state": "done",
+              "what": "consensus-c3-rows check build-test at 6a76867f3082"
+            }
+          ],
+          "final": true,
+          "from": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+          "reason": "",
+          "tested": "6a76867f30826b27731b92c9f3122722cf4788e7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "C3 rows: a repair at the base with another term is refused; the commit bound has its own row",
-      "updated": "2026-11-18T04:46:57",
-      "worktree": "../consensus-wt/xapiand/consensus-c3-rows"
+      "updated": "2026-11-18T14:46:51",
+      "worktree": ""
     },
     "consensus-flow-bench": {
       "accepted": {},
