@@ -2392,7 +2392,8 @@
         "detent:consensus-dns-threads",
         "detent:consensus-worker-release",
         "detent:consensus-close-fenced",
-        "detent:journal-group-io-cost"
+        "detent:journal-group-io-cost",
+        "detent:journal-group-io-sweep"
       ],
       "checks": [
         {
@@ -2441,7 +2442,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T07:24:43"
+      "updated": "2026-11-18T11:17:28"
     },
     "cluster-harness": {
       "accepted": {
