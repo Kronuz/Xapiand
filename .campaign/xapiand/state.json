@@ -533,6 +533,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-69",
       "text": "detent:transport-groups started and changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T04:27:34",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-70",
+      "text": "detent:transport-groups started and changes contract consensus:snapshot-channel, which your group-install consumes"
     }
   ],
   "quests": {
