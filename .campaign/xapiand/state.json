@@ -722,6 +722,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-96",
       "text": "detent:transport-groups-ci started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-18T01:58:40",
+      "by": "campaign detent",
+      "closed": "journal-faultfs moves journal's tests onto faultfs (faultlab step 5); group-core repins journal in its D115 follow-up",
+      "id": "msg-104",
+      "text": "detent:journal-faultfs started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
