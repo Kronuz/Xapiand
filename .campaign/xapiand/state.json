@@ -6484,6 +6484,34 @@
       "title": "http, reactor, http-log and prism without the offload path (L3)",
       "updated": "2026-11-08T15:40:22"
     },
+    "hunt-lua-fetch": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand",
+          "level": "light",
+          "minutes": 30,
+          "name": "build"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "contrib/lua/**",
+        "CMakeLists.txt",
+        ".github/workflows/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Lua sources fetch without lua.org resets",
+      "updated": "2026-11-17T22:20:29"
+    },
     "hunt-radix-router": {
       "accepted": {},
       "after": [],
