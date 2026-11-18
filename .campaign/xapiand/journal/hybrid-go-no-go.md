@@ -1,52 +1,56 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs 261118-002035-ee3342 and the C1 chain above (last: 261118-002307-8cf59d)
+State: waiting on jobs 261118-002817-ca72e9 and the VM chain in Doing (last: 261118-003018-148235)
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
 
-A1: the C1 rerun at 100 and 1,000 tenants of 1,000 vectors, queued as jobs. Harness in strata
-`bench/hybrid/` at strata:a950f1a4 (`c1.py` driver, `c1_strata.cc` strata arm, `setup.sh`,
-`CMakeLists.txt`); baselines installed under the worktree's `.scratch/c1` (setup log there).
+A1: C1 rerun at 100 and 1,000 tenants of 1,000 vectors, deciding rows in document-gate's Linux
+VM (lead, 2026-11-18). Harness strata:ed42f792, `bench/hybrid/`: `c1.py`, `c1_strata.cc`,
+`vm.sh` (VM wrapper: boots 8 vCPU / 16 GiB on SSH 18782, syncs the checkout, builds
+c1_strata, runs, copies results to the worktree's `.scratch/c1-vm/`, stops the VM on every
+exit), `setup.sh` (macOS dry-run installs).
 
-Local smoke at 5 tenants (light hold, busy host, 2 s idle; not evidence) ran every system end to
-end: recall@10 1.0 for strata, pgvector, Qdrant and LanceDB, 0.63 for Elasticsearch (HNSW,
-num_candidates 50); idle footprint strata 4 MB, pgvector 17 MB, Qdrant 70 MB, LanceDB 73 MB,
-Elasticsearch 8,728 MB (8 GiB heap).
+Lead's corrections, folded in at strata:ed42f792:
+1. Recall: each ANN system's search parameter is tuned at load to recall@10 >= 0.95 on 200
+   queries (Elasticsearch num_candidates 50 to 1,000, then rescore oversample 10; Qdrant
+   hnsw_ef 128 to 1,024), saved as `SYS-N-tune.json`; every pass records recall@10 and a row
+   below 0.95 fails. pgvector (shared table), LanceDB (flat) and strata are exact.
+2. Environment: services in Docker at C1's images (Qdrant v1.20.0, pgvector 0.8.7-pg17,
+   Elasticsearch 9.5.5), LanceDB 0.40.0, strata built in the VM. macOS native is a dry run only,
+   labelled `env: macos-dry-run` in its results.
+3. Cold: in the VM the page cache is dropped (`echo 3 > drop_caches` as root) after the 30 s
+   idle and before the first pass, which is then `cold`; without a drop (macOS) it is
+   `first_warm`.
 
-First dry run 261118-000128-f4c57b (light, strata:8b64cca8): strata, pgvector, LanceDB and
-Elasticsearch passed end to end at 100 tenants; Qdrant's load died on one "Connection reset by
-peer" (pooled keep-alive; the server logged nothing). Fix strata:a950f1a4: idempotent requests
-are resent up to twice, counted as `resets` in each result; a local Qdrant load at 100 then
-passed (0 resets, so the reset is intermittent and not reproduced). The first chain was
-cancelled and resubmitted at strata:a950f1a4.
+Superseded: the macOS chain at strata:a950f1a4 (cancelled); its dry run 261118-002035-ee3342
+was replaced by the one below. First dry run 261118-000128-f4c57b (strata:8b64cca8): all but
+Qdrant passed (one connection reset; resend fix strata:a950f1a4).
 
-Jobs at strata:a950f1a4 (each row waits on its load, each load on the row before; the disk
-holds one system's 1,000-tenant data at a time, so `row` removes it):
+Jobs (each row waits on its load, each load on the row before):
 
-| What | Load (light) | Row (exclusive, A1) |
+| What | Load + tune (light) | Row (exclusive, A1) |
 |---|---|---|
-| dry run, every system at 100 (light) | 261118-002035-ee3342 | |
-| strata 100 | 261118-002047-0c409b | 261118-002058-6f8d05 |
-| lance 100 | 261118-002109-c9afb4 | 261118-002118-5a1485 |
-| pg 100 | 261118-002129-e8cd60 | 261118-002135-26fb7a |
-| qdrant 100 | 261118-002144-1e4364 | 261118-002149-bf06b5 |
-| es 100 | 261118-002157-464fb9 | 261118-002203-0d60b7 |
-| strata 1000 | 261118-002212-539667 | 261118-002220-bdb10a |
-| lance 1000 | 261118-002226-aaa88b | 261118-002230-90cd99 |
-| pg 1000 | 261118-002235-ff002b | 261118-002240-bc2024 |
-| qdrant 1000 | 261118-002247-19421d | 261118-002254-5cba4c |
-| es 1000 | 261118-002302-f0e537 | 261118-002307-8cf59d |
-
-Results land in `.scratch/c1/results/SYS-N.json` (and `-load.json`); job logs carry the same JSON.
+| macOS dry run, every system at 100 (not evidence) | 261118-002809-0a06e7 | |
+| VM setup | 261118-002817-ca72e9 | |
+| strata 100 | 261118-002825-8d62f7 | 261118-002831-fab1cd |
+| lance 100 | 261118-002841-6e58d7 | 261118-002847-822bcf |
+| pg 100 | 261118-002854-03f894 | 261118-002859-39b455 |
+| qdrant 100 | 261118-002908-5c7ce8 | 261118-002914-68b7f1 |
+| es 100 | 261118-002922-74866d | 261118-002927-fc4e42 |
+| strata 1000 | 261118-002934-0bbebe | 261118-002938-82a6af |
+| lance 1000 | 261118-002946-0cc4c0 | 261118-002951-87a425 |
+| pg 1000 | 261118-002957-1432d6 | 261118-003001-d27a1c |
+| qdrant 1000 | 261118-003005-18f90e | 261118-003009-c2aab9 |
+| es 1000 | 261118-003014-529248 | 261118-003018-148235 |
 
 ## Next
 
-1. When the rows finish: tabulate them into strata `docs/perf/c1-strata-tenants.md` (results
-   note: jobs, commits, host) and the fit verdict's C1 reading; rerun failed links with
+1. When the rows finish: tabulate into strata `docs/perf/c1-strata-tenants.md` (jobs, commits,
+   VM, recall and tuned parameter beside every row; "warm" wherever no cache drop; 10,000
+   tenants out until disk allows) and the fit verdict's C1 reading. Rerun failed links with
    `campaign job rerun`.
-2. A2: the optimization experiments (i8 codes per Q5, fewer files per index, the catalog's
-   idle tiers), each a before/after at named commits.
+2. A2: optimization experiments, each a before/after at named commits.
 
 ## Setup (stated before installing)
 
@@ -62,8 +66,9 @@ Nothing system-wide: every service goes under the strata worktree's ignored
 | LanceDB | pip 0.40.0, Linux | pip 0.25.3 in a Python 3.12 venv (the last release with x86_64 macOS wheels) |
 | strata | not run | `bench/hybrid/c1_strata.cc` at the quest branch (main's code) |
 
-Docker Desktop is installed but not running; it is not used (a Linux VM beside a native strata
-would mix two kernels and a port proxy into p99).
+Deciding rows (lead, 2026-11-18): document-gate's Linux VM, where `vm.sh setup` installs
+docker.io, python3-venv, cmake and ninja inside the VM (not on the host), pulls C1's images and
+builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 
 ## Blocked on
 
@@ -84,25 +89,25 @@ Nothing.
 
 ## Rulings I made
 
-- Tenant counts at 1,000 vectors × 768-d float32: 100 (dry run) and 1,000 (3 GB raw). 10,000
-  tenants (30 GB raw per system) does not fit the host's free disk (27 GiB at 2026-11-17) and is
-  reported as not measured on this host.
+- Tenant counts at 1,000 vectors × 768-d float32: 100 and 1,000 (3 GB raw). 10,000 tenants
+  (30 GB raw per system) is out until disk allows (27 GiB free on the host, which holds the VM's
+  image); the results doc states it.
 - Load is a light job; each row's measurement (service restarted on the loaded data, 30 s idle,
   memory, 1,000 cold then warm queries, memory) is one exclusive job ≤10 min.
 - strata stores each vector as a document's stored value (float32, 3,072 bytes) in one index
   per tenant behind a `catalog`, and answers by an exact scan: no vector code exists on main.
-- Elasticsearch: 8 GiB heap (`-Xms8g -Xmx8g`), C1's (its default on that 16 GiB VM; the
-  default here would be 16 GiB); disk watermarks off, since this host's disk is past the 95%
-  flood stage, which would make the index read-only.
+- Elasticsearch: 8 GiB heap (`-Xms8g -Xmx8g`), C1's (its default on a 16 GiB machine). On the
+  macOS dry run only, disk watermarks are off (that disk is past the 95% flood stage).
+- Each VM job boots and stops the VM itself (trap on exit), so no batch leaves it running.
 - One shape per system, each C1's working one: Qdrant payload tenancy with bulk upload, pgvector
   shared table plus btree(tenant) (exact), Elasticsearch shared index with filtered kNN, LanceDB
   table per tenant (flat), strata index per tenant. Collection, index and table per tenant hit
   hard limits at about 1,000 in C1 and are not rerun.
 - Latency: services are timed at the Python client around each call (HTTP or libpq on
   localhost); strata and LanceDB are timed inside their process (embedded engines, a child
-  process on a line protocol). Memory and idle CPU come from `proc_pid_rusage` on each
-  process tree: footprint (dirty private, the anon analogue), resident, CPU seconds over 30 s.
+  process on a line protocol). Memory and idle CPU: in the VM, a container's cgroup
+  (anon, rss = anon + mapped file, C1's measure) and `/proc` for the embedded engines (RssAnon,
+  VmRSS); on macOS `proc_pid_rusage` (phys_footprint as anon). CPU seconds over 30 s idle.
 - strata's catalog runs as Xapiand's host does: `defer_io`, the sweep on, 8 chores.
 - Recall@10 against numpy's exact top 10 is recorded per pass.
-- No page-cache drop: `purge` needs root, which this host's agents lack; "cold" is a restarted
-  service's first touch with the OS cache as the load left it.
+- No page-cache drop on macOS (`purge` needs root): its first pass is `first_warm`, never cold.
