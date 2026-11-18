@@ -92,8 +92,8 @@ its request is cancelled.
 
 ## Call sites
 
-The two call sites are outside this quest's files (`src/server/search_views.cc`, `src/database/handler.cc`):
-`harness/wide_search_callsites.patch` carries them, and the probe jobs build with it applied.
+`resolve_index_endpoints` in `src/server/search_views.cc` resolves a search's names with `wide_search::resolve`;
+`DatabaseHandler::search_batch` in `src/database/handler.cc` takes the batch's pins and checkpoints per shard.
 
 ## Tests
 

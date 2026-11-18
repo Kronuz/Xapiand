@@ -54,6 +54,7 @@ ap.add_argument("--clients", default="16,64")
 ap.add_argument("--secs", type=float, default=12.0)
 ap.add_argument("--create-only", action="store_true")
 ap.add_argument("--reuse", action="store_true")
+ap.add_argument("--node-arg", action="append", default=[], help="a flag for the node (repeatable)")
 args = ap.parse_args()
 OUT = os.path.abspath(args.out)
 DATA = os.path.join(OUT, "data")
@@ -61,7 +62,7 @@ if not args.reuse:
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(DATA)
 node = subprocess.Popen(
-    [os.path.abspath(args.bin), "--port", str(args.port), "--name", "starve", "-D", DATA, "--shards", "1"],
+    [os.path.abspath(args.bin), "--port", str(args.port), "--name", "starve", "-D", DATA, "--shards", "1", *args.node_arg],
     stdout=open(os.path.join(OUT, "node.log"), "ab"),
     stderr=subprocess.STDOUT,
 )

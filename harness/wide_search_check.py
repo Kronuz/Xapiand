@@ -71,6 +71,7 @@ ap.add_argument("--pool", type=int, default=0)
 ap.add_argument("--create-only", action="store_true")
 ap.add_argument("--reuse", action="store_true")
 ap.add_argument("--sample", type=int, default=0, help="seconds to sample the node's stacks over the timed searches")
+ap.add_argument("--node-arg", action="append", default=[], help="a flag for every node this run starts (repeatable)")
 args = ap.parse_args()
 BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
 DATA = os.path.join(OUT, "data")
@@ -98,7 +99,7 @@ def call(method: str, path: str, body: object = None, port: int = PORT) -> tuple
 
 def start(tag: str, *flags: str) -> subprocess.Popen[bytes]:
     node = subprocess.Popen(
-        [BIN, "--port", str(PORT), "--name", "wide", "-D", DATA, "--processors", "2", "--shards", "1", *flags],
+        [BIN, "--port", str(PORT), "--name", "wide", "-D", DATA, "--processors", "2", "--shards", "1", *args.node_arg, *flags],
         stdout=open(os.path.join(OUT, f"node-{tag}.log"), "wb"),
         stderr=subprocess.STDOUT,
     )

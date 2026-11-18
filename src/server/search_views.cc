@@ -41,6 +41,7 @@
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
+#include "database/wide_search.h"           // for wide_search::resolve
 #include "engine/host_asio.h"               // for engine::AsioHost
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
 #include "engine/error.h"                   // for engine::Error
@@ -2286,24 +2287,7 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
 
 	auto paths = co_await expand_paths(request, query_field.patterns);
-
-	// Sorted and without repeats, as Endpoints::add keeps them, in one sort: a wide search names thousands.
-	std::vector<Endpoint> resolved;
-	for (const auto& path : paths) {
-		auto index_endpoints = co_await XapiandManager::resolve_index_endpoints(
-			Endpoint(path),
-			query_field.writable,
-			settings);
-		if (index_endpoints.empty()) {
-			throw engine::Error(engine::errc::network, "Endpoint node not available");
-		}
-		for (auto& endpoint : index_endpoints) {
-			resolved.push_back(std::move(endpoint));
-		}
-	}
-	std::sort(resolved.begin(), resolved.end());
-	resolved.erase(std::unique(resolved.begin(), resolved.end()), resolved.end());
-	static_cast<std::vector<Endpoint>&>(request.endpoints) = std::move(resolved);
+	static_cast<std::vector<Endpoint>&>(request.endpoints) = co_await wide_search::resolve(paths, query_field.writable, settings, *request.budget);
 	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
 	co_return paths.size();

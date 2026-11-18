@@ -47,6 +47,7 @@
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "database/wal.h"                   // for DatabaseWAL
+#include "database/wide_search.h"           // for wide_search::pins
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
 #include "io.hh"                            // for io::write (for MsgPack::serialize)
@@ -1470,11 +1471,19 @@ search_pinned_indexes(bool most)
 task::task<engine::BatchResult>
 DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
 {
+	// A wide search's batch takes its place under the node's bound on pinned indexes before it pins them.
+	wide_search::Pins::Hold hold;
+	if (endpoints.size() > search_batch_indexes()) {
+		hold = co_await wide_search::pins().take(end - begin, budget != nullptr ? budget->token() : task::cancel_token{});
+	}
 	std::vector<lock_shard> shards;
 	std::vector<size_t> shard_of;   // the shard of each position
 	shards.reserve(end - begin);
 	shard_of.reserve(end - begin);
 	for (auto i = begin; i < end; ++i) {
+		if (budget != nullptr) {
+			co_await budget->checkpoint();
+		}
 		const auto it = std::find_if(shards.begin(), shards.end(), [&](const lock_shard& shard) { return shard.endpoint.path == endpoints[i].path; });
 		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
 		if (it == shards.end()) {
@@ -1489,6 +1498,9 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
 			std::vector<engine::Shard*> found(shards.size(), nullptr);   // each shard's engine; null when missing
 			for (size_t s = 0; s < shards.size(); ++s) {
+				if (budget != nullptr) {
+					co_await budget->checkpoint();
+				}
 				try {
 					found[s] = co_await shards[s]->engine_for_read();
 				} catch (const engine::Error& error) {
