@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-035113-5edaf4 261118-035115-004ebb 261118-035116-0a37d4
+State: working
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,7 +18,18 @@ the host's full flush). Smoke 261118-035112-b6d316 passed (modeled 1 ms barrier 
 one P4 at 10 ms 15.7 MB/s; many slow10 hot: 99 groups keep 40 MB/s). Queued exclusive: exclusive A1 261118-035113-5edaf4,
 A2 261118-035115-004ebb, A3 261118-035116-0a37d4.
 
+Session 2 (resumed): A1 5edaf4 and A2 004ebb died of SIGPIPE (exit 141) in a Cluster's
+shutdown: the bench did not ignore SIGPIPE (connection.h makes it the host's duty on Linux).
+A1's rows also show zero-commit rows and P1 above P4: the bench never checkpoints, so the
+default 64 MiB log (256 x 256 KiB) fills and every later proposal is refused LogFull
+(hypothesis; diag job 261118-112702-edf7a9 counts refusals at 64 vs 1024 MiB). The three
+earlier failures (525386, fe310f, da434f) were fixed by e02b94b/84a9571 and superseded by
+passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_MIB. Merged main
+(e8a41de); pushed; build-test 261118-112720-46b10c.
+
 ## Next
+
+0. Read diag edf7a9: confirm LogFull, find what holds P4 to ~16 commands/s; then rerun a1, a2.
 
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
