@@ -22544,6 +22544,33 @@
       "title": "Track C's C1, membership changes and voter roles",
       "updated": "2026-11-08T15:39:09"
     },
+    "track-c-c3-gate": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/gates/track-c-c3.md",
+        "docs/reviews/track-c-c3.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "normal",
+      "status": "planned",
+      "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
+      "updated": "2026-11-18T02:55:51"
+    },
     "track-d": {
       "accepted": {},
       "after": [],
