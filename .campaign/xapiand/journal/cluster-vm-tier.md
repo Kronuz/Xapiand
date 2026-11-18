@@ -1,6 +1,6 @@
 # cluster-vm-tier: journal
 
-State: waiting on jobs 261118-105737-42100a 261118-110246-645dd6 261118-110425-fe0bf4
+State: waiting on jobs 261118-105737-42100a 261118-110246-645dd6 261118-110425-fe0bf4 261118-111122-f3c273
 Quest: .campaign/xapiand/quests/cluster-vm-tier.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Dev runs queued (light, not evidence): check 261118-105737-42100a (at Xapiand:74995cfa6),
-park_test 261118-110246-645dd6, netcheck 261118-110425-fe0bf4.
+Nothing has run yet: all four jobs sat queued for 15+ minutes behind a pending strict job
+(A4 100K dense round 2). No VM has booted under this quest, so nothing below is proven.
+Dev runs (light, not evidence): check 261118-105737-42100a, park_test 261118-110246-645dd6,
+netcheck 261118-110425-fe0bf4. A1 (exclusive, 10 min, `--after` the dev check):
+261118-111122-f3c273 at Xapiand:the journal commit's parent.
 
 ## Next
 
-1. Fix what the dev runs show.
-2. A1 as an exclusive job: `campaign job submit --quest cluster-vm-tier --for A1 --level exclusive
-   --minutes 20 -- tools/vm/cluster.sh check --nodes 3`.
+1. Read the dev check's log (`campaign job log 261118-105737-42100a`). Likely first-boot risks:
+   QEMU `-netdev socket,mcast` on macOS loopback; dmsetup or the dm-log-writes module missing
+   in the bare base image (then add `apt-get install dmsetup` to provisioning); netplan's
+   scope-link multicast route.
+2. Fix, resubmit; A1 reruns at the fixed head (its `--after` names the old dev check).
+3. Then a correctness review.
 
 ## Blocked on
 
