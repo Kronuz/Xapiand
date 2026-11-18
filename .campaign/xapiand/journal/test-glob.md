@@ -21,14 +21,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
-
+| A1 | 261118-052127-1653c7 |
+| A2 | 261118-052126-01b33f |
+| A3 | 261118-035605-95f3cd |
 ## Result
 
 <When ready for review: what changed, its measured effect with numbers and the jobs behind them,
