@@ -48,6 +48,16 @@ PEERS = range(1, 16)  # prio has at most 16 bands
 TABLE = "cluster"
 
 
+def band(peer: int) -> str:
+    """Peer's prio class: tc reads class and handle numbers in hex, so 1:a is band 10."""
+    return f"1:{peer + 1:x}"
+
+
+def leaf(peer: int) -> str:
+    """The handle of peer's netem qdisc, also hex: 11: to 1f:."""
+    return f"{peer + 0x10:x}:"
+
+
 def run(argv: list[str], stdin: str | None = None) -> str:
     done = subprocess.run(argv, input=stdin, capture_output=True, text=True, check=False)
     if done.returncode:
@@ -62,10 +72,10 @@ def setup() -> None:
     batch = [f"qdisc replace dev {DEV} root handle 1: prio bands 16 priomap {' '.join(['0'] * 16)}"]
     for peer in PEERS:
         batch.append(
-            f"qdisc replace dev {DEV} parent 1:{peer + 1} handle {peer + 10}: netem {' '.join(Shape().netem())}"
+            f"qdisc replace dev {DEV} parent {band(peer)} handle {leaf(peer)} netem {' '.join(Shape().netem())}"
         )
         batch.append(
-            f"filter add dev {DEV} parent 1: protocol ip prio 1 u32 match ip dst {L2}.{peer}/32 flowid 1:{peer + 1}"
+            f"filter add dev {DEV} parent 1: protocol ip prio 1 u32 match ip dst {L2}.{peer}/32 flowid {band(peer)}"
         )
     run(["tc", "-batch", "-"], "\n".join(batch) + "\n")
     table = f"table inet {TABLE} {{ set cut {{ type ipv4_addr; }} chain input {{ type filter hook input priority 0; ip saddr @cut drop; }} }}"
@@ -94,7 +104,7 @@ def main(argv: list[str]) -> int:
         shape = Shape(ms=args.ms, loss=args.loss, reorder=args.reorder, duplicate=args.duplicate, mbit=args.mbit)
         if shape.reorder and not shape.ms:
             raise SystemExit("net.py: reorder needs a delay: netem reorders by skipping it")
-        handle = f"parent 1:{args.peer + 1} handle {args.peer + 10}:"
+        handle = f"parent {band(args.peer)} handle {leaf(args.peer)}"
         run(["tc", "qdisc", "replace", "dev", DEV, *handle.split(), "netem", *shape.netem()])
     elif args.command == "partition":
         run(["nft", f"add element inet {TABLE} cut {{ {L2}.{args.peer} }}"])
