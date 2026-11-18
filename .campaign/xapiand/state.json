@@ -7141,18 +7141,45 @@
       "files": [
         "docs/GOAL5-AUDIT.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/goal5-audit",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T13:04:11",
+          "commit": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+          "criteria": {
+            "A1": "`docs/GOAL5-AUDIT.md` in consensus at consensus:42cb3cf: completion:d8b538c6778f, journal:ce05f0efd411, consensus:b7f48b2414d8, task:95798a02f68c, wheel:238b1ae9f58b",
+            "A2": "261118-112418-cceb31"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-112239-70bd05",
+              "level": "light",
+              "seconds": 930.6,
+              "state": "done",
+              "what": "goal5-audit check build-test at ac323fe6ec45"
+            }
+          ],
+          "final": true,
+          "from": "42019ebb7c1fd2f72a9edc7212c22a6e5c6f95c9",
+          "reason": "",
+          "tested": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Goal 5 audit of completion, journal, consensus, task, wheel: every thread and reclamation path bounded",
-      "updated": "2026-11-18T02:56:32",
-      "worktree": "../consensus-wt/xapiand/goal5-audit"
+      "updated": "2026-11-18T13:04:31",
+      "worktree": ""
     },
     "group-core": {
       "accepted": {
