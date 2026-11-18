@@ -5836,6 +5836,8 @@
     "faultlab-netlab": {
       "accepted": {},
       "after": [],
+      "base": "a452a8c5e79655293d114d77c2ebc54af5fb0505",
+      "branch": "quest/xapiand/faultlab-netlab",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 && (cd python && python3 -m pytest -q tests 2>/dev/null || python3 tests/selftest.py)",
@@ -5851,6 +5853,7 @@
         "docs/**",
         "README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-netlab",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -5858,9 +5861,10 @@
       "provides": [],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "netlab: Linux netns per node, netem delay/loss/reorder/duplicate/rate, nftables partition and reset (design F14)",
-      "updated": "2026-11-18T06:32:00"
+      "updated": "2026-11-18T06:32:31",
+      "worktree": "../faultlab-wt/xapiand/faultlab-netlab"
     },
     "faultlab-seam": {
       "accepted": {
