@@ -5416,10 +5416,41 @@
         "**"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-core",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T01:50:35",
+          "commit": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa",
+          "criteria": {
+            "A1": "261118-014732-efdd1e; fails without: 261118-005949-37fe70, 261118-005953-3d76e7",
+            "A2": "261118-014732-efdd1e; fails without: 261118-003136-4b6402",
+            "A3": "261118-014732-efdd1e; fails without: 261118-003131-9c42c3",
+            "A4": "261118-014732-efdd1e; fails without: 261118-003126-596e36, 261118-005958-a9f786, 261118-010550-5b5cd0, 261118-014000-1550fd, 261118-014001-993d1c",
+            "A5": "261118-014732-efdd1e; fails without: 261118-005504-2f7a32, 261118-005516-67f979, 261118-005529-db2445",
+            "A6": "`README.md`, `docs/api.md`, `docs/mechanisms/crash-model.md`; CI green on every platform at 5ec8a9e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-014732-efdd1e",
+              "level": "light",
+              "seconds": 26.2,
+              "state": "done",
+              "what": "faultlab-core check build-test at 5ec8a9e74fde"
+            }
+          ],
+          "final": true,
+          "from": "d8381c10ed015cb93d6a7beb63b907059c057d37",
+          "reason": "",
+          "tested": "5ec8a9e74fdedf9f8fed7b2abcc976cfc4e6ddfa"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [
         "faultlab-seam"
@@ -5429,10 +5460,10 @@
       ],
       "repo": "../faultlab",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
-      "updated": "2026-11-18T01:49:09",
-      "worktree": "../faultlab-wt/xapiand/faultlab-core"
+      "updated": "2026-11-18T01:51:05",
+      "worktree": ""
     },
     "faultlab-design": {
       "accepted": {
