@@ -1,6 +1,6 @@
 # cluster-vm-tier: journal
 
-State: working
+State: waiting on jobs 261118-105737-42100a 261118-110246-645dd6 261118-110425-fe0bf4
 Quest: .campaign/xapiand/quests/cluster-vm-tier.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First dev run of `tools/vm/cluster.sh check --nodes 3` (light job 261118-105737-42100a) at
-Xapiand:74995cfa6: boots 3 guests, probes multicast, plants and replays.
+Dev runs queued (light, not evidence): check 261118-105737-42100a (at Xapiand:74995cfa6),
+park_test 261118-110246-645dd6, netcheck 261118-110425-fe0bf4.
 
 ## Next
 
-1. Fix what the dev run shows; then a parking test (caller SIGKILL, guardian SIGKILL, SIGTERM, down)
-   as a light job.
+1. Fix what the dev runs show.
 2. A1 as an exclusive job: `campaign job submit --quest cluster-vm-tier --for A1 --level exclusive
    --minutes 20 -- tools/vm/cluster.sh check --nodes 3`.
 
