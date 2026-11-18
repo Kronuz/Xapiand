@@ -10,7 +10,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Doing
 
 Suite 261118-063506-98ae6b at 0889ae829 failed to compile, introduced here: test_pool.cc:1757,1780-1781 read
-`indexes.one_catalog(pool)`; fixed to `one_catalog(indexes.pool)` (Xapiand:a test fix commit). Its timing build and
+`indexes.one_catalog(pool)`; fixed to `one_catalog(indexes.pool)` (Xapiand:84ce2e1bc). Its timing build and
 A2 row were skipped behind the failed post-D2 profile (062628-76934e: `sample` found no pid because the gate's output
 was block-buffered; profile.sh now runs `python3 -u`). Merged master (Xapiand:4f03a9fbd; master changed tests and
 harness only, no src, so bins/base still is main's server). Branch pushed for CI.
