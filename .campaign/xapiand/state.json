@@ -13757,11 +13757,10 @@
       "consumes": [],
       "files": [
         "src/**",
-        "tests/**",
         "harness/**",
-        "CMakeLists.txt",
         "docs/mechanisms/more-like-this.md",
-        "docs/src/content/docs/**"
+        "docs/src/content/docs/**",
+        "tests/test_more_like_this*"
       ],
       "history": [
         {
@@ -13854,7 +13853,7 @@
       "risk": "high",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-08T22:56:38"
+      "updated": "2026-11-18T05:36:15"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
