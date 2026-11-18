@@ -414,6 +414,13 @@
       "closed": "consensus-wave-open fixes group-core's 64-open failure; consensus-rpc-lane now lands after it; group-core repins with quiescence",
       "id": "msg-100",
       "text": "detent:consensus-wave-open started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-wave-open, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:53:30",
+      "by": "campaign detent",
+      "closed": "journal-turn-bound only bounds a turn to a segment; group-core's driver use is unchanged; group-core repins journal after it lands if its 10^4 open run needs it",
+      "id": "msg-101",
+      "text": "detent:journal-turn-bound started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
