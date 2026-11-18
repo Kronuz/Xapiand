@@ -428,6 +428,13 @@
       "closed": "consensus-rpc-lane now lands after detent:reader-yield-stall and builds against its brief; group-core only consumes the driver API and repins after it lands if needed",
       "id": "msg-102",
       "text": "detent:reader-yield-stall started and may change files your consensus-rpc-lane changes (order them with --after detent:reader-yield-stall, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T22:33:33",
+      "by": "campaign detent",
+      "closed": "consensus-close-fenced is the D115 contract group-core asked for; group-core repins after it lands (hunt row); consensus-rpc-lane builds against its brief",
+      "id": "msg-103",
+      "text": "detent:consensus-close-fenced started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
