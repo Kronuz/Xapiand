@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-112720-46b10c 261118-113805-593a91 261118-113818-5a98ce 261118-114928-9bef7d 261118-114946-13cf10
+State: waiting on jobs 261118-135806-e23693
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,12 +29,8 @@ passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_M
 
 ## Next
 
-0. Diag edf7a9 timed out rebuilding in the VM beside light holds (exit 124): e7a453b adds a
-   `build` mode run as its own light job (593a91), diag 5a98ce after it, A1 9bef7d and A2
-   13cf10 (exclusive) after the diag, build-test 46b10c at d511a44 (rerun at the final head).
-   Read diag: confirm LogFull; find what holds P4 below P1 (rtt 0 slower than rtt 10). If the
-   bench changes, resubmit a1/a2 (the new submission replaces the queued ones).
-
+0. A3 rerun e23693 at e7a453b (0a37d4 ran pre-merge code): fill the doc's A3 section, push,
+   rerun build-test at the head if `campaign land` asks.
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
 2. docs/perf/flow-control.md from the jobs' output, each row's job id.
@@ -60,13 +56,23 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-114928-9bef7d (exclusive, e7a453b) |
+| A2 | 261118-114946-13cf10 (exclusive, e7a453b) |
+| A3 | 261118-135806-e23693 (queued; 0a37d4 ran pre-merge code) |
+| A4 | `docs/perf/flow-control.md` in consensus (A1, A2 at 33e0c5a; A3 pending) |
+
+Lead msg (all five jobs passed; diag confirms LogFull; fill rows, finish A4, push): A1/A2 rows
+in consensus:33e0c5a, pushed; A3 rerun queued since 0a37d4 predates the merge of main's
+transport changes. Diag 5a98ce ran beside light holds: sanity only, not cited as evidence.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+consensus `docs/perf/flow-control.md`. A1 (9bef7d): 256 KiB appends, modeled barrier,
+pipeline 4 against 1: 1.12x / 1.69x / 3.70x faster at 0 / 1 / 10 ms (54.4 vs 48.6, 55.5 vs 32.8,
+54.8 vs 14.8 MB/s); fdatasync 1.62x / 1.83x / 4.53x. 2 MiB appends: pipeline 1 wins by 14-36%.
+Pipeline 4 is held at ~55 MB/s (~210 commands/s) by the leader's two barriers per command
+(proposal, then commit index per one-entry ack). A2 (13cf10): slow follower leaves the other 99
+groups at 40.5 MB/s offered, node-2 apply p99 unchanged; slow group's undelivered <= 1 MiB.
 
 ## Rulings I made
 
