@@ -23675,6 +23675,9 @@
       "files": [
         "src/query_dsl.cc",
         "src/database/wide_search*",
+        "src/server/search_views.cc",
+        "src/database/handler.cc",
+        "src/index_resolver_lru.*",
         "harness/wide_search*",
         "tests/test_wide_search*",
         "docs/design/wide-search-loop.md"
@@ -23690,7 +23693,7 @@
       "risk": "high",
       "status": "active",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-18T02:21:31",
+      "updated": "2026-11-18T04:54:46",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
