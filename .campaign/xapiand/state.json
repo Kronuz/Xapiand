@@ -815,6 +815,21 @@
         "quest": "detent:transport-idle-budget"
       },
       "text": "detent:transport-idle-budget started and may change files your consensus-flow-bench changes (order them with --after detent:transport-idle-budget, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T10:44:49",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-112",
+      "items": {
+        "cluster-vm-tier": "frees harness/cluster/vm/** for cluster-vm-tier"
+      },
+      "settles": {
+        "start": [
+          "cluster-vm-tier"
+        ]
+      },
+      "text": "faultlab-adopt-xapiand landed: unlocks frees harness/cluster/vm/** for cluster-vm-tier"
     }
   ],
   "quests": {
@@ -2681,6 +2696,8 @@
     "cluster-vm-tier": {
       "accepted": {},
       "after": [],
+      "base": "eb950b074efcd8d3fc091cf610302d04a6ac4f96",
+      "branch": "quest/xapiand/cluster-vm-tier",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2709,9 +2726,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-18T06:32:07"
+      "updated": "2026-11-18T10:46:39",
+      "worktree": "../Xapiand-wt/xapiand/cluster-vm-tier"
     },
     "cold-tier-item5": {
       "accepted": {},
