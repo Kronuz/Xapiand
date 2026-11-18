@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-035112-b6d316 261118-035113-5edaf4 261118-035115-004ebb 261118-035116-0a37d4
+State: waiting on jobs 261118-035113-5edaf4 261118-035115-004ebb 261118-035116-0a37d4
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,8 @@ quest/xapiand/consensus-flow-bench). `bench/flow_bench.cc` (modes barrier, one, 
 `bench/flow_bench.cmake` (adds the target via `CMAKE_PROJECT_consensus_INCLUDE`),
 `bench/flow_bench_vm.sh smoke|a1|a2|a3` (VM 18782, netem on lo; starts/stops the VM only if
 it found it stopped). macOS build + dry run: job 261118-034144-72af4b; VM smoke 261118-034556-43f576 ran every mode (VM fdatasync p50 105 ms for 2 MiB:
-the host's full flush). Now: smoke 261118-035112-b6d316, then exclusive A1 261118-035113-5edaf4,
+the host's full flush). Smoke 261118-035112-b6d316 passed (modeled 1 ms barrier measures 2.1 ms p50 in the VM;
+one P4 at 10 ms 15.7 MB/s; many slow10 hot: 99 groups keep 40 MB/s). Queued exclusive: exclusive A1 261118-035113-5edaf4,
 A2 261118-035115-004ebb, A3 261118-035116-0a37d4.
 
 ## Next
