@@ -386,6 +386,13 @@
       "closed": "noted: consumers (consensus-rpc-lane, group-core, group-install, shard-rpc) are ordered after detent:consensus-driver and start once it fixes or lands the contract",
       "id": "msg-55",
       "text": "detent:consensus-driver started and changes contract consensus:rpc-lane, which your shard-rpc consumes"
+    },
+    {
+      "at": "2026-11-17T18:48:33",
+      "by": "campaign detent",
+      "closed": "journal-sync-seam is the change group-core asked for; group-core keeps its journal pin and repins with consensus-quiescence",
+      "id": "msg-97",
+      "text": "detent:journal-sync-seam started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
