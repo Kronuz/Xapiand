@@ -9198,17 +9198,45 @@
         "tests/test_loop_yield.cc",
         "tests/test_engine_search_strata.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T10:01:13",
+          "commit": "c79d539d5deac15481b80385b4ce9c3145e18212",
+          "criteria": {
+            "A1": "261118-085546-726c47; fails without: 261118-085535-5b48c7",
+            "A2": "261118-085607-269ff5",
+            "A3": "261118-085558-3ca281"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure --stop-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "9d56c48f8cc7cf097d411f0dcdadbe00fa719209",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-085558-3ca281",
+              "level": "light",
+              "seconds": 455.4,
+              "state": "done",
+              "what": "loop-yield-race check build-test at 9d56c48f8cc7"
+            }
+          ],
+          "final": true,
+          "from": "da2cd1e25d8df7007151fc20c150e9c4dc7d52a1",
+          "reason": "",
+          "tested": "bca3bb2872e0db3b49f3a414c4c45c24a88614e9"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Fix test_loop_yield's TSan race (F6) and the strata search timing bound",
-      "updated": "2026-11-18T08:51:13",
-      "worktree": "../Xapiand-wt/xapiand/loop-yield-race"
+      "updated": "2026-11-18T10:02:10",
+      "worktree": ""
     },
     "lua-memory-bound": {
       "accepted": {
