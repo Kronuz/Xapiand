@@ -4922,10 +4922,11 @@
     "document-gate": {
       "accepted": {
         "durability": {
-          "at": "2026-11-17T23:33:07",
-          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "at": "2026-11-18T14:43:22",
+          "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
           "blobs": {
             "CMakeLists.txt": "100644:0a57c425e1da0771dd06b513fd583290e3d98b40",
+            "bench/engines/rocksdb-11.11/build.sh": "100755:b13e4b78b65c218c916ede7edc3cfb1fc7f7fa3e",
             "bench/kv/barriers.py": "100755:2fbf2826f676515882529a73af27c79ae8916646",
             "bench/kv/floor.c": "100644:ccff3bada96238eee92ee29b96ddc52deac20352",
             "bench/kv/kv_strata.cc": "100644:7a183f83d37444409451fc95df0b49601945baf5",
@@ -4934,7 +4935,7 @@
             "bench/kv/run.py": "100644:518999043b34066b0bbb242dcd4a785143fe74ad",
             "cmake/check_core_includes.cmake": "100644:ed4a1afd8ca9fcf55156d313345951920aee01f1",
             "docs/design/standalone-turn-log.md": "100644:71590a4d28334680a68f66ac4ddb96cdea340163",
-            "docs/gates/document-profile.md": "100644:69998af2537267f284ab365aabfe52a7f1cb910a",
+            "docs/gates/document-profile.md": "100644:ccbfcd71e447da8c6626363e434fac25f373dce5",
             "docs/perf/standalone-turn-log.md": "100644:3f685e4925fc60add694d4151a8b66548ce99448",
             "fuzz/corpus/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
             "fuzz/corpus/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
@@ -4956,11 +4957,12 @@
             "test/standalone_turn_log_test.cc": "100644:8a22c82c4263d8b09b3c02901d36ab3c49841c20"
           },
           "by": "review",
-          "commit": "db4435636e55398af36e0efdb954752b76c6c6e4",
+          "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
           "criteria": "964dd2896d778795",
           "diffs": {
             "": "98762c87cd0c34d0",
             "CMakeLists.txt": "e6af7f9e01a18e1f",
+            "bench/engines/rocksdb-11.11/build.sh": "9ba14e31c543a389",
             "bench/kv/barriers.py": "af0eb3686975fac6",
             "bench/kv/floor.c": "cc84b0e46bedd6b7",
             "bench/kv/kv_strata.cc": "7e5dc2588f55be8b",
@@ -4969,7 +4971,7 @@
             "bench/kv/run.py": "1a827dcf3e7d98dc",
             "cmake/check_core_includes.cmake": "aaa6dfafd8396acb",
             "docs/design/standalone-turn-log.md": "82fef7d547ae20d5",
-            "docs/gates/document-profile.md": "e98010b55503854c",
+            "docs/gates/document-profile.md": "3204eaa4a5415e21",
             "docs/perf/standalone-turn-log.md": "28f1895335917c41",
             "fuzz/fuzz_command.cc": "6a3a19a0046ab392",
             "include/strata/core/command.hh": "abfddc5a4b9c49d2",
@@ -4985,24 +4987,26 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-document-gate-durability/run.sh split wal_window",
-                  "commit": "cc8ba3aa45b0545668dbff2877b53a81a723601b",
-                  "docs": [
-                    "docs/gates/document-profile.md",
-                    "docs/perf/standalone-turn-log.md"
-                  ],
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-134801-f716c7",
+                  "job": "261118-132716-c99eab",
                   "level": "light",
-                  "seconds": 491.5,
+                  "seconds": 286.3,
                   "state": "done",
-                  "what": "durability review probe rerun at the fix: wal_window lag, split"
+                  "what": "document-gate check build-test at cbf08ebf2aa3"
                 }
               ],
               "kind": "defect",
               "reproduced": false
             }
+          },
+          "fix_scope": {
+            "paths": [
+              "bench/engines/rocksdb-11.11/build.sh"
+            ],
+            "reason": "only bench/engines/rocksdb-11.11/build.sh changed since acceptance: RocksDB baseline built without io_uring; benchmark tooling, no strata mechanism"
           },
           "note": "",
           "review": "c951d14bdfc6b20bd348296b8e4956bc9db0916a",
@@ -5080,7 +5084,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-18T13:26:36",
+      "updated": "2026-11-18T14:43:22",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
