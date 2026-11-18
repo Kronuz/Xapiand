@@ -62,3 +62,8 @@ Not pushed (contributor rule); lead pushes. Fixed k=8 n=64 time is in job accfbe
 ## Review F1 folded (radix-router:69d3dbf)
 F1: loop now returns on a memoized repeat; test k=8 over 4096 `/x` < 100 ms; Memo comment and note corrected. F2 covered by that test. F3 not adopted (optional).
 Waiting on jobs at 69d3dbf: A2 261117-200150-9ef2b1, fails-without (vs 2aa9b22 header) 261117-200155-50edce, A3 261117-200200-153961, A4 strict 261117-200205-8b4389.
+
+## Fix round 2 (radix-router:a38040a)
+Suspect from reading, to be measured: Memo held an unordered_set by value (constructed+destroyed per find). Now a lazy unique_ptr. Diagnostic three-way strict job (main / 69d3dbf / current / A/A) 261117-203844-3a7578 tells whether it was that or the extra argument.
+Jobs at a38040a: A2 261117-203849-6f4be8, fails-without 261117-203854-3d433a, A3 261117-203902-44f8af, A4 exclusive 261117-203906-3e8d00.
+If not in the A/A band: kept old loop for non-nested is already the structure; next lever is dropping the memo argument via a separate nested-path function (not done).
