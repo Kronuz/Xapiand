@@ -22,7 +22,7 @@
 """The cluster harness's VM tier: N Linux guests under QEMU on one multicast L2 (README.md).
 
 A run is a directory under CLUSTER_VM_ROOT holding each guest's qcow2 overlay on the base image, its
-cloud-init seed, its logs and state.json. A guardian process in its own session owns the guests: each
+logs and state.json; the L2 is a learning hub in the guardian that relays the guests' frames over UDP. A guardian process in its own session owns the guests: each
 QEMU runs under a keeper that stops it when the guardian's pipe closes, and the guardian closes them
 all when the owner pid dies, at the deadline, on a signal, or when a keeper or guest stops.
 """
@@ -32,9 +32,11 @@ from __future__ import annotations
 import argparse
 import contextlib
 import fcntl
+import hashlib
 import io
 import json
 import os
+import re
 import select
 import shutil
 import signal
@@ -58,7 +60,8 @@ PORTS = range(18780, 18800)  # SSH forwards, one per guest
 RESERVED = {18782, 18784}  # document-gate's Linux and FreeBSD VMs
 USER = "cluster"
 L2 = "10.87.0"  # guest i is 10.87.0.i on the L2
-HOST_GROUP = "239.255.87.1"  # the host multicast group carrying the L2's frames; port = first SSH port + 10000
+HUB_OFFSET = 10000  # the L2's hub listens on UDP (first SSH port + 10000) on 127.0.0.1
+LINK_OFFSET = 11000  # guest i's end of the L2 is UDP (its SSH port + 11000)
 PROBE = ("239.192.87.1", 5870)  # the group the guests' probe uses on the L2
 GUEST = "/opt/cluster"
 DATA = "/srv/xapiand"
@@ -199,17 +202,40 @@ def listening(port: int) -> bool:
     return False
 
 
+def relay(hub: socket.socket, links: set[tuple[str, int]]) -> None:
+    """The L2: a learning hub. A frame goes to the link its destination MAC was last seen on, or, for
+    broadcast, multicast and unknown destinations, to every link but the one it came from."""
+    seen: dict[bytes, tuple[str, int]] = {}
+    while True:
+        try:
+            frame, source = hub.recvfrom(65536)
+        except OSError:
+            return  # closed at park
+        if source not in links or len(frame) < 14:
+            continue
+        seen[frame[6:12]] = source
+        target = seen.get(frame[0:6]) if not frame[0] & 1 else None
+        for link in (target,) if target is not None else links:
+            if link != source:
+                with contextlib.suppress(OSError):
+                    hub.sendto(frame, link)
+
+
 def guard(run: Path) -> int:
     """Owns `run`'s guests until the owner dies, the deadline passes, a signal comes or a guest stops."""
     for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(signum, _raise_stop)
     plan = json.loads((run / "plan.json").read_text())
-    state: dict[str, object] = {"guard": os.getpid(), "status": "starting", "nodes": [], "mcast": plan["mcast"]}
+    state: dict[str, object] = {"guard": os.getpid(), "status": "starting", "nodes": [], "hub": plan["hub"]}
     deadline = time.monotonic() + plan["timeout"]
     keepers: list[subprocess.Popen[bytes]] = []
     pipes: list[int] = []
     reason = "down"
+    hub = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
+        hub.bind(("127.0.0.1", plan["hub"]))
+        links = {("127.0.0.1", node["link"]) for node in plan["nodes"]}
+        threading.Thread(target=relay, args=(hub, links), daemon=True).start()
         for node in plan["nodes"]:
             read, write = os.pipe()
             pidfile = run / f"qemu{node['index']}.pid"
@@ -276,6 +302,7 @@ def guard(run: Path) -> int:
             qemu = pids_of(run, node)[1]
             if ours(qemu, run):
                 os.kill(qemu, signal.SIGKILL)
+        hub.close()
         discard_disks(run)
         state.update(status="parked", reason=reason)
         write_state(run, state)
@@ -310,11 +337,53 @@ def ensure_key(root: Path) -> Path:
     return key
 
 
-def make_seed(run: Path, index: int, key: Path) -> Path:
-    seed = run / f"seed{index}"
-    seed.mkdir()
-    (seed / "meta-data").write_text(f"instance-id: {run.name}-node{index}\nlocal-hostname: node{index}\n")
-    (seed / "user-data").write_text(
+def make_seed(root: Path, index: int, key: Path) -> Path:
+    """Guest `index`'s cloud-init seed, built once per root and key: every run boots fresh overlays, so
+    one instance-id per guest index is enough."""
+    files = seed_files(index, key)
+    digest = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()[:16]
+    iso = root / "seeds" / f"node{index}-{digest}.iso"
+    if iso.exists():
+        return iso
+    seed = root / "seeds" / f"node{index}-{digest}.tmp"
+    shutil.rmtree(seed, ignore_errors=True)
+    seed.mkdir(parents=True)
+    for name, text in files.items():
+        (seed / name).write_text(text)
+    partial = seed.with_suffix(".iso.tmp")
+    partial.unlink(missing_ok=True)
+    if sys.platform == "darwin":
+        argv = [
+            "hdiutil",
+            "makehybrid",
+            "-quiet",
+            "-o",
+            str(partial),
+            "-iso",
+            "-joliet",
+            "-default-volume-name",
+            "cidata",
+        ]
+        argv.append(str(seed))
+    else:
+        tool = shutil.which("genisoimage") or shutil.which("mkisofs") or shutil.which("xorrisofs")
+        if tool is None:
+            raise HarnessError("no genisoimage, mkisofs or xorrisofs for the cloud-init seed")
+        argv = [tool, "-quiet", "-V", "cidata", "-J", "-r", "-o", str(partial), str(seed)]
+    try:
+        subprocess.run(argv, check=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        raise HarnessError(f"{argv[0]} took over 120 s building {iso.name}") from None
+    if not partial.exists() and partial.with_suffix(".tmp.iso").exists():  # hdiutil may append .iso
+        partial.with_suffix(".tmp.iso").replace(partial)
+    partial.replace(iso)
+    shutil.rmtree(seed)
+    return iso
+
+
+def seed_files(index: int, key: Path) -> dict[str, str]:
+    files = {"meta-data": f"instance-id: cluster-node{index}\nlocal-hostname: node{index}\n"}
+    files["user-data"] = (
         "#cloud-config\n"
         f"hostname: node{index}\n"
         "users:\n"
@@ -325,36 +394,27 @@ def make_seed(run: Path, index: int, key: Path) -> Path:
         "package_update: false\n"
         "package_upgrade: false\n"
     )
-    (seed / "network-config").write_text(
+    files["network-config"] = (
         "version: 2\n"
         "ethernets:\n"
         f"  wan: {{match: {{macaddress: '52:54:00:87:00:{index:02x}'}}, set-name: wan, dhcp4: true}}\n"
         f"  l2: {{match: {{macaddress: '52:54:00:87:01:{index:02x}'}}, set-name: l2, addresses: ['{L2}.{index}/24'],\n"
         "       routes: [{to: 224.0.0.0/4, scope: link}]}\n"
     )
-    iso = run / f"seed{index}.iso"
-    if sys.platform == "darwin":
-        argv = ["hdiutil", "makehybrid", "-quiet", "-o", str(iso), "-iso", "-joliet", "-default-volume-name", "cidata"]
-        argv.append(str(seed))
-    else:
-        tool = shutil.which("genisoimage") or shutil.which("mkisofs") or shutil.which("xorrisofs")
-        if tool is None:
-            raise HarnessError("no genisoimage, mkisofs or xorrisofs for the cloud-init seed")
-        argv = [tool, "-quiet", "-V", "cidata", "-J", "-r", "-o", str(iso), str(seed)]
-    subprocess.run(argv, check=True)
-    return iso
+    return files
 
 
-def qemu_argv(run: Path, index: int, port: int, mcast: str, cpus: int, mb: int) -> list[str]:
+def qemu_argv(run: Path, index: int, port: int, seed: Path, hub: int, cpus: int, mb: int) -> list[str]:
+    link = f"local.type=inet,local.host=127.0.0.1,local.port={port + LINK_OFFSET}"
     return [
         shutil.which("qemu-system-x86_64") or "qemu-system-x86_64",
         *accelerator(),
         "-smp", str(cpus), "-m", str(mb),
         "-drive", f"file={run / f'node{index}.qcow2'},if=virtio,cache=unsafe,discard=unmap",
-        "-drive", f"file={run / f'seed{index}.iso'},media=cdrom,readonly=on",
+        "-drive", f"file={seed},media=cdrom,readonly=on",
         "-netdev", f"user,id=wan,hostfwd=tcp:127.0.0.1:{port}-:22",
         "-device", f"virtio-net-pci,netdev=wan,mac=52:54:00:87:00:{index:02x}",
-        "-netdev", f"socket,id=l2,mcast={mcast},localaddr=127.0.0.1",
+        "-netdev", f"dgram,id=l2,{link},remote.type=inet,remote.host=127.0.0.1,remote.port={hub}",
         "-device", f"virtio-net-pci,netdev=l2,mac=52:54:00:87:01:{index:02x}",
         "-display", "none", "-monitor", "none", "-serial", f"file:{run / f'console{index}.log'}",
     ]  # fmt: skip
@@ -445,17 +505,18 @@ def up(run: Path, nodes: int, owner: int, timeout: int, cpus: int, mb: int, disk
             raise HarnessError(f"only {len(ports)} free SSH ports in {PORTS.start}-{PORTS.stop - 1}")
         run.mkdir()
         (run / "owner").write_text(f"{os.getpid()}\n")
-        mcast = f"{HOST_GROUP}:{ports[0] + 10000}"
+        hub = ports[0] + HUB_OFFSET
         planned: list[dict[str, object]] = []
         for index, port in enumerate(ports, 1):
             backing = ["-b", str(BASE), "-F", "qcow2"]
             subprocess.run(
-                ["qemu-img", "create", "-q", "-f", "qcow2", *backing, str(run / f"node{index}.qcow2"), "8G"], check=True
+                ["qemu-img", "create", "-q", "-f", "qcow2", *backing, str(run / f"node{index}.qcow2"), "8G"],
+                check=True,
+                timeout=120,
             )
-            make_seed(run, index, key)
-            argv = qemu_argv(run, index, port, mcast, cpus, mb)
-            planned.append({"index": index, "port": port, "argv": argv})
-        plan = {"mcast": mcast, "timeout": timeout, "nodes": planned}
+            argv = qemu_argv(run, index, port, make_seed(ROOT, index, key), hub, cpus, mb)
+            planned.append({"index": index, "port": port, "link": port + LINK_OFFSET, "argv": argv})
+        plan = {"hub": hub, "timeout": timeout, "nodes": planned}
         (run / "plan.json").write_text(json.dumps(plan, indent=1) + "\n")
         with (run / "guard.log").open("ab") as out:
             subprocess.Popen(
@@ -465,12 +526,15 @@ def up(run: Path, nodes: int, owner: int, timeout: int, cpus: int, mb: int, disk
                 stdout=out,
                 stderr=subprocess.STDOUT,
             )
+        until = time.monotonic() + 120
         while (status := read_state(run).get("status")) in (None, "starting"):
+            if time.monotonic() > until:
+                raise HarnessError(f"{run.name}: the guardian did not start the guests in 120 s (guard.log)")
             time.sleep(0.2)
     if status != "started":
         raise HarnessError(f"{run.name}: {read_state(run).get('reason')} (see {run}/guard.log)")
     started = time.monotonic()
-    log(f"{run.name}: {nodes} guests on SSH ports {', '.join(map(str, ports))}, L2 over {mcast}")
+    log(f"{run.name}: {nodes} guests on SSH ports {', '.join(map(str, ports))}, L2 hub on UDP {hub}")
     results = parallel(range(1, nodes + 1), lambda index: provision(run, index, tar, disk_mb, started + boot))
     failed = {index: result for index, result in results.items() if isinstance(result, BaseException)}
     if failed:
@@ -542,6 +606,9 @@ def check(run: Path, out: Path, seconds: float, repeat: int, fill_mb: int) -> in
         ok &= not missing
         multicast[f"node{index}"] = {"heard": heard, "missing": missing}
         print(f"multicast node{index}: heard {sorted(heard)}, missing {missing or 'none'}", flush=True)
+        if missing:
+            with contextlib.suppress(HarnessError, subprocess.TimeoutExpired):
+                print(ssh(run, index, "ip -br addr; ip route; ip -s -br link show l2", timeout=30), flush=True)
     timings: list[float] = []
     for index in nodes:
         plant = f"python3 -I {GUEST}/guest/disk.py plant --repeat {repeat} --fill {fill_mb}"
@@ -584,7 +651,8 @@ def ping(run: Path, source: int, target: int, count: int = 10) -> tuple[float, f
         timeout=120,
         check=False,
     ).stdout
-    loss = next((float(word.rstrip("%")) / 100 for word in out.split(", ") if word.endswith("packet loss")), 1.0)
+    lost = re.search(r"([\d.]+)% packet loss", out)
+    loss = float(lost[1]) / 100 if lost else 1.0
     rtt = next((float(line.split("=")[1].split("/")[1]) for line in out.splitlines() if line.startswith("rtt")), inf)
     return loss, rtt
 

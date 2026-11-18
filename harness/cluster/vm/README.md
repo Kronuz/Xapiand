@@ -18,21 +18,28 @@ tools/vm/cluster.sh down
 ```
 host                                      guest i (Ubuntu cloud image, user `cluster`)
 QEMU i  -netdev user   127.0.0.1:1878x -> wan   DHCP, SSH
-        -netdev socket mcast 239.255.87.1:P <-> l2  10.87.0.i/24, route 224.0.0.0/4
+        -netdev dgram 127.0.0.1:L <-> hub   <-> l2  10.87.0.i/24, route 224.0.0.0/4
         node<i>.qcow2 (backing: base image)     /srv/xapiand -> disklab mount (dm-log-writes)
 ```
 
 **Guests.** Each guest boots a qcow2 overlay whose backing file is the base cloud image
 (`CLUSTER_VM_BASE`, default document-gate's `~/.scratch/vm-document-gate/linux/base.img`), so a guest
-costs only the blocks it writes, and a cloud-init seed that names it `node<i>`, adds the `cluster` user
+costs only the blocks it writes, and a cloud-init seed (shared, read-only) that names it `node<i>`, adds the `cluster` user
 with the run root's `ssh_key`, and installs nothing. Overlays use `cache=unsafe`: they are deleted at
 park, and power loss is modeled inside the guest, not by the host's cache.
 
-**The L2.** Every guest's second NIC joins one QEMU multicast socket on the host, so a frame one guest
-sends reaches all the others, multicast included; each run takes its own UDP port (its first SSH
-port + 10,000), so concurrent runs do not share a wire. Guest i is `10.87.0.i`, with `224.0.0.0/4`
-routed to the L2. SSH forwards take the free ports from 18780 up to 18799, skipping 18782 and 18784
+**The L2.** Each guest's second NIC is a QEMU `-netdev dgram` whose frames go, one per UDP datagram,
+to a hub in the guardian on `127.0.0.1` (port: the run's first SSH port + 10,000; guest i's end: its
+SSH port + 11,000, so concurrent runs never share a wire). The hub learns each source MAC's link and
+sends a frame to the link of its destination, or, for broadcast, multicast and unknown destinations,
+to every link but its own, as a switch does, so the guests share one L2 that carries multicast. A
+datagram from an address that is no guest's link is dropped. QEMU's `-netdev socket,mcast` cannot
+serve here: it sends from a socket bound to the group address, which macOS refuses
+(`EADDRNOTAVAIL`), so no frame ever leaves. Guest i is `10.87.0.i`, with `224.0.0.0/4` routed to the
+L2. SSH forwards take the free ports from 18780 up to 18799, skipping 18782 and 18784
 (document-gate's VMs); Detent's (18762, 18763) and strata's (18772, 18774) are outside the range.
+The cloud-init seeds are built once per root and key under `CLUSTER_VM_ROOT/seeds`, since `hdiutil`
+can take minutes on a loaded host and every run boots fresh overlays.
 
 **Data directory.** `up` copies `guest/` and the pinned faultlab's Python to `/opt/cluster` and starts
 `guest/disk.py serve` under `systemd-run` (unit `cluster-disk`): it opens a faultlab disklab (512 MiB
@@ -58,7 +65,7 @@ tools/vm/cluster.sh ssh 1 sudo python3 -I /opt/cluster/guest/net.py heal
 
 **Parking.** `up` starts a guardian (`vm.py guard`) in its own session; it starts one keeper per guest
 (`vm.py keep`), and each keeper runs one QEMU and stops it when the guardian's pipe closes. The guardian
-closes every pipe, waits for the keepers, deletes the overlays and seeds and records the reason in
+closes every pipe, waits for the keepers, deletes the overlays and records the reason in
 `state.json` when the owner pid dies (`check` and `run` name their shell), at the deadline
 (`CLUSTER_TIMEOUT`, 1,800 s by default), on SIGTERM, SIGINT or SIGHUP (`down`), or when any keeper or
 guest stops. Killing the caller, even with SIGKILL, parks the run within a second; a SIGKILLed guardian

@@ -21,7 +21,7 @@
 
 # park_test.sh -- every guest is parked on every way a run ends (README.md, Parking):
 # the caller's group SIGKILLed, the caller SIGTERMed, the guardian SIGKILLed (then sweep), a keeper
-# SIGKILLed, down, and the deadline. Each case uses its own CLUSTER_VM_ROOT, and passes when the
+# SIGKILLed, down, and the deadline (PARK_TESTS picks them). Each case passes when the
 # run's state says parked, none of its QEMU processes lives, and its overlays are gone.
 set -u
 
@@ -58,7 +58,7 @@ start_run() {
 	mkdir -p "$root"
 	PID="" RUN=""
 	set -m
-	CLUSTER_VM_ROOT=$root "$CLUSTER" run --nodes "${2:-2}" --out "$root/out" -- sh -c 'echo $$ > "$0/cmd"; echo "$CLUSTER_VM_RUN" > "$0/ready"; exec sleep 600' "$root" >"$root/run.log" 2>&1 &
+	CLUSTER_VM_ROOT=$SCRATCH "$CLUSTER" run --nodes "${2:-2}" --out "$root/out" -- sh -c 'echo $$ > "$0/cmd"; echo "$CLUSTER_VM_RUN" > "$0/ready"; exec sleep 600' "$root" >"$root/run.log" 2>&1 &
 	PID=$!
 	set +m
 	while [ ! -s "$root/ready" ] && [ $t -lt 400 ]; do sleep 1; t=$((t + 1)); done
@@ -87,7 +87,7 @@ case_up() { # ROOT [ARGS]: cluster.sh up; prints the run
 	mkdir -p "$1"
 	local root=$1
 	shift
-	CLUSTER_VM_ROOT=$root "$CLUSTER" up --nodes 2 "$@" 2>"$root/up.log" || { echo "FAIL up in $root" >&2; cat "$root/up.log" >&2; }
+	CLUSTER_VM_ROOT=$SCRATCH "$CLUSTER" up --nodes 2 "$@" 2>"$root/up.log" || { echo "FAIL up in $root" >&2; cat "$root/up.log" >&2; }
 }
 
 case_guardian_kill() {
@@ -95,7 +95,7 @@ case_guardian_kill() {
 	run=$(case_up "$root") && [ -n "$run" ] || { failed=1; return; }
 	kill -KILL "$(field "$run" 's["guard"]')"
 	expect "guardian SIGKILLed: keepers stop the guests" "$run" 20 stopped
-	CLUSTER_VM_ROOT=$root "$CLUSTER" sweep
+	CLUSTER_VM_ROOT=$SCRATCH "$CLUSTER" sweep
 	expect "guardian SIGKILLed: sweep parks the run" "$run" 5
 }
 
@@ -109,7 +109,7 @@ case_keeper_kill() {
 case_down() {
 	local root=$SCRATCH/down run
 	run=$(case_up "$root") && [ -n "$run" ] || { failed=1; return; }
-	CLUSTER_VM_ROOT=$root CLUSTER_VM_RUN=$run "$CLUSTER" down
+	CLUSTER_VM_ROOT=$SCRATCH CLUSTER_VM_RUN=$run "$CLUSTER" down
 	expect "down" "$run" 5
 }
 
