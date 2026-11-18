@@ -54,3 +54,7 @@ Next: record numbers in A4 and the note when jobs finish.
 ## Fix round 1
 A4 regression cause (counted, not timed): failing single-catch-all lookups inserted into the heap set (5 of 14 paths in the mix). Gated memo by catch-all nesting; 0 inserts on the mix now.
 Waiting on jobs at the new commit: A2 261117-193713-8b0cc1, fails-without 261117-193724-43d383, A3 261117-193733-999a72, A4 strict 261117-193741-7a68ec.
+
+## State: waiting on jobs (then ready for review)
+Evidence: A1 261117-184755-fff446 (main: k=8 n=64 207 s) and fixed-time rerun 261117-194859-accfbe; A2 + fails-without + A3 rerun at 2aa9b22 (ids from `campaign job rerun`); A4 261117-194506-e318e7 (fix/main 1.010 [0.944, 1.080] vs A/A 1.097 [1.006, 1.196], 10 rounds); A5 radix-router docs/NESTED_CATCHALLS.md [artifact].
+Not pushed (contributor rule); lead pushes. Fixed k=8 n=64 time is in job accfbe's output.
