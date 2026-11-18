@@ -6440,6 +6440,32 @@
       "title": "http, reactor, http-log and prism without the offload path (L3)",
       "updated": "2026-11-08T15:40:22"
     },
+    "hunt-radix-router": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "/Users/kronuz/code/Kronuz/radix-router",
+      "risk": "normal",
+      "status": "planned",
+      "title": "radix-router: bound slow matching inputs found by fuzzing",
+      "updated": "2026-11-17T18:45:42"
+    },
     "hybrid-go-no-go": {
       "accepted": {},
       "after": [],
