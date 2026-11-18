@@ -18197,7 +18197,8 @@
         "barrier-warning",
         "release-rows",
         "format-freeze",
-        "more-like-this"
+        "more-like-this",
+        "cluster-gate"
       ],
       "checks": [
         {
@@ -18309,7 +18310,7 @@
       "risk": "critical",
       "status": "blocked",
       "title": "The rename and the first Xapian-free release",
-      "updated": "2026-11-08T22:56:40"
+      "updated": "2026-11-18T02:29:15"
     },
     "release-rows": {
       "accepted": {
