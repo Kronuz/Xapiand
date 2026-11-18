@@ -624,6 +624,13 @@
       "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
       "id": "msg-82",
       "text": "detent:transport-idle-cost started and may change files your consensus-rpc-lane changes; order them (--after detent:transport-idle-cost) or narrow the files"
+    },
+    {
+      "at": "2026-11-17T07:56:27",
+      "by": "campaign detent",
+      "closed": "detent start notice: every named quest landed or dropped; consensus-rpc-lane already orders --after all of them",
+      "id": "msg-83",
+      "text": "detent:transport-idle-cost started and changes contract consensus:transport, which your consensus-rpc-lane consumes"
     }
   ],
   "quests": {
