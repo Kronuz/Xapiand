@@ -222,3 +222,10 @@ quest starts (name it) or is dropped with a reason.
 - campaign tool: `start` refuses a parked quest whose worktree still exists ("... exists"); a park released by `set` should reuse a clean worktree on the quest branch (seen on stemmer-names, 11-18).
 - tests/test_control_plane.cc:289 test_pending_keys_cost_the_loop_nothing asserts loop-lag p99 <= 16 ms in a unit test; FreeBSD CI VM saw p99 28.7 ms, max 90 ms (test-glob run, 11-18). A wall-clock bound in a CI unit test is a flake: make it a counted property (no extra wakes per pending key) or move the timing to a strict job.
 - O4 (goal5-audit): journal Host group_io sweeps every range per call, O(n) at millions of ids; Detent measures after journal-reopen-closed lands and files if it shows. Check before cluster-gate.
+- coverage-areas src findings (11-18, journal Findings in quest/xapiand/coverage-areas), one quest "geo-input-errors" + one row for aggs:
+  - ewkt.cc:314 format_error answers 500, should be 400
+  - Convex::getTrixels on an empty convex segfaults (reachable from a query? check; a crash on user input is high)
+  - EWKT `POINT(200 2)` accepted (longitude out of range)
+  - polygon altitude count mismatch throws std::out_of_range (500)
+  - multipolygon array form unreachable (dead code or a missing route: decide)
+  - aggregation kind phf accepts unknown kinds (should be 400 naming the kind)
