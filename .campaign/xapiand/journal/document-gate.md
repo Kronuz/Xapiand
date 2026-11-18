@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: ready for review at strata:db443563 (code cc8ba3aa). M-v rerun 261117-180849-82b11b queued
+State: waiting on jobs 261118-132434-8660f1 261118-132449-745336 261118-132457-0e435f
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Ready for review at strata:12f59669 (pushed; main is an ancestor, nothing to merge). The sync batch
-is one transaction (strata:5e7d1178, 193e6e32); perf note `docs/perf/standalone-turn-log.md` and
-gate report `docs/gates/document-profile.md` (strata:eb8437bc); the served test's reader reads at
-least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
+2026-11-18: main (strata:aca39c6c, docs only) merged as strata:3ec3adbb; the gate report gains the
+A6 VM rows, the A7 checks and the VM wal1 miss (strata:69b1d4b9, pushed: CI runs at it). Code is
+unchanged since cc8ba3aa. Queued at 69b1d4b9: build-test 261118-132434-8660f1; A5 calibration at
+100 B 261118-132449-745336 and 1 KiB 261118-132457-0e435f (each passes only if RocksDB's fastest
+variant is the pinned lvl-16k-lz4).
 
 ## Next
 
-1. Review of the F1 fix at strata:db443563 (code cc8ba3aa). M-v rerun 261117-180849-82b11b
-   queued (its first run lost its runner).
-2. The lead's: A7 reruns at the head (`campaign job rerun` ids under Evidence A7); A6 VM rows at
-   the fix commit, every row set (the 12f59669 ones were cancelled or skipped).
+1. Read the three jobs above; if a calibration picks another variant, that is a finding for the
+   lead (the A3 rows ran on lvl-16k-lz4), not a re-pin.
+2. Review of the F1 fix at strata:db443563 (code cc8ba3aa); the lead's.
 3. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
 ## Blocked on
@@ -102,10 +102,10 @@ least once (strata:12f59669, FreeBSD CI's only failure at 193e6e32).
 | A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of cc8ba3aa |
 | A3 | Durable tiers at cc8ba3aa, exclusive: wal1 261117-134809-8409da; sync1 261117-134818-6068ec, 261117-134824-199dc8, 261117-134834-f21397; N-log and group commit 261117-134842-7d024d; review probe 261117-134801-f716c7 (lag 2 records). A/A 261117-055320-5ca39d, 261117-055327-074989 (193e6e32). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
 | A4 | The same jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` (db443563): sync ties (0.93-1.01x); wal1 1.68-1.94x faster, p99 7.8-11.9x lower, p99.99 113-179x higher; group commit tie at K=1 and K=8, 1.32-1.39x slower at K=4 (turn-log-parity A6); memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
-| A5 | [artifact] RocksDB 11.11 pinned on lvl-16k-lz4 (calibrated fastest for 100 B and 1 KiB) in every row job above; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
-| A6 | D105. The VM row jobs at 12f59669 were cancelled or skipped (brief); none ran. Owed at the fix commit on Linux and FreeBSD: every row set (fits1, twox1, big1, sync1, wal1, N-log, A/A); wal1, sync1 and N-log changed with the backpressure. arm64 smoke: CI run 44119676721 at 12f59669 (linux-arm64-gcc build and ctest). arm64 rows owed before Phase 3R's next gate (D105) |
-| A7 | At 12f59669, code before the backpressure (the brief asks `campaign job rerun 261117-075713-601c02 261117-075726-9eb435 261117-075737-0c8aec 261117-075748-8a784a 261117-075800-5c7ffa 261117-075821-5866e7`): fuzz stored 261117-075713-601c02, manifest_log 261117-075726-9eb435, manifest_log_file 261117-075737-0c8aec, command 261117-075748-8a784a; version rejection and fixtures 261117-075800-5c7ffa; coverage 261117-075821-5866e7. The decoders they fuzz are unchanged; the lead's call whether to rerun. Scale statement: [artifact] gate report "Scale" (strata:91366374) |
-| A8 | [artifact] strata `docs/gates/document-profile.md` (db443563): every measured row with commit, platform and jobs, and the owed list |
+| A5 | Calibration at strata:69b1d4b9, exclusive: 100 B 261118-132449-745336, 1 KiB 261118-132457-0e435f (each passes only if `run.py calibrate` picks the pinned lvl-16k-lz4 over lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
+| A6 | D105, D114, at db443563 (code cc8ba3aa). Linux: build 261117-200358-f31d88, dry 261117-200358-e66125, sync+wal1 once 261117-200358-1336ac. FreeBSD: build 261117-200402-b01248, dry 261117-200402-6b0f87, sync+wal1 once 261117-200402-ed7288. Rows in strata `docs/gates/document-profile.md` "VM rows" (69b1d4b9). Failed first builds 261117-181304-9e575f (Linux), 261117-181307-6a39bf (FreeBSD): causes under Rulings; replaced by the two builds above. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
+| A7 | At db443563: fuzz (3 workers x 25 min, ASan+UBSan) stored 261117-181138-259eee, manifest_log 261117-181138-24cc48, manifest_log_file 261117-181138-0354ba, command 261117-181139-098eed; version rejection and fixtures 261117-181139-9949e7; coverage 261117-181139-6e2a77; ASan/UBSan/TSan on CI. Scale statement: [artifact] gate report "Scale" (strata:69b1d4b9) |
+| A8 | [artifact] strata `docs/gates/document-profile.md` (69b1d4b9): every measured row with commit, platform and jobs, the A7 checks, and the owed list |
 
 ## Result
 
@@ -117,6 +117,24 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
 `.scratch/mutate.py` in the strata worktree).
 
 ## Rulings I made
+
+- A6 VM builds (2026-11-18, the first runs at db443563 failed):
+  - Linux 261117-181304-9e575f: RocksDB's CMake found liburing (WITH_LIBURING defaults ON), so
+    librocksdb.a calls io_uring, and `bench/engines/rocksdb-11.11/build.sh` links kv_rocksdb
+    without -luring: `undefined reference to io_uring_queue_init`. build-linux.sh now removes
+    liburing-dev before the RocksDB build (the macOS and FreeBSD builds have no io_uring).
+    build.sh is outside the file set; a lasting fix there is -DWITH_LIBURING=OFF or -luring, the
+    lead's call (one line).
+  - FreeBSD 261117-181307-6a39bf: the RocksDB tree arrives by tar as root, keeping the host's
+    uid, so git refuses `rev-parse` (dubious ownership) and build.sh stops. build-freebsd.sh sets
+    `safe.directory '*'` in the VM first.
+  - Both reruns passed (261117-200358-f31d88, 261117-200402-b01248). The scripts live in
+    ~/.scratch/vm-document-gate (ours).
+- 2026-11-18 13:22: the Linux VM (pid 85560, booted 13:11) runs another agent's build of
+  ~/wsl in it (a `.lock` dir beside the disk); not this quest's job, left alone. It hit the
+  6 GiB OOM killer once.
+- A5's evidence is a calibration job per value size that fails unless the pin wins, rather than
+  citing the row jobs' environment, so the pin is shown fastest at the gate's commit.
 
 - F1 fix (D107 option (c), 2026-11-17):
   - Backpressure, not a byte bound: `log_state::turn_records` (1, journal seals one record per
