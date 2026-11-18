@@ -50,7 +50,7 @@ vm() { "$PY" -E -s "$VM/vm.py" "$@"; }
 
 # up, CMD, collect, down: the guardian parks the guests if this shell dies without its EXIT trap.
 one_shot() {
-	local nodes=3 out="" run
+	local nodes=3 out="" run child status
 	while [ $# -gt 0 ]; do
 		case $1 in
 			--nodes) nodes=$2; shift 2 ;;
@@ -61,11 +61,16 @@ one_shot() {
 	done
 	run=$(vm up --nodes "$nodes" --owner $$) || exit 2
 	out=${out:-build/cluster-vm/$(basename "$run")}
-	trap 'vm collect --run "$run" "$out" >/dev/null; vm down --run "$run"' EXIT
+	child=""
+	trap '[ -z "$child" ] || kill -TERM "$child" 2>/dev/null; vm collect --run "$run" "$out" >/dev/null; vm down --run "$run"' EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM HUP
-	CLUSTER_VM_RUN=$run CLUSTER_VM_OUT=$out "$@"
-	exit $?
+	CLUSTER_VM_RUN=$run CLUSTER_VM_OUT=$out "$@" &  # in our group, and wait returns on a trapped signal
+	child=$!
+	wait "$child"
+	status=$?
+	child=""
+	exit $status
 }
 
 case "${1:-}" in
