@@ -40,13 +40,13 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-010005-2aea3a; fails without: 261118-005949-37fe70 (additions), 261118-005953-3d76e7 (forced-skips-draw) |
-| A2 | 261118-010005-2aea3a; fails without: 261118-003136-4b6402 (stream-shift) |
-| A3 | 261118-010005-2aea3a; fails without: 261118-003131-9c42c3 (no-sector-cut) |
-| A4 | 261118-010005-2aea3a, at the review fixes 261118-013958-ae8b13; fails without: 261118-003126-596e36 (link-orphan), 261118-005958-a9f786 (fold-mutates), 261118-010550-5b5cd0 (kill-keeps-leases), 261118-014000-1550fd (fold-after-cut, F1), 261118-014001-993d1c (sync-durable-mapped, F2) |
-| A5 | 261118-010005-2aea3a; fails without: 261118-005504-2f7a32 (recorder-bytes), 261118-005516-67f979 (proxy-close-swallows), 261118-005529-db2445 (selftest monotonic, seal) |
+| A1 | 261118-014732-efdd1e; fails without: 261118-005949-37fe70, 261118-005953-3d76e7 |
+| A2 | 261118-014732-efdd1e; fails without: 261118-003136-4b6402 |
+| A3 | 261118-014732-efdd1e; fails without: 261118-003131-9c42c3 |
+| A4 | 261118-014732-efdd1e; fails without: 261118-003126-596e36, 261118-005958-a9f786, 261118-010550-5b5cd0, 261118-014000-1550fd, 261118-014001-993d1c |
+| A5 | 261118-014732-efdd1e; fails without: 261118-005504-2f7a32, 261118-005516-67f979, 261118-005529-db2445 |
 | Review | correctness CHANGES at a5dcc10, fixed at f296ffb; the reviewer's probes (run.sh) at the fix: 261118-013959-ab422e |
-| A6 | [artifact] faultlab:a5dcc10 README.md, docs/api.md, docs/mechanisms/crash-model.md, examples/demo.cc (run by CTest). CI: open, see Blocked on. |
+| A6 | `README.md`, `docs/api.md`, `docs/mechanisms/crash-model.md`; CI green on every platform at 5ec8a9e |
 
 ## Result
 
