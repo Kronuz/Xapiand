@@ -121,7 +121,8 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Next
 
-1. Read step 6's jobs (State): closed (0 descriptors, 0 frames, heap by owner), destroyed split
+1. Read step 7's jobs (State): build-test green at 88d72629, cold-schedulers killed, the size
+   breakdown's 4096 B row gone; then lead's push for CI. Step 6's reading, for reference: closed (0 descriptors, 0 frames, heap by owner), destroyed split
    (ours, consensus's row: Detent's consensus-quiescence heap criterion), timing at 500 and
    1,000 flat in N; fix failures (if `gone_slack` 16 B is off, read the row's mirror first:
    `footprint_owners.py --at destroyed --base before --closes N`). Push for CI (lead).
