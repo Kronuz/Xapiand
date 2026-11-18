@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-050242-f5a684 050258-4c6f40 050259-a1757e 050300-6ee958 050301-091601 050302-0cee31 050303-e61fcf
+State: waiting on jobs 261118-050242-f5a684 050258-4c6f40 050259-a1757e 050300-6ee958 050301-091601 050302-0cee31 050303-e61fcf 051427-692132 051429-5d9b36 051431-0d7e48 051433-c76a1c 051434-89f2f5
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,6 +23,14 @@ Open misses: T5 at 64 clients (light p99 5.3 ms vs 4.2 ms), T4 at 10,000 (max la
 | 261118-050301-091601 | strict | T4 hypothesis: gate 10,000, `--resolver-cache-size 100000` |
 | 261118-050302-0cee31 | strict | T5 attribution: starve 64, `XAPIAND_LAG_SPIN=2000` |
 | 261118-050303-e61fcf | strict | T4 attribution: gate 10,000, `XAPIAND_LAG_SPIN=2000` |
+| 261118-051427-692132 | light | build-prof: master's src (8e5040da8 reverted in the job), same sampler |
+| 261118-051429-5d9b36 | strict | A3 before (lead msg): starve 64 at master src, same sampler inert |
+| 261118-051431-0d7e48 | strict | A2 before (lead msg): gate 10,000 at master src, same sampler inert |
+| 261118-051433-c76a1c | exclusive | T4 host-or-engine: gate 10,000, master src |
+| 261118-051434-89f2f5 | exclusive | T4 host-or-engine: gate 10,000, branch src |
+
+Lead (session 2): A2/A3 before and after use binaries with the same timer-beat sampler, so session 1's before
+jobs are superseded by 051429/051431; T4 is decided under exclusive before it is called engine or host.
 
 Session 1:
 
