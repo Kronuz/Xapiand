@@ -1,0 +1,99 @@
+--- a/task_asio.hh
++++ b/task_asio.hh
+@@ -38,6 +38,9 @@
+ #include <algorithm>
+ #include <atomic>
+ #include <cassert>
++#include <cstdlib>
++#include <deque>
++#include <mutex>
+ #include <chrono>
+ #include <exception>
+ #include <memory>
+@@ -69,6 +72,9 @@
+ 	~asio_scheduler() {
+ 		close();
+ 		destroy_roots();
++		auto& hs = heavy_share::get();
++		std::lock_guard<std::mutex> lk(hs.m);
++		hs.waiting.erase(std::remove(hs.waiting.begin(), hs.waiting.end(), this), hs.waiting.end());
+ 	}
+ 	asio_scheduler(const asio_scheduler&) = delete;
+ 	asio_scheduler& operator=(const asio_scheduler&) = delete;
+@@ -245,21 +251,66 @@
+ 		if (!draining_) {
+ 			draining_ = true;
+ 			asio::post(executor_, [this] { drain(); });
++		}
++	}
++
++	// light-share prototype: the process's share of heavy turns. At most LS_HEAVY_SHARE loops run a heavy
++	// turn at once (unset or 0: no share); a loop whose next handle is heavy and finds no slot parks, and a
++	// finishing turn hands its slot to the first parked loop.
++	struct heavy_share {
++		std::mutex m;
++		int free = 0;
++		bool on = false;
++		std::deque<asio_scheduler*> waiting;
++		heavy_share() {
++			if (const char* v = std::getenv("LS_HEAVY_SHARE")) { free = std::atoi(v); on = free > 0; }
++		}
++		static heavy_share& get() { static heavy_share s; return s; }
++	};
++
++	void release_slot() {
++		auto& hs = heavy_share::get();
++		slot_.store(false, std::memory_order_relaxed);
++		asio_scheduler* w = nullptr;
++		{
++			std::lock_guard<std::mutex> lk(hs.m);
++			if (hs.waiting.empty()) { ++hs.free; return; }
++			w = hs.waiting.front();
++			hs.waiting.pop_front();
++			w->slot_.store(true, std::memory_order_relaxed);
+ 		}
++		asio::post(w->executor_, [w] { w->drain(); });
+ 	}
+ 
+ 	void drain() {
+ 		if (demoted_.empty()) {  // destroy_roots() forgot them
+ 			draining_ = false;
++			if (slot_.load(std::memory_order_relaxed)) { release_slot(); }
+ 			return;
+ 		}
+-		const demoted_entry e = demoted_.front();
+-		demoted_.pop_front();
++		auto& hs = heavy_share::get();
++		auto it = demoted_.begin();
++		if (hs.on && it->heavy && !slot_.load(std::memory_order_relaxed)) {
++			it = std::find_if(demoted_.begin(), demoted_.end(), [](const demoted_entry& d) { return !d.heavy; });
++			if (it == demoted_.end()) {
++				std::lock_guard<std::mutex> lk(hs.m);
++				if (hs.free == 0) {
++					hs.waiting.push_back(this);  // draining_ stays set: the grant posts drain()
++					return;
++				}
++				--hs.free;
++				slot_.store(true, std::memory_order_relaxed);
++				it = demoted_.begin();
++			}
++		}
++		const demoted_entry e = *it;
++		demoted_.erase(it);
+ 		demoted_count_.fetch_sub(1, std::memory_order_relaxed);
+ 		{
+ 			running_on scope(scheduler_ref::of(*this).with_heavy(e.heavy));
+ 			e.h.resume();
+ 		}
++		if (e.heavy && slot_.load(std::memory_order_relaxed)) { release_slot(); }
+ 		if (demoted_.empty()) {
+ 			draining_ = false;
+ 		} else {
+@@ -273,6 +324,7 @@
+ 	std::deque<demoted_entry> demoted_;
+ 	std::atomic<std::size_t> demoted_count_{0};
+ 	bool draining_ = false;
++	std::atomic<bool> slot_{false};
+ 	std::unique_ptr<timer_loop> timers_;
+ };
+ 
