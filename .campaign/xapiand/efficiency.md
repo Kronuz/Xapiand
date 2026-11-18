@@ -323,3 +323,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 ## 2026-11-18 06:00 hourly
 - Landed: Xapiand:7e451b42f test-glob (merge 20d227d7b). Started cheap-reopen. D124: ccache 15->40 GB, strata VMs stopped (swap 16.3 -> 2.8 GB), tool throughput agent running.
 - Host: light 60% used; 110 jobs ended, 14 failed. At 06:19 the hybrid C1 chain holds the host exclusively (7 exclusive VM rows x ~10 min), load 4.9, 45 queued behind it. Disk 110 GiB. Weekly 66%, 1.15%/h.
+## 2026-11-18 07:00 hourly
+- Landed: faultlab:8f893c1 faultlab-netlab (delay +102.2 ms for 50 ms each way, loss 10.27%, dup 10.01%, cap 19.13 of 20 Mb/s). strata:aca39c6c wbuf-inline docs; 3 zombie strata branches triaged (all DROP).
+- Runs: netlab ~158k; adopt-xapiand ~81k; cheap-reopen ~257k (lanes: 979-1,079 -> 383-415 ms probe); branch triage ~112k. ccache 84.7% hits, 17.1/40 GB, no cleanups since raise.
+- Host: light 56% used, idle-beside-runnable 53 min (VM exclusive rows). Disk 119 GiB. Weekly 68%, 1.17%/h.
