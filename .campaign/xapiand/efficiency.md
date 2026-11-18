@@ -301,3 +301,7 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: completion:d8b538c (faultlab-seam; F8 members; review CHANGES then F1 fixed with holes mutant a0d968 failing without it). Merged design: xapiand:861f25094 phase6 split (review CHANGES, re-check APPROVE).
 - Runs: faultlab-seam reviewer ~143k (1 blocker, real ENOSPC bug); fix round ~214k total for contributor; phase6 designer ~213k total, reviewer ~215k total (3 blockers, all real); faultlab-core contributor started.
 - Host: light slots 65% used, drains 12 min, idle-beside-runnable 37 min; load 15-18; disk 29 GiB after prune (slots are 80 of 103 GB). Weekly 58%, burn 1.13%/h.
+## 2026-11-18 01:00 hourly
+- Landed: none this hour. Created github.com/Kronuz/faultlab (D95). Detent A4 for consensus-wave-open confirmed by job 261118-003837-3e3d58 (64 open, 0 fenced).
+- Runs: faultlab-core contributor ~141k (6 steps, 10 mutants); stemmer-names contributor ~152k; hunt-lua-fetch fixes ~122k total; hybrid-go-no-go contributor ~250k (harness, then sent back: recall, env, cold). Reviewers in flight: faultlab-core.
+- Host: light slots 61% used; machine near idle 35 min behind a pending strict and the perf suite hold (drain). Disk 20 GiB (VM grew 9 to 17 GB for C1). Weekly 59%, burn 1.13%/h.
