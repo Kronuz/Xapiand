@@ -3347,6 +3347,8 @@
     "consensus-flow-bench": {
       "accepted": {},
       "after": [],
+      "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
+      "branch": "quest/xapiand/consensus-flow-bench",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -3361,6 +3363,7 @@
         "test/flow_bench*",
         "docs/perf/flow*"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -3368,9 +3371,10 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T02:55:53"
+      "updated": "2026-11-18T03:21:00",
+      "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
     },
     "consensus-hello-limits": {
       "accepted": {},
