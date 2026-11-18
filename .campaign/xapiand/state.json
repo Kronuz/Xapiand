@@ -3331,6 +3331,34 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "consensus-flow-bench": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "bench/flow*",
+        "test/flow_bench*",
+        "docs/perf/flow*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "normal",
+      "status": "planned",
+      "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
+      "updated": "2026-11-18T02:55:53"
+    },
     "consensus-hello-limits": {
       "accepted": {},
       "after": [],
