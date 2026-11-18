@@ -6669,20 +6669,50 @@
       "files": [
         "**"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-radix-router",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-17T22:45:16",
+          "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+          "criteria": {
+            "A1": "261117-224255-fbda31",
+            "A2": "261117-212239-e86d08 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md); fails without: 261117-193223-6651ac, 261117-193724-43d383, 261117-194920-33cf0e, 261117-200155-50edce, 261117-203854-3d433a, 261117-212234-a4772a",
+            "A3": "261117-212244-bb5fb1 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md)",
+            "A4": "261117-212248-c7a142 (passed at bd8172cbf492; ignores docs-only docs/NESTED_CATCHALLS.md)",
+            "A5": "`docs/NESTED_CATCHALLS.md`"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "234c2368773d1b84e42a0e59dce86176fb15c0c7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-224254-a6d031",
+              "level": "light",
+              "seconds": 38.4,
+              "state": "done",
+              "what": "hunt-radix-router check build-test at 234c2368773d"
+            }
+          ],
+          "final": true,
+          "from": "7369c62c0d418d8fccf9b608969e883799d85afc",
+          "reason": "",
+          "tested": "234c2368773d1b84e42a0e59dce86176fb15c0c7"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "/Users/kronuz/code/Kronuz/radix-router",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "radix-router: bound slow matching inputs found by fuzzing",
-      "updated": "2026-11-17T22:43:13",
-      "worktree": "../radix-router-wt/xapiand/hunt-radix-router"
+      "updated": "2026-11-17T22:45:34",
+      "worktree": ""
     },
     "hybrid-go-no-go": {
       "accepted": {},
