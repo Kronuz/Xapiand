@@ -139,7 +139,10 @@ def pct(xs: list[float], q: float) -> float:
 
 
 def phase(label: str, clients: int, path: str) -> dict[str, Any]:
-    stop, lat, statuses, wide_ms = threading.Event(), [], [], []
+    stop = threading.Event()
+    lat: list[float] = []
+    statuses: list[int | str] = []
+    wide_ms: list[float] = []
     before = stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())
 
     def wide() -> None:

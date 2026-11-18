@@ -52,6 +52,7 @@ import statistics
 import subprocess
 import sys
 import time
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stall_load
@@ -332,7 +333,7 @@ def gate() -> None:
     path = "/w*/"  # a pattern: a list of 10,000 names is most of a URL, 100,000 would not fit
     times = []
     total = None
-    lag0: dict[str, object] = {}
+    lag0: dict[str, Any] = {}
     sampler = None
     for run in range(args.runs + 1):
         if run == 1:
