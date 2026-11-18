@@ -5,16 +5,12 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Migration step 4 of cpp-libraries `docs/design/faultlab.md`: Xapiand's harness/cluster imports faultlab's history checker and proxy tier (pinned by commit), and its own history.py, proxy.py, proxy_test.py and selftest.py go. No shim.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The cluster harness's checks pass on faultlab's copies: the harness self-test and one cluster run as jobs
+- A2 `git grep -l 'class Link\|def check_linearizable' harness/` finds nothing in Xapiand: a job
 
 ## Contracts
 

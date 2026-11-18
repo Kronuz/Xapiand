@@ -5,16 +5,14 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+disklab, faultlab's disk tier (F15 in cpp-libraries `docs/design/faultlab.md`): in a Linux VM, dm-log-writes records every write with its flush and FUA marks and replays the device to any mark, which gives the states a real filesystem leaves at a real power cut; dm-delay slows the device and dm-flakey fails or drops writes for a window. Driven from the host over SSH, as jobs on our Linux VM; never on the host.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A planted unsynced write is missing when replayed to the mark before its flush and present at the mark after; the job states seconds per replay: a job
+- A2 dm-delay adds the configured latency to fsync (±10%) and dm-flakey fails writes inside its window and none outside it: a job
+- A3 Every fault writes its event in the history log: a test
+- A4 The build-test check passes, and CI is green
 
 ## Contracts
 
