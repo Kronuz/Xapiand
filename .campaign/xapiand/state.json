@@ -4903,6 +4903,40 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-core": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "completion:io"
+      ],
+      "files": [
+        "**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [
+        "faultlab-seam"
+      ],
+      "provides": [
+        "faultlab:faultfs"
+      ],
+      "repo": "../faultlab",
+      "risk": "high",
+      "status": "planned",
+      "title": "Create Kronuz/faultlab: faultfs, recorder, scenario, events, checker",
+      "updated": "2026-11-17T22:35:59"
+    },
     "faultlab-design": {
       "accepted": {
         "design": {
