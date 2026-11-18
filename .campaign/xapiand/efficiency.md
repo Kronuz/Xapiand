@@ -313,3 +313,6 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: none in Xapiand this hour. agent-campaign:fd0f607 pushed (8 tool fixes; suite 264 OK in 681 s); dotfiles:3c104f0.
 - Runs: tool bundle ~294k (8 fixes, 1 flaky cause found); Track C reconciliation ~194k (9 criteria to 6 quests, 2 owner decisions); goal5-audit ~194k (41 rows, 2 unbounded findings, both taken by Detent); c3-gate ~130k (Driver-level repair gap found); stemmer-names resume ~67k; light-share ~162k (waiting on jobs).
 - Disk 34 to 107 GiB (slots 42 GB, VM trim 37 GB, preflight 9 GB). Host: light 61% used, drains 37 min, idle-beside-runnable 23 min (was 47). Weekly 63%, burn 1.16%/h.
+## 2026-11-18 04:00 hourly
+- Landed: none. Light slots 89% used (drains 0); 86 jobs ended, 18 failed (Detent dns-threads 6, reopen-closed 5+2 timeout; ours: c3-gate FreeBSD harness, flow-bench 3), 19 skipped behind hybrid C1 chain failure.
+- Runs: flow-bench ~227k (driver cannot pipeline: Detent filed driver-pipeline); sim-loops ~275k (Driver spin after shutdown: Detent fixing in close-fenced A6; heal stall on 10/24 seeds under investigation); coverage-areas ~328k (6 src bugs filed). Weekly 65%, burn 1.17%/h.
