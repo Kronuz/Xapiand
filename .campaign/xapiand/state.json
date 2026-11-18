@@ -22606,6 +22606,8 @@
     "track-c-c3-gate": {
       "accepted": {},
       "after": [],
+      "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+      "branch": "quest/xapiand/track-c-c3-gate",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -22619,6 +22621,7 @@
         "docs/gates/track-c-c3.md",
         "docs/reviews/track-c-c3.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/track-c-c3-gate",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -22626,9 +22629,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T02:55:51"
+      "updated": "2026-11-18T02:56:42",
+      "worktree": "../strata-wt/xapiand/track-c-c3-gate"
     },
     "track-c-gates": {
       "accepted": {},
