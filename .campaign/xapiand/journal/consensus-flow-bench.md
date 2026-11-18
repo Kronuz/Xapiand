@@ -31,8 +31,11 @@ every Core with `Flow{}` (worker.h:144,172,173,646) and `GroupOptions` has no `F
 `pipeline = 1` is fixed for every Driver group. The bench drives `Core` directly over the
 host transport for that reason. Fix (not mine; files `include/consensus/driver.h`,
 `include/consensus/worker.h`): a `Flow flow{}` in `GroupOptions` passed to each `Core`.
-Also needed, not mine: `CMakeLists.txt` two lines adding `consensus_flow_bench` (until then
-`bench/flow_bench.cmake` does it).
+Lead (msg): no CMakeLists.txt edit; the bench loads from the configure line
+(`-DCMAKE_PROJECT_consensus_INCLUDE=$PWD/bench/flow_bench.cmake`), in flow_bench_vm.sh and the
+doc's reproduce line. Findings 1-2 went to Detent (driver-pipeline); the doc must state
+per-group commits/s at pipeline 1 and pipelined side by side (commands / timed seconds from
+the `one` lines).
 
 ## Evidence
 
