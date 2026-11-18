@@ -42,9 +42,7 @@ lock, builds both arms (master = 8e5040da8's src reverted), creates the indexes,
 
 macOS builds are the session-2 binaries (f5a684 build-probe, 692132 build-prof): the tool matched them at 700ffc0c3.
 
-Session 2 (jobs read; numbers in the design doc):
-
-Session 2 (lead widened the set to the call sites and `src/index_resolver_lru.*`): call sites applied as code
+Session 2 (read; numbers in the design doc; lead widened the set to the call sites and `src/index_resolver_lru.*`): call sites applied as code
 (Xapiand:ca68b2e39, patch deleted); harnesses take `--node-arg`; the stall sampler beats on a 250 us timer and prints
 the loop thread's CPU time over each late beat (Xapiand:1ccd11a5e): on CPU = a long turn, off CPU = preempted/blocked.
 Open misses: T5 at 64 clients (light p99 5.3 ms vs 4.2 ms), T4 at 10,000 (max lag 6.6-9.2 ms vs 1 ms).
@@ -148,6 +146,5 @@ Harness: `wide_search_check.py` (`--sample`, creation resume), `wide_search_star
   unless `XAPIAND_LAG_SPIN` is set (one getenv at loop start). Evidence jobs after it say so in their `what`.
 - R5. Pins apply only to searches wider than one batch: a single-batch search pinning would queue light searches
   behind wide batches; single-batch searches stay bounded by admission.
-- R6 (ruled by the lead at Xapiand:86a50e08e, see the quest's Decisions). A2's max reads against the control loop's floor: on this macOS host the control loop (no searches) shows a
-  2,048-2,560 us p99 in every run, so T4's 1,024 us edge is below what an idle loop's wake reaches here. The branch
-  meets the floor (2.07 ms), not 1,024 us; the lead rules whether that is A2's pass or Linux gates it.
+- R6 (the lead's, Xapiand:86a50e08e; quest Decisions). T4's 1,024 us is read on Linux (VM, strict); on macOS each
+  http loop's max must be no worse than the same run's control loop, which reads a 2.0-2.6 ms p99 with no searches.
