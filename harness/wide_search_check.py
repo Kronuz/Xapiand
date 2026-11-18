@@ -37,7 +37,8 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   histogram. --create-only creates the indexes and stops; --reuse searches the indexes an earlier run left in OUTDIR,
   so a light job can create them and a strict one time the searches; both together complete a creation an earlier
   run left unfinished. --sample S writes the node's call graph over the
-  first S seconds of the timed searches to OUTDIR/sample.txt (`sample` on macOS, perf_sample.py on Linux). Run it under `quiet strict`; the servers use
+  first S seconds of the timed searches to OUTDIR/sample.txt (`sample` on macOS, perf_sample.py on Linux); macOS's
+  `sample` suspends the node for seconds, so the lag of a sampled run is not SR3's. Run it under `quiet strict`; the servers use
   ports PORT and PORT + 1 and keep their data under OUTDIR; both are killed on exit.
 """
 
