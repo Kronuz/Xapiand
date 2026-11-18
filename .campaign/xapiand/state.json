@@ -7055,12 +7055,12 @@
         "cold-tier-step2"
       ],
       "provides": [],
-      "reason": "parked by the owner (hybrid Q1 'not yet', 2026-10-27; D8): resumes when cold-tier-step2 lands",
+      "reason": "its blocker landed",
       "repo": "../strata",
       "risk": "low",
-      "status": "blocked",
+      "status": "planned",
       "title": "The hybrid-search go/no-go run",
-      "updated": "2026-11-08T22:35:44"
+      "updated": "2026-11-17T23:08:16"
     },
     "idle-index": {
       "accepted": {},
