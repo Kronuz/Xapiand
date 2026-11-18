@@ -434,6 +434,8 @@ void test_ewkt_errors() {
 	};
 	for (const char* text : bad) {
 		bool threw = false;
+		std::fprintf(stderr, "INPUT '%s'\n", text);
+		std::fflush(stderr);
 		try {
 			(void)EWKT(text).getGeometry();
 		} catch (const GeoSpatialError&) {
