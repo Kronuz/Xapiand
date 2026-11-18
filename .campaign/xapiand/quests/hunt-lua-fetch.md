@@ -12,7 +12,8 @@ Xapiand fetches Lua like its other dependencies: from git, the Lua team's offici
 - A1 Configure fetches Lua by commit from GitHub and builds, with no lua.org or mirror URL left: a job.
 - A2 The drift check fails on a wrong commit or a changed patch: a job that fails with a wrong pin.
 - A3 The tag's sources match the 5.4.7 release's src/ byte for byte, or each difference is named: a job.
-- A4 The build check passes, and CI is green on every platform.
+- A4 Every git dependency is pinned by commit, not by a tag that can move: cppcodec v0.2 is 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166 and CLI11 v2.4.2 is 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9. The unused cmake/Modules/FindGTest.cmake (googletest at `master`, unpinned) and ExternalProjectInstall.cmake are deleted: [artifact] `CMakeLists.txt`.
+- A5 The build check passes, and CI is green on every platform.
 
 ## Contracts
 
