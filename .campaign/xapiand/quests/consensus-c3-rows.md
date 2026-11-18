@@ -10,7 +10,7 @@ Close track-c-c3-gate's review findings F1 and F2 (`.campaign/xapiand/reviews/tr
 ## Acceptance criteria
 
 - A1 After the base is raised (consensus_test.cc:1111), a repair at `{through, term_at(through)+1}` answers `InvalidRepair`; mutant P1 (the base term check removed) fails consensus_test: a test and a `--fails-without` job
-- A2 A repair at a boundary in (commit, last_index] is refused and one in (applied, commit] is accepted, in a row named for the commit bound; mutant P2 (the commit bound removed) fails that row: a test and a `--fails-without` job
+- A2 A repair at a boundary in (commit, last_index] is refused, in a row named for the commit bound, and mutant P2 (the commit bound removed) fails that row; a repair while applied < commit answers Busy, since a delivery or batch is outstanding there (contributor finding, 11-18: acceptance in (applied, commit] is unreachable at Core): tests and a `--fails-without` job
 - A3 P1 and P2 are in `tools/mutants.sh`, and the build-test check passes
 
 The review's probe is `.scratch/review-track-c-c3-gate-correctness/mutants-extra.sh` in the Xapiand home.
