@@ -22667,9 +22667,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T02:56:42",
+      "updated": "2026-11-18T04:21:12",
       "worktree": "../strata-wt/xapiand/track-c-c3-gate"
     },
     "track-c-gates": {
