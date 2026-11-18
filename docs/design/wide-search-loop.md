@@ -57,6 +57,7 @@ its width varies with the shards per index.
 | Row | master | probe | Jobs |
 |---|---|---|---|
 | SR3, 2,500 indexes: http loops' window max | 131-229 ms buckets (87-91 ms in 80ea60) | 640 / 1,536 us buckets (max since start 624 / 1,305 us) | 043331-286e1f, 043334-e2a804 |
+| SR3, 10,000: http loops' max since start | 395 / 475 ms | 6.6 / 9.2 ms | 043346-9d63ea, 045057-0e3792 |
 | SR3, 2,500: p99 lag, search p50 | 640-768 us, 10.7 s | 384-448 us, 1.28 s | same |
 | S2, 64 clients by names: light GET p99 / max | 83.8 / 1,819 ms | 5.3 / 26.3 ms | same |
 | S2, 64 by names: loops' window max | 1.57 s buckets | 115-131 ms buckets | same |
@@ -64,9 +65,13 @@ its width varies with the shards per index.
 
 The host was shared (strict holds beside light ones) and moved between runs (alone p99 0.8-2.5 ms), so these are the
 probe's direction, not the gate's numbers: A2 and A3 are rerun at the landed code. What remains in S2 is the
-resolver's lock and its misses, which slicing makes short but does not remove: see Open.
+resolver's lock and its misses, which slicing makes short but does not remove, and at 10,000 indexes turns of 7-10 ms
+that no capture has attributed yet (T4's edge is 1 ms): see Open.
 
 ## Open
+
+- At 10,000 indexes the probe still has 6.6-9.2 ms turns on the HTTP loops (0e3792); a stall capture at 10,000 at 5 ms
+  attributes them before the A2 rerun.
 
 - The resolver's cache holds 100 entries, so a search over more names than that misses every one and reads each
   index's settings document; a cache sized to the indexes a node serves (or settings kept beside the pool's names)

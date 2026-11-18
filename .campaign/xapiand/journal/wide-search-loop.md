@@ -50,7 +50,8 @@ Read so far (src = master, build-prof):
 1. After the lead's ruling: apply `harness/wide_search_callsites.patch` on the branch (or the owning quest does),
    delete the patch, rerun A2 (2,500 and 10,000, strict, no sampling) and A3 (starve 16,64, strict) as `--for` jobs
    at the landed code, then CI (A4) and the correctness review.
-2. Running, read when done: 261118-043346-9d63ea (A2 before, 10,000, unsampled), 261118-045057-0e3792 (probe 10,000).
+2. 10,000 indexes: master 9d63ea loops' max 395 / 475 ms; probe 0e3792 6.6 / 9.2 ms, still over T4's 1,024 us.
+   Next experiment: stall capture at 10,000 with XAPIAND_LAG_SPIN=5000 on build-probe to attribute those turns.
 
 ## Blocked on
 
@@ -77,7 +78,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/wide-search-loop.md` (Attribution: jobs 261118-043331-286e1f, 261118-022616-80ea60) |
-| A2 | before: 261118-022616-80ea60 (2,500: window max 98 ms bucket); 10,000 in 261118-043346-9d63ea; after: blocked |
+| A2 | before: 261118-022616-80ea60 (2,500: window max 98 ms bucket); 10,000: 261118-043346-9d63ea (max 395 / 475 ms); after: blocked (probe 0e3792: 6.6 / 9.2 ms) |
 | A3 | before: 261118-022618-928443 (64 names: light max 1,153 ms, loops 1.8-2.1 s); after: blocked |
 | A4 | suite 261118-034210-a84949 at Xapiand:b46f8e262 (44/44, test_wide_search with the Pins tests); CI pending |
 
