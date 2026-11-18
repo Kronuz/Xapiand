@@ -23211,20 +23211,56 @@
         "docs/gates/track-c-c3.md",
         "docs/reviews/track-c-c3.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/track-c-c3-gate",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T15:03:41",
+          "commit": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+          "criteria": {
+            "A1": "261118-042103-6cde19 (passed at 5cab3e7b21a7; ignores docs-only docs/gates/track-c-c3.md, docs/mechanisms/write-buffer.md, docs/perf/exploration-log.md, docs/perf/wbuf-inline.md, docs/reviews/track-c-c3.md, docs/status/wbuf-inline.md); fails without: 261118-025955-8f229e",
+            "A2": "docs/gates/track-c-c3.md (strata:7cd834b3), each row with its job id",
+            "A3": "docs/reviews/track-c-c3.md (strata:7cd834b3): the correctness review, accepted at strata:5cab3e7b, re-checked at consensus:6a76867"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+              "docs": [
+                "docs/gates/track-c-c3.md",
+                "docs/mechanisms/write-buffer.md",
+                "docs/perf/exploration-log.md",
+                "docs/perf/wbuf-inline.md",
+                "docs/reviews/track-c-c3.md",
+                "docs/status/wbuf-inline.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-042103-6cde19",
+              "level": "light",
+              "seconds": 869.1,
+              "state": "done",
+              "what": "track-c-c3-gate check build-test at 5cab3e7b21a7"
+            }
+          ],
+          "final": true,
+          "from": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+          "reason": "",
+          "tested": "7cd834b3d86cd8e16335091d85dcfb3342e037e1"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T15:02:18",
-      "worktree": "../strata-wt/xapiand/track-c-c3-gate"
+      "updated": "2026-11-18T15:03:44",
+      "worktree": ""
     },
     "track-c-gates": {
       "accepted": {},
