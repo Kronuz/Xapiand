@@ -407,6 +407,13 @@
       "closed": "consensus-rpc-lane now lands after detent:transport-feed-scan; group-core keeps its consensus pin until the quiescence repin",
       "id": "msg-99",
       "text": "detent:transport-feed-scan started and may change files your consensus-rpc-lane changes (order them with --after detent:transport-feed-scan, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-17T19:04:42",
+      "by": "campaign detent",
+      "closed": "consensus-wave-open fixes group-core's 64-open failure; consensus-rpc-lane now lands after it; group-core repins with quiescence",
+      "id": "msg-100",
+      "text": "detent:consensus-wave-open started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-wave-open, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
