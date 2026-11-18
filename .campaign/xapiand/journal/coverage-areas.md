@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-150347-6b0c44
+State: waiting on jobs 261118-153013-4ba278
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+00000. diag3 6b0c44: geospatial aborted with no FAIL text, so not the reprint (the abort is in an earlier test); aggregations: static std::mutex Node::_nodes_mtx (src/node.cc:112) is defined after Node::_local_node (:109), so it is destroyed first; suspect a lock at static destruction (unproven, the -O breakpoint filter did not filter). diag4 4ba278 (at 0b7192e42): geospatial tests now run guarded (names the test that throws); lldb breaks at __throw_system_error. Product fix only if the bt shows a src/ lock at exit; it would be outside the file set (src/node.cc), so ask the lead first.
 
 0000. diag2 e47048 showed only the expected (caught) throws. Suspect for geospatial: test_ewkt_forms re-parses geometry->toEWKT() outside a try (an InvalidArgument from a reprint the LLVM 22 libc++ formats differently); the test now catches and prints it. diag3 6b6c44... = 261118-150347-6b0c44 prints that text and the backtrace of the aggregations std::system_error at exit (break -E c++ -O std::__1::system_error). Then fix, rerun coverage (campaign job rerun f9ba50-style) and the suite at the new head.
 
