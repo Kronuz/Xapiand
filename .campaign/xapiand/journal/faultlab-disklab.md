@@ -26,10 +26,10 @@ The lead, for CI (A4) and two files outside the file set:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-072844-9a21c4 (at faultlab:d534091; later commit docs only) |
-| A2 | 261118-072844-9a21c4 (at faultlab:d534091; later commit docs only) |
-| A3 | 261118-073106-54b543; fails without: 261118-073108-b7211a (mutant faultlab:f82d919, `heal` writes no event; ref refs/mutants/faultlab-disklab-a3) |
-| A4 | 261118-073109-9a83d0; CI: see Blocked on |
+| A1 | 261118-073241-96587f (at faultlab:d534091; later commit docs only) |
+| A2 | 261118-073241-96587f (at faultlab:d534091; later commit docs only) |
+| A3 | 261118-073241-632ce6; fails without: 261118-073108-b7211a (mutant faultlab:f82d919, `heal` writes no event; ref refs/mutants/faultlab-disklab-a3) |
+| A4 | 261118-073241-30fded; CI: see Blocked on |
 
 Live run (Ubuntu 24.04, kernel 6.8, 4 vCPU VM on 18782, images on /dev/shm):
 - A1: points from mark `before` to mark `after`: #98 mark before (planted missing), #106 flush
