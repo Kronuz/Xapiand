@@ -6159,6 +6159,37 @@
       "title": "Retire ThreadPool dependency",
       "updated": "2026-11-08T15:39:54"
     },
+    "dsl-date-operators": {
+      "accepted": {},
+      "after": [
+        "dsl-not-wrap",
+        "serialize-validation"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "tests/test_query_dsl_date*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Query DSL serves _date, _time and _timedelta operators",
+      "updated": "2026-11-19T15:21:47"
+    },
     "dsl-not-wrap": {
       "accepted": {},
       "after": [
