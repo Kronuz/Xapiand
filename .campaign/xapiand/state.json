@@ -1838,7 +1838,9 @@
     },
     "cheap-reopen": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "wide-search-loop"
+      ],
       "base": "6715452bb0d72cc4daf7079c081c6f40ca2b85b2",
       "branch": "quest/xapiand/cheap-reopen",
       "checks": [
@@ -1869,7 +1871,7 @@
       "risk": "high",
       "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-18T06:31:41",
+      "updated": "2026-11-19T01:33:15",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
