@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-175050-f89fd4 261118-175038-d98aaf 261118-175039-7ab381 261118-175040-2293f6
+State: waiting on jobs 261118-175050-f89fd4 261118-175754-d9ffd0 261118-175800-a631ea 261118-175804-b5584f 261118-175808-cd9ef8 261118-175813-8e662b 261118-175828-fd348c 261118-175836-b6440b 261118-175843-a6f983 261118-175850-27a230
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -12,9 +12,23 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
 - logger:db35b6c the teardown fence (msg from the lead, below): `Teardown` defined right after
   config/hooks/handlers sets `torn_down`; emit and log load it first and write raw to stderr.
   Pushed; CI run 44435549806 green on all 9 platforms, logger_exit_late passed on each.
+- logger:b3cab44 test only (A5): test/exception.cc (ctest logger_exception), threads L_EXC an
+  exception and destroy it after the LOG thread wrote the line; races under TSan without the fix.
+- logger:004304e A5 fix: a record keeps the description (`std::optional<std::string> exc`), made by
+  `describe_exception` on the logging thread (`describe_at_call`; a throwing hook gives
+  "unknown exception"); the LOG thread never touches the exception. Pushed.
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
 
 ## Doing
+
+A5 (lead, third message): Xapiand TSan run 44281033140 (test_node): vptr race, LOG thread's
+default_describe_exception vs ~StorageCorruptWAL on the throwing thread. Reading: the record held
+an std::exception_ptr (shared ownership, not a raw reference), so the destruction followed the LOG
+thread's release; the order lives in libstdc++'s exception refcount, uninstrumented, so TSan saw
+no happens-before. Fixed anyway by the lead's design (text captured at the call): logger:004304e.
+Jobs: fails-without at b3cab44 175754-d9ffd0 (LLVM 22), 175800-a631ea (AGENTS recipe); clean at
+the fix 175804-b5584f, 175808-cd9ef8. Head 004304e: suite 175813-8e662b, ASan 175828-fd348c, TSan
+(AGENTS recipe) 175836-b6440b, producer A/B 175843-a6f983, drain A/B 175850-27a230.
 
 Lead (2026-11-18, second message): read the three failures, attribute, fix what's mine, rerun.
 Done (passed): late fails-without 171555-da551f, 171557-af5502; late+once pass 171600-54abd2;
@@ -28,11 +42,16 @@ Failures read:
 - TSan 171605-c73004: data races reported on function-local static init (`mach_clock()::clock`,
   `tick_stamps()::tick`), code this quest did not touch; logger_clock, logger_producer, logger_queue
   fail on the warnings. Likely the LLVM 22 libc++abi build (guard not seen by TSan). Attribution:
-  same script at main 175038-d98aaf; the AGENTS.md recipe at the fix 175039-7ab381. CI linux-tsan
-  green at both fix commits.
+  same script at main 175038-d98aaf FAILED the same way (logger_clock, logger_producer,
+  logger_queue on the same static-init reports): pre-existing with that toolchain, not this quest.
+  A3's TSan evidence is the AGENTS.md recipe instead (175836-b6440b at 004304e; 7ab381 at db35b6c
+  was superseded). CI linux-tsan green at both fix commits.
 - Bench 171637-3deb48: harness error, not a regression: logger_ab.py refuses an output dir that
   exists (left by 171612-9b1d05 in the shared slot). Fixed in .scratch ab_run.sh (rm -rf first);
-  rerun 175040-2293f6.
+  rerun 175040-2293f6 done: producer 6e7ab9e -> db35b6c, 8 rounds, median ratio [95%]: burst 1p
+  0.952 [0.713, 1.003], back to back 1p 0.944 [0.828, 1.300], end-to-end 1p 0.958 [0.652, 1.212],
+  burst 4p 1.010 [0.806, 1.075], back to back 4p 0.964 [0.731, 1.158], end-to-end 4p 1.002
+  [0.930, 1.215]: every interval spans 1.
 Bench results so far (strict beside light holds, host load high: wide intervals):
 - 171612-9b1d05 producer, 9a7c6b6 -> db35b6c (the teardown load alone), 8 rounds, median ratio
   [95% interval]: burst 1p 1.001 [0.831, 1.317], back to back 1p 1.032 [0.834, 1.235], end-to-end 1p
@@ -59,6 +78,7 @@ Nothing.
 | A1 | docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c) |
 | A2 | 261118-170114-f2778f (--fails-without at logger:d031751, LLVM 22 libc++): child aborts `system_error: mutex lock failed: Invalid argument`, status 6; 261118-170117-86f821 (same, Apple clang): the same abort; 261118-170120-b58cbb: passes at logger:9a7c6b6 (LLVM 22 libc++) |
 | A3 | pending at db35b6c: 171603-985f5d (ASan), 171605-c73004 (TSan); at 9a7c6b6 ASan 170152-8be416 failed logger_queue exit flush (attribution 171634-64599a); CI linux-asan-ubsan and linux-tsan green at 9a7c6b6 (run 44433808350) |
+| A5 | pending: fails-without at logger:b3cab44 175754-d9ffd0, 175800-a631ea; clean at logger:004304e 175804-b5584f, 175808-cd9ef8 |
 | A4 | pending: suite 171608-1a6cec at db35b6c; CI green on all platforms at logger:9a7c6b6 (run 44433808350) and logger:db35b6c (run 44435549806) (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
 
 ## Result
