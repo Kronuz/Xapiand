@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-155851-271f1d
+State: waiting on jobs 261118-160636-7684ae 261118-160642-277715 261118-160643-69ce14
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+000000000. Cause of both aborts (diag7 271f1d): harness/coverage.sh's instrumented binaries linked two C++ runtimes (CMake's find_library(c++) took the SDK's libc++, -L added LLVM 22's), so an exception thrown in one was missed by a catch in the other (geospatial CIRCLE(1 2)) and a mutex destroyed by one was locked by the other (aggregations at exit). Fixed in 4e69dda8b: coverage.sh names LLVM's libc++/libc++abi (-DLIBCPP_LIBRARIES, -DLIBCPPABI_LIBRARIES) and one_runtime() fails the build when a binary links two; the geospatial test is back to TEST_MAIN. No product fix: the normal build was never affected. Jobs at 4e69dda8b: proof 7684ae (geospatial and aggregations 20 runs each, 0 failures expected), coverage 277715 (A1 after), suite 69ce14 (A3). A2 8aa284 done. Then: lua/other areas still below their floors (see the coverage table), docs/dev/coverage.md, Evidence rows.
 
 00000000. diag6 a62f41: geospatial last line RUN test_ewkt_errors then terminate (InvalidArgument); aggregations aborts 1/20 baseline, 14/20 with _nodes_mtx/_nodes before _local_node (do not land that reorder). Hypothesis to test: the instrumented binaries load two libc++ copies (LLVM 22's via rpath and the system's via a dependency or libSystem), so exception types and std::mutex objects cross ABIs; both aborts only occur under harness/coverage.sh's LLVM toolchain. diag7 271f1d (at ca1cfe7c3): prints the failing EWKT input, otool -L / rpath, and DYLD_PRINT_LIBRARIES. If confirmed, the fix is link flags in harness/coverage.sh (not product); otherwise bisect the noexcept frame.
 
