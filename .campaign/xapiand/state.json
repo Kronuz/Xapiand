@@ -2795,9 +2795,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-18T10:46:39",
+      "updated": "2026-11-18T17:59:09",
       "worktree": "../Xapiand-wt/xapiand/cluster-vm-tier"
     },
     "cold-tier-item5": {
