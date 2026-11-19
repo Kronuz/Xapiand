@@ -14,6 +14,7 @@ coverage-areas' serialize tests (tests/test_coverage_serialize.cc, Xapiand:30669
 - A3 Distinct geo points serialize to distinct values, and the stored value's users (sort, exact match, aggregations) are listed with what the change does to existing indexes: a test failing at the parent commit, and a note in docs/
 - A4 `get_field_type` maps "boolean" to boolean, and string `_time` and `_timedelta` values serialize as time and timedelta: tests failing at the parent commit
 - A5 [decision] `_date`, `_multiconvex` and `_lua` casts: served, or removed by the owner (a Decisions row)
+- A7 An unknown aggregation type is refused with a 400 naming it (aggregations.cc:217 treats it as `_aggs`), and Cast refuses negative text for unsigned types (cast.cc:138): tests failing at the parent commit
 - A6 The suite passes and CI is green
 
 ## Contracts
