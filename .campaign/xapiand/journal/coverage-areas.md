@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-163254-b09a49
+State: waiting on jobs 261118-163254-b09a49 (A4 backtrace); three forks write tests (serialize, fieldparser, geospatial)
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+00000000000. Lead split (b929d23d2): this quest keeps A1 (aggregations, lua, geospatial, decoders), A4 (the exit-time mutex abort, fixed in the product with a check that fails without), A2 (done), A3. Forks (own files, commit only them): tests/test_coverage_serialize.cc (src/serialize.cc), tests/test_coverage_fieldparser.cc (src/field_parser.cc), tests/test_coverage_geospatial.cc (the ~200 geospatial lines), each iterating with harness/coverage_one.sh jobs (e2e1fa66b). Me: A4 from diag8 b09a49's backtrace; then the coverage job and suite at the new head, Evidence rows, docs/dev/coverage.md.
 
 0000000000. 11-18 evening. Proof 7684ae: one libc++ now; geospatial 0/20 failures; aggregations 20/20 failures (deterministic: OK then system_error mutex lock failed at exit, a mutex locked after its static died; LLVM's libc++ returns EINVAL where Apple's tolerates it). Diag8 b09a49 (at bf83947ba): lldb break at __throw_system_error / abort for the backtrace; fix in the frame's file (src/node.cc, node.h are in the file set; tell the lead if it is elsewhere) with a test that fails without it. Suite 69ce14 failed only test_coverage_lua (a function value in a table is stored as nil, not absent): fixed in bf83947ba. Coverage 277715 (at 4e69dda8b): met: collectors, engine strata, engine seam, aggregations 95.9/92.3, lua 92.9/82.3; geospatial 83.0/81.7 (short on lines: ewkt.cc 145, geospatial.cc 143, polygon.cc 86, convex.cc 60 lines uncovered; ~200 lines to 90%); below: decoders 65.6/62.3 (serialize.cc 618 lines, field_parser.cc 232; the strata decoders are at 96-100%), server 76.8/49.4 (search_views.cc 525 lines, 792 branches), database 61.1/51.4 (schema.cc 3969 lines, handler 702, wal 315, schemas_lru 286, shard 371), multivalue 70.4/69.8 (generate_terms 228, keymaker 144, range 103), core 63.5/49.1 (query_dsl 605, main 366, datetime_msgpack 298, manager 225, cast 184); all of src 68.8/58.8.
 
