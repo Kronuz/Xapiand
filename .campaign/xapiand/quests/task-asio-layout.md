@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`cancellable_asio_awaiter::on_loop_` (task_asio.hh:504-506) exists in every build, with only its check Debug-only, so the awaiter has one layout whatever NDEBUG is (task-driver-layout review F1, the same ODR hazard as F7). Inline functions whose bodies differ by NDEBUG (`orphaned_waiters()`, `event::~event`, review F2) are reviewed in the same pass: keep them NDEBUG-independent or document why the difference is harmless.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The layout test (test/layout_*.cc) also compares cancellable_asio_awaiter's size and alignment across NDEBUG and non-NDEBUG TUs, and fails at a revert commit
+- A2 [artifact] `task_asio.hh` has no NDEBUG-conditional data member left
+- A3 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From reviews/task-driver-layout-correctness.md F1, F2. Detent's adoption waits on layout parity.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
