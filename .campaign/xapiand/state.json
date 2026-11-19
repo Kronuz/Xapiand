@@ -7555,11 +7555,12 @@
     "geo-correctness": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T05:01:21",
+          "at": "2026-11-19T06:04:25",
           "base": "e5697b9bbd5c7129d2626d969b613d847b7eccc8",
           "blobs": {
             "CMakeLists.txt": "100644:986deea609940c84f1ce630a12f2b1a08396f5c0",
-            "docs/design/geo-correctness.md": "100644:bf4f7dea0c49754dbbe642b93f324a09f68891d7",
+            "docs/design/geo-correctness.md": "100644:03cb1b396c54d178dc63c64f48cab1ea4a50f8b0",
+            "docs/src/content/docs/changelog.md": "100644:7f495c624267877886313b9b45a3d94b540a8497",
             "src/geospatial/collection.cc": "100644:8c5706751d65cc487e109da6c81038e8adc6767c",
             "src/geospatial/collection.h": "100644:19d4caea4b68dd5042e036578623d3a776a6fa61",
             "src/geospatial/convex.cc": "100644:b7c4d13323648af3963580cf31570a6c1a55afa4",
@@ -7567,16 +7568,17 @@
             "src/geospatial/ewkt.cc": "100644:37c36fa1bb57355e788c2192c58fea1aefd67f2d",
             "src/geospatial/geospatial.cc": "100644:36edb3ffdc17afa527f95c7a66d059de10ab692b",
             "src/geospatial/geospatial.h": "100644:6e02a7049cb5d0708a2acdc0ca47a95226630561",
-            "tests/test_coverage_geospatial.cc": "100644:150a01d522438ad5a3a6a94b053972770262b2cf",
+            "tests/test_coverage_geospatial.cc": "100644:e29d4e049a44add2997cb72116fa6d7605553d56",
             "tests/test_geo_corpus.cc": "100644:3fa1b95e19d2c5c885ae13a0133b21d25bf2ce07",
-            "tests/test_geo_correctness.cc": "100644:de0dd90e1f37a1df01b191ae78e45abe2a3e74e5"
+            "tests/test_geo_correctness.cc": "100644:c30b1363119637fb200dca09a45567c8f1ffeab2"
           },
           "by": "review",
-          "commit": "d2ba9e9634bc657fb19f30576fa0bfa4d8188ac0",
+          "commit": "05fcde57c8c0c7c0529fce636caca31963502e87",
           "criteria": "a80f1e3faa89a6ac",
           "diffs": {
             "CMakeLists.txt": "25b04272a9a5821f",
-            "docs/design/geo-correctness.md": "e652693f25abfdfd",
+            "docs/design/geo-correctness.md": "05a8b81d295aa560",
+            "docs/src/content/docs/changelog.md": "4124a80c6a469dfd",
             "src/geospatial/collection.cc": "200fea1d6e181853",
             "src/geospatial/collection.h": "845853eeb5f6b8f5",
             "src/geospatial/convex.cc": "5fccc10271fa94ee",
@@ -7584,14 +7586,14 @@
             "src/geospatial/ewkt.cc": "e1ab333d6454e9ea",
             "src/geospatial/geospatial.cc": "fa14d9198d237569",
             "src/geospatial/geospatial.h": "550da72581a4d13b",
-            "tests/test_coverage_geospatial.cc": "4218dc79c3425fd6",
+            "tests/test_coverage_geospatial.cc": "6d2a71d682c82baf",
             "tests/test_geo_corpus.cc": "33af62e92638e7a9",
-            "tests/test_geo_correctness.cc": "6d497c8d71ada32c"
+            "tests/test_geo_correctness.cc": "c007aee370363603"
           },
           "findings": {},
           "note": "",
-          "review": "f10321076429cf636eb9b111ccc42c66dc62299f",
-          "reviewed": "d2ba9e9634bc657fb19f30576fa0bfa4d8188ac0",
+          "review": "6fa60d05ab2194028e59b0bc699baca2199f2340",
+          "reviewed": "05fcde57c8c0c7c0529fce636caca31963502e87",
           "verdict": "APPROVE"
         }
       },
@@ -7629,7 +7631,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-19T05:01:39",
+      "updated": "2026-11-19T06:04:25",
       "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
