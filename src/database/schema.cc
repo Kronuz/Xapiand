@@ -5803,19 +5803,22 @@ Schema::store_item(const MsgPack& value, MsgPack& data)
 			break;
 
 		case FieldType::date:
-		case FieldType::datetime:
+		case FieldType::datetime: {
+			// A cast object (`{"_date": ...}`) is read through its cast, as index_item reads it.
+			const auto iso = Datetime::iso8601(Datetime::DatetimeParser(value.is_map() ? Cast::cast(value) : value));
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
+					data_value = iso;
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					data_value.push_back(iso);
 					break;
 				default:
-					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
+					data_value = MsgPack({ data_value, iso });
 					break;
 			}
 			break;
+		}
 
 		default:
 			switch (data_value.get_type()) {
