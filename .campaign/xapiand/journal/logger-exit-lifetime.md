@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-170114-f2778f 261118-170117-86f821 261118-170120-b58cbb 261118-170152-8be416 261118-170154-c3fcd5 261118-170156-26ae58 261118-170205-2112bc 261118-170207-3c6344
+State: waiting on jobs 261118-170152-8be416 261118-170154-c3fcd5 261118-170156-26ae58 261118-170205-2112bc 261118-170207-3c6344
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -11,17 +11,15 @@ Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab
 
 ## Doing
 
-Waiting on: A2 fails-without at logger:d031751 (LLVM 22 libc++: 170114-f2778f; Apple clang:
-170117-86f821), A2 pass at the fix (170120-b58cbb), A3 ASan (170152-8be416) and TSan
-(170154-c3fcd5) suites under LLVM 22, A4 suite (170156-26ae58), bench A/B strict: producer
-(170205-2112bc), LOG-thread drain (170207-3c6344). CI run on the pushed branch.
+Waiting on: A3 ASan (170152-8be416) and TSan (170154-c3fcd5) suites under LLVM 22, A4 suite
+(170156-26ae58), bench A/B strict: producer (170205-2112bc), LOG-thread drain (170207-3c6344).
+Done: A2 (below); CI run 44433808350 on logger:9a7c6b6 green on all 9 platforms, and
+logger_exit_once passed in each (linux asan-ubsan, tsan, gcc x86_64/arm64, clang, freebsd, macos x86_64/arm64).
 
 ## Next
 
 1. Read the jobs; paste `campaign brief`'s evidence table; add the bench numbers to Result.
-2. Check CI on the branch (gh run list -R Kronuz/logger); main's last failure was a macos-arm64
-   runner never acquired (infra), run 43887623328.
-3. Mark ready for review.
+2. Mark ready for review.
 
 ## Blocked on
 
@@ -32,9 +30,9 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | docs/exit-lifetime.md in the logger repo (logger:9a7c6b6) |
-| A2 | pending jobs |
-| A3 | pending jobs |
-| A4 | pending jobs |
+| A2 | 261118-170114-f2778f (--fails-without at logger:d031751, LLVM 22 libc++): child aborts `system_error: mutex lock failed: Invalid argument`, status 6; 261118-170117-86f821 (same, Apple clang): the same abort; 261118-170120-b58cbb: passes at logger:9a7c6b6 (LLVM 22 libc++) |
+| A3 | pending: 261118-170152-8be416 (ASan), 261118-170154-c3fcd5 (TSan); CI linux-asan-ubsan and linux-tsan green (run 44433808350) |
+| A4 | pending: suite 261118-170156-26ae58; CI run 44433808350 green on all platforms at logger:9a7c6b6 (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
 
 ## Result
 
