@@ -24269,6 +24269,33 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-driver-layout": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "test/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "planned",
+      "title": "task: inline_scheduler layout identical in Debug and release (F7)",
+      "updated": "2026-11-19T12:53:48"
+    },
     "task-inbox-first": {
       "accepted": {
         "correctness": {
