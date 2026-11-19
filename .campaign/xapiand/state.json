@@ -19975,7 +19975,52 @@
       "worktree": ""
     },
     "reactor-server-composition": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T14:30:11",
+          "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
+          "blobs": {
+            "AGENTS.md": "100644:53df32c569e1956884a18c40139a1caf133cadf3",
+            "ARCHITECTURE.md": "100644:f3eb86e55328227f7963f30b04c4fc7720c939eb",
+            "CHANGELOG.md": "100644:6ac17d870c97b318c2515ccf9925c3dd6106ed2b",
+            "README.md": "100644:300e39819b3009ebdafcc400a0e532f2291bcf39",
+            "docs/API.md": "100644:e0c77479ee533342559b056e5554a1f2622762a0",
+            "docs/mechanisms/stop-and-accept.md": "100644:dba81eb9b176853e21e59ec31610e6e7695628d0",
+            "docs/perf/gate-leave.md": "100644:6fb678324b0be150a70435bd099b0b74b8f9f5bc",
+            "reactor.h": "100644:eaae1d7b9a3cfc5010efd9dfada54b018ea0fbac",
+            "reactor_tls.h": "100644:75b9a233aefa6d330452b1cf981ca8e7fe739674",
+            "test/gate_ab.sh": "100755:bc7ebb7edd40f6c0c3acfbaad8c02be72671924a",
+            "test/gate_bench.cc": "100644:c7ce8c55539202ce171834048523fc74fd7ea533",
+            "test/session_test.cc": "100644:416c06395134830e8c5787db128ca9205ecb9863",
+            "test/test.cc": "100644:ce301e9d7ae21d24cf82110500d24dac7c06d718",
+            "test/tls_test.cc": "100644:933ebb20f2742f5f9f50e907b037988bb4fd7252"
+          },
+          "by": "review",
+          "commit": "78f28caeffbb7d8ac9351df59ce21f09811f50fd",
+          "criteria": "055a024be7be1e7e",
+          "diffs": {
+            "AGENTS.md": "998e50ce63a37c23",
+            "ARCHITECTURE.md": "b38c13a980ea2c89",
+            "CHANGELOG.md": "b8833cb6a61b875d",
+            "README.md": "75da3c45183308ce",
+            "docs/API.md": "327f95732b0371e7",
+            "docs/mechanisms/stop-and-accept.md": "7c7fdbfbff31b0b9",
+            "docs/perf/gate-leave.md": "0cf4421b790a2c1f",
+            "reactor.h": "7ea5aaf51faa9d68",
+            "reactor_tls.h": "b9610a6b414eb4ed",
+            "test/gate_ab.sh": "f13b04e2a29bd193",
+            "test/gate_bench.cc": "9237a48804ef3788",
+            "test/session_test.cc": "f5a71a5b71f33fa8",
+            "test/test.cc": "e9611a1071d22126",
+            "test/tls_test.cc": "046ad174c4502aca"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0af74ed709d459a4b95d4d329f11e8e7f57a64bd",
+          "reviewed": "9349464efec8203a86377c3d2590eb918c131e07",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
       "branch": "quest/xapiand/reactor-server-composition",
@@ -20016,7 +20061,7 @@
       "risk": "high",
       "status": "review",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T14:23:26",
+      "updated": "2026-11-19T14:30:11",
       "worktree": "../reactor-wt/xapiand/reactor-server-composition"
     },
     "read-only-open": {
