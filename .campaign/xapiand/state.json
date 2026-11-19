@@ -21093,18 +21093,49 @@
       "files": [
         "docs/server-composition.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/server-composition-note",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T06:33:40",
+          "ci_skipped": "cpp-libraries has no CI workflow for docs/ (tools.yml filters to tools/**, cmake.yml is reusable only, nightly.yml is the dispatcher); doc check job 261119-063111-a8dbca passed",
+          "commit": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc",
+          "criteria": {
+            "A1": "`docs/server-composition.md` at cpp-libraries:0579a1a. F1: \"Options\" paragraph and C9 (--upstream-ca). F2: step 4's descriptor check, C5 (D133: explicit value exits EX_CONFIG, default shrinks). F3: step 4's Limits and Tls, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded.",
+            "A2": "`docs/server-composition.md` at cpp-libraries:0579a1a: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80; detent-agent cites (detent_agent/main.cc:105-116, config.hh:9, managed_host.cc:28-112,186-190,198-228, detent_delivery/coordinator.cc:253,316,446) read at Detent:372e95c7; the cited Detent sources have no diff 372e95c7..d3141878.",
+            "A3": "`docs/server-composition.md` at cpp-libraries:0579a1a, section Deviations: 18 rows, each with reason and status; adds detent-agent's 1 ms and 20 ms polls, its signal_set, and the unbounded stops (detent-authority, relay, agent).",
+            "A4": "`docs/server-composition.md` at cpp-libraries:0579a1a, lines 1-4: \"Status: CURRENT (2026-11-19), reviewed\", naming Xapiand D132, D133, D138 and Detent D122, D123 and the six heads the citations hold at. CURRENT at cpp-libraries:0579a1a.",
+            "A5": "Manual: Detent's lead confirmed the Detent-side text at cpp-libraries:0579a1a on 2026-11-19 (cmux 6ff6cac5), checking every citation at Detent:372e95c7 (detentd/main.cc:34,154,176; service.cc:543; configuration.cc:119,204; detent_agent/main.cc:105; config.hh:9). Citation refresh due after Detent's rename-detentd lands."
+          },
+          "evidence": [
+            {
+              "cmd": "test -s docs/server-composition.md",
+              "commit": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-063111-a8dbca",
+              "level": "none",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "server-composition-note check doc at 0579a1a4b335"
+            }
+          ],
+          "final": true,
+          "from": "260b9dffe6768de520c05047f6229368dfd687aa",
+          "reason": "",
+          "tested": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Fold the design review into the server-composition note and mark it CURRENT",
-      "updated": "2026-11-19T04:58:56",
-      "worktree": "../cpp-libraries-wt/xapiand/server-composition-note"
+      "updated": "2026-11-19T06:33:42",
+      "worktree": ""
     },
     "sha256-cl-10": {
       "accepted": {},
