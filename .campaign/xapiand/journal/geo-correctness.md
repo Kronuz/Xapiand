@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: waiting on jobs 261118-231033-23ce28 261118-231034-bee9e4 261118-231042-09af0d 261118-231043-0a7400 261118-231044-1e0858
+State: waiting on jobs 261119-004657-a00f7c 261119-004700-a4066a 261119-004729-f41c38 261119-004732-82117a 261119-004739-c04048 261119-004744-fa34d7
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,25 +9,20 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-All five findings handled in code at xapiand:56afff06b (tests at 673c25282 first); table commit follows. Jobs
-submitted: fails-without 261118-231033-23ce28 (at 673c25282), passing 261118-231034-bee9e4 (56afff06b), corpus before
-261118-231042-09af0d (673c25282, print), corpus after 261118-231043-0a7400 (bb8403367, table check + print), suite
-261118-231044-1e0858. F20 is not the convex: see Blocked on.
+xapiand:532e055a5: master merged, htm repinned to 0c09a0283a507b2cf08975a7c8572d95ece60b68, pinned wrong answers flipped
+(F18, F19, F20 x8 lens centers, F21, F22) in tests/test_coverage_geospatial.cc; D130 `_multiconvex` map form
+(geospatial.cc: top level, collection, intersection; nested lists = one convex per inner list, flat = one) with
+test_multiconvex_serves_in_the_map_form (tests/test_geo_correctness.cc) and the root-vertex lens centers (F20).
+Fails-without commit 4866a9a0f (dangling scratch: head's tests over master's src/geospatial and CMakeLists).
+Jobs: tests pass a00f7c; corpus table+print a4066a; fails-without f41c38 (geo_correctness) 82117a (coverage);
+suite c04048; coverage fa34d7.
 
 ## Next
 
-00. CI red on Linux x86_64 (run 44478325454): test_geo_corpus drew its random corpus inside call arguments
-(`at(asin(unit()...), unit()...)`), whose evaluation order differs by compiler: gcc built another corpus than
-clang, so every answer differed. Engine unaffected (arm64 and FreeBSD CI green). Fixed in the test: one draw per
-statement. Proof: g++-16 on the old test gives 77 FAIL rows; on the fixed test, 100 checks pass, same table as
-clang. Needs push and a Linux CI run to close.
-
-0. msg D129 (lead): F20 is fixed in htm quest htm-edge-points; after it lands I repin htm (CMakeLists.txt joins my file set) and flip the F20 pins. Branch not pushed by me: contributors never push; the lead pushes for CI.
-
-1. Read the jobs when they finish (`campaign brief geo-correctness`); fold in a CI failure on any platform.
-2. When coverage-areas lands and the lead merges master and widens the file set: flip the pinned assertions in
-   tests/test_coverage_geospatial.cc (F18 `MULTIPOINT(1 2, 3)` is an EWKTError; F19 `with_empty.toWKT()` ends
-   EMPTY; F21 and F22 add `covers(...)` of the center and the 5,500 km point; F20 stays pinned until htm moves).
+1. Read the jobs (`campaign brief geo-correctness`). If the corpus table check fails with the htm fix, regenerate the
+   `before` table in tests/test_geo_corpus.cc from a4066a's print and record before/after under Evidence A2.
+2. Fill Evidence, mark ready for review (normal risk: one correctness review).
+3. CI at ec6c7d982 (Linux fix): the lead pushes and checks.
 
 ## Blocked on
 
