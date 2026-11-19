@@ -130,7 +130,9 @@ resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* set
 	std::vector<Endpoint> resolved;
 	resolved.reserve(paths.size());
 	for (const auto& path : paths) {
-		co_await budget.checkpoint();
+		if (!writable) {
+			co_await budget.checkpoint();
+		}
 		auto endpoints = co_await XapiandManager::resolve_index_endpoints(Endpoint(path), writable, settings);
 		if (endpoints.empty()) {
 			throw engine::Error(engine::errc::network, "Endpoint node not available");

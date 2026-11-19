@@ -104,8 +104,8 @@ private:
 Pins& pins();
 
 
-// Each name to its shards, sorted and without repeats. The resolution yields the loop between slices of `budget`,
-// so a list of thousands of names never holds it longer than a slice at a time.
+// Each name to its shards, sorted and without repeats. A read's resolution yields the loop between slices of
+// `budget` and ends when its token is cancelled; a write's resolves whole, since a client's EOF cancels reads only.
 task::task<std::vector<Endpoint>> resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* settings, task::budget& budget);
 
 }  // namespace wide_search
