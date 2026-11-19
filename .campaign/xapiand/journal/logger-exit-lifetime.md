@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-201716-0c19dd 261118-202715-a8a813 261118-202715-8697af 261118-202716-10cb25 261118-202716-acc745 261118-202717-fdc85d 261118-202717-6ea3dd 261118-202718-79d2fa 261118-202718-f4715b 261118-202719-f5790d 261118-202723-694dbd 261118-202727-7e8fc4; CI run 44458400155
+State: waiting on jobs 261118-204609-df150a 261118-204609-7d5079 261118-204610-c89e2b 261118-204610-fedb55 261118-204611-770ed2 261118-204611-969d29 261118-204611-580d8d 261118-204612-0dc795 261118-204612-fdaa15 261118-204612-f4350c 261118-204614-336200 261118-204615-b7d8ee 261118-204617-778bc7 261118-204618-8f59b1 261118-204620-d7ed83 261118-204621-930578 261118-204622-0b0cd4 261118-204624-bc79bc
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -41,6 +41,8 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
   (5 s cap|stalled 200 ms): N lines not written" to stderr. A pass that sees `abandoned` adds its
   written lines to `completed_` first, so N (pending_count) is exact. Docs name the cap and reason.
   Pushed.
+- logger:0f1063d `mach_clock()` and `tick_stamps()` made in `LogWorker::get()`'s creation lambda,
+  before the LOG thread starts (pthread_create orders them before its reads). Pushed.
 - Probe branches (local, never pushed): probe/exit-abandon logger:333e7ff (b6371a4 + a stderr report
   when the exit join times out), probe/exit-abandon-main logger:832db5e (the same on main).
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
@@ -66,6 +68,17 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   fails-without 202723-694dbd (107d707), slow fails-without 201716-0c19dd (46d3d0b). CI run
   44458400155. Jobs at 70e3c36 are superseded. Main TSan probe 17b386 cancelled (the ASan main
   probe already attributes it).
+- Lead msg (79d2fa failed): LLVM 22 TSan logger_exception_test at cfcec69 reported "data race in
+  LogWorker::advance": the LOG thread reads `mach_clock()::clock` while main's first
+  `ring_published` constructs it (MachClock::MachClock); not `taken_` or `pending_count`. Same class
+  as main's 175038-d98aaf (mach_clock, tick_stamps, get()::worker statics; the LLVM 22 libc++abi
+  guard is invisible to TSan), so pre-existing and timing-dependent (42e95e was clean). Fix
+  logger:0f1063d. Jobs at 0f1063d: 79d2fa rerun 204611-580d8d + repeats 204614-336200,
+  204615-b7d8ee, 204617-778bc7; AGENTS recipe A5 204612-0dc795, suite 204610-fedb55; capped
+  204612-f4350c, slow+stall 204612-fdaa15; suite 204609-df150a; ASan 204609-7d5079 204610-c89e2b;
+  A2 204611-770ed2 204611-969d29; LLVM 22 TSan full suite (info) 204624-bc79bc. Attribution at
+  b6371a4 (before the exit changes), 4 runs: 204618-8f59b1 204620-d7ed83 204621-930578
+  204622-0b0cd4.
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
