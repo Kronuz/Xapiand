@@ -7563,6 +7563,8 @@
       "after": [
         "coverage-core-main"
       ],
+      "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+      "branch": "quest/xapiand/freebsd-exe-path",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7583,9 +7585,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T14:40:33"
+      "updated": "2026-11-19T14:41:29",
+      "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
     },
     "fuzz-cpu-hour": {
       "accepted": {},
