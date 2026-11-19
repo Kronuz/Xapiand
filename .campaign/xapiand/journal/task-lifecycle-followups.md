@@ -20,7 +20,9 @@ evidence, never land).
 
 Nothing. Q1-Q3 built as owner defaults, pending the owner's ruling (see Rulings). For the lead:
 `docs/API.md:107` and `docs/design/service-shape.md:86` still show `debounce`'s old
-`fire(key)` signature and timing; both are outside this quest's file set.
+`fire(key)` signature and timing; both are outside this quest's file set. `campaign brief` flags
+test/{lifecycle,timers}_test.cc as outside the set: a glob-parsing quirk (the set names them). CI
+has no run: the lead said not to push.
 
 ## Evidence
 
@@ -35,7 +37,13 @@ fire_pending's wait 261119-140154-3b9118, stop keeps pending 261119-140156-7d67f
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending jobs |
+| A1 | 261119-140132-6f55be; fails without: 261119-140140-9aee97 |
+| A2 | 261119-140132-6f55be; fails without: 261119-140143-816688 |
+| A3 | 261119-140132-6f55be; fails without: 261119-140145-8db73c |
+| A4 | 261119-140132-6f55be; fails without: 261119-140148-04f388 |
+| A5 | 261119-140132-6f55be, 261119-140207-206045 (ASan+UBSan), 261119-140209-c56112 (TSan x50, 0 reports), tsan check 261119-140132-d04ab6; fails without: 261119-140151-bc8368, 261119-140153-e85702, 261119-140154-3b9118, 261119-140156-7d67fb, 261119-140158-d2568f, 261119-140159-a8816d, 261119-140201-b19aab |
+
+Every mutant job fails on the CHECK of its own behavior (logs checked), not on a build error.
 
 ## Result
 
