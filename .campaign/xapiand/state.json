@@ -8219,6 +8219,38 @@
       "title": "http, reactor, http-log and prism without the offload path (L3)",
       "updated": "2026-11-08T15:40:22"
     },
+    "http-pin-halfclose": {
+      "accepted": {},
+      "after": [
+        "coverage-areas"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "harness/wide_search_halfclose.py",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "http-halfclose"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand takes http's half-close fix",
+      "updated": "2026-11-18T20:32:34"
+    },
     "hunt-lua-fetch": {
       "accepted": {},
       "after": [
