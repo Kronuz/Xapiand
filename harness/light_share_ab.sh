@@ -23,7 +23,8 @@
 #
 # T4/T5's mix (x7-gate's command: 20,000 accounts, light 200/s, 20 s phases, 4 heavy clients per reactor, a
 # prebuilt RESTORE stream) once per ARM, in the order given. ARM is "off" or a heavy share (LS_HEAVY_SHARE, the
-# loops that may run a heavy turn at once). Prints each arm's light p99s, worst loop lag and heavy throughput.
+# loops that may run a heavy turn at once; "SHARE@MS" also sets LS_LIGHT_WINDOW_MS, 0: the share always binds). TURNS=1
+# writes each arm's per-turn histograms (turns-N-ARM.jsonl). Prints each arm's light p99s, worst loop lag and heavy throughput.
 set -u
 BIN=$(cd "$(dirname "$1")" && pwd)/$(basename "$1"); OUT=$(mkdir -p "$2" && cd "$2" && pwd); shift 2
 ARMS=(); while [ $# -gt 0 ] && [ "$1" != -- ]; do ARMS+=("$1"); shift; done; [ $# -gt 0 ] && shift
@@ -33,13 +34,15 @@ echo "commit $(git -C "$HERE" rev-parse --short HEAD), $(sysctl -n hw.ncpu 2>/de
 i=0; FAILED=0
 for arm in "${ARMS[@]}"; do
 	i=$((i + 1))
-	if [ "$arm" = off ]; then unset LS_HEAVY_SHARE; else export LS_HEAVY_SHARE=$arm; fi
+	unset LS_HEAVY_SHARE LS_LIGHT_WINDOW_MS LS_TURN_HIST
+	if [ "$arm" != off ]; then export LS_HEAVY_SHARE=${arm%@*}; [ "$arm" = "${arm%@*}" ] || export LS_LIGHT_WINDOW_MS=${arm#*@}; fi
+	[ -z "${TURNS:-}" ] || export LS_TURN_HIST="$OUT/turns-$i-$arm.jsonl"
 	python3 "$HERE/stall_load.py" --bin "$BIN" --target 127.0.0.1:18980 --workdir "$OUT/w" --accounts-docs 20000 \
 		--phase both --rate 200 --duration 20 --no-assert --restore-prebuilt 8 "$@" \
 		--out "$OUT/ls-$i-$arm.json" 2> "$OUT/ls-$i-$arm.log"
 	rc=$?; echo "arm $i $arm rc $rc"; [ $rc -eq 0 ] || FAILED=1
 done
-unset LS_HEAVY_SHARE
+unset LS_HEAVY_SHARE LS_LIGHT_WINDOW_MS LS_TURN_HIST
 rm -rf "$OUT/w"
 python3 "$HERE/light_share_report.py" "$OUT"/ls-*.json || FAILED=1
 exit $FAILED

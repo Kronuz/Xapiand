@@ -36,6 +36,7 @@ COLS = (
     "unl_p99",
     "t5_limit",
     "query_p99",
+    "q_p999",
     "search_p99",
     "get_p99",
     "pair_p99",
@@ -62,6 +63,7 @@ def row(path: str) -> dict[str, float]:
         "unl_p99": unl_p99,
         "t5_limit": 2 * unl_p99 + 1,
         "query_p99": float(get(ld, "light.query.p99_us") or 0) / 1000,
+        "q_p999": float(get(ld, "light.query.p999_us") or 0) / 1000,
         "search_p99": float(get(ld, "light.search.p99_us") or 0) / 1000,
         "get_p99": float(get(ld, "light.get.p99_us") or 0) / 1000,
         "pair_p99": float(get(ld, "light.pair.p99_us") or 0) / 1000,
@@ -93,6 +95,15 @@ def main() -> int:
     print("median by arm (ms; heavy searches and restored docs per loaded phase; heavy_p99 is the worst heavy kind's)")
     for arm, rs in arms.items():
         print(arm.ljust(14) + "".join(f"{statistics.median(r[c] for r in rs):11.2f}" for c in COLS))
+    print("per arm: query p99 min-max / p99.9 min-max (ms), arms within the T5 limit, arms within T4's 1.024 ms")
+    for arm, rs in arms.items():
+        ok5 = sum(1 for r in rs if r["query_p99"] <= r["t5_limit"])
+        ok4 = sum(1 for r in rs if r["lag_p99"] <= 1.024)
+        print(
+            f"{arm}: p99 {min(r['query_p99'] for r in rs):.1f}-{max(r['query_p99'] for r in rs):.1f}"
+            f" / p99.9 {min(r['q_p999'] for r in rs):.1f}-{max(r['q_p999'] for r in rs):.1f}"
+            f"; T5 {ok5} of {len(rs)}; T4 {ok4} of {len(rs)}"
+        )
     return 0 if n else 1
 
 
