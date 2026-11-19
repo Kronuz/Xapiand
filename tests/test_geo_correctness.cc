@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstdio>
 #include <exception>
+#include <memory>
 #include <string>
 #include <typeinfo>
 #include <vector>
@@ -39,10 +40,15 @@
 #include "geospatial/convex.h"
 #include "geospatial/ewkt.h"
 #include "geospatial/exception.h"
+#include "geospatial/geospatial.h"
 #include "geospatial/intersection.h"
+#include "geospatial/multiconvex.h"
 #include "geospatial/multipoint.h"
 #include "geospatial/point.h"
+#include "database/utils.h"
 #include "htm.h"
+#include "msgpack.h"
+#include "rapidjson/document.h"
 
 namespace {
 
@@ -179,6 +185,16 @@ void test_lens_of_wide_circles_covers_its_center() {
 		}
 	}
 	CHECK_FALSE(covers(ranges, at(0.01, 180.0)));
+
+	// F20: and the vertex itself, whatever the longitude it sits at (HTM::getId places points on a mesh edge).
+	for (const double lon : { 0.0, 90.0, 180.0, -90.0 }) {
+		Convex vertex_lens;
+		vertex_lens.add(Circle(at(0, lon - 45.0 < -180.0 ? lon + 315.0 : lon - 45.0), 9000000));
+		vertex_lens.add(Circle(at(0, lon + 45.0 > 180.0 ? lon - 315.0 : lon + 45.0), 9000000));
+		for (const bool partials : { true, false }) {
+			CHECK(covers(vertex_lens.getRanges(partials, error), at(0, lon)));
+		}
+	}
 }
 
 // --- F21: a circle past a hemisphere in a convex -----------------------------------------------------
@@ -283,6 +299,56 @@ void test_circles_that_never_meet_cover_nothing() {
 	CHECK(none.getTrixels(true, error).empty());
 }
 
+
+// --- D130: `_multiconvex` in the map form ----------------------------------------------------------
+
+std::shared_ptr<Geometry> from_json(const std::string& json) {
+	rapidjson::Document doc;
+	json_load(doc, json);
+	return GeoSpatial(MsgPack(doc)).getGeometry();
+}
+
+void test_multiconvex_serves_in_the_map_form() {
+	const std::string text = "MULTICONVEX(((-101.19 19.70, 3000), (-101.20 19.71, 3000)), ((-101.0 19.0, 3000), (-101.01 19.01, 3000)))";
+	const std::string one = "{\"_latitude\":[19.70,19.71],\"_longitude\":[-101.19,-101.20],\"_radius\":[3000,3000]}";
+	const std::string two = "{\"_latitude\":[19.0,19.01],\"_longitude\":[-101.0,-101.01],\"_radius\":[3000,3000]}";
+	const std::string nested = "{\"_latitude\":[[19.70,19.71],[19.0,19.01]],\"_longitude\":[[-101.19,-101.20],[-101.0,-101.01]],"
+		"\"_radius\":[[3000,3000],[3000,3000]]}";
+
+	// One list of lists, one convex per inner list: the same geometry as the EWKT form.
+	const auto geometry = from_json("{\"_multiconvex\":" + nested + "}");
+	CHECK(geometry->getType() == Geometry::Type::MULTICONVEX);
+	CHECK_EQ(geometry->toEWKT(), EWKT(text).getGeometry()->toEWKT());
+	CHECK(geometry->getRanges(true, error) == ewkt_ranges(text));
+	CHECK(covers(geometry->getRanges(true, error), at(19.705, -101.195)));
+	CHECK(covers(geometry->getRanges(true, error), at(19.005, -101.005)));
+	CHECK_FALSE(covers(geometry->getRanges(true, error), at(48.85, 2.35)));
+
+	// A flat list is one convex.
+	const auto single = from_json("{\"_multiconvex\":" + one + "}");
+	CHECK(single->getType() == Geometry::Type::MULTICONVEX);
+	CHECK(single->getRanges(true, error) == from_json("{\"_convex\":" + one + "}")->getRanges(true, error));
+
+	// Inside a collection and an intersection, beside the other members.
+	const auto collection = from_json("{\"_geometrycollection\":{\"_multiconvex\":" + nested + "}}");
+	CHECK(collection->getType() == Geometry::Type::COLLECTION);
+	CHECK(collection->getRanges(true, error) == ewkt_ranges("GEOMETRYCOLLECTION(" + text + ")"));
+	const auto intersection = from_json("{\"_geometryintersection\":{\"_multiconvex\":" + nested + ",\"_circle\":{\"_latitude\":19.705,\"_longitude\":-101.195,\"_radius\":1000}}}");
+	CHECK(intersection->getType() == Geometry::Type::INTERSECTION);
+	CHECK(covers(intersection->getRanges(true, error), at(19.705, -101.195)));
+	CHECK_FALSE(covers(intersection->getRanges(true, error), at(19.005, -101.005)));
+
+	// Malformed input is a GeoSpatialError, a 400.
+	for (const char* bad : {
+		"{\"_multiconvex\":1}",
+		"{\"_multiconvex\":{\"_latitude\":[[1,2]],\"_longitude\":[[1,2]]}}",
+		"{\"_multiconvex\":{\"_latitude\":[[1,2],[3,4]],\"_longitude\":[[1,2]],\"_radius\":[[5,5]]}}",
+		"{\"_multiconvex\":{\"_latitude\":[[1,2]],\"_longitude\":[[1,2]],\"_radius\":[[5]]}}",
+	}) {
+		CHECK_THROW(from_json(bad), GeoSpatialError);
+	}
+}
+
 }  // namespace
 
 // Each test runs guarded: an exception that escapes one is a failed check naming it, not an abort of the whole run.
@@ -296,6 +362,7 @@ int main() {
 		{ "test_negative_circle_in_a_convex_covers_its_center_and_not_its_hole", test_negative_circle_in_a_convex_covers_its_center_and_not_its_hole },
 		{ "test_ring_covers_its_band_whatever_the_order_of_its_circles", test_ring_covers_its_band_whatever_the_order_of_its_circles },
 		{ "test_circles_that_never_meet_cover_nothing", test_circles_that_never_meet_cover_nothing },
+		{ "test_multiconvex_serves_in_the_map_form", test_multiconvex_serves_in_the_map_form },
 	};
 	for (const auto& t : tests) {
 		try {
