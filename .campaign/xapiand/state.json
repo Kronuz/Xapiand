@@ -20768,9 +20768,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T23:39:42",
+      "updated": "2026-11-19T00:20:55",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "sha256-cl-10": {
