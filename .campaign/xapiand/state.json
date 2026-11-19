@@ -7918,9 +7918,9 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T18:09:23",
+      "updated": "2026-11-18T18:09:26",
       "worktree": "../http-wt/xapiand/http-halfclose"
     },
     "http-lane": {
