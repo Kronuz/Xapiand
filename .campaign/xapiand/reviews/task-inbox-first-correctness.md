@@ -83,3 +83,50 @@ Scripts are in `.scratch/xapiand/review-task-inbox-first-correctness/` (`run.sh 
   serves both schedulers.
 - I did not rerun the suite, TSan, the mutants or the owner test. Their jobs are listed above.
 - CI was running at review time.
+
+## Re-check
+
+Commit: task:b7e24490310f40f1933b693f3777fc4ea8ee1429 (b7e2449)
+Verdict: APPROVE
+Date: 2026-11-19
+
+A scoped re-check of `git diff aa92196 b7e2449`.
+
+Evidence accepted:
+- Suite 261119-114200-848297 and TSan 261119-114200-363a83 at b7e2449. Both are RelWithDebInfo,
+  so the new assert is live only in `deadline_test`.
+- Mutant f4 (task:85819b1) fails `two-drivers`: 261119-114206-73a222.
+
+My own probe: 261119-114835-4aa572 runs the whole suite as a Debug build at b7e2449, with the
+assert live in every test. All 11 tests pass. That covers `lifecycle_test`'s flush thread posting
+through `post_call`, and the `owner` test's second-thread driver.
+
+1. **F1 is closed.** `ARCHITECTURE.md:37-39` gives the per-step order: behind the ready handles,
+   ahead of any demoted one. It adds the one-driver rule and the ownership rule, and these match
+   `task.hh`.
+2. **F2 is closed.** The caveat is in service-shape step 5 (`:203-205`), in D16 (`:268`) and in
+   lifecycle.md (`:72-74`). Each says that with no thread, the flushes run inline on the loop, so
+   a `flush()` must never wait on the loop. That matches probe cbfb48. It is docs only, as the
+   quest's A2 test already pins the inline path.
+3. **F4: the assert is right on every path I traced.** These traces are by reading, plus the
+   Debug suite.
+   - A run takes `driver_` by CAS from empty (`task.hh:452-454`), and the guard's destructor
+     clears it on return and on unwind. The guard is declared first, so it is destroyed last,
+     after the inner scopes.
+   - A nested same-thread `run_until` sees its own id. It passes without taking `driver_`, so it
+     does not clear it.
+   - A sequential handoff from driver A to driver B passes. B's CAS is a read-modify-write, so it
+     reads the latest value of `driver_`. If that value is A's release-store of empty, B's
+     acquire synchronizes with A's whole run, and B passes. If it is still A's id, then A has not
+     left `run_until`, so the runs really overlap and the assert is correct to fire.
+   - A run that throws still releases `driver_`.
+   - `two-drivers` checks for a SIGABRT in a forked child, with `alarm(10)` against a hang. A
+     child that does not assert exits 0, which fails the CHECK.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| F7 | no | nit | `driver_` exists only under `#ifndef NDEBUG` (`task.hh:511-513`), so `inline_scheduler`'s layout depends on NDEBUG. A program that mixes NDEBUG and non-NDEBUG TUs would break the ODR, with two layouts of one class. `deadline_test`'s `#undef NDEBUG` is safe only because that test is its own program. | `task.hh:444-455`, `:511-513`; `test/deadline_test.cc:18` | Optional: keep the member in every build and compile only the CAS and assert under `#ifndef NDEBUG`. |
+
+F3, F5 and F6 stay open and non-blocking, as above.
+
+Not run: Linux and FreeBSD. CI was still running at b7e2449 when I wrote this.
