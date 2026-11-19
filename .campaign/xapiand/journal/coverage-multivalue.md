@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: waiting on jobs e1d625
+State: waiting on jobs 7797bd
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -47,3 +47,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Bugs found (pinned in tests, src/ untouched)
 
 - M1 MIN_STR_CMPVALUE (keymaker.cc) is std::string("\x00"): built from a C string it is empty, not NUL; a descending SerializeKey on a missing slot keys as empty.
+- M1 confirmed by the run: `MIN_STR_CMPVALUE` is empty (size 0); a descending string key on a missing slot is "".
+- M2 (range.cc getStringQuery): with no upper bound end_s is "" and start_s > end_s, so a keyword/text range with only a lower bound gives an empty query (pinned, line 287 of the range test).
+- M3 (generate_terms.cc): geo with global prefixes indexes level pos under acc_global_prefix[pos] but the query looks levels up in reverse; querying with the same global list finds nothing (pinned).
+
+## Run 261119-035511-e1d625 (keymaker 99.2% lines/98.6% br, terms 93.7/86.3, range 91.7/87.9, geospatialrange 92.0/81.2)
+
+18 failed checks, all expectations: centroids must be unit vectors (distance was NaN), quantization 1e-9, lone range ids < 2^48 start with NUL = list magic, stop words need XAPIAND_DATA_PATH, M2, M3. Fixed at 20f148b59fcd; rerun is job 7797bd.
