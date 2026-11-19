@@ -33,7 +33,7 @@ An aborted test writes no profile, so a test that crashes shows no gain: read `c
 harness/coverage_one.sh serialize src/serialize.cc                    # builds tests/test_serialize.cc instrumented, runs it
 ```
 
-prints for each named file its lines and branches and the uncovered ones. It builds only that test into
+prints for each named file its lines and branches and the uncovered ones. `REPEAT=20` runs the test 20 times, fails when any run does and prints how many libc++ copies the binary links; that is how an exit-time abort is checked. It builds only that test into
 `build-cov-TEST`, so a coverage test iterates in minutes rather than a full build.
 
 ## One C++ runtime

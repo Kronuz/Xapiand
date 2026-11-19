@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # coverage_one.sh TEST FILE...: builds tests/test_TEST.cc with the coverage instrumentation of harness/coverage.sh (LLVM's libc++
 # only), runs it, and prints for each source FILE (src/...) its line and branch coverage and the uncovered lines and branches.
-# Env: BUILD (default build-cov-TEST), JOBS (default 4), LLVM (default: Homebrew's llvm@22 or llvm).
+# Env: BUILD (default build-cov-TEST), JOBS (default 4), REPEAT (run the test N times; exit nonzero when any run fails), LLVM (default: Homebrew's llvm@22 or llvm).
 set -u
 TEST=$1; shift
 ROOT=$(cd "$(dirname "$0")/.." && pwd); cd "$ROOT" || exit 126
@@ -17,7 +17,11 @@ cmake -S . -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=
 	-DLIBCPPABI_LIBRARIES=$LLVM/lib/c++/libc++abi.dylib -DZLIB_INCLUDE_DIR="$ROOT/sdkinc" -DUUID_INCLUDE_DIR="$ROOT/sdkinc" >"$BUILD.log" 2>&1 || { tail -20 "$BUILD.log"; exit 1; }
 cmake --build "$BUILD" -j"$JOBS" --target "xapiand_test_coverage_$TEST" >>"$BUILD.log" 2>&1 || { grep -E "error|Error" "$BUILD.log" | head -30; exit 1; }
 rm -f "$BUILD"/prof-*.profraw
-LLVM_PROFILE_FILE="$BUILD/prof-%p.profraw" "$BUILD/bin/xapiand_test_coverage_$TEST"; rc=$?
+rc=0; bad=0
+for _ in $(seq "${REPEAT:-1}"); do
+	LLVM_PROFILE_FILE="$BUILD/prof-%p.profraw" "$BUILD/bin/xapiand_test_coverage_$TEST" || { rc=$?; bad=$((bad + 1)); }
+done
+[ "${REPEAT:-1}" -gt 1 ] && echo "runs: $bad of $REPEAT failed; libc++ copies linked: $(otool -L "$BUILD/bin/xapiand_test_coverage_$TEST" | grep -c 'libc++\.')"
 echo "test exit: $rc"
 $LLVM/bin/llvm-profdata merge -sparse -o "$BUILD/merged.profdata" "$BUILD"/prof-*.profraw || exit 1
 $LLVM/bin/llvm-cov export -format=lcov -instr-profile "$BUILD/merged.profdata" "$BUILD/bin/xapiand_test_coverage_$TEST" 2>/dev/null >"$BUILD/coverage.lcov"
