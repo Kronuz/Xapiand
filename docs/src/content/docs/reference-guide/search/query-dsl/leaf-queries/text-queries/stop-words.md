@@ -19,7 +19,9 @@ no file for them and a lookup of a shipped language never fails.
 A file `<data path>/stopwords/<language>.txt` replaces the list of that language. It holds words separated by
 white space, in any order and with repeats; the node reads every such file once, at startup, and a file that
 cannot be read stops the node instead of leaving the shipped list in its place. A file with a name that is not
-a shipped language defines a list of that name.
+a shipped language defines a list of that name. The install copies the shipped lists to
+`share/doc/xapiand/stopwords/`, a directory nothing reads: copy one into `<data path>/stopwords/` and edit it to
+override that language.
 
 Each list has a fingerprint, 16 hexadecimal digits of the hash of its sorted words, so the same words give the
 same fingerprint whether they are compiled in or read from a file. An index records the fingerprint of every
