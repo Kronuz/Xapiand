@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs 261119-012453-e1a2b8
+State: waiting on jobs 261119-025323-2fdee2
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ Written, not yet run: tests/test_coverage_main.cc (includes src/main.cc under `#
 
 ## Next
 
-0. Job 82ceb7 built and ran test_coverage_main (main.cc 304/733 lines alone): 88 of 90 checks held; the two open-files cases died on an uncaught SystemExit from adjustOpenFilesLimit (300 explicit; process limit 1024). Now they print its code and the fd counts (adjust_or_report); e1a2b8 (coverage, WORKLOADS="ctest main", at be0e1ca33) shows them and the E2E checks in $JOB_OUT/cov/main.log and ctest.log. Fix the guessed expectations, then rerun with NOBUILD=1 where the build dir is reusable, then the suite (campaign verify --for A3).
+0. e1a2b8 failed (ctest: the 2 open-files cases; E2E: 10 of 86 checks). Fixed at f84681f1a: open-files cases pinned to the real SystemExit(EX_OSFILE) (3 fds open, max 300 / 1024); driver expects EX_SOFTWARE (70) for a name mismatch, -v -v for INFO texts, 20x PUT statuses, a refused 300 limit, daemon waited for "Ready to Rock". Rerun 2fdee2 (coverage ctest+main, no NOBUILD: the test changed). Then read main.log, per-file numbers, `campaign verify coverage-core-main --for A3`, Evidence table.
 
 1. Read 82ceb7: fix compile errors or failed checks in test_coverage_main.
 2. Submit a coverage job: `WORKLOADS="ctest main" harness/coverage.sh $JOB_OUT/cov` (newman PATH as job 8642ea uses); read main.log for failed E2E checks, fix the driver's guesses (log formats, exit statuses) and pin real values.
@@ -43,4 +43,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 - Lead 2026-11-19: coverage.sh and docs/dev/coverage.md are in my file set. coverage.sh now discovers harness/coverage_e2e_<name>.* as workload <name> and honors NOBUILD=1; documented (untested until the coverage job runs).
-- Product bug (pinned in test_coverage_main, test_open_files_limit): adjustOpenFilesLimit with --max-files 300, pool 200, clients 1000 leaves database_pool_size 34 and max_clients -2 (negative).
+- max_clients -2 is NOT confirmed (hunt.md row stays UNCONFIRMED/refuted): adjustOpenFilesLimit throws SystemExit(EX_OSFILE=72) for --max-files 300 and for a 1024 hard limit with defaults (pool 200, clients 1000); it logs "Your open files limit of 300 is not enough for the server to start. Please increase ... to at least 1471" (plus "database_pool_size has been reduced to 34"). The real finding: the computed minimum_files (1471) includes the capped default pool, so any limit under 1471 refuses with defaults although the pool would shrink to fit. Lead decides whether to fix.
