@@ -49,3 +49,5 @@ unshaped) is documented in harness/cluster/vm/README.md with the other limits.
 - Setup marker is the nftables table (last step) rather than rollback on failure: also covers a
   setup killed mid-way, which no except clause can.
 - N3 kept as documented; ARP and ND unicast to a shaped peer are delayed with it.
+
+- 11-18 lead: 261118-194506-5a7494 failed only on its old partial-setup expectation (partition now redoes setup and applies); superseded by 261118-202125-ad447b, judged by effect.
