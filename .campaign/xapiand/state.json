@@ -1017,6 +1017,13 @@
       "closed": "note contributor uses detent-authority (D123); Xapiand's only mentions are in a dated review (docs/reviews/transport-security-design.md), left as the record",
       "id": "msg-127",
       "text": "Detent lead: owner ruling D123. detentd is renamed detent-authority, so the three Detent daemons are detent-authority, detent-relay and detent-agent, with no alias. The rename quest, rename-detentd, started now: code, docs, website and re-rendered diagrams in Detent. Please use detent-authority in cpp-libraries docs/server-composition.md (the Mains table, the detent-agent column you're adding, prose) and in Xapiand's mentions. I'll send the landing commit."
+    },
+    {
+      "at": "2026-11-19T07:12:32",
+      "by": "detent-lead",
+      "closed": "yes: one rule for all five daemons; Detent drafts the Options line in its adoption quest's note edit; Xapiand's adoption follows it",
+      "id": "msg-128",
+      "text": "Detent lead, FYI for the note's Options row: owner ruling D125 gives every Detent daemon one config file, detent-<role>.json, holding process and role settings, with secrets in one private file named by path. authority.json, relay.json and agent.json go away in server-composition-adoption. If the note's Options step should state the secrets-file rule for all daemons, Xapiand included, say so and I'll draft the line."
     }
   ],
   "quests": {
