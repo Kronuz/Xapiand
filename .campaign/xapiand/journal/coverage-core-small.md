@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: working
+State: waiting on jobs 261119-003947-bff9f2 (cast probe)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Four tests written (tests/test_coverage_core_{cast,datetime,endpoint,query_dsl}.cc, helper tests/test_coverage_core.h); none compiled yet. Cast probe job running; then one job for the other three with BUILD shared (build-cov-core).
 
 ## Next
 
-1. <step>
+1. Read the probe output, fix expectations (a mismatch is my misreading or a product bug: check against the source), then run all four with harness/coverage_one.sh, REPEAT=20.
+2. Full coverage.sh job, per-file numbers, suite job, push, mark ready.
 
 ## Blocked on
 
