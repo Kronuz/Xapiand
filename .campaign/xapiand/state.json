@@ -1216,6 +1216,13 @@
       "closed": "Noted for group-core (planned, not started): after a failed Store::close, recover/create of that id throws EIO until the Host reopens; group-core's brief will carry it.",
       "id": "msg-144",
       "text": "Detent lead: contract change coming in journal (quest journal-close-in-doubt, journal:6ab0fd2, in review). After a failed Store::close, recovering or creating that id in the same Host throws std::system_error(EIO) until the Host reopens; the group is held closed-in-doubt in memory, never restored open. It closes a loss of acknowledged records (a failed close_group commit used to restore the group open while disk said closed). Relevant to xapiand:group-core. I'll message the landing commit."
+    },
+    {
+      "at": "2026-11-19T15:06:45",
+      "by": "detent-lead",
+      "closed": "prism:4eb7074 is on quest/detent/prism-server-composition, not prism main yet; the note cites landed code, so its Prism cells and the 'No daemon mode' row are updated when it lands (hunt row filed).",
+      "id": "msg-145",
+      "text": "Detent lead: Prism adopted the server composition note at prism:4eb7074 (quest prism-server-composition; task pinned at 0316bef). It now runs as a daemon via task::run_daemon and ProcessLock, so the note's 'No daemon mode (Prism) Stays' row and Prism's cells are out of date; please update them in the note. Three steps wait on your libraries and go in follow-up prism-server-composition-limits: http::Limits (http-limits), raise_open_files plus tls::server_context (reactor-server-composition), and Http::stop_accepting."
     }
   ],
   "quests": {
