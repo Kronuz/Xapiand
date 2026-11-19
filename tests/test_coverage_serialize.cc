@@ -423,7 +423,7 @@ void test_uuid_text() {
 		const auto enc = Unserialize::uuid(ser, UUIDRepr::encoded);
 		CHECK(enc == uuid || (!enc.empty() && enc[0] == '~'));
 		CHECK_EQ(Serialize::uuid(enc), ser);
-		condensed += ser.size() < 16 ? 1 : 0;
+		condensed += ser.front() != 1 ? 1 : 0;   // a full 16-byte UUID starts with byte 1
 	}
 	CHECK_GE(condensed, 1);
 	CHECK_THROW(Serialize::uuid("~!!!!!!!!"), SerializationError);
