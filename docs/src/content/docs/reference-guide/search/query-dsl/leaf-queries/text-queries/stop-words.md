@@ -7,8 +7,26 @@ should be removed from a query before processing. This list can be overridden
 or stop words can still be searched for if desired, but by default any words
 in the active stop words list will not be searched for. A field has a stop word list
 only when it has a `_language` (see [text fields](/Xapiand/reference-guide/schemas/field-types/text-type)):
-with no language there is no list and no word is dropped. A language with no list
-drops nothing and is not an error.
+with no language there is no list and no word is dropped. A language that has no list
+is an error, never a field that quietly stops nothing.
+
+## Where the Lists Come From
+
+The lists of the 18 shipped languages (`ca`, `da`, `de`, `en`, `es`, `eu`, `fi`, `fr`, `hu`, `hy`, `it`, `nl`,
+`no`, `pt`, `ro`, `ru`, `sv` and `tr`, 7,326 words in all) are compiled into the `xapiand` binary: a node reads
+no file for them and a lookup of a shipped language never fails.
+
+A file `<data path>/stopwords/<language>.txt` replaces the list of that language. It holds words separated by
+white space, in any order and with repeats; the node reads every such file once, at startup, and a file that
+cannot be read stops the node instead of leaving the shipped list in its place. A file with a name that is not
+a shipped language defines a list of that name.
+
+Each list has a fingerprint, 16 hexadecimal digits of the hash of its sorted words, so the same words give the
+same fingerprint whether they are compiled in or read from a file. An index records the fingerprint of every
+list it indexed with. When that list is missing later, or its words are not the recorded ones (a file replaced
+it, or a newer release ships another list), the index is refused with an error that names the index, the
+list and both fingerprints, because a query that stopped other words than the indexing did would answer
+differently without saying so. Put the earlier file back to open the index again, or re-create it.
 
 ### Example
 
