@@ -1258,14 +1258,25 @@ namespace {
 // written here records the current ones, so the verdict stands: a wide search over a small schema pool loads each
 // schema once, not once per search. Bounded by the working set of a wide search; a full set starts over.
 class AgreeingIndexes {
-	static constexpr std::size_t limit = 65536;
 	std::mutex mtx;
+	std::size_t limit = 65536;
 	std::unordered_set<std::string> paths;
 
 public:
 	bool has(const std::string& path) {
 		std::lock_guard<std::mutex> lk(mtx);
 		return paths.contains(path);
+	}
+
+	std::size_t size() {
+		std::lock_guard<std::mutex> lk(mtx);
+		return paths.size();
+	}
+
+	void reset(std::size_t new_limit) {
+		std::lock_guard<std::mutex> lk(mtx);
+		limit = new_limit;
+		paths.clear();
 	}
 
 	void add(const std::string& path) {
@@ -1297,6 +1308,20 @@ check_stop_words_of(DatabaseHandler& handler, std::string_view index)
 }
 
 }  // namespace
+
+
+size_t
+agreeing_indexes_size()
+{
+	return agreeing_indexes.size();
+}
+
+
+void
+reset_agreeing_indexes(size_t limit)
+{
+	agreeing_indexes.reset(limit);
+}
 
 
 task::task<std::tuple<engine::SearchResult, MsgPack, engine::Query>>

@@ -93,3 +93,9 @@ Notes for the lead (not fixed, hunt rows):
 Files touched outside the quest's file set, for the lead's `campaign set`: `src/server/http_utils.h` (the 409 mapping, N3: no in-set way to a 4xx other than 400) and `tests/test_stopword_search.cc` is in the set by name.
 
 Rulings: the C1 check loads the schema of each other index (the schema cache holds 100 by default, so a wide search misses for most): cost in docs/perf/stopword-lists.md. The multi-index check swallows non-refusal errors (a missing index) because the search reports them itself.
+
+
+## Rulings I made (wide-search fix)
+
+- Test (a), stale "agrees" in one process: no in-process path swaps an index's recorded fingerprints. A client body carrying `_stop_fingerprint` is refused (the field is not valid; tests/test_stopword_search.cc, "swap_refusal"); the HTTP metadata write refuses `schema` (src/server/search_views.cc, write_metadata_view: "Metadata ... is read-only"); `restore_documents` (src/database/handler.cc:1121) writes documents through the current schema and never `_schema` metadata; schema writes (`SchemasLRU::set`) serialize a Schema whose fingerprints come from the current lists (schema.cc:5003, adopt at schema.cc:9423). Untested residue: a direct write of the foreign schema document under `.xapiand/indexes`.
+- Test (b), bound: `reset_agreeing_indexes(2)` then searches over 4 and 5 indexes: size stays <= 2 and zz is refused every round after eviction.

@@ -219,6 +219,34 @@ phase_check()
 		CHECK(!contains(refusal, ".__"));   // the index, not its shards
 	}
 	CHECK_EQ(search({"aa", "gone"}), "");   // an index that does not exist is skipped, as before
+
+	// An index found to agree is remembered for the process, so nothing may rewrite what it recorded: a client
+	// that sends a fingerprint of its own is refused (Schema validation), and the index keeps agreeing.
+	put("bb", "the quick red fox");
+	CHECK_EQ(search({"bb", "aa"}), "");   // aa agrees, as the second index of the search
+	std::string swap_refusal;
+	try {
+		const MsgPack body({{"u", MsgPack({{"_type", "text"}, {"_language", "en"}, {"_stop_fingerprint", "0000000000000000"}, {"_value", "the quick fox"}})}});
+		DatabaseHandler handler(endpoints_of({"aa"}), DB_WRITABLE | DB_CREATE_OR_OPEN);
+		engine::sync_wait(handler.index(MsgPack("2"), UNKNOWN_REVISION, true, body, true, json_type));
+	} catch (const std::exception& exc) {
+		swap_refusal = exc.what();
+	}
+	CHECK(contains(swap_refusal, "'_stop_fingerprint'"));
+	CHECK_EQ(search({"bb", "aa"}), "");
+
+	// Over the bound the set starts over and every index is checked again: zz is refused whatever was forgotten.
+	put("cc", "the quick red fox");
+	put("dd", "the quick red fox");
+	reset_agreeing_indexes(2);
+	CHECK_EQ(search({"aa", "bb", "cc", "dd"}), "");
+	CHECK(agreeing_indexes_size() <= 2);
+	for (int round = 0; round < 3; ++round) {
+		CHECK(contains(search({"aa", "bb", "zz", "cc", "dd"}), "Index zz was built with stop words list en"));
+		CHECK_EQ(search({"dd", "cc", "bb", "aa"}), "");
+		CHECK(agreeing_indexes_size() <= 2);
+	}
+	reset_agreeing_indexes();
 	return testh::failures == 0 ? 0 : 1;
 }
 

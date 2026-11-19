@@ -67,3 +67,28 @@ the measured start-up is not slower in a way a perfect hash could recover: with 
 about 140-210 us and 29 KB, with a lookup cost unchanged. The compiled data is a sorted blob (50 KB in all)
 whose bytes are also the fingerprint input. A view mode in `analysis::stopper` (a lookup over the blob, no
 copy) would save those 29 KB and 40-110 us per language and is not worth a pinned library change for them. Dropped.
+
+## A wide search checks every index it covers
+
+`DatabaseHandler::get_mset` checks each distinct index of a search after the first against the stop lists it
+recorded (the first one is `get_schema`'s). Probe: `xapiand_test_stopword_search --probe wide 2000 POOL`, a
+search for one term over 2,000 one-document indexes, five times in one process, strict jobs, `--schema-pool-size`
+POOL. Milliseconds per search; rep 0 is the first search of the process.
+
+| run | commit | pool 100 (reps 0-4) | pool 4096 (reps 0-4) |
+|---|---|---|---|
+| before: only the first index checked (mutant) | quest:e4a75e7e4 | 1,645 / 858 / 935 / 894 / 965 (261119-112243-6bdb1d) | 2,386 / 2,865 / 3,419 / 971 / 1,027 (261119-112245-25a678) |
+| after, every index through the schema cache | quest:0772ade92 | 24,283 / 29,155 / 16,981 / 6,720 / 3,022 (261119-112248-434c12) | 1,254 / 4,693 / 1,011 / 760 / 737 (261119-112250-23f8dd) |
+| after, agreeing indexes remembered | quest:18108e527 | 1,531 / 2,715 / 610 / 560 / 572 (261119-121016-295597) | 645 / 584 / 576 / 561 / 613 (261119-121017-3c611b) |
+
+The uncached check cost 3-18 times more at pool 100 (reps 2-4: 3,022-16,981 ms against 894-965): 2,000
+schemas through 100 slots are evicted and reloaded from metadata on every search. At pool 4096 every schema
+stays cached and the check cost nothing measurable (737-1,011 against 971-1,027). With the verdict remembered
+by path, steady state is 560-610 ms at both pool sizes, and the first search of a pool-100 process pays the
+one-time schema loads (rep 1, 2,715 ms), so read reps 2-4.
+
+Honest limits: the "before" commit is the mutant (quest:e4a75e7e4: `0772ade92` with the check removed), not
+the same code with the check off, and it ran in a different strict window from the others; the pool 4096 "before"
+reps 0-2 (2,386-3,419 ms) are noise of that window, not a cost of the code. The 560-610 ms steady state is below
+the 894-965 ms of the mutant; nothing in the change makes a search faster, so that gap is the runs' windows,
+not a speedup. The claim rests on pool 100 against pool 4096 at the same commit.
