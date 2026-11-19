@@ -28033,6 +28033,18 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:19",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
         }
       ],
       "landed": [],
@@ -28043,10 +28055,10 @@
       "needs": [],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-18T05:36:21"
+      "updated": "2026-11-19T06:17:19"
     },
     "xapiand-on-strata": {
       "accepted": {},
