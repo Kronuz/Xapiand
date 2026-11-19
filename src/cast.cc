@@ -135,8 +135,8 @@ Cast::cast(FieldType type, const MsgPack& obj)
 						return MsgPack(r);
 					}
 				}
-				{
-					// Try like POSITIVE.
+				if (obj.str_view().find('-') == std::string_view::npos) {
+					// Try like POSITIVE; strtoull reads a sign and wraps a negative.
 					int errno_save;
 					auto r = strict_stoull(&errno_save, obj.str_view());
 					if (errno_save == 0) {
