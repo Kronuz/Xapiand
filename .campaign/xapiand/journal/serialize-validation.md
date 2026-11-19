@@ -9,11 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Branch rewritten 11-18 23:12 (the test commit had a raw-string typo that stopped the suite build, job 636a02):
-tests Xapiand:0ce396821; fixes A1 Xapiand:4a92b06ea, A2 Xapiand:bafdf66d1, A4 Xapiand:fe731c5df, A3 Xapiand:1ef5a9f0d.
-A2 mutant (head with A2 reverted): Xapiand:4b7fde8de at refs/mutants/serialize-validation/a2-type-names.
-Local build in the worktree's `.scratch/serialize-validation/build` checks compile first; then jobs from
-.scratch/xapiand/serialize-validation/submit.sh (home) and `campaign verify`.
+Branch rewritten 11-18 23:25 (the test commit had a raw-string typo that stopped the suite build, job 636a02, and
+the type-name test's random words now exclude names before counting 10,000): tests Xapiand:cdcabfbae; fixes
+A1 Xapiand:e50891de3, A2 Xapiand:b5aba4703, A4 Xapiand:ef908749b, A3 Xapiand:8f68bbd53.
+A2 mutant (head with A2 reverted): Xapiand:21623ff47 at refs/mutants/serialize-validation/a2-type-names.
+Local build in the worktree's `.scratch/serialize-validation/build`: negative 34, time casts 61, geo 4469 checks pass
+at head; type names rebuilt after the word-count fix. Then jobs from .scratch/xapiand/serialize-validation/submit.sh
+(home) and `campaign verify`.
 
 ## Next
 
