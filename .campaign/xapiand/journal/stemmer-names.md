@@ -1,6 +1,6 @@
 # stemmer-names: journal
 
-State: waiting on jobs 261118-024858-f4b47c 261118-024902-cbb6ac 261118-024903-704f38
+State: ready for review
 Quest: .campaign/xapiand/quests/stemmer-names.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Merged master (365fd3b57). Interrupted jobs 261118-024902-cbb6ac and 261118-024903-704f38 lost their runner before starting (infrastructure, not a test failure); A2 resubmitted at the merged head. A3 mutant 261118-003721-65702e (done) and build-test 261118-024858-f4b47c (done) stand; the vocabulary row earlyenglish exit 1 is the expected difference (2,849 differ), which is why it was removed per D118.
+Head f0f313e64. A2 261118-115201-ed2420 passed (exit 0): 42 names served, 3 refused, every served name 0 differ against the oracle. A3 build-test 261118-024858-f4b47c passed (docs-only and master merges since); mutant 261118-003721-65702e fails without the fix. Earlier A2 jobs (261118-024902-cbb6ac, 261118-003712-6c88e6, 261118-112126-17e762 timeout) are replaced. The vocabulary row earlyenglish exit 1 is the expected difference (2,849 differ), why D118 removed it.
+
+CI at f0f313e64: only "Unit tests under TSan" failed, on test_node (TSan data race on vptr, Exception::~Exception vs logger's default_describe_exception, WAL write_replace_document). Not this quest's files; the same failure is on master at 10d4be321 (CI run 44281033140). Failed job rerun (run 44379724982); the other five CI jobs, FreeBSD and arm64 passed.
 
 ## Next
 
-1. Fold job results into the table below; then ready for review.
+1. Review (removes the earlyenglish name).
 
 ## Blocked on
 
@@ -36,8 +38,8 @@ stem_parity 2cc69d4d1e91, snowball-data vocabularies as release-rows A4 used):
 | Criterion | Evidence |
 |---|---|
 | A1 | D118 (PLAN.md Decisions) |
-| A2 | 261118-024902-cbb6ac (queued, head 3ba079814; earlier 261118-003712-6c88e6 at pre-rebase) |
-| A3 | 261118-024858-f4b47c build-test, 261118-024903-704f38 mutant at 95104c4b2 (head's tests, pre-removal schema; scratch branch mut-stemmer-names) (queued) |
+| A2 | 261118-115201-ed2420 (passed at f0f313e64) |
+| A3 | 261118-024858-f4b47c build-test (passed at 302d5ff53; only merges from master since); fails without: 261118-003721-65702e |
 
 ## Result
 
@@ -57,3 +59,4 @@ stem_parity 2cc69d4d1e91, snowball-data vocabularies as release-rows A4 used):
   from a531eabd6 so each removal stays its own commit; old jobs 261118-003117-68b230,
   261118-003120-4a78a1, 261118-003125-1bdbe0 cancelled.
 - Docs: no doc names any of the six; no docs change.
+- CI TSan test_node failure is pre-existing on master (10d4be321); reported to the lead, not fixed here (outside the file set).
