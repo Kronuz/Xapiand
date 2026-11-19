@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-164432-50b1a8 261118-164112-38046f; forks serialize and geospatial still writing
+State: waiting on jobs 261118-174155-a12f7b (fieldparser) 261118-174158-f210d3 (geospatial); serialize fork resubmitting; A4 waits on logger-exit-lifetime
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,6 +29,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F7 `['abc` hangs the parser forever (`case '\0': break;` in SQUARE_BRACKET_QUOTE never advances); its test is written but not run. F8 a space in a field name is not counted (`a b:c` names `a `). F9 the 1,024-byte field-name cap never applies. F10 an escaped quote closes the string. F11 a double-quoted name leaves the value flagged double-quoted. F12 `lens_*_quote` is not reset at the colon, so a later getter over-reads. F13 `parse(100)` clamps to 10 but arrays of size 10 are indexed at level 10 (out-of-bounds write). F14 `skip_quote` is unused. Unreachable: `case SQUARE_BRACKET_END`, the `>= 1024` check in INIT.
 
 ## Next
+
+Pre-check 50b1a8: with the logger's OnceFilter never destroyed (patched copy, job checkout only) the aggregations test fails 0 of 20 (baseline 20 of 20): the cause is confirmed; not A4 evidence. harness/coverage_one.sh reported 0/0 (relative source paths): fixed at 09806551e; jobs 38046f and 13cfad ran the old script. Field parser commit 48bb471c5 passed its 192 checks (job 38046f exit 0). Geospatial commit b35430350 (draft 1), serialize commit 4b690309d.
 
 Lead 11-18: option (a). Quest logger-exit-lifetime (in ../logger) fixes the OnceFilter lifetime with a test; coverage-areas lands after it; CMakeLists.txt is in my file set for the pin bump. Then: bump the logger pin (CMakeLists.txt:563) to its commit, rerun the aggregations test 20 times under one libc++ (0 of 20 is A4's evidence; 50b1a8 is only a pre-check of the patch), rerun coverage and the suite. Forks: fieldparser done (48bb471c5, job 38046f), serialize and geospatial running.
 
