@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-171555-da551f 261118-171557-af5502 261118-171600-54abd2 261118-171603-985f5d 261118-171605-c73004 261118-171608-1a6cec 261118-171612-9b1d05 261118-171614-f0f5a1 261118-171634-64599a 261118-171637-3deb48
+State: waiting on jobs 261118-175050-f89fd4 261118-175038-d98aaf 261118-175039-7ab381 261118-175040-2293f6
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -16,19 +16,30 @@ Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab
 
 ## Doing
 
-Lead's message (2026-11-18): keep config/hooks/handlers destructors; fence them with an
-after-teardown flag checked first in emit, raw stderr after it; a test that fails without it;
-producer benchmark before/after; close the doc's open point; push. Done in logger:61edbc6 and
-logger:db35b6c (pushed). Jobs at db35b6c:
-- A2 late, --fails-without at 61edbc6: 171555-da551f (LLVM 22), 171557-af5502 (Apple clang);
-  pass at the fix (late + once): 171600-54abd2.
-- A3 ASan 171603-985f5d, TSan 171605-c73004 (LLVM 22).
-- A4 suite 171608-1a6cec.
-- Bench (strict): producer 6e7ab9e vs db35b6c 171637-3deb48; producer 9a7c6b6 vs db35b6c (the
-  load alone) 171612-9b1d05; drain 6e7ab9e vs db35b6c 171614-f0f5a1.
-- ASan at 9a7c6b6 (170152-8be416) failed in logger_queue "exit flush" (CHECK n == 4*800+400 at
-  test/queue.cc:757: lines lost at exit, likely the 200 ms exit join timing out under ASan with host
-  load 122). Attribution job at main 6e7ab9e: 171634-64599a (ASan logger_queue).
+Lead (2026-11-18, second message): read the three failures, attribute, fix what's mine, rerun.
+Done (passed): late fails-without 171555-da551f, 171557-af5502; late+once pass 171600-54abd2;
+suite 171608-1a6cec at db35b6c; ASan logger_queue alone at main 171634-64599a (12.3 s).
+Failures read:
+- ASan 171603-985f5d (db35b6c) and 170152-8be416 (9a7c6b6): logger_queue "exit flush" only,
+  CHECK n == 4*800+400 (test/queue.cc:757), lines lost at exit. In the suite ctest runs 4 tests at
+  once (logger_queue took 29-35 s vs 12 s alone). Hypothesis: the 200 ms exit join times out under
+  contention, at main as at the fix. Experiment 175050-f89fd4 (.scratch exitflush.sh): the exit
+  child 20x per arm, main vs fix, alone and beside 3 ASan logger_timestamp_test loops, interleaved.
+- TSan 171605-c73004: data races reported on function-local static init (`mach_clock()::clock`,
+  `tick_stamps()::tick`), code this quest did not touch; logger_clock, logger_producer, logger_queue
+  fail on the warnings. Likely the LLVM 22 libc++abi build (guard not seen by TSan). Attribution:
+  same script at main 175038-d98aaf; the AGENTS.md recipe at the fix 175039-7ab381. CI linux-tsan
+  green at both fix commits.
+- Bench 171637-3deb48: harness error, not a regression: logger_ab.py refuses an output dir that
+  exists (left by 171612-9b1d05 in the shared slot). Fixed in .scratch ab_run.sh (rm -rf first);
+  rerun 175040-2293f6.
+Bench results so far (strict beside light holds, host load high: wide intervals):
+- 171612-9b1d05 producer, 9a7c6b6 -> db35b6c (the teardown load alone), 8 rounds, median ratio
+  [95% interval]: burst 1p 1.001 [0.831, 1.317], back to back 1p 1.032 [0.834, 1.235], end-to-end 1p
+  1.067 [0.654, 1.761], burst 4p 1.007 [0.896, 1.078], back to back 4p 1.014 [0.874, 1.095],
+  end-to-end 4p 0.967 [0.886, 1.047]. Every interval spans 1.
+- 171614-f0f5a1 drain (emit per line), 6e7ab9e -> db35b6c, 15 paired rounds: 1491.5 -> 1412.2 ns
+  per line, median ratio 0.962 (range 0.823..1.101).
 
 ## Next
 
