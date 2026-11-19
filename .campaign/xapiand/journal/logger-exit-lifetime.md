@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-204609-7d5079 261118-204610-c89e2b 261118-204610-fedb55 261118-204611-770ed2 261118-204611-969d29 261118-204612-0dc795 261118-204612-fdaa15 261118-204612-f4350c 261118-204614-336200 261118-204615-b7d8ee 261118-204617-778bc7 261118-204618-8f59b1 261118-204620-d7ed83 261118-204621-930578 261118-204622-0b0cd4 261118-204624-bc79bc
+State: review CHANGES folded in (F1-F6) at logger:dec68de; waiting on jobs 261118-211550-396b63 261118-211530-b2be3e 261118-211531-a0d2cc 261118-211551-f2d9be 261118-211533-3692bb 261118-211535-b29cd5 261118-211536-fab87d 261118-211538-f22be9 261118-211539-e2b84a 261118-211539-de38d7 261118-211539-19d855 261118-211540-46d3e1 261118-211540-5fa769 261118-211540-ef50bc 261118-211540-b21587 261118-211541-c3bd82 261118-211541-54fa80 261118-211541-bb2b1d 261118-211542-bf5dcf 261118-211542-b01ba9
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -43,6 +43,21 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
   Pushed.
 - logger:0f1063d `mach_clock()` and `tick_stamps()` made in `LogWorker::get()`'s creation lambda,
   before the LOG thread starts (pthread_create orders them before its reads). Pushed.
+- Review CHANGES (reviews/logger-exit-lifetime-correctness.md), lead's message:
+  - logger:ab42a67 test: `late` also logs L_EXC from the late static with a heap-held describe hook
+    that exits 95 once destroyed; expects "late exception line: late boom" on stderr.
+  - logger:d037d5b F4: the raw stderr write after the teardown appends the line's description.
+  - logger:a3a7ef6 F1: `describe_at_call` loads `torn_down` first; set, it uses the std default.
+  - logger:ef5f968 test: `fork` (logger_exit_fork) and `logexit` (logger_exit_logexit), each child
+    run with a deadline.
+  - logger:e74c64e F3: the stop returns at once when getpid() differs from the LOG thread's
+    creator's or it runs on the LOG thread (`tid_`). Doc: the cap bounds the drain; a handler
+    blocked forever in a write is the case it does not bound.
+  - logger:dec68de F2: abandoned, the LOG thread expires the due lines out of the wheel and keeps
+    the count still filed (`not_due_`, read after `parked`); report "at most N lines not written".
+    F5/F6 documented in docs/API.md. Pushed.
+  - Reviewer's probes copied to .scratch/xapiand/logger-exit-lifetime/review-probe (count mode
+    parses "at most N"; late-exc now sees "late exc line: late boom", which it reports as ok).
 - Probe branches (local, never pushed): probe/exit-abandon logger:333e7ff (b6371a4 + a stderr report
   when the exit join times out), probe/exit-abandon-main logger:832db5e (the same on main).
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
@@ -81,6 +96,13 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   204622-0b0cd4.
   Passed so far: suite 204609-df150a, 79d2fa rerun 204611-580d8d; CI run 44460551314 green at
   0f1063d. Next: when the rest pass, paste the brief's evidence table, mark ready for review.
+- Review round jobs: fails-without F1 211550-396b63 (d037d5b, late), F3 211530-b2be3e (fork),
+  211531-a0d2cc (logexit) at ef5f968; pass at dec68de 211551-f2d9be (late fork logexit capped
+  slow); review probes 211533-3692bb (plain), 211535-b29cd5 (ASan), 211536-fab87d (TSan); reruns at
+  dec68de: suite 211538-f22be9, ASan 211539-e2b84a 211539-de38d7, TSan recipe 211539-19d855, A2
+  211540-46d3e1 211540-5fa769, A5 211540-ef50bc 211540-b21587 211541-bb2b1d 211542-bf5dcf
+  211542-b01ba9, slow+stall 211541-c3bd82, capped 211541-54fa80. Next: when all pass, CI green,
+  evidence table, ready for review.
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
@@ -182,6 +204,7 @@ Benchmarks, strict beside light holds (host load high, wide intervals), median r
 
 ## Rulings I made
 
+- F1 fails-without filed under A2 and F3's under A4 (A1 is an [artifact] criterion, proven here).
 - The stop reports on stderr when it gives up after a stall too, not only at the cap: lines lost
   either way are never silent.
 - Exit-flush loss (A3): proved by probe, not bisected: the probe names the mechanism directly
