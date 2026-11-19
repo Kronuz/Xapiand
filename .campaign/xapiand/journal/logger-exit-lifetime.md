@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-175050-f89fd4 261118-175754-d9ffd0 261118-175800-a631ea 261118-175804-b5584f 261118-175808-cd9ef8 261118-175813-8e662b 261118-175828-fd348c 261118-175836-b6440b 261118-175843-a6f983 261118-175850-27a230
+State: waiting on jobs 261118-180838-6a28bf 261118-180840-23d801 261118-180842-978b44 261118-180844-44f49a 261118-180847-4a6030 261118-180849-59f354 261118-180851-36de6b 261118-180853-c68838 261118-180856-e0632e 261118-180858-55c995
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -17,6 +17,12 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
 - logger:004304e A5 fix: a record keeps the description (`std::optional<std::string> exc`), made by
   `describe_exception` on the logging thread (`describe_at_call`; a throwing hook gives
   "unknown exception"); the LOG thread never touches the exception. Pushed.
+- logger:cc66e3a test/exception.cc holds a watchdog so each L_EXC is due a tick later: at
+  b3cab44 the test passed under TSan with the bug present (175754-d9ffd0, 175800-a631ea exit 0),
+  since a line written at once could be released after its thread dropped the handle, ordering
+  the two through the record's shared_ptr. Pushed.
+- Mutant (local branch mutant/a5-no-describe-at-call, logger:5660da5, never pushed): cc66e3a with
+  logger:004304e reverted, for the A5 --fails-without jobs.
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
 
 ## Doing
@@ -26,9 +32,11 @@ default_describe_exception vs ~StorageCorruptWAL on the throwing thread. Reading
 an std::exception_ptr (shared ownership, not a raw reference), so the destruction followed the LOG
 thread's release; the order lives in libstdc++'s exception refcount, uninstrumented, so TSan saw
 no happens-before. Fixed anyway by the lead's design (text captured at the call): logger:004304e.
-Jobs: fails-without at b3cab44 175754-d9ffd0 (LLVM 22), 175800-a631ea (AGENTS recipe); clean at
-the fix 175804-b5584f, 175808-cd9ef8. Head 004304e: suite 175813-8e662b, ASan 175828-fd348c, TSan
-(AGENTS recipe) 175836-b6440b, producer A/B 175843-a6f983, drain A/B 175850-27a230.
+Jobs at head logger:cc66e3a: A5 fails-without at the mutant 180838-6a28bf (LLVM 22),
+180840-23d801 (AGENTS recipe); clean at the fix 180842-978b44, 180844-44f49a; suite 180849-59f354,
+ASan 180851-36de6b, TSan (AGENTS recipe) 180853-c68838, producer A/B 180856-e0632e, drain A/B
+180858-55c995; exit-flush experiment 180847-4a6030 (175050-f89fd4 died in its build: llvm.sh's
+otool line, now optional).
 
 Lead (2026-11-18, second message): read the three failures, attribute, fix what's mine, rerun.
 Done (passed): late fails-without 171555-da551f, 171557-af5502; late+once pass 171600-54abd2;
@@ -78,7 +86,7 @@ Nothing.
 | A1 | docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c) |
 | A2 | 261118-170114-f2778f (--fails-without at logger:d031751, LLVM 22 libc++): child aborts `system_error: mutex lock failed: Invalid argument`, status 6; 261118-170117-86f821 (same, Apple clang): the same abort; 261118-170120-b58cbb: passes at logger:9a7c6b6 (LLVM 22 libc++) |
 | A3 | pending at db35b6c: 171603-985f5d (ASan), 171605-c73004 (TSan); at 9a7c6b6 ASan 170152-8be416 failed logger_queue exit flush (attribution 171634-64599a); CI linux-asan-ubsan and linux-tsan green at 9a7c6b6 (run 44433808350) |
-| A5 | pending: fails-without at logger:b3cab44 175754-d9ffd0, 175800-a631ea; clean at logger:004304e 175804-b5584f, 175808-cd9ef8 |
+| A5 | pending: fails-without at the mutant logger:5660da5 180838-6a28bf, 180840-23d801; clean at logger:cc66e3a 180842-978b44, 180844-44f49a |
 | A4 | pending: suite 171608-1a6cec at db35b6c; CI green on all platforms at logger:9a7c6b6 (run 44433808350) and logger:db35b6c (run 44435549806) (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
 
 ## Result
