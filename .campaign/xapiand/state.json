@@ -1103,6 +1103,21 @@
         "quest": "detent:consensus-worker-release"
       },
       "text": "detent:consensus-worker-release started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-worker-release, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T13:22:06",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-136",
+      "items": {
+        "task-asio-layout": "frees test/**, CMakeLists.txt for task-asio-layout"
+      },
+      "settles": {
+        "start": [
+          "task-asio-layout"
+        ]
+      },
+      "text": "task-driver-layout landed: unlocks frees test/**, CMakeLists.txt for task-asio-layout"
     }
   ],
   "quests": {
@@ -24352,6 +24367,8 @@
       "after": [
         "task-driver-layout"
       ],
+      "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+      "branch": "quest/xapiand/task-asio-layout",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -24366,6 +24383,7 @@
         "test/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-asio-layout",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -24373,9 +24391,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
-      "updated": "2026-11-19T13:20:03"
+      "updated": "2026-11-19T13:22:35",
+      "worktree": "../task-wt/xapiand/task-asio-layout"
     },
     "task-driver-layout": {
       "accepted": {
