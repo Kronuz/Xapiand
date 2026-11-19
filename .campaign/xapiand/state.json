@@ -24814,6 +24814,42 @@
       "updated": "2026-11-19T13:22:06",
       "worktree": ""
     },
+    "task-fire-pending-guard": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "later": true,
+          "level": "light",
+          "minutes": 40,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task_timers.hh",
+        "test/timers_test.cc",
+        "docs/mechanisms/lifecycle.md",
+        "docs/API.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "planned",
+      "title": "debounce: fire_pending() from inside a fire is caught, not a hang",
+      "updated": "2026-11-19T14:40:35"
+    },
     "task-inbox-first": {
       "accepted": {
         "correctness": {
