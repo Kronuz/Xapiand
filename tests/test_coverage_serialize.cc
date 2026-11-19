@@ -37,6 +37,7 @@
 #include "database/schema.h"
 #include "database/utils.h"
 #include "datetime.h"
+#include "datetime_msgpack.h"
 #include "exception_engine.h"
 #include "msgpack.h"
 #include "rapidjson/document.h"
@@ -510,7 +511,7 @@ void test_cast_objects() {
 	CHECK_EQ(obj(FieldType::datetime, R"({"_datetime":"1970-01-02"})"), day);
 	CHECK_EQ(obj(FieldType::time, R"({"_time":"10:30:00"})"), Serialize::timestamp(37800.0));
 	CHECK_EQ(obj(FieldType::timedelta, R"({"_timedelta":"+01:30:00"})"), Serialize::timestamp(5400.0));
-	CHECK_EQ(obj(FieldType::geo, R"({"_ewkt":"POINT(-101.19 19.70)"})"), Serialize::geospatial(point));
+	CHECK_EQ(obj(FieldType::geo, "{\"_ewkt\":\"POINT(-101.19 19.70)\"}"), Serialize::geospatial(point));
 	CHECK_EQ(Serialize::object(spc(FieldType::geo), point), Serialize::geospatial(point));
 	for (const char* kind : { "_circle", "_convex", "_polygon", "_chull", "_multipoint", "_multicircle", "_multipolygon", "_multichull",
 			"_geometrycollection", "_geometryintersection" }) {
