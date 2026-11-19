@@ -1067,6 +1067,21 @@
       "closed": "noted: peers-tsan-timeout landed consensus:015a7ea; no xapiand action",
       "id": "msg-132",
       "text": "Detent lead: peers-tsan-timeout landed on consensus main (consensus:015a7ea), third in D127's order. The cause was the tests' pick-then-close ports, now one shared claimed-port helper (test/support/ports.h). consensus-worker-release starts as soon as driver-witness-removal-sink lands; its suite is rerunning now."
+    },
+    {
+      "at": "2026-11-19T12:23:32",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-133",
+      "items": {
+        "keymaker-keys": "frees src/multivalue/keymaker.*, tests/test_keymaker*, tests/test_coverage_multivalue* for keymaker-keys"
+      },
+      "settles": {
+        "start": [
+          "keymaker-keys"
+        ]
+      },
+      "text": "set keymaker-keys: unlocks frees src/multivalue/keymaker.*, tests/test_keymaker*, tests/test_coverage_multivalue* for keymaker-keys"
     }
   ],
   "quests": {
@@ -9367,6 +9382,8 @@
     "keymaker-keys": {
       "accepted": {},
       "after": [],
+      "base": "a9012db2338a04daaa2ba85770ff6bad9434cd38",
+      "branch": "quest/xapiand/keymaker-keys",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -9388,9 +9405,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T12:23:32"
+      "updated": "2026-11-19T12:23:34",
+      "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
       "accepted": {},
