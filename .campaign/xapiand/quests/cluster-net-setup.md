@@ -5,16 +5,13 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+cluster-vm-tier's review findings (.campaign/xapiand/reviews/cluster-vm-tier-correctness.md) are fixed: a guest's first tc/nft setup either completes or fails the command (N1: a later `shape` exited 0 and did nothing, 50 ms measured 1.28 ms), and partitions and shapes cover IPv6 on l2 (N2). N3-N7 fixed where cheap, otherwise noted in the harness docs.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A setup stopped partway makes the next `shape` or `partition` redo it or fail, never exit 0 doing nothing: a net_test.py case that fails without the fix
+- A2 IPv6 traffic between a partitioned pair is dropped and a shaped pair is delayed: a VM job with values
+- A3 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +20,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: follow-up of cluster-vm-tier review N1-N7; cluster measurements depend on shaping really applying.
 
 ## May land early
 
