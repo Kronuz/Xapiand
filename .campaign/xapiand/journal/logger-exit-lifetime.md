@@ -11,7 +11,7 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
   after logger.cc's statics logs; its lines must reach stderr. Must fail.
 - logger:db35b6c the teardown fence (msg from the lead, below): `Teardown` defined right after
   config/hooks/handlers sets `torn_down`; emit and log load it first and write raw to stderr.
-  Pushed; CI pending.
+  Pushed; CI run 44435549806 green on all 9 platforms, logger_exit_late passed on each.
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
 
 ## Doing
@@ -34,7 +34,7 @@ logger:db35b6c (pushed). Jobs at db35b6c:
 
 1. Read the jobs; if 171634-64599a also fails at main, the exit-flush loss is pre-existing (report
    it; the join timeout is the cause to check); else investigate in my change.
-2. Check CI for logger:db35b6c; paste `campaign brief`'s evidence table; bench numbers to Result.
+2. Paste `campaign brief`'s evidence table; bench numbers to Result.
 3. Mark ready for review.
 
 ## Blocked on
@@ -48,7 +48,7 @@ Nothing.
 | A1 | docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c) |
 | A2 | 261118-170114-f2778f (--fails-without at logger:d031751, LLVM 22 libc++): child aborts `system_error: mutex lock failed: Invalid argument`, status 6; 261118-170117-86f821 (same, Apple clang): the same abort; 261118-170120-b58cbb: passes at logger:9a7c6b6 (LLVM 22 libc++) |
 | A3 | pending at db35b6c: 171603-985f5d (ASan), 171605-c73004 (TSan); at 9a7c6b6 ASan 170152-8be416 failed logger_queue exit flush (attribution 171634-64599a); CI linux-asan-ubsan and linux-tsan green at 9a7c6b6 (run 44433808350) |
-| A4 | pending: suite 171608-1a6cec at db35b6c; CI run 44433808350 green on all platforms at logger:9a7c6b6 (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
+| A4 | pending: suite 171608-1a6cec at db35b6c; CI green on all platforms at logger:9a7c6b6 (run 44433808350) and logger:db35b6c (run 44435549806) (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
 
 ## Result
 
