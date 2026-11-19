@@ -1,6 +1,6 @@
 # http-halfclose: journal
 
-State: waiting on jobs 261118-180446-6142f8 261118-180447-06d623 261118-180449-60722d 261118-180450-67e80e
+State: waiting on jobs 261118-181016-e8d252 261118-181018-e0741e 261118-180447-06d623 261118-180449-60722d 261118-180446-6142f8
 Quest: .campaign/xapiand/quests/http-halfclose.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,36 +9,35 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs queued at http:33c3f7f (suite, TSan) and at the mutant http:8781b59 (local branch
-`mutant/xapiand/http-halfclose-a1`: 33c3f7f with http_asio.h and http_message.h from the base;
-never pushed, never landed). Branch pushed; CI runs on quest/xapiand/http-halfclose.
+Head http:cd6ed31 (fix http:33c3f7f + AGENTS.md/CHANGELOG.md). Jobs: suite at cd6ed31
+261118-181016-e8d252, TSan at cd6ed31 261118-181018-e0741e (replaced 261118-180450-67e80e), suite at
+33c3f7f 261118-180446-6142f8, and the two `--fails-without` jobs at the mutant http:8781b59 (local
+branch `mutant/xapiand/http-halfclose-a1`: 33c3f7f with http_asio.h and http_message.h from the
+base; never pushed, never landed). Branch pushed; CI runs on quest/xapiand/http-halfclose.
+Correctness review running in parallel (the lead's).
 
 ## Next
 
-1. Record the four jobs and CI; on green, set State to ready for review.
-2. Once the lead widens the file set (Blocked on), update AGENTS.md:155-158 and CHANGELOG.md.
+1. Record the jobs and CI; on green, set State to ready for review; fold in review findings by id.
 
 ## Blocked on
 
-The lead: AGENTS.md (lines 155-158, "EOF or a read error ... calls Request::cancel(http::disconnected).
-That is the per-request rule and it differs from the deferred-reply monitor's") now states the old
-rule, and CHANGELOG.md has no entry for a behavior change Detent and Xapiand see. Both are outside
-the file set (http_asio.h, http_message.h, test/**, docs/**, CMakeLists.txt). Options: (a) widen
-the set to AGENTS.md and CHANGELOG.md and I update them here (recommended: one commit, the docs
-match the code that lands); (b) a follow-up quest. Nothing else waits on it.
+Nothing. (The lead widened the file set to AGENTS.md and CHANGELOG.md; done in http:cd6ed31.)
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261118-180446-6142f8 at http:33c3f7f; `--fails-without` 261118-180447-06d623 (coroutine at the mutant) |
-| A2 | suite 261118-180446-6142f8 (coroutine [J] reset and failed-write checks, [C] reset) |
-| A3 | suite 261118-180446-6142f8; `--fails-without` 261118-180449-60722d (readahead at the mutant) |
-| A4 | TSan 261118-180450-67e80e |
-| A5 | suite 261118-180446-6142f8; CI on quest/xapiand/http-halfclose (pending) |
-| A6 | [artifact] http_asio.h ConnectionInput comment (was 426-431), http_message.h `disconnected` and `Request::cancel` comments, docs/mechanisms/coroutine-handlers.md "Cancel reads, not writes" (one rule, failed write, what ends a waiting handler) |
+| A1 | suite 261118-181016-e8d252 at http:cd6ed31 (and 261118-180446-6142f8 at 33c3f7f); `--fails-without` 261118-180447-06d623 (coroutine at the mutant) |
+| A2 | suite 261118-181016-e8d252 (coroutine [J] reset and failed-write checks, [C] reset) |
+| A3 | suite 261118-181016-e8d252; `--fails-without` 261118-180449-60722d (readahead at the mutant) |
+| A4 | TSan 261118-181018-e0741e at http:cd6ed31 |
+| A5 | suite 261118-181016-e8d252; CI on quest/xapiand/http-halfclose (pending) |
+| A6 | [artifact] http_asio.h ConnectionInput comment (was 426-431), http_message.h `disconnected` and `Request::cancel` comments, docs/mechanisms/coroutine-handlers.md "Cancel reads, not writes" (one rule, failed write, what ends a waiting handler), AGENTS.md watch invariant, CHANGELOG.md 2026-11-18 entry (http:cd6ed31) |
 
-Lead's message (Detent's long-poll shape): done. coroutine_test [J] `/poll` is that shape (a
+Lead's message (Detent's long-poll shape): done. Lead's message (widen to AGENTS.md, CHANGELOG.md): done in http:cd6ed31.
+
+Detent's long poll: coroutine_test [J] `/poll` is that shape (a
 handler held on its token up to its own bound): half-closed, it is answered "poll:bound" at its
 bound (301 ms of 300); half-closed and then reset, nothing is seen until the bound, then the write
 fails and cancels the request (the kept token reads http::disconnected; released 242 ms after the
@@ -48,7 +47,7 @@ Local run (macOS, RelWithDebInfo, the tree of http:33c3f7f): 13/13 ctest pass.
 
 ## Result
 
-http:33c3f7f. EOF on a connection with a request in flight ends reading and cancels nothing;
+http:33c3f7f (code, tests, mechanism doc) and http:cd6ed31 (AGENTS.md, CHANGELOG.md). EOF on a connection with a request in flight ends reading and cancels nothing;
 a reset cancels (watch) or closes the reply exchange (monitor); a failed reply write now also
 calls `Request::cancel(http::disconnected)`. Watch and monitor read one rule (a read error other
 than EOF is a disconnect). The connection already outlived the handler and its reply (the
