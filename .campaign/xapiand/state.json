@@ -25320,10 +25320,11 @@
     "wide-search-loop": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T03:24:56",
+          "at": "2026-11-19T05:44:52",
           "base": "a6de2c57936a95716912a676dee99e48d5011f01",
           "blobs": {
             "docs/design/wide-search-loop.md": "100644:23d7200b4e7e5c3fdc47ddb30d06ca18c901714c",
+            "harness/async_allowlist.tsv": "100644:82d044e7aa9117462bfee2a87e6eba0ebfe0247d",
             "harness/wide_search_check.py": "100755:00376b9a0dc8bf00ae4468c8122867d9c4a180e3",
             "harness/wide_search_halfclose.py": "100755:e00746eec871aa17d24e769b0ac301c5b45a3e93",
             "harness/wide_search_reactor_stalls.patch": "100644:2c990f9bc82baf61df3a70fe750bf2a3ece0d5af",
@@ -25335,13 +25336,14 @@
             "src/database/wide_search.h": "100644:a242aa173ba78e0de7d0dc8637e57796c4c5dea4",
             "src/server/search_views.cc": "100644:600f5449ec5e71190962c1e7fb4e5f417c15d973",
             "tests/test_node.cc": "100644:dfb4df5c3ab214276b233d5120dcb1f604bd18e9",
-            "tests/test_wide_search.cc": "100644:3a68ae8ab7efcbf50fff6dddd16658142bb9383c"
+            "tests/test_wide_search.cc": "100644:3dd76df79ed9d9ad22f1521f1daa711995f1df2f"
           },
           "by": "review",
-          "commit": "5b206efdec1b95721da151b7faa9be0f95c5eab4",
+          "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
           "criteria": "3be2c18b9e5aedd9",
           "diffs": {
             "docs/design/wide-search-loop.md": "8a8e4780c64f103e",
+            "harness/async_allowlist.tsv": "058287ed11f6c5af",
             "harness/wide_search_check.py": "c972e894f51fa607",
             "harness/wide_search_halfclose.py": "cb9ddd6c8a8ae909",
             "harness/wide_search_reactor_stalls.patch": "a47315a81a06ea44",
@@ -25353,12 +25355,12 @@
             "src/database/wide_search.h": "21d902e7c276751d",
             "src/server/search_views.cc": "4eba71e47e29e8fd",
             "tests/test_node.cc": "08c2c5fffc7595b9",
-            "tests/test_wide_search.cc": "9e34d32ab57620d5"
+            "tests/test_wide_search.cc": "6a9a853b7e96922a"
           },
           "findings": {},
           "note": "",
-          "review": "91a2a8b1c03a04bd82b41ca00a73fd0d944307da",
-          "reviewed": "5b206efdec1b95721da151b7faa9be0f95c5eab4",
+          "review": "7265610722d3cf07ef915cd3c2be7321a33c4b4f",
+          "reviewed": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
           "verdict": "APPROVE"
         }
       },
@@ -25397,7 +25399,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T04:18:10",
+      "updated": "2026-11-19T05:44:52",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
