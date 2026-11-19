@@ -25017,9 +25017,11 @@
         "task.hh",
         "lifecycle.hh",
         "task_timers.hh",
-        "test/{lifecycle",
-        "timers}_test.cc",
-        "docs/mechanisms/lifecycle.md"
+        "test/lifecycle_test.cc",
+        "test/timers_test.cc",
+        "docs/mechanisms/lifecycle.md",
+        "docs/API.md",
+        "docs/design/service-shape.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-lifecycle-followups",
       "landed": [],
@@ -25033,7 +25035,7 @@
       "risk": "high",
       "status": "active",
       "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
-      "updated": "2026-11-19T13:49:05",
+      "updated": "2026-11-19T14:13:39",
       "worktree": "../task-wt/xapiand/task-lifecycle-followups"
     },
     "task-lifecycle-rename": {
