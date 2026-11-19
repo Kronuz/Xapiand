@@ -41,13 +41,15 @@ Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070126-838b76, 261119-070133-ac2bcb |
+| A2 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A3 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A4 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070140-37fb0f |
+| A5 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070146-73b92c |
+| A6 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A7 | `docs/design/service-shape.md`: "task::lifecycle" |
 
 ## Result
 
@@ -75,15 +77,3 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   fake-clock scheduler is single-threaded; `add_flush` returns a registration removed when the
   driver returns, so a late third signal never flushes a dead set.
 - The process step (`run_daemon`, `ProcessLock`) is not in A1-A7; left for a later quest.
-
-## Evidence
-
-| Criterion | Evidence |
-|---|---|
-| A1 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070126-838b76, 261119-070133-ac2bcb |
-| A2 | 261119-070103-951ddb, 261119-070103-36a333 |
-| A3 | 261119-070103-951ddb, 261119-070103-36a333 |
-| A4 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070140-37fb0f |
-| A5 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070146-73b92c |
-| A6 | 261119-070103-951ddb, 261119-070103-36a333 |
-| A7 | `docs/design/service-shape.md`: "task::lifecycle" |
