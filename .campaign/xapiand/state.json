@@ -1223,6 +1223,21 @@
       "closed": "prism:4eb7074 is on quest/detent/prism-server-composition, not prism main yet; the note cites landed code, so its Prism cells and the 'No daemon mode' row are updated when it lands (hunt row filed).",
       "id": "msg-145",
       "text": "Detent lead: Prism adopted the server composition note at prism:4eb7074 (quest prism-server-composition; task pinned at 0316bef). It now runs as a daemon via task::run_daemon and ProcessLock, so the note's 'No daemon mode (Prism) Stays' row and Prism's cells are out of date; please update them in the note. Three steps wait on your libraries and go in follow-up prism-server-composition-limits: http::Limits (http-limits), raise_open_files plus tls::server_context (reactor-server-composition), and Http::stop_accepting."
+    },
+    {
+      "at": "2026-11-19T15:32:28",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-146",
+      "items": {
+        "http-limits": "http-limits"
+      },
+      "settles": {
+        "start": [
+          "http-limits"
+        ]
+      },
+      "text": "reactor-server-composition landed: unlocks http-limits"
     }
   ],
   "quests": {
@@ -9119,6 +9134,8 @@
       "after": [
         "detent:http-drop-user-data"
       ],
+      "base": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+      "branch": "quest/xapiand/http-limits",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9136,6 +9153,7 @@
         "examples/**",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/http-limits",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -9145,9 +9163,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "http: Limits, timeouts and stop_accepting",
-      "updated": "2026-11-19T14:58:26"
+      "updated": "2026-11-19T15:33:15",
+      "worktree": "../http-wt/xapiand/http-limits"
     },
     "http-phase7c-l3": {
       "accepted": {},
