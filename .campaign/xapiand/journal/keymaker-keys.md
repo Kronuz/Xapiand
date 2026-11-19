@@ -1,6 +1,6 @@
 # keymaker-keys: journal
 
-State: waiting on jobs 261119-123351-6084a3 261119-123354-0d438a 261119-123359-293e2f
+State: waiting on jobs 261119-140732-acb2c3 261119-140733-9319fb 261119-140735-5f4129
 Quest: .campaign/xapiand/quests/keymaker-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fixes committed at 792807431 (keymaker.h MIN_STR_CMPVALUE and StringKey slot/direction; metric_serialize.h phonetic code restore). Pins flipped in tests/test_coverage_multivalue.cc. Mutant commit bd701f5b2e00 (src reverted, tests kept; ref refs/mutant/keymaker-keys). Jobs: test 261119-123351-6084a3, mutant 261119-123354-0d438a, suite 261119-123359-293e2f.
+First jobs failed for real: Restored(unserialize_string(...)) took a string_view (compile error in metric_serialize.h, seen in the suite job's full log a1/log), and the test job used a wrong target name. Fixed at 32749f008 (std::string copy; target xapiand_test_coverage_multivalue); merged origin/master. Mutant commit b9d4c5314c9c (src reverted, tests kept). Jobs: test 261119-140732-acb2c3, mutant 261119-140733-9319fb, suite 261119-140735-5f4129. Local syntax check could not run clean (stale deps in the scratch build), so the jobs are the check.
 
 ## Next
 
