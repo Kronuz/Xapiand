@@ -10396,9 +10396,9 @@
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
-      "updated": "2026-11-19T14:20:02",
+      "updated": "2026-11-19T14:43:10",
       "worktree": "../logger-wt/xapiand/logger-fork-reset"
     },
     "logger-producer-path": {
