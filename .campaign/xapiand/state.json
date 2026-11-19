@@ -8094,7 +8094,12 @@
         "tests/**",
         "docs/**",
         "CHANGELOG.md",
-        "README.md"
+        "README.md",
+        "htm.cc",
+        "htm.h",
+        "CMakeLists.txt",
+        "ARCHITECTURE.md",
+        "test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/htm-edge-points",
       "landed": [],
@@ -8108,7 +8113,7 @@
       "risk": "high",
       "status": "active",
       "title": "A point on a root-mesh edge gets its own trixel id",
-      "updated": "2026-11-18T23:13:54",
+      "updated": "2026-11-18T23:56:33",
       "worktree": "../htm-wt/xapiand/htm-edge-points"
     },
     "http-cancel-race": {
