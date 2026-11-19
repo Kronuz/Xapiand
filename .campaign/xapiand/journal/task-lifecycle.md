@@ -1,6 +1,6 @@
 # task-lifecycle: journal
 
-State: working
+State: waiting on jobs 261119-070103-951ddb 261119-070103-36a333 261119-070126-838b76 261119-070133-ac2bcb 261119-070140-37fb0f 261119-070146-73b92c
 Quest: .campaign/xapiand/quests/task-lifecycle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,22 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1, A1-A7 built on task quest/xapiand/task-lifecycle: sleeps in task.hh, task_timers.hh
-(group, periodic, debounce), lifecycle.hh (component, components, stop_source, stop_signals,
-lifecycle), tests test/timers_test.cc and test/lifecycle_test.cc, docs. Syntax check, then the
-suite and tsan through `campaign verify task-lifecycle`.
+Step 1 built at task:066a183 (A1-A7). Syntax-checked clean (clang, -Wall -Wextra) under quiet.
+Jobs queued, none run yet (light slots full):
+- suite 261119-070103-951ddb, tsan 261119-070103-36a333 (`campaign verify`, --for A1-A6)
+- fails-without at mutant commits (refs/mutants/task-lifecycle/* in the task repo):
+  - 261119-070126-838b76 A1: stops run forward (81a3a6c) -> `task_lifecycle_test order` fails
+  - 261119-070133-ac2bcb A1: no cancel at bound - grace (48c275e) -> `bound` fails
+  - 261119-070140-37fb0f A4: sleep ignores its token (454b50e) -> `task_timers_test periodic` fails
+  - 261119-070146-73b92c A5: start failure skips the unwind (4155fc4) -> `failure` fails
 
 ## Next
 
-1. Run `campaign verify task-lifecycle` (suite, tsan) and fix what fails.
-2. A mutant job for A1: drains in start order must fail test/lifecycle_test.cc order.
-3. Later step (not in A1-A7): `event::wait(token)` and the process step (`run_daemon`,
+1. Read the six jobs; fix any red (each fix gets its own test and mutant job).
+2. Push is the lead's: CI (A6's "green on every platform") runs on the quest branch push.
+3. Paste `campaign brief`'s evidence table; A7 row: docs/design/service-shape.md (D132 names,
+   D15, D16), README.md and docs/API.md list the API; docs/mechanisms/lifecycle.md.
+4. Later step (not in A1-A7): `event::wait(token)` and the process step (`run_daemon`,
    `ProcessLock`) moved from Detent, per server-composition's adoption order 3.
 
 ## Blocked on
