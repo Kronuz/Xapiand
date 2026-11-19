@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112 132935-f1f8e1 132936-f7bb71 150319-fc7064 150321-7fa506 150323-09adf2
+State: waiting on jobs 261118-170254-9f8b5a 170257-d8055d 170319-9e4695 170300-52f4dd 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -26,6 +26,23 @@ checkout without the slot's binaries and data (now `--slot wide-search-loop`); s
 (`test_a_put_whose_client_half_closes_completes_durably`, test_node.cc:1169/1175), unrelated to search; f7bb71 runs
 it at master to show whether it is pre-existing.
 
+test_node regression, found and fixed (Xapiand:9a3cfeccf). Controls: test_node alone x5 passed 5/5 at master
+(150319-fc7064), 0/5 at c59b6e739 (150321-7fa506), 5/5 at b46f8e262 (150323-09adf2). Cause: 8e5040da8 routes every
+view's name resolution through `wide_search::resolve`, whose `budget.checkpoint()` throws `cancelled` when the token
+is requested (task.hh, budget::checkpoint: await_ready is true on a requested token, await_resume throws). The
+half-closed PUT's EOF requests the token before `write_document_view` resolves, so the write ends 503 before it is
+admitted. Fix: only reads checkpoint (`if (!writable)`); a write view resolves one index. Regression test: test_node.
+
+| Job | Commit | What |
+|---|---|---|
+| 261118-170254-9f8b5a | 8e5040da8 | bisect: test_node x5 (expect failures: the call sites alone) |
+| 261118-170257-d8055d | 9a3cfeccf | fix: test_node x5, exits 0 only at 5/5 |
+| 261118-170319-9e4695 | d986bcdd7 | `--fails-without --for A4`: test_node fails before the fix |
+| 261118-170300-52f4dd | 9a3cfeccf | suite (A4) |
+
+The fix changes src (writes only), so the A2/A3 jobs queued at d3411d2aa/c59b6e739 run pre-fix binaries; reads are
+unchanged, but the tool will ask for reruns at the landed commit (macOS build-probe rebuild and the VM build).
+
 test_node failed 2 of 2 suite runs on the branch (d8889b at 700ffc0c3, f1f8e1 at d3411d2aa): the half-closed PUT is
 answered 503 and the restart finds no write (test_node.cc:1169, :1175); master's CI passes it. The master control
 f7bb71 never reached the test (wrong target). Controls, test_node alone x5 each, chained in the slot (`xapiand_test_node`):
@@ -41,7 +58,7 @@ bisect from there and fix. The branch's src touches only search (`search_batch`,
 
 | Job | Level | For | What |
 |---|---|---|---|
-| 261118-132935-f1f8e1 | light | A4 | suite 132935-f1f8e1 failed test_node (2 of 2 on the branch); controls 150319-fc7064 (master), 150321-7fa506 (head), 150323-09adf2 (b46f8e262) pending; CI running |
+| 261118-132935-f1f8e1 | light | A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
 | 261118-132936-f7bb71 | light | | test_node at master (pre-existing check) |
 | 261118-132928-09c53e | exclusive | A2 macOS before | SR3 2,500, build-prof (master src) |
 | 261118-132932-c9dd00 | exclusive | A2 macOS after | SR3 2,500, build-probe (branch src) |
@@ -103,7 +120,7 @@ build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, bu
 | 261118-024337-7a9aec | light | probe | build-probe: Xapiand:c33b7cc79 + `harness/wide_search_callsites.patch` |
 | 261118-025903-1d4a33 | strict | probe | 2,500 gate + sample on build-probe |
 | 261118-025905-94c734 | strict | probe | starve 16,64 on build-probe |
-| 261118-034210-a84949 | light | A4 | suite 132935-f1f8e1 failed test_node (2 of 2 on the branch); controls 150319-fc7064 (master), 150321-7fa506 (head), 150323-09adf2 (b46f8e262) pending; CI running |
+| 261118-034210-a84949 | light | A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
 
 Drafted (Xapiand:c33b7cc79): `src/database/wide_search.{h,cc}`, `wide_search::Pins` (node-wide FIFO bound on
 indexes pinned by wide-search batches, sized to the pool's soft_open) and `wide_search::resolve` (per-name budget
@@ -142,7 +159,7 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured); attribution rerun 261118-113058-7cb4e4 |
 | A2 | Linux: 132830-475ea9 / 132836-3c231e (2,500), 132842-a03818 / 132847-f885d2 (10,000), pending. macOS 10,000: 051433-c76a1c before (max 322 / 373 ms), 051434-89f2f5 after (2.07 / 2.07 ms, control 2,560 us bucket); 2,500: 132928-09c53e, 132932-c9dd00 pending |
 | A3 | 261118-132929-bb97fa before, 261118-132933-243767 after (pending); session-2 reads: 051429-5d9b36 vs 050258-4c6f40 |
-| A4 | suite 132935-f1f8e1 failed test_node (2 of 2 on the branch); controls 150319-fc7064 (master), 150321-7fa506 (head), 150323-09adf2 (b46f8e262) pending; CI running |
+| A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
 
 ## Result
 
