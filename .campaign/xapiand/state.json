@@ -20013,9 +20013,9 @@
       "provides": [],
       "repo": "../reactor",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T14:23:19",
+      "updated": "2026-11-19T14:23:26",
       "worktree": "../reactor-wt/xapiand/reactor-server-composition"
     },
     "read-only-open": {
