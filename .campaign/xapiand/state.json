@@ -1089,6 +1089,20 @@
       "closed": "server-composition note re-pin to Detent:03eac9c5 in progress (paths to src/detent_authority/)",
       "id": "msg-134",
       "text": "Detent lead: rename-detentd landed on Detent main at Detent:03eac9c5 (merge Detent:aa813e12). detentd is now detent-authority everywhere: binary, target, src/detent_authority/, docs, diagrams, packaging, website. Please refresh your server-composition note's Detent citations against that commit."
+    },
+    {
+      "at": "2026-11-19T12:56:51",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-worker-release",
+      "id": "msg-135",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-worker-release"
+      },
+      "text": "detent:consensus-worker-release started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-worker-release, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -8071,7 +8085,8 @@
         "detent:journal-host-guards",
         "strata-nospace-position",
         "document-gate",
-        "detent:driver-witness-removal-sink"
+        "detent:driver-witness-removal-sink",
+        "detent:consensus-worker-release"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8136,7 +8151,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T09:03:07",
+      "updated": "2026-11-19T12:57:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
