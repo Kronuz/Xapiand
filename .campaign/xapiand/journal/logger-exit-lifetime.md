@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-193213-a62d6d 261118-193214-e96e6a
+State: exit-flush loss found and fixed (logger:70e3c36); waiting on jobs (see Doing)
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -27,9 +27,29 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
   library; Xapiand's ~Error chain is instrumented. Pushed.
 - Mutant (local branch mutant/a5-no-describe-at-call, logger:fff8ba9, never pushed): b6371a4 with
   logger:004304e reverted, for the A5 --fails-without jobs.
+- logger:46d3d0b test only: `logger_exit_test slow` (ctest logger_exit_slow), 400 lines at 1 ms a
+  line queued at exit, never stalled: every line must be written. The stalled `child` now stalls one
+  call 1 s (it paced 1200 lines at 20 ms, which a progress-based stop would wait out). Must fail.
+- logger:70e3c36 fix: the exit-time stop joins while the LOG thread takes lines (`taken_`, one
+  relaxed store per line) and abandons only after 200 ms without one. Docs: ARCHITECTURE.md,
+  docs/exit-lifetime.md. Pushed.
+- Probe branches (local, never pushed): probe/exit-abandon logger:333e7ff (b6371a4 + a stderr report
+  when the exit join times out), probe/exit-abandon-main logger:832db5e (the same on main).
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
 
 ## Doing
+
+Fifth session (fresh context): find and fix the A3 exit-flush loss.
+- Cause, measured: probe 200511-3f29a3 (ASan suite at the fix + timeout report) failed exit flush
+  and printed "join timed out after 213085 us": the 200 ms exit join timed out and the stop
+  abandoned the queued tail. Probe run 200509-ae0766 passed (load-sensitive). The 200 ms budget and
+  abandon are main's (logger:4b5b847); the quest's commits only add 3 tests running beside
+  logger_queue. Main probes 200513-427cb2 (ASan), 200515-17b386 (TSan recipe) pending; the TSan
+  recipe at main 193214-e96e6a already failed the same CHECK.
+- Fix logger:70e3c36 (test logger:46d3d0b). Jobs: fails-without 201716-0c19dd (46d3d0b), pass
+  201706-a7fe03 (slow + stalled child); reruns at 70e3c36: suite 201651-0c4cbe, ASan 201651-95cb5d
+  and 201707-d5031e, TSan recipe 201652-34809c, A2 201652-2ff32a 201653-1b9363, A5 201653-39af86
+  201653-28f0e6. CI on push of 70e3c36.
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
@@ -97,7 +117,12 @@ Bench results so far (strict beside light holds, host load high: wide intervals)
 
 ## Blocked on
 
-Nothing.
+Lead to confirm (implemented, reversible): the exit-time stop now waits as long as the drain keeps
+writing (abandons after 200 ms without a line) instead of 200 ms in all. Effect a host sees: a
+process exiting with many lines queued behind a slow handler takes longer to exit and loses no
+lines; a stalled handler is still given up on after 200 ms. Options: (a) this (recommended: it is
+what the timeout was documented for, "a handler is stalled"); (b) keep 200 ms in all and shrink
+logger_queue's exit flush to fit sanitizers under load (lines still lost at exit under load).
 
 ## Evidence
 
@@ -121,6 +146,9 @@ Benchmarks, strict beside light holds (host load high, wide intervals), median r
   line, median ratio 0.985.
 
 ## Rulings I made
+
+- Exit-flush loss (A3): proved by probe, not bisected: the probe names the mechanism directly
+  (timeout report), and the budget is main's, not the quest's.
 
 - Design rule (docs/exit-lifetime.md): the exit-time stop (`Finisher` in `LogWorker::get()`) is
   made at the first queued line; what the logger makes after it is destroyed first. So everything
