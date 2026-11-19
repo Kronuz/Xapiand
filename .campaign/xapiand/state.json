@@ -8825,6 +8825,39 @@
       "updated": "2026-11-12T22:31:47",
       "worktree": ""
     },
+    "http-limits": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "http_asio_tls.h",
+        "test/**",
+        "docs/**",
+        "examples/**",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "reactor-server-composition"
+      ],
+      "provides": [],
+      "repo": "../http",
+      "risk": "normal",
+      "status": "planned",
+      "title": "http: Limits, timeouts and stop_accepting",
+      "updated": "2026-11-19T13:35:02"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
