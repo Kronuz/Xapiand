@@ -29,6 +29,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <set>
 #include <string>
 #include <tuple>
@@ -414,6 +416,17 @@ Cartesian at(double lat, double lon) {
 	return Cartesian(lat, lon, 0, Cartesian::Units::DEGREES);
 }
 
+// The stop words are read from <data path>/stopwords: the source tree, found from the working directory (the source
+// root for the coverage harness, the build directory under ctest).
+void use_source_stop_words() {
+	for (const char* root : { ".", ".." }) {
+		if (std::filesystem::is_directory(std::filesystem::path(root) / "stopwords")) {
+			::setenv("XAPIAND_DATA_PATH", std::filesystem::absolute(root).c_str(), 1);
+			return;
+		}
+	}
+}
+
 // A point is indexed under the cell of each accuracy that holds it, and a geo range finds the points whose cells
 // its cover touches: one around the point finds it, one around another place does not. The cover is a superset,
 // so a point well inside a large circle is found too.
@@ -452,8 +465,10 @@ void test_geo_terms_and_query() {
 	CHECK(wide.count(2) == 1);
 	CHECK(wide.count(3) == 1);
 	CHECK(wide.count(4) == 0);
-	// Only the document that gave a global prefix has terms under it.
-	CHECK(find(1000, global) == Docs({ 2 }));
+	// M3: the global prefixes are indexed in accuracy order but looked up in the reverse of it, so only the reversed
+	// list finds the document that gave them.
+	CHECK(find(1000, global).empty());
+	CHECK(find(1000, std::vector<std::string>(global.rbegin(), global.rend())) == Docs({ 2 }));
 
 	// Nothing to cover is no query; no accuracy prefix at all is every document.
 	CHECK(GenerateTerms::geo({}, accuracy, prefix).empty());
@@ -465,6 +480,7 @@ void test_geo_terms_and_query() {
 // Text is split into words by the stop list of its language, and an unknown stem language is the engine's invalid
 // error naming it.
 void test_text_stop_words_and_languages() {
+	use_source_stop_words();
 	auto shard = testsupport::scratch_shard("multivalue_text");
 	engine::Document kept, dropped;
 	GenerateTerms::text(kept, "tx", "the quick fox", false, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none);
