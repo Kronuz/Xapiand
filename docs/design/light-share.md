@@ -21,28 +21,46 @@ process-wide `LS_HEAVY_SHARE` (unset is today's drain), read once. 16 CPUs, 16 l
 
 ## Results
 
-Exclusive, the same build, arms differ only in the share (`harness/light_share_ab.sh`, `light_share_t10.sh`,
-`light_share_t12.sh`; jobs 261118-135313-0d4d30, 135314-eb475b, 135315-63667c, 135316-88308e). Medians of 2-3 arms
-for `off` (today's drain), a share of 12 and a share of 8.
+Exclusive, one build, arms differ only in the share (`harness/light_share_ab.sh`, `light_share_t10.sh`,
+`light_share_t12.sh`). T4/T5 rows are medians over all exclusive arms (4 for off, 8 and 4, 6; 2 for 12; jobs
+261118-135313-0d4d30, 184044-457a2d, 184045-c76864); T10 over its arms (135314-eb475b, 135315-63667c, 184047-e27ef6,
+184048-415e50; 12 has one arm); T12 over 184049-f10605 and 135316-88308e.
 
-| Measure (bound) | off | share 12 | share 8 |
-|---|---|---|---|
-| T5 loaded light query p99 (limit 8.6-9.0 ms) | 33.2 ms (25.7-40.7) | 31.2 (26.3-36.0) | 12.2 (8.1-16.3) |
-| T4 worst loop lag p99 (1.024 ms) | 5.12 ms | 4.61 | 2.30 (2.05-2.56) |
-| T10 flood p99 (about 20 ms) | 46.3 ms (44.7-53.1) | 28.2 (one arm) | 21.2 (20.7-21.6) |
-| Heavy searches per loaded phase | 30,935 | 30,808 (-0.4%) | 27,408 (-11%) |
-| Worst heavy kind's loaded p99 | 149 ms | 150 | 130 |
-| T12 RESTORE docs/s | 9,318 | 9,303 | 9,328 |
-| T12 QPS (A/A band 3,532-4,318) | 3,925 | 3,993 | 4,612 |
+| Measure (bound) | off | 12 | 8 | 6 | 4 |
+|---|---|---|---|---|---|
+| T5 loaded light query p99, ms (limit 7.3-9.5 per arm) | 33.2 | 31.2 | 9.1 | 19.3 | 6.5 |
+| T5 arms within limit | 0 of 4 | 0 of 2 | 2 of 4 | 1 of 4 | 4 of 4 |
+| T4 worst loop lag p99, ms (1.024) | 5.12 | 4.61 | 2.56 | 2.05 | 1.92 (1.79-2.05) |
+| T10 flood p99, ms (about 20) | 46.3 | 28.2 | 21.2 | 18.0 | 17.1 |
+| Heavy searches per loaded phase | 30,935 | 30,808 | 26,313 | 23,069 | 19,683 |
+| vs off | | -0.4% | -15% | -25% | -36% |
+| Worst heavy kind's loaded p99, ms | 149 | 150 | 136 | 158 | 182 |
+| T12 RESTORE docs/s | 9,325 | 9,303 | 9,366 | 9,259 | 9,420 |
+| T12 QPS (off alone spans 3,532-4,564) | 4,318 | 3,993 | 4,176 | 4,146 | 4,249 |
 
 Reading.
 
-1. A share of 12 does nothing measurable (inside the A/A spread everywhere).
-2. A share of 8 cuts loaded light p99 by 63% (one of two arms meets T5's limit), worst loop lag by 55% (still 2.2x
-   T4's bound), and T10's flood p99 by 54% (at the bound, max 26-31 ms). It costs 11% of heavy searches and none of
-   RESTORE throughput or QPS; the worst heavy p99 improves.
-3. T4 and T5 are not yet at their bounds at 8. The sweep between 4 and 8 is the next measurement, run against the
-   landed mechanism (A2/A3's before/after are taken then, unpatched master against the landed code).
+1. A share of 12 does nothing measurable. T5 and T10 improve as the share falls; share 4 meets both (T5 in all 4
+   arms, T10 at 17.1-17.7 ms).
+2. No share meets T4. Worst loop lag p99 plateaus at 1.8-2.05 ms from share 6 down: shrinking the share from 6 to 4
+   costs 15% more heavy searches and moves lag by one histogram bucket.
+3. The cost of share 4: 36% of heavy searches in the T4/T5 mix (heavy clients saturate every loop), the worst heavy
+   p99 up 22% (149 to 182 ms) and the probe pair p99 52 to 80 ms; RESTORE throughput and QPS are inside off's own
+   spread.
+
+What bounds T4. A share limits how many loops run heavy turns at once; it cannot shorten a turn that is running. A
+heavy turn that ends at a checkpoint is 0.25-0.35 ms (`loop-scheduling.md`, the lane's wait bounds), a timer is
+seen one pass late (two turns, about 0.7 ms), but a resume after I/O, a chore or a body read runs to its next
+checkpoint or suspension, and un-checkpointed sections (response serialization) bound a turn as today. The
+worst loop's lag p99 of 1.8-2.05 ms, with only 4 of 16 loops allowed a heavy turn and CPU free for the rest, is the
+length of those turns plus the light work queued ahead, not CPU. This is inferred from the plateau and the census; it
+is not profiled per turn. T4 needs those sections checkpointed (the stall quests own them), not a smaller share.
+
+## Pick
+
+Share 4 is the only one that meets T5 and T10; it leaves T4 at about 1.9x its bound and costs 36% of heavy searches
+in the saturated mix. Share 6 meets T10 but T5 in one of four arms. The pick is the owner's: heavy throughput against
+T5/T10 bounds (see the journal).
 
 ## Landing
 
@@ -51,6 +69,6 @@ count of heavy slots shared by schedulers, belongs there (follow-up quest light-
 sets the slot count in `src/manager.cc` and bumps the pin. The environment knob is the prototype's; the landed
 mechanism takes the count from the manager (no knob).
 
-Caveats. The runs are one build on one 16-CPU host with 2-3 arms each; the A/A spread of `off` is 20% on QPS and
-about 1.6x on light p99, so only the share-8 effects above exceed it. `restored` is 100,000 docs per loaded phase at
-share 8 against 80,000 at `off` and 12 (not understood; heavy throughput is judged by the rows above).
+Caveats. The runs are one build on one 16-CPU host with 2-4 arms each; the A/A spread of `off` is 30% on QPS and
+about 3x on light p99, so only the effects at shares 8-4 above exceed it. `restored` per loaded phase is 80,000 at
+`off` and 12, 100,000 at 8, 120,000 at 6 and 140,000 at 4 (not explained).

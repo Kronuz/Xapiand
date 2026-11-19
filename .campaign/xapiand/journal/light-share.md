@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: waiting on jobs 261118-184044-457a2d 261118-184045-c76864 261118-184047-e27ef6 261118-184048-415e50 261118-184049-f10605 (sweep; suite 261118-184002-4c0fa6 too)
+State: ready for review (A2 unmet on T4 at every share; owner decision named under Blocked on)
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,41 +24,21 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Read the sweep (X1c 184044-457a2d and X1d 184045-c76864: T4/T5 at 6, 4, plus off and 8; X2c 184047-e27ef6 and
-   X2d 184048-415e50: T10 at 6, 4; X3b 184049-f10605: T12 at off, 6, 4, 8). Write the table off/12/8/6/4 against each
-   bound in `docs/design/light-share.md` and the Evidence table.
-2. If a share meets A2 and A3 at a stated A4 cost: pick it. If none: say what bounds T4 (loop CPU from heavy turns,
-   or something a share cannot reach), for the owner. Then "ready for review".
+1. Correctness review (lead). Then light-share-task (Kronuz/task, own quest) for the generic slot count; this quest
+   then bumps the pin and sets the slot count in `src/manager.cc`; A2-A4's before/after rerun at the landed code.
 
 ## Blocked on
 
-Nothing. Lead ruled (2026-11-18): if X1-X3 show the share wins, the Kronuz/task change is its own quest
-(light-share-task, repo ../task, own review); this quest then bumps the pin (CMakeLists.txt's pin line, added to
-the file set after test-glob lands) and sets the slot count in `src/manager.cc`.
-
-## Reading so far (session 2, master merged at 34710b05b2da, pushed)
-
-The previous jobs did not all finish: X1 done; X2 hit its 10 min bound (exit 124, result invalid, only arms 1-2
-ran); X3 never ran (it was `--after` X2). All three ran strict beside 8-15 other agents' light holds (X1's unloaded
-query p99 is 441 ms in arm 1 and 1,073 ms in arm 6, both `off`: a 2.4x A/A spread), so none of it is a clean number.
-
-X1 (ms, medians of 2-3 arms; T4 bound 1.024 ms of loop lag, T5 bound 2x unloaded + 1 ms):
-off: loaded query p99 1185, search 1285, worst loop lag p99 3.07, heavy searches 9,717.
-12: 1193 / 1297 / 2.05 / 7,944 (-18% heavy). 8: 1170 / 1248 / 1.79 / 5,678 (-42% heavy).
-The share cuts worst-loop lag p99 by 33-42% (still 1.8-2x the 1.024 ms bound) and leaves light p99 unchanged
-(within +-2%, far inside the A/A spread) while costing 18-42% of heavy searches. Not a win on X1.
-X2 (T10, 4 loops): flood p99 0.85 ms for `off` and 12 alike (the 48 ms of the gate does not reproduce here); the
-only failure is a 140.9 ms max of one light GET in `off` (limit 50), while 12 shows 37 and 266 ms maxima: noise.
-
-Reruns 650d76, f7cdd0, 1f9d36, 12be10 measured nothing: submitted without `--slot`, they ran in a fresh checkout
-without `build-ls` (stall_load/lua_bounds tracebacks, "build-ls/bin/xapiand: No such file"); the harnesses hid it
-(X1b exited 0 with empty medians). Fixed: `light_share_ab.sh`, `light_share_t12.sh`, the new `light_share_t10.sh` and
-`light_share_report.py` exit nonzero on a failed arm, a missing binary or no rows. Resubmitted with `--slot
-light-share` (the slot that holds build-ls) at 85d17ff346b2: X1b 261118-135313-0d4d30, X2a 261118-135314-eb475b
-(off 12 off), X2b 261118-135315-63667c (8 off 8), X3 261118-135316-88308e. Suite d26d97 passed at 34710b05b2da (A5
-evidence; harness-only commits since). Superseded list: X1b 261118-112144-650d76 (off 8 12 off 8 12), X2 261118-112147-f7cdd0
-(off 12 off) and 261118-112151-1f9d36 (8 off 8), X3 261118-112154-12be10 (T12: off 12 8 off), suite
-261118-112158-d26d97. Provisional verdict from X1: the share does not win; the verdict stands on the reruns.
+Owner decision (does not stop the review): A2's T4 (1.024 ms) is not reachable by any share; the choice is the share.
+1. Share 4: T5 in 4 of 4 arms (6.5 ms vs limit 7.3-9.5), T10 17.1 ms (bound 20); costs 36% of heavy searches in
+   the saturated mix, worst heavy p99 +22%, RESTORE and QPS flat; T4 still 1.9 ms. Recommended, with T4 as its own
+   quest.
+2. Share 6: T10 18.0 ms, but T5 in 1 of 4 arms; costs 25% of heavy searches.
+3. Share 8: T5 in 2 of 4, T10 21.2 ms (misses); costs 15%.
+4. Stay at off: no cost, T4/T5/T10 all missed.
+T4 needs the un-checkpointed heavy sections (post-I/O resumes, response serialization) cut to checkpoints (stall
+quests), since lag plateaus at 1.8-2.05 ms from share 6 down. That is inferred from the plateau and the census, not
+profiled per turn.
 
 ## Messages
 
@@ -69,26 +49,26 @@ evidence; harness-only commits since). Superseded list: X1b 261118-112144-650d76
 
 ## Evidence
 
-Exclusive jobs, medians (full table in `docs/design/light-share.md`); arms off / share 12 / share 8:
+Exclusive jobs; arms off / 12 / 8 / 6 / 4 (table with bounds in `docs/design/light-share.md`):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/light-share.md`: the wait is CPU on the loops, not the pool or shard turns; share 8 chosen |
-| A2 | NOT MET (the tool's "met" is only exit 0). X1b 261118-135313-0d4d30 (6 arms): T5 loaded light p99 33.2 / 31.2 / 12.2 ms vs limit 8.6-9.0 (one of two share-8 arms passes); T4 lag p99 5.12 / 4.61 / 2.30 ms vs 1.024. Improved, bounds NOT yet met; before/after at the landed code pending |
-| A3 | At the bound only at share 8 (not yet shown to hold). X2a 261118-135314-eb475b (off 12 off) + X2b 261118-135315-63667c (8 off 8): flood p99 46.3 / 28.2 / 21.2 ms vs about 20 (at the bound, 54% down) |
-| A4 | X3 261118-135316-88308e: RESTORE 9,318 / 9,303 / 9,328 docs/s (flat); QPS 3,925 / 3,993 / 4,612 (inside or above the A/A band); heavy searches -0.4% / -11%, heavy p99 149 / 150 / 130 ms |
-| A5 | suite 261118-112158-d26d97 passed at 34710b05b2da; rerun at the head 261118-184002-4c0fa6; CI: branch pushed |
+| A1 | `docs/design/light-share.md`: the wait is CPU on the loops plus un-checkpointed heavy turns, not the pool or shard turns |
+| A2 | NOT MET (the tool's "met" is exit 0 only). X1b 135313-0d4d30, X1c 184044-457a2d, X1d 184045-c76864. T5 loaded light p99 33.2 / 31.2 / 9.1 / 19.3 / 6.5 ms vs limit 7.3-9.5: share 4 meets it in 4 of 4 arms, 8 in 2 of 4, 6 in 1 of 4. T4 lag p99 5.12 / 4.61 / 2.56 / 2.05 / 1.92 ms vs 1.024: no share meets it |
+| A3 | X2a 135314-eb475b, X2b 135315-63667c, X2c 184047-e27ef6, X2d 184048-415e50. Flood p99 46.3 / 28.2 / 21.2 / 18.0 / 17.1 ms vs about 20: met at shares 6 and 4, missed at 8 |
+| A4 | X3 135316-88308e, X3b 184049-f10605. RESTORE 9,325 / 9,303 / 9,366 / 9,259 / 9,420 docs/s (flat); QPS 4,318 / 3,993 / 4,176 / 4,146 / 4,249 (inside off's 3,532-4,564 spread). Heavy searches per loaded phase 30,935 / 30,808 / 26,313 / 23,069 / 19,683 (0 / -0.4 / -15 / -25 / -36%); heavy p99 149 / 150 / 136 / 158 / 182 ms |
+| A5 | suites 261118-112158-d26d97 (34710b05b2da) and 261118-184002-4c0fa6 (37f06f732607) passed; CI: branch pushed |
 
 Earlier jobs (022842-883d3a, 022854-f0e080, 112144-650d76, 112147-f7cdd0, 112151-1f9d36, 112154-12be10) are
-superseded: noisy, timed out, or ran without build-ls. The X1 numbers from before are not used.
+superseded: noisy, timed out, or ran without build-ls.
 
 ## Result
 
-The loaded light wait is CPU on the 16 loops, not the pool or shard turns. A process-wide cap of 8 loops running a
-heavy turn at once cuts loaded light p99 63%, worst loop lag 55% and T10 flood p99 54%, at 11% of heavy searches and
-no RESTORE or QPS cost; a cap of 12 does nothing. T4 (2.2x over) and T5 (12.2 vs 9.0 ms) are not yet at their bounds;
-a share between 4 and 8 is the next measurement. The generic part belongs in Kronuz/task (follow-up quest
-light-share-task). Design note: `docs/design/light-share.md`.
+The loaded light wait is CPU on the 16 loops, not the pool or shard turns. Capping loops that run a heavy turn
+fixes T5 and T10 at share 4 (6.5 ms; 17.1 ms) at 36% of heavy searches in the saturated mix; share 6 fixes T10 only
+(25%); 12 does nothing. No share reaches T4: lag plateaus at 1.8-2.05 ms, the length of un-checkpointed heavy turns,
+which a share cannot shorten. The generic part belongs in Kronuz/task (follow-up quest light-share-task). Design
+note: `docs/design/light-share.md`.
 
 ## Rulings I made
 
