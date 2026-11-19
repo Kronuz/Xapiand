@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: ready for review (only suite job 261118-184002-4c0fa6 is running, A5)
+State: waiting on jobs 261118-184044-457a2d 261118-184045-c76864 261118-184047-e27ef6 261118-184048-415e50 261118-184049-f10605 (sweep; suite 261118-184002-4c0fa6 too)
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,9 +24,11 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Correctness review (lead). Then light-share-task (Kronuz/task, own quest): the generic slot count in
-   `task_asio.hh`; this quest then bumps the pin and sets the slot count in `src/manager.cc`; A2/A3/A4's
-   before/after rerun against the landed code, with a share sweep between 4 and 8.
+1. Read the sweep (X1c 184044-457a2d and X1d 184045-c76864: T4/T5 at 6, 4, plus off and 8; X2c 184047-e27ef6 and
+   X2d 184048-415e50: T10 at 6, 4; X3b 184049-f10605: T12 at off, 6, 4, 8). Write the table off/12/8/6/4 against each
+   bound in `docs/design/light-share.md` and the Evidence table.
+2. If a share meets A2 and A3 at a stated A4 cost: pick it. If none: say what bounds T4 (loop CPU from heavy turns,
+   or something a share cannot reach), for the owner. Then "ready for review".
 
 ## Blocked on
 
@@ -72,8 +74,8 @@ Exclusive jobs, medians (full table in `docs/design/light-share.md`); arms off /
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/light-share.md`: the wait is CPU on the loops, not the pool or shard turns; share 8 chosen |
-| A2 | X1b 261118-135313-0d4d30 (6 arms): T5 loaded light p99 33.2 / 31.2 / 12.2 ms vs limit 8.6-9.0 (one of two share-8 arms passes); T4 lag p99 5.12 / 4.61 / 2.30 ms vs 1.024. Improved, bounds NOT yet met; before/after at the landed code pending |
-| A3 | X2a 261118-135314-eb475b (off 12 off) + X2b 261118-135315-63667c (8 off 8): flood p99 46.3 / 28.2 / 21.2 ms vs about 20 (at the bound, 54% down) |
+| A2 | NOT MET (the tool's "met" is only exit 0). X1b 261118-135313-0d4d30 (6 arms): T5 loaded light p99 33.2 / 31.2 / 12.2 ms vs limit 8.6-9.0 (one of two share-8 arms passes); T4 lag p99 5.12 / 4.61 / 2.30 ms vs 1.024. Improved, bounds NOT yet met; before/after at the landed code pending |
+| A3 | At the bound only at share 8 (not yet shown to hold). X2a 261118-135314-eb475b (off 12 off) + X2b 261118-135315-63667c (8 off 8): flood p99 46.3 / 28.2 / 21.2 ms vs about 20 (at the bound, 54% down) |
 | A4 | X3 261118-135316-88308e: RESTORE 9,318 / 9,303 / 9,328 docs/s (flat); QPS 3,925 / 3,993 / 4,612 (inside or above the A/A band); heavy searches -0.4% / -11%, heavy p99 149 / 150 / 130 ms |
 | A5 | suite 261118-112158-d26d97 passed at 34710b05b2da; rerun at the head 261118-184002-4c0fa6; CI: branch pushed |
 
