@@ -24,6 +24,7 @@
 #include "serialize.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <cerrno>                                     // for EINVAL, ERANGE
 #include <cmath>                                      // for std::isnan
 #include <cstdint>                                    // for int64_t, uint64_t
 #include <limits>                                     // for std::numeric_limits
@@ -201,6 +202,18 @@ json_number_text(std::string_view text) noexcept
 }
 
 
+// The uint64 a text spells. strtoull reads a sign and wraps a negative, so text with a '-' is EINVAL.
+uint64_t
+positive_of(int* errno_save, std::string_view text) noexcept
+{
+	if (text.find('-') != std::string_view::npos) {
+		*errno_save = EINVAL;
+		return 0;
+	}
+	return strict_stoull(errno_save, text);
+}
+
+
 // The number a text spells, read as JSON reads one (int64, else uint64, else double); undefined when it spells none.
 MsgPack
 number_of(std::string_view text)
@@ -213,11 +226,9 @@ number_of(std::string_view text)
 	if (errno_save == 0) {
 		return MsgPack(static_cast<int64_t>(i));
 	}
-	if (text.front() != '-') {  // strtoull wraps a negative
-		const auto u = strict_stoull(&errno_save, text);
-		if (errno_save == 0) {
-			return MsgPack(static_cast<uint64_t>(u));
-		}
+	const auto u = positive_of(&errno_save, text);
+	if (errno_save == 0) {
+		return MsgPack(static_cast<uint64_t>(u));
 	}
 	const auto d = strict_stod(&errno_save, text);
 	if (errno_save == 0) {
@@ -802,12 +813,15 @@ Serialize::integer(std::string_view field_value)
 std::string
 Serialize::positive(std::string_view field_value)
 {
-	try {
-		return positive(strict_stoull(field_value));
-	} catch (const std::invalid_argument& exc) {
-		RETHROW(SerializationError, "Invalid positive integer format: {}", repr(field_value));
-	} catch (const std::out_of_range& exc) {
-		RETHROW(SerializationError, "Out of range positive integer format: {}", repr(field_value));
+	int errno_save;
+	const auto value = positive_of(&errno_save, field_value);
+	switch (errno_save) {
+		case 0:
+			return positive(value);
+		case ERANGE:
+			THROW(SerializationError, "Out of range positive integer format: {}", repr(field_value));
+		default:
+			THROW(SerializationError, "Invalid positive integer format: {}", repr(field_value));
 	}
 }
 
@@ -1038,7 +1052,7 @@ Serialize::guess_type(const class MsgPack& field_value)
 			// Try like POSITIVE.
 			{
 				int errno_save;
-				strict_stoull(&errno_save, str_value);
+				positive_of(&errno_save, str_value);
 				if (errno_save == 0) {
 					return FieldType::positive;
 				}
