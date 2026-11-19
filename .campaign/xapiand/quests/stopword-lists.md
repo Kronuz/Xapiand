@@ -24,7 +24,6 @@ Index metadata gains the list fingerprints (a persisted key; formats are open un
 ## Decisions
 
 - D137 (owner 2026-11-19). Use the constexpr-phf library if it fits; otherwise a sorted array, measured.
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
 
 ## May land early
 
