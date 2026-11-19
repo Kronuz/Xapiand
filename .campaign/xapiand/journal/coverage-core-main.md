@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs 261119-052702-edbcb8 (suite, A3); then ready for review
+State: ready for review (suite and CI to rerun at the new head)
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -55,3 +55,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - Lead 2026-11-19: coverage.sh and docs/dev/coverage.md are in my file set. coverage.sh now discovers harness/coverage_e2e_<name>.* as workload <name> and honors NOBUILD=1; documented (untested until the coverage job runs).
 - max_clients -2 is NOT confirmed (hunt.md row stays UNCONFIRMED/refuted): adjustOpenFilesLimit throws SystemExit(EX_OSFILE=72) for --max-files 300 and for a 1024 hard limit with defaults (pool 200, clients 1000); it logs "Your open files limit of 300 is not enough for the server to start. Please increase ... to at least 1471" (plus "database_pool_size has been reduced to 34"). The real finding: the computed minimum_files (1471) includes the capped default pool, so any limit under 1471 refuses with defaults although the pool would shrink to fit. Lead decides whether to fix.
 - Linux fix 868260bbf: get_max_files_per_proc = min(sysconf(_SC_OPEN_MAX), soft limit); the automatic raise walks down in 16 steps, so the 1024 case accepts [1008, 1024]; explicit case exact. Reasoned from system.cc, not run on Linux (no VM job reachable); CI arm64 is the proof.
+- CI fixes at the head after 5af2697d2: Linux x86 limit-of-3 case needs fds 0-2 open (fill_stdio); FreeBSD get_executable_path has no OS source (src/main.cc only resolves argv0): test passes the sysctl path. Product gap for a hunt row: FreeBSD get_executable_path(nullptr) is empty, so setup_data_path finds no data beside the executable; add KERN_PROC_PATHNAME in src/main.cc.
