@@ -1135,6 +1135,19 @@
         ]
       },
       "text": "task-asio-layout landed: unlocks frees test/{lifecycle for task-lifecycle-followups; frees test/process_test.cc, CMakeLists.txt for task-process-step"
+    },
+    {
+      "at": "2026-11-19T14:40:07",
+      "by": "campaign detent",
+      "closed": "reactor-server-composition is accepted and lands on CI within the hour; detent:reactor-tls-cache should go after it (it consumes server_context)",
+      "id": "msg-139",
+      "settles": {
+        "ours": [
+          "reactor-server-composition"
+        ],
+        "quest": "detent:reactor-tls-cache"
+      },
+      "text": "detent:reactor-tls-cache started and may change files your reactor-server-composition changes (order them with --after detent:reactor-tls-cache, or narrow the files)"
     }
   ],
   "quests": {
