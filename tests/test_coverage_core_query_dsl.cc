@@ -482,6 +482,16 @@ bool has_key(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const char
 	return sorter->serialize().find(serialize_string(name)) != std::string::npos;
 }
 
+// has_key of the sorter `sort` builds; a throw is a failed check that prints what it threw, not an abort of the binary.
+bool built_key(QueryDSL& dsl, const MsgPack& sort, const char* name) {
+	try {
+		return has_key(dsl.get_sorter(sort), name);
+	} catch (const std::exception& e) {
+		std::printf("get_sorter threw: %s\n", e.what());
+		return false;
+	}
+}
+
 }  // namespace
 
 static void test_sorters() {
@@ -493,14 +503,15 @@ static void test_sorters() {
 	auto desc = fx.dsl.get_sorter(obj({ { "n", obj({ { "_value", 100 }, { "_order", "desc" } }) } }));
 	CHECK_TRUE(sorted_key(desc, SLOT_N, Serialize::integer(90)) > sorted_key(desc, SLOT_N, Serialize::integer(120)));
 	CHECK_TRUE(asc->serialize() != desc->serialize());
-	// Product bug (sort-cast-word): a cast word hands the whole map to the cast, so an integer field throws (text and datetime accept the map).
+	// Product bug (sort-cast-word): a cast word hands the whole map to the cast, so an integer field throws (a datetime throws DatetimeError).
 	CHECK_THROWS_WITH(fx.dsl.get_sorter(obj({ { "n", obj({ { "_integer", "100" } }) } })), CastError, "cannot be cast to integer");
 	auto flt = fx.dsl.get_sorter(obj({ { "f", obj({ { "_value", 1.5 } }) } }));
 	CHECK_TRUE(has_key(flt, "FloatKey"));
 	CHECK_TRUE(sorted_key(flt, SLOT_F, Serialize::floating(1.0)) < sorted_key(flt, SLOT_F, Serialize::floating(3.0)));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "p", obj({ { "_value", 7 } }) } })), "PositiveKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "d", obj({ { "_value", "2021-03-04" } }) } })), "DateKey"));
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } })), "DateKey"));  // a datetime cast word works
+	// The map is parsed as a datetime whole, so its `_datetime` string is read as a `_time` (sort-cast-word).
+	CHECK_THROWS_WITH(fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } })), DatetimeError, "Error format in _time");
 	// Product bug (sort-boolean-key): a boolean reference value is a DateKey; BoolKey exists and is unused.
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "DateKey"));
 	CHECK_FALSE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "BoolKey"));
@@ -521,8 +532,8 @@ static void test_sorters() {
 		CHECK_TRUE(phonetic != jaro);
 		CHECK_TRUE(phonetic.find("smith") == std::string::npos);
 	}
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "k", obj({ { "_text", "smith" } }) } })), "Jaro"));  // a text cast word works
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "u", obj({ { "_value", "a2d6e3b4-0000-1000-8000-0100000000ab" } }) } })), "Jaro"));
+	CHECK_TRUE(built_key(fx.dsl, obj({ { "k", obj({ { "_text", "smith" } }) } }), "Jaro"));
+	CHECK_TRUE(built_key(fx.dsl, obj({ { "u", obj({ { "_value", "a2d6e3b4-0000-1000-8000-0100000000ab" } }) } }), "Jaro"));
 	// A geo reference value gives the centroids; one with none adds no key.
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "g", obj({ { "_ewkt", "POINT(10 20)" } }) } })), "GeoKey"));
 	// The order alone, as an object or a text, sorts by the value itself.
