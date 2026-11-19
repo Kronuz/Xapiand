@@ -25069,10 +25069,10 @@
     "task-lifecycle-followups": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T14:22:04",
-          "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "at": "2026-11-19T14:29:03",
+          "base": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
           "blobs": {
-            "docs/API.md": "100644:781e55e85bbd3f54ba9d6d3e9fb6e240c4e54ad4",
+            "docs/API.md": "100644:7ed06dd205b39498472371be11b8211f8ac76e0f",
             "docs/design/service-shape.md": "100644:faa7a00ec93537669ae408dd763a555a5fd1bcb6",
             "docs/mechanisms/lifecycle.md": "100644:62502ee10f399bc6ad29c40f9b12d7e574f1155d",
             "lifecycle.hh": "100644:f8e0725b42ef3f61869e7ffb22ef46a1c778d058",
@@ -25082,7 +25082,7 @@
             "test/timers_test.cc": "100644:5df1c716d760f93d1cfbe157cf676dc5b31b26ee"
           },
           "by": "review",
-          "commit": "8cf679386a8fc9edb2a8ef1ec352cc06416cc01a",
+          "commit": "0316befffa225849f04a8064ea6c46a334e52b94",
           "criteria": "406e626f9125da71",
           "diffs": {
             "docs/API.md": "3799f1e0db73168f",
@@ -25143,7 +25143,7 @@
       "risk": "high",
       "status": "review",
       "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
-      "updated": "2026-11-19T14:22:04",
+      "updated": "2026-11-19T14:29:03",
       "worktree": "../task-wt/xapiand/task-lifecycle-followups"
     },
     "task-lifecycle-rename": {
