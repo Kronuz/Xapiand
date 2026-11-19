@@ -8013,6 +8013,40 @@
       "updated": "2026-11-11T00:23:06",
       "worktree": ""
     },
+    "htm-edge-points": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/**",
+        "src/**",
+        "test/**",
+        "tests/**",
+        "docs/**",
+        "CHANGELOG.md",
+        "README.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../htm",
+      "risk": "high",
+      "status": "planned",
+      "title": "A point on a root-mesh edge gets its own trixel id",
+      "updated": "2026-11-18T23:13:41"
+    },
     "http-cancel-race": {
       "accepted": {
         "correctness": {
