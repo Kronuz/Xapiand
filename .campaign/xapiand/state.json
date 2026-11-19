@@ -20926,6 +20926,32 @@
       "updated": "2026-11-19T00:35:48",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
+    "server-composition-note": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "test -s docs/server-composition.md",
+          "level": "none",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/server-composition.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "Fold the design review into the server-composition note and mark it CURRENT",
+      "updated": "2026-11-19T04:58:27"
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
