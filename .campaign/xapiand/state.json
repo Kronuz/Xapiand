@@ -24978,6 +24978,8 @@
       "after": [
         "task-driver-layout"
       ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-lifecycle-followups",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25001,6 +25003,7 @@
         "timers}_test.cc",
         "docs/mechanisms/lifecycle.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle-followups",
       "landed": [],
       "lenses": [
         "correctness"
@@ -25010,9 +25013,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
-      "updated": "2026-11-19T13:35:00"
+      "updated": "2026-11-19T13:49:05",
+      "worktree": "../task-wt/xapiand/task-lifecycle-followups"
     },
     "task-lifecycle-rename": {
       "accepted": {},
