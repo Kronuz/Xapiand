@@ -25172,20 +25172,47 @@
         "AGENTS.md",
         "docs/API.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-process-step",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T14:15:44",
+          "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "criteria": {
+            "A1": "261119-140521-dfbfec, 261119-140516-0c982a; fails without: 261119-135244-853d1c, 261119-135246-098fe2, 261119-135249-e2e328, 261119-140043-e5c800, 261119-140046-b42af2, 261119-140519-1f4501",
+            "A2": "261119-140521-dfbfec, 261119-140516-0c982a; fails without: 261119-135252-fe16f4, 261119-135254-cd52b7, 261119-140049-af456c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140521-dfbfec",
+              "level": "light",
+              "seconds": 38.9,
+              "state": "done",
+              "what": "task-process-step check suite at 3ce0f0c0fdcd"
+            }
+          ],
+          "final": true,
+          "from": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "reason": "",
+          "tested": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
-      "updated": "2026-11-19T14:07:17",
-      "worktree": "../task-wt/xapiand/task-process-step"
+      "updated": "2026-11-19T14:16:09",
+      "worktree": ""
     },
     "termdict-forward-seek": {
       "accepted": {},
