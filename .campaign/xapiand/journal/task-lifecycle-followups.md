@@ -1,6 +1,6 @@
 # task-lifecycle-followups: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/task-lifecycle-followups.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on jobs at task:4c73dbb (branch head) and mutant branches `mutant/tlf-*` (local only,
-evidence, never land).
+Nothing: every criterion has evidence at task:4c73dbb; suite, TSan (12/12) and ASan+UBSan green.
 
 ## Next
 
-1. Read the jobs; fill Evidence from `campaign brief`; set ready for review.
+1. Correctness review (lead launches it); owner rulings on Q1-Q3.
 
 ## Blocked on
 
@@ -41,7 +40,7 @@ fire_pending's wait 261119-140154-3b9118, stop keeps pending 261119-140156-7d67f
 | A2 | 261119-140132-6f55be; fails without: 261119-140143-816688 |
 | A3 | 261119-140132-6f55be; fails without: 261119-140145-8db73c |
 | A4 | 261119-140132-6f55be; fails without: 261119-140148-04f388 |
-| A5 | 261119-140132-6f55be, 261119-140207-206045 (ASan+UBSan), 261119-140209-c56112 (TSan x50, 0 reports), tsan check 261119-140132-d04ab6; fails without: 261119-140151-bc8368, 261119-140153-e85702, 261119-140154-3b9118, 261119-140156-7d67fb, 261119-140158-d2568f, 261119-140159-a8816d, 261119-140201-b19aab |
+| A5 | 261119-140132-6f55be, 261119-140207-206045 (ASan+UBSan), 261119-140209-c56112 (TSan x50, 0 reports), tsan check 261119-140132-d04ab6 (12/12); fails without: 261119-140151-bc8368, 261119-140153-e85702, 261119-140154-3b9118, 261119-140156-7d67fb, 261119-140158-d2568f, 261119-140159-a8816d, 261119-140201-b19aab |
 
 Every mutant job fails on the CHECK of its own behavior (logs checked), not on a build error.
 
