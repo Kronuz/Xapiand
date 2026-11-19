@@ -830,6 +830,46 @@
         ]
       },
       "text": "faultlab-adopt-xapiand landed: unlocks frees harness/cluster/vm/** for cluster-vm-tier"
+    },
+    {
+      "at": "2026-11-18T12:23:35",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash; journal-group-io-sweep (behavior unchanged, amortized sweeps) reaches it at the planned journal repin, and cluster-gate already waits on it",
+      "id": "msg-113",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-group-io-sweep"
+      },
+      "text": "detent:journal-group-io-sweep started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T12:53:06",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane now lands --after detent:peers-tsan-timeout; group-core pins consensus by hash and takes the Driver change at its planned repin",
+      "id": "msg-114",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:peers-tsan-timeout"
+      },
+      "text": "detent:peers-tsan-timeout started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-tsan-timeout, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T14:03:04",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash; turn-seal-forget-flake reaches it at the planned journal repin",
+      "id": "msg-115",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:turn-seal-forget-flake"
+      },
+      "text": "detent:turn-seal-forget-flake started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -3459,18 +3499,47 @@
         "test/consensus_test.cc",
         "tools/mutants.sh"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-c3-rows",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T14:46:49",
+          "ci_skipped": "owner-approved 2026-11-18: consensus TSan transport tests are flaky (transport_connection slow-reader, detent:connection-slow-reader-flake; transport_peers timeout, detent:peers-tsan-timeout); the quest changes Core repair tests only; all other CI jobs green",
+          "commit": "6a76867f30826b27731b92c9f3122722cf4788e7",
+          "criteria": {
+            "A1": "261118-144151-83ff5c; fails without: 261118-044856-2cb29b",
+            "A2": "261118-144151-83ff5c; fails without: 261118-044857-1a8ab1",
+            "A3": "261118-144151-83ff5c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6a76867f30826b27731b92c9f3122722cf4788e7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-144151-83ff5c",
+              "level": "light",
+              "seconds": 204.9,
+              "state": "done",
+              "what": "consensus-c3-rows check build-test at 6a76867f3082"
+            }
+          ],
+          "final": true,
+          "from": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+          "reason": "",
+          "tested": "6a76867f30826b27731b92c9f3122722cf4788e7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "C3 rows: a repair at the base with another term is refused; the commit bound has its own row",
-      "updated": "2026-11-18T04:46:57",
-      "worktree": "../consensus-wt/xapiand/consensus-c3-rows"
+      "updated": "2026-11-18T14:46:51",
+      "worktree": ""
     },
     "consensus-flow-bench": {
       "accepted": {},
@@ -3556,7 +3625,10 @@
         "detent:transport-groups-ci",
         "detent:transport-feed-scan",
         "detent:consensus-wave-open",
-        "detent:reader-yield-stall"
+        "detent:reader-yield-stall",
+        "detent:peers-tsan-timeout",
+        "detent:consensus-close-fenced",
+        "detent:consensus-dns-threads"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -3745,7 +3817,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-17T21:16:03",
+      "updated": "2026-11-18T13:19:47",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -3887,7 +3959,9 @@
       "files": [
         "tests/test_coverage_*",
         "harness/coverage*",
-        "docs/dev/coverage.md"
+        "docs/dev/coverage.md",
+        "src/node.cc",
+        "src/node.h"
       ],
       "landed": [],
       "lenses": [],
@@ -3898,8 +3972,152 @@
       "risk": "low",
       "status": "active",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T02:21:59",
+      "updated": "2026-11-18T15:43:05",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
+    },
+    "coverage-core-main": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_main*",
+        "harness/coverage_e2e_main*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
+      "updated": "2026-11-18T16:36:45"
+    },
+    "coverage-core-small": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_core*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "cast, datetime_msgpack, endpoint and query_dsl reach T13 coverage",
+      "updated": "2026-11-18T16:36:37"
+    },
+    "coverage-database": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_database*",
+        "tests/test_coverage_schema*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "database (schema.cc) reaches T13 coverage",
+      "updated": "2026-11-18T16:36:42"
+    },
+    "coverage-multivalue": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_multivalue*",
+        "tests/test_coverage_reserved*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "multivalue and reserved reach T13 coverage",
+      "updated": "2026-11-18T16:36:34"
+    },
+    "coverage-server": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_server*",
+        "harness/coverage_e2e_server*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "server (search_views) reaches T13 coverage through E2E drivers",
+      "updated": "2026-11-18T16:36:40"
     },
     "cr1-fix": {
       "accepted": {},
@@ -4879,10 +5097,11 @@
     "document-gate": {
       "accepted": {
         "durability": {
-          "at": "2026-11-17T23:33:07",
-          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "at": "2026-11-18T14:43:22",
+          "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
           "blobs": {
             "CMakeLists.txt": "100644:0a57c425e1da0771dd06b513fd583290e3d98b40",
+            "bench/engines/rocksdb-11.11/build.sh": "100755:b13e4b78b65c218c916ede7edc3cfb1fc7f7fa3e",
             "bench/kv/barriers.py": "100755:2fbf2826f676515882529a73af27c79ae8916646",
             "bench/kv/floor.c": "100644:ccff3bada96238eee92ee29b96ddc52deac20352",
             "bench/kv/kv_strata.cc": "100644:7a183f83d37444409451fc95df0b49601945baf5",
@@ -4891,7 +5110,7 @@
             "bench/kv/run.py": "100644:518999043b34066b0bbb242dcd4a785143fe74ad",
             "cmake/check_core_includes.cmake": "100644:ed4a1afd8ca9fcf55156d313345951920aee01f1",
             "docs/design/standalone-turn-log.md": "100644:71590a4d28334680a68f66ac4ddb96cdea340163",
-            "docs/gates/document-profile.md": "100644:69998af2537267f284ab365aabfe52a7f1cb910a",
+            "docs/gates/document-profile.md": "100644:ccbfcd71e447da8c6626363e434fac25f373dce5",
             "docs/perf/standalone-turn-log.md": "100644:3f685e4925fc60add694d4151a8b66548ce99448",
             "fuzz/corpus/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
             "fuzz/corpus/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
@@ -4913,11 +5132,12 @@
             "test/standalone_turn_log_test.cc": "100644:8a22c82c4263d8b09b3c02901d36ab3c49841c20"
           },
           "by": "review",
-          "commit": "db4435636e55398af36e0efdb954752b76c6c6e4",
+          "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
           "criteria": "964dd2896d778795",
           "diffs": {
             "": "98762c87cd0c34d0",
             "CMakeLists.txt": "e6af7f9e01a18e1f",
+            "bench/engines/rocksdb-11.11/build.sh": "9ba14e31c543a389",
             "bench/kv/barriers.py": "af0eb3686975fac6",
             "bench/kv/floor.c": "cc84b0e46bedd6b7",
             "bench/kv/kv_strata.cc": "7e5dc2588f55be8b",
@@ -4926,7 +5146,7 @@
             "bench/kv/run.py": "1a827dcf3e7d98dc",
             "cmake/check_core_includes.cmake": "aaa6dfafd8396acb",
             "docs/design/standalone-turn-log.md": "82fef7d547ae20d5",
-            "docs/gates/document-profile.md": "e98010b55503854c",
+            "docs/gates/document-profile.md": "3204eaa4a5415e21",
             "docs/perf/standalone-turn-log.md": "28f1895335917c41",
             "fuzz/fuzz_command.cc": "6a3a19a0046ab392",
             "include/strata/core/command.hh": "abfddc5a4b9c49d2",
@@ -4942,24 +5162,26 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "sh /Users/kronuz/code/Kronuz/Xapiand/.scratch/review-document-gate-durability/run.sh split wal_window",
-                  "commit": "cc8ba3aa45b0545668dbff2877b53a81a723601b",
-                  "docs": [
-                    "docs/gates/document-profile.md",
-                    "docs/perf/standalone-turn-log.md"
-                  ],
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261117-134801-f716c7",
+                  "job": "261118-132716-c99eab",
                   "level": "light",
-                  "seconds": 491.5,
+                  "seconds": 286.3,
                   "state": "done",
-                  "what": "durability review probe rerun at the fix: wal_window lag, split"
+                  "what": "document-gate check build-test at cbf08ebf2aa3"
                 }
               ],
               "kind": "defect",
               "reproduced": false
             }
+          },
+          "fix_scope": {
+            "paths": [
+              "bench/engines/rocksdb-11.11/build.sh"
+            ],
+            "reason": "only bench/engines/rocksdb-11.11/build.sh changed since acceptance: RocksDB baseline built without io_uring; benchmark tooling, no strata mechanism"
           },
           "note": "",
           "review": "c951d14bdfc6b20bd348296b8e4956bc9db0916a",
@@ -4994,7 +5216,8 @@
         "CMakeLists.txt",
         "docs/design/standalone-turn-log.md",
         "fuzz/**",
-        "cmake/check_core_includes.cmake"
+        "cmake/check_core_includes.cmake",
+        "bench/engines/rocksdb-11.11/build.sh"
       ],
       "history": [
         {
@@ -5036,7 +5259,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-18T02:39:19",
+      "updated": "2026-11-18T14:43:22",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -7113,18 +7336,45 @@
       "files": [
         "docs/GOAL5-AUDIT.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/goal5-audit",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T13:04:11",
+          "commit": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+          "criteria": {
+            "A1": "`docs/GOAL5-AUDIT.md` in consensus at consensus:42cb3cf: completion:d8b538c6778f, journal:ce05f0efd411, consensus:b7f48b2414d8, task:95798a02f68c, wheel:238b1ae9f58b",
+            "A2": "261118-112418-cceb31"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-112239-70bd05",
+              "level": "light",
+              "seconds": 930.6,
+              "state": "done",
+              "what": "goal5-audit check build-test at ac323fe6ec45"
+            }
+          ],
+          "final": true,
+          "from": "42019ebb7c1fd2f72a9edc7212c22a6e5c6f95c9",
+          "reason": "",
+          "tested": "ac323fe6ec457bc5616c77c23c07bb8a6b6d69fa"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Goal 5 audit of completion, journal, consensus, task, wheel: every thread and reclamation path bounded",
-      "updated": "2026-11-18T02:56:32",
-      "worktree": "../consensus-wt/xapiand/goal5-audit"
+      "updated": "2026-11-18T13:04:31",
+      "worktree": ""
     },
     "group-core": {
       "accepted": {
@@ -7166,7 +7416,8 @@
         "detent:consensus-driver",
         "detent:consensus-quiescence",
         "detent:journal-host-guards",
-        "strata-nospace-position"
+        "strata-nospace-position",
+        "document-gate"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -7212,7 +7463,8 @@
         "test/group/**",
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md",
-        "docs/REPLICATION.md"
+        "docs/REPLICATION.md",
+        "include/strata/core/index.hh"
       ],
       "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
@@ -7230,7 +7482,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-17T03:06:14",
+      "updated": "2026-11-18T13:20:23",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -23067,7 +23319,26 @@
       "updated": "2026-11-08T15:39:09"
     },
     "track-c-c3-gate": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T15:02:18",
+          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
+          "blobs": {
+            "docs/gates/track-c-c3.md": "100644:425d4bb56d62eb1ffcde34dd350546c4f2195976"
+          },
+          "by": "review",
+          "commit": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+          "criteria": "ab0e6001941ab8c1",
+          "diffs": {
+            "docs/gates/track-c-c3.md": "1d4bffc59a627485"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9c68a2ad4fcbe8b70c3ffc5f1ac826b74e84c302",
+          "reviewed": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "consensus-c3-rows"
       ],
@@ -23086,18 +23357,56 @@
         "docs/gates/track-c-c3.md",
         "docs/reviews/track-c-c3.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/track-c-c3-gate",
-      "landed": [],
-      "lenses": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T15:03:41",
+          "commit": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+          "criteria": {
+            "A1": "261118-042103-6cde19 (passed at 5cab3e7b21a7; ignores docs-only docs/gates/track-c-c3.md, docs/mechanisms/write-buffer.md, docs/perf/exploration-log.md, docs/perf/wbuf-inline.md, docs/reviews/track-c-c3.md, docs/status/wbuf-inline.md); fails without: 261118-025955-8f229e",
+            "A2": "docs/gates/track-c-c3.md (strata:7cd834b3), each row with its job id",
+            "A3": "docs/reviews/track-c-c3.md (strata:7cd834b3): the correctness review, accepted at strata:5cab3e7b, re-checked at consensus:6a76867"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5cab3e7b21a701c1ce76eeea9aa69c8c412c244e",
+              "docs": [
+                "docs/gates/track-c-c3.md",
+                "docs/mechanisms/write-buffer.md",
+                "docs/perf/exploration-log.md",
+                "docs/perf/wbuf-inline.md",
+                "docs/reviews/track-c-c3.md",
+                "docs/status/wbuf-inline.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-042103-6cde19",
+              "level": "light",
+              "seconds": 869.1,
+              "state": "done",
+              "what": "track-c-c3-gate check build-test at 5cab3e7b21a7"
+            }
+          ],
+          "final": true,
+          "from": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+          "reason": "",
+          "tested": "7cd834b3d86cd8e16335091d85dcfb3342e037e1"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "C3 gate report: T5 rows and the repair mutant at consensus main, three platforms",
-      "updated": "2026-11-18T04:44:41",
-      "worktree": "../strata-wt/xapiand/track-c-c3-gate"
+      "updated": "2026-11-18T15:03:44",
+      "worktree": ""
     },
     "track-c-gates": {
       "accepted": {},
@@ -23105,7 +23414,8 @@
         "consensus-hello-limits",
         "consensus-sim-loops",
         "consensus-flow-bench",
-        "detent:journal-faultfs"
+        "detent:journal-faultfs",
+        "detent:driver-apply-gap"
       ],
       "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
       "branch": "quest/xapiand/track-c-gates",
@@ -23134,7 +23444,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T08:19:27",
+      "updated": "2026-11-18T12:58:47",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
