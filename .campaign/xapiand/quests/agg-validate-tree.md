@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A search whose aggregation tree names an unknown type anywhere, nested under a bucket included, is refused with a 400 before the search runs. Today bucket.h builds sub-aggregations lazily, so a nested unknown type is refused only when the first bucket forms at match time, and a search with no matching documents never refuses it (serialize-validation journal).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A nested unknown aggregation type under each bucket kind is refused with a 400 naming the type, before any document is matched, including on an empty index; tests fail without the fix
+- A2 Valid nested trees still return the same aggregation results (existing aggregation tests pass unchanged)
+- A3 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

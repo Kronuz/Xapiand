@@ -5,27 +5,22 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A process that forks while the LOG thread holds its mutex can log in the child without blocking: a `pthread_atfork` handler (or equivalent) leaves the child's logger state consistent, so `wake_for` never waits on a mutex held by a thread that no longer exists (logger-exit-lifetime review R4, pre-existing on main).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test forks while the LOG thread holds the mutex (forced with a test hook) and the child logs and exits within a bound; it hangs or times out without the fix (mutant job)
+- A2 The parent's logging is unaffected across the fork; TSan clean
+- A3 The suite and TSan pass and CI is green on all platforms
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
