@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: blocked on owner: the heavy-share cap (decision request below); E1/E2 folded in at Xapiand:8860f642f
+State: ready for review (master merged at Xapiand:23ae3cd53; evidence jobs at the head queued, map under "Review findings")
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,14 +24,35 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Owner decides the cap (below). Then light-share-task lands the share in Kronuz/task with a light-in-flight gate
-   signalled by Xapiand (the fixed patch's gate never opens: design note "Why the fixed share does not bind").
-2. Correctness review F6: its fix is ineffective under real traffic; tell the reviewer before `campaign accept`.
-3. Lead: merge master into the branch, `campaign verify light-share` at the head (A5), push.
+1. Jobs at the merged head: build 261119-144345-a9ab6a, probes 261119-144400-cb39e5 and fails-without 261119-144408-f9f803,
+   suite 261119-144433-ce3dda, E1a/E1b 261119-144508-f4e402/261119-144510-c2e08e (A2), E2 261119-144515-a45fea (A3),
+   T12 261119-144429-0fbc68 and heavy-only 261119-144523-5ffc92 (A4). Fold their numbers into the Evidence table.
+2. Lead: push the branch for CI at the merged head; `campaign accept light-share correctness --confirm` with the map below.
+3. Owner decides the cap (below); then light-share-task lands it in Kronuz/task with a light-in-flight gate signalled
+   by Xapiand (the fixed patch's gate never opens: design note "Why the fixed share does not bind"), carrying F7-F9.
+
+## Review findings (correctness, verdict CHANGES at Xapiand:2b8c66958)
+
+| Finding | Fix | Job |
+|---|---|---|
+| F1 (blocking) | patch v2 (Xapiand:7ef26e7cc): a parked loop keeps `draining_` clear, so a light arrival posts `drain()` and runs | `parked` probe: passes 261119-144400-cb39e5, fails at v1 261119-144408-f9f803 |
+| F2 | heavy head asks for a slot first, light only when none is free | `bypass` probe, same two jobs |
+| F3 | report per-arm position and p99.9 (Xapiand:b58267569) | E1a/E1b 261119-144508-f4e402, 261119-144510-c2e08e |
+| F4 | per-turn wall/CPU histogram (`harness/light_share_turns.py`); note keeps "inferred" beside E1's 0.92-0.94 CPU/wall | E1a/E1b |
+| F5 | restored docs and light max (not p99.9) in the note's tables; light p99.9 per arm in the report | E1a/E1b |
+| F6 | share binds only while light waits (`heavyonly`, `gate` probes); the gate's signal moves to Xapiand (light-share-task) | probes as F1; heavy-only 261119-144523-5ffc92 |
+| F7 | patch v2: grant posted under the lock; the destructor returns a held slot | task tests in the probe job (no destroy-while-granted test) |
+| F8, F9 | nits for light-share-task (no landed code here, R3) | none |
+
+For `campaign accept`: F1=261119-144400-cb39e5 (fails without: 261119-144408-f9f803), suite 261119-144433-ce3dda.
+
+CI at 24ab5dfe3 (run 44524508302): only "Unit tests under TSan" and "ThreadSanitizer" failed, both at their "Install
+build deps" step (apt: "Failed to fetch https://security.ubuntu.com/... Connection failed"), before any build; arm64
+and FreeBSD green on the same commit. A runner network flake, not this branch's code; the merged head needs a push.
 
 ## Blocked on
 
-Owner: the heavy-share cap. Decision request (also in `docs/design/light-share.md`, "Decision: the cap"), with E1/E2:
+Nothing for this quest's landing (R3). The owner's cap decision gates light-share-task: Decision request (also in `docs/design/light-share.md`, "Decision: the cap"), with E1/E2:
 
 > **Decision request: the heavy-share cap.** No value is clearly best. On a share that always binds (both patches:
 > 7 mix arms per share, 4 T10 arms each at 4 and 6, 10 T12 arms; 16 CPUs, 16 loops), share 4 meets T10 and meets T5
@@ -106,7 +127,7 @@ share in both patches, inside off's 3,532-4,564.
 | A2 | NOT MET. T5: share 4 (binding) 5 of 7 arms over both patches (fixed patch 1 of 3), prototype only. T4: no share (plateau 1.79-2.05 ms vs 1.024). No landed code (R3) |
 | A3 | MET ON THE PROTOTYPE at shares 6 and 4, both patches (binding, 17.7-18.3 and 17.0-17.4 ms; E2 53715a); not at landed code (R3); fixed patch at 10 ms misses (44 ms) |
 | A4 | MET ON THE PROTOTYPE: T12 RESTORE and QPS inside off's band at every share, both patches (abe252, 135316-88308e, 184049-f10605); the mix's heavy searches are not A4's measure but cost 36% at share 4 |
-| A5 | NOT MET at the head: suite last passed at 37f06f732607 (261118-184002-4c0fa6); since then harness and docs only; master not merged |
+| A5 | Pending at the merged head 23ae3cd53: suite 261119-144433-ce3dda, probes 261119-144400-cb39e5 / fails-without 261119-144408-f9f803; CI needs a push |
 
 E1 (fixed patch, share always binds; 261119-030739-c88e70, 030741-9184b7, 3 arms each). Heavy turn wall p99; turns
 over 1.024 ms and their CPU/wall:
@@ -144,4 +165,6 @@ light traffic; its signal belongs in Xapiand. Design note: `docs/design/light-sh
   diagnosis, the harnesses and the design note.
 - R4: the cap decision stands on always-binding arms (first patch, and the fixed patch's `N@0`), since the fixed
   patch's 10 ms gate does not bind under the mix; the gate's signal is a landing question (light-share-task).
+- R6: E1/E2 rerun with `--force` at the merged head: `campaign` reused them as "only merges from main since", but
+  the merge changes `src/server/search_views.cc` on T5's path, so the binary they measured is not the head's.
 - R5: exclusive jobs are capped at 10 minutes, so E1 is two 6-arm jobs; E2 drops share 8 (it misses T10 already).
