@@ -982,6 +982,84 @@
         ]
       },
       "text": "coverage-areas landed: unlocks coverage-core-main; coverage-core-small; coverage-database; coverage-multivalue; coverage-server"
+    },
+    {
+      "at": "2026-11-19T04:52:29",
+      "by": "detent-lead",
+      "closed": "FYI from Detent: consensus:62eb8fc is test-only (connection_test.cc read_slowly sizing); no transport or contract change, consensus-rpc-lane unaffected",
+      "id": "msg-123",
+      "text": "Detent lead: connection-slow-reader-flake landed at consensus:62eb8fc. Test-only (test/transport/connection_test.cc): read_slowly measures the reader's real receive capacity before the run and sizes its queue from it (macOS loopback holds pinned SO_RCVBUF + 522624 B), refuses unsatisfiable marks by value, no retries. No transport code or contract changed, so consensus-rpc-lane is unaffected."
+    },
+    {
+      "at": "2026-11-19T05:33:12",
+      "by": "detent-lead",
+      "closed": "FYI from Detent: consensus:ae08d92 dns-threads landed (bounded joined resolver threads); no Xapiand contract change",
+      "id": "msg-124",
+      "text": "Detent lead (D127): consensus-dns-threads landed at consensus:ae08d92. DNS lookups run on bounded, owned threads (process_bound 16, joined on shutdown); a hung resolver no longer blocks the shared asio thread. Landed with --no-ci under D116: CI 44467383652 failed only groups_upload on macos-x86_64. Next in D127 order: peers-tsan-timeout, then driver-apply-gap (in review, fix round 1), then consensus-worker-release."
+    },
+    {
+      "at": "2026-11-19T06:24:36",
+      "by": "detent-lead",
+      "closed": "D138 records it; Prism row closed; detent-agent column goes into the note with the lifecycle rename",
+      "id": "msg-125",
+      "text": "Detent lead: owner ruling D122. Every Kronuz daemon ends up with one shape in the server-composition areas: Xapiand, Prism, detentd, detent-relay and detent-agent. Detent takes Prism's adoption (prism-server-composition, after server-composition-adoption, which now includes detent-agent). Both start once the note is CURRENT and your adoption has landed. If the note's Mains table lacks rows for detent-agent and Prism, please add them."
+    },
+    {
+      "at": "2026-11-19T06:25:41",
+      "by": "detent-lead",
+      "closed": "noted; I send the CURRENT commit and the adoption landing when each happens",
+      "id": "msg-126",
+      "text": "Detent lead, server-composition timing: (1) loop-idle-waits (detentd, relay and coordinator off 1 ms polling) started now; it has no dependency on the note. (2) server-composition-adoption (detentd, detent-relay, detent-agent) starts the moment the note is CURRENT and your Xapiand adoption has landed. (3) prism-server-composition follows it. Each depends on an event, not a date. Send me the CURRENT commit and your adoption's landing, and I start (2) the same hour."
+    },
+    {
+      "at": "2026-11-19T06:29:37",
+      "by": "detent-lead",
+      "closed": "note contributor uses detent-authority (D123); Xapiand's only mentions are in a dated review (docs/reviews/transport-security-design.md), left as the record",
+      "id": "msg-127",
+      "text": "Detent lead: owner ruling D123. detentd is renamed detent-authority, so the three Detent daemons are detent-authority, detent-relay and detent-agent, with no alias. The rename quest, rename-detentd, started now: code, docs, website and re-rendered diagrams in Detent. Please use detent-authority in cpp-libraries docs/server-composition.md (the Mains table, the detent-agent column you're adding, prose) and in Xapiand's mentions. I'll send the landing commit."
+    },
+    {
+      "at": "2026-11-19T07:12:32",
+      "by": "detent-lead",
+      "closed": "yes: one rule for all five daemons; Detent drafts the Options line in its adoption quest's note edit; Xapiand's adoption follows it",
+      "id": "msg-128",
+      "text": "Detent lead, FYI for the note's Options row: owner ruling D125 gives every Detent daemon one config file, detent-<role>.json, holding process and role settings, with secrets in one private file named by path. authority.json, relay.json and agent.json go away in server-composition-adoption. If the note's Options step should state the secrets-file rule for all daemons, Xapiand included, say so and I'll draft the line."
+    },
+    {
+      "at": "2026-11-19T08:18:57",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-129",
+      "items": {
+        "stopword-lists": "frees docs/src/content/docs/changelog.md for stopword-lists"
+      },
+      "settles": {
+        "start": [
+          "stopword-lists"
+        ]
+      },
+      "text": "geo-correctness landed: unlocks frees docs/src/content/docs/changelog.md for stopword-lists"
+    },
+    {
+      "at": "2026-11-19T09:02:55",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:driver-witness-removal-sink",
+      "id": "msg-130",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:driver-witness-removal-sink"
+      },
+      "text": "detent:driver-witness-removal-sink started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T09:03:19",
+      "by": "detent-lead",
+      "closed": "noted: driver-apply-gap landed at consensus:c64b5cd; consensus-rpc-lane's after list includes it",
+      "id": "msg-131",
+      "text": "Detent lead: driver-apply-gap landed on consensus main (consensus:c64b5cd, 4b0b214 Merge branch 'main' into quest/detent/driver-apply-gap), first in D127's order. consensus-dns-threads landed earlier. peers-tsan-timeout is next, then consensus-worker-release starts once it lands (same files). driver-witness-removal-sink started now. Please pass this to whoever on your side waits on the apply gap (xapiand-d8)."
     }
   ],
   "quests": {
@@ -1160,6 +1238,20 @@
       "checks": [],
       "consumes": [],
       "files": [],
+      "history": [
+        {
+          "at": "2026-11-19T06:17:14",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -1172,10 +1264,10 @@
         "prospect:term-expansion"
       ],
       "repo": "../prospect",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-08T19:31:57"
+      "updated": "2026-11-19T06:17:14"
     },
     "automata-evaluation": {
       "accepted": {},
@@ -1323,6 +1415,18 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:05",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> low"
+          ]
         }
       ],
       "landed": [],
@@ -1335,10 +1439,10 @@
       ],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "low",
       "status": "planned",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-18T05:36:11",
+      "updated": "2026-11-19T06:17:05",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
@@ -1858,7 +1962,8 @@
         "docs/design/cheap-reopen.md",
         "tests/test_cheap_reopen*",
         "tests/test_pool.cc",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "src/database/handler.cc"
       ],
       "landed": [],
       "lenses": [
@@ -1871,7 +1976,7 @@
       "risk": "high",
       "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T01:33:15",
+      "updated": "2026-11-19T08:43:29",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
@@ -3925,7 +4030,8 @@
         "detent:peers-tsan-timeout",
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
-        "detent:driver-apply-gap"
+        "detent:driver-apply-gap",
+        "detent:driver-witness-removal-sink"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4114,7 +4220,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-18T17:24:53",
+      "updated": "2026-11-19T09:03:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -4323,7 +4429,8 @@
         "tests/test_coverage_main*",
         "harness/coverage_e2e_main*",
         "harness/coverage.sh",
-        "docs/dev/coverage.md"
+        "docs/dev/coverage.md",
+        "harness/coverage_one.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -4336,7 +4443,7 @@
       "risk": "low",
       "status": "active",
       "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
-      "updated": "2026-11-19T00:46:09",
+      "updated": "2026-11-19T02:39:39",
       "worktree": "../Xapiand-wt/xapiand/coverage-core-main"
     },
     "coverage-core-small": {
@@ -7538,7 +7645,50 @@
       "updated": "2026-11-08T13:25:33"
     },
     "geo-correctness": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T06:04:25",
+          "base": "e5697b9bbd5c7129d2626d969b613d847b7eccc8",
+          "blobs": {
+            "CMakeLists.txt": "100644:986deea609940c84f1ce630a12f2b1a08396f5c0",
+            "docs/design/geo-correctness.md": "100644:03cb1b396c54d178dc63c64f48cab1ea4a50f8b0",
+            "docs/src/content/docs/changelog.md": "100644:7f495c624267877886313b9b45a3d94b540a8497",
+            "src/geospatial/collection.cc": "100644:8c5706751d65cc487e109da6c81038e8adc6767c",
+            "src/geospatial/collection.h": "100644:19d4caea4b68dd5042e036578623d3a776a6fa61",
+            "src/geospatial/convex.cc": "100644:b7c4d13323648af3963580cf31570a6c1a55afa4",
+            "src/geospatial/convex.h": "100644:f3dc85db4ba0acef658a6e534c2019f4421fce70",
+            "src/geospatial/ewkt.cc": "100644:37c36fa1bb57355e788c2192c58fea1aefd67f2d",
+            "src/geospatial/geospatial.cc": "100644:36edb3ffdc17afa527f95c7a66d059de10ab692b",
+            "src/geospatial/geospatial.h": "100644:6e02a7049cb5d0708a2acdc0ca47a95226630561",
+            "tests/test_coverage_geospatial.cc": "100644:e29d4e049a44add2997cb72116fa6d7605553d56",
+            "tests/test_geo_corpus.cc": "100644:3fa1b95e19d2c5c885ae13a0133b21d25bf2ce07",
+            "tests/test_geo_correctness.cc": "100644:c30b1363119637fb200dca09a45567c8f1ffeab2"
+          },
+          "by": "review",
+          "commit": "05fcde57c8c0c7c0529fce636caca31963502e87",
+          "criteria": "a80f1e3faa89a6ac",
+          "diffs": {
+            "CMakeLists.txt": "25b04272a9a5821f",
+            "docs/design/geo-correctness.md": "05a8b81d295aa560",
+            "docs/src/content/docs/changelog.md": "4124a80c6a469dfd",
+            "src/geospatial/collection.cc": "200fea1d6e181853",
+            "src/geospatial/collection.h": "845853eeb5f6b8f5",
+            "src/geospatial/convex.cc": "5fccc10271fa94ee",
+            "src/geospatial/convex.h": "23d8f4ea222f73e9",
+            "src/geospatial/ewkt.cc": "e1ab333d6454e9ea",
+            "src/geospatial/geospatial.cc": "fa14d9198d237569",
+            "src/geospatial/geospatial.h": "550da72581a4d13b",
+            "tests/test_coverage_geospatial.cc": "6d2a71d682c82baf",
+            "tests/test_geo_corpus.cc": "33af62e92638e7a9",
+            "tests/test_geo_correctness.cc": "c007aee370363603"
+          },
+          "findings": {},
+          "note": "",
+          "review": "6fa60d05ab2194028e59b0bc699baca2199f2340",
+          "reviewed": "05fcde57c8c0c7c0529fce636caca31963502e87",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "coverage-areas",
         "htm-edge-points"
@@ -7559,18 +7709,49 @@
         "tests/test_geo*.cc",
         "docs/design/geo*",
         "tests/test_coverage_geospatial.cc",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
-      "lenses": [],
+      "landed": [
+        {
+          "at": "2026-11-19T08:18:32",
+          "commit": "7401fbbbc781f792e5aaeee5fa1abec2e74f9abc",
+          "criteria": {
+            "A1": "261119-050228-23f105; fails without: 261118-231033-23ce28, 261119-004729-f41c38, 261119-004732-82117a",
+            "A2": "261119-055658-f279a3, 261119-055659-ad649e, 261119-055659-51f521",
+            "A3": "261119-055628-79a85b, 261119-055658-705b95, 261119-055700-5f9840"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "05fcde57c8c0c7c0529fce636caca31963502e87",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-055628-79a85b",
+              "level": "light",
+              "seconds": 484.2,
+              "state": "done",
+              "what": "geo-correctness check suite at 05fcde57c8c0"
+            }
+          ],
+          "final": true,
+          "from": "eb703e4b9bfddff612dc996ffe6aca42bdd1e7e5",
+          "reason": "",
+          "tested": "05fcde57c8c0c7c0529fce636caca31963502e87"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-19T00:42:46",
+      "updated": "2026-11-19T08:18:57",
       "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
@@ -7802,7 +7983,8 @@
         "detent:consensus-quiescence",
         "detent:journal-host-guards",
         "strata-nospace-position",
-        "document-gate"
+        "document-gate",
+        "detent:driver-witness-removal-sink"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -7867,7 +8049,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-18T13:20:23",
+      "updated": "2026-11-19T09:03:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -7969,6 +8151,20 @@
         "docs/gates/phase-3r.md",
         "docs/mechanisms/simulator.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-19T06:17:22",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -7977,10 +8173,10 @@
       "needs": [],
       "provides": [],
       "repo": "../strata",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Phase 3R gate rows in the simulator",
-      "updated": "2026-11-15T23:04:59"
+      "updated": "2026-11-19T06:17:22"
     },
     "hashes-cl-1": {
       "accepted": {},
@@ -15191,6 +15387,18 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:08",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
         }
       ],
       "landed": [],
@@ -15202,10 +15410,10 @@
       "needs": [],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-18T05:36:15"
+      "updated": "2026-11-19T06:17:08"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
@@ -17010,6 +17218,18 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:17",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
         }
       ],
       "landed": [],
@@ -17021,10 +17241,10 @@
       "needs": [],
       "provides": [],
       "repo": "../prospect",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Phase 5, analysis and the query language's long tail",
-      "updated": "2026-11-09T04:14:30"
+      "updated": "2026-11-19T06:17:17"
     },
     "phase6": {
       "accepted": {},
@@ -17907,6 +18127,18 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:11",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
         }
       ],
       "landed": [],
@@ -17920,10 +18152,10 @@
       ],
       "provides": [],
       "repo": "../prospect",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-09T04:14:30"
+      "updated": "2026-11-19T06:17:11"
     },
     "pins-2026-11": {
       "accepted": {},
@@ -20918,6 +21150,67 @@
       "updated": "2026-11-19T00:35:48",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
+    "server-composition-note": {
+      "accepted": {},
+      "after": [],
+      "base": "260b9dffe6768de520c05047f6229368dfd687aa",
+      "branch": "quest/xapiand/server-composition-note",
+      "checks": [
+        {
+          "cmd": "test -s docs/server-composition.md",
+          "level": "none",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/server-composition.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T06:33:40",
+          "ci_skipped": "cpp-libraries has no CI workflow for docs/ (tools.yml filters to tools/**, cmake.yml is reusable only, nightly.yml is the dispatcher); doc check job 261119-063111-a8dbca passed",
+          "commit": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc",
+          "criteria": {
+            "A1": "`docs/server-composition.md` at cpp-libraries:0579a1a. F1: \"Options\" paragraph and C9 (--upstream-ca). F2: step 4's descriptor check, C5 (D133: explicit value exits EX_CONFIG, default shrinks). F3: step 4's Limits and Tls, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded.",
+            "A2": "`docs/server-composition.md` at cpp-libraries:0579a1a: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80; detent-agent cites (detent_agent/main.cc:105-116, config.hh:9, managed_host.cc:28-112,186-190,198-228, detent_delivery/coordinator.cc:253,316,446) read at Detent:372e95c7; the cited Detent sources have no diff 372e95c7..d3141878.",
+            "A3": "`docs/server-composition.md` at cpp-libraries:0579a1a, section Deviations: 18 rows, each with reason and status; adds detent-agent's 1 ms and 20 ms polls, its signal_set, and the unbounded stops (detent-authority, relay, agent).",
+            "A4": "`docs/server-composition.md` at cpp-libraries:0579a1a, lines 1-4: \"Status: CURRENT (2026-11-19), reviewed\", naming Xapiand D132, D133, D138 and Detent D122, D123 and the six heads the citations hold at. CURRENT at cpp-libraries:0579a1a.",
+            "A5": "Manual: Detent's lead confirmed the Detent-side text at cpp-libraries:0579a1a on 2026-11-19 (cmux 6ff6cac5), checking every citation at Detent:372e95c7 (detentd/main.cc:34,154,176; service.cc:543; configuration.cc:119,204; detent_agent/main.cc:105; config.hh:9). Citation refresh due after Detent's rename-detentd lands."
+          },
+          "evidence": [
+            {
+              "cmd": "test -s docs/server-composition.md",
+              "commit": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-063111-a8dbca",
+              "level": "none",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "server-composition-note check doc at 0579a1a4b335"
+            }
+          ],
+          "final": true,
+          "from": "260b9dffe6768de520c05047f6229368dfd687aa",
+          "reason": "",
+          "tested": "0579a1a4b3356193ab41c794941e89fe9c3c5bfc"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "landed",
+      "title": "Fold the design review into the server-composition note and mark it CURRENT",
+      "updated": "2026-11-19T06:33:42",
+      "worktree": ""
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
@@ -22367,6 +22660,66 @@
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
       "updated": "2026-11-18T21:37:42",
       "worktree": ""
+    },
+    "stopword-lists": {
+      "accepted": {},
+      "after": [],
+      "base": "cf4cba6050866463e1ad7638cdc2f4e8c0a369bb",
+      "branch": "quest/xapiand/stopword-lists",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/stopper*",
+        "src/stopwords/**",
+        "src/engine/text.cc",
+        "tests/test_stopword*",
+        "docs/src/content/docs/**stop*",
+        "docs/src/content/docs/changelog.md",
+        "src/reserved/schema.h",
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/database/handler.cc",
+        "src/multivalue/generate_terms.cc",
+        "tests/test_control_plane.cc",
+        "CMakeLists.txt",
+        "docs/mechanisms/stopword-lists.md",
+        "docs/perf/stopword-lists.md",
+        "docs/src/content/docs/**options*"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T06:14:41",
+          "reason": "owner asked; no concurrency or durability: one metadata key under formats-open-until-release, behavior change already approved (D137); normal keeps the correctness review and drops the crash/TSan gates high adds",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "Stopword lists built in, overridable, fingerprinted per index",
+      "updated": "2026-11-19T08:35:24",
+      "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
       "accepted": {},
@@ -23838,6 +24191,87 @@
       "updated": "2026-11-12T22:21:31",
       "worktree": ""
     },
+    "task-lifecycle": {
+      "accepted": {},
+      "after": [],
+      "base": "95798a02f68c86f070401329a05c78d326ac2579",
+      "branch": "quest/xapiand/task-lifecycle",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_asio.hh",
+        "task_timers.hh",
+        "lifecycle*.hh",
+        "test/**",
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "task:lifecycle"
+      ],
+      "repo": "../task",
+      "risk": "high",
+      "status": "review",
+      "title": "task::lifecycle: components, stop sources, periodic and debounce",
+      "updated": "2026-11-19T09:11:49",
+      "worktree": "../task-wt/xapiand/task-lifecycle"
+    },
+    "task-lifecycle-rename": {
+      "accepted": {},
+      "after": [],
+      "base": "95798a02f68c86f070401329a05c78d326ac2579",
+      "branch": "quest/xapiand/task-lifecycle-rename",
+      "checks": [
+        {
+          "cmd": "! grep -nwE \"serve|stop_signals\\b.*&|concept service\" docs/design/service-shape.md docs/API.md",
+          "level": "none",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/service-shape.md",
+        "docs/API.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle-rename",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "folded into task-lifecycle, which builds the code and renames the design doc together",
+      "repo": "../task",
+      "risk": "low",
+      "status": "dropped",
+      "title": "task docs: serve/service become lifecycle/component",
+      "updated": "2026-11-19T06:34:19",
+      "worktree": "../task-wt/xapiand/task-lifecycle-rename"
+    },
     "task-phase7c-l1": {
       "accepted": {},
       "after": [],
@@ -25229,7 +25663,52 @@
       "worktree": ""
     },
     "wide-search-loop": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T05:44:52",
+          "base": "a6de2c57936a95716912a676dee99e48d5011f01",
+          "blobs": {
+            "docs/design/wide-search-loop.md": "100644:23d7200b4e7e5c3fdc47ddb30d06ca18c901714c",
+            "harness/async_allowlist.tsv": "100644:82d044e7aa9117462bfee2a87e6eba0ebfe0247d",
+            "harness/wide_search_check.py": "100755:00376b9a0dc8bf00ae4468c8122867d9c4a180e3",
+            "harness/wide_search_halfclose.py": "100755:e00746eec871aa17d24e769b0ac301c5b45a3e93",
+            "harness/wide_search_reactor_stalls.patch": "100644:2c990f9bc82baf61df3a70fe750bf2a3ece0d5af",
+            "harness/wide_search_stalls.py": "100755:2834751c010acba8eef2a427b39263d22d2ef3a8",
+            "harness/wide_search_starve.py": "100755:5aa8e70e4ba3baf118aad1ddcb9c876d6003eb59",
+            "harness/wide_search_vm.sh": "100755:79f872f1ee98c4fe1add93cfff9cbcb2c20c4271",
+            "src/database/handler.cc": "100644:59576eec9a6c3c73d8fb8f95695f5b91107598ba",
+            "src/database/wide_search.cc": "100644:89f0a67f01402b0b831c9d21cd2272c856beb84b",
+            "src/database/wide_search.h": "100644:a242aa173ba78e0de7d0dc8637e57796c4c5dea4",
+            "src/server/search_views.cc": "100644:600f5449ec5e71190962c1e7fb4e5f417c15d973",
+            "tests/test_node.cc": "100644:dfb4df5c3ab214276b233d5120dcb1f604bd18e9",
+            "tests/test_wide_search.cc": "100644:3dd76df79ed9d9ad22f1521f1daa711995f1df2f"
+          },
+          "by": "review",
+          "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+          "criteria": "3be2c18b9e5aedd9",
+          "diffs": {
+            "docs/design/wide-search-loop.md": "8a8e4780c64f103e",
+            "harness/async_allowlist.tsv": "058287ed11f6c5af",
+            "harness/wide_search_check.py": "c972e894f51fa607",
+            "harness/wide_search_halfclose.py": "cb9ddd6c8a8ae909",
+            "harness/wide_search_reactor_stalls.patch": "a47315a81a06ea44",
+            "harness/wide_search_stalls.py": "f7037af268b7bea0",
+            "harness/wide_search_starve.py": "0e583d903fcaa8d8",
+            "harness/wide_search_vm.sh": "9b5da1b0a8d40c1a",
+            "src/database/handler.cc": "ab3193eb145876c2",
+            "src/database/wide_search.cc": "e9f9d4c827b0001f",
+            "src/database/wide_search.h": "21d902e7c276751d",
+            "src/server/search_views.cc": "4eba71e47e29e8fd",
+            "tests/test_node.cc": "08c2c5fffc7595b9",
+            "tests/test_wide_search.cc": "6a9a853b7e96922a"
+          },
+          "findings": {},
+          "note": "",
+          "review": "7265610722d3cf07ef915cd3c2be7321a33c4b4f",
+          "reviewed": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "e3582203c19c3191218ff6dde560592ae1a67406",
       "branch": "quest/xapiand/wide-search-loop",
@@ -25251,7 +25730,8 @@
         "harness/wide_search*",
         "tests/test_wide_search*",
         "docs/design/wide-search-loop.md",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [
@@ -25264,7 +25744,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-18T22:00:15",
+      "updated": "2026-11-19T05:44:52",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
@@ -27787,6 +28267,18 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:19",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
         }
       ],
       "landed": [],
@@ -27797,10 +28289,10 @@
       "needs": [],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-18T05:36:21"
+      "updated": "2026-11-19T06:17:19"
     },
     "xapiand-on-strata": {
       "accepted": {},
