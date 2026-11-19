@@ -1,7 +1,8 @@
 # Cheap reopen: an evicted index reopens near the cost of finding it open
 
 Status: measured at main 4adce97ce (strata 397c02d5). D1, D2 and D3 are built on quest/xapiand/cheap-reopen
-(D3 at Xapiand:3b8d41c39); D4's strata half is a follow-up, its Xapiand half is refused.
+(D3 at Xapiand:3b8d41c39); D4's strata half is a follow-up, its Xapiand half is refused. A2 (within 2x) is not met:
+the best arm measured is 2.0x (H5).
 
 ## Problem
 
@@ -52,6 +53,9 @@ next. Sixteen work threads sit idle (191,801 of the window's samples are waits) 
 | D1 (lanes) alone, against the merge-base f722ff939 | 884, 888 ms (base 948, 977) | 131, 143 ms (base 125, 153) | 131125-16ca52 |
 | H3: D1 plus D3 (concurrent pins), against D1 alone | 291, 284 ms (D1 869, 843) | 118, 126 ms (D1 128, 129) | 150608-5ad670 |
 | D1 + D3 at 3b8d41c39, against the merge-base f722ff939 | 285, 283 ms (base 959, 881) | 128, 129 ms (base 122, 123) | 184757-7f0046 |
+| H4: up to 16 partitions (12 at pool 200), against D1 + D3 | 264, 262 ms (head 283, 281) | 125, 124 ms (head 125, 126) | 213949-011031 |
+| H5: `recover`'s sizes by `fstatat` (strata probe) | 262, 262 ms (head 281, 282) | 123, 124 ms (head 124, 123) | 033144-b85265 |
+| H4 + H5 | 251, 249 ms (H4 alone 266, 268) | 122, 124 ms (H4 128, 125) | 033144-b85265 |
 
 H1 confirms the lane: concurrent pins queue on the catalog's one group. H2 gives the lane eight slots: the same job's
 main arm ran 1,536-2,291 ms beside 6 light holds, the lanes 383-415 ms, 3.0x the pool-5000 run. The rest is CPU:
@@ -62,6 +66,14 @@ D1 alone gains 8%: a profile of it (job 261118-145656-a26428) holds 0.76 opens i
 `search_batch` still pins one index at a time. With D3 the lanes fill: 3.0x faster at pool 200, 2.4x the pool-5000
 run (2.2x at 3b8d41c39, job 184757-7f0046: A2 is not yet met). In that profile `open(2)` and `close(2)` are over half the busy time; strata `recover`'s per-file
 open-for-its-size is the largest single caller, about a quarter of each open (D4's strata half).
+
+H4 and H5 each take about 7% off the pool-200 run, and together 11%: head is 2.25x its pool-5000 run, H4 2.1x, H5
+2.1x, both 2.0x (250 against 123 ms, still over). H5 replaces `open_existing(n)->size()` with the IO's
+`entry_footprint(n)`, one `fstatat` on the directory descriptor PosixIO holds. A profile of head beside six light holds
+(job 261119-033151-f32bdd, p50 692 ms) puts `close(2)` of those size probes at 72% of `run_open`, but removing them
+in the exclusive run gains only 7%, so the profile mostly measures the other holds' file-system load.
+What remains per reopen without them is `scan_directory`, `read_log` and `load_files` in strata (about 27% of a
+reopen at main), the directory's open, and the payload's WAL and DataStorage scans (about 20%).
 
 ## Decisions
 
@@ -93,8 +105,9 @@ open-for-its-size is the largest single caller, about a quarter of each open (D4
   descriptors like open (soft_open already counts warm); it does not help a loop wider than the pool. Sizing the
   pool from memory is quest pool-from-memory.
 
-Expected: D1 + D3 measured 3.0x (H2); D2 and D4 cut a reopen's CPU by about half, which brings the lanes under the
-2x target when the host has cores to give. A2 decides with an exclusive job.
+Measured: D1 + D3 make pool 200 3.4x faster (959 to 283 ms) and leave it 2.2x the pool-5000 run. D4's `fstatat`
+half and more lanes (H4) reach 2.0x together. Only the remembered log state skips the scan and the parse that
+remain, and it is the one mechanism left that could reach 2x; it is unmeasured.
 
 ## Durability
 
@@ -106,6 +119,8 @@ commit, and a missing index is not_found and leaves no directory.
 
 ## Memory
 
-An open index costs 40.1 KiB resident at 2,500 open (job 261118-060120-5b74f3, pool 5000). D1 adds P catalogs'
-fixed state (slot chunks, S3-FIFO queues, a ghost of soft_open/2/P hashes each); D4's remembered state is one
-manifest log state per ghost entry. Both are to be measured per index before landing.
+An open index costs 40.1 KiB resident at 2,500 open at main (job 261118-060120-5b74f3, pool 5000). D1 + D3 cost
+41.1-41.9 KiB against the merge-base's 40.0-40.3 in the same job (184757-7f0046), about 1.3 KiB (3%) more: P
+catalogs' fixed state (slot chunks, S3-FIFO queues, a ghost of soft_open/2/P hashes each), spread over the open
+indexes. H4 and H5 change neither (41.2-41.5 KiB, job 033144-b85265). D4's remembered state is one manifest log
+state per ghost entry, to be measured when it is built.

@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261119-033144-b85265 261119-033151-f32bdd
+State: blocked on owner: A2 decision (accept 2.2x or build the remembered log state)
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -47,23 +47,38 @@ Profile 261118-223530-9e3c57 failed (exit 4, empty graph): the 12 s sample outla
 8 s), the server exited under the first take and was gone for the second. A sampling problem, not the code; profile.sh
 now takes RUNS, and the rerun samples 8 s inside 60 searches.
 
-H5 (261119-033144-b85265, exclusive, ABAB x2, 10 searches): strata recover's per-file `open_existing(n)->size()`
-becomes `entry_footprint(n)` (one fstatat on PosixIO's directory fd, counted_io forwards it; an IO without entry
-inspection still opens). Probe `.scratch/strata-h5.patch` on the fetched strata 397c02d5, built by
-`.scratch/build-h5.sh`: arms head, h5, p16, p16+h5 at pool 200 and 5000. Profile rerun 261119-033151-f32bdd (strict,
-after H5) shows what remains at head.
+H5 (261119-033144-b85265, exclusive, ABAB x2, 10 searches; `.scratch/strata-h5.patch` replaces recover's
+`open_existing(n)->size()` with `entry_footprint(n)`, one fstatat; built by `.scratch/build-h5.sh`). p50 pool 200 /
+pool 5000, ms: head 281,282 / 124,123 (2.28x); h5 262,262 / 123,124 (2.12x); p16 266,268 / 128,125 (2.11x); p16+h5
+251,249 / 122,124 (2.03x). No arm is within 2x; the cap and the fstatat change stay probes.
+
+Profile 261119-033151-f32bdd (strict, 8 s inside 60 searches; beside 6 light holds, p50 692 ms): run_open 27,737
+thread-ms, strata open 25,449, recover 24,110; recover's size lambda 21,634, of which `close(2)` 20,008 (72% of
+run_open); open_blocking 2,330 (8%); the directory's PosixIO 791. H5 removes exactly those closes yet gains 7% when
+exclusive, so the profile's close time is the light holds' file-system load, not the quiet cost.
+
+Per-index memory at 2,500 open (pool 5000): head 41.1-41.9 KiB against base 40.0-40.3 in 184757-7f0046 (+1.3 KiB,
+3%); H4/H5 arms 41.2-41.5. In docs/design/cheap-reopen.md.
 
 ## Next
 
-1. Read H5 261119-033144-b85265: h5 or p16+h5 pool 200 within 2x of its pool 5000? If so, the fstatat change is a
-   strata quest (the lead files it, `after` this design); p16 joins it only if p16+h5 needs it. If not, A2 stays at
-   2.1-2.25x: report it to the lead with the profile. Budget: H1-H5 used of about five.
-2. Read profile 261119-033151-f32bdd; update docs/design/cheap-reopen.md with H4, H5 and the head breakdown.
-3. Per-index memory at 2,500 open from the rows' pool-5000 arms: head 41.3 KiB per open index (H4).
+1. The owner's A2 ruling (below). If accept: correctness review, then land after wide-search-loop and a master
+   merge. If build: the remembered log state is a strata quest `after` this design; A2 is measured again with it.
+2. After wide-search-loop lands: merge master, resolve search_batch (D3 after the budget checkpoint).
 
 ## Blocked on
 
 Landing waits for wide-search-loop (lead ruling 11-19); then merge master and resolve search_batch.
+
+A2 decision (owner): five experiments done; the best arm is 2.0x, the shippable head 2.2x (283 vs 128 ms).
+- Accept 2.2x: land D1-D3 (pool 200 3.4x faster, 959 to 283 ms; +1.3 KiB per open index) and amend A2. The
+  `fstatat` (H5) and the 16-partition cap (H4) add 11% together (2.0x) and could follow as their own small quests.
+- Build the one mechanism left: the catalog keeps a closed index's recovered log state (and file sizes) in its
+  ghost entry, trusted only when the manifest log has the same inode and size, so a reopen skips `scan_directory`,
+  the per-file sizes and `read_log` (about a third of a reopen's CPU at main). A strata quest, unmeasured; it would
+  subsume H5. Projection, not measured: about 1.8x.
+- Recommendation: accept 2.2x and land D1-D3 now (small and landed beats big and pending), and file the
+  remembered log state as a strata quest that carries the 2x target, measured against this head.
 
 ## Lead's ruling (answered)
 
@@ -88,7 +103,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
-| A2 | H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
+| A2 | H5 261119-033144-b85265: best p16+h5 251/249 vs 122/124 ms, 2.0x, head 2.28x (not met); H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
 | A3 | suite 261118-184756-bf6036 at 3b8d41c39; earlier 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
 | A4 | suite 261118-184756-bf6036; CI green at 937a5e94e (44447325291, 44447325350, 44447325397) |
 
