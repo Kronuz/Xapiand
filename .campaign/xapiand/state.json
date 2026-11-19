@@ -8079,20 +8079,51 @@
         "AGENTS.md",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-halfclose",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T20:32:06",
+          "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+          "criteria": {
+            "A1": "261118-201311-bc538f; fails without: 261118-180447-06d623",
+            "A2": "261118-201311-bc538f; fails without: 261118-201313-8f56ef",
+            "A3": "261118-201311-bc538f; fails without: 261118-180449-60722d",
+            "A4": "261118-201316-1f8ff0",
+            "A5": "261118-201311-bc538f",
+            "A6": "[artifact] `docs/mechanisms/coroutine-handlers.md`: \"One rule reads the socket watch: a read error other than EOF (a reset) is a disconnect, and EOF\" (also `http_asio.h`: \"One rule reads it: a read error other than EOF (a reset) is a\"; `AGENTS.md`: \"One rule reads it: a read error other than EOF (a reset, not our own cancellation)\"), all at http:ec273dd"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure",
+              "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-201311-bc538f",
+              "level": "light",
+              "seconds": 42.1,
+              "state": "done",
+              "what": "http-halfclose check suite at ec273dd4d37e"
+            }
+          ],
+          "final": true,
+          "from": "2671470a488e6fe45148146e98cf3b264308ac82",
+          "reason": "",
+          "tested": "ec273dd4d37e46a4c206c8307200eab35ab5e448"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T20:31:53",
-      "worktree": "../http-wt/xapiand/http-halfclose"
+      "updated": "2026-11-18T20:32:09",
+      "worktree": ""
     },
     "http-lane": {
       "accepted": {},
