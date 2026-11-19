@@ -9070,6 +9070,39 @@
       "title": "logger pins the scheduler on WorkPool",
       "updated": "2026-11-08T15:40:31"
     },
+    "logger-exit-lifetime": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure --stop-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "logger.cc",
+        "logger.h",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/**",
+        "ARCHITECTURE.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../logger",
+      "risk": "high",
+      "status": "planned",
+      "title": "logger's worker never touches destroyed statics at exit",
+      "updated": "2026-11-18T16:44:57"
+    },
     "logger-producer-path": {
       "accepted": {},
       "after": [],
