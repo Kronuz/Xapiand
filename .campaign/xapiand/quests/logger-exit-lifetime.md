@@ -13,6 +13,7 @@ The logger's worker thread, which still drains and emits lines while `LogWorker:
 - A2 A test reproduces the abort without the fix (a process whose worker emits a `once` line during exit aborts, or ASan reports use-after-destroy) at the parent commit and passes at the fix: a `--fails-without` job
 - A3 ASan and TSan builds of the logger suite pass: jobs
 - A4 The suite passes and CI is green on every platform
+- A5 A deferred line never reaches its exception after the throwing thread destroyed it. TSan in Xapiand CI (run 44281033140, test_node): `default_describe_exception` (logger.cc:618) on the LOG thread makes a virtual call on a `StorageCorruptWAL` that `DatabaseWALWriterTask::write_replace_document` (wal.cc:976) is destroying. The line must own what it describes (the text captured at the call, or an `std::exception_ptr`): a TSan test that races without the fix (`--fails-without`) and passes with it
 
 ## Contracts
 
