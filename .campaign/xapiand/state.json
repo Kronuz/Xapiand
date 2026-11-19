@@ -24391,9 +24391,9 @@
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
-      "updated": "2026-11-19T13:22:35",
+      "updated": "2026-11-19T13:27:55",
       "worktree": "../task-wt/xapiand/task-asio-layout"
     },
     "task-driver-layout": {
