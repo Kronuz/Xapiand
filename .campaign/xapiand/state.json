@@ -7488,6 +7488,35 @@
       "title": "Format 13 landing and pre-freeze work",
       "updated": "2026-11-08T15:39:16"
     },
+    "freebsd-exe-path": {
+      "accepted": {},
+      "after": [
+        "coverage-core-main"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/main.cc",
+        "tests/test_executable_path*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "FreeBSD: get_executable_path finds the executable",
+      "updated": "2026-11-19T14:40:33"
+    },
     "fuzz-cpu-hour": {
       "accepted": {},
       "after": [
