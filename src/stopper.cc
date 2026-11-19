@@ -73,11 +73,21 @@ overrides()
 			if (it->path().extension() != ".txt") {
 				continue;
 			}
-			std::ifstream file(it->path());
+			std::error_code status_ec;
+			std::ifstream file;
+			if (std::filesystem::is_regular_file(it->path(), status_ec)) {
+				file.open(it->path());
+			}
 			if (!file.is_open()) {
 				throw std::runtime_error("Cannot open stop words file: " + it->path().string());
 			}
 			std::vector<std::string> words((std::istream_iterator<std::string>(file)), std::istream_iterator<std::string>());
+			if (!words.empty() && words.front().starts_with("\xEF\xBB\xBF")) {
+				words.front().erase(0, 3);   // a UTF-8 byte order mark is not part of the first word
+				if (words.front().empty()) {
+					words.erase(words.begin());
+				}
+			}
 			std::sort(words.begin(), words.end());
 			words.erase(std::unique(words.begin(), words.end()), words.end());
 			auto& list = loaded[it->path().stem().string()];

@@ -49,9 +49,13 @@
 #include <unistd.h>
 
 #include "database/schema.h"
+#include "engine/document.h"
+#include "engine/error.h"
 #include "engine/text.h"
 #include "exception_engine.h"
 #include "msgpack.h"
+#include "multivalue/generate_terms.h"
+#include "server/http_utils.h"
 #include "stopper.h"
 #include "stopwords/builtin.h"
 
@@ -261,19 +265,19 @@ check_schema_stop_words(const std::string& en_now, const std::string& fr_now)
 	schema_of(en_now, fr_now)->check_stop_words("idx", false);
 
 	// A field with another fingerprint recorded, at the top or inside an object, refuses the schema.
-	const auto top = thrown<Error>([&] { schema_of("0123456789abcdef", fr_now)->check_stop_words("idx", false); });
+	const auto top = thrown<StopWordsMismatchError>([&] { schema_of("0123456789abcdef", fr_now)->check_stop_words("idx", false); });
 	CHECK(contains(top, "idx"));
 	CHECK(contains(top, "stop words list en"));
 	CHECK(contains(top, "0123456789abcdef"));
 	CHECK(contains(top, en_now));
-	const auto inner = thrown<Error>([&] { schema_of(en_now, "fedcba9876543210")->check_stop_words("idx2", true); });
+	const auto inner = thrown<StopWordsMismatchError>([&] { schema_of(en_now, "fedcba9876543210")->check_stop_words("idx2", true); });
 	CHECK(contains(inner, "idx2"));
 	CHECK(contains(inner, "stop words list fr"));
 	CHECK(contains(inner, "fedcba9876543210"));
 	CHECK(contains(inner, fr_now));
 
 	// A list that is not there is refused too.
-	const auto gone = thrown<Error>([&] { schema_of(en_now, "fedcba9876543210", "gone")->check_stop_words("idx", false); });
+	const auto gone = thrown<StopWordsMismatchError>([&] { schema_of(en_now, "fedcba9876543210", "gone")->check_stop_words("idx", false); });
 	CHECK(contains(gone, "stop words list gone"));
 	CHECK(contains(gone, "missing"));
 
@@ -359,6 +363,29 @@ scenario_builtin()
 	CHECK_EQ(thrown<UnknownStopWordsError>([] { stopWordsFingerprint("xx"); }), "Stop words list xx unknown");
 	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords("EN"); }), "Stop words list EN unknown");
 	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords(""); }), "Stop words list  unknown");
+
+	// Indexing text in a language without a list is an invalid argument naming it (a 400), not text left unstopped.
+	engine::errc kind = engine::errc::internal;
+	std::string reason;
+	try {
+		engine::Document doc;
+		GenerateTerms::text(doc, "t", "the fox", true, 1, false, "xx", "", analysis::stop_strategy::all, analysis::stem_strategy::none);
+	} catch (const engine::Error& error) {
+		kind = error.kind;
+		reason = error.reason();
+	}
+	CHECK(kind == engine::errc::invalid);
+	CHECK(contains(reason, "Stop words list xx unknown"));
+
+	// An index whose list changed is a conflict (a 409) naming the index, not an internal error.
+	const auto http = catch_http_errors([]() -> int {
+		checkStopWords("ix", "en", "0123456789abcdef");
+		return 0;
+	});
+	CHECK(http.error_code == HTTP_STATUS_CONFLICT);
+	CHECK(contains(http.error, "ix"));
+	CHECK(contains(http.error, "0123456789abcdef"));
+	CHECK(contains(http.error, "d1834faea3c14e55"));
 
 	engine::TextConfig config;
 	config.stop_language = "xx";
@@ -453,7 +480,7 @@ scenario_override()
 	CHECK(contains(custom, "344b9978a88eed3a"));
 
 	// A schema recorded with the shipped English list is refused by the node whose file replaced it.
-	const auto old_schema = thrown<Error>([] { schema_of("d1834faea3c14e55", stopWordsFingerprint("fr"))->check_stop_words("idx", false); });
+	const auto old_schema = thrown<StopWordsMismatchError>([] { schema_of("d1834faea3c14e55", stopWordsFingerprint("fr"))->check_stop_words("idx", false); });
 	CHECK(contains(old_schema, "d1834faea3c14e55"));
 	CHECK(contains(old_schema, "ce679203ae8663b7"));
 	check_schema_stop_words("ce679203ae8663b7", stopWordsFingerprint("fr"));
@@ -476,6 +503,35 @@ scenario_unreadable()
 	CHECK(contains(error, "en.txt"));
 	CHECK_EQ(thrown<std::runtime_error>([] { getStopWords("de"); }), error);   // and so is every lookup
 	::chmod((root / "stopwords" / "en.txt").c_str(), 0600);
+	fs::remove_all(root);
+}
+
+// A directory named like a list is unreadable too: it must not stand for an empty list.
+void
+scenario_directory()
+{
+	const auto root = data_path("directory");
+	fs::create_directories(root / "stopwords" / "en.txt");
+	const auto error = thrown<std::runtime_error>([] { getStopWords("en"); });
+	CHECK(contains(error, "Cannot open stop words file"));
+	CHECK(contains(error, "en.txt"));
+	CHECK_EQ(thrown<std::runtime_error>([] { getStopWords("de"); }), error);
+	fs::remove_all(root);
+}
+
+// A UTF-8 byte order mark is not part of the first word: the same words, the same list.
+void
+scenario_bom()
+{
+	const auto root = data_path("bom");
+	write(root / "stopwords" / "xx.txt", "\xEF\xBB\xBF" "alpha beta\n");
+	write(root / "stopwords" / "yy.txt", "alpha beta\n");
+	write(root / "stopwords" / "zz.txt", "\xEF\xBB\xBF" "\n");   // only a mark: an empty list
+	preloadStopWords();
+	CHECK((*getStopWords("xx"))("alpha"));
+	CHECK(!(*getStopWords("xx"))("\xEF\xBB\xBF" "alpha"));
+	CHECK_EQ(stopWordsFingerprint("xx"), stopWordsFingerprint("yy"));
+	CHECK_EQ(stopWordsFingerprint("zz"), fingerprint_of({}));
 	fs::remove_all(root);
 }
 
@@ -518,6 +574,8 @@ const Scenario scenarios[] = {
 	{"builtin", scenario_builtin},
 	{"override", scenario_override},
 	{"unreadable", scenario_unreadable},
+	{"directory", scenario_directory},
+	{"bom", scenario_bom},
 };
 
 // Runs each scenario in a process of its own.

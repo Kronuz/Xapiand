@@ -9375,6 +9375,23 @@ thread_local VerifiedSchemas verified_schemas;
 
 
 void
+Schema::check_cached_stop_words(std::string_view index, const std::shared_ptr<const MsgPack>& schema)
+{
+	L_CALL("Schema::check_cached_stop_words({})", repr(index));
+
+	if (!schema->is_map() || verified_schemas.has(schema)) {
+		return;  // a foreign schema holds no fields of its own
+	}
+	std::vector<UnrecordedStopWords> unrecorded;
+	std::vector<std::string> path;
+	check_field_stop_words(*schema, path, index, unrecorded);
+	if (unrecorded.empty()) {
+		verified_schemas.add(schema);
+	}
+}
+
+
+void
 Schema::check_stop_words(std::string_view index, bool adopt)
 {
 	L_CALL("Schema::check_stop_words({}, {})", repr(index), adopt);
@@ -9388,11 +9405,7 @@ Schema::check_stop_words(std::string_view index, bool adopt)
 	}
 	std::vector<UnrecordedStopWords> unrecorded;
 	std::vector<std::string> path;
-	try {
-		check_field_stop_words(root, path, index, unrecorded);
-	} catch (const StopWordsMismatchError& exc) {
-		THROW(Error, "{}", exc.what());
-	}
+	check_field_stop_words(root, path, index, unrecorded);
 	if (unrecorded.empty() && !mut_schema) {
 		verified_schemas.add(schema);
 	}

@@ -980,10 +980,16 @@ public:
 
 	/*
 	 * Refuses the schema when a field's stop words list is missing or changed since the field was
-	 * indexed (throws Error naming `index`, the list and both fingerprints). A field with a language and
-	 * no recorded fingerprint adopts the current list's in the mutable schema when `adopt` is set.
+	 * indexed (throws StopWordsMismatchError naming `index`, the list and both fingerprints). A field
+	 * with a language and no recorded fingerprint adopts the current list's in the mutable schema when
+	 * `adopt` is set.
 	 */
 	void check_stop_words(std::string_view index, bool adopt);
+
+	/*
+	 * The same check on a schema as the cache holds it, for an index a search covers: nothing is adopted.
+	 */
+	static void check_cached_stop_words(std::string_view index, const std::shared_ptr<const MsgPack>& schema);
 
 	std::shared_ptr<const MsgPack> get_const_schema() const;
 

@@ -26,7 +26,7 @@ getStopWords(lang):  overrides[lang]  else  builtin[lang] (an analysis::stopper 
    `tests/test_stopword_lists.cc` fails when the two differ (every shipped file against its compiled list, the
    word counts and the fingerprints).
 3. `preloadStopWords()` reads the override files once, at startup, so no request reads a file. A file that
-   cannot be read throws: a quiet fallback to the shipped list is what D137 forbids. With no
+   cannot be read, or a directory with a list's name, throws: a quiet fallback to the shipped list is what D137 forbids. With no
    stopwords directory nothing is read.
 4. A shipped list becomes an `analysis::stopper` (the analysis library's `unordered_set`) the first time its
    language is asked for, once per process (`std::call_once`); later lookups read it.
@@ -38,7 +38,11 @@ getStopWords(lang):  overrides[lang]  else  builtin[lang] (an analysis::stopper 
 7. A text field with a language stores `_stop_fingerprint` beside `_language` when it is created
    (`validate_required_data`, `src/database/schema.cc`). `DatabaseHandler::get_schema` calls
    `Schema::check_stop_words(index, adopt)` on every schema it hands out: each field with a language is
-   checked with `checkStopWords`, and a mismatch is an `Error` that names the index. A field with a language and
+   checked with `checkStopWords`, and a mismatch is a `StopWordsMismatchError` that names the index (the
+   first shard's path without the shard suffix) and answers `409`: the request and the index are fine, the node's
+   list is not the one the index was built with. `DatabaseHandler::get_mset` also checks every other distinct index
+   of the search with `Schema::check_cached_stop_words` on the schema the cache holds (no adoption); an index that
+   does not load is left to the search. A field with a language and
    no record (an index from before the fingerprints) adopts the current list's fingerprint in the mutable
    schema when the handler is writable, so the next schema write persists it; one info line names the index
    and the list, once per process. `dispatch_readable` (behind `get_full(true)`, the `_schema` of info and

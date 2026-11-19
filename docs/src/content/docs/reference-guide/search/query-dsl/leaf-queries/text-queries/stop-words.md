@@ -26,9 +26,14 @@ override that language.
 Each list has a fingerprint, 16 hexadecimal digits of the hash of its sorted words, so the same words give the
 same fingerprint whether they are compiled in or read from a file. An index records the fingerprint of every
 list it indexed with. When that list is missing later, or its words are not the recorded ones (a file replaced
-it, or a newer release ships another list), the index is refused with an error that names the index, the
-list and both fingerprints, because a query that stopped other words than the indexing did would answer
-differently without saying so. Put the earlier file back to open the index again, or re-create it.
+it, or a newer release ships another list), the index is refused with `409 Conflict` and a message that names the
+index, the list and both fingerprints, because a query that stopped other words than the indexing did would answer
+differently without saying so. A search over several indexes checks each of them, so one refused index refuses the
+search. Restore the list file the index was built with (`<data path>/stopwords/<language>.txt`) and restart the node to
+open the index again: an index cannot be deleted or re-created over HTTP, and a dump carries no schema.
+
+A file is read as text with one or more words per line; a UTF-8 byte order mark is ignored. A directory named like a
+list stops the node, as an unreadable file does.
 
 The fingerprint is stored in the field's properties, as `_stop_fingerprint` beside `_language`, and is not shown
 in the schema a request reads: it is derived from the list, not a setting, and a schema sent back with a stale one
