@@ -24331,20 +24331,61 @@
         "docs/**",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-inbox-first",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T12:52:37",
+          "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "criteria": {
+            "A1": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112652-358a42",
+            "A2": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112653-b9569c",
+            "A3": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112655-c20d84, 261119-114206-73a222",
+            "A4": "[artifact] `docs/design/service-shape.md` step 1 reads \"task: sleeps, D10, D14\" (task:aa92196)",
+            "A5": "261119-114200-848297, 261119-114200-363a83"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-114200-848297",
+              "level": "light",
+              "seconds": 35.0,
+              "state": "done",
+              "what": "task-inbox-first check suite at b7e24490310f"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-114200-363a83",
+              "level": "light",
+              "seconds": 37.5,
+              "state": "done",
+              "what": "task-inbox-first check tsan at b7e24490310f"
+            }
+          ],
+          "final": true,
+          "from": "4b6a0965a6eb59a414df65605ca40e7bc38633a2",
+          "reason": "",
+          "tested": "b7e24490310f40f1933b693f3777fc4ea8ee1429"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T12:52:31",
-      "worktree": "../task-wt/xapiand/task-inbox-first"
+      "updated": "2026-11-19T12:52:40",
+      "worktree": ""
     },
     "task-lanes": {
       "accepted": {
