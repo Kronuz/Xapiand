@@ -1,6 +1,6 @@
 # task-lifecycle: journal
 
-State: waiting on jobs 261119-090341-1360aa 261119-090341-37aa0c 261119-090347-251328 261119-090348-2190d4 261119-090350-b4378e 261119-090352-db744b 261119-090354-f4cfff 261119-090355-d51b76 261119-090357-d8be11 261119-090358-1a1d14 261119-090405-f5a3a0 261119-090407-ec258c 261119-090420-0559d4 261119-090421-ff6d94 261119-090422-6cc987 261119-090424-e27174 261119-090425-d1a7c8 261119-090426-3d1640
+State: waiting on jobs 261119-090341-1360aa 261119-090341-37aa0c 261119-090420-0559d4 261119-090421-ff6d94 261119-090422-6cc987 261119-090424-e27174 261119-090425-d1a7c8 261119-090426-3d1640 (suite, tsan, probes at task:27028a0). All nine mutants failed as required; N7's control aborts at the fix (f5a3a0).
 Quest: .campaign/xapiand/quests/task-lifecycle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,7 +30,9 @@ build and ctest pass (11/11). Jobs at 27028a0:
 
 ## Next
 
-1. Read the jobs; fill Evidence with the fix-round rows; State to ready for review.
+1. Read the suite, TSan and probe jobs; add them to Evidence; State to ready for review.
+   Done: mutants 251328, 2190d4, b4378e, db744b, f4cfff, d51b76, d8be11, 1a1d14, ec258c failed
+   as required (exit 1); N7 control at the fix f5a3a0 passed (aborted on the assert).
 2. Lead: `campaign accept task-lifecycle correctness --confirm F1=... F2=... F3=... F4=...` with the
    suite job; push for CI (A6).
 3. Later step (not in A1-A7): `event::wait(token)` and the process step (`run_daemon`,
