@@ -1,6 +1,6 @@
 # crash-d-rows: journal
 
-State: waiting on jobs 261119-131239-b80edb (A2's plain pass at head; mutant f74d98 failed as it must), CI
+State: ready for review
 Quest: .campaign/xapiand/quests/crash-d-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Cherry-picked e4884d358 as e580b0626. A1 job runs the whole script (A-D) as gate
 
 ## Next
 
-1. When jobs pass: paste campaign brief table, set ready for review.
+1. Lead: check CI, then land.
 
 ## Blocked on
 
@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261119-122426-23b4be |
+| A2 | 261119-122426-23b4be, 261119-131239-b80edb; fails without: 261119-122444-f74d98 (mutant 293735bfe: B wrong row '1 999999', D wrong row 'w1-1 999999', each with listing line and raw hit) |
+| A3 | suite 261119-122452-83d60f passed; CI on the branch (FreeBSD, arm64) was running at 9f510b4e8 |
 
 ## Result
 
