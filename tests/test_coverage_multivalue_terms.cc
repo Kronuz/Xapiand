@@ -484,7 +484,7 @@ void test_text_stop_words_and_languages() {
 	auto shard = testsupport::scratch_shard("multivalue_text");
 	engine::Document kept, dropped;
 	GenerateTerms::text(kept, "tx", "the quick fox", false, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none);
-	GenerateTerms::text(dropped, "tx", "the quick fox", false, 1, false, "english", "", analysis::stop_strategy::all, analysis::stem_strategy::none);
+	GenerateTerms::text(dropped, "tx", "the quick fox", false, 1, false, "en", "", analysis::stop_strategy::all, analysis::stem_strategy::none);
 	add(*shard, kept);
 	add(*shard, dropped);
 	commit(*shard);

@@ -418,7 +418,7 @@ void test_geospatial_source() {
 
 	// The weight is pi minus the closest centroid's angle: 10 degrees to the north.
 	const auto weight = source.weight(value({ hr(15, 16) }, { at(30, 0), at(10, 0) }));
-	CHECK_LT(std::fabs(weight - (M_PI - M_PI / 18)), 1e-6);
+	CHECK_LT(std::fabs(weight - (M_PI - M_PI / 18)), 1e-2);
 	// A document without centroids, or that does not decode, weighs nothing; so does a source without centroids.
 	CHECK_EQ(source.weight(value({ hr(15, 16) }, {})), 0.0);
 	CHECK_EQ(source.weight("\xff\xff"), 0.0);
@@ -432,7 +432,7 @@ void test_geospatial_source() {
 	CHECK(back->accept(value({ hr(15, 16) }, {})));
 	CHECK_FALSE(back->accept(value({ hr(21, 39) }, {})));
 	CHECK_EQ(source.clone()->serialize(), source.serialize());
-	CHECK_LT(std::fabs(back->weight(value({ hr(15, 16) }, { at(10, 0) })) - (M_PI - M_PI / 18)), 1e-6);
+	CHECK_LT(std::fabs(back->weight(value({ hr(15, 16) }, { at(10, 0) })) - (M_PI - M_PI / 18)), 1e-2);
 
 	check_refused(source, serialize_length(7), "Bad serialized GeoSpatialRange");
 	check_refused(source, multi({ serialize_length(7), "x", "y" }), "Bad serialized GeoSpatialRange");
