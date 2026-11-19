@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: ready for review
+State: waiting on jobs 261119-102621-bfeb0c 261119-102623-f1d985 261119-102607-098a1c 261119-102609-9fd6d9 (the wide-search cost probes, strict, queued behind another quest's exclusive hold)
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-All criteria have evidence at eae0478d9 (journal and docs-only commits after it). Ready for the correctness review.
+Review CHANGES (reviews/stopword-lists-correctness.md at eae0478d9) folded in at 3726dd38c. C1, N2-N5 fixed with tests;
+N1 and N6 are notes below. Only the wide-search cost numbers are pending (docs/perf/stopword-lists.md gets them).
 
 ## Next
 
-1. Review findings, if any: each fix gets a test that fails without it, as a job.
+1. Read the four wide probes (`grep probe <log>`), write before/after into docs/perf/stopword-lists.md, commit.
+2. Fill the review-fix evidence rows; State ready for review.
 
 ## Blocked on
 
@@ -72,3 +74,22 @@ Nothing.
 7. The schema check cache is per thread and by schema identity (weak pointers, 4096 entries), because the
    schema cache that owns the versions (`schemas_lru.cc`) is outside the file set.
 8. Lead's ruling 7 applied: perfect hash dropped; reason and numbers in `docs/perf/stopword-lists.md`.
+
+## Review fixes (reviews/stopword-lists-correctness.md, CHANGES at eae0478d9)
+
+| Finding | Fix | Evidence |
+|---|---|---|
+| C1 (blocking) | `DatabaseHandler::get_mset` checks every other distinct index of the search on the schema the cache holds (`Schema::check_cached_stop_words`, through the same per-schema cache, no adoption); an index that does not load is left to the search (a pattern may name a gone one: test_node's missing-index test) | new `tests/test_stopword_search.cc` (two processes on one data dir: `zz` built with the shipped list, `aa` under a changed `en.txt`; `/zz/`, `/aa,zz/`, `/zz,aa/` refuse naming `zz`, `/aa/` and `/aa,gone/` answer): passes 261119-102558-5fc975, suite 261119-102611-1fd615; fails at the revert commit (branch mutant/stopword-lists-multi-index, 552e5c5fd, loop removed) 261119-102559-196ab6 (the refusal checks fail); reviewer's probe at the fixed head 261119-102630-385e6d: `/aa,zz/`, `/zz,aa/`, `/*/`, `/es,ix/`, `/es,wa/`, COUNT `/*/` all 409 naming the stale index |
+| N3 | `StopWordsMismatchError` now reaches `catch_http_errors` (`src/server/http_utils.h`) and answers 409 Conflict, naming `unsharded_path` of the first endpoint, not the shard list. 409 over 422 because the request body is well-formed and the index is fine: the resource's state (its recorded list) conflicts with the node's current list, and the fix is on the server side (restore the file), which is what 409 says; 422 says the entity the client sent is wrong. | `catch_http_errors` unit check in test_stopword_lists (409, index and both fingerprints); the probe's lines show `409 Conflict: Index old was built with ...` |
+| N2 | test of `GenerateTerms::text` with an unknown language: `engine::errc::invalid` (a 400) naming the list | `scenario_builtin`, 261119-102558-5fc975 |
+| N5 | docs now say to restore the list file and restart (no DELETE, no schema in DUMP); also the 409 and the multi-index check | stop-words.md, changelog |
+| N4 | a directory named `<lang>.txt` (or any non-regular file) throws like an unreadable file; a UTF-8 BOM is stripped (a BOM-only file is an empty list) | scenarios `directory` and `bom`; the reviewer's probe now ends at its directory phase because the node stops with exit 13 (intended) |
+
+Notes for the lead (not fixed, hunt rows):
+
+- N1: a text field inside a `_namespace` object records no `_language` or fingerprint, so changing a list does not refuse such an index (probe `H SEARCH ns` still 200). Whether index-time stopping applies there is unverified.
+- N6: an index built when the old build found no list (it stopped nothing) is stamped with the current built-in list at its first write: old documents keep stop words as terms, new ones lose them. D137 accepts it; the changelog could say so in one sentence.
+
+Files touched outside the quest's file set, for the lead's `campaign set`: `src/server/http_utils.h` (the 409 mapping, N3: no in-set way to a 4xx other than 400) and `tests/test_stopword_search.cc` is in the set by name.
+
+Rulings: the C1 check loads the schema of each other index (the schema cache holds 100 by default, so a wide search misses for most): cost in docs/perf/stopword-lists.md. The multi-index check swallows non-refusal errors (a missing index) because the search reports them itself.
