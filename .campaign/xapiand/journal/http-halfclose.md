@@ -1,6 +1,6 @@
 # http-halfclose: journal
 
-State: waiting on jobs 261118-181016-e8d252 261118-181018-e0741e 261118-180447-06d623 261118-180449-60722d 261118-180446-6142f8
+State: waiting on jobs 261118-201311-bc538f 261118-201313-8f56ef 261118-201316-1f8ff0, CI run 44456767194
 Quest: .campaign/xapiand/quests/http-halfclose.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,32 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Head http:cd6ed31 (fix http:33c3f7f + AGENTS.md/CHANGELOG.md). Jobs: suite at cd6ed31
-261118-181016-e8d252, TSan at cd6ed31 261118-181018-e0741e (replaced 261118-180450-67e80e), suite at
-33c3f7f 261118-180446-6142f8, and the two `--fails-without` jobs at the mutant http:8781b59 (local
-branch `mutant/xapiand/http-halfclose-a1`: 33c3f7f with http_asio.h and http_message.h from the
-base; never pushed, never landed). Branch pushed; CI runs on quest/xapiand/http-halfclose.
-Correctness review running in parallel (the lead's).
+Head http:ec273dd. Review APPROVED at cd6ed31 (accepted by the lead); CI at cd6ed31 failed every
+Linux job on one check, readahead [L] "engage() after a reset fires the disconnect" (macOS passed).
+
+Cause: the test, not the transport. It waited for the reset with `recv(MSG_PEEK | MSG_DONTWAIT)`.
+On Linux a recv that returns a pending socket error takes it (sock_error() clears sk_err, MSG_PEEK
+or not), and the socket is then closed for reading, so engage()'s recv read 0. Under the old rule
+EOF also fired, which hid it; under D126 EOF is a half-close. Nothing in the transport reads the
+socket but the watch itself, and the [U] and [L] cases where the watch's own read meets the reset
+passed on Linux in that same run. Fix: the test waits with poll() (takes nothing); a Linux-only
+check pins the kernel behavior (a peek returns ECONNRESET, the next recv reads EOF). CI run
+44456767194 is the Linux proof.
+
+Review F1 (gap): coroutine [J] `/stream-big-token`, a wants_body_stream handler that keeps its
+token and answers 32 MiB, then a reset: the token reads http::disconnected. `--fails-without` at
+mutant M2 http:a243051 (local branch `mutant/xapiand/http-halfclose-m2`: ec273dd without the
+streamed path's cancel), job 261118-201313-8f56ef. F2 (nit): the `disconnected` comment in
+http_message.h now names every undelivered reply (failed or timed-out write, deferred reply ended
+unwritten); behavior unchanged. F3: none (owner ruled). F4 (optional TLS case): not done, out of
+the quest's plain-TCP criteria.
+
+Jobs at ec273dd: suite 261118-201311-bc538f, TSan 261118-201316-1f8ff0, F1 mutant 261118-201313-8f56ef.
+Local macOS run of ec273dd's tree: 13/13 pass.
 
 ## Next
 
-1. Record the jobs and CI; on green, set State to ready for review; fold in review findings by id.
+1. Record the three jobs and CI 44456767194 (Linux); on green, ready for re-acceptance.
 
 ## Blocked on
 
@@ -28,14 +44,14 @@ Nothing. (The lead widened the file set to AGENTS.md and CHANGELOG.md; done in h
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261118-181016-e8d252 at http:cd6ed31 (and 261118-180446-6142f8 at 33c3f7f); `--fails-without` 261118-180447-06d623 (coroutine at the mutant) |
-| A2 | suite 261118-181016-e8d252 (coroutine [J] reset and failed-write checks, [C] reset) |
-| A3 | suite 261118-181016-e8d252; `--fails-without` 261118-180449-60722d (readahead at the mutant) |
-| A4 | TSan 261118-181018-e0741e at http:cd6ed31 |
-| A5 | suite 261118-181016-e8d252; CI on quest/xapiand/http-halfclose (pending) |
+| A1 | suite 261118-201311-bc538f at http:ec273dd (passed at cd6ed31: 261118-181016-e8d252); `--fails-without` 261118-180447-06d623 passed (coroutine at the mutant http:8781b59) |
+| A2 | suite 261118-201311-bc538f; F1 `--fails-without` 261118-201313-8f56ef at mutant M2 (coroutine [J] reset and failed-write checks, [C] reset) |
+| A3 | suite 261118-201311-bc538f; `--fails-without` 261118-180449-60722d passed (readahead at the mutant) |
+| A4 | TSan 261118-201316-1f8ff0 at http:ec273dd (passed at cd6ed31: 261118-181018-e0741e) |
+| A5 | suite 261118-201311-bc538f; CI run 44456767194 at ec273dd (cd6ed31's failed on Linux: the [L] probe, fixed) |
 | A6 | [artifact] http_asio.h ConnectionInput comment (was 426-431), http_message.h `disconnected` and `Request::cancel` comments, docs/mechanisms/coroutine-handlers.md "Cancel reads, not writes" (one rule, failed write, what ends a waiting handler), AGENTS.md watch invariant, CHANGELOG.md 2026-11-18 entry (http:cd6ed31) |
 
-Lead's message (Detent's long-poll shape): done. Lead's message (widen to AGENTS.md, CHANGELOG.md): done in http:cd6ed31.
+Lead's message (Detent's long-poll shape): done. Lead's message (widen to AGENTS.md, CHANGELOG.md): done in http:cd6ed31. Lead's message (Linux CI, F1): done in http:ec273dd, see Doing.
 
 Detent's long poll: coroutine_test [J] `/poll` is that shape (a
 handler held on its token up to its own bound): half-closed, it is answered "poll:bound" at its
@@ -78,3 +94,7 @@ How it works: docs/mechanisms/coroutine-handlers.md, "Cancel reads, not writes".
   reads its 503 after a shutdown cancel instead of after a half-close.
 - A1's fails-without runs at a mutant commit (the tests at 33c3f7f with the base transport), not
   a tests-first commit, so the branch history never holds a red commit.
+- The Linux CI failure is the test's probe, not the transport (see Doing); the test changed,
+  the transport did not. A Linux-only check pins why a test must never recv to wait for a reset.
+- F2: kept the behavior (any undelivered reply cancels with http::disconnected) and made the
+  comment say so, rather than a new reason; the connection ends in every such case.
