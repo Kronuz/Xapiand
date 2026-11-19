@@ -46,3 +46,23 @@ One script, `.scratch/xapiand/review-stopword-lists-correctness/probe.py` (run b
 3. Concurrent first writers adopting the same old index; TSan; Linux, FreeBSD, arm64 (CI's).
 4. Whether namespace fields stop terms at index time (N1).
 5. Cost of C1's fix on a 2,000-index search.
+
+## Re-check
+
+Commit: b34001019
+Verdict: APPROVE
+
+Scope: `git diff eae0478d9 b34001019 -- src tests docs`. The slot build I probed is at 769913970, whose `src` is identical to b34001019 (journal-only difference). My queued job 261119-124627-5dba90 waited on `quiet light` behind a load of about 50 and was cancelled; the probe ran directly (one node, a single light process) against that build, so it is a probe, not evidence. Scripts: `.scratch/xapiand/review-stopword-lists-correctness/recheck.py` (with `EXTRA="--schema-pool-size 1" EVICT=3` for the second run).
+
+1. C1 closed. `get_mset` now checks each other distinct index through `Schema::check_cached_stop_words` (no adoption) and rethrows only `StopWordsMismatchError`. Evidence relied on: the contributor's mutant 196ab6 (fails at the revert), the probe 385e6d and the suite d249fa; I did not rerun them. A mismatch is never added to the set (`add` runs after the check, which throws first), so a stale index is refused on every search.
+2. N2-N5 closed by reading the diff: the `GenerateTerms::text` unknown-language test, 409 through `catch_http_errors` (test asserts status and that the message names the index and both fingerprints), the index named by `unsharded_path`, directory (`is_regular_file`) and BOM handling with scenario tests, and the docs text (409, file route, no HTTP re-create).
+3. Remembered-index set, correctness: `AgreeingIndexes` takes one mutex for `has`, `add`, `size` and `reset`, so it is safe across threads; two searches checking the same index at once both add it, which is harmless. Eviction clears the whole set when `size >= limit`, so a forgotten index is merely rechecked and nothing false is kept; `tests/test_stopword_search.cc` runs `reset_agreeing_indexes(2)` over 4 and 5 indexes for three rounds, checking `size <= 2` and that `zz` is refused every round (the bound and a refusal after eviction both hold).
+4. Staleness, the direct write: the journal's list holds for every route except one. `PUT /.xapiand/indexes/<ix>` with a hand-edited `schema` is accepted (204), bypassing the `_stop_fingerprint` validation. In the same process the schema cache keeps serving the old schema, so nothing changes for a while (`/zz/` 200). Once the cache turns over (`--schema-pool-size 1`, other indexes touched), `/zz/` is refused (409, naming `0000000000000000`) while `/es,zz/` still answers 200, because `zz` is remembered by path. After a restart both refuse. So the set can outlive a reload of the schema doc, for the process.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | gap | A remembered index is not rechecked after its schema is reloaded, so a hand-edited reserved schema doc is caught by single-index requests but not by multi-index ones until a restart. It takes a write to the reserved indexes database (an operator, inside the trusted-cluster model) and bypasses all schema validation anyway. | `recheck.py`, run with the slot build at the commit's `src`, `--schema-pool-size 1`: `SEARCH /zz/` 409, `SEARCH /es,zz/` 200 | Key the set by the cached schema's identity and flags (it changes on reload) instead of the path, or accept and add one line to the mechanism note. The journal's "no in-process path" claim should say "except a direct write of the foreign schema document". |
+| R2 | no | nit | `get_mset`'s `catch (...)` around the other indexes' check also swallows a cancellation or budget error thrown inside the load; the search then continues to its own next check. I did not trigger it. | `handler.cc` (the loop in `get_mset`) | Rethrow what the search's budget raises, or narrow the catch to the errors a missing index raises. |
+| R3 | no | note | Past 65,536 indexes a wide search clears the set each time it fills and pays the reload cost again; correctness is unaffected, only the A5-style cost on a very wide search. | `AgreeingIndexes::add` | None needed. |
+
+Not run: the contributor's perf numbers (560-610 ms at 2,000 indexes), TSan on the set, other platforms.
