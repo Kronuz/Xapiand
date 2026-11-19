@@ -93,9 +93,21 @@
 #include "traceback.h"
 #include "tls.h"
 
+// main.cc's exit(status) ends the process at once with that status, so a test sees the status the code chose and not
+// what the exit machinery (atexit handlers, sanitizer runtimes, static destructors) does with no descriptors left.
+namespace std {
+[[noreturn]] inline void main_exit(int status) {  // also reached as std::main_exit, for main.cc's std::exit
+	std::fflush(nullptr);
+	::_exit(status);
+}
+}  // namespace std
+using std::main_exit;
+
 #define main xapiand_main_not_run
 #define opts main_opts
+#define exit main_exit
 #include "../src/main.cc"
+#undef exit
 #undef opts
 #undef main
 
