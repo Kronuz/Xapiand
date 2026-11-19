@@ -54,7 +54,7 @@ const std::string SERIALIZED_ONE(Serialize::floating(1));
 const std::string SERIALIZED_M_PI(Serialize::floating(M_PI));
 
 const std::string MAX_STR_CMPVALUE("\xff");
-const std::string MIN_STR_CMPVALUE("\x00");
+const std::string MIN_STR_CMPVALUE(1, '\0');
 
 
 class Multi_MultiValueKeyMaker;
@@ -280,10 +280,11 @@ public:
 	}
 
 	std::string serialize() const override {
-		return _metric.serialize();
+		return BaseKey::serialize() + _metric.serialize();
 	}
 
 	void unserialize(const char** p, const char* p_end) override {
+		BaseKey::unserialize(p, p_end);
 		_metric.unserialize(p, p_end);
 	}
 
