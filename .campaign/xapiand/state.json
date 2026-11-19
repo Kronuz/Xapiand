@@ -16317,6 +16317,8 @@
     "nightly-retry": {
       "accepted": {},
       "after": [],
+      "base": "04a75c0e5b0476431a0c90fe8a043c97a932bf1f",
+      "branch": "quest/xapiand/nightly-retry",
       "checks": [
         {
           "cmd": "python3 -m pytest -q tools",
@@ -16330,6 +16332,7 @@
         "tools/nightly_dispatch.py",
         "tools/test_nightly_dispatch*"
       ],
+      "journal": "../Xapiand-wt/xapiand/nightly-retry",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -16337,9 +16340,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "nightly dispatcher retries transient GitHub errors",
-      "updated": "2026-11-19T14:40:37"
+      "updated": "2026-11-19T14:41:33",
+      "worktree": "../cpp-libraries-wt/xapiand/nightly-retry"
     },
     "no-stalls": {
       "accepted": {},
