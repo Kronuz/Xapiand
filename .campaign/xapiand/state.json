@@ -25665,8 +25665,8 @@
     "wide-search-loop": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T05:44:52",
-          "base": "a6de2c57936a95716912a676dee99e48d5011f01",
+          "at": "2026-11-19T09:20:21",
+          "base": "b2e1afce18b16fc259f7c90a9d44e0937715edf4",
           "blobs": {
             "docs/design/wide-search-loop.md": "100644:23d7200b4e7e5c3fdc47ddb30d06ca18c901714c",
             "harness/async_allowlist.tsv": "100644:82d044e7aa9117462bfee2a87e6eba0ebfe0247d",
@@ -25684,7 +25684,7 @@
             "tests/test_wide_search.cc": "100644:3dd76df79ed9d9ad22f1521f1daa711995f1df2f"
           },
           "by": "review",
-          "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+          "commit": "b7d9fd04cc0935ec9ad97a79b7550333a02d1475",
           "criteria": "3be2c18b9e5aedd9",
           "diffs": {
             "docs/design/wide-search-loop.md": "8a8e4780c64f103e",
@@ -25703,7 +25703,7 @@
             "tests/test_wide_search.cc": "6a9a853b7e96922a"
           },
           "findings": {},
-          "note": "",
+          "note": "lead read main's changes since review: geo-correctness (src/geospatial/**, its tests), CI concurrency groups, CMakeLists pin line; none touches wide_search, the loop or handler.cc",
           "review": "7265610722d3cf07ef915cd3c2be7321a33c4b4f",
           "reviewed": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
           "verdict": "APPROVE"
@@ -25744,7 +25744,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T05:44:52",
+      "updated": "2026-11-19T09:20:21",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
