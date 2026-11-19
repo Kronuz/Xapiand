@@ -3779,9 +3779,9 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T04:02:20",
+      "updated": "2026-11-18T22:33:18",
       "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
     },
     "consensus-hello-limits": {
