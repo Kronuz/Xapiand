@@ -73,7 +73,7 @@ void test_numeric_keys_come_back_as_integers_and_others_are_dropped() {
 
 void test_a_function_value_is_stored_as_nil() {
 	const auto out = run("_doc.g = print; _doc.keep = 1", MsgPack::MAP());
-	CHECK(out.find("g") == out.end());
+	CHECK(out.find("g") != out.end() && out.at("g").get_type() == MsgPack::Type::NIL);
 	CHECK_EQ(out.at("keep").i64(), 1);
 }
 
