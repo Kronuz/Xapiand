@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: ready for review (A2/A3 reruns at the head pending: 261118-204934-64d3ad 204936-89b870 204937-0379fa 204938-0b8425 204940-5102a8 204941-e7215b 204943-b5ecc2 204944-67b125 204945-b054bc 204947-345e6f 204948-5f181c 204950-07c772 204952-37627c 204953-ab2050 204956-040046 204958-a9c88b 204959-bf947d)
+State: waiting on jobs 261118-214334-70753d 214345-e0caec 214405-d4ad8f 214416-55f6c4 214430-1d4cc0 214441-5d5798 214452-f8d1d8 214453-f4a3ac 214455-d04574 214548-17cbe8 214550-dea844 214551-71a78d 214552-695322 214554-8a79f5 214555-113315 214557-802978 214558-d15a54 214617-f0c429 214618-1e9519 214620-79eb0b 214621-f82004 214622-52318a 214624-c6c5de 214625-59b5ea 210116-568ffe
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,52 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 4 (correctness review CHANGES at Xapiand:3e2edbef4, `.campaign/xapiand/reviews/wide-search-loop-correctness.md`).
+Master merged (no src change). Fixes:
+- F1 (blocking): Xapiand:9d827de68. `wide_search::resolve` takes `task::budget*`; the call site passes it only when
+  `query_field.patterns` (search and count), so a list HEAD, list :commit or refused list write resolves whole, as on
+  master. Tests first, at Xapiand:6fe65e78a: test_node `test_a_half_closed_commit_of_a_list_commits_durably` (child:
+  write applied to hcl_kept without WAL or autocommit; half-closed `POST /hcl_new,hcl_kept/:commit` whose hcl_new
+  settings load waits on the reserved index's held turn while the EOF lands; 200, then _Exit; restart finds the write),
+  and HEAD /hc,hc2/1 and POST /hc,hc2/:commit rows in `harness/wide_search_halfclose.py`.
+- F2: test_node `test_a_cancelled_wide_search_gives_its_count_back` (Xapiand:d9cc31863): `--concurrent-search-indexes 1`,
+  ordered by `pins().held()`, so a removed take or a leaked Hold fails it. Pins unit tests (Xapiand:78198eea6) run
+  their batches as one thread's `task::when_all` (children start in order up to their first wait): no sleeps, and the
+  cancelled-batch case can no longer hang.
+- F5: Xapiand:78198eea6. `search_batch` counts distinct shards before the take; `Pins::try_take` removed. Test:
+  test_node `test_a_wide_batch_counts_a_repeated_index_once` (Xapiand:d9cc31863, fails before the fix).
+- Evidence (step 4): 204934-64d3ad ran in slot `xapiand-wide-search-loop` (default), so every macOS A2/A3 job is now
+  submitted with `--slot wide-search-loop`. 204950-07c772: `Exec format error` on the VM's build-master binary, linked
+  at 05:04 just before the build job's stop (`vm.sh stop` = poweroff, sleep 5, kill qemu): unsynced guest writes lost.
+  Xapiand:e649ebcb1 syncs the guest before every stop, relinks each arm, fails the build unless the binary is ELF, and
+  builds the master arm from the branch's whole src diff reversed (8e5040da8 alone no longer reverts cleanly).
+  Submission scripts: `~/.scratch/xapiand/wide-search-loop/submit-{macos,vm}.sh`.
+
+| Job | Level | For | What |
+|---|---|---|---|
+| 261118-214334-70753d | light | A4 | suite at Xapiand:e649ebcb1 |
+| 261118-214345-e0caec | light | A4 | test_node x5 at the head, 0 only at 5/5 |
+| 261118-214405-d4ad8f | light | A4 fails-without | F2: test_node cancelled-wide case with the take deleted |
+| 261118-214416-55f6c4 | light | A4 fails-without | F1: test_node list-commit case at Xapiand:6fe65e78a |
+| 261118-214430-1d4cc0 | light | A4 fails-without | F5: test_node repeated-index case at Xapiand:d9cc31863 |
+| 261118-214441-5d5798 | light | | builds build-hc-{master,mut,branch}; mutant passes the budget unconditionally |
+| 261118-214452-f8d1d8 | light | A4 | F1: half-close probe, branch vs master |
+| 261118-214453-f4a3ac | light | A4 fails-without | F1: half-close probe, mutant vs master |
+| 261118-214455-d04574 | light | A4 | F1: reviewer's halfclose_multi.py, branch vs master |
+| 261118-214548-17cbe8 / 214550-dea844 | light | | slot wide-search-loop: build-probe (branch src) / build-prof (master src) |
+| 261118-214551-71a78d / 214554-8a79f5 | exclusive | A2 macOS | SR3 2,500 before / after |
+| 261118-214552-695322 / 214555-113315 | exclusive | A2 macOS | SR3 10,000 before / after |
+| 261118-214557-802978 / 214558-d15a54 | strict | A3 | starve 64 before / after |
+| 261118-214617-f0c429 | light | | VM build both arms |
+| 261118-214618-1e9519 / 214620-79eb0b | light | | VM create 2,500 / 10,000 |
+| 261118-214621-f82004 / 214622-52318a | strict | A2 Linux | SR3 2,500 before / after |
+| 261118-214624-c6c5de / 214625-59b5ea | strict | A2 Linux | SR3 10,000 before / after |
+| 261118-210116-568ffe | exclusive | F3 | reviewer's A3 ABABAB (read when it runs) |
+
+Cancelled, mis-submitted (zsh did not split the options): 214509-a7a619 .. 214520-cb6d6e; 214418-15eb96 (rechained).
+
+Earlier sessions:
 
 Session 3: master merged (Xapiand:700ffc0c3, no src change from master), branch pushed for CI (A4). Session-2 jobs read
 into `docs/design/wide-search-loop.md` "Branch measured": at 10,000 exclusive the http loops' max 322 / 373 ms (master)
@@ -195,7 +241,10 @@ Read so far (src = master, build-prof):
 
 ## Next
 
-1. Read session-3 jobs. A2 Linux: every http loop's max <= 1,024 us after, at 2,500 and 10,000. A2 macOS: each http
+1. Read session-4 jobs: suite, test_node x5, fails-without (3 test_node, 1 probe), half-close probes; A2 macOS (each
+   http loop's max <= the control loop's), A2 Linux (<= 1,024 us), A3; F3 from 568ffe (branch misses T5 in 2 of 3 with
+   master passing: the change; then the beat-on sampler at 64 clients). Then the lead accepts correctness.
+2. (session 3) Read session-3 jobs. A2 Linux: every http loop's max <= 1,024 us after, at 2,500 and 10,000. A2 macOS: each http
    loop's max <= the same run's control loop. Beat A/B: if both arms' p99 fall near 512 us, the branch's p99 rise is
    idle-wake slack; if only master's, slice the branch's short turns and rerun (fails A2 otherwise). A3 from 3774af /
    647326. A4: suite d8889b + CI.
@@ -210,9 +259,9 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
-| A2 | at the head: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
-| A3 | at the head: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
-| A4 | fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
+| A2 | session 4 at Xapiand:e649ebcb1: macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000); Linux 214621-f82004 / 214622-52318a (2,500), 214624-c6c5de / 214625-59b5ea (10,000); pending. Superseded, at Xapiand:3e2edbef4: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
+| A3 | session 4: 214557-802978 before, 214558-d15a54 after; F3's deciding A/B 210116-568ffe; pending. Superseded, at Xapiand:3e2edbef4: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
+| A4 | session 4: suite 214334-70753d, test_node x5 214345-e0caec, probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 
@@ -226,6 +275,11 @@ Harness: `wide_search_check.py` (`--sample`, creation resume), `wide_search_star
 `wide_search_stalls.py` + `wide_search_reactor_stalls.patch` (stall attribution).
 
 ## Rulings I made
+
+- R7. The lead's assignment names test_node for F1's and F2's handler-level cases, and the fixtures (RunningNode,
+  run_child, HoldTurn) live only in `tests/test_node.cc`, outside the file set; the cases are additive there (new
+  functions, three table rows, one include). The lead may widen the set or move them.
+- R8. F4 (wide-search throughput under contention) is the owner's call per the review; not changed here.
 
 - R1. S2's probe is `harness/wide_search_starve.py` (the review's `wide_starve.py` under the file set's glob), with
   `--create-only/--reuse`; its verdict is T5's bound on the name-list phases: light p99 <= 2x alone p99 + 1 ms.
