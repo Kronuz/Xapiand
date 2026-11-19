@@ -25033,9 +25033,9 @@
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
-      "updated": "2026-11-19T14:13:39",
+      "updated": "2026-11-19T14:14:38",
       "worktree": "../task-wt/xapiand/task-lifecycle-followups"
     },
     "task-lifecycle-rename": {
