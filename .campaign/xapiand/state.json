@@ -25131,20 +25131,61 @@
         "docs/API.md",
         "docs/design/service-shape.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-lifecycle-followups",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T14:29:14",
+          "commit": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "criteria": {
+            "A1": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140140-9aee97",
+            "A2": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140143-816688",
+            "A3": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140145-8db73c",
+            "A4": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140148-04f388",
+            "A5": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since), 261119-140207-206045 (passed at 4c73dbb7a5c2; only merges from main since), 261119-140209-c56112 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140151-bc8368, 261119-140153-e85702, 261119-140154-3b9118, 261119-140156-7d67fb, 261119-140158-d2568f, 261119-140159-a8816d, 261119-140201-b19aab"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4c73dbb7a5c290ccbd942302a49f7c3712fb7649",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140132-6f55be",
+              "level": "light",
+              "seconds": 55.9,
+              "state": "done",
+              "what": "task-lifecycle-followups check suite at 4c73dbb7a5c2"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "4c73dbb7a5c290ccbd942302a49f7c3712fb7649",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140132-d04ab6",
+              "level": "light",
+              "seconds": 42.4,
+              "state": "done",
+              "what": "task-lifecycle-followups check tsan at 4c73dbb7a5c2"
+            }
+          ],
+          "final": true,
+          "from": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "reason": "",
+          "tested": "0316befffa225849f04a8064ea6c46a334e52b94"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
-      "updated": "2026-11-19T14:29:03",
-      "worktree": "../task-wt/xapiand/task-lifecycle-followups"
+      "updated": "2026-11-19T14:29:39",
+      "worktree": ""
     },
     "task-lifecycle-rename": {
       "accepted": {},
