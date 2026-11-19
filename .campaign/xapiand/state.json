@@ -7711,9 +7711,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T14:41:29",
+      "updated": "2026-11-19T15:47:51",
       "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
     },
     "fuzz-cpu-hour": {
