@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`_not` builds the same query tree on every toolchain. Today `{{ x }}` in QueryDSL::create_exp_op_dsl (src/query_dsl.cc:1321) is parsed as a nested list on macOS/Linux ({"_not":[[x]]}) and a flat list on FreeBSD ({"_not":[x]}); build it with an explicit push_back.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A new test pins the `_not` tree (and every other `{{ }}` construction in query_dsl.cc found by grep) to one shape and runs on all CI platforms; it fails without the fix on at least one toolchain (mutant job or the FreeBSD CI row)
+- A2 tests/test_coverage_core_query_dsl.cc:428's platform workaround, if any, is removed or noted for coverage-core-small's owner
+- A3 The suite passes and CI is green on all platforms
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

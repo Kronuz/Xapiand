@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+debounce's `fire_pending()` called from inside a fire is caught by a Debug assert instead of hanging forever; the other review notes (N2 starvation before a stop, N3 concurrent fire of one key without a stop, N8 the 300 ms test window) are fixed or documented (reviews/task-lifecycle-followups-correctness.md).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A Debug test calls fire_pending() from inside a fire and observes the assert (death test or hook), not a hang; fails without the guard (mutant job)
+- A2 N2 and N3 are either fixed with a test each or stated in docs/mechanisms/lifecycle.md as the contract
+- A3 debounce_mid_fire no longer depends on a 300 ms window (a handshake instead); suite passes, TSan clean, CI green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
