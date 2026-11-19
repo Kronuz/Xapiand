@@ -4644,6 +4644,8 @@
     "crash-d-rows": {
       "accepted": {},
       "after": [],
+      "base": "8c59800d38ddc4f342d073efddea15bbcd49f77b",
+      "branch": "quest/xapiand/crash-d-rows",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4663,9 +4665,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "harness: crash check prints every wrong row (land explore/crash-d-wrong)",
-      "updated": "2026-11-19T12:22:50"
+      "updated": "2026-11-19T12:23:23",
+      "worktree": "../Xapiand-wt/xapiand/crash-d-rows"
     },
     "cross-shard-followups": {
       "accepted": {},
