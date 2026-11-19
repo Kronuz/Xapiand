@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: waiting on jobs (corpus check and suite, ids below)
+State: waiting on jobs 261119-040317-8d9156 (corpus check) 261119-040319-57eeba (suite), at fdc169e74
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
