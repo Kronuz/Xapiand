@@ -23,7 +23,7 @@
 // A fixed corpus of points and a fixed list of geo queries: how many corpus points each query hits, with a hash of
 // which. The table holds each answer now; where the fixes of findings F18-F23 changed it, `before` holds the answer
 // before them. Every other query keeps the answer it had, so a change to the geometry code that moves a hit shows
-// here. Run it with the argument `print` to list every query's values.
+// here. Run it with the argument `print` to list every query's values, `indexes` for the hit indexes and `points` for the corpus.
 
 #include "test_harness.h"
 
@@ -34,6 +34,7 @@
 #include <exception>
 #include <memory>
 #include <random>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -61,29 +62,37 @@ struct Settings {
 // The engine's defaults first, then the finest cover, with and without partial trixels.
 constexpr Settings settings[] = { { true, 0.3 }, { true, 0.05 }, { false, 0.05 } };
 
-// The ids of the corpus: a uniform scatter, two dense clusters, and points on the mesh's root edges and poles.
-std::vector<uint64_t> corpus_ids() {
+// The corpus: a uniform scatter, two dense clusters, and points on the mesh's root edges and poles, as (lat, lon).
+std::vector<std::pair<double, double>> corpus_points() {
 	std::mt19937_64 rng(20261118);
 	const auto unit = [&rng] { return static_cast<double>(rng() % 1000001) / 1000000.0; };
-	std::vector<uint64_t> ids;
+	std::vector<std::pair<double, double>> points;
 	// Each random draw is its own statement: the order of evaluation of call arguments differs between compilers.
 	for (int i = 0; i < 4000; ++i) {
 		const double sin_lat = unit() * 2.0 - 1.0;
 		const double lon = unit() * 360.0 - 180.0;
-		ids.push_back(HTM::getId(at(std::asin(sin_lat) * 180.0 / M_PI, lon)));
+		points.emplace_back(std::asin(sin_lat) * 180.0 / M_PI, lon);
 	}
 	for (int i = 0; i < 1000; ++i) {
 		const double dlat = unit() - 0.5;
 		const double dlon = unit() - 0.5;
-		ids.push_back(HTM::getId(at(19.7028 + dlat, -101.1922 + dlon)));
+		points.emplace_back(19.7028 + dlat, -101.1922 + dlon);
 		const double plat = unit() - 0.5;
 		const double plon = unit() - 0.5;
-		ids.push_back(HTM::getId(at(48.8566 + plat, 2.3522 + plon)));
+		points.emplace_back(48.8566 + plat, 2.3522 + plon);
 	}
 	for (const double lat : { 0.0, 90.0, -90.0 }) {
 		for (const double lon : { 0.0, 10.0, 90.0, 180.0, -90.0 }) {
-			ids.push_back(HTM::getId(at(lat, lon)));
+			points.emplace_back(lat, lon);
 		}
+	}
+	return points;
+}
+
+std::vector<uint64_t> corpus_ids() {
+	std::vector<uint64_t> ids;
+	for (const auto& [lat, lon] : corpus_points()) {
+		ids.push_back(HTM::getId(at(lat, lon)));
 	}
 	return ids;
 }
@@ -149,6 +158,24 @@ const std::vector<Query>& queries() {
 		{ "collection of empty intersection", "", wide_collection },
 	};
 	return list;
+}
+
+// The indexes of the corpus points a query hits at a setting, or null when it does not parse.
+bool hit_indexes(const Query& query, const Settings& s, const std::vector<uint64_t>& ids, std::vector<size_t>& out) {
+	const auto geometry = query.build != nullptr ? query.build() : parse(query.ewkt);
+	if (geometry == nullptr) {
+		return false;
+	}
+	const auto ranges = geometry->getRanges(s.partials, s.error);
+	for (size_t i = 0; i < ids.size(); ++i) {
+		for (const auto& r : ranges) {
+			if (r.start <= ids[i] && ids[i] <= r.end) {
+				out.push_back(i);
+				break;
+			}
+		}
+	}
+	return true;
 }
 
 // What a query hits at a setting: "error" when it does not parse, else "<hits> <hash of the hit indexes>".
@@ -288,6 +315,31 @@ const Expected expected[] = {
 int main(int argc, char** argv) {
 	const auto ids = corpus_ids();
 	const bool print = argc > 1 && std::strcmp(argv[1], "print") == 0;
+	// `points` lists the corpus as "index lat lon"; `indexes` lists each query's hit indexes, one per line.
+	if (argc > 1 && std::strcmp(argv[1], "points") == 0) {
+		size_t i = 0;
+		for (const auto& [lat, lon] : corpus_points()) {
+			std::printf("%zu %.17g %.17g\n", i++, lat, lon);
+		}
+		return 0;
+	}
+	if (argc > 1 && std::strcmp(argv[1], "indexes") == 0) {
+		for (const auto& query : queries()) {
+			for (size_t k = 0; k < sizeof(settings) / sizeof(settings[0]); ++k) {
+				std::vector<size_t> hits;
+				if (!hit_indexes(query, settings[k], ids, hits)) {
+					std::printf("%s | %zu | error\n", query.name, k);
+					continue;
+				}
+				std::printf("%s | %zu |", query.name, k);
+				for (const auto i : hits) {
+					std::printf(" %zu", i);
+				}
+				std::printf("\n");
+			}
+		}
+		return 0;
+	}
 	size_t found = 0;
 	for (const auto& query : queries()) {
 		for (size_t k = 0; k < sizeof(settings) / sizeof(settings[0]); ++k) {
