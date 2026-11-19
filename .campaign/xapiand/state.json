@@ -9454,7 +9454,42 @@
       "updated": "2026-11-08T15:40:31"
     },
     "logger-exit-lifetime": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T22:35:02",
+          "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:4fc883897fa6cd0f3294dd6974a98ef33a30f096",
+            "CMakeLists.txt": "100644:6ff1fb7d87b481c0228e65693303cd8927183b6e",
+            "docs/API.md": "100644:bbada675a4e9efea85cc549ceb6e9d30553be75f",
+            "docs/exit-lifetime.md": "100644:76916d4f986fbc8d4b3ea083cc3e44852e56f9de",
+            "logger.cc": "100644:1dcdfa57718e01d4aca4df5ef1d38f9615226711",
+            "logger.h": "100644:0fe9611f42cb333f2974843e7eaa5676adf9cbd1",
+            "test/exception.cc": "100644:12fcb3efe74c05668a458d4c79574133ed3c1312",
+            "test/exit.cc": "100644:915ff5dce3ed0b8f283de48daf58617aeee32f4d",
+            "test/queue.cc": "100644:0c381b10e7228a1a1af61198deaf3315251b1e2d"
+          },
+          "by": "review",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": "9a7ff1643648af3d",
+          "diffs": {
+            "ARCHITECTURE.md": "6dbdaa0c9bbc80ce",
+            "CMakeLists.txt": "71cd5dff8e29c8c3",
+            "docs/API.md": "2aa6d61335d6fda2",
+            "docs/exit-lifetime.md": "5f2ac4860adc3e03",
+            "logger.cc": "b0c3773b46a1174a",
+            "logger.h": "4d7d7c5fabbb57ca",
+            "test/exception.cc": "7abd90ee538177b3",
+            "test/exit.cc": "39f2f3fc95cbd1a5",
+            "test/queue.cc": "b461ba9726ade5e7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "7aaf4db7baf7a5598a67155aed00186eac3f96a2",
+          "reviewed": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
       "branch": "quest/xapiand/logger-exit-lifetime",
@@ -9487,7 +9522,7 @@
       "risk": "high",
       "status": "review",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T20:50:12",
+      "updated": "2026-11-18T22:35:02",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
