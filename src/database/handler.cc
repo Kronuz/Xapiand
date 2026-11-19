@@ -1471,25 +1471,29 @@ search_pinned_indexes(bool most)
 task::task<engine::BatchResult>
 DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
 {
+	std::vector<size_t> first;      // the first position of each shard
+	std::vector<size_t> shard_of;   // the shard of each position
+	shard_of.reserve(end - begin);
+	for (auto i = begin; i < end; ++i) {
+		const auto it = std::find_if(first.begin(), first.end(), [&](size_t f) { return endpoints[f].path == endpoints[i].path; });
+		shard_of.push_back(static_cast<size_t>(it - first.begin()));
+		if (it == first.end()) {
+			first.push_back(i);
+		}
+	}
 	// A wide search's batch takes its place under the node's bound on pinned indexes before it pins them.
 	wide_search::Pins::Hold hold;
 	if (endpoints.size() > search_batch_indexes()) {
-		hold = co_await wide_search::pins().take(end - begin, budget != nullptr ? budget->token() : task::cancel_token{});
+		hold = co_await wide_search::pins().take(first.size(), budget != nullptr ? budget->token() : task::cancel_token{});
 	}
 	std::vector<lock_shard> shards;
-	std::vector<size_t> shard_of;   // the shard of each position
-	shards.reserve(end - begin);
-	shard_of.reserve(end - begin);
-	for (auto i = begin; i < end; ++i) {
+	shards.reserve(first.size());
+	for (const auto i : first) {
 		if (budget != nullptr) {
 			co_await budget->checkpoint();
 		}
-		const auto it = std::find_if(shards.begin(), shards.end(), [&](const lock_shard& shard) { return shard.endpoint.path == endpoints[i].path; });
-		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
-		if (it == shards.end()) {
-			shards.emplace_back(endpoints[i], flags, turn_token());
-			co_await shards.back().pin();
-		}
+		shards.emplace_back(endpoints[i], flags, turn_token());
+		co_await shards.back().pin();
 	}
 	PinCount pinned(shards.size());
 	engine::BatchResult batch;

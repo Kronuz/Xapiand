@@ -46,7 +46,7 @@ measured 115-131 ms p99.9 with nothing reopening). `DatabaseHandler::search_batc
 refreshes.
 
 **D3. A node-wide bound on the indexes wide searches pin at once.** `wide_search::Pins` holds the pool's soft_open
-(what the pool keeps open): a batch of a search wider than one batch takes its indexes' count before it pins them and
+(what the pool keeps open): a batch of a search wider than one batch takes its distinct indexes' count before it pins them and
 gives it back when it ends. A batch that does not fit waits its turn, first come first served, holding no thread; a
 batch wider than the bound takes all of it, alone. Searches that fit in one batch do not take a place: they hold at
 most K indexes each and are bounded by admission (1,000 in flight per loop), as every light request is.
@@ -138,5 +138,8 @@ its request is cancelled.
 
 `tests/test_wide_search.cc`: the bound (a batch that fits takes its count at once and gives it back, a batch wider than
 the bound takes all of it), the line (a waiting batch keeps its place: a narrower one does not pass it), and the
-cancellation of a batch behind the head. `harness/wide_search_check.py gate` reads SR3 (each loop's lag over the timed
+cancellation of a batch behind the head, each ordered by one thread's `task::when_all` rather than by sleeps.
+`tests/test_node.cc`, through `search_batch` with `--concurrent-search-indexes 1`: a cancelled wide search gives its
+batch's count back, and a batch that names an index twice counts it once (it pins it once); and a half-closed
+`POST /a,b/:commit` commits and survives a restart without a stop (D1). `harness/wide_search_check.py gate` reads SR3 (each loop's lag over the timed
 searches, `--sample` the call graph); `harness/wide_search_starve.py` is S2's probe with T5's bound as its verdict.

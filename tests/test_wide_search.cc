@@ -30,15 +30,12 @@
 #include "test_harness.h"
 
 #include <algorithm>
-#include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "database/flags.h"
@@ -485,16 +482,15 @@ void test_a_batch_holds_whole_indexes() {
 	CHECK_THROW(engine::sync_wait(engine::search_batched(13, 4, std::span<const std::uint32_t>(index_of, 5), runner, request)), engine::Error);
 }
 
-// The node's bound on pinned indexes: a batch that fits takes its count at once and gives it back when it ends; one
-// that does not waits, holding no thread, until room comes back; a batch wider than the bound takes all of it.
+// The node's bound on pinned indexes: a batch that fits takes its count at once and gives it back when it ends; a batch
+// wider than the bound takes all of it.
 void test_the_pins_bound_the_indexes_held_at_once() {
 	wide_search::Pins pins(4);
 	{
 		auto three = engine::sync_wait(pins.take(3, {}));
 		CHECK_EQ(three.size(), std::size_t{3});
 		CHECK_EQ(pins.held(), std::size_t{3});
-		CHECK_EQ(pins.try_take(2).size(), std::size_t{0});   // does not fit
-		auto one = pins.try_take(1);
+		auto one = engine::sync_wait(pins.take(1, {}));   // fits
 		CHECK_EQ(one.size(), std::size_t{1});
 		CHECK_EQ(pins.held(), std::size_t{4});
 	}
@@ -505,53 +501,63 @@ void test_the_pins_bound_the_indexes_held_at_once() {
 	CHECK_EQ(pins.held(), std::size_t{0});
 }
 
-// A batch that does not fit waits for room and is first in line: a narrower batch does not pass it.
+// Takes n and records the count it got, in the order the batches got theirs.
+task::task<void> take_in_line(wide_search::Pins& pins, std::size_t n, std::vector<std::size_t>& order) {
+	auto hold = co_await pins.take(n, {});
+	order.push_back(hold.size());
+}
+
+// The tasks of one when_all start in order on one thread, each up to its first wait: by the time `control` runs, every
+// batch before it is in line or holds its count.
+task::task<void> release_after_checking(wide_search::Pins& pins, wide_search::Pins::Hold& held, const std::vector<std::size_t>& order) {
+	// One index is free, but the batch of two waits at the head of the line, so the batch of one behind it does not
+	// take it.
+	CHECK_EQ(pins.held(), std::size_t{3});
+	CHECK_TRUE(order.empty());
+	held = {};   // room comes back: the head takes it, then the batch behind it
+	co_return;
+}
+
+// A batch that does not fit waits for room, holding no thread, and is first in line: a narrower batch does not pass it.
 void test_a_waiting_batch_keeps_its_place() {
 	wide_search::Pins pins(4);
 	auto three = engine::sync_wait(pins.take(3, {}));
-	std::atomic<bool> done{false};
-	std::thread waiter([&] {
-		auto two = engine::sync_wait(pins.take(2, {}));
-		CHECK_EQ(two.size(), std::size_t{2});
-		done = true;
-	});
-	// One index is free, but the batch of two waits at the head of the line, so a batch of one does not take it.
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
-	CHECK_FALSE(done.load());
-	CHECK_EQ(pins.try_take(1).size(), std::size_t{0});
-	three = {};   // room comes back: the waiting batch takes it
-	waiter.join();
-	CHECK_TRUE(done.load());
+	std::vector<std::size_t> order;
+	engine::sync_wait(task::when_all(take_in_line(pins, 2, order), take_in_line(pins, 1, order), release_after_checking(pins, three, order)));
+	CHECK_TRUE(order == (std::vector<std::size_t>{2, 1}));
 	CHECK_EQ(pins.held(), std::size_t{0});
+}
+
+task::task<void> head_of_line(wide_search::Pins& pins, bool& done) {
+	auto one = co_await pins.take(1, {});
+	done = true;
+}
+
+task::task<void> behind_the_head(wide_search::Pins& pins, task::cancel_token token, bool& cancelled) {
+	try {
+		auto one = co_await pins.take(1, std::move(token));
+	} catch (const task::cancelled&) {
+		cancelled = true;
+	}
+}
+
+task::task<void> cancel_then_release(task::cancel_source& source, wide_search::Pins::Hold& held, const bool& head_done) {
+	source.request();   // the batch behind the head leaves the line
+	CHECK_FALSE(head_done);
+	held = {};          // room for the head; the cancelled batch is not given the line after it
+	co_return;
 }
 
 // A batch behind the head of the line leaves it when its search is cancelled.
 void test_a_cancelled_batch_leaves_the_line() {
 	wide_search::Pins pins(2);
 	auto two = engine::sync_wait(pins.take(2, {}));
-	std::atomic<bool> head_done{false};
-	std::thread head([&] {
-		auto one = engine::sync_wait(pins.take(1, {}));
-		head_done = true;
-	});
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	task::cancel_source source;
-	std::atomic<bool> cancelled{false};
-	std::thread behind([&] {
-		try {
-			auto one = engine::sync_wait(pins.take(1, source.token()));
-		} catch (const task::cancelled&) {
-			cancelled = true;
-		}
-	});
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
-	source.request();
-	behind.join();
-	CHECK_TRUE(cancelled.load());
-	CHECK_FALSE(head_done.load());
-	two = {};
-	head.join();
-	CHECK_TRUE(head_done.load());
+	bool head_done = false;
+	bool cancelled = false;
+	engine::sync_wait(task::when_all(head_of_line(pins, head_done), behind_the_head(pins, source.token(), cancelled), cancel_then_release(source, two, head_done)));
+	CHECK_TRUE(cancelled);
+	CHECK_TRUE(head_done);
 	CHECK_EQ(pins.held(), std::size_t{0});
 }
 

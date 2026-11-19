@@ -83,9 +83,6 @@ public:
 	// task::cancelled when `token` is requested while it waits for its place in line.
 	task::task<Hold> take(std::size_t n, task::cancel_token token);
 
-	// Takes n at once, or nothing when it does not fit or others wait (the pins of a search that cannot wait).
-	Hold try_take(std::size_t n) noexcept;
-
 	std::size_t capacity() const noexcept { return capacity_; }
 	std::size_t held() const noexcept;
 

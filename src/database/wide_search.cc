@@ -67,26 +67,6 @@ Pins::take(std::size_t n, task::cancel_token token)
 }
 
 
-Pins::Hold
-Pins::try_take(std::size_t n) noexcept
-{
-	n = std::min(std::max<std::size_t>(1, n), capacity_);
-	if (!line_.try_lock()) {
-		return {};
-	}
-	Hold hold;
-	{
-		std::lock_guard<std::mutex> lk(mutex_);
-		if (free_ >= n) {
-			free_ -= n;
-			hold = Hold(this, n);
-		}
-	}
-	line_.unlock();
-	return hold;
-}
-
-
 std::size_t
 Pins::held() const noexcept
 {
