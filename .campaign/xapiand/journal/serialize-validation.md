@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs e9f90f 367e06 859ec0 f13d5c f41436
+State: waiting on jobs 41ab85
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,6 +22,19 @@ done, failed as it must), 159564 (A2 mutant, done, failed as it must), 7f59ed (A
 222d40 (A3), e9f90f (A7 cast at Xapiand:df8cf48b7), 367e06 (A7 aggregations mutant), 859ec0 (D130 at
 Xapiand:095b65241, filed under A7 since A5 takes no job); head pass f13d5c (A1-A4, A7, at Xapiand:ba766afee); suite
 f41436 (A6). Cancelled as stale: 039ba1, 50ab8b (older head).
+
+## Session 4 (11-19): merge and CI
+
+Merged origin/master (Xapiand:e9f7f6a28, no conflicts). CI at Xapiand:0db7027c2 failed on all three platforms with ONE
+cause, mine: the docs E2E ("Exact Matching :: Geospatial Point count/size/values", expected 4 to equal 3). ctest passed
+51/51 on arm64 and FreeBSD; the red rows are the docs E2E (FreeBSD, CI, ASan, TSan) and arm64's t2_e2e_asan row (same
+assert.txt). geospatial-type.md runs `UPDATE /bank/6` moving _id 6 to (-74.01042, 41.50343) before the search, so the
+exact point answers _id 6, 156, 768, 891. My doc said 156, 768, 891 (counted from accounts.ndjson alone). Not on master:
+master's docs say 10 (the bug). Fixed in Xapiand:72be2396c (docs + geo-exact-term.md), which also flips the pins in
+tests/test_coverage_serialize.cc that master brought in (it pinned the bugs this quest fixes). Job 41ab85 runs that test
+plus the seven serialize_validation tests at the merged head; then `campaign verify`.
+Stale jobs 261119-002707-c3d713, 261119-003619-41690e (review probes) failed/timed out before any review: not mine to
+rerun; the reviewer's.
 
 ## Next
 
