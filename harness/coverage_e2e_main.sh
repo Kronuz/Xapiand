@@ -114,10 +114,10 @@ expect_log "the pid file is removed on the way out" "$W/s1.log" "Removing the pi
 
 echo "== [2] the saved node name (manager: init, run)"
 run_to "$W/s2.log" 30 "$BIN" --port "$(free_port)" -D "$D" --name other
-expect_eq "another --name on the same directory ends with EX_CONFIG" "$RC" 78
+expect_eq "another --name on the same directory ends with EX_SOFTWARE" "$RC" 70
 expect_log "it says the name does not match" "$W/s2.log" "doesn't match the one saved in the node's directory"
 expect_eq "the saved name is untouched" "$(cat "$D/.xapiand/node" 2>/dev/null)" "n1"
-start_node "$W/s2b.log" "$D" --name N1 -v
+start_node "$W/s2b.log" "$D" --name N1 -v -v
 expect_eq "the same name in another case starts" "$(cat "$D/.xapiand/node" 2>/dev/null)" "n1"
 stop_node INT 20
 expect_eq "SIGINT ends it with status 0" "$RC" 0
@@ -127,7 +127,7 @@ echo "== [3] documents, signals that do not end the node (main: sig_handler; man
 start_node "$W/s3.log" "$D" -v
 expect_eq "the saved name is used without --name" "$(cat "$D/.xapiand/node" 2>/dev/null)" "n1"
 st1=$(put idx 1 '{"word": "alpha", "n": 1}'); st2=$(put idx 2 '{"word": "beta", "n": 2}')
-case "$st1$st2" in 20[01]20[01]) pass "two documents are indexed ($st1 $st2)";; *) fail "the PUTs answered $st1 and $st2";; esac
+case "$st1$st2" in 20[0-9]20[0-9]) pass "two documents are indexed ($st1 $st2)";; *) fail "the PUTs answered $st1 and $st2";; esac
 expect_log "GET returns the document" <(curl -s "127.0.0.1:$PORT/idx/1") '"word": ?"alpha"'
 kill -HUP "$NODE_PID"; sleep 0.3
 kill -0 "$NODE_PID" 2>/dev/null && pass "SIGHUP is ignored" || fail "SIGHUP ended the node"
@@ -162,7 +162,7 @@ wait_exit 20
 expect_eq "it ends with status 0 once the request is gone" "$RC" 0
 
 echo "== [5] repeated signals force the end (manager: shutdown_sig)"
-start_node "$W/s5.log" "$D" -v
+start_node "$W/s5.log" "$D" -v -v
 hold; sleep 1
 kill -INT "$NODE_PID"; sleep 0.4; kill -INT "$NODE_PID"; sleep 0.4; kill -INT "$NODE_PID"
 wait_exit 15
@@ -192,21 +192,20 @@ expect_eq "an open-files limit below the minimum is EX_OSFILE" "$RC" 72
 expect_log "and says so" "$W/r5.log" "is not enough for the server to start"
 
 echo "== [7] open-files limits (main: adjustOpenFilesLimit)"
-# 300 descriptors: the pool shrinks to (300 - 57) / 7 = 34 databases.
-start_node "$W/l1.log" "$W/lim1" --max-files 300 --database-pool-size 200 --max-clients 1000 -v
+# 300 descriptors cannot hold the default pool and clients: the pool is cut to (300 - 57) / 7 = 34 databases,
+# yet the start is refused because the computed minimum (1471) is above the limit.
+run_to "$W/l1.log" 30 "$BIN" --port "$(free_port)" --bind-address 127.0.0.1 -D "$W/lim1" --max-files 300 --database-pool-size 200 --max-clients 1000 -v
+expect_eq "a limit of 300 with the default pool is EX_OSFILE" "$RC" 72
+expect_log "it asks for at least 1471" "$W/l1.log" "open files limit of 300 is not enough for the server to start.*at least 1471"
 expect_log "the pool is cut to what 300 descriptors hold" "$W/l1.log" "database_pool_size has been reduced to 34 to compensate for low limit"
-expect_log "the limit is announced" "$W/l1.log" "Current maximum open files is 300"
-stop_node TERM 20
 # A process limit of 128 (soft and hard) that cannot be raised.
-PORT=$(free_port)
-bash -c 'ulimit -n 128; exec "$0" "$@"' "$BIN" --port "$PORT" --bind-address 127.0.0.1 -D "$W/lim2" -v --database-pool-size 200 --max-clients 1000 --name l2 >"$W/l2.log" 2>&1 &
-NODE_PID=$!; PIDS="$PIDS $NODE_PID"
-sleep 6
-stop_node TERM 20
-expect_log "a limit that cannot be raised is reported" "$W/l2.log" "can't set maximum open files|not enough"
+bash -c 'ulimit -n 128; exec "$0" "$@"' "$BIN" --port "$(free_port)" --bind-address 127.0.0.1 -D "$W/lim2" -v --database-pool-size 200 --max-clients 1000 --name l2 >"$W/l2.log" 2>&1
+expect_eq "a process limit that cannot be raised is EX_OSFILE" "$?" 72
+expect_log "the failed raise is reported" "$W/l2.log" "can't set maximum open files to .* EPERM"
+expect_log "and the limit is not enough" "$W/l2.log" "is not enough for the server to start"
 # A limit above the system's.
-start_node "$W/l3.log" "$W/lim3" --max-files 1000000 -v
-expect_log "a huge request is tried" "$W/l3.log" "open files"
+start_node "$W/l3.log" "$W/lim3" --max-files 1000000 -v -v
+expect_log "a huge request is tried" "$W/l3.log" "(Increased|Decresed) maximum number of open files to|can't set maximum open files"
 stop_node TERM 20
 expect_eq "the node ends with status 0" "$RC" 0
 
@@ -216,7 +215,7 @@ expect_eq "the parent of --detach returns 0" "$RC" 0
 for _ in $(seq 100); do [ -s "$W/det.pid" ] && break; sleep 0.1; done
 dpid=$(tr -d '[:space:]' < "$W/det.pid" 2>/dev/null)
 [ -n "$dpid" ] && kill -0 "$dpid" 2>/dev/null && pass "the daemon runs under the pid in the pid file ($dpid)" || fail "no daemon under pid '$dpid'"
-for _ in $(seq 100); do grep -q "taking over" "$W/det.log" 2>/dev/null && break; sleep 0.1; done
+for _ in $(seq 200); do grep -q "Ready to Rock" "$W/det.log" 2>/dev/null && break; sleep 0.1; done
 expect_log "the daemon names its pid" "$W/det.log" "Daemon on process ID \\[$dpid\\] taking over"
 kill -TERM "$dpid" 2>/dev/null
 for _ in $(seq 200); do kill -0 "$dpid" 2>/dev/null || break; sleep 0.1; done

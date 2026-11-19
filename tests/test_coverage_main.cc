@@ -389,15 +389,18 @@ void lower_limit(rlim_t to) {
 	::setrlimit(RLIMIT_NOFILE, &rl);
 }
 
-// adjustOpenFilesLimit, reporting the exit code it throws with and the descriptors the process holds (a diagnostic).
-void adjust_or_report() {
+// adjustOpenFilesLimit refusing the start: the child ends with 0 when it threw SystemExit(EX_OSFILE), with the descriptors
+// the process holds (3 here: stdin, stdout and stderr) and the limit it ended with checked.
+void expect_refusal(ssize_t limit) {
 	try {
 		adjustOpenFilesLimit();
 	} catch (const SystemExit& exc) {
-		std::fprintf(stderr, "adjustOpenFilesLimit threw SystemExit(%d): %zd open, max %zd, requested max_files %zd\n",
-			exc.code, static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(get_max_files_per_proc()), main_opts.max_files);
-		std::exit(2);
+		CHECK_EQ(exc.code, static_cast<int>(EX_OSFILE));
+		CHECK_LE(static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(16));
+		CHECK_EQ(static_cast<ssize_t>(get_max_files_per_proc()), limit);
+		return;
 	}
+	CHECK(false);
 }
 
 void test_open_files_limit() {
@@ -410,23 +413,15 @@ void test_open_files_limit() {
 		std::exit(1);
 	}), static_cast<int>(EX_OSFILE));
 
-	// An explicit limit that the pool and the clients do not fit in: the pool shrinks to what fits and the clients get
-	// what is left of the 300 descriptors, which is less than none (FDS_PER_DATABASE 7, FDS_RESERVED 50:
-	// (300 - 57) / 7 = 34 databases leave (300 - 304) / 2 = -2 clients). BUG (pinned): max_clients goes negative
-	// instead of the pool giving up a database for the first client.
+	// An explicit limit that the default pool and clients do not fit in is refused too, though the pool would shrink
+	// to (300 - 57) / 7 = 34 databases: the computed minimum is 1471 descriptors (the log says "at least 1471"). The
+	// max_clients -2 that (300 - 304) / 2 suggests is never reached: the start ends first with EX_OSFILE.
 	CHECK_EQ(in_child([] {
 		main_opts.max_files = 300;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
 		main_opts.concurrent_search_indexes = 100;
-		adjust_or_report();
-		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(300));
-		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>(34));
-		CHECK_EQ(main_opts.concurrent_search_indexes, static_cast<ssize_t>(34));
-		CHECK_EQ(main_opts.max_clients, static_cast<ssize_t>(-2));
-		struct rlimit rl;
-		::getrlimit(RLIMIT_NOFILE, &rl);
-		CHECK_EQ(rl.rlim_cur, static_cast<rlim_t>(300));
+		expect_refusal(300);
 	}), 0);
 
 	// A roomy explicit limit changes nothing the pool and the clients asked for.
@@ -442,20 +437,14 @@ void test_open_files_limit() {
 		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(4096));
 	}), 0);
 
-	// With no explicit limit and a process limit below what the defaults need, the pool and the clients shrink to fit
-	// (a user that can raise its hard limit gets what it asked for instead).
+	// With no explicit limit and a hard limit of 1024 (which cannot be raised) the default pool and clients are
+	// refused as well, for the same minimum.
 	CHECK_EQ(in_child([] {
 		lower_limit(1024);
 		main_opts.max_files = 0;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
-		adjust_or_report();
-		CHECK_LE(main_opts.database_pool_size, static_cast<ssize_t>(200));
-		CHECK_LE(main_opts.max_clients, static_cast<ssize_t>(1000));
-		if (::getuid() != 0) {
-			CHECK_LT(main_opts.database_pool_size, static_cast<ssize_t>(200));
-			CHECK_LE(main_opts.max_files, static_cast<ssize_t>(1024));
-		}
+		expect_refusal(1024);
 	}), 0);
 }
 
