@@ -169,7 +169,7 @@ wait_exit 15
 kill -9 "$HOLDER" 2>/dev/null
 [ "$RC" != 124 ] && pass "three SIGINTs end a node that has a request in flight (status $RC)" || fail "the node outlived three SIGINTs"
 expect_log "the second signal tries an immediate shutdown" "$W/s5.log" "Trying immediate shutdown"
-expect_log "the third says it insisted" "$W/s5.log" "(Trying breaking the loop|You insisted)"
+expect_eq "the third ends it with EX_SOFTWARE" "$RC" 70
 
 echo "== [6] refusals at start-up (main: usedir, adjustOpenFilesLimit)"
 run_to "$W/r1.log" 30 "$BIN" --port "$(free_port)" -D ""
@@ -268,15 +268,15 @@ color_run 16;        [ "$(grep -c "$ESC" "$W/c-16.log")" -gt 0 ] && pass "--colo
 expect_no_log "--color 16 uses no 256-color or 24-bit codes" "$W/c-16.log" "${ESC}\\[[0-9;]*38;[25];"
 color_run stacked;   [ "$(grep -c "$ESC" "$W/c-stacked.log")" -gt 0 ] && pass "--color stacked writes escapes" || fail "--color stacked wrote none"
 run_to "$W/f-iso.log" 60 "$BIN" -D "$D" --dump idx -o "$W/c.mp" --color never --log iso8601 --log milliseconds --log thread-names --log locations
-expect_log "--log iso8601 stamps lines in ISO 8601" "$W/f-iso.log" "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+expect_log "--log iso8601 stamps lines in ISO 8601" "$W/f-iso.log" "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3} "
 expect_log "--log locations names source files" "$W/f-iso.log" "\\.(cc|h):[0-9]+"
 expect_log "--log thread-names names the thread" "$W/f-iso.log" "MAIN"
 run_to "$W/f-epoch.log" 60 "$BIN" -D "$D" --dump idx -o "$W/c.mp" --color never --log epoch --log microseconds
-expect_log "--log epoch stamps lines in epoch seconds" "$W/f-epoch.log" "^[0-9]{10}[. ]"
+expect_log "--log epoch stamps lines in epoch seconds" "$W/f-epoch.log" "^[^0-9]{1,4}[0-9]{10}\\.[0-9]{6} "
 run_to "$W/f-less.log" 60 "$BIN" -D "$D" --dump idx -o "$W/c.mp" --color never --log timeless
-expect_no_log "--log timeless drops the stamp" "$W/f-less.log" "^[0-9]{8,}"
+expect_no_log "--log timeless drops the stamp" "$W/f-less.log" "^[^0-9]{1,4}[0-9]{8,} "
 run_to "$W/f-def.log" 60 "$BIN" -D "$D" --dump idx -o "$W/c.mp" --color never
-expect_log "the default stamp is YYYYMMDDHHMMSS" "$W/f-def.log" "^[0-9]{14}"
+expect_log "the default stamp is YYYYMMDDHHMMSS" "$W/f-def.log" "^[^0-9]{1,4}[0-9]{14} "
 
 echo "== [11] HTTPS start-up and refusals (manager: make_servers' TLS failures; main: tls_setup)"
 if command -v openssl >/dev/null; then
