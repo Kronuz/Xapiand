@@ -76,6 +76,9 @@ Collection::to_string() const
 		str.append(str_geometry).push_back(',');
 	}
 	for (const auto& intersection : intersections) {
+		if (intersection.empty()) {
+			continue;
+		}
 		const auto str_geometry = intersection.toWKT();
 		str.reserve(str.length() + str_geometry.length() + 1);
 		str.append(str_geometry).push_back(',');
