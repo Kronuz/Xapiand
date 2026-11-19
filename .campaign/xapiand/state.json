@@ -982,6 +982,13 @@
         ]
       },
       "text": "coverage-areas landed: unlocks coverage-core-main; coverage-core-small; coverage-database; coverage-multivalue; coverage-server"
+    },
+    {
+      "at": "2026-11-19T04:52:29",
+      "by": "detent-lead",
+      "closed": "FYI from Detent: consensus:62eb8fc is test-only (connection_test.cc read_slowly sizing); no transport or contract change, consensus-rpc-lane unaffected",
+      "id": "msg-123",
+      "text": "Detent lead: connection-slow-reader-flake landed at consensus:62eb8fc. Test-only (test/transport/connection_test.cc): read_slowly measures the reader's real receive capacity before the run and sizes its queue from it (macOS loopback holds pinned SO_RCVBUF + 522624 B), refuses unsatisfiable marks by value, no retries. No transport code or contract changed, so consensus-rpc-lane is unaffected."
     }
   ],
   "quests": {
