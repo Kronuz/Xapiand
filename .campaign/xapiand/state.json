@@ -24363,7 +24363,8 @@
       "consumes": [],
       "files": [
         "task.hh",
-        "test/**"
+        "test/**",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/task-driver-layout",
       "landed": [],
@@ -24375,7 +24376,7 @@
       "risk": "normal",
       "status": "active",
       "title": "task: inline_scheduler layout identical in Debug and release (F7)",
-      "updated": "2026-11-19T12:53:55",
+      "updated": "2026-11-19T13:03:45",
       "worktree": "../task-wt/xapiand/task-driver-layout"
     },
     "task-inbox-first": {
