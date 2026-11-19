@@ -66,12 +66,19 @@ std::vector<uint64_t> corpus_ids() {
 	std::mt19937_64 rng(20261118);
 	const auto unit = [&rng] { return static_cast<double>(rng() % 1000001) / 1000000.0; };
 	std::vector<uint64_t> ids;
+	// Each random draw is its own statement: the order of evaluation of call arguments differs between compilers.
 	for (int i = 0; i < 4000; ++i) {
-		ids.push_back(HTM::getId(at(std::asin(unit() * 2.0 - 1.0) * 180.0 / M_PI, unit() * 360.0 - 180.0)));
+		const double sin_lat = unit() * 2.0 - 1.0;
+		const double lon = unit() * 360.0 - 180.0;
+		ids.push_back(HTM::getId(at(std::asin(sin_lat) * 180.0 / M_PI, lon)));
 	}
 	for (int i = 0; i < 1000; ++i) {
-		ids.push_back(HTM::getId(at(19.7028 + (unit() - 0.5), -101.1922 + (unit() - 0.5))));
-		ids.push_back(HTM::getId(at(48.8566 + (unit() - 0.5), 2.3522 + (unit() - 0.5))));
+		const double dlat = unit() - 0.5;
+		const double dlon = unit() - 0.5;
+		ids.push_back(HTM::getId(at(19.7028 + dlat, -101.1922 + dlon)));
+		const double plat = unit() - 0.5;
+		const double plon = unit() - 0.5;
+		ids.push_back(HTM::getId(at(48.8566 + plat, 2.3522 + plon)));
 	}
 	for (const double lat : { 0.0, 90.0, -90.0 }) {
 		for (const double lon : { 0.0, 10.0, 90.0, 180.0, -90.0 }) {

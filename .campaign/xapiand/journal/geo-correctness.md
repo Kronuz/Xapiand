@@ -16,6 +16,12 @@ submitted: fails-without 261118-231033-23ce28 (at 673c25282), passing 261118-231
 
 ## Next
 
+00. CI red on Linux x86_64 (run 44478325454): test_geo_corpus drew its random corpus inside call arguments
+(`at(asin(unit()...), unit()...)`), whose evaluation order differs by compiler: gcc built another corpus than
+clang, so every answer differed. Engine unaffected (arm64 and FreeBSD CI green). Fixed in the test: one draw per
+statement. Proof: g++-16 on the old test gives 77 FAIL rows; on the fixed test, 100 checks pass, same table as
+clang. Needs push and a Linux CI run to close.
+
 0. msg D129 (lead): F20 is fixed in htm quest htm-edge-points; after it lands I repin htm (CMakeLists.txt joins my file set) and flip the F20 pins. Branch not pushed by me: contributors never push; the lead pushes for CI.
 
 1. Read the jobs when they finish (`campaign brief geo-correctness`); fold in a CI failure on any platform.
