@@ -3975,6 +3975,35 @@
       "updated": "2026-11-18T15:43:05",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
+    "coverage-core-main": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_main*",
+        "harness/coverage_e2e_main*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
+      "updated": "2026-11-18T16:36:45"
+    },
     "coverage-core-small": {
       "accepted": {},
       "after": [],
