@@ -34,12 +34,22 @@ So a point on the equator, on the prime meridian, or at a pole is indexed under 
 around it does not find it: at `(0, 10)`, `(0, 0)`, `(10, 0)` and `(90, 0)` a 1 km circle misses its own point.
 The circle test passes today by luck: a 9,000 km circle holds the middle of the octant too.
 
-The cause is in the htm library (`htm.cc`, `inside<Round>`). Taking the edge as inside, `>= 0`, puts a point on
-an edge in the first child that holds it, and with that one change (a scratch copy of the pinned htm
-`bb5e01d`) every point above hits its 1 km circle and the lens covers its center at all four longitudes, both
-partial settings (8 misses of 8 before, none after). It moves ids only for points on an edge, which are the ones
-misplaced now; but htm's `test/golden.h` pins those ids (92 of its 396 golden points mismatch) and ids are stored
-in indexes. Whether to move them, and when, is the owner's call; it is not made here.
+The cause was in the htm library (`htm.cc`, `HTM::getId`): a point on an edge of a root trixel fell to the middle
+child at every level. htm `0c09a02` places an edge point in the nearest child that holds it, and
+`intersectConstraints` clamps its result; the lens covers its center at all four root vertices
+(`test_lens_of_wide_circles_covers_its_center`), and every point above hits its 1 km circle.
 
-When the htm id is fixed, the lens in `tests/test_coverage_geospatial.cc` flips to `covers(ranges, center)`, and
-`test_lens_of_wide_circles_covers_its_center` can take the root vertices as centers.
+Ids move only for points on an edge, so the corpus answers move only for its 15 root-edge points (indexes 6000 to
+6014). Rerun at the new pin, 24 of the 99 answers differ from the pin before it (same code otherwise), in 12
+queries and 53 points, every one an edge point: 24 gained, 29 lost. Against the exact distance to each circle:
+
+| Class | Count | Exact distance |
+|---|---|---|
+| Gained, inside the shape | 23 | inside by 821 to 3,940 km (`partials` false or true) |
+| Gained, outside the shape | 1 | `convex cap and negative` with partials: 220 km outside; that setting also hits 76 other points up to 350 km outside, partial cells by design |
+| Lost, inside the shape | 0 | |
+| Lost, outside the shape | 29 | outside by 504 to 6,198 km: the old id put the edge point in the middle of its octant, which these shapes held |
+
+With whole cells only (setting 2) every gained point is inside and every lost point outside. The queries that changed:
+circle 5,000 / 9,000 / 15,011 km and equator 3,000 km, convex lens 9,000 / 5,000 km, convex negative, both ring orders,
+and convex cap and negative; `tests/test_geo_corpus.cc` keeps each `before` and `now`.
