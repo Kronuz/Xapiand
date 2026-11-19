@@ -44,3 +44,4 @@ No other conditional member, base or class-scope state exists.
 
 - F2 left: `orphaned_waiters()`/`event::~event` live in task.hh, outside this quest's file set. Both are Debug-only diagnostics with no layout effect; making orphan_count unconditional would add a relaxed RMW to event teardown in Release. Lead may widen the set if wanted.
 - The mutant is a branch (mutant-asio-layout), not on the quest branch.
+- A size-only compare cannot see on_loop_ (a bool fits the padding after three bools; the first mutant passed, job 261119-132355-c6cff3), so the test also compares whether on_loop_ exists (`#define private public` around task_asio.hh in the layout TUs only).
