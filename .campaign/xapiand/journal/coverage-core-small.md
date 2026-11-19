@@ -65,3 +65,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - query_dsl aborted: uncaught CastError "Type MAP cannot be cast to integer" from get_sorter({"n": {"_integer": "100"}}). NEW finding sort-cast-word: the sorter passes the whole map (`value = &o`, not `&val`) to Cast::cast, so every cast word throws CastError for integer, datetime and text fields (geo works: the cast returns the map). Not a process abort in product code: the test did not expect the throw. Pinned as CHECK_THROW.
 - query_dsl wrong expectations fixed: phrase/near carry window 11; nest(20) keeps 20 pairs of parentheses; "k._10" with "a" throws integer type error; "NOT a" is `_not: [[...]]` (pinned, dsl-not-nested); "a b" is not refused (value printed by the next run, then pinned).
 - Suspects: acc-zero, dsl-scale-weight, sort-boolean-key: unknown until query_dsl runs.
+
+## Job 36eeba (exit 1) readout
+
+- query_dsl ran: 1201/1311 lines (91.6%), branches 582/702 (82.9%); 275 checks, 11 failed, all wrong expectations in test_sorters: a datetime and a text cast word WORK in a sort (only integer throws: sort-cast-word narrowed); phonetic metrics store the encoded code, not "smith"; metric key names are Levenshtein, Jaro_Winkler, Sorensen_Dice, Jaccard, LCSubstr, LCSubsequence, Jaro (no "StringKey"); "a b" is `_or` of both terms (pinned).
+- Confirmed (their pinned checks passed): acc-zero, dsl-scale-weight, sort-boolean-key. cast 336/336, 301/302; datetime 446/485, 253/282; endpoint 285/292, 111/128.
