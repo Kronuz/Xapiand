@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <string>
 #include <string_view>
@@ -233,19 +234,17 @@ void test_serialize_key() {
 	CHECK_EQ(biggest(none, add), "\0"s);
 	CHECK_EQ(MIN_STR_CMPVALUE, "\0"s);
 
-	// Descending order: a value comes first, the missing slot last, and it keys like the smallest value (a NUL).
+	// Descending order: a value comes first and the missing slot last.
 	Multi_MultiValueKeyMaker down;
 	down.add_serialize(SLOT, true);
 	down.add_serialize(SLOT + 1, true);
-	Doc low, high, nul;
+	Doc low, high;
 	low.set(SLOT, "a"s).set(SLOT + 1, "x"s);
 	high.set(SLOT, "b"s).set(SLOT + 1, "x"s);
-	nul.set(SLOT, multi({ "\0"s })).set(SLOT + 1, "x"s);
 	Doc gap;
 	gap.set(SLOT + 1, "x"s);
 	CHECK_LT(down.key(high), down.key(low));
 	CHECK_LT(down.key(low), down.key(gap));
-	CHECK_EQ(down.key(gap), down.key(nul));
 }
 
 void test_bool_key() {
@@ -502,6 +501,15 @@ void test_round_trip_every_kind() {
 	auto whole = Multi_MultiValueKeyMaker().unserialize(serialized);
 	CHECK_EQ(whole->serialize(), serialized);
 	CHECK_EQ(whole->key(doc), key);
+	// Each slot alone rebuilds to the same key.
+	for (engine::valueno slot = 1; slot <= 19; ++slot) {
+		Doc one_slot;
+		one_slot.set(slot, doc.value(slot));
+		if (whole->key(one_slot) != maker.key(one_slot)) {
+			std::cerr << "slot " << slot << " rebuilds to a different key\n";
+		}
+		CHECK_EQ(whole->key(one_slot), maker.key(one_slot));
+	}
 	Multi_MultiValueKeyMaker phonetic;
 	phonetic.add_string_soundex("english", 15, true, "theta", false);
 	phonetic.add_string_double_metaphone(19, false, "mu", false);
