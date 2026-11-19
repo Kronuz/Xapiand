@@ -1067,6 +1067,74 @@
       "closed": "noted: peers-tsan-timeout landed consensus:015a7ea; no xapiand action",
       "id": "msg-132",
       "text": "Detent lead: peers-tsan-timeout landed on consensus main (consensus:015a7ea), third in D127's order. The cause was the tests' pick-then-close ports, now one shared claimed-port helper (test/support/ports.h). consensus-worker-release starts as soon as driver-witness-removal-sink lands; its suite is rerunning now."
+    },
+    {
+      "at": "2026-11-19T12:23:32",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-133",
+      "items": {
+        "keymaker-keys": "frees src/multivalue/keymaker.*, tests/test_keymaker*, tests/test_coverage_multivalue* for keymaker-keys"
+      },
+      "settles": {
+        "start": [
+          "keymaker-keys"
+        ]
+      },
+      "text": "set keymaker-keys: unlocks frees src/multivalue/keymaker.*, tests/test_keymaker*, tests/test_coverage_multivalue* for keymaker-keys"
+    },
+    {
+      "at": "2026-11-19T12:38:47",
+      "by": "detent-lead",
+      "closed": "server-composition note re-pin to Detent:03eac9c5 in progress (paths to src/detent_authority/)",
+      "id": "msg-134",
+      "text": "Detent lead: rename-detentd landed on Detent main at Detent:03eac9c5 (merge Detent:aa813e12). detentd is now detent-authority everywhere: binary, target, src/detent_authority/, docs, diagrams, packaging, website. Please refresh your server-composition note's Detent citations against that commit."
+    },
+    {
+      "at": "2026-11-19T12:56:51",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-worker-release",
+      "id": "msg-135",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-worker-release"
+      },
+      "text": "detent:consensus-worker-release started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-worker-release, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T13:22:06",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-136",
+      "items": {
+        "task-asio-layout": "frees test/**, CMakeLists.txt for task-asio-layout"
+      },
+      "settles": {
+        "start": [
+          "task-asio-layout"
+        ]
+      },
+      "text": "task-driver-layout landed: unlocks frees test/**, CMakeLists.txt for task-asio-layout"
+    },
+    {
+      "at": "2026-11-19T13:48:41",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-137",
+      "items": {
+        "task-lifecycle-followups": "frees test/{lifecycle for task-lifecycle-followups",
+        "task-process-step": "frees test/process_test.cc, CMakeLists.txt for task-process-step"
+      },
+      "settles": {
+        "start": [
+          "task-lifecycle-followups",
+          "task-process-step"
+        ]
+      },
+      "text": "task-asio-layout landed: unlocks frees test/{lifecycle for task-lifecycle-followups; frees test/process_test.cc, CMakeLists.txt for task-process-step"
     }
   ],
   "quests": {
@@ -4038,7 +4106,8 @@
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
         "detent:driver-apply-gap",
-        "detent:driver-witness-removal-sink"
+        "detent:driver-witness-removal-sink",
+        "detent:consensus-worker-release"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4227,7 +4296,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T09:03:03",
+      "updated": "2026-11-19T12:57:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -8048,7 +8117,8 @@
         "detent:journal-host-guards",
         "strata-nospace-position",
         "document-gate",
-        "detent:driver-witness-removal-sink"
+        "detent:driver-witness-removal-sink",
+        "detent:consensus-worker-release"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8113,7 +8183,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T09:03:07",
+      "updated": "2026-11-19T12:57:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -8772,6 +8842,39 @@
       "updated": "2026-11-12T22:31:47",
       "worktree": ""
     },
+    "http-limits": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "http_asio_tls.h",
+        "test/**",
+        "docs/**",
+        "examples/**",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "reactor-server-composition"
+      ],
+      "provides": [],
+      "repo": "../http",
+      "risk": "normal",
+      "status": "planned",
+      "title": "http: Limits, timeouts and stop_accepting",
+      "updated": "2026-11-19T13:35:02"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
@@ -9367,6 +9470,8 @@
     "keymaker-keys": {
       "accepted": {},
       "after": [],
+      "base": "a9012db2338a04daaa2ba85770ff6bad9434cd38",
+      "branch": "quest/xapiand/keymaker-keys",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -9378,6 +9483,7 @@
       "consumes": [],
       "files": [
         "src/multivalue/keymaker.*",
+        "src/metric_serialize.h",
         "tests/test_keymaker*",
         "tests/test_coverage_multivalue*"
       ],
@@ -9388,9 +9494,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T12:23:32"
+      "updated": "2026-11-19T12:41:20",
+      "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
       "accepted": {},
@@ -19795,6 +19902,48 @@
       "updated": "2026-11-10T03:20:14",
       "worktree": ""
     },
+    "reactor-server-composition": {
+      "accepted": {},
+      "after": [],
+      "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
+      "branch": "quest/xapiand/reactor-server-composition",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "reactor.h",
+        "reactor_tls.h",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/reactor-server-composition",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../reactor",
+      "risk": "high",
+      "status": "active",
+      "title": "reactor: server composition, stop phases, tls server_context",
+      "updated": "2026-11-19T13:35:52",
+      "worktree": "../reactor-wt/xapiand/reactor-server-composition"
+    },
     "read-only-open": {
       "accepted": {},
       "after": [
@@ -22815,7 +22964,68 @@
       "worktree": ""
     },
     "stopword-lists": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T12:54:55",
+          "base": "f1cc6dcfdf7f0930bee2e92251fd6a596927deb3",
+          "blobs": {
+            "CMakeLists.txt": "100644:a21ef66ee7805f1d65935fb787f1f46dee6803eb",
+            "docs/mechanisms/stopword-lists.md": "100644:b4cb9e3cb866a2243261540e8f02b2b5df9aba75",
+            "docs/perf/stopword-lists.md": "100644:9ce814fbcf30a3eacc8321f3f1d09b3819e2343a",
+            "docs/src/content/docs/changelog.md": "100644:fab2d4883d67bb7ad0b38864374a389daea78de7",
+            "docs/src/content/docs/options.md": "100644:58a4379cd4f1a99851bad2563da6a80be349789d",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "100644:208a079180491beee0d3db639bdda5dff5c74bf7",
+            "src/database/handler.cc": "100644:701c0e6af252999ee8f3df73d16e4e55a70f68a0",
+            "src/database/handler.h": "100644:796e350384c4b5108a8390780d4ea8f3639bc52b",
+            "src/database/schema.cc": "100644:0117a99960c7dc831a8771313ffb4468ec45b4ed",
+            "src/database/schema.h": "100644:4a58904feb3ed6410d41b77d9b55060974277465",
+            "src/engine/text.cc": "100644:827250cb2f2d43fef520550db0bbd25e8b117082",
+            "src/multivalue/generate_terms.cc": "100644:692b6814ce1a113813359f5ce6002a9c112d684c",
+            "src/reserved/schema.h": "100644:6b821a86ec73137e24eff64973474ba941278b48",
+            "src/server/http_utils.h": "100644:21d631106f132ad469f6e755c3743c16ab99cc18",
+            "src/stopper.cc": "100644:fbae6d64004639d0514e87ff7d562e2aef696841",
+            "src/stopper.h": "100644:817f64e39d2934f2d9563d66bb096e20a3713caf",
+            "src/stopwords/builtin.h": "100644:7a759d3b4f2d846c61125294c5dee4646f29ca74",
+            "src/stopwords/builtin.inc": "100644:bbb5db83408f279b72b53eb42cf30975c2be8479",
+            "src/stopwords/generate.py": "100644:165bbcb94df95bb0a2447386b1b94654c6ff16ca",
+            "tests/test_control_plane.cc": "100644:1cec5fa58741e1637803762080fb63ff87e567ce",
+            "tests/test_stopword_lists.cc": "100644:84f2f1c259a9940a70bc9bc3afda4f099f66e0b9",
+            "tests/test_stopword_search.cc": "100644:726580235bbd8a8cb9522983949d9dc399f8e2a8"
+          },
+          "by": "review",
+          "commit": "769913970fb2b665bdf20e2e26360fa7e2439aec",
+          "criteria": "9ee611bda5f41e2a",
+          "diffs": {
+            "CMakeLists.txt": "93bc9f5eea31e8de",
+            "docs/mechanisms/stopword-lists.md": "774459c81ec24a49",
+            "docs/perf/stopword-lists.md": "3b9aeeeb348b9531",
+            "docs/src/content/docs/changelog.md": "5da9ea7765619589",
+            "docs/src/content/docs/options.md": "b8ded43867689b76",
+            "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "7cf1bc17f5694c60",
+            "src/database/handler.cc": "ccbe6b1e6ec4f8aa",
+            "src/database/handler.h": "39aa325c2355df69",
+            "src/database/schema.cc": "6c55e4ecab8e89ef",
+            "src/database/schema.h": "c06b0f0a365da968",
+            "src/engine/text.cc": "4b09a0af3fae3e67",
+            "src/multivalue/generate_terms.cc": "122070d4502b1b84",
+            "src/reserved/schema.h": "e000337ef6a64b4b",
+            "src/server/http_utils.h": "98c54c060a61ec76",
+            "src/stopper.cc": "73c33a13972db696",
+            "src/stopper.h": "dc65890bf35b897b",
+            "src/stopwords/builtin.h": "447d9bf53e9b306d",
+            "src/stopwords/builtin.inc": "bbc8e46c80c24df8",
+            "src/stopwords/generate.py": "cf1d417fa6b9ad4e",
+            "tests/test_control_plane.cc": "f23a19c0a220a997",
+            "tests/test_stopword_lists.cc": "7bc0784dfde1766e",
+            "tests/test_stopword_search.cc": "afe452a9b3439ac7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "10128f4623563ee4c0200ac9c581ba6584e49dd1",
+          "reviewed": "b34001019735a91cce2eb826b57f4f3ed17cf2a2",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "cf4cba6050866463e1ad7638cdc2f4e8c0a369bb",
       "branch": "quest/xapiand/stopword-lists",
@@ -22846,7 +23056,8 @@
         "docs/perf/stopword-lists.md",
         "docs/src/content/docs/**options*",
         "src/server/http_utils.h",
-        "tests/test_stopword_search.cc"
+        "tests/test_stopword_search.cc",
+        "src/database/handler.h"
       ],
       "history": [
         {
@@ -22873,7 +23084,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T10:54:29",
+      "updated": "2026-11-19T12:54:55",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
@@ -24243,6 +24454,186 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-asio-layout": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:34:17",
+          "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "blobs": {
+            "CMakeLists.txt": "100644:bae4f8c00a4f5c0db3cf474b2a8807fcc82553a2",
+            "task_asio.hh": "100644:ecf54ca2fe7dc1e099a29d86549ce0259bddf327",
+            "test/layout_debug.cc": "100644:db35facfab4571049b71007f2f630d80086c45f1",
+            "test/layout_release.cc": "100644:d55661e1253536c4c4495b14b56618de050d9229",
+            "test/layout_test.cc": "100644:0fbe215cca287b5345b51601314d4e38b7ef0e7e"
+          },
+          "by": "review",
+          "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "criteria": "64d90c8015ea1d1f",
+          "diffs": {
+            "CMakeLists.txt": "bcba4cee02b995d0",
+            "task_asio.hh": "fd5a3ffe691b5dfb",
+            "test/layout_debug.cc": "dab5c0ed698be715",
+            "test/layout_release.cc": "40b73077b08457d4",
+            "test/layout_test.cc": "19209d21e3e1fa7c"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3549479dc5597a7e1cba635c9da683b9121ddf41",
+          "reviewed": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+      "branch": "quest/xapiand/task-asio-layout",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task_asio.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T13:48:35",
+          "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "criteria": {
+            "A1": "261119-133221-a93d2b; fails without: 261119-132647-2e1fa2, 261119-133219-595e34",
+            "A2": "[artifact] task_asio.hh: the only NDEBUG left (line 451) guards an assert, no data member",
+            "A3": "261119-133227-71f49f"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-133227-71f49f",
+              "level": "light",
+              "seconds": 28.7,
+              "state": "done",
+              "what": "task-asio-layout check suite at fb32493ad359"
+            }
+          ],
+          "final": true,
+          "from": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "reason": "",
+          "tested": "fb32493ad359462a7de74ad968149e09b3e06f8a"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "landed",
+      "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
+      "updated": "2026-11-19T13:48:41",
+      "worktree": ""
+    },
+    "task-driver-layout": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:19:27",
+          "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "blobs": {
+            "CMakeLists.txt": "100644:0b5a7210faa6c6784889a875f0c4ac92839fc21a",
+            "task.hh": "100644:1b08b76669d390a719c8355fa7be13e128d0357a",
+            "test/layout_debug.cc": "100644:4aad8e866d4bbf2ad76a6679f4eb01b251d94536",
+            "test/layout_release.cc": "100644:6b8db450d60eedf472d9faa2e538e63889badb5e",
+            "test/layout_test.cc": "100644:6c710e05c70dcbbc1692aadceff8e819db09db30"
+          },
+          "by": "review",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": "07f28c4f2e860afd",
+          "diffs": {
+            "CMakeLists.txt": "f24701f0e9b7e52f",
+            "task.hh": "0bea1c6b91d3322d",
+            "test/layout_debug.cc": "357541a782323975",
+            "test/layout_release.cc": "83e6442e8f1b8d0e",
+            "test/layout_test.cc": "0d32935293e37559"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8db659d95ef06c22901b35f858dc418bb408e2f2",
+          "reviewed": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+      "branch": "quest/xapiand/task-driver-layout",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T13:22:00",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": {
+            "A1": "261119-131530-b00b7b; fails without: 261119-125658-e4aa1e, 261119-131528-361954",
+            "A2": "261119-131533-48d7b2",
+            "A3": "261119-125708-077ad8 (suite); CI on the branch"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-125708-077ad8",
+              "level": "light",
+              "seconds": 85.0,
+              "state": "done",
+              "what": "task-driver-layout check suite at 63b43bd06881"
+            }
+          ],
+          "final": true,
+          "from": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "reason": "",
+          "tested": "63b43bd06881acf56a4fe82303469cdf54dd05b2"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "landed",
+      "title": "task: inline_scheduler layout identical in Debug and release (F7)",
+      "updated": "2026-11-19T13:22:06",
+      "worktree": ""
+    },
     "task-inbox-first": {
       "accepted": {
         "correctness": {
@@ -24302,22 +24693,64 @@
         "task.hh",
         "lifecycle.hh",
         "test/**",
-        "docs/**"
+        "docs/**",
+        "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-inbox-first",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T12:52:37",
+          "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "criteria": {
+            "A1": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112652-358a42",
+            "A2": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112653-b9569c",
+            "A3": "261119-114200-848297, 261119-114200-363a83; fails without: 261119-112655-c20d84, 261119-114206-73a222",
+            "A4": "[artifact] `docs/design/service-shape.md` step 1 reads \"task: sleeps, D10, D14\" (task:aa92196)",
+            "A5": "261119-114200-848297, 261119-114200-363a83"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-114200-848297",
+              "level": "light",
+              "seconds": 35.0,
+              "state": "done",
+              "what": "task-inbox-first check suite at b7e24490310f"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-114200-363a83",
+              "level": "light",
+              "seconds": 37.5,
+              "state": "done",
+              "what": "task-inbox-first check tsan at b7e24490310f"
+            }
+          ],
+          "final": true,
+          "from": "4b6a0965a6eb59a414df65605ca40e7bc38633a2",
+          "reason": "",
+          "tested": "b7e24490310f40f1933b693f3777fc4ea8ee1429"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T12:05:42",
-      "worktree": "../task-wt/xapiand/task-inbox-first"
+      "updated": "2026-11-19T12:52:40",
+      "worktree": ""
     },
     "task-lanes": {
       "accepted": {
@@ -24557,6 +24990,51 @@
       "updated": "2026-11-19T11:19:20",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
+    "task-lifecycle-followups": {
+      "accepted": {},
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-lifecycle-followups",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "lifecycle.hh",
+        "task_timers.hh",
+        "test/{lifecycle",
+        "timers}_test.cc",
+        "docs/mechanisms/lifecycle.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle-followups",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "high",
+      "status": "active",
+      "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
+      "updated": "2026-11-19T13:49:05",
+      "worktree": "../task-wt/xapiand/task-lifecycle-followups"
+    },
     "task-lifecycle-rename": {
       "accepted": {},
       "after": [],
@@ -24619,6 +25097,43 @@
       "status": "landed",
       "title": "Task primitives for Phase 7c (L1)",
       "updated": "2026-11-08T15:40:16"
+    },
+    "task-process-step": {
+      "accepted": {},
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-process-step",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "process.hh",
+        "test/process_test.cc",
+        "docs/mechanisms/process.md",
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "docs/API.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/task-process-step",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "review",
+      "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
+      "updated": "2026-11-19T13:56:54",
+      "worktree": "../task-wt/xapiand/task-process-step"
     },
     "termdict-forward-seek": {
       "accepted": {},
