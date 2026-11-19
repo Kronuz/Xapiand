@@ -24126,7 +24126,42 @@
       "updated": "2026-11-08T13:25:30"
     },
     "task-inbox-first": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T12:05:42",
+          "base": "4b6a0965a6eb59a414df65605ca40e7bc38633a2",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:0b4caa114d24fad97b83b4bcc4daa1cba7d3b044",
+            "docs/API.md": "100644:ba69e3307619c157879c4461ae9f36cd0a1c7376",
+            "docs/design/service-shape.md": "100644:04eee6dfe717d775193b3a1b80b7de200d33c179",
+            "docs/mechanisms/deadlines.md": "100644:5957b332fdd4dfa5fecb109dab74a817dc14005e",
+            "docs/mechanisms/lifecycle.md": "100644:8df1f4e3cf5865e9e1eda19859dd0138f39b1653",
+            "lifecycle.hh": "100644:0ef75163fd4ed808f5bf46388b945934bab81316",
+            "task.hh": "100644:dd4ad7eab44ac7d15e92d52003452c9041af49d4",
+            "test/deadline_test.cc": "100644:ce2890950d251703b9ca070f2f65ef660ec651e9",
+            "test/lifecycle_test.cc": "100644:59c238844a5bf1b1e41aed0a1b7898d9c5013a0c"
+          },
+          "by": "review",
+          "commit": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "criteria": "3a3975fee724293f",
+          "diffs": {
+            "ARCHITECTURE.md": "f665b4cd8d2e66d9",
+            "docs/API.md": "aebec0d1ec4b15db",
+            "docs/design/service-shape.md": "bacc99b162dc45a2",
+            "docs/mechanisms/deadlines.md": "eac031da3714a2d6",
+            "docs/mechanisms/lifecycle.md": "c88e3e37602f11ef",
+            "lifecycle.hh": "2f94674d2c557df6",
+            "task.hh": "683085bc1d5638d6",
+            "test/deadline_test.cc": "e673329c691bb833",
+            "test/lifecycle_test.cc": "b1bdfebc95e9ec53"
+          },
+          "findings": {},
+          "note": "",
+          "review": "1922acddc3765f1beeef8ecf9d839457425bb4ec",
+          "reviewed": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "4b6a0965a6eb59a414df65605ca40e7bc38633a2",
       "branch": "quest/xapiand/task-inbox-first",
@@ -24163,7 +24198,7 @@
       "risk": "high",
       "status": "review",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T11:32:39",
+      "updated": "2026-11-19T12:05:42",
       "worktree": "../task-wt/xapiand/task-inbox-first"
     },
     "task-lanes": {
