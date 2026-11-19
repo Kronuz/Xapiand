@@ -11,8 +11,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 Fixes committed: A1 Xapiand:77324bbed, A2 Xapiand:e121732c6, A4 Xapiand:f06c5fb55, A3 Xapiand:5e3078b65 (tests at
 Xapiand:f12634566). A2 mutant (head with A2 reverted): Xapiand:3a04b5dad, kept at refs/mutants/serialize-validation/a2-type-names.
-Jobs queued: suite 636a02 (A6); fails-without 2af582 (A1 at c87aaf555), e5d3b2 (A2 mutant), e023eb (A4 boolean at
-e121732c6), c474be (A4 time casts at e121732c6), e13d5d (A3 at f06c5fb55); head pass cb35db (A1-A4).
+Jobs queued: suite 636a02 (A6); fails-without 90be6d (A1 at c87aaf555), e716cb (A2 mutant), caa4d2 (A4 boolean at
+e121732c6), 40b1f9 (A4 time casts at e121732c6), 2630f9 (A3 at f06c5fb55); head pass 6c2a9f (A1-A4). Submitted by .scratch/xapiand/serialize-validation/submit.sh (home).
 Local build in the worktree's `.scratch/serialize-validation/build` (iteration only).
 
 ## Next
