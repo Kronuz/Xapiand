@@ -162,6 +162,10 @@ void test_complex_keys() {
 	CHECK(map.ok);
 	CHECK_EQ(map.json.rfind("{\"COMPLEX YAML KEYS ARE NOT SUPPORTED", 0), static_cast<size_t>(0));
 	CHECK(map.json.find(":1}") != std::string::npos);
+	const auto nested = load("? [[a], {b: [c]}]\n: 1\nx: 2\n");
+	CHECK(nested.ok);
+	CHECK_EQ(nested.json.rfind("{\"COMPLEX YAML KEYS ARE NOT SUPPORTED", 0), static_cast<size_t>(0));
+	CHECK(nested.json.find(":1,\"x\":2}") != std::string::npos);
 }
 
 void test_no_error_outputs() {
