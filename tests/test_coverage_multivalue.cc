@@ -304,7 +304,7 @@ void test_geo_key() {
 template <typename Metric, typename Add>
 void check_string_metric(Add&& add_key) {
 	Metric ref("martha", false);
-	const double near = ref.distance("marhta"), far = ref.distance("zzz");
+	const double near = ref.distance(std::string("marhta")), far = ref.distance(std::string("zzz"));
 	auto add = [&](Multi_MultiValueKeyMaker& m, bool reverse) { add_key(m, reverse, "martha", false); };
 
 	Doc some;
@@ -315,7 +315,7 @@ void check_string_metric(Add&& add_key) {
 	Doc exact;
 	exact.set(SLOT, multi({ "marhta", "martha", "zzz" }));
 	CHECK_EQ(smallest(exact, add), Serialize::floating(0.0));
-	CHECK_EQ(biggest(exact, add), Serialize::floating(std::max({ near, far, ref.distance("martha") })));
+	CHECK_EQ(biggest(exact, add), Serialize::floating(std::max({ near, far, ref.distance(std::string("martha")) })));
 
 	Doc none;
 	CHECK_EQ(smallest(none, add), std::string(sortable::max_finite));
