@@ -1,6 +1,6 @@
 # dsl-not-wrap: journal
 
-State: waiting on jobs 261119-144356-c9d35e
+State: waiting on jobs 261119-152541-bf3758 (test run; a7379a segfaulted on a null Schema, fixed). Then: mutant --fails-without at 8ceefe142, campaign verify
 Quest: .campaign/xapiand/quests/dsl-not-wrap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
