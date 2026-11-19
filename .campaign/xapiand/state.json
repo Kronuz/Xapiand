@@ -20310,8 +20310,8 @@
     "reactor-server-composition": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T14:30:11",
-          "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
+          "at": "2026-11-19T15:31:15",
+          "base": "01ea267f155338a35f491f46bee56e4af21a3804",
           "blobs": {
             "AGENTS.md": "100644:53df32c569e1956884a18c40139a1caf133cadf3",
             "ARCHITECTURE.md": "100644:f3eb86e55328227f7963f30b04c4fc7720c939eb",
@@ -20329,7 +20329,7 @@
             "test/tls_test.cc": "100644:933ebb20f2742f5f9f50e907b037988bb4fd7252"
           },
           "by": "review",
-          "commit": "78f28caeffbb7d8ac9351df59ce21f09811f50fd",
+          "commit": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a",
           "criteria": "055a024be7be1e7e",
           "diffs": {
             "AGENTS.md": "998e50ce63a37c23",
@@ -20394,7 +20394,7 @@
       "risk": "high",
       "status": "review",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T14:30:11",
+      "updated": "2026-11-19T15:31:15",
       "worktree": "../reactor-wt/xapiand/reactor-server-composition"
     },
     "read-only-open": {
