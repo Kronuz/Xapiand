@@ -25100,7 +25100,54 @@
       "updated": "2026-11-08T15:40:16"
     },
     "task-process-step": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T14:07:17",
+          "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "blobs": {
+            "AGENTS.md": "100644:719e75631c2c244fbf78400fee12728fb499c86d",
+            "CMakeLists.txt": "100644:4fd0b9103edf3a27db8187f1a3636a73f40f5869",
+            "docs/API.md": "100644:d03fac8fbdacb49900d6f21ea8c23d04893048b1",
+            "docs/mechanisms/process.md": "100644:29b8ea8047002eaf573407427f2e7b797222417d",
+            "process.hh": "100644:f63b67497ddedb6badad5b5b79b78e9ccc39c379",
+            "test/process_test.cc": "100644:7ea3bccfb3b2db7f9a70df8a614e68aa4a6af06a"
+          },
+          "by": "review",
+          "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "criteria": "7e83c0884cde2eda",
+          "diffs": {
+            "AGENTS.md": "f0f31fa24b76394d",
+            "CMakeLists.txt": "6950a908e64de3c3",
+            "docs/API.md": "473f73dad57753e3",
+            "docs/mechanisms/process.md": "bee51f2fda49fc9b",
+            "process.hh": "d986cbe5663818c1",
+            "test/process_test.cc": "5093e9d324861f6a"
+          },
+          "findings": {
+            "R1": {
+              "jobs": [
+                {
+                  "cmd": "build-pt/task_process_test",
+                  "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-140516-0c982a",
+                  "level": "light",
+                  "seconds": 5.7,
+                  "state": "done",
+                  "what": "build-pt/task_process_test at 3ce0f0c0fdcd"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "e3b4b37d98126c62f689960d2c82aa70100a2105",
+          "reviewed": "ef353dde84fc996f51d28907aeb059061ea233ff",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "task-driver-layout"
       ],
@@ -25125,7 +25172,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/task-process-step",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -25133,7 +25182,7 @@
       "risk": "normal",
       "status": "review",
       "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
-      "updated": "2026-11-19T13:56:54",
+      "updated": "2026-11-19T14:07:17",
       "worktree": "../task-wt/xapiand/task-process-step"
     },
     "termdict-forward-seek": {
