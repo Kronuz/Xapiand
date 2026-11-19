@@ -46,16 +46,24 @@ again once and fails on an empty one. If H4 loses, H5 is recover's sizes by `fst
 
 ## Next
 
-1. Read H4 261118-213949-011031: p16 pool 200 within 2x of its pool 5000? If it wins, land the partition cap and
-   rerun the A2 before/after at that commit; then ready for review (high risk). Budget: H1-H4 used of about five.
+1. Read H4 261118-213949-011031: p16 pool 200 within 2x of its pool 5000? If it wins, commit the cap (pool.cc,
+   not handler.cc) and rerun the A2 before/after at that commit; ready for review (high risk) after wide-search-loop
+   lands and master is merged. Budget: H1-H4 used of about five.
 2. Read profile 261118-223530-9e3c57; H5 (recover sizes by fstatat, a strata probe) if H4 loses.
 3. Per-index memory at 2,500 open from the row's pool-5000 arms, lanes vs main.
 
 ## Blocked on
 
-Nothing for D1. D3 waits for wide-search-loop (lead, msg answered below).
+Landing waits for wide-search-loop (lead ruling 11-19); then merge master and resolve search_batch.
 
 ## Lead's ruling (answered)
+
+- 11-19: D3 is kept, but it went past the lead's deferral: handler.cc is wide-search-loop's file set. cheap-reopen
+  lands after wide-search-loop; then merge master and resolve search_batch as the design note says (the budget
+  checkpoint in the loop, the pins after it); handler.cc joins this quest's set at that point. Until then, do not
+  touch handler.cc; ask the lead, with evidence, before going past any ruling.
+- 11-19: H4 runs when the exclusive queue frees (about 05:17); if it loses, H5 (recover's sizes by `fstatat`) as a
+  strata probe. A fresh contributor continues from this journal.
 
 - test_pool.cc and test_node.cc granted: done, `one_catalog()` in test_pool.cc (its pools are one partition), the
   key's catalog or a sum over partitions in test_node.cc.
