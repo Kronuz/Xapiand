@@ -30,7 +30,7 @@ path.
 | A3 | "Deviations" table: 17 rows, each with reason and status (removed by which decision, or stays and why). |
 | A4 | Status line: "CURRENT (2026-11-19), reviewed", naming the six heads. |
 | A5 | Source: Detent lead cmux 3708c307 (wording for F1, F4, F6, relayed by the lead; no message sent). F1 used with the `--upstream-ca` rename (Xapiand and Prism have no CA option: opts.cc:199-201, prism main.cc:246,258-259). F6 used as C8. F4 used except the relay point under Blocked on. |
-| doc check | job 261119-051022-2f4115 |
+| doc check | job 261119-051022-2f4115, exit 0 at cpp-libraries:21b3d33 |
 
 ## Result
 
