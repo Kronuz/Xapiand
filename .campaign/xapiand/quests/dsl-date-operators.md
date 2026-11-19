@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Field and global queries accept `_date`, `_time` and `_timedelta` as typed-value operators, as they accept `_datetime`; today they answer 400 "Invalid operator: _date" (src/query_dsl.cc:270, 380, 1404, 1449). D130 (amended), serialize-validation review S1/S2.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 An HTTP test queries a field with each of `_date`, `_time`, `_timedelta` and finds the matching document; each fails without the fix (mutant job)
+- A2 `{"_datetime": "2020-01-02"}` on a new field: find why it answers 400 "Error format in _time" (review S8) and fix it or file it with the cause
+- A3 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Query DSL operators (user-visible: adds accepted input only).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D130 amended 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
