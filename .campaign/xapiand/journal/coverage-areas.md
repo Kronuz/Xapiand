@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-164432-50b1a8 (A4 proof); forks writing tests
+State: waiting on jobs 261118-164432-50b1a8 261118-164112-38046f; forks serialize and geospatial still writing
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,6 +23,10 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F4 src/geospatial/geospatial.cc make_multipolygon: the ARRAY case calls get_data(o) (which reads o as a map), so the nested-array `_latitude`/`_longitude` form is unreachable.
 - F6 `{"_polygon":{"_latitude":[1,2,3],"_longitude":[1,2,3],"_altitude":[1]}}` throws std::out_of_range (vector) from make_polygon, not a GeoSpatialError.
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
+
+## Findings from the field parser fork (src/field_parser.cc; tests/test_coverage_fieldparser.cc at 48bb471c5, job 38046f queued, no numbers yet)
+
+- F7 `['abc` hangs the parser forever (`case '\0': break;` in SQUARE_BRACKET_QUOTE never advances); its test is written but not run. F8 a space in a field name is not counted (`a b:c` names `a `). F9 the 1,024-byte field-name cap never applies. F10 an escaped quote closes the string. F11 a double-quoted name leaves the value flagged double-quoted. F12 `lens_*_quote` is not reset at the colon, so a later getter over-reads. F13 `parse(100)` clamps to 10 but arrays of size 10 are indexed at level 10 (out-of-bounds write). F14 `skip_quote` is unused. Unreachable: `case SQUARE_BRACKET_END`, the `>= 1024` check in INIT.
 
 ## Next
 
