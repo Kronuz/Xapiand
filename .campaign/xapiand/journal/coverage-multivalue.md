@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: waiting on jobs ce5d85
+State: waiting on jobs 261119-044052-c8b854
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
