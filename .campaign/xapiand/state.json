@@ -20929,6 +20929,8 @@
     "server-composition-note": {
       "accepted": {},
       "after": [],
+      "base": "260b9dffe6768de520c05047f6229368dfd687aa",
+      "branch": "quest/xapiand/server-composition-note",
       "checks": [
         {
           "cmd": "test -s docs/server-composition.md",
@@ -20941,6 +20943,7 @@
       "files": [
         "docs/server-composition.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/server-composition-note",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -20948,9 +20951,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Fold the design review into the server-composition note and mark it CURRENT",
-      "updated": "2026-11-19T04:58:27"
+      "updated": "2026-11-19T04:58:56",
+      "worktree": "../cpp-libraries-wt/xapiand/server-composition-note"
     },
     "sha256-cl-10": {
       "accepted": {},
