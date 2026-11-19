@@ -1,6 +1,6 @@
 # dsl-not-wrap: journal
 
-State: waiting on jobs 261119-154742-814af6 (test pass), 261119-154751-976aa9 (nested-_not mutant, fails-without); then campaign verify dsl-not-wrap, evidence, ready for review
+State: waiting on jobs 261119-154841-203822 (tests pass A1,A2), 261119-154845-7b6ce7 (pre-fix mutant, fails-without), plus campaign verify jobs; then Evidence and ready for review
 Quest: .campaign/xapiand/quests/dsl-not-wrap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -46,3 +46,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - msg (lead): test leaf is {"a":{"_value":"b"}}. The loop's "AND MAYBE" input threw QueryDslError "Unexpected end of expression": that spelling is not the lexer's AND_MAYBE token (lexer source not read; likely a different keyword). Dropped it from the test; not a quest-scope parser fix. Follow-up for the lead: find the AND_MAYBE query-string spelling.
 - Mutant: macOS is already flat for _not, so the mutant job rewrites create_exp_op_dsl to nest the list and expects the test to fail (it pins the shape every toolchain must produce); FreeBSD CI is the real-toolchain check.
 - A2: tests/test_coverage_core_query_dsl.cc does not exist in this tree; nothing to remove.
+- Merged origin/master (coverage-core-small). Replaced the unwrap workaround in tests/test_coverage_core_query_dsl.cc with an exact `_not` shape check (A2). Restored "a MAYBE b" in test_query_dsl_not. Mutant is the real pre-fix query_dsl.cc (8ceefe142) run against both tests.
