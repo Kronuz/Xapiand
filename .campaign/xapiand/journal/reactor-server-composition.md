@@ -1,6 +1,6 @@
 # reactor-server-composition: journal
 
-State: waiting on jobs 261119-135903-7920d2
+State: ready for review
 Quest: .campaign/xapiand/quests/reactor-server-composition.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on the strict A/B 261119-135903-7920d2 (queued behind light holds); every other job is done and as expected.
+Nothing: every criterion has evidence at reactor:9349464 (code at reactor:3626f70; later commit is docs only).
 
 ## Next
 
-1. Read the A/B (a vs a, b vs b, a vs b on req/s and ns/pair), fill A5's row and Result, set State to ready for review.
+1. Correctness review (lead launches it); CI needs the branch pushed (the lead held pushes).
 
 ## Blocked on
 
@@ -42,11 +42,23 @@ branches `mutant/rsc-*` in the reactor repository, never landed:
 | A2 | 261119-135828-bf6eab, 261119-135829-521317; fails without: 261119-135840-1dad3b ([R] x3) |
 | A3 | 261119-135828-bf6eab, 261119-135829-521317 (TSan clean); fails without: 261119-135842-6ffa4b ([W] refusal), 261119-135845-fa3dd3 ([W] hangs), 261119-135847-85e4ab ([H] 2.3 s x5, [R] hangs) |
 | A4 | 261119-135828-bf6eab, 261119-135829-521317; fails without: 261119-135850-7391bb ([L]: stop 2005 ms, not cancelled) |
-| A5 | 261119-135828-bf6eab, 261119-135829-521317; strict A/B 261119-135903-7920d2 pending |
+| A5 | 261119-135828-bf6eab, 261119-135829-521317; strict A/B 261119-135903-7920d2: +1.7% req/s, -0.1 ns/pair at the median, inside the 11% / 2.9 ns A/A spread (docs/perf/gate-leave.md) |
 
 ## Result
 
-<pending jobs>
+reactor:409c4ce, reactor:3626f70 and reactor:9349464 on quest/xapiand/reactor-server-composition:
+
+- `TcpServer::stop_accepting()`, `wait_requests(token) -> bool`, `cancel_requests()`,
+  `force_connections()`; legacy `stop()` composes them with no wait. `wait_requests` sleeps on a
+  drain the gate's last leave wakes once armed (seq_cst flag against the gate's fetch_sub, wake
+  under the waiter's mutex): no poll, no lost wakeup (TSan clean; mutants caught).
+- `reactor::raise_open_files(wanted)`; `reactor::tls::server_context`, `seconds_to_expiry`,
+  `expiry_warning`.
+- Measured: the leave change is within A/A noise (docs/perf/gate-leave.md); one server
+  descriptor per plain connection (test.cc [P]), against Xapiand's FDS_PER_CLIENT 2.
+- Docs: docs/API.md, docs/mechanisms/stop-and-accept.md, docs/perf/gate-leave.md, CHANGELOG.md.
+- Open: README.md, AGENTS.md, ARCHITECTURE.md (outside the file set) still describe stop() as abort
+  first; arm64 cost of the seq_cst leave unmeasured; the note (cpp-libraries) folds D2 when this lands.
 
 ## Rulings I made
 
