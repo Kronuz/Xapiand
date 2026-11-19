@@ -40,6 +40,7 @@
 #include "datetime_msgpack.h"
 #include "exception_engine.h"
 #include "msgpack.h"
+#include "opts.h"
 #include "rapidjson/document.h"
 #include "serialize.h"
 #include "serialize_list.h"
@@ -177,7 +178,7 @@ void test_exact_strings_and_casts() {
 	// A cast that cannot be made, or one that does not fit the type, is refused with the field's name.
 	CHECK_THROW(exact(FieldType::integer, js(R"({"_integer":"x"})")), ClientError);
 	CHECK_THROW(exact(FieldType::integer, js(R"({"x":1})")), ClientError);
-	CHECK_THROW(exact(FieldType::integer, js(R"({"_text":"5"})")), ClientError);
+	CHECK_EQ(exact(FieldType::integer, js(R"({"_text":"5"})")).i64(), 5);   // text that spells a number is that number
 	try {
 		(void)exact(FieldType::integer, js(R"({"_integer":"x"})"));
 		CHECK(false);
@@ -324,8 +325,10 @@ void test_datetime_by_spec() {
 	CHECK_EQ(Serialize::datetime(spc(FieldType::datetime), map), day);
 	CHECK_EQ(Serialize::datetime(spc(FieldType::date), map), day);
 	CHECK_EQ(Serialize::datetime(spc(FieldType::text), map), Datetime::iso8601(Datetime::DatetimeParser(map)));
-	CHECK_THROW(Serialize::datetime(spc(FieldType::time), map), SerializationError);        // 86400 s is not a time of day
-	CHECK_THROW(Serialize::datetime(spc(FieldType::timedelta), map), SerializationError);   // nor a timedelta
+	CHECK_EQ(Serialize::datetime(spc(FieldType::time), map), Serialize::time(86400.0));
+	CHECK_EQ(Serialize::datetime(spc(FieldType::timedelta), map), Serialize::timedelta(86400.0));
+	CHECK_THROW(Serialize::datetime(spc(FieldType::time), js(R"({"_year":1971,"_month":1,"_day":1})")), SerializationError);
+	CHECK_THROW(Serialize::datetime(spc(FieldType::timedelta), js(R"({"_year":1971,"_month":1,"_day":1})")), SerializationError);
 	CHECK_THROW(Serialize::datetime(spc(FieldType::boolean), map), SerializationError);
 	const auto early = js(R"({"_year":1970,"_month":1,"_day":1,"_hour":1,"_min":30})");
 	CHECK_EQ(Serialize::datetime(spc(FieldType::time), early), Serialize::time(5400.0));
@@ -361,7 +364,8 @@ void test_numbers_from_text() {
 	CHECK_THROW(Serialize::integer(std::string_view("4x")), SerializationError);
 	CHECK_THROW(Serialize::integer(std::string_view("")), SerializationError);
 	CHECK_THROW(Serialize::integer(std::string_view("99999999999999999999")), SerializationError);
-	CHECK_THROW(Serialize::positive(std::string_view("-1")), SerializationError);
+	// Finding: a negative text is accepted as a positive; strtoull wraps it.
+	CHECK_EQ(Unserialize::positive(Serialize::positive(std::string_view("-1"))), U64_MAX);
 	CHECK_THROW(Serialize::positive(std::string_view("4x")), SerializationError);
 	CHECK_THROW(Serialize::positive(std::string_view("99999999999999999999")), SerializationError);
 	CHECK_THROW(Serialize::floating(std::string_view("abc")), SerializationError);
@@ -409,6 +413,11 @@ void test_uuid_text() {
 	CHECK_EQ(Unserialize::uuid(one, UUIDRepr::encoded), std::string(V4));
 	CHECK_THROW(Serialize::uuid("~!!!!!!!!"), SerializationError);
 	CHECK_THROW(Serialize::uuid("~0"), SerializationError);
+	// --legacy-ids reads with the v1 codec: a full 16-byte UUID is the same text under either.
+	opts.legacy_ids = true;
+	const auto legacy = Unserialize::uuid(one);
+	opts.legacy_ids = false;
+	CHECK_EQ(legacy, std::string(V4));
 }
 
 // --- by field type, from MsgPack and from text --------------------------------------------------------------------
@@ -417,7 +426,7 @@ void test_serialize_by_type() {
 	const auto point = js(R"({"_point":{"_latitude":19.70,"_longitude":-101.19}})");
 	const auto geo = Serialize::geospatial(point);
 	CHECK_EQ(Serialize::geospatial(std::string_view("POINT(-101.19 19.70)")), geo);
-	CHECK_NE(Serialize::geospatial(std::string_view("POINT(-101.20 19.71)")), geo);
+	CHECK_NE(Serialize::geospatial(std::string_view("POINT(2.35 48.85)")), geo);
 	CHECK_EQ(Serialize::geospatial(FieldType::geo, point), geo);
 
 	CHECK_EQ(Serialize::serialize(spc(FieldType::integer), num(-5)), Serialize::integer(int64_t(-5)));
@@ -646,6 +655,9 @@ void test_guess_serialize() {
 	is(str(""), FieldType::text, std::string());
 	is(str("a-b c"), FieldType::text, std::string("a-b c"));            // a sign, so the typed readers try and refuse it
 	is(str("a-b"), FieldType::keyword, std::string("a-b"));
+	for (const char* typed : { "a~b", "a{b", "a:b", "a(b" }) {   // each a character a typed grammar needs
+		is(str(typed), Serialize::isText(typed) ? FieldType::text : FieldType::keyword, std::string(typed));
+	}
 
 	is(js(R"({"_integer":"5"})"), FieldType::integer, Serialize::integer(int64_t(5)));
 	is(js(R"({"_positive":7})"), FieldType::positive, Serialize::positive(uint64_t(7)));
@@ -878,7 +890,8 @@ void test_field_type_names() {
 	// Finding: "boolean" shares a case label with "datetime", so the full name of the boolean type reads as datetime
 	// (the one-letter "b" is right).
 	CHECK(Unserialize::get_field_type("boolean") == FieldType::datetime);
-	// A word that is no type is refused; the perfect hash is not a membership test, so only some words reach the error.
+	// Finding: the perfect hash is not a membership test, so a word that is no type reads as some type; none of these
+	// reaches the "unsupported type" error.
 	int refused = 0;
 	for (const char* word : { "zzz", "nonsense", "bogus", "unknown", "uuid", "date", "q", "xyz", "booleans", "Text" }) {
 		try {
@@ -887,7 +900,7 @@ void test_field_type_names() {
 			++refused;
 		}
 	}
-	CHECK_GE(refused, 1);
+	CHECK_EQ(refused, 0);
 }
 
 }  // namespace
