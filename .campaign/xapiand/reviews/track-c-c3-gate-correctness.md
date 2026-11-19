@@ -122,3 +122,47 @@ conclusions above did not.
   and I did not examine them.
 - I did not read strata's own repair host code; the gate is about `consensus`.
 - The build-test check 261118-042103-6cde19 on the strata branch was still queued.
+
+## Re-check
+
+Commit: strata:5cab3e7b21a701c1ce76eeea9aa69c8c412c244e, judging the rows it reports at consensus:6a76867f30826b27731b92c9f3122722cf4788e7
+Verdict: APPROVE
+Date: 2026-11-18
+
+`include/consensus/core.h` is unchanged since b7f48b2 (`git diff b7f48b2 6a76867` touches only
+`test/consensus_test.cc` and `tools/mutants.sh` among the C3 files), so the fix is all in the rows.
+Probes, run by me under light holds from `~/.scratch/xapiand/review-track-c-c3-gate-correctness/`
+(macOS x86_64, a `git archive` of 6a76867, RelWithDebInfo, Ninja):
+
+1. `recheck.sh` (`run.log`): the unmutated `consensus_test` exits 0, `39668 consensus checks, 0
+   failures`, `repair: 8 boundaries`. Consensus's own `tools/mutants.sh`, its list narrowed to P1
+   and P2 (unit, membership, simulation at 100 seeds of 2,000 steps), exits 0: "repair ignores
+   the term at the base boundary: unit yes" (3 failures, first `FAIL: a boundary at base_index
+   with another term is refused`); "repair above the commit index: unit yes" (11 failures, first
+   `FAIL: a boundary above commit is refused`). Neither is caught by membership or the simulation.
+2. `isolate-p2.sh` (`isolate.log`): under P2 the suite throws `missing application batch` and
+   stops inside `repair_at_or_below_commit` before it reaches the new commit-bound block, and its
+   first failure is row 1099, which now carries the same name. So with row 1099 dropped: control
+   (core unmutated) `39667 checks, 0 failures`; P2 `1 FAIL: a boundary above commit is refused`,
+   from the new row at `consensus_test.cc:1144`. The new row kills P2 on its own, and its setup
+   check (`:1140`, an appended entry above commit with applied == commit) holds.
+
+| ID | Status | Evidence |
+|---|---|---|
+| F1 | closed | `consensus_test.cc:1112` repairs at `{through, term_at(through) + 1}` after the base is raised (`:1110`) and expects `InvalidRepair`; it passes unmutated and is P1's first failure. P1 is in `tools/mutants.sh:33` and is killed by the unit suite (probe 1). |
+| F2 | closed | `consensus_test.cc:1136-1146`: a follower holding appended entries in `(commit, last_index]` refuses each at its own term with `InvalidRepair`; P2 fails that row alone (probe 2). Row 1099 is renamed "above commit". P2 is in `tools/mutants.sh:34`, killed by the unit suite (probe 1). The new Busy row (`:1119-1120`) pins that a repair while applied < commit answers Busy, consistent with `core.h:640`. |
+| F3 | closed | The deferral is recorded in `.campaign/xapiand/quests/track-c-c3-gate.md` Decisions; Driver-level repair rows are `consensus-sim-loops` A3. |
+| F4 | stands, tracked | Repair liveness under load is still unmeasured; `consensus-sim-loops` A5 owns it. Non-blocking. |
+| F5 | stands | `docs/gates/track-c-c3.md` at strata:5cab3e7b (the quest branch, unchanged) still shows the Linux and FreeBSD cells as queued (lines 33-37), and it reports rows at b7f48b2, not at 6a76867 where the new rows live. Non-blocking nit for the lead. |
+| F6 | stands | `core.h:642` keeps the ternary that duplicates `log_term` (`core.h:430`). Optional. |
+
+Non-blocking notes:
+
+- N1: rows 1099 and 1144 share the name "a boundary above commit is refused", so a fails-without
+  log for P2 (job 261118-044857-1a8ab1 shows exactly one such line) cannot tell which row failed;
+  row 1099 is unchanged apart from its name, so it still probes past the log's end and fails
+  through the fence, as the original review found. A distinct name for
+  row 1099 ("a boundary past the log's end is refused") would make the job self-evident.
+- N2: the build-test job 261118-144151-83ff5c configures with the default generator, so
+  `consensus_mutants` (registered only under Ninja, `CMakeLists.txt:115-117`) does not run in it;
+  A3's "P1 and P2 are in `tools/mutants.sh`" is shown by probe 1 here, not by that job.

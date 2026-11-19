@@ -10,7 +10,7 @@ A search across thousands of indexes yields the HTTP loop like any heavy request
 ## Acceptance criteria
 
 - A1 [artifact] The stall attributed (per-name resolution, per-index work) and the bound chosen: `docs/design/wide-search-loop.md`
-- A2 SR3: every HTTP loop's max lag over the timed searches at 2,500 and 10,000 indexes within T4's slice: strict jobs before and after
+- A2 SR3: every HTTP loop's max lag over the timed searches at 2,500 and 10,000 indexes within T4's slice (1,024 us) on Linux (strict jobs in the Linux VM, which pins its threads), and on macOS no worse than the same run's idle control loop (R6): strict jobs before and after
 - A3 S2: `wide_starve.py` (security review probe) at 64 clients: light GET p99 within T5's bound: a strict job before and after
 - A4 The suite passes and CI is green at the landed code
 
@@ -20,6 +20,8 @@ A search across thousands of indexes yields the HTTP loop like any heavy request
 quest depending on it can start before it lands.>
 
 ## Decisions
+
+- Lead R6 (2026-11-18): this macOS host's idle control loop, which runs no search, reads 2.0-2.6 ms p99, above T4's 1,024 us, so the absolute bound is measured on Linux; on macOS the search loops must match the control loop's floor in the same run. The 250 us wake-timer A/B (jobs 113452, 113513) says whether the branch's p99 rise (384-448 us to 1.5-2.0 ms) is idle-wake delay or longer turns; longer turns fail A2 on either OS.
 
 <Decisions made, and by whom; open questions, naming the owner or the lead.>
 
