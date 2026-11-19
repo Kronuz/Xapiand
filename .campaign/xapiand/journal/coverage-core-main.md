@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs 261119-025323-2fdee2
+State: waiting on jobs 261119-041414-396553
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,8 @@ Written, not yet run: tests/test_coverage_main.cc (includes src/main.cc under `#
 
 ## Next
 
-0. e1a2b8 failed (ctest: the 2 open-files cases; E2E: 10 of 86 checks). Fixed at f84681f1a: open-files cases pinned to the real SystemExit(EX_OSFILE) (3 fds open, max 300 / 1024); driver expects EX_SOFTWARE (70) for a name mismatch, -v -v for INFO texts, 20x PUT statuses, a refused 300 limit, daemon waited for "Ready to Rock". Rerun 2fdee2 (coverage ctest+main, no NOBUILD: the test changed). Then read main.log, per-file numbers, `campaign verify coverage-core-main --for A3`, Evidence table.
+0. 2fdee2 (at f84681f1a): ctest green, E2E 89 checks 4 failed (log stamps carry a leading glyph, ISO uses a space + ms, third SIGINT ends node before it logs); fixed at 83c4df6f9, rerun 396553. 2fdee2 numbers: main.cc 588/743 lines 79.1%, 282/465 branches 60.6%; manager.cc 665/835 79.6%, 225/428 52.6% (targets 90/80: below, more scenarios needed after 396553; read coverage-uncovered.txt).
+   Earlier: e1a2b8 failed (ctest: the 2 open-files cases; E2E: 10 of 86 checks). Fixed at f84681f1a: open-files cases pinned to the real SystemExit(EX_OSFILE) (3 fds open, max 300 / 1024); driver expects EX_SOFTWARE (70) for a name mismatch, -v -v for INFO texts, 20x PUT statuses, a refused 300 limit, daemon waited for "Ready to Rock". Rerun 2fdee2 (coverage ctest+main, no NOBUILD: the test changed). Then read main.log, per-file numbers, `campaign verify coverage-core-main --for A3`, Evidence table.
 
 1. Read 82ceb7: fix compile errors or failed checks in test_coverage_main.
 2. Submit a coverage job: `WORKLOADS="ctest main" harness/coverage.sh $JOB_OUT/cov` (newman PATH as job 8642ea uses); read main.log for failed E2E checks, fix the driver's guesses (log formats, exit statuses) and pin real values.
