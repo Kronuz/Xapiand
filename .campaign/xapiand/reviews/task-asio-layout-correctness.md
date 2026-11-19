@@ -59,3 +59,20 @@ Scripts in `.scratch/xapiand/review-task-asio-layout-correctness/`.
 - Timing of F2 (no benchmark; the claim is the assembly diff only).
 - The Linux/libstdc++ build and CI (running at review time).
 - The suite and layout test (taken from the lead's jobs).
+
+## Re-check
+
+Commit: fb32493
+Verdict: APPROVE
+
+Read `git diff fef73c3 fb32493` (task_asio.hh, test/layout_*.cc); no job rerun beyond the lead's
+(106881 release assembly, 2021cf, a93d2b layout test, 595e34 rebuilt mutant, 71f49f suite).
+
+- F2 fixed: `on_loop_` stays an unconditional member (task_asio.hh:504); only the assignment
+  (task_asio.hh:418-420) is under `#ifndef NDEBUG`, and the assert that reads it is Debug-only too.
+  Layout unchanged, release cost gone. A2 still holds (no NDEBUG-conditional data member).
+- F1 fixed: layout_debug.cc and layout_release.cc include the eight asio headers `task_asio.hh` lists
+  before `#define private public`; this is the shape I compiled in job 261119-133106-572130, so only
+  `task_asio.hh` (and `cassert`) opens under the define. The Linux libstdc++ CI run remains the check.
+- F4 fixed: the parenthetical is in layout_test.cc's header comment.
+- F3 (nit) left; non-blocking. No new finding.
