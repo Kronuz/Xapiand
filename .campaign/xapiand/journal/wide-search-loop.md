@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-170254-9f8b5a 170257-d8055d 170319-9e4695 170300-52f4dd 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112
+State: waiting on jobs 261118-170254-9f8b5a 170257-d8055d 170319-9e4695 170300-52f4dd 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112 170529-87c0b4
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,16 @@ Session-3 first submissions failed or were redone: the VM build 114932-476f73 hi
 checkout without the slot's binaries and data (now `--slot wide-search-loop`); suite 112500-d8889b failed test_node
 (`test_a_put_whose_client_half_closes_completes_durably`, test_node.cc:1169/1175), unrelated to search; f7bb71 runs
 it at master to show whether it is pre-existing.
+
+Lead's question (half-closed reads). Where the token is set: Kronuz/http at the pin eb08b59e6aa2, `http_asio.h`
+`ConnectionInput::completed` fires the request's watch on any read error but our own abort, EOF included, and the
+watch calls `Request::cancel(http::disconnected)` (`http_message.h` CancelWatch). It does not tell a half-close from a
+reset: by design (`http_asio.h:426-431`), only deferred/owned-stream replies ignore EOF. `SearchService::handle`
+(`search_views.cc:3174`) asks for `hreq.cancel_token()` on every request, which engages the lazy watch at once, and
+builds the request's budget on it. Probe `harness/wide_search_halfclose.py` (Xapiand:0ee651e46): GET doc, search and
+count, plain vs half-closed x5. Job 261118-170529-87c0b4 runs it on master src and branch src (same tree otherwise):
+if master misses too, it is pre-existing (http's policy plus master's search checkpoints); if only the branch misses,
+the branch's read checkpoints (resolve, search_batch) introduced it.
 
 test_node regression, found and fixed (Xapiand:9a3cfeccf). Controls: test_node alone x5 passed 5/5 at master
 (150319-fc7064), 0/5 at c59b6e739 (150321-7fa506), 5/5 at b46f8e262 (150323-09adf2). Cause: 8e5040da8 routes every
