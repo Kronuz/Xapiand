@@ -16241,6 +16241,33 @@
       "updated": "2026-11-17T22:34:05",
       "worktree": ""
     },
+    "nightly-retry": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 -m pytest -q tools",
+          "level": "none",
+          "minutes": 5,
+          "name": "test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/nightly_dispatch.py",
+        "tools/test_nightly_dispatch*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "nightly dispatcher retries transient GitHub errors",
+      "updated": "2026-11-19T14:40:37"
+    },
     "no-stalls": {
       "accepted": {},
       "after": [],
