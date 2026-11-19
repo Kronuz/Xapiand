@@ -1337,6 +1337,18 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-19T06:17:05",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> low"
+          ]
         }
       ],
       "landed": [],
@@ -1349,10 +1361,10 @@
       ],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "low",
       "status": "planned",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-18T05:36:11",
+      "updated": "2026-11-19T06:17:05",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
