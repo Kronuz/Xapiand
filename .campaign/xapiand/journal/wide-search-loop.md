@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-214334-70753d 214345-e0caec 214405-d4ad8f 214416-55f6c4 214430-1d4cc0 214441-5d5798 214452-f8d1d8 214453-f4a3ac 214455-d04574 214548-17cbe8 214550-dea844 214551-71a78d 214552-695322 214554-8a79f5 214555-113315 214557-802978 214558-d15a54 214617-f0c429 214618-1e9519 214620-79eb0b 214621-f82004 214622-52318a 214624-c6c5de 214625-59b5ea 210116-568ffe
+State: waiting on jobs 261118-214345-e0caec 214405-d4ad8f 214416-55f6c4 214430-1d4cc0 214441-5d5798 214452-f8d1d8 214453-f4a3ac 214455-d04574 214548-17cbe8 214550-dea844 214551-71a78d 214552-695322 214554-8a79f5 214555-113315 214557-802978 214558-d15a54 214617-f0c429 214618-1e9519 214620-79eb0b 214621-f82004 214622-52318a 214624-c6c5de 214625-59b5ea 210116-568ffe
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,7 +32,7 @@ Master merged (no src change). Fixes:
 
 | Job | Level | For | What |
 |---|---|---|---|
-| 261118-214334-70753d | light | A4 | suite at Xapiand:e649ebcb1 |
+| 261118-214334-70753d | light | A4 | suite at Xapiand:e649ebcb1: PASS, 44/44 (test_node's three new cases, test_wide_search's when_all cases) |
 | 261118-214345-e0caec | light | A4 | test_node x5 at the head, 0 only at 5/5 |
 | 261118-214405-d4ad8f | light | A4 fails-without | F2: test_node cancelled-wide case with the take deleted |
 | 261118-214416-55f6c4 | light | A4 fails-without | F1: test_node list-commit case at Xapiand:6fe65e78a |
@@ -261,7 +261,7 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
 | A2 | session 4 at Xapiand:e649ebcb1: macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000); Linux 214621-f82004 / 214622-52318a (2,500), 214624-c6c5de / 214625-59b5ea (10,000); pending. Superseded, at Xapiand:3e2edbef4: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
 | A3 | session 4: 214557-802978 before, 214558-d15a54 after; F3's deciding A/B 210116-568ffe; pending. Superseded, at Xapiand:3e2edbef4: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
-| A4 | session 4: suite 214334-70753d, test_node x5 214345-e0caec, probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
+| A4 | session 4: suite 214334-70753d (pass, 44/44), test_node x5 214345-e0caec, probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 
