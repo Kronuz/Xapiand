@@ -320,6 +320,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D135 | 2026-11-19 | cheap-reopen: accept pool 200 at about 2.2x pool 5000 (959 -> 283 ms, 3.4x faster) and amend A2; fstatat sizes and the 16-partition cap (2.03x together) follow as small quests; the 2x target moves to a strata quest that keeps a closed index's recovered log state in its catalog entry. | owner |
 | D136 | 2026-11-19 | Prism's server-composition adoption is a Xapiand quest, ordered after Xapiand's and Detent's adoptions. | owner |
 | D137 | 2026-11-19 | Stopword lists: built-in defaults compiled in (18 languages, 7,326 words) as perfect-hash sets, no start-up read; `<data path>/stopwords/<lang>.txt` overrides a language, and custom names stay possible; each index records the fingerprint of every list it used and refuses (an error naming index, list and both fingerprints) when that list is missing or differs; a missing list never means silently no stopping. Index-time stopping exists (generate_terms.cc:528-535 stop_strategy), so refuse, not warn. | owner |
+| D138 | 2026-11-19 | Supersedes D136: per the owner's ruling recorded as Detent D122, Prism's server-composition adoption is Detent's quest prism-server-composition (repo prism), after Xapiand's adoption; detent-agent joins Detent's server-composition-adoption. The note's Mains table gains a detent-agent column (signal, housekeeping and stop steps only). | owner (Detent D122) |
 
 ## Pending owner
 
