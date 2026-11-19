@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-011010-900c61 (probe 2, 120 min) 261119-011013-cabf22 (baseline coverage, 120 min); the first two (4358ca, 08fd11) timed out at 30 min
+State: waiting on jobs 261119-023502-f03bab (probe 3) and the baseline coverage job (see campaign job list); cabf22 failed on my test file's compile error (extra namespace), fixed; probe 900c61 had silently failed the same way
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
