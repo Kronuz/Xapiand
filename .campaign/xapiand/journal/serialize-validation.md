@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs 76dfe9 159564 7f59ed b9fd21 222d40 039ba1 50ab8b
+State: working
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,36 +9,31 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Branch rewritten 11-18 23:25 (the test commit had a raw-string typo that stopped the suite build, job 636a02, and
-the type-name test's random words now exclude names before counting 10,000): tests Xapiand:cdcabfbae; fixes
-A1 Xapiand:e50891de3, A2 Xapiand:b5aba4703, A4 Xapiand:ef908749b, A3 Xapiand:8f68bbd53.
-A2 mutant (head with A2 reverted): Xapiand:21623ff47 at refs/mutants/serialize-validation/a2-type-names.
-Local build in the worktree's `.scratch/serialize-validation/build`: negative 34, time casts 61, geo 4469 checks pass
-at head; type names rebuilt after the word-count fix. Then jobs from .scratch/xapiand/serialize-validation/submit.sh
-(home) and `campaign verify`.
-Jobs: fails-without 76dfe9 (A1 at e872b2f03), 159564 (A2 mutant 21623ff47), 7f59ed (A4 boolean at b5aba4703),
-b9fd21 (A4 time casts at b5aba4703), 222d40 (A3 at ef908749b); head pass 039ba1 (A1-A4); suite 50ab8b (A6).
+Session 3 (11-18 23:40): D130 and A7. Tests Xapiand:bb38411df (cast_negative, aggregation_types, date_lua), docs
+Xapiand:c95f679d0 (geo-exact-term.md, the docs example's 3 hits). Fixes next: D130 (cast.cc, serialize.cc), A7 cast
+(cast.cc:138), A7 aggregations (aggregations.cc:217); local build in `.scratch/serialize-validation/build`.
+Earlier: tests Xapiand:cdcabfbae; fixes A1 Xapiand:e50891de3, A2 Xapiand:b5aba4703, A4 Xapiand:ef908749b, A3
+Xapiand:8f68bbd53; A2 mutant Xapiand:21623ff47 (refs/mutants/serialize-validation/a2-type-names).
+Jobs: fails-without 76dfe9 (A1), 159564 (A2 mutant), 7f59ed (A4 boolean), b9fd21 (A4 time casts), 222d40 (A3); head
+pass 039ba1 (A1-A4); suite 50ab8b (A6, at bfd71aa84: superseded by a suite at the new head).
 
 ## Next
 
-1. Read the jobs (all compiled and passed locally at head: negative 34, type names 149, time casts 61, geo 4469 checks; test_serialize, test_range_terms, test_geospatial pass); fix what fails.
-2. A3 note in docs once the file set has a docs path (Blocked on 2).
-3. After coverage-areas lands and is merged here: flip its pins in tests/test_coverage_serialize.cc (lead merges; the file then needs to be in my set or the lead flips it).
+1. Commit the D130 and A7 fixes, build and run the three new tests, then submit their fails-without jobs and a suite at head.
+2. Read the jobs; fill Evidence; push for CI.
+3. After coverage-areas lands and is merged here: flip its pins (lead): tests/test_coverage_serialize.cc lines 558-562,
+   642-643, 704-705 expect `_date` and `_multiconvex` refused; `_date` is now served, `_multiconvex` serializes once
+   geo-correctness serves its map form, `_lua` stays refused.
 4. Correctness review (high risk).
 
 ## Blocked on
 
-1. **A5, owner's decision** (`_date`, `_multiconvex`, `_lua` casts). Findings:
-   - `_date` is already an alias: `Cast::cast` serves it as datetime (src/cast.cc:61), `FieldType::date` exists and serializes exactly as datetime (`Serialize::serialize`, date and datetime share a case), docs show it as a cast (reference-guide/search/query-dsl/leaf-queries/casting-values.md:119). Only `Serialize::object`, `guess_type`, `guess_serialize` (mine) and `Cast::get_field_type` (src/cast.cc:417, not in my set; the schema's index path at schema.cc:5235 calls it) refuse it. Recommend: serve, `_date` -> FieldType::date with datetime bytes; needs src/cast.cc in the file set.
-   - `_multiconvex` is served everywhere but the map form: MultiConvex geometry, EWKT `MULTICONVEX(...)` (src/geospatial/ewkt.cc:194), collection and intersection members, docs (geospatial-type.md:199, casting-values.md:108). `GeoSpatial(const MsgPack&)` (src/geospatial/geospatial.cc:117-160, geo-correctness's files) has no `_multiconvex` case, and none for `_multichull` either, though the serializer accepts `_multichull` and then fails in GeoSpatial. Recommend: serve both map forms (a `make_multiconvex` beside `make_multicircle`) in geo-correctness, not remove: removal would strand the EWKT form and the docs.
-   - `_lua` is a script, not a value: `Cast::get_field_type` maps it to FieldType::script and the scripting docs use it (reference-guide/documents/scripting.md:57). A script is never a stored value, so the serializer refusing it is right. Recommend: keep the refusal with a message saying so; nothing to remove.
-   Lead's default (serve `_date` if an alias, remove the others if nothing serves them) gives: serve `_date`; `_multiconvex` and `_lua` are both served elsewhere, so neither is removed. Not implementing until a Decisions row exists.
-2. **A3's docs note needs a path in my file set.** The set has no docs path (docs/design/geo* is geo-correctness's). Ask: add `docs/mechanisms/geo-exact-term.md`. Draft under Result.
-3. **The docs E2E pins A3's bug.** reference-guide/search/query-dsl/compound-queries/geospatial-searches.md:18-70 queries the exact point (41.50343, -74.01042) and expects count 10 with `_id` 1..10: every point matched every point. In docs/public/assets/accounts.json exactly three accounts sit there, `_id` 156, 768, 891, so after the fix the example answers count 3 with those ids. docs/src is not in my set: the lead adds it (I change the expectations) or flips it.
-4. **Out of my file set, for the lead** (same bug class as A2: a `case _.fhh(k)` whose key the phf table lacks is npos and catches every miss):
-   - src/aggregations/aggregations.cc:217 `case _.fhh(RESERVED_AGGS_AGGS)` is not in the table (line 64), so every unknown aggregation type is taken as `_aggs` instead of "Aggregation type ... is not valid".
-   - The cause in one place: constexpr-phf's `find` could fail compilation when a constant-evaluated lookup misses (`if (std::is_constant_evaluated() && miss) throw`), so such a case label cannot compile. Audit script: `.scratch/xapiand/serialize-validation/phf_audit.py` (home) found exactly these three in src/.
-   - src/cast.cc:138 (`Cast::cast(FieldType::empty, text)`) has the strtoull wrap I fixed in serialize.cc: "-18446744073709551615" casts to 1.
+Nothing. (A5: D130 ruled; docs path and docs page: added to the file set.)
+
+For the lead, out of my file set (same strtoull wrap as A1, not Cast): src/database/handler.cc:107 reads a docid
+"&-1" through strict_stoull (wraps); src/query_dsl.cc:579,595 and src/database/schema.cc:1602,1611 read accuracy
+suffixes (`_geo-1`, `_-1`) the same way; src/server/search_views.cc:3156,3212 read Content-Length with std::strtoull
+("-1" wraps to 2^64-1).
 
 ## Evidence
 
@@ -48,7 +43,7 @@ b9fd21 (A4 time casts at b5aba4703), 222d40 (A3 at ef908749b); head pass 039ba1 
 | A2 | pending |
 | A3 | pending |
 | A4 | pending |
-| A5 | Blocked on 1 |
+| A5 | D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script |
 | A6 | pending |
 
 ## Result
