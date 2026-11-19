@@ -2794,8 +2794,36 @@
       "files": [
         "harness/cluster/**"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T20:33:19",
+          "commit": "f01638eb12acd76d30fe3bf93c5e4e45e0075d37",
+          "criteria": {
+            "A1": "261118-194500-d0da34; fails without: 261118-194233-3dc361",
+            "A2": "261118-202126-c9a5a2",
+            "A3": "261118-194512-0404ca"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "3a0187e2b146fc076452e5715c5c492711da1c34",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-194512-0404ca",
+              "level": "light",
+              "seconds": 657.6,
+              "state": "done",
+              "what": "cluster-net-setup check suite at 3a0187e2b146"
+            }
+          ],
+          "final": true,
+          "from": "cfa67193eb30b56c7159223b983a4c2400e1597f",
+          "reason": "",
+          "tested": "9749aa48a69339b728939fad748cb9e1d503f076"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "cluster-vm-tier"
@@ -2803,10 +2831,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "VM net setup is all-or-nothing; IPv6 obeys partitions and shapes",
-      "updated": "2026-11-18T19:37:07",
-      "worktree": "../Xapiand-wt/xapiand/cluster-net-setup"
+      "updated": "2026-11-18T20:33:26",
+      "worktree": ""
     },
     "cluster-vm-tier": {
       "accepted": {
