@@ -259,9 +259,9 @@ main(int argc, char** argv)
 	if (argc > 2 && std::string(argv[1]) == "--phase") {
 		return std::string(argv[2]) == "build" ? phase_build() : phase_check();
 	}
-	if (argc > 3 && std::string(argv[1]) == "--probe") {
+	if (argc > 4 && std::string(argv[1]) == "--probe" && std::string(argv[2]) == "wide") {
 		::setenv("XAPIAND_DATA_PATH", (fs::current_path() / "stopword_search_lists").c_str(), 1);
-		return probe_wide(std::atoi(argv[2]), argv[3]);
+		return probe_wide(std::atoi(argv[3]), argv[4]);
 	}
 	const auto lists = fs::current_path() / "stopword_search_lists";
 	fs::remove_all(lists);
