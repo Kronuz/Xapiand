@@ -224,6 +224,8 @@ quest starts (name it) or is dropped with a reason.
 | reactor F2: sessions cannot see accepting stopped; http-limits A3 needs its own flag for keep-alive refusal after stop | same | reactor.h, http | http-limits brief | open |
 | reactor F3/F5/F6: raise_open_files(SIZE_MAX) casts to negative rlim_t on FreeBSD and raises nothing (clamp + test); macOS maxfilesperproc cap and refused-setrlimit paths untested; seconds_to_expiry returns 0 for unreadable and expiring-now | same | reactor.h, test/** | reactor | open, small |
 | reactor F4: Xapiand raises the hard limit as root and lowers it via --max-files; raise_open_files does neither (owner call in server-limits) | same | reactor.h | server-limits | open |
+| logger-fork-reset N2 (owner call, default: option 2): a fork child that keeps running without exec queues every async line forever (no LOG thread), so memory grows unbounded. Options: document; set kStopping in the child so its lines go inline; start a LOG thread on first use in the child | reviews/logger-fork-reset-correctness.md | logger.cc | logger | open, decision |
+| logger-fork-reset N1/N3-N8: docs/fork.md misses workpool's thread_names_mutex, handlers' locks and the `once` filter lock; cv reset has no failing test (hook fires before cv.wait); fork during first-use setup can still hang (pre-existing); pthread_atfork return ignored; the future's state not reset (finish(n) in a child forked mid-join); TSan cannot see the child; docs/fork.md linked from nowhere | same | logger.cc, docs/fork.md, test/exit.cc | logger | open, small |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
