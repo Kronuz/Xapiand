@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261118-150608-5ad670
+State: waiting on jobs 261118-213949-011031 261118-223530-9e3c57
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,17 +30,25 @@ child). Over 8.26 s of pool-200 searches with lanes:
   per-file `open_existing(n)->size()` 1,707 (27% of run_open, the largest single item), the directory open 673,
   the WAL 574, DataStorage 411, load_files 263, scan_directory 211.
 
-Experiment H3 (job 261118-150608-5ad670, exclusive): lanes vs lanes + D3 as a probe (`.scratch/concurrent-pin.patch`
-over head, built by `.scratch/build-d3.sh`, never landed while the lead defers D3), pool 200 and 5000, ABAB x2.
-It targets the serial chain. If it wins and the lanes fill, the CPU half follows (H4): recover's sizes from
-`io_->inspect_entry(n)` (one `fstatat` on the directory descriptor, already in completion's PosixIO) instead of
-an open, fstat and close per file, about a quarter of each open.
+H3 (261118-150608-5ad670, exclusive): lanes + D3 pool 200 p50 291/284 ms against lanes 869/843; pool 5000 118/126
+against 128/129. D3 is the fix: built at Xapiand:3b8d41c39 (`search_batch` pins its batch with `when_all`; node test
+`test_a_search_batch_pins_its_indexes_together`, batches of 8 over 24 indexes with a missing one).
+
+At 3b8d41c39: suite 261118-184756-bf6036 passed (45 of 45; A3, A4). CI green at 937a5e94e (CI 44447325291, FreeBSD
+44447325350, arm64 44447325397). A2 before/after 261118-184757-7f0046 (exclusive, base f722ff939 vs head, both built
+in the job): pool 200 base 959/881 ms, head 285/283 ms (3.2x faster); pool 5000 base 122/123, head 128/129 ms.
+Head's pool 200 is 2.2x its pool 5000: A2 (within 2x) is not met.
+
+H4 (261118-213949-011031, exclusive, queued behind light holds until about 05:17): head against head with up to 16
+partitions (`.scratch/lanes16.patch`: 12 at pool 200, P = min(threads, 16, soft_open / 16)). Profile of head
+261118-223530-9e3c57 (strict) reruns 184759-013c96, whose `sample` wrote an empty call graph; profile.sh now takes it
+again once and fails on an empty one. If H4 loses, H5 is recover's sizes by `fstatat` (strata probe).
 
 ## Next
 
-1. Read H3 261118-150608-5ad670: lanes + D3 at pool 200 against lanes at pool 5000 (target within 2x). Experiment
-   budget: H1, H2, H3 used of about five; stop at the third loser in a row.
-2. H4 (recover sizes by fstatat, a strata probe patch over .deps-perf/strata-src) if H3 leaves CPU the limit.
+1. Read H4 261118-213949-011031: p16 pool 200 within 2x of its pool 5000? If it wins, land the partition cap and
+   rerun the A2 before/after at that commit; then ready for review (high risk). Budget: H1-H4 used of about five.
+2. Read profile 261118-223530-9e3c57; H5 (recover sizes by fstatat, a strata probe) if H4 loses.
 3. Per-index memory at 2,500 open from the row's pool-5000 arms, lanes vs main.
 
 ## Blocked on
@@ -63,9 +71,9 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
-| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 ms vs pool 5000 131/143 ms (not met) |
-| A3 | pending: suite 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
-| A4 | pending: suite 261118-112223-56c3f7; CI on the pushed branch |
+| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
+| A3 | suite 261118-184756-bf6036 at 3b8d41c39; earlier 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
+| A4 | suite 261118-184756-bf6036; CI green at 937a5e94e (44447325291, 44447325350, 44447325397) |
 
 ## Result
 

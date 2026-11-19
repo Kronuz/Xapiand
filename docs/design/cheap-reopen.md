@@ -51,6 +51,7 @@ next. Sixteen work threads sit idle (191,801 of the window's samples are waits) 
 | H2: H1 plus 8 items per group (probe only: the catalog assumes one lane) | 383, 415 ms | 136 ms | 060951-f40471 |
 | D1 (lanes) alone, against the merge-base f722ff939 | 884, 888 ms (base 948, 977) | 131, 143 ms (base 125, 153) | 131125-16ca52 |
 | H3: D1 plus D3 (concurrent pins), against D1 alone | 291, 284 ms (D1 869, 843) | 118, 126 ms (D1 128, 129) | 150608-5ad670 |
+| D1 + D3 at 3b8d41c39, against the merge-base f722ff939 | 285, 283 ms (base 959, 881) | 128, 129 ms (base 122, 123) | 184757-7f0046 |
 
 H1 confirms the lane: concurrent pins queue on the catalog's one group. H2 gives the lane eight slots: the same job's
 main arm ran 1,536-2,291 ms beside 6 light holds, the lanes 383-415 ms, 3.0x the pool-5000 run. The rest is CPU:
@@ -59,7 +60,7 @@ parallelize eight ways. The first search at pool 5000 (2,500 cold opens) went fr
 
 D1 alone gains 8%: a profile of it (job 261118-145656-a26428) holds 0.76 opens in flight on 8 lanes, because
 `search_batch` still pins one index at a time. With D3 the lanes fill: 3.0x faster at pool 200, 2.4x the pool-5000
-run. In that profile `open(2)` and `close(2)` are over half the busy time; strata `recover`'s per-file
+run (2.2x at 3b8d41c39, job 184757-7f0046: A2 is not yet met). In that profile `open(2)` and `close(2)` are over half the busy time; strata `recover`'s per-file
 open-for-its-size is the largest single caller, about a quarter of each open (D4's strata half).
 
 ## Decisions
