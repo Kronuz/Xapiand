@@ -4534,8 +4534,36 @@
         "tests/test_coverage_multivalue*",
         "tests/test_coverage_reserved*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T11:50:05",
+          "commit": "a28fed41119cc9d86d46cc5d4b5236472cb3bee5",
+          "criteria": {
+            "A1": "261119-044052-c8b854 (passed at 6e12d4a36df9; only merges from main since)",
+            "A2": "261119-055223-ed6ece: the suite runs the new tests, which use CHECK_EQ/LT/NE on keys, terms, queries and bytes (77, 85, 116 checks); the 4 CHECK_THROW name QueryParserError. No src bug is fixed (M1-M5 are pinned as current behavior, src untouched), so no fails-without applies.",
+            "A3": "suite 261119-055223-ed6ece at fb2437c12; CI green needs the lead's push"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "fb2437c126dc41696ad01e9a9f7a5d226049d5a0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-055223-ed6ece",
+              "level": "light",
+              "seconds": 897.1,
+              "state": "done",
+              "what": "coverage-multivalue check suite at fb2437c126dc"
+            }
+          ],
+          "final": true,
+          "from": "fa284709f7c25f8306ca6e4eb73b9e44af3b9b91",
+          "reason": "",
+          "tested": "166e50dac6bacdbf64c6ffc9cf61e7032a62e4de"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -4543,9 +4571,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "multivalue and reserved reach T13 coverage",
-      "updated": "2026-11-19T00:35:40",
+      "updated": "2026-11-19T11:51:47",
       "worktree": "../Xapiand-wt/xapiand/coverage-multivalue"
     },
     "coverage-server": {
