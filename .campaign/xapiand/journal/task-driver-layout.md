@@ -1,6 +1,6 @@
 # task-driver-layout: journal
 
-State: waiting on jobs 261119-125658-e4aa1e 261119-125701-a28181 261119-125704-1e0770 261119-125708-077ad8
+State: ready for review
 Quest: .campaign/xapiand/quests/task-driver-layout.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,11 +13,11 @@ Fix and test committed on the quest branch (task worktree): a4a9e42 test, cd6a54
 
 ## Next
 
-1. When jobs pass: confirm A1-A3 rows, set State ready for review (A3 also needs CI green after a push, not done: no push).
+1. Lead: confirm CI green, review, land.
 
 ## Blocked on
 
-The quest file set (task.hh, test/**) omits CMakeLists.txt, which the new test registration (3 lines) needs. Lead: add it to the file set. Otherwise nothing.
+The quest file set (task.hh, test/**) omits CMakeLists.txt, which the new test registration (3 lines) needs. Resolved: the lead added it.
 <"
 
 ## Evidence
@@ -28,9 +28,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | e4aa1e (fails-without at b7b76b5 revert), a28181 (passes at 63b43bd) |
-| A2 | 1e0770 deadline_test two-drivers (Debug abort) |
-| A3 | 077ad8 suite; CI after push |
+| A1 | 361954 mutant at b7b76b5 exits 1 on the assertion ("layout: release 216/8, debug 224/8: FAILED"); b00b7b at 63b43bd "release 224/8, debug 224/8: ok" (CMake build) |
+| A2 | 48d7b2 deadline_test two-drivers: the assert aborts, "two-drivers ok" |
+| A3 | suite 077ad8 passes; CI at 63b43bd |
 
 ## Result
 
@@ -41,3 +41,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 - Test is sizeof/alignof across two TUs (private members block offsetof): test/layout_test.cc, layout_release.cc (NDEBUG), layout_debug.cc; CMake target task_layout_test.
+
+- The first direct-compiler A1/A2 jobs lacked the wheel include path; superseded by the CMake-build jobs 361954, b00b7b, 48d7b2.
