@@ -24870,6 +24870,47 @@
       "updated": "2026-11-19T11:19:20",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
+    "task-lifecycle-followups": {
+      "accepted": {},
+      "after": [
+        "task-driver-layout"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "lifecycle.hh",
+        "task_timers.hh",
+        "test/{lifecycle",
+        "timers}_test.cc",
+        "docs/mechanisms/lifecycle.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "high",
+      "status": "planned",
+      "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
+      "updated": "2026-11-19T13:35:00"
+    },
     "task-lifecycle-rename": {
       "accepted": {},
       "after": [],
