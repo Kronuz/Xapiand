@@ -10495,8 +10495,8 @@
     "logger-fork-reset": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T14:55:11",
-          "base": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "at": "2026-11-19T15:42:41",
+          "base": "529ae7694a33a183725b9f453cf63539d9690890",
           "blobs": {
             "CHANGELOG.md": "100644:90b67b0e6031e4614e8c97c988bd4c461fed8cf9",
             "docs/fork.md": "100644:564a7a75aa71e347ebc9f722a3debfd1e7088850",
@@ -10506,7 +10506,7 @@
             "test/fork_mutant.sh": "100755:5c958e3fed12930528552c765617e6f4e54952ec"
           },
           "by": "review",
-          "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+          "commit": "1d52e89644205cc18a852587717fd2a267c63de8",
           "criteria": "43e6935f631264d0",
           "diffs": {
             "CHANGELOG.md": "24730ac472bff3aa",
@@ -10560,7 +10560,7 @@
       "risk": "high",
       "status": "review",
       "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
-      "updated": "2026-11-19T14:55:11",
+      "updated": "2026-11-19T15:42:41",
       "worktree": "../logger-wt/xapiand/logger-fork-reset"
     },
     "logger-producer-path": {
