@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: review fixes complete at logger:fc698e2; waiting on jobs 261118-213659-24fa6a 261118-213700-cba5c4 261118-213700-bd7a8d 261118-213700-dfe75e 261118-213701-0b38c9 261118-213701-5bf09d 261118-213701-b3b490 261118-213702-278777 261118-213702-35a4ac 261118-213702-10d630 261118-213702-8b6f13 261118-213703-3c2535 261118-213703-ff918e 261118-213703-87e194 261118-213704-9a8ef7; then ready for review
+State: head logger:455cad0 (test-only after fc698e2); waiting on jobs 261118-214915-0e2ec6 261118-214915-84fc5a 261118-214916-ce95b6 261118-214917-50faa0 261118-214917-0177e9 261118-214918-1cd38b 261118-214918-35cf03 261118-214918-7f4e7e 261118-214919-1e22af 261118-214920-4695f1 261118-214920-31f08e 261118-214920-9f753a 261118-214921-e6db5a 261118-214921-e60e8b 261118-214922-5150a7 261118-214922-6e3841 261118-214922-21a59e 261118-214923-74fb0f and CI; then ready for review
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -127,6 +127,14 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
     ef5f968 (test, fork/logexit), e74c64e (F3 + doc), dec68de (F2 report + F5/F6 API doc), 9c3ef8e
     (test, exit flush 900 lines), 385584f (test, capped + deferred), fc698e2 (F2: abandoned in the
     last look).
+- Lead msg (CI run 44466356229 red at fc698e2, linux-asan-ubsan logger_exit_capped): LSan's two
+  reports are the TEST's own allocation, not the logger's: direct 24 B at exit.cc:183 (`new
+  std::vector<Log>` in child_capped) and indirect 384 B (its buffer, exit.cc:185), the deferred
+  handles kept so the lines stay filed, rooted only by a local. The logger's abandoned lines are
+  not reported (reachable from the rings and the wheel). The other exit tests (exit, once, late,
+  slow, fork, logexit) passed under LSan in that run. Fix logger:455cad0 (test only): a global
+  `capped_deferred` pointer roots the vector; no suppression. Since 0f1063d, for the re-check, add
+  455cad0 after fc698e2. Reruns at 455cad0: 261118-214915-0e2ec6 261118-214915-84fc5a 261118-214916-ce95b6 261118-214917-50faa0 261118-214917-0177e9 261118-214918-1cd38b 261118-214918-35cf03 261118-214918-7f4e7e 261118-214919-1e22af 261118-214920-4695f1 261118-214920-31f08e 261118-214920-9f753a 261118-214921-e6db5a 261118-214921-e60e8b 261118-214922-5150a7 261118-214922-6e3841 261118-214922-21a59e 261118-214923-74fb0f.
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
