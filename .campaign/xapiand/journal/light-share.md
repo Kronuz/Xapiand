@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: ready for review
+State: ready for review (only suite job 261118-184002-4c0fa6 is running, A5)
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -75,7 +75,7 @@ Exclusive jobs, medians (full table in `docs/design/light-share.md`); arms off /
 | A2 | X1b 261118-135313-0d4d30 (6 arms): T5 loaded light p99 33.2 / 31.2 / 12.2 ms vs limit 8.6-9.0 (one of two share-8 arms passes); T4 lag p99 5.12 / 4.61 / 2.30 ms vs 1.024. Improved, bounds NOT yet met; before/after at the landed code pending |
 | A3 | X2a 261118-135314-eb475b (off 12 off) + X2b 261118-135315-63667c (8 off 8): flood p99 46.3 / 28.2 / 21.2 ms vs about 20 (at the bound, 54% down) |
 | A4 | X3 261118-135316-88308e: RESTORE 9,318 / 9,303 / 9,328 docs/s (flat); QPS 3,925 / 3,993 / 4,612 (inside or above the A/A band); heavy searches -0.4% / -11%, heavy p99 149 / 150 / 130 ms |
-| A5 | suite 261118-112158-d26d97 passed at 34710b05b2da (later commits touch harness and docs only); CI: branch pushed |
+| A5 | suite 261118-112158-d26d97 passed at 34710b05b2da; rerun at the head 261118-184002-4c0fa6; CI: branch pushed |
 
 Earlier jobs (022842-883d3a, 022854-f0e080, 112144-650d76, 112147-f7cdd0, 112151-1f9d36, 112154-12be10) are
 superseded: noisy, timed out, or ran without build-ls. The X1 numbers from before are not used.
