@@ -8027,33 +8027,33 @@
     "http-halfclose": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-18T20:00:16",
+          "at": "2026-11-18T20:31:53",
           "base": "2671470a488e6fe45148146e98cf3b264308ac82",
           "blobs": {
             "AGENTS.md": "100644:ece541922e35097a450c6c17e9512b352eef578a",
             "CHANGELOG.md": "100644:9e822b5bbb498f4204e822c0504208966345f104",
             "docs/mechanisms/coroutine-handlers.md": "100644:ebd4c2be8d0a794e259f73ff53f199e181000d6c",
             "http_asio.h": "100644:560b3935f2eac4cfddd4d959590ade9a046a7509",
-            "http_message.h": "100644:1dff98794d15e7a2102e61a45f7912593f62fdeb",
-            "test/coroutine_test.cc": "100644:7f6c56dfbf85f25b7c6757c22c184c34db365017",
-            "test/readahead_test.cc": "100644:09e0b812a0a716a4eec63fa32fa1ae5e42018b44"
+            "http_message.h": "100644:13fecd7b9588202073f3c430b109a40192010235",
+            "test/coroutine_test.cc": "100644:afd6f81e128871dc05f762e4e0cafbecbdaf5ae1",
+            "test/readahead_test.cc": "100644:cf6ca5f36ded3272d3c0f5d70dcaac7bec2863ed"
           },
           "by": "review",
-          "commit": "cd6ed31015aed61c506261a8dfa8a62b7267f4ad",
+          "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
           "criteria": "fba62ac3d93f5546",
           "diffs": {
             "AGENTS.md": "8f5fb43df28bf6a1",
             "CHANGELOG.md": "68278fceafb872ed",
             "docs/mechanisms/coroutine-handlers.md": "053ea75cc3c4aaf6",
             "http_asio.h": "0ce81c4f52db299d",
-            "http_message.h": "fda56b87ae4872d5",
-            "test/coroutine_test.cc": "f73f9c4ba9407658",
-            "test/readahead_test.cc": "11b95976396ad9c2"
+            "http_message.h": "e4f98e4c52a8665e",
+            "test/coroutine_test.cc": "76229c02a8a93b67",
+            "test/readahead_test.cc": "1343d7256cec51da"
           },
           "findings": {},
           "note": "",
-          "review": "07ca92334c4b8e2dd20822e3c52b1689f9d98dc2",
-          "reviewed": "cd6ed31015aed61c506261a8dfa8a62b7267f4ad",
+          "review": "04cf8170a2260c9bf41fa628c0db907acebad6fa",
+          "reviewed": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
           "verdict": "APPROVE"
         }
       },
@@ -8091,7 +8091,7 @@
       "risk": "high",
       "status": "review",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T20:00:16",
+      "updated": "2026-11-18T20:31:53",
       "worktree": "../http-wt/xapiand/http-halfclose"
     },
     "http-lane": {

@@ -95,3 +95,24 @@ build (asserts live), at `build.sh`, in slot `review-halfclose-correctness`.
 - The Xapiand side (repin plus `wide_search_halfclose.py` for :search and :count) is a separate step under D126.
 - Owned-stream replies after a half-close: their monitor path is covered by M6 only through the
   deferred reply.
+
+## Re-check
+
+Commit: http:ec273dd4d37e
+Verdict: APPROVE
+Date: 2026-11-18
+
+- **No new mechanism.** cd6ed31..ec273dd leaves http_asio.h untouched. http_message.h changes only
+  the `disconnected` comment, which now names a write that fails or times out and a deferred reply
+  that ends unwritten. That answers F2 by its first option. The test changes are a streamed [J]
+  case, a [L] wait that uses `poll()` instead of a peek, and a Linux-only test of the kernel's
+  behavior. None of them adds transport code.
+- **F1 is fixed.** Mutant http:a243051 is exactly M2: ec273dd with only the streamed path's
+  `request.cancel(disconnected)` (http_asio.h:1079) removed. Job 261118-201313-8f56ef runs
+  coroutine_test at that mutant and exits 8, failing exactly one check: "[J] streamed body: a
+  failed write cancels the request: the token the handler kept sees http::disconnected". So the
+  new test kills M2.
+- **Evidence accepted:** suite 261118-201311-bc538f, TSan 261118-201316-1f8ff0, and CI green on
+  every platform at ec273dd (all reported by the lead). I did not rerun my stress or mutant
+  probes, because the transport did not change.
+- F3 (owner-ruled) and F4 (TLS half-close, optional) stand as non-blocking notes.
