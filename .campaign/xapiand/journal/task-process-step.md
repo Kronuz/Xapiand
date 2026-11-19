@@ -36,3 +36,8 @@ Source: Detent src/detent_cli/daemon.cc and daemon.hh, last changed at Detent:27
 
 - AGENTS.md and docs/API.md entries re-added at e68d46f after the lead widened the file set; suite 261119-135206-202326 (reused: same tree as 1cc2223).
 - Mutants lived on local branches (deleted); their commits are the ones named by the jobs.
+
+## Review fixes (correctness review, code at task:ef353dd)
+
+F1 cloexec startup pipe, F2 lock-in-run documented and tested, F4 clamp, F5 waitpid at timeout, F6 pidfile cloexec test. Pass job 261119-140041-d1a5e2; suite 261119-140051-362a8a. Mutants: F1 261119-140043-e5c800 (exec-child), F5 261119-140046-b42af2 (timeout), F6 261119-140049-af456c (lock-cloexec).
+F3 (locked_pid takes the lock for an instant; nullopt means unknown, not lockable): Q5, process-and-node's. Callers must take the lock to decide and not probe in a loop against a starting daemon.
