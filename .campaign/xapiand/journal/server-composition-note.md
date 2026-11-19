@@ -25,10 +25,10 @@ path.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/server-composition.md` at cpp-libraries:21b3d33. F1: "Options" paragraph and C9 (`--upstream-ca`). F2: step 4's descriptor check, C5. F3: step 4's `Limits`/`Tls`, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded (Options, C2, step 3, ledger-prefixed IDs, Settled 1 and 5). |
-| A2 | Same file: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80 (`git -C ... show`); Mains Housekeeping row names the 5 s `control::Periodic` retry (manager.cc:184,706-709); Sizing 8.6 KB / 40 KB, 41 MB per 1024 TLS (http docs/perf/idle.md:56,75-82); relay mirror in Mains "Loop and services" and the `--upstream-ca` row (host.cc:155-296, configuration.cc:101-103,151,157); C2 corrected. |
-| A3 | "Deviations" table: 17 rows, each with reason and status (removed by which decision, or stays and why). |
-| A4 | Status line: "CURRENT (2026-11-19), reviewed", naming the six heads. |
+| A1 | `docs/server-composition.md` at cpp-libraries:21b3d33. F1: "Options" paragraph and C9 (--upstream-ca). F2: step 4's descriptor check, C5. F3: step 4's Limits and Tls, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded (Options, C2, step 3, ledger-prefixed IDs, Settled 1 and 5). |
+| A2 | `docs/server-composition.md` at cpp-libraries:21b3d33: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80 (git -C ... show); the Mains Housekeeping row names Xapiand's 5 s control::Periodic retry (manager.cc:184,706-709); Sizing 8.6 KB / 40 KB, 41 MB per 1024 TLS (http docs/perf/idle.md:56,75-82); the relay's mirror in Mains and the upstream-CA row (host.cc:155-296, configuration.cc:101-103,151,157); C2 corrected. |
+| A3 | `docs/server-composition.md` at cpp-libraries:21b3d33, section Deviations: 17 rows, each with its reason and status (removed by which decision, or stays and why). |
+| A4 | `docs/server-composition.md` at cpp-libraries:21b3d33, line 1: "Status: CURRENT (2026-11-19), reviewed", naming the six heads the citations hold at. |
 | A5 | Source: Detent lead cmux 3708c307 (wording for F1, F4, F6, relayed by the lead; no message sent). F1 used with the `--upstream-ca` rename (Xapiand and Prism have no CA option: opts.cc:199-201, prism main.cc:246,258-259). F6 used as C8. F4 used except the relay point under Blocked on. |
 | doc check | job 261119-051022-2f4115, exit 0 at cpp-libraries:21b3d33 |
 
