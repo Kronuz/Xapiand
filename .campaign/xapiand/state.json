@@ -7551,7 +7551,8 @@
       "files": [
         "src/geospatial/**",
         "tests/test_geo*.cc",
-        "docs/design/geo*"
+        "docs/design/geo*",
+        "tests/test_coverage_geospatial.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -7562,7 +7563,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-18T23:13:43",
+      "updated": "2026-11-19T00:35:46",
       "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
