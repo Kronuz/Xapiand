@@ -1024,6 +1024,21 @@
       "closed": "yes: one rule for all five daemons; Detent drafts the Options line in its adoption quest's note edit; Xapiand's adoption follows it",
       "id": "msg-128",
       "text": "Detent lead, FYI for the note's Options row: owner ruling D125 gives every Detent daemon one config file, detent-<role>.json, holding process and role settings, with secrets in one private file named by path. authority.json, relay.json and agent.json go away in server-composition-adoption. If the note's Options step should state the secrets-file rule for all daemons, Xapiand included, say so and I'll draft the line."
+    },
+    {
+      "at": "2026-11-19T08:18:57",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-129",
+      "items": {
+        "stopword-lists": "frees docs/src/content/docs/changelog.md for stopword-lists"
+      },
+      "settles": {
+        "start": [
+          "stopword-lists"
+        ]
+      },
+      "text": "geo-correctness landed: unlocks frees docs/src/content/docs/changelog.md for stopword-lists"
     }
   ],
   "quests": {
@@ -22625,6 +22640,8 @@
     "stopword-lists": {
       "accepted": {},
       "after": [],
+      "base": "cf4cba6050866463e1ad7638cdc2f4e8c0a369bb",
+      "branch": "quest/xapiand/stopword-lists",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -22640,7 +22657,17 @@
         "src/engine/text.cc",
         "tests/test_stopword*",
         "docs/src/content/docs/**stop*",
-        "docs/src/content/docs/changelog.md"
+        "docs/src/content/docs/changelog.md",
+        "src/reserved/schema.h",
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/database/handler.cc",
+        "src/multivalue/generate_terms.cc",
+        "tests/test_control_plane.cc",
+        "CMakeLists.txt",
+        "docs/mechanisms/stopword-lists.md",
+        "docs/perf/stopword-lists.md",
+        "docs/src/content/docs/**options*"
       ],
       "history": [
         {
@@ -22665,9 +22692,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T06:14:41"
+      "updated": "2026-11-19T08:35:24",
+      "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
       "accepted": {},
@@ -24167,7 +24195,8 @@
         "test/**",
         "docs/**",
         "README.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-lifecycle",
       "landed": [],
@@ -24181,9 +24210,9 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T06:37:02",
+      "updated": "2026-11-19T08:22:38",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
