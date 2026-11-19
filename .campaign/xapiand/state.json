@@ -4641,6 +4641,32 @@
       "title": "Commit WAL-replayed operations",
       "updated": "2026-11-08T13:25:17"
     },
+    "crash-d-rows": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/engine_crash_check.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "harness: crash check prints every wrong row (land explore/crash-d-wrong)",
+      "updated": "2026-11-19T12:22:50"
+    },
     "cross-shard-followups": {
       "accepted": {},
       "after": [],
