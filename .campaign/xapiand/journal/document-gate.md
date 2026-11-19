@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261119-053901-2db986 261119-053903-78cd57 261119-053905-93b87c 261119-053908-95f546 261119-053910-2d1731 261119-053912-c499bc 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649 261119-054043-5ab1f3 261119-054047-bffba3 261119-054051-012889 261119-054055-fde881 261119-054058-2c1749
+State: waiting on jobs 261119-053901-2db986 261119-053903-78cd57 261119-053905-93b87c 261119-053908-95f546 261119-053910-2d1731 261119-053912-c499bc 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649 261119-054043-5ab1f3 261119-054047-bffba3 261119-054051-012889 261119-054055-fde881 261119-054058-2c1749 261119-054339-e1a2d2 261119-054348-8c6f59 (context about 200k: a fresh contributor can continue from here)
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -36,6 +36,21 @@ cc8ba3aa's; since then bench/kv/run.py (a93f2b59, calibrate trials and pin check
   spreads 2.5-28% (lvl-16k-lz4 ycsb_a 28%, lvl-4k-none 4.6-15%). strata in the same job, none
   tier 1 KiB: fillrandom 0.72x lvl-4k-none (241k vs 333k ops/s; 0.78x in c46cd4), readrandom
   2.01x, ycsb_a 1.54x; 1 KiB fillrandom is no gate row, but every 1 KiB YCSB load runs it.
+
+- msg (lead, 2026-11-19, rulings 1-2):
+  - tenx1 added to bench/kv/run.py (strata:dd02c63d): fits1's 13 rows at big1's 10x scale (100 B:
+    1M records at 12 MiB; 1 KiB: 200k at 24 MiB). Dry run 261119-054339-e1a2d2; its timed rows are
+    not queued yet (13 rows x 2 engines at 1M records: split per row to fit 10-minute jobs).
+  - 1 KiB fillrandom 0.72x: profile job 261119-054348-8c6f59 (strict, ~/code/Kronuz/Xapiand/
+    .scratch/xapiand/document-gate/prof1k.sh): 5 interleaved timings of both engines at 256 MiB
+    and 2 GiB, and `sample` of strata's writer at 4x records and memory.
+    Hypothesis from the calibration data (c46cd4/4d7ad8 records): strata flushes inline on the
+    writer (3 segments, 48 MiB written inside the run; settle 0.06 s), while RocksDB flushes on
+    its 2 background threads and leaves its memtables to the settle (0.52 s, 0.26 s CPU). strata's
+    p50 is 0.71 us against RocksDB's 1.6, so the mean is carried by the flush stalls; strata's run
+    plus settle (0.43 s) beats RocksDB's (0.81 s). If the 2 GiB rows put strata above RocksDB, the
+    engine change is a background flush of the frozen write buffer onto `options::background`
+    (as merges already are), same segment bytes: no on-disk change.
 
 ## Next
 
