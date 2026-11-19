@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: working
+State: waiting on jobs 2d327a 6819b2 0f1a51
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Three test files written (tests/test_coverage_multivalue.cc keymaker; _terms.cc generate_terms; _range.cc range + geospatialrange), never compiled until jobs 2d327a (keymaker), 6819b2 (terms), 0f1a51 (range) finish: read their out/ logs, fix failures (pin real behavior, list bugs below), then full coverage + suite jobs.
 
 ## Next
 
-1. <step>
+1. Read the three coverage_one jobs; fix tests; per-file numbers vs 90 lines / 80 branches (area total 1166/1657 lines at coverage-areas 8642ea).
+2. Coverage job (harness/coverage.sh, WORKLOADS="ctest corpora e2e", newman on PATH) and suite job at the head; Evidence rows; push; ready.
 
 ## Blocked on
 
@@ -38,3 +39,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## Bugs found (pinned in tests, src/ untouched)
+
+- M1 MIN_STR_CMPVALUE (keymaker.cc) is std::string("\x00"): built from a C string it is empty, not NUL; a descending SerializeKey on a missing slot keys as empty.
