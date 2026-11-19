@@ -4434,7 +4434,9 @@
     },
     "coverage-server": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "coverage-core-main"
+      ],
       "base": "454950586ef45aaa67bf80c1eca803e654584716",
       "branch": "quest/xapiand/coverage-server",
       "checks": [
@@ -4461,7 +4463,7 @@
       "risk": "low",
       "status": "active",
       "title": "server (search_views) reaches T13 coverage through E2E drivers",
-      "updated": "2026-11-19T00:35:45",
+      "updated": "2026-11-19T00:46:34",
       "worktree": "../Xapiand-wt/xapiand/coverage-server"
     },
     "cr1-fix": {
