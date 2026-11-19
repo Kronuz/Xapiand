@@ -20382,20 +20382,61 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/reactor-server-composition",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:31:28",
+          "commit": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a",
+          "criteria": {
+            "A1": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135837-88bc47",
+            "A2": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135840-1dad3b",
+            "A3": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135842-6ffa4b, 261119-135845-fa3dd3, 261119-135847-85e4ab",
+            "A4": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135850-7391bb",
+            "A5": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since), 261119-135903-7920d2 (passed at 3626f708055f; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3626f708055f434c7fe5d045cd53deeda87ccb4b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-135828-bf6eab",
+              "level": "light",
+              "seconds": 39.4,
+              "state": "done",
+              "what": "reactor-server-composition check suite at 3626f708055f"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "3626f708055f434c7fe5d045cd53deeda87ccb4b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-135829-521317",
+              "level": "light",
+              "seconds": 63.6,
+              "state": "done",
+              "what": "reactor-server-composition check tsan at 3626f708055f"
+            }
+          ],
+          "final": true,
+          "from": "01ea267f155338a35f491f46bee56e4af21a3804",
+          "reason": "",
+          "tested": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../reactor",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T15:31:15",
-      "worktree": "../reactor-wt/xapiand/reactor-server-composition"
+      "updated": "2026-11-19T15:32:28",
+      "worktree": ""
     },
     "read-only-open": {
       "accepted": {},
