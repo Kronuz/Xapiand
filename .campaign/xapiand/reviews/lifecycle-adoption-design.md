@@ -79,3 +79,48 @@ Reading only, no probe jobs: the probes this plan needs are its own criteria, re
 - Not checked: whether `tls.cc` already applies a `strict`-equivalent policy (F13's TLS half), the
   `opts.cc` and `search_views.cc` line citations, the size estimates, and Detent's
   `daemon.cc`/`daemon.hh`.
+
+## Re-check
+
+Commit: Xapiand:cf5c20817
+Verdict: APPROVE
+Date: 2026-11-19
+
+I read `git diff 0669d9415 cf5c20817 -- docs/design/lifecycle-adoption.md` for the four blockers,
+and task:b7e2449 `task_asio.hh:77-115` for D9's claim. No jobs were run; the plan is still unbuilt.
+
+| ID | Status | Where it is fixed |
+|---|---|---|
+| F1 | fixed | D3's table separates each Stop. Hurry is no longer consulted in Stop 3, so indexes commit (in 6 within the bound). The third signal's current exit 70 is spelled out. 6 A2 holds Stop 3, sends a second SIGTERM, and asserts exit 0 with the write in the commit; its mutant keeps `insisted()`. |
+| F2 | fixed | D8 gives each owner one latched flush: a mutex held for the whole run, with `done` set last. A later caller blocks, and only the holder joins. The fsyncher is registered first, so the WAL flush runs first. Registrations die before the resets and wait out a run in progress. 6 A3 holds Stop 4 between two writers' joins, with an `exchange`-latch mutant under TSan. 9 A7 reruns it at the end-of-path flush. Limits names the cost: a WAL writer stuck on its disk is unkillable by SIGTERM, as in today's `join()`. |
+| F3 | fixed | D9 names the producers (a turn handoff, a chore resume, a cross-thread cancel) and closes hunt row 105 F2 inside 9. The claim checks out at `task_asio.hh:77-97`: `post` and `post_call` drop work when closed, and the queued lambda re-checks `closed()`. Phase 4 runs only after the control loop joined. 9 A6 forces both handoffs at the two hook points, under ASan and TSan. |
+| F4 | fixed | D10's `dump_target` is a mutex plus pointers, cleared after Stop 5 and before the resets (in 9, when `lifecycle` returns). The concurrent reads it relies on are cited. 6 A4 covers a wedged loop, requests in flight under TSan, and a dump during a held Stop 3; 9 A7 covers the Registry drain. Limits names the cost: a dump blocked on a lock delays later signals. |
+
+The designer flagged two choices:
+
+1. **Quest 8 drops the adaptive grace (F6).** This is the right reading. D77 fixes the 5 s grace,
+   and the note deletes the reserve and the adaptive grace. At the default 35 s bound the stop
+   behaves as today. Only a `--shutdown-timeout-ms` under about 15 s changes, and that option is
+   new in the same quest, so no existing deployment sees a difference.
+2. **Quest 9 leaves commits unbounded.** This is consistent with D71: its bound covers requests
+   in flight, and indexes "still commit". It is also consistent with service-shape D7 and D9 (one
+   bound for requests; durable work unbounded). It is not consistent with the note, whose
+   Deviations row says "`--shutdown-timeout-ms` bounds every stop" (Settled 3), and D77 names
+   the option as the shutdown bound. It is a user-visible change, and the owner must decide it.
+   It also has a durability edge. Today a commit stalled past the bound exits 75 with the WAL
+   flushed (Stop 4 runs after Stop 3 gives up). In 9 the WAL flush waits behind the stalled
+   Registry drain. A supervisor that sends one SIGTERM and then SIGKILL (systemd's
+   TimeoutStopSec) never sends the third signal, so it would lose the queued WAL writes. That
+   happens only when the commit is stuck while the WAL disk is healthy, for example a lock bug.
+   Options:
+   - (a) Accept unbounded commits. State that the option bounds requests, and correct the note's
+     Deviations row and Settled 3.
+   - (b) The Registry's commit wait takes `b.abandon`. At abandon it leaves the remaining commits
+     to WAL replay; `flush()` still runs, and the node exits 75 as today.
+   - (c) Bound the commit with its own option.
+
+   I recommend (b). It keeps today's exit-75 contract and the note's wording, and the WAL is
+   flushed before any supervisor's SIGKILL. D71 still holds for every commit that finishes within
+   the bound.
+
+No new blocking findings. F5-F18 were not re-checked here.
