@@ -1462,6 +1462,33 @@ static void test_a_search_batch_skips_a_missing_index() {
 }
 
 
+// A batch pins its indexes together (cheap-reopen D3): every present index of several batches is found once, and a
+// missing one among them is skipped, not a failure of the pins beside it.
+static void test_a_search_batch_pins_its_indexes_together() {
+	Watchdog watchdog("a search batch pins its indexes together");
+	constexpr int N = 24;
+	Endpoints endpoints;
+	for (int i = 0; i < N; ++i) {
+		const auto one = endpoints_of("batch_together_" + std::to_string(i));
+		auto entry = pin_index(*manager()->database_pool, one[0].path, WRITE_QUIET);
+		Shard shard = use_index(entry, WRITE_QUIET);
+		engine::sync_wait(shard.add_document(make("K" + std::to_string(i))));
+		engine::sync_wait(shard.commit());
+		endpoints.add(one[0]);
+		if (i == N / 2) {
+			endpoints.add(endpoints_of("batch_together_missing")[0]);
+		}
+	}
+	const auto saved = opts.concurrent_search_indexes;
+	opts.concurrent_search_indexes = 8;   // batches of 8 pins
+	DatabaseHandler handler(endpoints, DB_OPEN);
+	const auto result = engine::sync_wait(handler.get_mset(engine::Query::term("f", "body"), 0, 2 * N));
+	opts.concurrent_search_indexes = saved;
+	CHECK_EQ(result.hits.size(), static_cast<size_t>(N));
+	CHECK_FALSE(std::filesystem::exists(endpoints_of("batch_together_missing")[0].path));
+}
+
+
 // A write that may not create its index, to an index that does not exist, is not_found (a 404), as a read of it
 // is: its use has no pin, and that use names the missing index rather than a closed one.
 static void test_a_write_to_a_missing_index_is_not_found() {
@@ -3626,6 +3653,7 @@ int main(int argc, char** argv) {
 		{"test_the_control_loop_is_free_during_a_schema_load", test_the_control_loop_is_free_during_a_schema_load},
 		{"test_the_control_loop_is_free_during_a_settings_load", test_the_control_loop_is_free_during_a_settings_load},
 		{"test_a_search_batch_skips_a_missing_index", test_a_search_batch_skips_a_missing_index},
+		{"test_a_search_batch_pins_its_indexes_together", test_a_search_batch_pins_its_indexes_together},
 		{"test_a_write_to_a_missing_index_is_not_found", test_a_write_to_a_missing_index_is_not_found},
 		{"test_a_search_batch_pins_a_repeated_index_once", test_a_search_batch_pins_a_repeated_index_once},
 		{"test_a_cancelled_request_stops_waiting_for_its_index", test_a_cancelled_request_stops_waiting_for_its_index},

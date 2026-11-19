@@ -1479,8 +1479,16 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
 		if (it == shards.end()) {
 			shards.emplace_back(endpoints[i], flags, turn_token());
-			co_await shards.back().pin();
 		}
+	}
+	{
+		// The batch's pins run together, so its reopens fill the pool's lanes (cheap-reopen D3).
+		std::vector<task::task<void>> pins;
+		pins.reserve(shards.size());
+		for (auto& shard : shards) {
+			pins.push_back(shard.pin());
+		}
+		co_await task::when_all(std::move(pins));
 	}
 	PinCount pinned(shards.size());
 	engine::BatchResult batch;
