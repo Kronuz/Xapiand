@@ -7686,7 +7686,28 @@
       "updated": "2026-11-08T15:39:16"
     },
     "freebsd-exe-path": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:49:15",
+          "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+          "blobs": {
+            "src/main.cc": "100644:5dfe4100ed844983283468356be22837e3d2bc5b",
+            "tests/test_executable_path.cc": "100644:989450e7c76c3785daee293149b8d47a88602c45"
+          },
+          "by": "review",
+          "commit": "72cc2d0babf1149411265a19fd5b5803bb56b8cc",
+          "criteria": "7bf6ef1d8f457b21",
+          "diffs": {
+            "src/main.cc": "79d55ee96727549d",
+            "tests/test_executable_path.cc": "b09c649d1fc7b931"
+          },
+          "findings": {},
+          "note": "",
+          "review": "43cf334311402dc978aa5b95e09e7ec783df0ce6",
+          "reviewed": "53b31611627d2775afbcbb3a7bed9eaa82de8dc6",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "coverage-core-main"
       ],
@@ -7706,7 +7727,9 @@
         "tests/test_executable_path*"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -7714,7 +7737,7 @@
       "risk": "normal",
       "status": "review",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T15:47:51",
+      "updated": "2026-11-19T15:49:15",
       "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
     },
     "fuzz-cpu-hour": {
