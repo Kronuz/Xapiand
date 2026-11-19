@@ -56,6 +56,11 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #ifdef HAVE_SYS_PRCTL_H
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -199,6 +204,16 @@ void test_toggle_hooks() {
 
 void lower_limit(rlim_t to);
 
+// Descriptors 0, 1 and 2 all open (a runner may start the test with one of them closed), so that a limit of 3 leaves
+// no descriptor to open.
+void fill_stdio() {
+	for (int fd = 0; fd < 3; ++fd) {
+		if (::fcntl(fd, F_GETFD) == -1) {
+			(void)::open("/dev/null", O_RDWR);
+		}
+	}
+}
+
 void test_signal_handler_without_a_manager() {
 	REQUIRE(!XapiandManager::manager());
 	for (int signum : {SIGUSR1, SIGWINCH, SIGCHLD}) {
@@ -208,7 +223,7 @@ void test_signal_handler_without_a_manager() {
 		CHECK_EQ(errno, EBADF);  // the handler restores errno
 	}
 	// With no descriptor left to open /dev/null, SIGTERM ends the process with EX_OSFILE.
-	CHECK_EQ(in_child([] { lower_limit(3); sig_handler(SIGTERM); }), static_cast<int>(EX_OSFILE));
+	CHECK_EQ(in_child([] { fill_stdio(); lower_limit(3); sig_handler(SIGTERM); }), static_cast<int>(EX_OSFILE));
 	// With no manager to hand it to, SIGTERM and SIGINT end the process with EX_SOFTWARE.
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGTERM); }); }), static_cast<int>(EX_SOFTWARE));
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGINT); }); }), static_cast<int>(EX_SOFTWARE));
@@ -345,7 +360,20 @@ void test_writepid() {
 }
 
 void test_data_path_beside_the_executable() {
+	// Apple and Linux know their executable's path; elsewhere (FreeBSD has no /proc/self/exe) it comes from argv[0]
+	// resolved with realpath, so the test hands it the path the kernel reports.
 	auto exe = get_executable_path(nullptr);
+#if defined(__FreeBSD__)
+	if (exe.empty()) {
+		int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+		char path[PATH_MAX + 1];
+		size_t len = sizeof path - 1;
+		if (::sysctl(mib, 4, path, &len, nullptr, 0) == 0) {
+			path[len] = '\0';
+			exe = get_executable_path(path);
+		}
+	}
+#endif
 	CHECK(exe.size() > 1 && exe.front() == '/');
 	CHECK(exe.size() > 26 && exe.substr(exe.size() - 26) == "xapiand_test_coverage_main");
 
