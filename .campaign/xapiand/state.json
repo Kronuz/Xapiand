@@ -7408,7 +7408,8 @@
     "geo-correctness": {
       "accepted": {},
       "after": [
-        "coverage-areas"
+        "coverage-areas",
+        "htm-edge-points"
       ],
       "base": "3a7c8b1ed09044c9dd5276408ba7ee19403ad3e7",
       "branch": "quest/xapiand/geo-correctness",
@@ -7435,7 +7436,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-18T22:28:53",
+      "updated": "2026-11-18T23:13:43",
       "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
