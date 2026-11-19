@@ -49,7 +49,7 @@ Nothing. (The lead widened the file set to AGENTS.md and CHANGELOG.md; done in h
 | A3 | suite 261118-201311-bc538f; `--fails-without` 261118-180449-60722d passed (readahead at the mutant) |
 | A4 | TSan 261118-201316-1f8ff0 at http:ec273dd (passed at cd6ed31: 261118-181018-e0741e) |
 | A5 | suite 261118-201311-bc538f; CI run 44456767194 at ec273dd (cd6ed31's failed on Linux: the [L] probe, fixed) |
-| A6 | [artifact] http_asio.h ConnectionInput comment (was 426-431), http_message.h `disconnected` and `Request::cancel` comments, docs/mechanisms/coroutine-handlers.md "Cancel reads, not writes" (one rule, failed write, what ends a waiting handler), AGENTS.md watch invariant, CHANGELOG.md 2026-11-18 entry (http:cd6ed31) |
+| A6 | [artifact] `docs/mechanisms/coroutine-handlers.md`: "One rule reads the socket watch: a read error other than EOF (a reset) is a disconnect, and EOF" (also `http_asio.h`: "One rule reads it: a read error other than EOF (a reset) is a"; `AGENTS.md`: "One rule reads it: a read error other than EOF (a reset, not our own cancellation)"), all at http:ec273dd |
 
 Lead's message (Detent's long-poll shape): done. Lead's message (widen to AGENTS.md, CHANGELOG.md): done in http:cd6ed31. Lead's message (Linux CI, F1): done in http:ec273dd, see Doing.
 
