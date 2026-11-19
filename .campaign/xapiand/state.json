@@ -24269,10 +24269,53 @@
         "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-lifecycle",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T11:19:17",
+          "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "criteria": {
+            "A1": "261119-090341-1360aa, 261119-090341-37aa0c; fails without: 261119-070126-838b76, 261119-070133-ac2bcb, 261119-090348-2190d4",
+            "A2": "261119-090341-1360aa, 261119-090341-37aa0c; fails without: 261119-090352-db744b, 261119-090354-f4cfff, 261119-090355-d51b76, 261119-090357-d8be11, 261119-090358-1a1d14",
+            "A3": "261119-090341-1360aa, 261119-090341-37aa0c; fails without: 261119-090352-db744b",
+            "A4": "261119-090341-1360aa, 261119-090341-37aa0c, 261119-090405-f5a3a0; fails without: 261119-070140-37fb0f, 261119-090350-b4378e, 261119-090407-ec258c",
+            "A5": "261119-090341-1360aa, 261119-090341-37aa0c; fails without: 261119-070146-73b92c, 261119-090347-251328",
+            "A6": "261119-090341-1360aa, 261119-090341-37aa0c",
+            "A7": "`docs/design/service-shape.md`: \"task::lifecycle\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-090341-1360aa",
+              "level": "light",
+              "seconds": 111.5,
+              "state": "done",
+              "what": "task-lifecycle check suite at 27028a038fb6"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-090341-37aa0c",
+              "level": "light",
+              "seconds": 84.1,
+              "state": "done",
+              "what": "task-lifecycle check tsan at 27028a038fb6"
+            }
+          ],
+          "final": true,
+          "from": "95798a02f68c86f070401329a05c78d326ac2579",
+          "reason": "",
+          "tested": "27028a038fb6b23cf305db1d4a65a1935d8b890a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -24280,9 +24323,9 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T09:22:03",
+      "updated": "2026-11-19T11:19:20",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
