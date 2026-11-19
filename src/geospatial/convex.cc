@@ -61,6 +61,15 @@ Convex::simplify()
 }
 
 
+const Constraint&
+Convex::smallest() const noexcept
+{
+	return std::min_element(circles.begin(), circles.end(), [](const Circle& a, const Circle& b) {
+		return a.constraint.arcangle < b.constraint.arcangle;
+	})->constraint;
+}
+
+
 int
 Convex::insideVertex(const Cartesian& v) const noexcept
 {
@@ -107,13 +116,14 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			}
 
 			// For positive, zero and mixed convex.
-			auto it = circles.begin();
-			const auto& smallest_c = it->constraint;
+			const auto& smallest_c = smallest();
 			// The smallest constraint intersect with an edge of trixel (v0, v1, v2).
 			if (HTM::intersectConstraint_EdgeTrixel(smallest_c, v0, v1, v2)) {
-				const auto it_e = circles.end();
 				// Any other positive constraint not intersect with an enge of trixel (v0, v1, v2).
-				for (++it; it != it_e && it->constraint.sign == Constraint::Sign::POS; ++it) {
+				for (auto it = circles.begin(); it != circles.end(); ++it) {
+					if (&it->constraint == &smallest_c || it->constraint.sign != Constraint::Sign::POS) {
+						continue;
+					}
 					if (!HTM::intersectConstraint_EdgeTrixel(it->constraint, v0, v1, v2)) {
 						// Constraint center inside trixel (v0, v1, v2).
 						if (HTM::insideVertex_Trixel(it->constraint.center, v0, v1, v2)) {
@@ -151,8 +161,8 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 			if (sign == Sign::NEG || sign == Sign::MIXED) {
 				for (const auto& circle : circles) {
 					if (circle.constraint.sign == Constraint::Sign::NEG) {
-						// Constraint center inside trixel (there is a hole).
-						if (HTM::insideVertex_Trixel(circle.constraint.center, v0, v1, v2)) {
+						// The excluded cap, around the antipode of the center, lies inside the trixel (there is a hole).
+						if (HTM::thereisHole(circle.constraint, v0, v1, v2)) {
 							return TypeTrixel::PARTIAL;
 						}
 						// Negative constraint intersect with a side.
@@ -369,8 +379,12 @@ Convex::getTrixels(bool partials, double error) const
 		THROW(HTMError, "Error must be in [{}, {}]", HTM_MIN_ERROR, HTM_MAX_ERROR);
 	}
 
+	if (circles.empty()) {
+		return {};
+	}
+
 	trixel_data data(partials, HTM_MAX_LEVEL);
-	error = error * circles.begin()->constraint.radius;
+	error = error * smallest().radius;
 	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
 		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;
@@ -421,8 +435,12 @@ Convex::getRanges(bool partials, double error) const
 		THROW(HTMError, "Error must be in [{}, {}]", HTM_MIN_ERROR, HTM_MAX_ERROR);
 	}
 
+	if (circles.empty()) {
+		return {};
+	}
+
 	range_data data(partials, HTM_MAX_LEVEL);
-	error = error * circles.begin()->constraint.radius;
+	error = error * smallest().radius;
 	for (size_t i = 0; i < HTM_MAX_LEVEL; ++i) {
 		if (ERROR_NIVEL[i] < error) {
 			data.max_level = i;

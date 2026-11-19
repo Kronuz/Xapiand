@@ -47,6 +47,7 @@
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "database/wal.h"                   // for DatabaseWAL
+#include "database/wide_search.h"           // for wide_search::pins
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
 #include "io.hh"                            // for io::write (for MsgPack::serialize)
@@ -1470,16 +1471,28 @@ search_pinned_indexes(bool most)
 task::task<engine::BatchResult>
 DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequest& request)
 {
-	std::vector<lock_shard> shards;
+	std::vector<size_t> first;      // the first position of each shard
 	std::vector<size_t> shard_of;   // the shard of each position
-	shards.reserve(end - begin);
 	shard_of.reserve(end - begin);
 	for (auto i = begin; i < end; ++i) {
-		const auto it = std::find_if(shards.begin(), shards.end(), [&](const lock_shard& shard) { return shard.endpoint.path == endpoints[i].path; });
-		shard_of.push_back(static_cast<size_t>(it - shards.begin()));
-		if (it == shards.end()) {
-			shards.emplace_back(endpoints[i], flags, turn_token());
+		const auto it = std::find_if(first.begin(), first.end(), [&](size_t f) { return endpoints[f].path == endpoints[i].path; });
+		shard_of.push_back(static_cast<size_t>(it - first.begin()));
+		if (it == first.end()) {
+			first.push_back(i);
 		}
+	}
+	// A wide search's batch takes its place under the node's bound on pinned indexes before it pins them.
+	wide_search::Pins::Hold hold;
+	if (endpoints.size() > search_batch_indexes()) {
+		hold = co_await wide_search::pins().take(first.size(), budget != nullptr ? budget->token() : task::cancel_token{});
+	}
+	std::vector<lock_shard> shards;
+	shards.reserve(first.size());
+	for (const auto i : first) {
+		if (budget != nullptr) {
+			co_await budget->checkpoint();
+		}
+		shards.emplace_back(endpoints[i], flags, turn_token());
 	}
 	{
 		// The batch's pins run together, so its reopens fill the pool's lanes (cheap-reopen D3).
@@ -1497,6 +1510,9 @@ DatabaseHandler::search_batch(size_t begin, size_t end, const engine::SearchRequ
 			// A shard whose index doesn't exist is skipped (multi-index search over a missing one).
 			std::vector<engine::Shard*> found(shards.size(), nullptr);   // each shard's engine; null when missing
 			for (size_t s = 0; s < shards.size(); ++s) {
+				if (budget != nullptr) {
+					co_await budget->checkpoint();
+				}
 				try {
 					found[s] = co_await shards[s]->engine_for_read();
 				} catch (const engine::Error& error) {
