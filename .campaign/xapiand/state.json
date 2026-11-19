@@ -8111,9 +8111,9 @@
       "provides": [],
       "repo": "../htm",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A point on a root-mesh edge gets its own trixel id",
-      "updated": "2026-11-18T23:56:33",
+      "updated": "2026-11-19T00:05:25",
       "worktree": "../htm-wt/xapiand/htm-edge-points"
     },
     "http-cancel-race": {
