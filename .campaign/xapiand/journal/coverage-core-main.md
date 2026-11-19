@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: ready for review (suite and CI to rerun at the new head)
+State: ready for review (CI to report the DIAG lines)
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
