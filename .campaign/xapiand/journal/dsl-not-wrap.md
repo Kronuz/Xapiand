@@ -1,6 +1,6 @@
 # dsl-not-wrap: journal
 
-State: working
+State: waiting on jobs 261119-144356-c9d35e
 Quest: .campaign/xapiand/quests/dsl-not-wrap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Fixed src/query_dsl.cc line 1321 (_not: flat [x]) and 394 (cast map {name:o}) with explicit calls; tests/test_query_dsl_not.cc added (prints trees; expected strings unverified until the probe job 261119-144356-c9d35e runs). A2: tests/test_coverage_core_query_dsl.cc is absent in this tree; note for coverage-core-small's owner.
 
 ## Next
 
-1. <step>
+1. Read the probe job log; fix test expectations (to_string format, NOT syntax, MsgPack API).
+2. Mutant job: revert src/query_dsl.cc fix, --fails-without --for A1 (git stash/ref to the pre-fix commit).
+3. campaign verify dsl-not-wrap.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
