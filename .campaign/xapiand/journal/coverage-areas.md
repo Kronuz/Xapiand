@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-174155-a12f7b (fieldparser) 261118-174158-f210d3 (geospatial) 261118-174725-3659a2 (serialize); A4 waits on logger-exit-lifetime
+State: waiting on jobs 261118-195812-46640b (geospatial) 261118-174725-3659a2 (serialize); A4 waits on logger-exit-lifetime
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,6 +29,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F7 `['abc` hangs the parser forever (`case '\0': break;` in SQUARE_BRACKET_QUOTE never advances); its test is written but not run. F8 a space in a field name is not counted (`a b:c` names `a `). F9 the 1,024-byte field-name cap never applies. F10 an escaped quote closes the string. F11 a double-quoted name leaves the value flagged double-quoted. F12 `lens_*_quote` is not reset at the colon, so a later getter over-reads. F13 `parse(100)` clamps to 10 but arrays of size 10 are indexed at level 10 (out-of-bounds write). F14 `skip_quote` is unused. Unreachable: `case SQUARE_BRACKET_END`, the `>= 1024` check in INIT.
 
 ## Next
+
+11-18 late. Field parser job a12f7b: field_parser.cc 450/474 lines (94.9 percent), 243/268 branches (90.7 percent); the 24 uncovered lines are the unreachable ones (the 1,024-byte cap 114-115, SQUARE_BRACKET_END 501-519), the hang case (432-433, F7) and line 202; the decoders area needs 98 percent lines and 95 percent branches over six files, so serialize.cc's number decides it. Geospatial job f210d3 (draft 1): lines 2658/2786 = 95.4 percent over the 11 files (above T13's 90), branches about 90 percent (T13 80), but 12 checks failed: the tests had guessed wrong about large circles, lenses and rings and one error type. Fixed at the next commit by pinning today's behavior as findings F18 (MULTIPOINT(1 2, 3) raises a non-EWKTError), F19 (a collection holding an empty intersection does not write EMPTY), F20 (a lens of two 9,000 km circles misses the center at 8 of 9 longitudes), F21 (a 15,011 km circle does not cover its own center), F22 (a point inside a ring's circles is not covered); rerun 261118-195812-46640b. Serialize 3659a2 is still queued. Remaining: serialize numbers and its gap, coverage and suite reruns at the final head, A4 after the logger quest (pin bump, 20 runs), Evidence rows, docs/dev/coverage.md.
 
 Serialize fork (4b690309d, ~890 lines, 20 tests, never compiled yet; job 3659a2): findings F15 `object`, `guess_type` and `guess_serialize` refuse the `_date`, `_multiconvex` and `_lua` casts; F16 `guess_serialize` of `{"_time":"10:30:00"}` and `{"_timedelta":"+01:30:00"}` throws; F17 `get_field_type("boolean")` returns datetime.
 
