@@ -1,16 +1,17 @@
 # logger-fork-reset: journal
 
-State: waiting on jobs 261119-142946-f38e36 261119-142948-f94cd1 261119-142949-6501eb 261119-142950-24d36d
+State: waiting on jobs 261119-142949-6501eb 261119-142950-24d36d
 Quest: .campaign/xapiand/quests/logger-fork-reset.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at logger:dc571a0 (fix) and logger:3ed8ec2 (`mutant/fork-no-reset`, the registration
-removed).
+A1 done: the fix passes, the mutant (logger:3ed8ec2, `mutant/fork-no-reset`) fails with "the
+fork child blocked on the LOG thread's mutex (killed after 5 s)". Suite and TSan at logger:dc571a0
+are queued behind other holds.
 
 ## Next
 
-1. Read the jobs; fill Evidence from `campaign brief`; State "ready for review".
+1. When suite 261119-142949-6501eb and tsan 261119-142950-24d36d pass: fill A2/A3 rows; State "ready for review".
 2. CI on all platforms (A3) needs the quest branch pushed; the lead's prompt says not to push.
 
 ## Blocked on
@@ -21,8 +22,8 @@ Nothing. A3's CI half waits for the lead to push `quest/xapiand/logger-fork-rese
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending: 261119-142946-f38e36 (fix), 261119-142948-f94cd1 (mutant, --fails-without) |
-| A2 | pending: 261119-142946-f38e36, tsan 261119-142950-24d36d |
+| A1 | 261119-142946-f38e36; fails without: 261119-142948-f94cd1 (hang, killed after 5 s) |
+| A2 | 261119-142946-f38e36 (parent writes all 100 post-fork lines, pending 0); TSan pending: 261119-142950-24d36d |
 | A3 | pending: suite 261119-142949-6501eb, tsan 261119-142950-24d36d; CI after push |
 
 ## Result
