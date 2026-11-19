@@ -22,7 +22,7 @@ Waiting on the lead's choice between two branches (both in Kronuz/htm, local wor
 
 ## Next
 
-1. On (a): finish CI, record jobs, add a CHANGELOG known-issue line for the dyadic misses.
+1. On (a): add a CHANGELOG known-issue line for the dyadic misses; mark ready for review.
 2. On (b): fast-forward quest branch to 7c33b0a, push, CI, record jobs.
 3. Ready for review.
 
@@ -65,7 +65,11 @@ Branch (a) head b572ff0 (rerun after the test.cc fix; aa46816 jobs passed too:
 | A1 | 261118-235236-7257de (htm_edge, 140 points); fails without: 261118-235238-6f0465 (edge test on cadec57's htm.cc: 110 of 140 fail) |
 | A2 | 261118-235240-ba7661 (test/compare_ids.sh: 100,000 random ids, cadec57 vs head); htm_diff in the suite holds 225,000 random points to the open rule's ids |
 | A3 | [artifact] htm test/golden.h re-id'd (92 of 396 change: 75 with a zero coordinate, 17 exact deeper-trixel vertices/midpoints); htm CHANGELOG.md 2026-11-18 names the changed ids and the reindex. On (b): 238 of 396, plus 19 of 48 fusing probes in htm.cc |
-| A4 | suite 261118-235244-a2968f; Debug ctest 261118-235315-6f984c; CI on quest/xapiand/htm-edge-points (first push failed on test.cc asserts, Debug only; fixed in b572ff0) |
+| A4 | suite 261118-235244-a2968f; Debug ctest 261118-235315-6f984c; CI run 44482965809 green on every platform at b572ff0 (the aa46816 run 44480925021 failed on test.cc asserts, Debug only; fixed in b572ff0) |
+
+Option (b) at 7c33b0a, all passed: htm_edge 10,360 edge points 261118-235302-13c067; fails
+without on (a)'s htm.cc 261118-235304-011c3c (394 of 10,360 fail, e.g. lat 0 lon 11.25);
+Debug ctest incl. htm_diff's restated A2 check 261118-235307-3e9c50. No CI yet (local branch).
 
 ## Result
 
