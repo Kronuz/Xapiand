@@ -1,6 +1,6 @@
 # task-process-step: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/task-process-step.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,30 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done. Code branch quest/xapiand/task-process-step at task-wt/xapiand/task-process-step (d02ca88).
 
 ## Next
 
-1. <step>
+1. Review and land. The lead adds the process.hh lines to AGENTS.md and docs/API.md (outside the file set).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
+Source: Detent src/detent_cli/daemon.cc and daemon.hh, last changed at Detent:276bc58d (Detent main c2f10b20, which contains 03eac9c5).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pass job 261119-135236-15cba5 (all cases); suite 261119-135259-c55e35. Mutants (plain test, fails-without): ready never written 261119-135244-853d1c; message dropped 261119-135246-098fe2; no SIGTERM at timeout 261119-135249-e2e328 |
+| A2 | same pass job and suite. Mutants: second lock acquires 261119-135252-fe16f4; stale file named 261119-135254-cd52b7 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`process.hh` (header-only, namespace task, POSIX): `run_daemon`, `ProcessLock`, `locked_pid`, a faithful port; Ready is named `daemon_ready` and the helpers sit in `process_detail`. Outcomes are exposed (held lock: `acquired()` false; failed or timed-out startup: throw), no exit code chosen. Tests: test/process_test.cc (ready, detach, throws, failed, timeout, in-place, lock, locked-pid, unsafe). Doc: docs/mechanisms/process.md. Not run: CI (not pushed).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- AGENTS.md and docs/API.md entries reverted: outside the file set.
+- Mutants lived on local branches (deleted); their commits are the ones named by the jobs.
