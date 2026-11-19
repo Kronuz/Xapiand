@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: working
+State: waiting on jobs 76dfe9 159564 7f59ed b9fd21 222d40 039ba1 50ab8b
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,6 +16,8 @@ A2 mutant (head with A2 reverted): Xapiand:21623ff47 at refs/mutants/serialize-v
 Local build in the worktree's `.scratch/serialize-validation/build`: negative 34, time casts 61, geo 4469 checks pass
 at head; type names rebuilt after the word-count fix. Then jobs from .scratch/xapiand/serialize-validation/submit.sh
 (home) and `campaign verify`.
+Jobs: fails-without 76dfe9 (A1 at e872b2f03), 159564 (A2 mutant 21623ff47), 7f59ed (A4 boolean at b5aba4703),
+b9fd21 (A4 time casts at b5aba4703), 222d40 (A3 at ef908749b); head pass 039ba1 (A1-A4); suite 50ab8b (A6).
 
 ## Next
 
