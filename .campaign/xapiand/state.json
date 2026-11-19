@@ -19998,7 +19998,10 @@
         "reactor_tls.h",
         "test/**",
         "docs/**",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "README.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/reactor-server-composition",
       "landed": [],
@@ -20012,7 +20015,7 @@
       "risk": "high",
       "status": "active",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T13:35:52",
+      "updated": "2026-11-19T14:23:19",
       "worktree": "../reactor-wt/xapiand/reactor-server-composition"
     },
     "read-only-open": {
