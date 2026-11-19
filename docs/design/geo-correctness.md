@@ -40,12 +40,12 @@ child at every level. htm `0c09a02` places an edge point in the nearest child th
 (`test_lens_of_wide_circles_covers_its_center`), and every point above hits its 1 km circle.
 
 Ids move only for points on an edge, so the corpus answers move only for its 15 root-edge points (indexes 6000 to
-6014). Rerun at the new pin, 24 of the 99 answers differ from the pin before it (same code otherwise), in 12
-queries and 53 points, every one an edge point: 24 gained, 29 lost. Against the exact distance to each circle:
+6014). Rerun at the new pin, 24 of the 99 answers differ from the pin before it (same code otherwise), in 10
+queries; the changes are 53 (point, answer) pairs, all of them edge points: 24 gained, 29 lost. Against the exact distance to each circle:
 
 | Class | Count | Exact distance |
 |---|---|---|
-| Gained, inside the shape | 23 | inside by 821 to 3,940 km (`partials` false or true) |
+| Gained, inside the shape | 23 | inside by 163 to 3,940 km (`partials` false or true) |
 | Gained, outside the shape | 1 | `convex cap and negative` with partials: 220 km outside; that setting also hits 76 other points up to 350 km outside, partial cells by design |
 | Lost, inside the shape | 0 | |
 | Lost, outside the shape | 29 | outside by 504 to 6,198 km: the old id put the edge point in the middle of its octant, which these shapes held |
