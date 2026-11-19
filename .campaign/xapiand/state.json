@@ -989,6 +989,13 @@
       "closed": "FYI from Detent: consensus:62eb8fc is test-only (connection_test.cc read_slowly sizing); no transport or contract change, consensus-rpc-lane unaffected",
       "id": "msg-123",
       "text": "Detent lead: connection-slow-reader-flake landed at consensus:62eb8fc. Test-only (test/transport/connection_test.cc): read_slowly measures the reader's real receive capacity before the run and sizes its queue from it (macOS loopback holds pinned SO_RCVBUF + 522624 B), refuses unsatisfiable marks by value, no retries. No transport code or contract changed, so consensus-rpc-lane is unaffected."
+    },
+    {
+      "at": "2026-11-19T05:33:12",
+      "by": "detent-lead",
+      "closed": "FYI from Detent: consensus:ae08d92 dns-threads landed (bounded joined resolver threads); no Xapiand contract change",
+      "id": "msg-124",
+      "text": "Detent lead (D127): consensus-dns-threads landed at consensus:ae08d92. DNS lookups run on bounded, owned threads (process_bound 16, joined on shutdown); a hung resolver no longer blocks the shared asio thread. Landed with --no-ci under D116: CI 44467383652 failed only groups_upload on macos-x86_64. Next in D127 order: peers-tsan-timeout, then driver-apply-gap (in review, fix round 1), then consensus-worker-release."
     }
   ],
   "quests": {
