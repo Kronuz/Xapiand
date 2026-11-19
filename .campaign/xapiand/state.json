@@ -4343,6 +4343,8 @@
     "coverage-database": {
       "accepted": {},
       "after": [],
+      "base": "76ff9a364f946ca95ac34bf09fcf6ac262070d5f",
+      "branch": "quest/xapiand/coverage-database",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4365,9 +4367,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "database (schema.cc) reaches T13 coverage",
-      "updated": "2026-11-18T16:36:42"
+      "updated": "2026-11-19T00:35:37",
+      "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
     "coverage-multivalue": {
       "accepted": {},
