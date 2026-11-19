@@ -16,6 +16,8 @@ Three test files written (tests/test_coverage_multivalue.cc keymaker; _terms.cc 
 1. Read the three coverage_one jobs; fix tests; per-file numbers vs 90 lines / 80 branches (area total 1166/1657 lines at coverage-areas 8642ea).
 2. Coverage job (harness/coverage.sh, WORKLOADS="ctest corpora e2e", newman on PATH) and suite job at the head; Evidence rows; push; ready.
 
+Lead msg: if 2d327a, 6819b2 or 0f1a51 times out (exit 124), resubmit one light job, --minutes 150, running coverage_one.sh for all three tests in turn (e.g. bash -c with BUILD per test). None had timed out when read.
+
 ## Blocked on
 
 <What, and who decides. "Nothing" when nothing.>
