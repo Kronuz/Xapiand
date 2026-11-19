@@ -266,7 +266,7 @@ static void test_uuid_normalized() {
 	SEE(Endpoint("idx." + upper).path, "idx." + lower);
 	SEE(Endpoint("not-a-uuid/0000").path, std::string("not-a-uuid/0000"));
 	// Several UUIDs in a segment, separated by the list separator, all normalize.
-	SEE(Endpoint(upper + "," + upper).path, lower + "," + lower);
+	SEE(Endpoint(upper + ";" + upper).path, lower + ";" + lower);
 }
 
 static void test_uuid_partitioned() {
