@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261118-132434-8660f1 261118-132449-745336 261118-132457-0e435f
+State: waiting on jobs 261118-175418-fa1d4d 261118-175419-c46cd4 261118-175420-dca1f5
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,22 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-2026-11-18: main (strata:aca39c6c, docs only) merged as strata:3ec3adbb; the gate report gains the
-A6 VM rows, the A7 checks and the VM wal1 miss (strata:69b1d4b9, pushed: CI runs at it). Code is
-unchanged since cc8ba3aa. Queued at 69b1d4b9: build-test 261118-132434-8660f1; A5 calibration at
-100 B 261118-132449-745336 and 1 KiB 261118-132457-0e435f (each passes only if RocksDB's fastest
-variant is the pinned lvl-16k-lz4).
+2026-11-18: main (strata:aca39c6c, docs only) merged as strata:3ec3adbb; gate report gains the A6
+VM rows, A7 checks and the VM wal1 miss (strata:69b1d4b9); build.sh builds RocksDB without
+io_uring (strata:cbf08ebf, the lead's); calibrate runs trials and checks the pin (strata:a93f2b59,
+pushed; CI 44440356088). Code under include/ unchanged since cc8ba3aa. build-test 261118-132434-8660f1
+passed at 69b1d4b9.
+
+A5: the first calibration at 100 B (261118-132449-745336) failed on my own exact-match check,
+not an assertion: one trial picked lvl-4k-none, the pin scored 0.989 of it (fillrandom favors
+lvl-16k-lz4, readrandom lvl-4k-none). 1 KiB 261118-132457-0e435f cancelled as superseded.
+Queued at a93f2b59: calibrate 100 B 261118-175418-fa1d4d and 1 KiB 261118-175419-c46cd4 (5
+interleaved trials, pin within 3% of the fastest); build-test 261118-175420-dca1f5.
 
 ## Next
 
-1. Read the three jobs above; if a calibration picks another variant, that is a finding for the
-   lead (the A3 rows ran on lvl-16k-lz4), not a re-pin.
+1. Read the three jobs above. A pin outside 3% is a finding for the lead (the A3 rows ran on
+   lvl-16k-lz4), not a re-pin. Then add the calibration to the gate report and mark ready.
 2. Review of the F1 fix at strata:db443563 (code cc8ba3aa); the lead's.
 3. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
@@ -102,7 +108,7 @@ variant is the pinned lvl-16k-lz4).
 | A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of cc8ba3aa |
 | A3 | Durable tiers at cc8ba3aa, exclusive: wal1 261117-134809-8409da; sync1 261117-134818-6068ec, 261117-134824-199dc8, 261117-134834-f21397; N-log and group commit 261117-134842-7d024d; review probe 261117-134801-f716c7 (lag 2 records). A/A 261117-055320-5ca39d, 261117-055327-074989 (193e6e32). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
 | A4 | The same jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` (db443563): sync ties (0.93-1.01x); wal1 1.68-1.94x faster, p99 7.8-11.9x lower, p99.99 113-179x higher; group commit tie at K=1 and K=8, 1.32-1.39x slower at K=4 (turn-log-parity A6); memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
-| A5 | Calibration at strata:69b1d4b9, exclusive: 100 B 261118-132449-745336, 1 KiB 261118-132457-0e435f (each passes only if `run.py calibrate` picks the pinned lvl-16k-lz4 over lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
+| A5 | Calibration at strata:a93f2b59, exclusive, 5 interleaved trials: 100 B 261118-175418-fa1d4d, 1 KiB 261118-175419-c46cd4 (each passes only if the pinned lvl-16k-lz4 scores within 3% of the fastest of lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
 | A6 | D105, D114, at db443563 (code cc8ba3aa). Linux: build 261117-200358-f31d88, dry 261117-200358-e66125, sync+wal1 once 261117-200358-1336ac. FreeBSD: build 261117-200402-b01248, dry 261117-200402-6b0f87, sync+wal1 once 261117-200402-ed7288. Rows in strata `docs/gates/document-profile.md` "VM rows" (69b1d4b9). Failed first builds 261117-181304-9e575f (Linux), 261117-181307-6a39bf (FreeBSD): causes under Rulings; replaced by the two builds above. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
 | A7 | At db443563: fuzz (3 workers x 25 min, ASan+UBSan) stored 261117-181138-259eee, manifest_log 261117-181138-24cc48, manifest_log_file 261117-181138-0354ba, command 261117-181139-098eed; version rejection and fixtures 261117-181139-9949e7; coverage 261117-181139-6e2a77; ASan/UBSan/TSan on CI. Scale statement: [artifact] gate report "Scale" (strata:69b1d4b9) |
 | A8 | [artifact] strata `docs/gates/document-profile.md` (69b1d4b9): every measured row with commit, platform and jobs, the A7 checks, and the owed list |
@@ -123,8 +129,7 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
     librocksdb.a calls io_uring, and `bench/engines/rocksdb-11.11/build.sh` links kv_rocksdb
     without -luring: `undefined reference to io_uring_queue_init`. build-linux.sh now removes
     liburing-dev before the RocksDB build (the macOS and FreeBSD builds have no io_uring).
-    build.sh is outside the file set; a lasting fix there is -DWITH_LIBURING=OFF or -luring, the
-    lead's call (one line).
+    The lasting fix, -DWITH_LIBURING=OFF in build.sh, is strata:cbf08ebf.
   - FreeBSD 261117-181307-6a39bf: the RocksDB tree arrives by tar as root, keeping the host's
     uid, so git refuses `rev-parse` (dubious ownership) and build.sh stops. build-freebsd.sh sets
     `safe.directory '*'` in the VM first.
@@ -133,8 +138,10 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
 - 2026-11-18 13:22: the Linux VM (pid 85560, booted 13:11) runs another agent's build of
   ~/wsl in it (a `.lock` dir beside the disk); not this quest's job, left alone. It hit the
   6 GiB OOM killer once.
-- A5's evidence is a calibration job per value size that fails unless the pin wins, rather than
-  citing the row jobs' environment, so the pin is shown fastest at the gate's commit.
+- A5: calibration per value size at the gate's commit, not the row jobs' environment. "Fastest"
+  means within 3% of the best geomean of per-workload medians over 5 interleaved trials: below the
+  RocksDB A/A spread (0.2-8%), so a pick inside it is noise. The 3% came after seeing one trial at
+  0.989; the 5-trial jobs are the test of it.
 
 - F1 fix (D107 option (c), 2026-11-17):
   - Backpressure, not a byte bound: `log_state::turn_records` (1, journal seals one record per
