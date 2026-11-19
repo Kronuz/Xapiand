@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs 7f59ed b9fd21 222d40 e9f90f 367e06 859ec0 f13d5c f41436
+State: waiting on jobs e9f90f 367e06 859ec0 f13d5c f41436
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,7 +25,7 @@ f41436 (A6). Cancelled as stale: 039ba1, 50ab8b (older head).
 
 ## Next
 
-1. Read jobs 7f59ed b9fd21 222d40 e9f90f 367e06 859ec0 f13d5c f41436; fill Evidence; fix what fails.
+1. Read jobs e9f90f 367e06 859ec0 f13d5c f41436 (7f59ed, b9fd21, 222d40 done: failed without their fixes, as they must); fill Evidence; fix what fails; then ready for review.
 2. The lead pushes the branch for CI (contributors never push).
 3. After coverage-areas lands and is merged here: flip its pins (lead): tests/test_coverage_serialize.cc lines 558-562,
    642-643, 704-705 expect `_date` and `_multiconvex` refused; `_date` is now served, `_multiconvex` serializes once
@@ -42,8 +42,8 @@ Nothing.
 |---|---|
 | A1 | 76dfe9 failed without the fix (exit 1, 11 of 30 checks); head f13d5c pending |
 | A2 | 159564 failed at the mutant (exit 1, 22 of 149 checks); head f13d5c pending |
-| A3 | 222d40 pending; note docs/mechanisms/geo-exact-term.md (Xapiand:c95f679d0) |
-| A4 | 7f59ed, b9fd21 pending; head f13d5c pending |
+| A3 | 222d40 failed without the fix (exit 1, 2220 of 4469 checks); note docs/mechanisms/geo-exact-term.md (Xapiand:c95f679d0); head f13d5c pending |
+| A4 | 7f59ed failed without the fix (exit 1, boolean read as datetime), b9fd21 failed without it (exit 1, 7 of 53 checks); head f13d5c pending |
 | A5 | D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script |
 | A7 | pending: e9f90f, 367e06, 859ec0 (fails-without), f13d5c (head) |
 | A6 | pending: f41436 (suite); CI after the lead pushes |
