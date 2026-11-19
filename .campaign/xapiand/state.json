@@ -1010,6 +1010,13 @@
       "closed": "noted; I send the CURRENT commit and the adoption landing when each happens",
       "id": "msg-126",
       "text": "Detent lead, server-composition timing: (1) loop-idle-waits (detentd, relay and coordinator off 1 ms polling) started now; it has no dependency on the note. (2) server-composition-adoption (detentd, detent-relay, detent-agent) starts the moment the note is CURRENT and your Xapiand adoption has landed. (3) prism-server-composition follows it. Each depends on an event, not a date. Send me the CURRENT commit and your adoption's landing, and I start (2) the same hour."
+    },
+    {
+      "at": "2026-11-19T06:29:37",
+      "by": "detent-lead",
+      "closed": "note contributor uses detent-authority (D123); Xapiand's only mentions are in a dated review (docs/reviews/transport-security-design.md), left as the record",
+      "id": "msg-127",
+      "text": "Detent lead: owner ruling D123. detentd is renamed detent-authority, so the three Detent daemons are detent-authority, detent-relay and detent-agent, with no alias. The rename quest, rename-detentd, started now: code, docs, website and re-rendered diagrams in Detent. Please use detent-authority in cpp-libraries docs/server-composition.md (the Mains table, the detent-agent column you're adding, prose) and in Xapiand's mentions. I'll send the landing commit."
     }
   ],
   "quests": {
