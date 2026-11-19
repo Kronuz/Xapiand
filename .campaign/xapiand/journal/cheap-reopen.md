@@ -56,7 +56,7 @@ against 128/129. D3 is the fix: built at Xapiand:3b8d41c39 (`search_batch` pins 
 `test_a_search_batch_pins_its_indexes_together`, batches of 8 over 24 indexes with a missing one).
 
 At 3b8d41c39: suite 261118-184756-bf6036 passed (45 of 45; A3, A4). CI green at 937a5e94e (CI 44447325291, FreeBSD
-44447325350, arm64 44447325397). A2 before/after 261118-184757-7f0046 (exclusive, base f722ff939 vs head, both built
+44447325350, arm64 44447325397). A2 before/after 261119-112059-d1220b (exclusive, base f722ff939 vs head, both built
 in the job): pool 200 base 959/881 ms, head 285/283 ms (3.2x faster); pool 5000 base 122/123, head 128/129 ms.
 Head's pool 200 is 2.2x its pool 5000: A2 (within 2x) is not met.
 
@@ -124,7 +124,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (profile 261119-112058-686d62 at 0dc08322a; breakdown from 261118-060438-5fb87b at main; H1 060440-baf657, H2 060951-f40471) |
-| A2 | H5 261119-033144-b85265: best p16+h5 251/249 vs 122/124 ms, 2.0x, head 2.28x (not met); H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
+| A2 | H5 261119-033144-b85265: best p16+h5 251/249 vs 122/124 ms, 2.0x, head 2.28x (not met); H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261119-112059-d1220b, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
 | A3 | suite 261118-184756-bf6036 at 3b8d41c39; earlier 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
 | A4 | suite 261118-184756-bf6036; CI green at 937a5e94e (44447325291, 44447325350, 44447325397) |
 
