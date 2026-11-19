@@ -5,27 +5,22 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+harness/engine_crash_check.sh prints every wrong row in scenarios B and D (its listing line and its raw hit), so the next FreeBSD crash-D failure (hunt :194, 1 wrong row of 4501 at a465288dc) says whether it is a torn document or a malformed listing line. The change exists as Xapiand:e4884d358 on explore/crash-d-wrong.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The crash check passes at the head (a light job running harness/engine_crash_check.sh scenarios B and D on this host)
+- A2 A deliberately injected wrong row (a mutant job) makes the check fail and print that row with its listing line and raw hit
+- A3 CI is green on all platforms
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None beyond the fixed behavior.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md rows; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

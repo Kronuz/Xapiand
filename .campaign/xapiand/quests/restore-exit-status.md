@@ -5,27 +5,22 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`xapiand --restore FILE` exits nonzero when the restore fails (a file that is not a dump now logs "Indexing object has an unsupported type: POSITIVE_INTEGER" and exits 0), so scripts can tell success from failure. Pinned by coverage-core-main job 261119-044115-72c517.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A restore of a non-dump file exits with a nonzero status (EX_DATAERR or the code main.cc uses for bad input) and names the problem; a test fails without the fix
+- A2 A good restore still exits 0 (test)
+- A3 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None beyond the fixed behavior.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md rows; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

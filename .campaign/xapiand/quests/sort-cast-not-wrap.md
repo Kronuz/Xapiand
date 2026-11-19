@@ -5,27 +5,23 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Two query DSL defects close: (1) a cast word in a sort (`sort: {"n": {"_integer": "100"}}`, `_datetime`) sorts instead of throwing CastError/DatetimeError, because get_sorter passes the cast value, not the whole map (`value = &o`; hunt :187, job 261119-025306-f2d437); (2) `_not` builds the same tree on every toolchain: `{{ x }}` in QueryDSL::create_exp_op_dsl gives {"_not":[[x]]} on macOS/Linux and {"_not":[x]} on FreeBSD (query_dsl.cc:1321); use an explicit push_back.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Sorts with `_integer`, `_float`, `_datetime` and `_keyword` cast words return the expected order; tests fail without the fix
+- A2 `_not` produces one documented tree shape; a test asserts the exact serialized query and runs on every CI platform (FreeBSD included)
+- A3 The coverage-core-small pins for both flip to the fixed values
+- A4 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None beyond the fixed behavior.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md rows; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

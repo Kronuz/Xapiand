@@ -5,27 +5,23 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Sort keys keep what they encode: MIN_STR_CMPVALUE is a one-byte NUL (M1, keymaker.cc; std::string("\x00") is empty), StringKey::serialize writes its slot and direction (M5, keymaker.cc:466), and SerializablePhoneticMetric::unserialize keeps the encoder code so a rebuilt soundex or dmetaphone key round-trips at its original length (M4: 13 -> 8 bytes for soundex english). Pins from coverage-multivalue (jobs 261119-035511-e1d625, 261119-041546-ce5...) flip to the right values.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A descending string sort with a missing slot orders the missing value as the minimum; a test checks the order and fails without the fix
+- A2 Every sort key kind serializes and unserializes to an identical key (bytes equal) and sorts identically; tests for string (slot, direction) and phonetic (soundex, dmetaphone) fail without the fix
+- A3 The coverage-multivalue pins for M1, M4, M5 assert the fixed values
+- A4 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None beyond the fixed behavior.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md rows; filed by the lead 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
