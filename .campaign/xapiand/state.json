@@ -20510,6 +20510,38 @@
       "updated": "2026-11-16T08:06:35",
       "worktree": ""
     },
+    "serialize-validation": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/serialize.cc",
+        "src/serialize.h",
+        "src/database/schema.cc",
+        "tests/test_coverage_serialize.cc",
+        "tests/test_serialise*.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Negative text never becomes a positive number; unknown type names are refused",
+      "updated": "2026-11-18T20:38:08"
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
