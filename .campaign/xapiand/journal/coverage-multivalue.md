@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: waiting on jobs 7797bd
+State: waiting on jobs ce5d85
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -54,3 +54,6 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Run 261119-035511-e1d625 (keymaker 99.2% lines/98.6% br, terms 93.7/86.3, range 91.7/87.9, geospatialrange 92.0/81.2)
 
 18 failed checks, all expectations: centroids must be unit vectors (distance was NaN), quantization 1e-9, lone range ids < 2^48 start with NUL = list magic, stop words need XAPIAND_DATA_PATH, M2, M3. Fixed at 20f148b59fcd; rerun is job 7797bd.
+- M3 settled by 7797bd: same global list finds nothing, reversed list finds the document (checks passed).
+- M4 (metric_serialize.h SerializablePhoneticMetric::unserialize): reads and drops the encoder code, so a rebuilt phonetic key serializes shorter (13 to 8 bytes soundex english); pinned. Round trip excludes phonetic slots.
+- 7797bd: geospatialrange 96.0/93.8; remaining failures were wrong expectations (stop words key "en", geodetic vs geocentric angles, M4). Fixed at ad0c8d0a8149; rerun ce5d85.
