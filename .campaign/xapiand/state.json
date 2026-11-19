@@ -883,6 +883,21 @@
         "quest": "detent:journal-host-ranges-race"
       },
       "text": "detent:journal-host-ranges-race started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T17:24:41",
+      "by": "campaign detent",
+      "closed": "consensus-sim-loops and consensus-rpc-lane now land --after detent:driver-apply-gap; group-core pins consensus by hash and takes the Driver fix at its planned repin",
+      "id": "msg-117",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "consensus-sim-loops",
+          "group-core"
+        ],
+        "quest": "detent:driver-apply-gap"
+      },
+      "text": "detent:driver-apply-gap started and may change files your consensus-sim-loops changes (order them with --after detent:driver-apply-gap, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
