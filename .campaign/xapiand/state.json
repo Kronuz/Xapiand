@@ -7674,18 +7674,46 @@
         "CMakeLists.txt",
         "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T08:18:32",
+          "commit": "7401fbbbc781f792e5aaeee5fa1abec2e74f9abc",
+          "criteria": {
+            "A1": "261119-050228-23f105; fails without: 261118-231033-23ce28, 261119-004729-f41c38, 261119-004732-82117a",
+            "A2": "261119-055658-f279a3, 261119-055659-ad649e, 261119-055659-51f521",
+            "A3": "261119-055628-79a85b, 261119-055658-705b95, 261119-055700-5f9840"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "05fcde57c8c0c7c0529fce636caca31963502e87",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-055628-79a85b",
+              "level": "light",
+              "seconds": 484.2,
+              "state": "done",
+              "what": "geo-correctness check suite at 05fcde57c8c0"
+            }
+          ],
+          "final": true,
+          "from": "eb703e4b9bfddff612dc996ffe6aca42bdd1e7e5",
+          "reason": "",
+          "tested": "05fcde57c8c0c7c0529fce636caca31963502e87"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-19T06:04:25",
+      "updated": "2026-11-19T08:18:57",
       "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
