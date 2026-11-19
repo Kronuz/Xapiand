@@ -20529,18 +20529,38 @@
         "tests/test_coverage_serialize.cc",
         "tests/test_serialise*.cc"
       ],
+      "history": [
+        {
+          "at": "2026-11-18T20:55:41",
+          "lenses": [
+            [],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "risk": [
+            "normal",
+            "high"
+          ],
+          "voided": [],
+          "weakened": []
+        }
+      ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [
         "coverage-areas"
       ],
       "provides": [],
       "repo": ".",
-      "risk": "normal",
+      "risk": "high",
       "status": "planned",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T20:38:08"
+      "updated": "2026-11-18T20:55:41"
     },
     "sha256-cl-10": {
       "accepted": {},
