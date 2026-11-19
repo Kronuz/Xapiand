@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: waiting on jobs 261119-004657-a00f7c 261119-004700-a4066a 261119-004729-f41c38 261119-004732-82117a 261119-004739-c04048 261119-004744-fa34d7
+State: waiting on jobs 261119-024749-524b1b 261119-024740-da1dc6 (corpus hit indexes after and before the htm fix)
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -19,10 +19,18 @@ suite c04048; coverage fa34d7.
 
 ## Next
 
-1. Read the jobs (`campaign brief geo-correctness`). If the corpus table check fails with the htm fix, regenerate the
-   `before` table in tests/test_geo_corpus.cc from a4066a's print and record before/after under Evidence A2.
-2. Fill Evidence, mark ready for review (normal risk: one correctness review).
-3. CI at ec6c7d982 (Linux fix): the lead pushes and checks.
+msg (lead, after the first job round): jobs at 97b397153: A1 pass a00f7c, coverage fa34d7, fails-without f41c38 and
+82117a green. Suite c04048 failed with exactly one failing test, test_geo_corpus (53 of 54 pass); corpus a4066a: 24 of
+100 rows differ under the htm fix, some by count DOWN (ring largest first, setting 0: 725 to 721), so "gains only" is
+unproven: checked per point, not per count.
+
+1. Corpus test now has `points` and `indexes` modes (xapiand:f686aa12a). Jobs: after (htm 0c09a02, head) 524b1b,
+   before (old htm bb5e01d, fixes in; scratch commit 88191d384) da1dc6. Diff the sets per row with an exact-distance
+   oracle for the circle and convex rows; classify each gained and lost point (root-edge point, sliver, other).
+2. Regenerate the `expected` table at the htm-fixed code (`now`), keeping `before` for the F-fixes; record before/after
+   per row under Evidence A2.
+3. Rerun the corpus check and suite as light jobs --minutes 150; fill Evidence; mark ready if green.
+4. CI at ec6c7d982 (Linux fix) is the lead's.
 
 ## Blocked on
 
