@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: working
+State: waiting on jobs 261118-231033-23ce28 261118-231034-bee9e4 261118-231042-09af0d 261118-231043-0a7400 261118-231044-1e0858
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,7 +10,9 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Doing
 
 All five findings handled in code at xapiand:56afff06b (tests at 673c25282 first); table commit follows. Jobs
-submitted: see Evidence. F20 is not the convex: see Blocked on.
+submitted: fails-without 261118-231033-23ce28 (at 673c25282), passing 261118-231034-bee9e4 (56afff06b), corpus before
+261118-231042-09af0d (673c25282, print), corpus after 261118-231043-0a7400 (bb8403367, table check + print), suite
+261118-231044-1e0858. F20 is not the convex: see Blocked on.
 
 ## Next
 
@@ -40,7 +42,7 @@ Jobs prove criteria by their tags (`--for A1`).
 |---|---|
 | A1 | F18, F19, F21, F22 (and F23): fails-without and passing jobs below. F20: [decision] the convex is right (lens covers its center at 60 generic centers, tests/test_geo_correctness.cc `test_lens_of_wide_circles_covers_its_center`, and at all four root vertices once HTM::getId places them: scratch htm patch, 8 of 8 fixed); the wrong answer is HTM::getId, in the htm library; docs/design/geo-correctness.md |
 | A2 | tests/test_geo_corpus.cc: 6,015 corpus points, 33 queries, 3 settings = 99 answers; 12 change, all listed in its table (`before`): convex apart x3 (6015 hits to 0, F23), convex negative p=false (4396 to 5340, F21), convex negative hole 1000km x2 (6015 to 6007, 5071 to 5978, F21), multipoint plain x3 and multipoint plain one x3 (error to parsed, F18). The other 87 are equal: jobs below |
-| A3 | <suite and CI: jobs below> |
+| A3 | suite job 261118-231044-1e0858 at bb8403367; CI: the lead pushes, I do not |
 
 ## Result
 
