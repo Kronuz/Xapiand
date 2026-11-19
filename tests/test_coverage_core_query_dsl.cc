@@ -286,7 +286,7 @@ static void test_text_fields() {
 	SEE(fx.got(obj({ { "t", obj({ { "_wildcard", "" } }) } })), std::string("t.any/"));
 	// A text field with a language stems and drops stop words.
 	CHECK_TRUE(fx.got(obj({ { "ts", "running" } })).find("run") != std::string::npos);
-	SEE(fx.got(obj({ { "ts", obj({ { "_and", "the running dogs" } }) } })), std::string("(ts/run AND ts/dog)"));  // "the" is a stop word
+	SEE(fx.got(obj({ { "ts", obj({ { "_and", "the running dogs" } }) } })), std::string("(?5/run AND ?5/dog)"));  // "the" is a stop word; ?5 is the stemmed-term prefix
 }
 
 static void test_compound_clauses() {
