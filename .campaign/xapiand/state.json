@@ -21559,6 +21559,37 @@
       "title": "Publish and reclaim guarded reader views",
       "updated": "2026-11-08T15:39:29"
     },
+    "sort-cast-not-wrap": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "tests/test_query_dsl*",
+        "tests/test_coverage_core_query_dsl.cc",
+        "tests/test_sort*",
+        "docs/src/content/docs/changelog.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "query DSL: cast words in sorts; _not wraps the same on every toolchain",
+      "updated": "2026-11-19T12:23:18"
+    },
     "sortable-encoding": {
       "accepted": {
         "correctness": {
