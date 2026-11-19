@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-135806-e23693
+State: waiting on jobs 261118-222741-9273aa
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,8 +29,7 @@ passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_M
 
 ## Next
 
-0. A3 rerun e23693 at e7a453b (0a37d4 ran pre-merge code): fill the doc's A3 section, push,
-   rerun build-test at the head if `campaign land` asks.
+0. build-test 9273aa at the merge head; push (consensus:afea684 + main merge); CI rerun; then review.
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
 2. docs/perf/flow-control.md from the jobs' output, each row's job id.
@@ -58,8 +57,8 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | 261118-114928-9bef7d (exclusive, e7a453b) |
 | A2 | 261118-114946-13cf10 (exclusive, e7a453b) |
-| A3 | 261118-135806-e23693 (queued; 0a37d4 ran pre-merge code) |
-| A4 | `docs/perf/flow-control.md` in consensus (A1, A2 at 33e0c5a; A3 pending) |
+| A3 | 261118-135806-e23693 (exclusive, e7a453b) |
+| A4 | `docs/perf/flow-control.md` in consensus (A1, A2, A3 rows, consensus:afea684) |
 
 Lead msg (all five jobs passed; diag confirms LogFull; fill rows, finish A4, push): A1/A2 rows
 in consensus:33e0c5a, pushed; A3 rerun queued since 0a37d4 predates the merge of main's
@@ -72,7 +71,14 @@ pipeline 4 against 1: 1.12x / 1.69x / 3.70x faster at 0 / 1 / 10 ms (54.4 vs 48.
 54.8 vs 14.8 MB/s); fdatasync 1.62x / 1.83x / 4.53x. 2 MiB appends: pipeline 1 wins by 14-36%.
 Pipeline 4 is held at ~55 MB/s (~210 commands/s) by the leader's two barriers per command
 (proposal, then commit index per one-entry ack). A2 (13cf10): slow follower leaves the other 99
-groups at 40.5 MB/s offered, node-2 apply p99 unchanged; slow group's undelivered <= 1 MiB.
+groups at 40.5 MB/s offered, node-2 apply p99 unchanged; slow group's undelivered <= 1 MiB. A3 (e23693): behind Bulk the control frame's longest delay
+6.5-37.4 ms, longest gap 14.2-38.9 ms (includes the 10 ms cadence) against stated bounds of
+15-122 ms (election_min 1 s); 300/300 control frames arrived in every row; Control-lane data
+waits 1.6-2.0x Bulk's p50 on a 1 Gb/s link. Single 3 s run per row.
+
+CI at 33e0c5a: only freebsd-x86_64 failed, in vmactions provisioning (pkg fetch error while
+installing cmake etc., `ssh exited with code 3`), before any build; the commit changed docs only.
+Not mine; rerun on the merge head.
 
 ## Rulings I made
 
