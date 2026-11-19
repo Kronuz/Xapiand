@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261119-053901-2db986 261119-053903-78cd57 261119-053905-93b87c 261119-053908-95f546 261119-053910-2d1731 261119-053912-c499bc 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649
+State: waiting on jobs 261119-053901-2db986 261119-053903-78cd57 261119-053905-93b87c 261119-053908-95f546 261119-053910-2d1731 261119-053912-c499bc 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649 261119-054043-5ab1f3 261119-054047-bffba3 261119-054051-012889 261119-054055-fde881 261119-054058-2c1749
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,6 +24,18 @@ cc8ba3aa's; since then bench/kv/run.py (a93f2b59, calibrate trials and pin check
   -053910-2d1731, -053912-c499bc. The build scripts now archive the job's own checkout at HEAD
   (they hardcoded db443563).
 - A7 reruns at the head: 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649.
+- A3 owed rows at the head (a second contributor session, 2026-11-19 05:40), exclusive,
+  pins lvl-16k-lz4 / lvl-4k-none: fits1 x3 261119-054043-5ab1f3, twox1 x3 261119-054047-bffba3,
+  big1 (10x, 4 rows) 261119-054051-012889, -054055-fde881, -054058-2c1749. "10x on every
+  workload" has no set in run.py (big1 is fillrandom, readrandom, seekrandom, ycsb_a): a tenx1
+  set is a harness step, not built.
+- Read of the four finished jobs: sync1 medians over 3 trials fillrandom/100 1.014 (0.998-1.114),
+  overwrite/100 0.996, ycsb_a 0.993 (0.977-0.998), ycsb_f 0.983 (0.979-0.989), fillrandom/1 0.996,
+  /10 0.995: inside the 10% tie band, but 4 of 6 medians under A4's 1.0x and YCSB F under it in
+  every trial. Calibration 4d7ad8: lvl-4k-none 1.000, lvl-16k-lz4 0.983, lz4-hash 0.957; per-run
+  spreads 2.5-28% (lvl-16k-lz4 ycsb_a 28%, lvl-4k-none 4.6-15%). strata in the same job, none
+  tier 1 KiB: fillrandom 0.72x lvl-4k-none (241k vs 333k ops/s; 0.78x in c46cd4), readrandom
+  2.01x, ycsb_a 1.54x; 1 KiB fillrandom is no gate row, but every 1 KiB YCSB load runs it.
 
 ## Next
 
