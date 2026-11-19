@@ -21,7 +21,7 @@ b9fd21 (A4 time casts at b5aba4703), 222d40 (A3 at ef908749b); head pass 039ba1 
 
 ## Next
 
-1. Read the jobs; fix what fails (compile not yet checked locally when queued).
+1. Read the jobs (all compiled and passed locally at head: negative 34, type names 149, time casts 61, geo 4469 checks; test_serialize, test_range_terms, test_geospatial pass); fix what fails.
 2. A3 note in docs once the file set has a docs path (Blocked on 2).
 3. After coverage-areas lands and is merged here: flip its pins in tests/test_coverage_serialize.cc (lead merges; the file then needs to be in my set or the lead flips it).
 4. Correctness review (high risk).
@@ -63,7 +63,15 @@ through `guess_serialize`). Not users: sorting (centroids in the value slot, key
 slot's ranges), geo range and within queries (accuracy trixel terms and the value slot), all written by
 `ranges_centroids` and `GenerateTerms::geo`, which this does not change.
 
+Cost of the new term (.scratch/xapiand/serialize-validation/hash_bench.cc, home; quiet strict beside 2 light holds,
+i9-9980HK, portable SHA-256 kernel: this CPU has no SHA-NI): 437 ns per one-range term (a point), 968 ns for 8
+ranges, 7.2 us for 64, 55 us for 512, about 107 ns per range once past the first block; the xor it replaces was
+about 1 ns per range. Not yet set against the rest of a geo document's indexing (getRanges, accuracy terms).
+
 ## Rulings I made
 
 - "-0" for a positive is refused with the other negatives: a positive's text has no '-', the rule `Cast::positive` already applies (src/cast.cc:223).
+- SHA-256 for the geo term: the only hash in the tree with a documented bound (birthday bound on a 128-bit truncation) that holds for any input; a 64-bit hash would collide with probability about 2.7% at 10^9 distinct geometries.
+- The type-name tests count 10,000 random words that are no name, from a fixed seed.
+- guess_serialize's map branch now goes through `Serialize::object` (one cast switch instead of two copies), which is what fixed `_time`/`_timedelta`; a number out of time's range is now refused there as the field refuses it.
 - Type names stay case-insensitive (the tables hash with `hhl`): "Text" is the type text, not an unknown word, though coverage-areas listed it as one.
