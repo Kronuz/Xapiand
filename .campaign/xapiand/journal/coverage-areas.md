@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-163254-b09a49 (A4 backtrace); three forks write tests (serialize, fieldparser, geospatial)
+State: waiting on jobs 261118-164432-50b1a8 (A4 proof); forks writing tests
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -58,6 +58,8 @@ Follow-up quests, gaps named: (1) multivalue (generate_terms, keymaker, range: ~
 3. After-coverage job (same command as d4c5ad) at the final commit; docs/dev/coverage.md (before/after table, what is open, reader registry bytes); Evidence table.
 
 ## Blocked on
+
+A4's frame is not in Xapiand: diag8 b09a49 shows the abort is on the log thread (`Xapiand:LOG`), LogWorker::close() draining at exit into Logging::emit, which takes `static OnceFilter filter`'s mutex (Kronuz/logger logger.cc:1765, pin 6e7ab9e). The function-local static is constructed after the logger's own state, so it is destroyed first, and the drain locks its destroyed std::mutex (LLVM's libc++ returns EINVAL; Apple's tolerated it, so Xapiand's normal build never showed it). The fix is in the logger repository (make the filter a member of the logger or never-destroyed: `static OnceFilter& filter = *new OnceFilter;`) plus a pin bump in CMakeLists.txt (line 563), both outside this quest's file set and repository. Proof job 50b1a8 runs the aggregations test 20 times against a patched copy (the job's checkout only). Options for the lead: (a) a logger quest/commit, then pin bump here, with a logger test that fails without; (b) widen this quest to CMakeLists.txt and keep the logger change as a separate landing. Recommendation (a). Until then the aggregations test (20 of 20 abort under one libc++, instrumented build only) is A4's check, and its coverage lines still count only if the profile is written: to keep the coverage run honest meanwhile, the instrumented tests could close the logger before exit.
 
 <What, and who decides. "Nothing" when nothing.>
 
