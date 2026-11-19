@@ -10548,20 +10548,59 @@
         "docs/**",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/logger-fork-reset",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:42:47",
+          "commit": "1d52e89644205cc18a852587717fd2a267c63de8",
+          "criteria": {
+            "A1": "261119-142946-f38e36 (passed at dc571a0c75ee; only merges from main since); fails without: 261119-142948-f94cd1",
+            "A2": "261119-142946-f38e36 (passed at dc571a0c75ee; only merges from main since), 261119-142949-6501eb (passed at dc571a0c75ee; only merges from main since), 261119-142950-24d36d (passed at dc571a0c75ee; only merges from main since)",
+            "A3": "261119-142949-6501eb (passed at dc571a0c75ee; only merges from main since), 261119-142950-24d36d (passed at dc571a0c75ee; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-142949-6501eb",
+              "level": "light",
+              "seconds": 97.2,
+              "state": "done",
+              "what": "logger-fork-reset check suite at dc571a0c75ee"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-142950-24d36d",
+              "level": "light",
+              "seconds": 146.4,
+              "state": "done",
+              "what": "logger-fork-reset check tsan at dc571a0c75ee"
+            }
+          ],
+          "final": true,
+          "from": "529ae7694a33a183725b9f453cf63539d9690890",
+          "reason": "",
+          "tested": "1d52e89644205cc18a852587717fd2a267c63de8"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
-      "updated": "2026-11-19T15:42:41",
-      "worktree": "../logger-wt/xapiand/logger-fork-reset"
+      "updated": "2026-11-19T15:42:49",
+      "worktree": ""
     },
     "logger-producer-path": {
       "accepted": {},
