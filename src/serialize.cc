@@ -1304,52 +1304,10 @@ Serialize::guess_serialize(const class MsgPack& field_value)
 		}
 
 		case MsgPack::Type::MAP: {
-			if (field_value.size() == 1) {
-				const auto it = field_value.begin();
-				const auto str_key = it->str_view();
-				if (str_key.empty() || str_key[0] != reserved__) {
-					THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
-				}
-				switch (Cast::get_hash_type(str_key)) {
-					case Cast::HashType::INTEGER:
-						return std::make_pair(FieldType::integer, integer(Cast::integer(it.value())));
-					case Cast::HashType::POSITIVE:
-						return std::make_pair(FieldType::positive, positive(Cast::positive(it.value())));
-					case Cast::HashType::FLOAT:
-						return std::make_pair(FieldType::floating, floating(FieldType::floating, Cast::floating(it.value())));
-					case Cast::HashType::BOOLEAN:
-						return std::make_pair(FieldType::boolean, boolean(Cast::boolean(it.value())));
-					case Cast::HashType::KEYWORD:
-						return std::make_pair(FieldType::keyword, Cast::string(it.value()));
-					case Cast::HashType::TEXT:
-						return std::make_pair(FieldType::text, Cast::string(it.value()));
-					case Cast::HashType::UUID:
-						return std::make_pair(FieldType::uuid, uuid(Cast::uuid(it.value())));
-					case Cast::HashType::DATETIME:
-						return std::make_pair(FieldType::datetime, datetime(Cast::datetime(it.value())));
-					case Cast::HashType::TIME:
-						return std::make_pair(FieldType::time, datetime(Cast::time(it.value())));
-					case Cast::HashType::TIMEDELTA:
-						return std::make_pair(FieldType::timedelta, datetime(Cast::timedelta(it.value())));
-					case Cast::HashType::EWKT:
-					case Cast::HashType::POINT:
-					case Cast::HashType::CIRCLE:
-					case Cast::HashType::CONVEX:
-					case Cast::HashType::POLYGON:
-					case Cast::HashType::CHULL:
-					case Cast::HashType::MULTIPOINT:
-					case Cast::HashType::MULTICIRCLE:
-					case Cast::HashType::MULTIPOLYGON:
-					case Cast::HashType::MULTICHULL:
-					case Cast::HashType::GEO_COLLECTION:
-					case Cast::HashType::GEO_INTERSECTION:
-						return std::make_pair(FieldType::geo, geospatial(field_value));
-					default:
-						THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
-				}
-			} else {
-				THROW(SerializationError, "Expected map with one element");
-			}
+			// A cast object serializes as a field of the type it names would.
+			required_spc_t field_spc;
+			field_spc.set_type(guess_type(field_value));
+			return std::make_pair(field_spc.get_type(), object(field_spc, field_value));
 		}
 
 		default:
@@ -1674,8 +1632,8 @@ Unserialize::get_field_type(std::string_view str_type)
 		case _.fhhl("array"):
 			return FieldType::array;
 		case _.fhhl("b"):
-			return FieldType::boolean;
 		case _.fhhl("boolean"):
+			return FieldType::boolean;
 		case _.fhhl("d"):
 		case _.fhhl("datetime"):
 			return FieldType::datetime;
