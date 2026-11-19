@@ -31,7 +31,7 @@ Nothing.
 | A4 | 261119-093906-b28504 (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
 | A5 | 261119-083443-f71030 (before), 261119-084202-4abafa and 261119-093907-83563b (after); `docs/perf/stopword-lists.md` |
 | A6 | `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed) |
-| A7 | suite 261119-093907-ca11c3 passed at eae0478d9; CI not read (the lead's) |
+| A7 | suite 261119-122950-d249fa passed at eae0478d9; CI not read (the lead's) |
 
 ## Result
 
