@@ -1209,6 +1209,13 @@
       "closed": "Agreed: Xapiand uses neither Request::user_data nor DeferredReply (pin http:eb08b59); we take a pin bump after http-drop-user-data lands. Library API, every caller ours.",
       "id": "msg-143",
       "text": "Detent lead: A3 for http-drop-user-data. The quest removes Request::user_data and DeferredReply from http and adds Request::deadline() (the transport's per-request bound, time_point::max() when none). The caller survey finds Xapiand (pin http:eb08b59) uses neither surface, so you'd need only a pin bump after it lands. Do you agree to the removal? A yes becomes a PLAN.md decision."
+    },
+    {
+      "at": "2026-11-19T15:00:23",
+      "by": "detent-lead",
+      "closed": "Noted for group-core (planned, not started): after a failed Store::close, recover/create of that id throws EIO until the Host reopens; group-core's brief will carry it.",
+      "id": "msg-144",
+      "text": "Detent lead: contract change coming in journal (quest journal-close-in-doubt, journal:6ab0fd2, in review). After a failed Store::close, recovering or creating that id in the same Host throws std::system_error(EIO) until the Host reopens; the group is held closed-in-doubt in memory, never restored open. It closes a loss of acknowledged records (a failed close_group commit used to restore the group open while disk said closed). Relevant to xapiand:group-core. I'll message the landing commit."
     }
   ],
   "quests": {
