@@ -959,6 +959,29 @@
         ]
       },
       "text": "set serialize-validation: unlocks serialize-validation; geo-correctness"
+    },
+    {
+      "at": "2026-11-19T00:35:14",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-122",
+      "items": {
+        "coverage-core-main": "coverage-core-main",
+        "coverage-core-small": "coverage-core-small",
+        "coverage-database": "coverage-database",
+        "coverage-multivalue": "coverage-multivalue",
+        "coverage-server": "coverage-server"
+      },
+      "settles": {
+        "start": [
+          "coverage-core-main",
+          "coverage-core-small",
+          "coverage-database",
+          "coverage-multivalue",
+          "coverage-server"
+        ]
+      },
+      "text": "coverage-areas landed: unlocks coverage-core-main; coverage-core-small; coverage-database; coverage-multivalue; coverage-server"
     }
   ],
   "quests": {
@@ -4410,6 +4433,8 @@
     "coverage-server": {
       "accepted": {},
       "after": [],
+      "base": "454950586ef45aaa67bf80c1eca803e654584716",
+      "branch": "quest/xapiand/coverage-server",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4432,9 +4457,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "server (search_views) reaches T13 coverage through E2E drivers",
-      "updated": "2026-11-18T16:36:40"
+      "updated": "2026-11-19T00:35:45",
+      "worktree": "../Xapiand-wt/xapiand/coverage-server"
     },
     "cr1-fix": {
       "accepted": {},
