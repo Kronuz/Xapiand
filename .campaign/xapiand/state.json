@@ -24363,7 +24363,34 @@
       "updated": "2026-11-08T13:25:30"
     },
     "task-asio-layout": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:34:17",
+          "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "blobs": {
+            "CMakeLists.txt": "100644:bae4f8c00a4f5c0db3cf474b2a8807fcc82553a2",
+            "task_asio.hh": "100644:ecf54ca2fe7dc1e099a29d86549ce0259bddf327",
+            "test/layout_debug.cc": "100644:db35facfab4571049b71007f2f630d80086c45f1",
+            "test/layout_release.cc": "100644:d55661e1253536c4c4495b14b56618de050d9229",
+            "test/layout_test.cc": "100644:0fbe215cca287b5345b51601314d4e38b7ef0e7e"
+          },
+          "by": "review",
+          "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "criteria": "64d90c8015ea1d1f",
+          "diffs": {
+            "CMakeLists.txt": "bcba4cee02b995d0",
+            "task_asio.hh": "fd5a3ffe691b5dfb",
+            "test/layout_debug.cc": "dab5c0ed698be715",
+            "test/layout_release.cc": "40b73077b08457d4",
+            "test/layout_test.cc": "19209d21e3e1fa7c"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3549479dc5597a7e1cba635c9da683b9121ddf41",
+          "reviewed": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "task-driver-layout"
       ],
@@ -24385,7 +24412,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/task-asio-layout",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -24393,7 +24422,7 @@
       "risk": "normal",
       "status": "review",
       "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
-      "updated": "2026-11-19T13:27:55",
+      "updated": "2026-11-19T13:34:17",
       "worktree": "../task-wt/xapiand/task-asio-layout"
     },
     "task-driver-layout": {
