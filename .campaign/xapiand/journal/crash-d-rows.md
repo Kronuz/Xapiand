@@ -1,6 +1,6 @@
 # crash-d-rows: journal
 
-State: waiting on jobs 261119-122426-23b4be (A1), 261119-122444-f74d98 (A2), suite via campaign verify
+State: waiting on jobs 261119-131239-b80edb (A2's plain pass at head; mutant f74d98 failed as it must), CI
 Quest: .campaign/xapiand/quests/crash-d-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
