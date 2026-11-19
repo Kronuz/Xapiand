@@ -395,13 +395,17 @@ void lower_limit(rlim_t to) {
 
 // adjustOpenFilesLimit refusing the start: the child ends with 0 when it threw SystemExit(EX_OSFILE), with the descriptors
 // the process holds (3 here: stdin, stdout and stderr) and the limit it ended with checked.
-void expect_refusal(ssize_t limit) {
+void expect_refusal(ssize_t limit, ssize_t slack = 0) {
 	try {
 		adjustOpenFilesLimit();
 	} catch (const SystemExit& exc) {
 		CHECK_EQ(exc.code, static_cast<int>(EX_OSFILE));
-		CHECK_LE(static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(16));
-		CHECK_EQ(static_cast<ssize_t>(get_max_files_per_proc()), limit);
+		CHECK_LE(static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(64));
+		// get_max_files_per_proc is min(sysconf(_SC_OPEN_MAX), RLIMIT_NOFILE soft). An explicit limit is set exactly; an
+		// automatic one is the first value of a 16-step walk down from the recommended number that setrlimit accepts.
+		const auto max_files = static_cast<ssize_t>(get_max_files_per_proc());
+		CHECK_LE(max_files, limit);
+		CHECK_GT(max_files, limit - slack - 1);
 		return;
 	}
 	CHECK(false);
@@ -458,7 +462,7 @@ void test_open_files_limit() {
 		main_opts.max_files = 0;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
-		expect_refusal(1024);
+		expect_refusal(1024, 16);
 	}), 0);
 
 	// Explicit limits the process can only lower, and a request above them: the raise fails and the limit it gets is
