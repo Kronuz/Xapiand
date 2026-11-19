@@ -3944,7 +3944,9 @@
     },
     "coverage-areas": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "logger-exit-lifetime"
+      ],
       "base": "ea544737d678d1a8dc94417d670538a7e7ddc9e9",
       "branch": "quest/xapiand/coverage-areas",
       "checks": [
@@ -3972,7 +3974,7 @@
       "risk": "low",
       "status": "active",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T15:43:05",
+      "updated": "2026-11-18T16:45:11",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "coverage-core-main": {
