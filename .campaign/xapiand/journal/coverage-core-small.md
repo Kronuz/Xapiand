@@ -32,7 +32,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | f37689 (REPEAT=3, T13 target 90 lines / 80 branches): cast.cc 336/336 lines (100.0%), 301/302 branches (99.7%); datetime_msgpack.cc 446/485 (92.0%), 253/282 (89.7%); endpoint.cc 285/292 (97.6%), 111/128 (86.7%); query_dsl.cc 1201/1311 (91.6%), 581/702 (82.8%). All met. Rerun at 344945a35: c4ce88 |
 | A2 | Every check compares values (SEE, CHECK_THROWS_WITH); findings are pinned with their current values. The stop-word check fails without the fix: 02118e (4339206eb, no data path) must exit nonzero; c4ce88 passes |
-| A3 | suite fae73e; CI after the lead's push |
+| A3 | 261119-081851-090187 (suite; only merges from master since); CI on the branch |
 
 ## Result
 
