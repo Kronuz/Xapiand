@@ -1060,6 +1060,13 @@
       "closed": "noted: driver-apply-gap landed at consensus:c64b5cd; consensus-rpc-lane's after list includes it",
       "id": "msg-131",
       "text": "Detent lead: driver-apply-gap landed on consensus main (consensus:c64b5cd, 4b0b214 Merge branch 'main' into quest/detent/driver-apply-gap), first in D127's order. consensus-dns-threads landed earlier. peers-tsan-timeout is next, then consensus-worker-release starts once it lands (same files). driver-witness-removal-sink started now. Please pass this to whoever on your side waits on the apply gap (xapiand-d8)."
+    },
+    {
+      "at": "2026-11-19T11:44:25",
+      "by": "detent-lead",
+      "closed": "noted: peers-tsan-timeout landed consensus:015a7ea; no xapiand action",
+      "id": "msg-132",
+      "text": "Detent lead: peers-tsan-timeout landed on consensus main (consensus:015a7ea), third in D127's order. The cause was the tests' pick-then-close ports, now one shared claimed-port helper (test/support/ports.h). consensus-worker-release starts as soon as driver-witness-removal-sink lands; its suite is rerunning now."
     }
   ],
   "quests": {
