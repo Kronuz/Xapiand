@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: exit-flush loss found and fixed (logger:70e3c36); waiting on jobs (see Doing)
+State: waiting on jobs 261118-201716-0c19dd 261118-201706-a7fe03 261118-201651-0c4cbe 261118-201651-95cb5d 261118-201707-d5031e 261118-201652-34809c 261118-201652-2ff32a 261118-201653-1b9363 261118-201653-39af86 261118-201653-28f0e6 261118-200515-17b386
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -50,7 +50,8 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
 - Fix logger:70e3c36 (test logger:46d3d0b). Jobs: fails-without 201716-0c19dd (46d3d0b), pass
   201706-a7fe03 (slow + stalled child); reruns at 70e3c36: suite 201651-0c4cbe, ASan 201651-95cb5d
   and 201707-d5031e, TSan recipe 201652-34809c, A2 201652-2ff32a 201653-1b9363, A5 201653-39af86
-  201653-28f0e6. CI on push of 70e3c36.
+  201653-28f0e6. CI run 44457207582 at 70e3c36: green on all 9 platforms (linux-asan-ubsan,
+  linux-tsan, freebsd, macos x86_64/arm64, linux gcc/clang/arm64).
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
@@ -110,6 +111,9 @@ Bench results so far (strict beside light holds, host load high: wide intervals)
   per line, median ratio 0.962 (range 0.823..1.101).
 
 ## Next
+
+0. Read the jobs above; if all pass, paste `campaign brief`'s evidence table, then mark ready for
+   review. If an ASan suite still fails exit flush, read its log for a timeout.
 
 1. Read the jobs; if 171634-64599a also fails at main, the exit-flush loss is pre-existing (report
    it; the join timeout is the cause to check); else investigate in my change.
