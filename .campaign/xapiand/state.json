@@ -3788,7 +3788,8 @@
         "include/consensus/host*",
         "test/transport*",
         "test/host*",
-        "docs/**"
+        "docs/mechanisms/hello*",
+        "docs/design/hello*"
       ],
       "landed": [],
       "lenses": [
@@ -3803,7 +3804,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
-      "updated": "2026-11-18T02:57:38"
+      "updated": "2026-11-18T22:28:34"
     },
     "consensus-rpc-lane": {
       "accepted": {},
