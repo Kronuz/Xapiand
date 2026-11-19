@@ -44,8 +44,9 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   and printed "join timed out after 213085 us": the 200 ms exit join timed out and the stop
   abandoned the queued tail. Probe run 200509-ae0766 passed (load-sensitive). The 200 ms budget and
   abandon are main's (logger:4b5b847); the quest's commits only add 3 tests running beside
-  logger_queue. Main probes 200513-427cb2 (ASan), 200515-17b386 (TSan recipe) pending; the TSan
-  recipe at main 193214-e96e6a already failed the same CHECK.
+  logger_queue. Pre-existing: main probe 200513-427cb2 (ASan suite at main + the report, 15 tests)
+  FAILED the same CHECK with "join timed out after 227647 us"; the TSan recipe at main 193214-e96e6a
+  failed it too. Main's ASan pass a62d6d was a lucky run. TSan main probe 200515-17b386 pending.
 - Fix logger:70e3c36 (test logger:46d3d0b). Jobs: fails-without 201716-0c19dd (46d3d0b), pass
   201706-a7fe03 (slow + stalled child); reruns at 70e3c36: suite 201651-0c4cbe, ASan 201651-95cb5d
   and 201707-d5031e, TSan recipe 201652-34809c, A2 201652-2ff32a 201653-1b9363, A5 201653-39af86
