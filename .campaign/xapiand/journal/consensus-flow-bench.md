@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: ready for review (one correctness review; CI rerun on consensus:d7091f6 pending)
+State: ready for lead (review CHANGES folded: F1-F4, F6-F8 in consensus:d9605f4; CI on it pending)
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,7 +29,7 @@ passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_M
 
 ## Next
 
-0. Pushed consensus:d7091f6 (A3 rows + main merge); build-test 261118-222741-9273aa passed; check CI (freebsd was provisioning-flaky); correctness review.
+0. Pushed consensus:d9605f4 (doc-only fixes for the review); build-test 9273aa reused (docs-only); earlier push consensus:d7091f6 (A3 rows + main merge); build-test 261118-222741-9273aa passed; check CI (freebsd was provisioning-flaky); correctness review.
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
 2. docs/perf/flow-control.md from the jobs' output, each row's job id.
@@ -104,3 +104,14 @@ should check; no product code changed.
 - R8 The VM build is its own light job (`flow_bench_vm.sh build`): timed jobs only measure.
 - R4 Unsent bytes of the slow group = entry bytes its leader Core sent to node 2 minus entry
   bytes node 2's loop was handed (sampled every 2 ms): what the transport holds for it.
+
+Review consensus-flow-bench-correctness (CHANGES at d7091f6), folded in consensus:d9605f4, doc only
+(no code change, so confirmation cites the reviewer's probe job 261118-224935-cfdbeb: ping 0.02 /
+2.8 / 12.2 ms, P3 repeats; `campaign verify` reused build-test 261118-222741-9273aa):
+- F1 rows relabeled by measured RTT (2.8 and 12.2 ms), netem note and ping values in "How".
+- F2 Control rows reported first as R19's case with four-repeat ranges; Bulk stated as a separate
+  connection (links.h slots by node and lane) showing cross-connection interference; the two
+  exceedances called single tail events; "does not claim" dropped.
+- F3 table compares delay max to the bound (gap kept last as liveness); F4 A2 scoped to a slow
+  barrier; F6 single-run rows marked; F7 "about three quarters busy"; F8 idle tail and disk clause.
+- F5 (no value test) for the lead's hunt list; F9 (T7 gate text vs quest criteria) the lead's call.
