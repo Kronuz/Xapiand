@@ -25,7 +25,8 @@
 #   ctest      every unit test
 #   corpora    harness/restore_corpora.sh check, on the instrumented node
 #   e2e        harness/engine_e2e.sh, the docs E2E on the instrumented node (needs newman 6 first on PATH; skipped without it)
-# WORKLOADS picks them (default "ctest corpora e2e"). The profiles are merged and llvm-cov exports one summary per source file
+#   main       harness/coverage_e2e_main.sh, the node's flags, start-up refusals, signals, shutdowns, dump and restore
+# WORKLOADS picks them (default "ctest corpora e2e main"). The profiles are merged and llvm-cov exports one summary per source file
 # (.cc files; COV_HEADERS=1 adds the headers), grouped in the areas of AREAS below. Writes OUTDIR/coverage.txt (the table),
 # OUTDIR/coverage-files.txt (every file) and OUTDIR/coverage.json (the export). `report` redoes the table from OUTDIR's
 # merged profile; OUTDIR/coverage-uncovered.txt lists each file's uncovered lines and unexecuted branches (from the lcov export). STRICT=1 exits 3 when an area is below its target. Run it under a hold:
@@ -36,7 +37,7 @@
 HERE=$(cd "$(dirname "$0")" && pwd); ROOT=$(cd "$HERE/.." && pwd)
 MODE=build; [ "${1:-}" = report ] && { MODE=report; shift; }
 OUT=$(mkdir -p "${1:-$ROOT/.scratch/coverage}" && cd "${1:-$ROOT/.scratch/coverage}" && pwd)
-BUILD=${BUILD:-$ROOT/build-cov}; JOBS=${JOBS:-4}; WORKLOADS=${WORKLOADS:-ctest corpora e2e}
+BUILD=${BUILD:-$ROOT/build-cov}; JOBS=${JOBS:-4}; WORKLOADS=${WORKLOADS:-ctest corpora e2e main}
 export HARNESS_TMP=${HARNESS_TMP:-$OUT}
 
 if [ -z "${LLVM:-}" ]; then
@@ -94,6 +95,8 @@ workloads() {
 				"$HERE/engine_e2e.sh" "$BUILD/bin/xapiand" "$OUT/e2e" >"$OUT/e2e.log" 2>&1 || { echo "FAIL: e2e (see $OUT/e2e.log)"; rc=1; }
 				tail -2 "$OUT/e2e.log"
 			else echo "skip: e2e (no newman on PATH)"; fi ;;
+		main) "$HERE/coverage_e2e_main.sh" "$BUILD/bin/xapiand" "$OUT/main" >"$OUT/main.log" 2>&1 || { echo "FAIL: main (see $OUT/main.log)"; rc=1; }
+			tail -1 "$OUT/main.log" ;;
 		*) echo "coverage: unknown workload '$w'" >&2; rc=1 ;;
 		esac
 	done

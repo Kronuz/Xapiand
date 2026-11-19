@@ -59,6 +59,11 @@ Each file is one `TEST_MAIN` binary registered by name in ctest (`ctest -R test_
 | `test_coverage_lua.cc` | `src/lua/` |
 | `test_coverage_geospatial.cc` | `src/geospatial/` |
 | `test_coverage_reader_registry.cc` | the reader registry's bytes per open index |
+| `test_coverage_main.cc` | the callable pieces of `src/main.cc` (compiled in under a renamed `main` and `opts`) |
+
+`harness/coverage_e2e_main.sh BINARY` is the `main` workload of `harness/coverage.sh`: it runs the instrumented node through its flags, start-up
+refusals, signals, shutdowns, detach, dump and restore, and checks each exit status, message and file; it covers the rest of `main.cc` and
+the signal and shutdown paths of `manager.cc`.
 
 A test pins today's behavior, including behavior that looks wrong; the product bugs it found are in the quests
 `serialize-validation` and `geo-correctness`, and each pinned check names its finding so the fix flips one line.
