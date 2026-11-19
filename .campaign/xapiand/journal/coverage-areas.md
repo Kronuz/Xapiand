@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-160636-7684ae 261118-160642-277715 261118-160643-69ce14
+State: waiting on jobs 261118-163254-b09a49
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,13 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F5 EWKT `POINT(200 2)` is accepted (the map and array forms range-check, the EWKT form does not).
 
 ## Next
+
+0000000000. 11-18 evening. Proof 7684ae: one libc++ now; geospatial 0/20 failures; aggregations 20/20 failures (deterministic: OK then system_error mutex lock failed at exit, a mutex locked after its static died; LLVM's libc++ returns EINVAL where Apple's tolerates it). Diag8 b09a49 (at bf83947ba): lldb break at __throw_system_error / abort for the backtrace; fix in the frame's file (src/node.cc, node.h are in the file set; tell the lead if it is elsewhere) with a test that fails without it. Suite 69ce14 failed only test_coverage_lua (a function value in a table is stored as nil, not absent): fixed in bf83947ba. Coverage 277715 (at 4e69dda8b): met: collectors, engine strata, engine seam, aggregations 95.9/92.3, lua 92.9/82.3; geospatial 83.0/81.7 (short on lines: ewkt.cc 145, geospatial.cc 143, polygon.cc 86, convex.cc 60 lines uncovered; ~200 lines to 90%); below: decoders 65.6/62.3 (serialize.cc 618 lines, field_parser.cc 232; the strata decoders are at 96-100%), server 76.8/49.4 (search_views.cc 525 lines, 792 branches), database 61.1/51.4 (schema.cc 3969 lines, handler 702, wal 315, schemas_lru 286, shard 371), multivalue 70.4/69.8 (generate_terms 228, keymaker 144, range 103), core 63.5/49.1 (query_dsl 605, main 366, datetime_msgpack 298, manager 225, cast 184); all of src 68.8/58.8.
+
+### Proposed split (the lead decides)
+
+This quest closes: aggregations, lua (met), then geospatial lines (~200 lines in ewkt, geospatial, polygon, convex, one more pass), and decoders (serialize.cc and field_parser.cc, ~850 lines, pure functions: one test file each, mutants easy).
+Follow-up quests, gaps named: (1) multivalue (generate_terms, keymaker, range: ~480 lines to 90%); (2) core-small (cast.cc, datetime_msgpack.cc, endpoint.cc, query_dsl.cc: ~1,200 lines, all unit-testable); (3) server (search_views.cc: 525 lines and 792 branches, needs a node or E2E driver, branches are the gap); (4) database (schema.cc alone is 3,969 uncovered lines; wal, handler, shard, schemas_lru: a program of its own, E2E corpora more than unit tests); (5) core main.cc/manager.cc (process entry, CLI and startup: E2E/harness, ~590 lines). Areas 3, 4 and 5 will not reach their floors from unit tests; the quest wording should say E2E-driven, or the floors for them should be re-set as a ratchet.
 
 000000000. Cause of both aborts (diag7 271f1d): harness/coverage.sh's instrumented binaries linked two C++ runtimes (CMake's find_library(c++) took the SDK's libc++, -L added LLVM 22's), so an exception thrown in one was missed by a catch in the other (geospatial CIRCLE(1 2)) and a mutex destroyed by one was locked by the other (aggregations at exit). Fixed in 4e69dda8b: coverage.sh names LLVM's libc++/libc++abi (-DLIBCPP_LIBRARIES, -DLIBCPPABI_LIBRARIES) and one_runtime() fails the build when a binary links two; the geospatial test is back to TEST_MAIN. No product fix: the normal build was never affected. Jobs at 4e69dda8b: proof 7684ae (geospatial and aggregations 20 runs each, 0 failures expected), coverage 277715 (A1 after), suite 69ce14 (A3). A2 8aa284 done. Then: lua/other areas still below their floors (see the coverage table), docs/dev/coverage.md, Evidence rows.
 
