@@ -1,6 +1,6 @@
 # phase5: Phase 5, analysis and the query language's long tail
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status phase5`.
 
 ## Outcome
