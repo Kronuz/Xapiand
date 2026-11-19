@@ -25,7 +25,7 @@ CI red at 5b206efde (tests and allowlist only; the mechanism is unchanged), fixe
   the lead's.
 
 Session 5, last step: all ten jobs read (design doc "Branch measured again"). Head recorded below.
-- Suite at the merged head 261119-015540-f34736: exit 0, 52/52.
+- Suite at the merged head 261119-054336-554e87: exit 0, 52/52.
 - A2 Linux exclusive (015840-52e913 / 015843-118f54 at 2,500; 015846-7c0eec / 015849-58ebd1 at 10,000): http0 / http1
   max since start 60.5 / 76.7 ms -> 6.95 / 2.77 ms (2,500), 329.2 / 299.3 -> 7.38 / 7.39 ms (10,000); window max
   <= 65.5 / 81.9 ms -> <= 2.05 / 2.05 ms and <= 393 / 2.56 -> <= 3.07 / 3.58 ms; p99 1.5-2.0 ms every arm. Control loop alone: window
@@ -37,7 +37,7 @@ Session 5, last step: all ten jobs read (design doc "Branch measured again"). He
   3.09-3.21 ms: PASS on all six; max 473 / 1,299 / 1,982 ms vs 9.9 / 5.3 / 9.4 ms.
 
 Session 5 (resumed). Read the finished session-4 jobs (below); merged master (Xapiand:0b7e4b69a, src change in
-`src/database/schema.cc` only); docs at Xapiand:9b474d811; suite at that head 261119-015540-f34736 (light, 120 min).
+`src/database/schema.cc` only); docs at Xapiand:9b474d811; suite at that head 261119-054336-554e87 (light, 120 min).
 Jobs read:
 - A2 Linux (VM, strict, beside 6-8 light holds), http0 / http1 max since start: 2,500 master 179.9 / 162.6 ms -> branch
   19.7 / 14.3 ms (9-11x lower); 10,000 master 558.1 / 475.8 ms -> branch 10.4 / 8.8 ms (54x lower). p99 2,048 us
@@ -143,7 +143,7 @@ writes-only rule. Bisect 170254-9f8b5a: test_node 0/5 at 8e5040da8 alone (the ca
 
 | Job | For | What |
 |---|---|---|
-| 261118-174748-eec809 | | test_node x5 at cffd0190a, exits 0 only at 5/5 |
+| 261119-054327-9f2eac | | test_node x5 at cffd0190a, exits 0 only at 5/5 |
 | 261118-174750-e0b022 | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
 | 261118-174832-f05da1 | | builds: master src, branch src, mutant (`if (wide)` -> `if (true)`) |
 | 261118-174834-15710d | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
@@ -203,7 +203,7 @@ bisect from there and fix. The branch's src touches only search (`search_batch`,
 | 261118-051434-89f2f5 | exclusive | A2 macOS after | SR3 10,000 branch src (reused likewise) |
 | 261118-132929-bb97fa | strict | A3 before | starve 64, master src, exits on T5's verdict |
 | 261118-132933-243767 | strict | A3 after | starve 64, branch src, exits on T5's verdict |
-| 261118-113058-7cb4e4 | strict | A1 | attribution rerun at 700ffc0c3 (done) |
+| 261119-054325-0edfb0 | strict | A1 | attribution rerun at 700ffc0c3 (done) |
 | 261118-132931-6328f9 | exclusive | R6 p99 | SR3 10,000 master src, XAPIAND_LAG_SPIN=1000000 (250 us beat keeps loops awake) |
 | 261118-132934-2ba112 | exclusive | R6 p99 | same, branch src |
 | 261118-132813-32aa11 | light | | VM: apt deps, build both arms at -j2 |
@@ -279,7 +279,7 @@ Read so far (src = master, build-prof):
 
 ## Next
 
-0. (session 5) Everything read; the lead pushes the head and sends the re-check. Open: the owner's A2-Linux question (Blocked on); A1's attribution job 261118-113058-7cb4e4 ran at 700ffc0c3 (the tool wants a rerun; its evidence is the design doc).
+0. (session 5) Everything read; the lead pushes the head and sends the re-check. Open: the owner's A2-Linux question (Blocked on); A1's attribution job 261119-054325-0edfb0 ran at 700ffc0c3 (the tool wants a rerun; its evidence is the design doc).
 1. Read session-4 jobs: suite, test_node x5, fails-without (3 test_node, 1 probe), half-close probes; A2 macOS (each
    http loop's max <= the control loop's), A2 Linux (<= 1,024 us), A3; F3 from 568ffe (branch misses T5 in 2 of 3 with
    master passing: the change; then the beat-on sampler at 64 clients). Then the lead accepts correctness.
@@ -302,10 +302,10 @@ Recommendation: 1 first. Lead took option 1 (the owner takes the Linux reading):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
+| A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261119-054325-0edfb0 |
 | A2 | Linux exclusive 261119-015840-52e913 / 015843-118f54 (2,500: http max since start 60.5 / 76.7 -> 6.95 / 2.77 ms), 015846-7c0eec / 015849-58ebd1 (10,000: 329.2 / 299.3 -> 7.38 / 7.39 ms; control alone <= 2.05-2.56 ms window; 1,024 us literally unmet, question in Blocked on); macOS exclusive 214551-71a78d / 214554-8a79f5 (2,500: 105.4 / 75.9 -> 2.08 / 2.05 ms), 214552-695322 / 214555-113315 (10,000: 281.0 / 232.0 -> 2.05 / 2.08 ms; control <= 2.56 ms); strict Linux reads: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
 | A3 | session 4: 214557-802978 before (names p99 13.64 / max 1,336 ms, T5 bound 2.32 ms: exit 1), 214558-d15a54 after (1.91 / 2.55 ms, bound 2.27 ms: pass); the earlier branch run 243767 missed (2.85 vs 2.39 ms); F3's A/B 210116-568ffe, exclusive x3: light p99 master 1.51 / 0.68 / 1.09 vs branch 1.86 / 1.58 / 1.57 ms, bound 3.09-3.21 ms, all six pass; max 473-1,982 ms vs 5.3-9.9 ms |
-| A4 | session 4: suite 214334-70753d (pass, 44/44 at e649ebcb1; merged head 9b474d811: 261119-015540-f34736 pass, 52/52), test_node x5 214345-e0caec (5/5), probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
+| A4 | session 4: suite 214334-70753d (pass, 44/44 at e649ebcb1; merged head 9b474d811: 261119-054336-554e87 pass, 52/52), test_node x5 214345-e0caec (5/5), probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261119-054327-9f2eac (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 
