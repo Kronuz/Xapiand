@@ -49,6 +49,7 @@
 #include "repr.hh"                                    // for repr
 #include "reserved/fields.h"                           // for ID_FIELD_NAME
 #include "serialize_list.h"                           // for StringList, CartesianList and RangeList
+#include "sha256.h"                                   // for kronuz::sha256::hasher
 #include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
 #include "utype.hh"                                   // for toUType
@@ -937,10 +938,17 @@ Serialize::centroids(const std::vector<Cartesian>& centroids)
 }
 
 
+// The first 16 bytes of SHA-256 over the ranges' fixed-width encodings: n distinct range lists collide with
+// probability at most n(n-1)/2^129, and the term's 16 bytes never equal an older 1 to 10 byte length-prefixed hash.
 std::string
 Serialize::ranges_hash(const std::vector<range_t>& ranges)
 {
-	return serialize_length(std::hash<std::vector<range_t>>{}(ranges));
+	kronuz::sha256::hasher hasher;
+	for (const auto& r : ranges) {
+		hasher.update(range(r));
+	}
+	const auto digest = hasher.final();
+	return std::string(reinterpret_cast<const char*>(digest.data()), SERIALIZED_LENGTH_RANGES_HASH);
 }
 
 
