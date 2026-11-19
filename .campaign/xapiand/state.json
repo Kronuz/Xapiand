@@ -1118,6 +1118,23 @@
         ]
       },
       "text": "task-driver-layout landed: unlocks frees test/**, CMakeLists.txt for task-asio-layout"
+    },
+    {
+      "at": "2026-11-19T13:48:41",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-137",
+      "items": {
+        "task-lifecycle-followups": "frees test/{lifecycle for task-lifecycle-followups",
+        "task-process-step": "frees test/process_test.cc, CMakeLists.txt for task-process-step"
+      },
+      "settles": {
+        "start": [
+          "task-lifecycle-followups",
+          "task-process-step"
+        ]
+      },
+      "text": "task-asio-layout landed: unlocks frees test/{lifecycle for task-lifecycle-followups; frees test/process_test.cc, CMakeLists.txt for task-process-step"
     }
   ],
   "quests": {
@@ -25086,6 +25103,8 @@
       "after": [
         "task-driver-layout"
       ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-process-step",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25101,6 +25120,7 @@
         "docs/mechanisms/process.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-process-step",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25108,9 +25128,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
-      "updated": "2026-11-19T13:35:03"
+      "updated": "2026-11-19T13:49:07",
+      "worktree": "../task-wt/xapiand/task-process-step"
     },
     "termdict-forward-seek": {
       "accepted": {},
