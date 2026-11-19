@@ -898,6 +898,21 @@
         "quest": "detent:driver-apply-gap"
       },
       "text": "detent:driver-apply-gap started and may change files your consensus-sim-loops changes (order them with --after detent:driver-apply-gap, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T19:36:21",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-118",
+      "items": {
+        "cluster-net-setup": "cluster-net-setup"
+      },
+      "settles": {
+        "start": [
+          "cluster-net-setup"
+        ]
+      },
+      "text": "cluster-vm-tier landed: unlocks cluster-net-setup"
     }
   ],
   "quests": {
@@ -2765,6 +2780,8 @@
     "cluster-net-setup": {
       "accepted": {},
       "after": [],
+      "base": "2a328ee592961ad784f028df8a709a974a12c812",
+      "branch": "quest/xapiand/cluster-net-setup",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2786,9 +2803,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "VM net setup is all-or-nothing; IPv6 obeys partitions and shapes",
-      "updated": "2026-11-18T18:14:50"
+      "updated": "2026-11-18T19:37:07",
+      "worktree": "../Xapiand-wt/xapiand/cluster-net-setup"
     },
     "cluster-vm-tier": {
       "accepted": {
