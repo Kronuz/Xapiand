@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-003759-4358ca 261119-003904-08fd11
+State: waiting on jobs 261119-011010-900c61 (probe 2, 120 min) 261119-011013-cabf22 (baseline coverage, 120 min); the first two (4358ca, 08fd11) timed out at 30 min
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
