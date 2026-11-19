@@ -1,6 +1,6 @@
 # cluster-net-setup: journal
 
-State: waiting on jobs 261118-194233-3dc361 261118-194500-d0da34 261118-194503-0ec526 261118-194506-5a7494 261118-194509-6f88ff 261118-194512-0404ca
+State: waiting on jobs 261118-202125-ad447b 261118-202126-c9a5a2
 Quest: .campaign/xapiand/quests/cluster-net-setup.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-All fixes committed and pushed (Xapiand:fbe0aa24a test only, Xapiand:37cacbd1e net.py, Xapiand:3a0187e2b
-vm.py/README/sweep_test). Waiting on the jobs below.
+Lead's msg: l2probe 5a7494 FAILed "partial setup" lines. Diagnosis from its log (not a defect): the probe
+expected the old behavior (`partition` fails on a prio-only guest). Now the setup is redone, so
+`partition 1` on node 3 succeeded (empty output, exit 0) and really cut node 1 at node 3; the next
+step's `shape 1` then ran with that cut still in place, so 3->1 was inf (a cut, not a broken shape).
+Rewrote the probe step (~/.scratch/xapiand/cluster-net-setup/l2probe.py): each partial case starts from
+a prio-only guest and is judged by effect (partition: 3->1 loss 100% then heal restores; shape: rtt
+50-60 ms). Rerun: l2probe 261118-202125-ad447b, netcheck 261118-202126-c9a5a2.
 
 ## Next
 
-1. When the jobs finish: read the netcheck log (IPv6 values), l2probe (partial setup line), fails-without
-   3dc361 (must show the FAIL lines, not a fetch error), park_test, suite. If the u32 `at -14` MAC
-   filter or `ether saddr` is refused by the guest, fall back to flower `dst_mac` for tc.
-2. Fill Evidence and Result, State "ready for review".
+1. When both finish: if ad447b passes, State "ready for review"; else fix what its log shows.
 
 ## Blocked on
 
