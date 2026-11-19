@@ -8025,7 +8025,38 @@
       "worktree": ""
     },
     "http-halfclose": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T20:00:16",
+          "base": "2671470a488e6fe45148146e98cf3b264308ac82",
+          "blobs": {
+            "AGENTS.md": "100644:ece541922e35097a450c6c17e9512b352eef578a",
+            "CHANGELOG.md": "100644:9e822b5bbb498f4204e822c0504208966345f104",
+            "docs/mechanisms/coroutine-handlers.md": "100644:ebd4c2be8d0a794e259f73ff53f199e181000d6c",
+            "http_asio.h": "100644:560b3935f2eac4cfddd4d959590ade9a046a7509",
+            "http_message.h": "100644:1dff98794d15e7a2102e61a45f7912593f62fdeb",
+            "test/coroutine_test.cc": "100644:7f6c56dfbf85f25b7c6757c22c184c34db365017",
+            "test/readahead_test.cc": "100644:09e0b812a0a716a4eec63fa32fa1ae5e42018b44"
+          },
+          "by": "review",
+          "commit": "cd6ed31015aed61c506261a8dfa8a62b7267f4ad",
+          "criteria": "fba62ac3d93f5546",
+          "diffs": {
+            "AGENTS.md": "8f5fb43df28bf6a1",
+            "CHANGELOG.md": "68278fceafb872ed",
+            "docs/mechanisms/coroutine-handlers.md": "053ea75cc3c4aaf6",
+            "http_asio.h": "0ce81c4f52db299d",
+            "http_message.h": "fda56b87ae4872d5",
+            "test/coroutine_test.cc": "f73f9c4ba9407658",
+            "test/readahead_test.cc": "11b95976396ad9c2"
+          },
+          "findings": {},
+          "note": "",
+          "review": "07ca92334c4b8e2dd20822e3c52b1689f9d98dc2",
+          "reviewed": "cd6ed31015aed61c506261a8dfa8a62b7267f4ad",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "2671470a488e6fe45148146e98cf3b264308ac82",
       "branch": "quest/xapiand/http-halfclose",
@@ -8060,7 +8091,7 @@
       "risk": "high",
       "status": "review",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T18:09:26",
+      "updated": "2026-11-18T20:00:16",
       "worktree": "../http-wt/xapiand/http-halfclose"
     },
     "http-lane": {
