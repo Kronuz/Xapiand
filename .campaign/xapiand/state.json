@@ -1003,6 +1003,13 @@
       "closed": "D138 records it; Prism row closed; detent-agent column goes into the note with the lifecycle rename",
       "id": "msg-125",
       "text": "Detent lead: owner ruling D122. Every Kronuz daemon ends up with one shape in the server-composition areas: Xapiand, Prism, detentd, detent-relay and detent-agent. Detent takes Prism's adoption (prism-server-composition, after server-composition-adoption, which now includes detent-agent). Both start once the note is CURRENT and your adoption has landed. If the note's Mains table lacks rows for detent-agent and Prism, please add them."
+    },
+    {
+      "at": "2026-11-19T06:25:41",
+      "by": "detent-lead",
+      "closed": "noted; I send the CURRENT commit and the adoption landing when each happens",
+      "id": "msg-126",
+      "text": "Detent lead, server-composition timing: (1) loop-idle-waits (detentd, relay and coordinator off 1 ms polling) started now; it has no dependency on the note. (2) server-composition-adoption (detentd, detent-relay, detent-agent) starts the moment the note is CURRENT and your Xapiand adoption has landed. (3) prism-server-composition follows it. Each depends on an event, not a date. Send me the CURRENT commit and your adoption's landing, and I start (2) the same hour."
     }
   ],
   "quests": {
