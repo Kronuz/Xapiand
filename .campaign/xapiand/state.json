@@ -942,6 +942,46 @@
         ]
       },
       "text": "set geo-correctness: unlocks geo-correctness"
+    },
+    {
+      "at": "2026-11-18T22:28:21",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-121",
+      "items": {
+        "geo-correctness": "geo-correctness",
+        "serialize-validation": "serialize-validation"
+      },
+      "settles": {
+        "start": [
+          "geo-correctness",
+          "serialize-validation"
+        ]
+      },
+      "text": "set serialize-validation: unlocks serialize-validation; geo-correctness"
+    },
+    {
+      "at": "2026-11-19T00:35:14",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-122",
+      "items": {
+        "coverage-core-main": "coverage-core-main",
+        "coverage-core-small": "coverage-core-small",
+        "coverage-database": "coverage-database",
+        "coverage-multivalue": "coverage-multivalue",
+        "coverage-server": "coverage-server"
+      },
+      "settles": {
+        "start": [
+          "coverage-core-main",
+          "coverage-core-small",
+          "coverage-database",
+          "coverage-multivalue",
+          "coverage-server"
+        ]
+      },
+      "text": "coverage-areas landed: unlocks coverage-core-main; coverage-core-small; coverage-database; coverage-multivalue; coverage-server"
     }
   ],
   "quests": {
@@ -3736,7 +3776,32 @@
       "worktree": ""
     },
     "consensus-flow-bench": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T23:16:51",
+          "base": "84608ccb0f885d6b689f4db895e30a72154d0054",
+          "blobs": {
+            "bench/flow_bench.cc": "100644:8ab03fd8b3e9e82ef104e649654cc739aac13104",
+            "bench/flow_bench.cmake": "100644:65ad576d173ae82f1a6846129fd10a3bc8d518c8",
+            "bench/flow_bench_vm.sh": "100755:9aae850c78cadb33b3edcc2d61e99924a3728753",
+            "docs/perf/flow-control.md": "100644:b26c56018cd5bfc4943389a6a54fcc4bcfa3723c"
+          },
+          "by": "review",
+          "commit": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "criteria": "6514629604a24b3e",
+          "diffs": {
+            "bench/flow_bench.cc": "a5367707107f54b1",
+            "bench/flow_bench.cmake": "4070865b18f340b3",
+            "bench/flow_bench_vm.sh": "c50031c1d5f67042",
+            "docs/perf/flow-control.md": "c20a56c443dbee8b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "5313d8fab50b4ad74a4301d09f9b9eb048622fbd",
+          "reviewed": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
       "branch": "quest/xapiand/consensus-flow-bench",
@@ -3754,18 +3819,52 @@
         "test/flow_bench*",
         "docs/perf/flow*"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
-      "landed": [],
-      "lenses": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T23:27:21",
+          "commit": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "criteria": {
+            "A1": "261118-114928-9bef7d (passed at e7a453b78635; only merges from main since)",
+            "A2": "261118-114946-13cf10 (passed at e7a453b78635; only merges from main since)",
+            "A3": "261118-135806-e23693 (passed at e7a453b78635; only merges from main since)",
+            "A4": "`docs/perf/flow-control.md` in consensus (A1, A2, A3 rows, consensus:afea684)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d7091f66de9d08f2d16ead6c40ac978d423f4d82",
+              "docs": [
+                "docs/perf/flow-control.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-222741-9273aa",
+              "level": "light",
+              "seconds": 267.4,
+              "state": "done",
+              "what": "consensus-flow-bench check build-test at d7091f66de9d"
+            }
+          ],
+          "final": true,
+          "from": "84608ccb0f885d6b689f4db895e30a72154d0054",
+          "reason": "",
+          "tested": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T04:02:20",
-      "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
+      "updated": "2026-11-18T23:27:23",
+      "worktree": ""
     },
     "consensus-hello-limits": {
       "accepted": {},
@@ -4163,21 +4262,52 @@
         "src/node.h",
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T00:35:05",
+          "commit": "adda36214202cbb0f435dcf2c18da462d23906af",
+          "criteria": {
+            "A1": "261118-223638-8642ea; fails without: 261118-035634-731f0f, 261118-035636-f2de7d, 261118-035637-6b1e21",
+            "A2": "261119-002802-225819",
+            "A3": "261118-223641-404662",
+            "A4": "261118-223636-e68395; fails without: 261118-223632-217f42"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "4517f42e45d7e82f89f689c17c688ad4b9a370be",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-223641-404662",
+              "level": "light",
+              "seconds": 823.7,
+              "state": "done",
+              "what": "coverage-areas check suite at 4517f42e45d7"
+            }
+          ],
+          "final": true,
+          "from": "23970839156430f627c6dede6f1f296e5faccd17",
+          "reason": "",
+          "tested": "5ab69c838b7750b65dec48325feca8d78a100d67"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T16:45:12",
+      "updated": "2026-11-19T00:35:14",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "coverage-core-main": {
       "accepted": {},
       "after": [],
+      "base": "adef0420aa3b1ab36d08d17cbcd7dc72a7638089",
+      "branch": "quest/xapiand/coverage-core-main",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4200,13 +4330,16 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
-      "updated": "2026-11-18T16:36:45"
+      "updated": "2026-11-19T00:35:42",
+      "worktree": "../Xapiand-wt/xapiand/coverage-core-main"
     },
     "coverage-core-small": {
       "accepted": {},
       "after": [],
+      "base": "a465288dcff2a6ccc293d389c4c4b80fe1e7671d",
+      "branch": "quest/xapiand/coverage-core-small",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4228,13 +4361,16 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "cast, datetime_msgpack, endpoint and query_dsl reach T13 coverage",
-      "updated": "2026-11-18T16:36:37"
+      "updated": "2026-11-19T00:35:34",
+      "worktree": "../Xapiand-wt/xapiand/coverage-core-small"
     },
     "coverage-database": {
       "accepted": {},
       "after": [],
+      "base": "76ff9a364f946ca95ac34bf09fcf6ac262070d5f",
+      "branch": "quest/xapiand/coverage-database",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4257,13 +4393,16 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "database (schema.cc) reaches T13 coverage",
-      "updated": "2026-11-18T16:36:42"
+      "updated": "2026-11-19T00:35:37",
+      "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
     "coverage-multivalue": {
       "accepted": {},
       "after": [],
+      "base": "963ebca0f49ba33aaaa17481e4ec4961a91797af",
+      "branch": "quest/xapiand/coverage-multivalue",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4286,13 +4425,16 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "multivalue and reserved reach T13 coverage",
-      "updated": "2026-11-18T16:36:34"
+      "updated": "2026-11-19T00:35:40",
+      "worktree": "../Xapiand-wt/xapiand/coverage-multivalue"
     },
     "coverage-server": {
       "accepted": {},
       "after": [],
+      "base": "454950586ef45aaa67bf80c1eca803e654584716",
+      "branch": "quest/xapiand/coverage-server",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4315,9 +4457,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "server (search_views) reaches T13 coverage through E2E drivers",
-      "updated": "2026-11-18T16:36:40"
+      "updated": "2026-11-19T00:35:45",
+      "worktree": "../Xapiand-wt/xapiand/coverage-server"
     },
     "cr1-fix": {
       "accepted": {},
@@ -7391,8 +7534,11 @@
     "geo-correctness": {
       "accepted": {},
       "after": [
-        "coverage-areas"
+        "coverage-areas",
+        "htm-edge-points"
       ],
+      "base": "3a7c8b1ed09044c9dd5276408ba7ee19403ad3e7",
+      "branch": "quest/xapiand/geo-correctness",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7405,7 +7551,9 @@
       "files": [
         "src/geospatial/**",
         "tests/test_geo*.cc",
-        "docs/design/geo*"
+        "docs/design/geo*",
+        "tests/test_coverage_geospatial.cc",
+        "CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -7414,9 +7562,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-18T22:28:19"
+      "updated": "2026-11-19T00:42:46",
+      "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
       "accepted": {},
@@ -7991,6 +8140,118 @@
       "status": "landed",
       "title": "HEAD carries no body; Allow lists the routed verbs",
       "updated": "2026-11-11T00:23:06",
+      "worktree": ""
+    },
+    "htm-edge-points": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T00:42:09",
+          "base": "cadec57954b838bd0428cfc151e925689d8f2f31",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:1c1e18f810c1b7d1c02aa7fba32813559b9443c1",
+            "CHANGELOG.md": "100644:757f4e801e03986b24d12c780891736b123dace5",
+            "CMakeLists.txt": "100644:b751d84d8a3b61efcb1831e20a5139637be1a362",
+            "README.md": "100644:67ea6d8d2d2015bff437433b6c15bc198db88791",
+            "htm.cc": "100644:dc5b5a8c307017975efe779640838df7bb7015d5",
+            "test/diff_test.cc": "100644:c5c20ea0b2c9af0d9359c7453372808dd38c6236",
+            "test/edge_test.cc": "100644:11332b838850c52c13de04b1de80495f8585459b",
+            "test/frozen.h": "100644:12fec58eaae4f8b65c71a7bd504449ac0dbdc874",
+            "test/golden.h": "100644:49354d53190e657290206249eade0107398c82d5",
+            "test/ieee.h": "100644:d83269aacbe52b02d6e70c65e3957c07d721462b",
+            "test/test.cc": "100644:caf0f52b256790c2cd076e1cd98a4a229a215668"
+          },
+          "by": "review",
+          "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "criteria": "7b182fc62236d9ad",
+          "diffs": {
+            "ARCHITECTURE.md": "249044e29993004d",
+            "CHANGELOG.md": "a30344ae68251b44",
+            "CMakeLists.txt": "a5c86c673fa715d5",
+            "README.md": "1030fbcc624e3383",
+            "htm.cc": "17821ccebe0ea7c4",
+            "test/diff_test.cc": "e41f489b6592b49f",
+            "test/edge_test.cc": "51c6d209be665752",
+            "test/frozen.h": "bbb9ca267982adee",
+            "test/golden.h": "19ff1dc6075a4610",
+            "test/ieee.h": "ba1bacbff662fa60",
+            "test/test.cc": "d68b4e644fed31c1"
+          },
+          "findings": {},
+          "note": "",
+          "review": "4363013a12d1d468d028ebd8a34e6163ba9d868f",
+          "reviewed": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "cadec57954b838bd0428cfc151e925689d8f2f31",
+      "branch": "quest/xapiand/htm-edge-points",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/**",
+        "src/**",
+        "test/**",
+        "tests/**",
+        "docs/**",
+        "CHANGELOG.md",
+        "README.md",
+        "htm.cc",
+        "htm.h",
+        "CMakeLists.txt",
+        "ARCHITECTURE.md",
+        "test.cc"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T00:42:16",
+          "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "criteria": {
+            "A1": "261119-003445-380f20; fails without: 261118-233616-40d68a, 261118-235238-6f0465, 261118-235304-011c3c, 261118-235815-bffda3, 261118-235817-c86c33",
+            "A2": "261119-003448-692923",
+            "A3": "[artifact] htm test/golden.h: 238 of 396 ids changed (a re-id at head changes 0), and the fusing probes 19 of 48. CHANGELOG.md 2026-11-18 says which ids change and to reindex all stored geo points",
+            "A4": "261119-003450-7f1ba0, 261119-003449-9282f5",
+            "A5": "261119-003445-380f20; fails without: 261119-003446-097d2d"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-003450-7f1ba0",
+              "level": "light",
+              "seconds": 10.2,
+              "state": "done",
+              "what": "htm-edge-points check suite at 0c09a0283a50"
+            }
+          ],
+          "final": true,
+          "from": "cadec57954b838bd0428cfc151e925689d8f2f31",
+          "reason": "",
+          "tested": "0c09a0283a507b2cf08975a7c8572d95ece60b68"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../htm",
+      "risk": "high",
+      "status": "landed",
+      "title": "A point on a root-mesh edge gets its own trixel id",
+      "updated": "2026-11-19T00:42:20",
       "worktree": ""
     },
     "http-cancel-race": {
@@ -9434,7 +9695,42 @@
       "updated": "2026-11-08T15:40:31"
     },
     "logger-exit-lifetime": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T22:35:02",
+          "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:4fc883897fa6cd0f3294dd6974a98ef33a30f096",
+            "CMakeLists.txt": "100644:6ff1fb7d87b481c0228e65693303cd8927183b6e",
+            "docs/API.md": "100644:bbada675a4e9efea85cc549ceb6e9d30553be75f",
+            "docs/exit-lifetime.md": "100644:76916d4f986fbc8d4b3ea083cc3e44852e56f9de",
+            "logger.cc": "100644:1dcdfa57718e01d4aca4df5ef1d38f9615226711",
+            "logger.h": "100644:0fe9611f42cb333f2974843e7eaa5676adf9cbd1",
+            "test/exception.cc": "100644:12fcb3efe74c05668a458d4c79574133ed3c1312",
+            "test/exit.cc": "100644:915ff5dce3ed0b8f283de48daf58617aeee32f4d",
+            "test/queue.cc": "100644:0c381b10e7228a1a1af61198deaf3315251b1e2d"
+          },
+          "by": "review",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": "9a7ff1643648af3d",
+          "diffs": {
+            "ARCHITECTURE.md": "6dbdaa0c9bbc80ce",
+            "CMakeLists.txt": "71cd5dff8e29c8c3",
+            "docs/API.md": "2aa6d61335d6fda2",
+            "docs/exit-lifetime.md": "5f2ac4860adc3e03",
+            "logger.cc": "b0c3773b46a1174a",
+            "logger.h": "4d7d7c5fabbb57ca",
+            "test/exception.cc": "7abd90ee538177b3",
+            "test/exit.cc": "39f2f3fc95cbd1a5",
+            "test/queue.cc": "b461ba9726ade5e7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "7aaf4db7baf7a5598a67155aed00186eac3f96a2",
+          "reviewed": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
       "branch": "quest/xapiand/logger-exit-lifetime",
@@ -9456,18 +9752,48 @@
         "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/logger-exit-lifetime",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T22:35:07",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": {
+            "A1": "docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c)",
+            "A2": "261118-214918-1cd38b, 261118-214918-35cf03; fails without: 261118-170114-f2778f, 261118-170117-86f821, 261118-171555-da551f, 261118-171557-af5502, 261118-211550-396b63",
+            "A3": "261118-214915-84fc5a, 261118-214917-50faa0, 261118-214916-ce95b6, 261118-214917-0177e9; fails without: 261118-201716-0c19dd, 261118-202723-694dbd",
+            "A4": "261118-214915-0e2ec6, 261118-214922-5150a7; fails without: 261118-211530-b2be3e, 261118-211531-a0d2cc",
+            "A5": "261118-214918-7f4e7e, 261118-214919-1e22af, 261118-214920-4695f1, 261118-214920-31f08e, 261118-214920-9f753a; fails without: 261118-181931-f6bb3e, 261118-181933-1d17de"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure --stop-on-failure",
+              "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-214915-0e2ec6",
+              "level": "light",
+              "seconds": 67.8,
+              "state": "done",
+              "what": "logger-exit-lifetime check suite at 455cad0a185b"
+            }
+          ],
+          "final": true,
+          "from": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "reason": "",
+          "tested": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T20:50:12",
+      "updated": "2026-11-18T22:35:16",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
@@ -20530,6 +20856,8 @@
       "after": [
         "coverage-areas"
       ],
+      "base": "ba35940e12c838d802b918bf60a046adb202f0b2",
+      "branch": "quest/xapiand/serialize-validation",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -20544,7 +20872,13 @@
         "src/serialize.h",
         "src/database/schema.cc",
         "tests/test_serialise*.cc",
-        "tests/test_serialize_validation*"
+        "tests/test_serialize_validation*",
+        "src/cast.cc",
+        "src/cast.h",
+        "src/aggregations/aggregations.cc",
+        "docs/mechanisms/geo-exact-term.md",
+        "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md",
+        "tests/test_coverage_serialize.cc"
       ],
       "history": [
         {
@@ -20573,9 +20907,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T22:28:21"
+      "updated": "2026-11-19T00:35:48",
+      "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "sha256-cl-10": {
       "accepted": {},
