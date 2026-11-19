@@ -21664,7 +21664,48 @@
       "updated": "2026-11-08T15:41:25"
     },
     "stemmer-names": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T19:54:13",
+          "base": "f722ff9392f7bc82306ca301cf4aeb188680dc5d",
+          "blobs": {
+            "src/database/schema.cc": "100644:769fcdb8416cd4aee943ab47fd495e77ba43c589",
+            "tests/test_stem_parity.sh": "100755:532eeb32e7d45df3dd591de2ecb5833a249e5c19",
+            "tests/test_strict_text.cc": "100644:7693e95793b12150d9bba8af238842619b339758"
+          },
+          "by": "review",
+          "commit": "0ad80010f029c9d8e5cea234ac1918e870b2a6e5",
+          "criteria": "0589629ce9a0720f",
+          "diffs": {
+            "src/database/schema.cc": "659b4a83a0cd67a8",
+            "tests/test_stem_parity.sh": "8f865d9a099d6faf",
+            "tests/test_strict_text.cc": "801f4245b9f581ec"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                  "commit": "18511f3282d521927e7d2f2b6199572a22f15c65",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261118-182339-5bd2c7",
+                  "level": "light",
+                  "seconds": 535.7,
+                  "state": "done",
+                  "what": "stemmer-names check build-test at 18511f3282d5"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "df28deedbd6bc82419389dc272068e7fd297c456",
+          "reviewed": "7d4df712a6964623cb86bc3b9307d0b87e0502e4",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "9ef3466047b91a9b00623463a25e80b194d07c18",
       "branch": "quest/xapiand/stemmer-names",
@@ -21711,7 +21752,9 @@
         }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
@@ -21719,7 +21762,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T17:54:21",
+      "updated": "2026-11-18T19:54:13",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
