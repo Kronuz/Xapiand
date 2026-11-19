@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs 261119-041414-396553
+State: waiting on jobs 261119-044115-72c517 (coverage) and the A3 verify jobs (campaign verify --for A3)
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,8 @@ Written, not yet run: tests/test_coverage_main.cc (includes src/main.cc under `#
 
 ## Next
 
-0. 2fdee2 (at f84681f1a): ctest green, E2E 89 checks 4 failed (log stamps carry a leading glyph, ISO uses a space + ms, third SIGINT ends node before it logs); fixed at 83c4df6f9, rerun 396553. 2fdee2 numbers: main.cc 588/743 lines 79.1%, 282/465 branches 60.6%; manager.cc 665/835 79.6%, 225/428 52.6% (targets 90/80: below, more scenarios needed after 396553; read coverage-uncovered.txt).
+0. 396553 passed (E2E 89/89, main.cc 79.1% lines/60.6% br, manager.cc 79.6%/52.8%). Added at 737496e23: more open-files cases, fd-exhausted SIGTERM, bad restores; rerun 72c517. Left (fault injection/root/tty/abandoned shutdown): demote 507-543, setuid fail, tty branches, backtrace handler (death by signal skips the profile flush), host_address fallbacks, shutdown abandonment 1083-1103/1138-1152/1224-1240.
+   Earlier: 2fdee2 (at f84681f1a): ctest green, E2E 89 checks 4 failed (log stamps carry a leading glyph, ISO uses a space + ms, third SIGINT ends node before it logs); fixed at 83c4df6f9, rerun 396553. 2fdee2 numbers: main.cc 588/743 lines 79.1%, 282/465 branches 60.6%; manager.cc 665/835 79.6%, 225/428 52.6% (targets 90/80: below, more scenarios needed after 396553; read coverage-uncovered.txt).
    Earlier: e1a2b8 failed (ctest: the 2 open-files cases; E2E: 10 of 86 checks). Fixed at f84681f1a: open-files cases pinned to the real SystemExit(EX_OSFILE) (3 fds open, max 300 / 1024); driver expects EX_SOFTWARE (70) for a name mismatch, -v -v for INFO texts, 20x PUT statuses, a refused 300 limit, daemon waited for "Ready to Rock". Rerun 2fdee2 (coverage ctest+main, no NOBUILD: the test changed). Then read main.log, per-file numbers, `campaign verify coverage-core-main --for A3`, Evidence table.
 
 1. Read 82ceb7: fix compile errors or failed checks in test_coverage_main.
