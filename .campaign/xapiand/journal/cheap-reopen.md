@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261119-112058-686d62 261119-112059-d1220b 261119-112102-8426f3
+State: waiting on jobs 261119-112059-d1220b 261119-112102-8426f3
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,6 +14,9 @@ keeps both: the wide-search pin hold and the per-index budget checkpoint first, 
 (`when_all`, D3), as the design note says. Syntax check (`.scratch/syntax.sh`, light hold) of handler.cc,
 test_node.cc and test_pool.cc passed. Queued at 0dc08322a: A1 profile 261119-112058-686d62 (rerun of 060438-5fb87b),
 A2 pair 261119-112059-d1220b (rerun of 184757-7f0046, base f722ff939), suite 261119-112102-8426f3.
+A1 profile 112058-686d62 passed (strict, beside 2 light holds: gate p50 545 ms, 12,500 of 12,500, peak pinned
+100, sample in its out/sample.txt). After one 600 s wait the A2 pair is queued for the exclusive slot and the suite
+is running.
 
 For the correctness reviewer, probe:
 - Cache staleness after a write: an index written (or replaced) while evicted, then reopened, serves its last
@@ -120,7 +123,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
+| A1 | `docs/design/cheap-reopen.md` (profile 261119-112058-686d62 at 0dc08322a; breakdown from 261118-060438-5fb87b at main; H1 060440-baf657, H2 060951-f40471) |
 | A2 | H5 261119-033144-b85265: best p16+h5 251/249 vs 122/124 ms, 2.0x, head 2.28x (not met); H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
 | A3 | suite 261118-184756-bf6036 at 3b8d41c39; earlier 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
 | A4 | suite 261118-184756-bf6036; CI green at 937a5e94e (44447325291, 44447325350, 44447325397) |
