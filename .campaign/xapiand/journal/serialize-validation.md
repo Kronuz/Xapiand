@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs 41ab85
+State: waiting on jobs 41ab85 01e205
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,13 +32,13 @@ assert.txt). geospatial-type.md runs `UPDATE /bank/6` moving _id 6 to (-74.01042
 exact point answers _id 6, 156, 768, 891. My doc said 156, 768, 891 (counted from accounts.ndjson alone). Not on master:
 master's docs say 10 (the bug). Fixed in Xapiand:72be2396c (docs + geo-exact-term.md), which also flips the pins in
 tests/test_coverage_serialize.cc that master brought in (it pinned the bugs this quest fixes). Job 41ab85 runs that test
-plus the seven serialize_validation tests at the merged head; then `campaign verify`.
+plus the seven serialize_validation tests at Xapiand:72be2396c; `campaign verify` suite job 01e205 (A6) queued at the same head.
 Stale jobs 261119-002707-c3d713, 261119-003619-41690e (review probes) failed/timed out before any review: not mine to
 rerun; the reviewer's.
 
 ## Next
 
-1. Read jobs e9f90f 367e06 859ec0 f13d5c f41436 (7f59ed, b9fd21, 222d40 done: failed without their fixes, as they must); fill Evidence; fix what fails; then ready for review.
+1. Read jobs 41ab85 (coverage_serialize pins + the seven tests) and 01e205 (suite); fix what fails (the pin for "uuid"/"date" as unknown words in test_coverage_serialize's get_field_type loop is a guess: refused count 9 is unverified); older head jobs f13d5c e9f90f 367e06 859ec0 f41436 are at Xapiand:ba766afee, superseded by 41ab85/01e205 but their fails-without runs stand; fill Evidence at the new head; then ready for review.
 2. The lead pushes the branch for CI (contributors never push).
 3. After coverage-areas lands and is merged here: flip its pins (lead): tests/test_coverage_serialize.cc lines 558-562,
    642-643, 704-705 expect `_date` and `_multiconvex` refused; `_date` is now served, `_multiconvex` serializes once
