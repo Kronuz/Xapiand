@@ -197,6 +197,8 @@ void test_toggle_hooks() {
 	CHECK(contains(disabled, "Info hooks disabled!"));
 }
 
+void lower_limit(rlim_t to);
+
 void test_signal_handler_without_a_manager() {
 	REQUIRE(!XapiandManager::manager());
 	for (int signum : {SIGUSR1, SIGWINCH, SIGCHLD}) {
@@ -205,6 +207,8 @@ void test_signal_handler_without_a_manager() {
 		CHECK(contains(text, "Signal received: " + signal_name(signum)));
 		CHECK_EQ(errno, EBADF);  // the handler restores errno
 	}
+	// With no descriptor left to open /dev/null, SIGTERM ends the process with EX_OSFILE.
+	CHECK_EQ(in_child([] { lower_limit(3); sig_handler(SIGTERM); }), static_cast<int>(EX_OSFILE));
 	// With no manager to hand it to, SIGTERM and SIGINT end the process with EX_SOFTWARE.
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGTERM); }); }), static_cast<int>(EX_SOFTWARE));
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGINT); }); }), static_cast<int>(EX_SOFTWARE));
@@ -403,6 +407,16 @@ void expect_refusal(ssize_t limit) {
 	CHECK(false);
 }
 
+// adjustOpenFilesLimit for a case that must not refuse: a refusal ends the child with status 2.
+void adjust_or_report() {
+	try {
+		adjustOpenFilesLimit();
+	} catch (const SystemExit& exc) {
+		std::fprintf(stderr, "adjustOpenFilesLimit threw SystemExit(%d)\n", exc.code);
+		std::exit(2);
+	}
+}
+
 void test_open_files_limit() {
 	// An explicit limit too low for even one database and one client ends the start with EX_OSFILE.
 	CHECK_EQ(in_child([] {
@@ -446,6 +460,45 @@ void test_open_files_limit() {
 		main_opts.max_clients = 1000;
 		expect_refusal(1024);
 	}), 0);
+
+	// Explicit limits the process can only lower, and a request above them: the raise fails and the limit it gets is
+	// reported, and the pool and the clients still fit.
+	CHECK_EQ(in_child([] {
+		lower_limit(512);
+		main_opts.max_files = 5000;
+		main_opts.database_pool_size = 2;
+		main_opts.max_clients = 2;
+		adjust_or_report();
+		CHECK_LE(main_opts.max_files, static_cast<ssize_t>(512));
+		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>(2));
+		CHECK_EQ(main_opts.max_clients, static_cast<ssize_t>(2));
+	}), 0);
+
+	// An explicit limit below the current one is applied.
+	CHECK_EQ(in_child([] {
+		main_opts.max_files = 400;
+		main_opts.database_pool_size = 2;
+		main_opts.max_clients = 2;
+		adjust_or_report();
+		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(400));
+		struct rlimit rl;
+		::getrlimit(RLIMIT_NOFILE, &rl);
+		CHECK_EQ(rl.rlim_cur, static_cast<rlim_t>(400));
+	}), 0);
+
+	// A hard limit between the minimum and the recommended number: the start goes on with a smaller pool and clients.
+	for (rlim_t limit : {2000, 3000, 4000}) {
+		CHECK_EQ(in_child([limit] {
+			lower_limit(limit);
+			main_opts.max_files = 0;
+			main_opts.database_pool_size = 200;
+			main_opts.max_clients = 1000;
+			adjust_or_report();
+			CHECK_LE(main_opts.max_files, static_cast<ssize_t>(limit));
+			CHECK_LE(main_opts.database_pool_size, static_cast<ssize_t>(200));
+			CHECK_LE(main_opts.max_clients, static_cast<ssize_t>(1000));
+		}), 0);
+	}
 }
 
 }  // namespace

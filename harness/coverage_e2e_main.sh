@@ -253,6 +253,11 @@ run_to "$W/e3.log" 60 "$BIN" -D "$D" --dump ../outside -o "$W/e3.mp" --color nev
 expect_eq "--dump of an index outside the data directory is EX_USAGE" "$RC" 64
 expect_log "and says so" "$W/e3.log" "outside the data directory"
 run_to "$W/e4.log" 60 "$BIN" -D "$D" --dump nosuchindex -o "$W/e4.mp" --color never
+echo "not a dump" > "$W/bad.mp"
+run_to "$W/e5.log" 60 "$BIN" -D "$W/restored5" --restore idx -i "$W/bad.mp" --color never
+[ "$RC" != 0 ] && [ "$RC" != 124 ] && pass "--restore of a file that is not a dump fails (status $RC)" || fail "--restore of garbage ended with status $RC"
+run_to "$W/e6.log" 60 "$BIN" -D "$W/restored6" --restore ../outside -i "$W/idx.mp" --color never
+expect_eq "--restore of an index outside the data directory is EX_USAGE" "$RC" 64
 echo "  INFO  --dump of an index that does not exist ends with status $RC"
 
 echo "== [10] colors and log formats (main: main)"
