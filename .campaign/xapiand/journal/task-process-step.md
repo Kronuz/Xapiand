@@ -13,7 +13,7 @@ Done. Code branch quest/xapiand/task-process-step at task-wt/xapiand/task-proces
 
 ## Next
 
-1. Review and land. The lead adds the process.hh lines to AGENTS.md and docs/API.md (outside the file set).
+1. Review and land.
 
 ## Blocked on
 
@@ -34,5 +34,5 @@ Source: Detent src/detent_cli/daemon.cc and daemon.hh, last changed at Detent:27
 
 ## Rulings I made
 
-- AGENTS.md and docs/API.md entries reverted: outside the file set.
+- AGENTS.md and docs/API.md entries re-added at e68d46f after the lead widened the file set; suite 261119-135206-202326 (reused: same tree as 1cc2223).
 - Mutants lived on local branches (deleted); their commits are the ones named by the jobs.
