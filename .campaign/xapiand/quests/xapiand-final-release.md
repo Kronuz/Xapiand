@@ -1,6 +1,6 @@
 # xapiand-final-release: The final Xapian-only Xapiand release
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status xapiand-final-release`.
 
 ## Outcome
