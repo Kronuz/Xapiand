@@ -913,6 +913,20 @@
         ]
       },
       "text": "cluster-vm-tier landed: unlocks cluster-net-setup"
+    },
+    {
+      "at": "2026-11-18T20:36:12",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane and group-core pin consensus by hash and take transport/driver changes at their planned repins",
+      "id": "msg-119",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-3s-class"
+      },
+      "text": "detent:groups-upload-3s-class started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -2794,8 +2808,36 @@
       "files": [
         "harness/cluster/**"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T20:33:19",
+          "commit": "f01638eb12acd76d30fe3bf93c5e4e45e0075d37",
+          "criteria": {
+            "A1": "261118-194500-d0da34; fails without: 261118-194233-3dc361",
+            "A2": "261118-202126-c9a5a2",
+            "A3": "261118-194512-0404ca"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "3a0187e2b146fc076452e5715c5c492711da1c34",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-194512-0404ca",
+              "level": "light",
+              "seconds": 657.6,
+              "state": "done",
+              "what": "cluster-net-setup check suite at 3a0187e2b146"
+            }
+          ],
+          "final": true,
+          "from": "cfa67193eb30b56c7159223b983a4c2400e1597f",
+          "reason": "",
+          "tested": "9749aa48a69339b728939fad748cb9e1d503f076"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "cluster-vm-tier"
@@ -2803,10 +2845,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "VM net setup is all-or-nothing; IPv6 obeys partitions and shapes",
-      "updated": "2026-11-18T19:37:07",
-      "worktree": "../Xapiand-wt/xapiand/cluster-net-setup"
+      "updated": "2026-11-18T20:33:26",
+      "worktree": ""
     },
     "cluster-vm-tier": {
       "accepted": {
@@ -7330,6 +7372,37 @@
       "title": "Gate verification and safety fixes",
       "updated": "2026-11-08T13:25:33"
     },
+    "geo-correctness": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/geospatial/**",
+        "tests/test_coverage_geospatial.cc",
+        "tests/test_geo*.cc",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
+      "updated": "2026-11-18T19:58:54"
+    },
     "github-triage": {
       "accepted": {},
       "after": [],
@@ -7994,7 +8067,38 @@
       "worktree": ""
     },
     "http-halfclose": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T20:31:53",
+          "base": "2671470a488e6fe45148146e98cf3b264308ac82",
+          "blobs": {
+            "AGENTS.md": "100644:ece541922e35097a450c6c17e9512b352eef578a",
+            "CHANGELOG.md": "100644:9e822b5bbb498f4204e822c0504208966345f104",
+            "docs/mechanisms/coroutine-handlers.md": "100644:ebd4c2be8d0a794e259f73ff53f199e181000d6c",
+            "http_asio.h": "100644:560b3935f2eac4cfddd4d959590ade9a046a7509",
+            "http_message.h": "100644:13fecd7b9588202073f3c430b109a40192010235",
+            "test/coroutine_test.cc": "100644:afd6f81e128871dc05f762e4e0cafbecbdaf5ae1",
+            "test/readahead_test.cc": "100644:cf6ca5f36ded3272d3c0f5d70dcaac7bec2863ed"
+          },
+          "by": "review",
+          "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+          "criteria": "fba62ac3d93f5546",
+          "diffs": {
+            "AGENTS.md": "8f5fb43df28bf6a1",
+            "CHANGELOG.md": "68278fceafb872ed",
+            "docs/mechanisms/coroutine-handlers.md": "053ea75cc3c4aaf6",
+            "http_asio.h": "0ce81c4f52db299d",
+            "http_message.h": "e4f98e4c52a8665e",
+            "test/coroutine_test.cc": "76229c02a8a93b67",
+            "test/readahead_test.cc": "1343d7256cec51da"
+          },
+          "findings": {},
+          "note": "",
+          "review": "04cf8170a2260c9bf41fa628c0db907acebad6fa",
+          "reviewed": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "2671470a488e6fe45148146e98cf3b264308ac82",
       "branch": "quest/xapiand/http-halfclose",
@@ -8017,20 +8121,51 @@
         "AGENTS.md",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-halfclose",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T20:32:06",
+          "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+          "criteria": {
+            "A1": "261118-201311-bc538f; fails without: 261118-180447-06d623",
+            "A2": "261118-201311-bc538f; fails without: 261118-201313-8f56ef",
+            "A3": "261118-201311-bc538f; fails without: 261118-180449-60722d",
+            "A4": "261118-201316-1f8ff0",
+            "A5": "261118-201311-bc538f",
+            "A6": "[artifact] `docs/mechanisms/coroutine-handlers.md`: \"One rule reads the socket watch: a read error other than EOF (a reset) is a disconnect, and EOF\" (also `http_asio.h`: \"One rule reads it: a read error other than EOF (a reset) is a\"; `AGENTS.md`: \"One rule reads it: a read error other than EOF (a reset, not our own cancellation)\"), all at http:ec273dd"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure",
+              "commit": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-201311-bc538f",
+              "level": "light",
+              "seconds": 42.1,
+              "state": "done",
+              "what": "http-halfclose check suite at ec273dd4d37e"
+            }
+          ],
+          "final": true,
+          "from": "2671470a488e6fe45148146e98cf3b264308ac82",
+          "reason": "",
+          "tested": "ec273dd4d37e46a4c206c8307200eab35ab5e448"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T18:09:26",
-      "worktree": "../http-wt/xapiand/http-halfclose"
+      "updated": "2026-11-18T20:32:09",
+      "worktree": ""
     },
     "http-lane": {
       "accepted": {},
@@ -8125,6 +8260,38 @@
       "status": "landed",
       "title": "http, reactor, http-log and prism without the offload path (L3)",
       "updated": "2026-11-08T15:40:22"
+    },
+    "http-pin-halfclose": {
+      "accepted": {},
+      "after": [
+        "coverage-areas"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "harness/wide_search_halfclose.py",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "http-halfclose"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand takes http's half-close fix",
+      "updated": "2026-11-18T20:32:34"
     },
     "hunt-lua-fetch": {
       "accepted": {},
@@ -20343,6 +20510,38 @@
       "updated": "2026-11-16T08:06:35",
       "worktree": ""
     },
+    "serialize-validation": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/serialize.cc",
+        "src/serialize.h",
+        "src/database/schema.cc",
+        "tests/test_coverage_serialize.cc",
+        "tests/test_serialise*.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Negative text never becomes a positive number; unknown type names are refused",
+      "updated": "2026-11-18T20:38:08"
+    },
     "sha256-cl-10": {
       "accepted": {},
       "after": [],
@@ -21664,7 +21863,48 @@
       "updated": "2026-11-08T15:41:25"
     },
     "stemmer-names": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T19:54:13",
+          "base": "f722ff9392f7bc82306ca301cf4aeb188680dc5d",
+          "blobs": {
+            "src/database/schema.cc": "100644:769fcdb8416cd4aee943ab47fd495e77ba43c589",
+            "tests/test_stem_parity.sh": "100755:532eeb32e7d45df3dd591de2ecb5833a249e5c19",
+            "tests/test_strict_text.cc": "100644:7693e95793b12150d9bba8af238842619b339758"
+          },
+          "by": "review",
+          "commit": "0ad80010f029c9d8e5cea234ac1918e870b2a6e5",
+          "criteria": "0589629ce9a0720f",
+          "diffs": {
+            "src/database/schema.cc": "659b4a83a0cd67a8",
+            "tests/test_stem_parity.sh": "8f865d9a099d6faf",
+            "tests/test_strict_text.cc": "801f4245b9f581ec"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                  "commit": "18511f3282d521927e7d2f2b6199572a22f15c65",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261118-182339-5bd2c7",
+                  "level": "light",
+                  "seconds": 535.7,
+                  "state": "done",
+                  "what": "stemmer-names check build-test at 18511f3282d5"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "df28deedbd6bc82419389dc272068e7fd297c456",
+          "reviewed": "7d4df712a6964623cb86bc3b9307d0b87e0502e4",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "9ef3466047b91a9b00623463a25e80b194d07c18",
       "branch": "quest/xapiand/stemmer-names",
@@ -21711,7 +21951,9 @@
         }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
@@ -21719,7 +21961,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T17:54:21",
+      "updated": "2026-11-18T19:54:13",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {

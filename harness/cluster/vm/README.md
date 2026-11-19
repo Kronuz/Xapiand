@@ -50,12 +50,26 @@ mounts the state the cut leaves at a mark or entry; faultlab's `docs/mechanisms/
 log and replay mechanics.
 
 **Network faults.** `guest/net.py` builds faultlab netlab's `Shape` into the guest's `l2` egress: a
-prio qdisc with one band per peer, peer j's address sent by a u32 filter to a band whose netem carries
-that direction's delay, loss, reorder, duplicate and rate, while multicast stays unshaped. A partition
-adds the peer's address to an nftables set whose input rule drops it, as netlab drops where a packet
-arrives, so TCP retransmits after heal; run it on both guests to cut both directions.
-`tools/vm/cluster.sh netcheck` proves a 50 ms shape on 1 to 2 and not on 1 to 3, and a partition of
-1 and 2 that leaves 1 and 3 talking until heal.
+prio qdisc with one band per peer, a frame to peer j's MAC (`52:54:00:87:01:j`) sent by a u32 filter to
+a band whose netem carries that direction's delay, loss, reorder, duplicate and rate. A partition adds
+the peer's MAC to an nftables set whose input rule (`ether saddr`) drops it, as netlab drops where a
+packet arrives, so TCP retransmits after heal; run it on both guests to cut both directions. Peers are
+matched by MAC, so IPv4, IPv6 (link-local included) and every other protocol obey. The nftables table
+is built last and marks a complete setup: a command that finds it missing clears the guest's tc and
+nft state and builds it all again, so a setup stopped partway is redone, never skipped. `heal` of a
+peer that is not cut exits 0.
+`tools/vm/cluster.sh netcheck` proves, over IPv4 and IPv6, a 50 ms shape on 1 to 2 and not on 1 to 3,
+and a partition of 1 and 2 that leaves 1 and 3 and 2 and 3 talking until heal. `guest/net_test.py`
+runs on any host: it checks every class and nft block the commands name, and replays interrupted
+setups against a model kernel.
+
+Known limits. Broadcast and multicast frames stay in the unshaped band, so a shape's loss, reorder and
+duplicate never touch discovery multicast; a partition does cut it, on the guest that has the cut. The
+L2's hub relays in Python and floods group, broadcast and unknown-destination frames to every link, as a
+switch without IGMP snooping does; a burst of 5,000 datagrams from three guests at once lost 2 to 26%
+in the receivers' socket buffers and nothing in the hub (review of 2026-11-18). The guardian parks the
+run when the hub thread dies. A run whose `up` was killed before the guardian wrote `state.json` loses
+its overlays at the next `sweep`, once its owner is dead.
 
 ```sh
 tools/vm/cluster.sh ssh 1 sudo python3 -I /opt/cluster/guest/net.py shape 2 --ms 50 --loss 0.01
