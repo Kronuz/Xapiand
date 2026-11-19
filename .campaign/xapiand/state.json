@@ -8208,20 +8208,50 @@
         "ARCHITECTURE.md",
         "test.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/htm-edge-points",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T00:42:16",
+          "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "criteria": {
+            "A1": "261119-003445-380f20; fails without: 261118-233616-40d68a, 261118-235238-6f0465, 261118-235304-011c3c, 261118-235815-bffda3, 261118-235817-c86c33",
+            "A2": "261119-003448-692923",
+            "A3": "[artifact] htm test/golden.h: 238 of 396 ids changed (a re-id at head changes 0), and the fusing probes 19 of 48. CHANGELOG.md 2026-11-18 says which ids change and to reindex all stored geo points",
+            "A4": "261119-003450-7f1ba0, 261119-003449-9282f5",
+            "A5": "261119-003445-380f20; fails without: 261119-003446-097d2d"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-003450-7f1ba0",
+              "level": "light",
+              "seconds": 10.2,
+              "state": "done",
+              "what": "htm-edge-points check suite at 0c09a0283a50"
+            }
+          ],
+          "final": true,
+          "from": "cadec57954b838bd0428cfc151e925689d8f2f31",
+          "reason": "",
+          "tested": "0c09a0283a507b2cf08975a7c8572d95ece60b68"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../htm",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A point on a root-mesh edge gets its own trixel id",
-      "updated": "2026-11-19T00:42:09",
-      "worktree": "../htm-wt/xapiand/htm-edge-points"
+      "updated": "2026-11-19T00:42:20",
+      "worktree": ""
     },
     "http-cancel-race": {
       "accepted": {
