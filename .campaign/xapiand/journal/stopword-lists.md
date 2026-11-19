@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-093906-670fdd 261119-093907-83563b 261119-093907-ca11c3
+State: ready for review
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fixing the first run's two failures and the per-request schema cost (head eae0478d9). The lists, schema
-recording, check and docs are in; tests pass (261119-093906-b28504), the fingerprint mutant fails them
-(261119-093843-4ea7ac, branch deleted). Waiting on the strict probes and the suite.
+All criteria have evidence at eae0478d9 (journal and docs-only commits after it). Ready for the correctness review.
 
 ## Next
 
-1. Read 261119-093906-670fdd (schema check, cold and warm) and 261119-093907-83563b (A5 after); write both into
-   docs/perf/stopword-lists.md (medians per mode: `python3 -I ~/.scratch/xapiand/stopword-lists/med.py LOG`).
-2. Read the suite 261119-093907-ca11c3 (A7); fix what it shows.
-3. Fill Result; State ready for review.
+1. Review findings, if any: each fix gets a test that fails without it, as a job.
 
 ## Blocked on
 
@@ -26,21 +21,33 @@ Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); `campaign brief` generates the table.
-
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261119-083429-63dc87 (scenario `builtin`: 18 shipped files vs compiled lists, counts, fingerprints, no data directory) |
-| A2 | job 261119-083429-63dc87 (scenario `override`: en replaced, xx custom, fr same words same fingerprint, de untouched, files deleted after preload; `unreadable` throws) |
-| A3 | job 261119-083429-63dc87 (unchanged passes, changed and missing refuse with index, list and both fingerprints) and 261119-083432-825a1e (the same test fails at the mutant). The mutant is branch mutant/stopword-lists-fingerprint (11d4f7004), to delete after. The schema integration is Blocked on |
-| A4 | job 261119-083429-63dc87 (`getStopWords`, `stopWordsFingerprint`, `parse_text` with an unknown language throw naming it); generate_terms.cc maps the throw to an invalid engine error |
-| A5 | jobs 261119-083443-f71030 (before) and 261119-083435-9bba38 (after); numbers under Result |
+| A1 | 261119-093906-b28504 (scenario `builtin`: 18 shipped files vs compiled lists, per-language counts, fingerprints, no data directory) |
+| A2 | 261119-093906-b28504 (scenario `override`; `unreadable` throws) |
+| A3 | 261119-093906-b28504 (unchanged passes, changed and missing refuse with index, list and both fingerprints, through `Schema::check_stop_words`) and 261119-093843-4ea7ac (the same test fails, 16 checks, at the mutant that makes `checkStopWords` return; branch deleted) |
+| A4 | 261119-093906-b28504 (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
+| A5 | 261119-083443-f71030 (before), 261119-084202-4abafa and 261119-093907-83563b (after); `docs/perf/stopword-lists.md` |
 | A6 | `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed) |
-| A7 | pending the schema recording; `campaign verify stopword-lists` after |
+| A7 | suite 261119-093907-ca11c3 passed at eae0478d9; CI not read (the lead's) |
 
 ## Result
 
-Pending the jobs.
+1. Lists compiled in (18 languages, 7,342 distinct words; the lead's 7,326 counted lines with comments and
+   blanks, so the user docs say 7,342 and the test asserts the per-language counts from the files, no total).
+2. First failure fixed: `_stop_fingerprint` showed in `to_string()`. `to_string()` is `get_full(true)`, the
+   user-facing `_schema` of info and search responses (`search_views.cc:1347`), so that is the output tested.
+   The cause was older: `Schema::dispatch_readable` does `switch (key)` on the raw hash against `_.fhh` cases
+   (the other dispatchers use `_.find(key)`), so none of its cases ever match and the readable schema hid
+   nothing on main either (`_prefix` and `_slot` show). The docs tests in
+   `docs/src/content/docs/tests/schema/define-slot.md` expect `_prefix` and `_slot`, so I left the switch alone and
+   erase the fingerprint before it. Lead's call: fix the switch (the readable schema then hides `_prefix`,
+   `_slot`, `_acc_prefix`, and a `_stem_language` equal to `_language`) and update those docs tests, or leave it.
+3. Schema check cost: `DatabaseHandler::get_schema` runs per request, so the check now remembers schemas that
+   passed with nothing to adopt: 96 us (hot) to 563 us (cold) per check for 200 fields down to 0.17 us warm.
+4. A3's old mutant job exited 1 on the two unrelated failures, so it proved nothing; the mutant was rebuilt at the
+   fixed head and fails 16 checks. A5: no-data first use 105 to 142-214 us, heap 512 B to 29,176 B, "the" 0 to stopped.
+5. No perfect hash (ruling 7), reason in the perf note.
 
 ## Rulings I made
 
@@ -62,3 +69,6 @@ Pending the jobs.
    now only reads the override files. Test scenarios run in one process each (the lists load once per process).
 6. Observation, not changed (the owner keeps the lists, D97): `stopwords/tr.txt` spells some words with U+0163
    (ţ) where Turkish has ş (`ţimdi`, `ţu`, `ţöyle`).
+7. The schema check cache is per thread and by schema identity (weak pointers, 4096 entries), because the
+   schema cache that owns the versions (`schemas_lru.cc`) is outside the file set.
+8. Lead's ruling 7 applied: perfect hash dropped; reason and numbers in `docs/perf/stopword-lists.md`.
