@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-174155-a12f7b (fieldparser) 261118-174158-f210d3 (geospatial); serialize fork resubmitting; A4 waits on logger-exit-lifetime
+State: waiting on jobs 261118-174155-a12f7b (fieldparser) 261118-174158-f210d3 (geospatial) 261118-174725-3659a2 (serialize); A4 waits on logger-exit-lifetime
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,6 +29,8 @@ A2 evidence: run `.scratch/build/bin/xapiand_test_coverage_reader_registry` outp
 - F7 `['abc` hangs the parser forever (`case '\0': break;` in SQUARE_BRACKET_QUOTE never advances); its test is written but not run. F8 a space in a field name is not counted (`a b:c` names `a `). F9 the 1,024-byte field-name cap never applies. F10 an escaped quote closes the string. F11 a double-quoted name leaves the value flagged double-quoted. F12 `lens_*_quote` is not reset at the colon, so a later getter over-reads. F13 `parse(100)` clamps to 10 but arrays of size 10 are indexed at level 10 (out-of-bounds write). F14 `skip_quote` is unused. Unreachable: `case SQUARE_BRACKET_END`, the `>= 1024` check in INIT.
 
 ## Next
+
+Serialize fork (4b690309d, ~890 lines, 20 tests, never compiled yet; job 3659a2): findings F15 `object`, `guess_type` and `guess_serialize` refuse the `_date`, `_multiconvex` and `_lua` casts; F16 `guess_serialize` of `{"_time":"10:30:00"}` and `{"_timedelta":"+01:30:00"}` throws; F17 `get_field_type("boolean")` returns datetime.
 
 Pre-check 50b1a8: with the logger's OnceFilter never destroyed (patched copy, job checkout only) the aggregations test fails 0 of 20 (baseline 20 of 20): the cause is confirmed; not A4 evidence. harness/coverage_one.sh reported 0/0 (relative source paths): fixed at 09806551e; jobs 38046f and 13cfad ran the old script. Field parser commit 48bb471c5 passed its 192 checks (job 38046f exit 0). Geospatial commit b35430350 (draft 1), serialize commit 4b690309d.
 
