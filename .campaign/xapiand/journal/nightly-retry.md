@@ -1,40 +1,33 @@
 # nightly-retry: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/nightly-retry.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done. Code: cpp-libraries tools/nightly_dispatch.py, tools/test_nightly_dispatch.py (commit cpp-libraries:d382351, local, not pushed).
 
 ## Next
 
-1. <step>
+1. Review; push; cpp-libraries CI for the A2 CI half.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+The quest `check` (`python3 -m pytest -q tools`) fails on this machine: no pytest installed (jobs 261119-144244-fe093d, 261119-144255-45f1c8). Not a code failure; the lead owns the check. The unittest run of the same file passes.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | unittest job 261119-144336-a6a4a1 passes (RetryTest: two 502s then success, 4xx fails at once, persistent 5xx gives up after 4 attempts, dispatch 5xx retried); mutant RETRIES=1 job 261119-144343-378e22 exits 1 (fails-without) |
+| A2 | unittest 45 tests pass (job 261119-144336-a6a4a1), ruff check job 261119-144300-c04dc6; cpp-libraries CI not run (not pushed) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Github.call retries HTTP 5xx, timeouts, connection resets: 4 attempts, 2/4/8 s backoff via the clock. `workflow run` retries only a 5xx reply. Standard library only.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Retry lives in Github.call (one place) over a transport; permanent errors fail at once.
+- A timeout or reset on `workflow run` is not retried: a run may have started.
+- test_poll_error_keeps_waiting now injects a 404 (a 502 is absorbed by the retry).
