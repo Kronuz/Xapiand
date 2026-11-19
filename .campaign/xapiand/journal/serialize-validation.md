@@ -9,16 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Tests committed (Xapiand:f12634566, all four expected to fail there); local build in
-`.scratch/serialize-validation/build` (worktree) running. Next the fixes, one commit each.
+Fixes committed: A1 Xapiand:77324bbed, A2 Xapiand:e121732c6, A4 Xapiand:f06c5fb55, A3 Xapiand:5e3078b65 (tests at
+Xapiand:f12634566). A2 mutant (head with A2 reverted): Xapiand:3a04b5dad, kept at refs/mutants/serialize-validation/a2-type-names.
+Jobs queued: suite 636a02 (A6); fails-without 2af582 (A1 at c87aaf555), e5d3b2 (A2 mutant), e023eb (A4 boolean at
+e121732c6), c474be (A4 time casts at e121732c6), e13d5d (A3 at f06c5fb55); head pass cb35db (A1-A4).
+Local build in the worktree's `.scratch/serialize-validation/build` (iteration only).
 
 ## Next
 
-1. Fix commits: A1 (`positive_of`), A2 (serialize.cc "t" key; schema.cc "geospatial" and its variants), A4 ("boolean"; guess_serialize's map branch through `object`), A3 (ranges_hash = SHA-256 truncated to 128 bits).
-2. Local run of the four tests at the test commit (fail) and at head (pass).
-3. Jobs: `--fails-without` per criterion at f12634566; suite via `campaign verify`.
-4. A3 note in docs once the file set has a docs path (Blocked on 2).
-5. After coverage-areas lands and is merged here: flip its pins in tests/test_coverage_serialize.cc (lead merges; file then needs to be in my set or the lead flips it).
+1. Read the jobs; fix what fails (compile not yet checked locally when queued).
+2. A3 note in docs once the file set has a docs path (Blocked on 2).
+3. After coverage-areas lands and is merged here: flip its pins in tests/test_coverage_serialize.cc (lead merges; the file then needs to be in my set or the lead flips it).
+4. Correctness review (high risk).
 
 ## Blocked on
 
