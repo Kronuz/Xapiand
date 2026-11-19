@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: waiting on jobs 261118-222741-9273aa
+State: ready for review (one correctness review; CI rerun on consensus:d7091f6 pending)
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,7 +29,7 @@ passing smokes. consensus d511a44: SIGPIPE ignored, refusal counters, FLOW_LOG_M
 
 ## Next
 
-0. build-test 9273aa at the merge head; push (consensus:afea684 + main merge); CI rerun; then review.
+0. Pushed consensus:d7091f6 (A3 rows + main merge); build-test 261118-222741-9273aa passed; check CI (freebsd was provisioning-flaky); correctness review.
 1. Fix what the macOS dry run shows; VM smoke job (light), then a1, a2, a3 as exclusive jobs
    `--after` the smoke.
 2. docs/perf/flow-control.md from the jobs' output, each row's job id.
@@ -78,7 +78,9 @@ waits 1.6-2.0x Bulk's p50 on a 1 Gb/s link. Single 3 s run per row.
 
 CI at 33e0c5a: only freebsd-x86_64 failed, in vmactions provisioning (pkg fetch error while
 installing cmake etc., `ssh exited with code 3`), before any build; the commit changed docs only.
-Not mine; rerun on the merge head.
+Not mine; rerun on the merge head. Review not waived: the bench/doc are measurement claims
+(gap metric includes the 10 ms cadence; bound compared at the measured rate), which a fresh reader
+should check; no product code changed.
 
 ## Rulings I made
 
