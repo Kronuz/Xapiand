@@ -9,7 +9,7 @@ main.cc and manager.cc reach T13's target (about 590 uncovered lines) through E2
 
 ## Acceptance criteria
 
-- A1 Line and branch coverage of main.cc and manager.cc at or above T13's target: harness/coverage.sh before and after
+- A1 Line and branch coverage of main.cc and manager.cc at or above the measured floor: main.cc 81% lines / 63% branches, manager.cc 79% / 52% (harness/coverage.sh before and after). Lowered 2026-11-19 from T13's 90/80 (lead): the remaining lines need root, a tty, a failing setuid, a never-ending write or death by signal (Evidence lists the ranges), and manager.cc is replaced by the server-composition adoption (D74, D132), so no fault-injection hooks are added to it; hunt row filed
 - A2 Every new test checks values, not only that code ran; a test of a fixed bug fails without the fix
 - A3 The suite passes and CI is green
 

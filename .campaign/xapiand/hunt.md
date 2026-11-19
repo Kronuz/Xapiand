@@ -195,6 +195,7 @@ quest starts (name it) or is dropped with a reason.
 | M5: StringKey::serialize writes only the metric, not the slot or direction, so a rebuilt string sort key reads slot 0 and keys differently from the original (keymaker.cc:466 check) | coverage-multivalue job 261119-041546-ce5d85, pinned at eeac65125 | src/multivalue/keymaker.cc | after coverage-multivalue | open |
 | Geo ring with partials off at error 0.3: the cover takes in 6,918 points up to 1,943 km inside the ring's hole (pre-existing at the parent too) | geo-correctness review R2, job 261119-044559-b9ea18 | src/geospatial/** | after geo-correctness | open |
 | A failed restore exits 0: `xapiand --restore` of a file that is not a dump logs "Indexing object has an unsupported type: POSITIVE_INTEGER" and exits with status 0, so scripts see success | coverage-core-main job 261119-044115-72c517, pinned at e826caa41 | src/main.cc restore path, src/manager.cc | after coverage-core-main | open |
+| Fault-injection hooks for start-up and shutdown (root demote, setuid failure, tty branches, a never-ending write at shutdown, host_address fallbacks), so main.cc's process steps reach T13 coverage; build them into the server-composition adoption's lifecycle, not into manager.cc | coverage-core-main Evidence (job 261119-050554-5cd724) | src/main.cc, the adoption quest | after the Xapiand server-composition adoption | open |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
