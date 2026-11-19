@@ -404,15 +404,10 @@ void test_ewkt_forms() {
 		CHECK(geometry->getType() == c.type || (c.type == Geometry::Type::MULTICHULL && geometry->getType() == Geometry::Type::MULTIPOLYGON));
 		const bool has_ranges = !geometry->getRanges(partials, error).empty();
 		// Printing and re-parsing is stable.
-		std::string reprinted;
-		try {
-			reprinted = EWKT(geometry->toEWKT()).getGeometry()->toEWKT();
-		} catch (const std::exception& e) {
-			std::fprintf(stderr, "  FAIL: '%s' prints as '%s', which does not parse: %s: %s\n", c.text, geometry->toEWKT().c_str(), typeid(e).name(), e.what());
-		}
-		const bool stable = reprinted == geometry->toEWKT();
+		const auto again = EWKT(geometry->toEWKT()).getGeometry();
+		const bool stable = again->toEWKT() == geometry->toEWKT();
 		if (!has_ranges || !stable) {
-			std::fprintf(stderr, "  FAIL: '%s' ranges=%d stable=%d type=%d\n  %s\n  %s\n", c.text, has_ranges, stable, static_cast<int>(geometry->getType()), geometry->toEWKT().c_str(), reprinted.c_str());
+			std::fprintf(stderr, "  FAIL: '%s' ranges=%d stable=%d type=%d\n  %s\n  %s\n", c.text, has_ranges, stable, static_cast<int>(geometry->getType()), geometry->toEWKT().c_str(), again->toEWKT().c_str());
 		}
 		CHECK(has_ranges);
 		CHECK(stable);
@@ -434,8 +429,6 @@ void test_ewkt_errors() {
 	};
 	for (const char* text : bad) {
 		bool threw = false;
-		std::fprintf(stderr, "INPUT '%s'\n", text);
-		std::fflush(stderr);
 		try {
 			(void)EWKT(text).getGeometry();
 		} catch (const GeoSpatialError&) {
@@ -615,43 +608,7 @@ void test_map_errors() {
 
 }  // namespace
 
-// Each test runs guarded: an exception that escapes one is a failed check naming it, not an abort of the whole run.
-int main() {
-	const struct { const char* name; void (*run)(); } tests[] = {
-		{ "test_point", test_point },
-		{ "test_multipoint", test_multipoint },
-		{ "test_circle", test_circle },
-		{ "test_circle_extremes", test_circle_extremes },
-		{ "test_convex", test_convex },
-		{ "test_polygon", test_polygon },
-		{ "test_graham_scan", test_graham_scan },
-		{ "test_multicircle", test_multicircle },
-		{ "test_multiconvex", test_multiconvex },
-		{ "test_multipolygon", test_multipolygon },
-		{ "test_collection", test_collection },
-		{ "test_intersection", test_intersection },
-		{ "test_ewkt_forms", test_ewkt_forms },
-		{ "test_ewkt_errors", test_ewkt_errors },
-		{ "test_inputs_that_surface_a_format_error", test_inputs_that_surface_a_format_error },
-		{ "test_geometry_errors", test_geometry_errors },
-		{ "test_map_forms", test_map_forms },
-		{ "test_map_errors", test_map_errors },
-	};
-	std::fprintf(stderr, "MAIN\n");
-	for (const auto& t : tests) {
-		std::fprintf(stderr, "RUN %s\n", t.name);
-		std::fflush(stderr);
-		try {
-			t.run();
-		} catch (const std::exception& e) {
-			std::fprintf(stderr, "  FAIL: %s threw %s: %s\n", t.name, typeid(e).name(), e.what());
-			++testh::failures;
-		}
-	}
-	if (testh::failures != 0) {
-		std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
-		return 1;
-	}
-	std::printf("OK: %d checks passed\n", testh::checks);
-	return 0;
-}
+TEST_MAIN(
+	test_point, test_multipoint, test_circle, test_circle_extremes, test_convex, test_polygon, test_graham_scan,
+	test_multicircle, test_multiconvex, test_multipolygon, test_collection, test_intersection, test_ewkt_forms,
+	test_ewkt_errors, test_inputs_that_surface_a_format_error, test_geometry_errors, test_map_forms, test_map_errors)

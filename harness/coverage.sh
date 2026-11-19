@@ -55,11 +55,29 @@ build() {
 		for f in zlib.h zconf.h uuid; do ln -sfn "$(xcrun --show-sdk-path)/usr/include/$f" "$ROOT/sdkinc/$f"; done
 		extra=(-DZLIB_INCLUDE_DIR="$ROOT/sdkinc" -DUUID_INCLUDE_DIR="$ROOT/sdkinc")
 	fi
-	[ -n "${LLVM:-}" ] && [ -d "$LLVM/lib/c++" ] && ld="-L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++"
+	# The build's find_library("c++") would add the SDK's runtime beside LLVM's: name LLVM's, so each binary loads one.
+	if [ -n "${LLVM:-}" ] && [ -d "$LLVM/lib/c++" ]; then
+		ld="-L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++"
+		extra+=(-DLIBCPP_LIBRARIES="$LLVM/lib/c++/libc++.dylib" -DLIBCPPABI_LIBRARIES="$LLVM/lib/c++/libc++abi.dylib")
+	fi
 	cmake -S "$ROOT" -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
 		-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
 		"-DCMAKE_EXE_LINKER_FLAGS=$flags $ld" "${extra[@]}" || return 1
-	cmake --build "$BUILD" -j"$JOBS" && cmake --build "$BUILD" -j"$JOBS" --target strata_check
+	cmake --build "$BUILD" -j"$JOBS" && cmake --build "$BUILD" -j"$JOBS" --target strata_check && one_runtime
+}
+
+# Fails when a binary links two C++ runtimes (the tests then throw through one and catch in the other, or lock a mutex
+# the other destroyed).
+one_runtime() {
+	[ "$(uname)" = Darwin ] || return 0
+	local f n m bad=0
+	for f in "$BUILD"/bin/*; do
+		[ -f "$f" ] && [ -x "$f" ] || continue
+		n=$(otool -L "$f" 2>/dev/null | awk '/libc\+\+\.[0-9.]*dylib/ {c++} END {print c+0}')
+		m=$(otool -L "$f" 2>/dev/null | awk '/libc\+\+abi\.[0-9.]*dylib/ {c++} END {print c+0}')
+		[ "$n" -le 1 ] && [ "$m" -le 1 ] || { echo "coverage: $f links $n libc++ and $m libc++abi" >&2; bad=1; }
+	done
+	return $bad
 }
 
 workloads() {
