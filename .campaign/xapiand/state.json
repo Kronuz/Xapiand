@@ -24090,6 +24090,43 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-inbox-first": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "lifecycle.hh",
+        "test/**",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "high",
+      "status": "planned",
+      "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
+      "updated": "2026-11-19T11:20:33"
+    },
     "task-lanes": {
       "accepted": {
         "correctness": {
