@@ -55,8 +55,6 @@ using namespace std::chrono_literals;
 
 namespace {
 
-namespace {
-
 template <typename F>
 bool eventually(F&& done, std::chrono::milliseconds limit) {
 	const auto end = std::chrono::steady_clock::now() + limit;
