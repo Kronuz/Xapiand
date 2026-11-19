@@ -24127,6 +24127,7 @@
       "files": [
         "task.hh",
         "task_asio.hh",
+        "task_timers.hh",
         "lifecycle*.hh",
         "test/**",
         "docs/**",
@@ -24147,7 +24148,7 @@
       "risk": "high",
       "status": "active",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T06:34:48",
+      "updated": "2026-11-19T06:37:02",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
