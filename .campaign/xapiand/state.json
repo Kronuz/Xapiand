@@ -24126,9 +24126,9 @@
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T11:20:44",
+      "updated": "2026-11-19T11:32:39",
       "worktree": "../task-wt/xapiand/task-inbox-first"
     },
     "task-lanes": {
