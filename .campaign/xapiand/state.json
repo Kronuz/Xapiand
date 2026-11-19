@@ -24185,7 +24185,8 @@
         "test/**",
         "docs/**",
         "README.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-lifecycle",
       "landed": [],
@@ -24201,7 +24202,7 @@
       "risk": "high",
       "status": "active",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T06:37:02",
+      "updated": "2026-11-19T08:22:33",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
