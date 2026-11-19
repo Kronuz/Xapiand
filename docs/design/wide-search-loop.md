@@ -35,8 +35,9 @@ So the stall is per-name resolution, not per-index work, and concurrency turns i
 **D1. The name resolution yields between slices.** `wide_search::resolve` resolves a search's names one at a time
 with a `task::budget` checkpoint before each, the request's budget: after `REQUEST_LIGHT_SLICES` slices the search
 runs in the heavy lane (loop-scheduling D2), so a light request on the same loop waits at most one slice behind it.
-A checkpoint also ends the request when its token is cancelled, which a client's EOF does for reads only (test_node's
-half-closed PUT, T9): a write's resolution, one index for every write view, takes no checkpoint.
+A checkpoint also ends the request when its token is cancelled, which a client's EOF does (Kronuz/http's in-flight
+watch): a single name resolves without one, as on master, so a half-closed PUT (test_node T9) or document GET
+(`harness/wide_search_halfclose.py`) keeps its answer; only a list of names checkpoints.
 
 **D2. A batch's pins and engine reads yield between shards.** No capture holds them today; the checkpoints keep a
 batch of K indexes K short steps when K is large (`--concurrent-search-indexes`, or the pool at 5,000, where x7-gate

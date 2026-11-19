@@ -129,8 +129,9 @@ resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* set
 {
 	std::vector<Endpoint> resolved;
 	resolved.reserve(paths.size());
+	const bool wide = paths.size() > 1;
 	for (const auto& path : paths) {
-		if (!writable) {
+		if (wide) {
 			co_await budget.checkpoint();
 		}
 		auto endpoints = co_await XapiandManager::resolve_index_endpoints(Endpoint(path), writable, settings);
