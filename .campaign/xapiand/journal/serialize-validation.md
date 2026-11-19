@@ -39,11 +39,7 @@ rerun; the reviewer's.
 ## Next
 
 1. Correctness review (high risk). CI at Xapiand:7093caf5b: the earlier red was the docs E2E (fixed Xapiand:72be2396c).
-2. The lead pushes the branch for CI (contributors never push).
-3. After coverage-areas lands and is merged here: flip its pins (lead): tests/test_coverage_serialize.cc lines 558-562,
-   642-643, 704-705 expect `_date` and `_multiconvex` refused; `_date` is now served, `_multiconvex` serializes once
-   geo-correctness serves its map form, `_lua` stays refused.
-4. Correctness review (high risk).
+2. The pins in tests/test_coverage_serialize.cc are flipped here (Xapiand:72be2396c); `_multiconvex` map form still comes with geo-correctness.
 
 ## Blocked on
 
