@@ -22479,6 +22479,20 @@
         "docs/src/content/docs/**stop*",
         "docs/src/content/docs/changelog.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-19T06:14:41",
+          "reason": "owner asked; no concurrency or durability: one metadata key under formats-open-until-release, behavior change already approved (D137); normal keeps the correctness review and drops the crash/TSan gates high adds",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -22487,10 +22501,10 @@
       "needs": [],
       "provides": [],
       "repo": ".",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T06:10:42"
+      "updated": "2026-11-19T06:14:41"
     },
     "storage-phase7c-l6": {
       "accepted": {},
