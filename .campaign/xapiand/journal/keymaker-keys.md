@@ -1,6 +1,6 @@
 # keymaker-keys: journal
 
-State: waiting on jobs 261119-141751-bda861 261119-141757-1907bd 261119-140735-5f4129
+State: waiting on jobs 261119-142723-81965c
 Quest: .campaign/xapiand/quests/keymaker-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First jobs failed for real: Restored(unserialize_string(...)) took a string_view (compile error in metric_serialize.h, seen in the suite job's full log a1/log), and the test job used a wrong target name. Fixed at 32749f008 (std::string copy; target xapiand_test_coverage_multivalue); merged origin/master. Mutant commit b9d4c5314c9c (src reverted, tests kept). Jobs: test 261119-141751-bda861 (binary is build/bin/, first try 140732 built but could not find it), mutant 261119-141757-1907bd, suite 261119-140735-5f4129. Local syntax check could not run clean (stale deps in the scratch build), so the jobs are the check.
+Suite 5f4129 failed 3 checks in tests/test_coverage_multivalue.cc (lines 248, 481, 504). They are my new assertions, not old pins (all old M1/M4/M5 pins were already flipped). Line 248 (missing slot keys equal to a NUL value) was a bad test: dropped, order check kept. Lines 481 and 504 (rebuilt key equals original) are a real difference left after the slot fix, cause unknown; a per-slot check now prints the slot (job 261119-142723-81965c). Then: fix the code if real, resubmit mutant (commit b9d4c5314c9c at the new head needs a rebuild of the mutant commit) and `campaign verify`. File set note: tests/test_coverage_multivalue.cc is already in the set (tests/test_coverage_multivalue*); src/metric_serialize.h is not.
 
 ## Next
 
