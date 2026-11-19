@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261118-175418-fa1d4d 261118-175419-c46cd4 261118-175420-dca1f5
+State: waiting on jobs 261118-202755-3d88cf 261118-202758-1425d5 261118-202802-fb1582 261118-202804-4d7ad8
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,15 +18,22 @@ passed at 69b1d4b9.
 A5: the first calibration at 100 B (261118-132449-745336) failed on my own exact-match check,
 not an assertion: one trial picked lvl-4k-none, the pin scored 0.989 of it (fillrandom favors
 lvl-16k-lz4, readrandom lvl-4k-none). 1 KiB 261118-132457-0e435f cancelled as superseded.
-Queued at a93f2b59: calibrate 100 B 261118-175418-fa1d4d and 1 KiB 261118-175419-c46cd4 (5
-interleaved trials, pin within 3% of the fastest); build-test 261118-175420-dca1f5.
+At a93f2b59: build-test 261118-175420-dca1f5 passed; CI 44440356088 green. Calibration, 5
+trials: 100 B 261118-175418-fa1d4d passed (lvl-16k-lz4 fastest outright, next lvl-4k-lz4-hash
+0.967); 1 KiB 261118-175419-c46cd4 failed: lvl-4k-none fastest, the pin 0.970 (fillrandom 343k
+against 301k ops/s, spreads 3.8% and 8.3%; readrandom 0.94x, ycsb_a tie). A real miss, so 1 KiB
+re-pins to lvl-4k-none. On the host only sync1's YCSB A and F use 1 KiB (wal1 and N-log are 100 B).
+Queued: sync1 x3 at the new pin 261118-202755-3d88cf, -202758-1425d5, -202802-fb1582; a fresh
+1 KiB calibration checking lvl-4k-none 261118-202804-4d7ad8.
 
 ## Next
 
-1. Read the three jobs above. A pin outside 3% is a finding for the lead (the A3 rows ran on
-   lvl-16k-lz4), not a re-pin. Then add the calibration to the gate report and mark ready.
-2. Review of the F1 fix at strata:db443563 (code cc8ba3aa); the lead's.
-3. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
+1. Read the four jobs above; replace the sync1 rows (gate report, perf note) with the 1 KiB
+   re-pinned ones, state the pins per size, then mark ready for review.
+2. The lead's: the A/A sync rows and the VM syncaa 1 KiB row ran on lvl-16k-lz4 (A/A measures
+   noise; VM rows check the platform); rerun them on the new pin or accept.
+3. Review of the F1 fix at strata:db443563 (code cc8ba3aa); the lead's.
+4. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
 ## Blocked on
 
@@ -108,7 +115,7 @@ interleaved trials, pin within 3% of the fastest); build-test 261118-175420-dca1
 | A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of cc8ba3aa |
 | A3 | Durable tiers at cc8ba3aa, exclusive: wal1 261117-134809-8409da; sync1 261117-134818-6068ec, 261117-134824-199dc8, 261117-134834-f21397; N-log and group commit 261117-134842-7d024d; review probe 261117-134801-f716c7 (lag 2 records). A/A 261117-055320-5ca39d, 261117-055327-074989 (193e6e32). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
 | A4 | The same jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` (db443563): sync ties (0.93-1.01x); wal1 1.68-1.94x faster, p99 7.8-11.9x lower, p99.99 113-179x higher; group commit tie at K=1 and K=8, 1.32-1.39x slower at K=4 (turn-log-parity A6); memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
-| A5 | Calibration at strata:a93f2b59, exclusive, 5 interleaved trials: 100 B 261118-175418-fa1d4d, 1 KiB 261118-175419-c46cd4 (each passes only if the pinned lvl-16k-lz4 scores within 3% of the fastest of lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
+| A5 | Calibration at strata:a93f2b59, exclusive, 5 interleaved trials, a pin passing within 3% of the fastest: 100 B 261118-175418-fa1d4d (lvl-16k-lz4 fastest); 1 KiB re-pinned to lvl-4k-none after 261118-175419-c46cd4 (lvl-16k-lz4 at 0.970), checked by 261118-202804-4d7ad8 (candidates lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
 | A6 | D105, D114, at db443563 (code cc8ba3aa). Linux: build 261117-200358-f31d88, dry 261117-200358-e66125, sync+wal1 once 261117-200358-1336ac. FreeBSD: build 261117-200402-b01248, dry 261117-200402-6b0f87, sync+wal1 once 261117-200402-ed7288. Rows in strata `docs/gates/document-profile.md` "VM rows" (69b1d4b9). Failed first builds 261117-181304-9e575f (Linux), 261117-181307-6a39bf (FreeBSD): causes under Rulings; replaced by the two builds above. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
 | A7 | At db443563: fuzz (3 workers x 25 min, ASan+UBSan) stored 261117-181138-259eee, manifest_log 261117-181138-24cc48, manifest_log_file 261117-181138-0354ba, command 261117-181139-098eed; version rejection and fixtures 261117-181139-9949e7; coverage 261117-181139-6e2a77; ASan/UBSan/TSan on CI. Scale statement: [artifact] gate report "Scale" (strata:69b1d4b9) |
 | A8 | [artifact] strata `docs/gates/document-profile.md` (69b1d4b9): every measured row with commit, platform and jobs, the A7 checks, and the owed list |
@@ -142,6 +149,9 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
   means within 3% of the best geomean of per-workload medians over 5 interleaved trials: below the
   RocksDB A/A spread (0.2-8%), so a pick inside it is noise. The 3% came after seeing one trial at
   0.989; the 5-trial jobs are the test of it.
+- A5 re-pin (2026-11-18): 1 KiB moves to lvl-4k-none because A5's rule says so (the pin trails
+  by 3.0%, its fillrandom gap 14% outside the spread); this favors RocksDB. Host rows at 1 KiB
+  (sync1 YCSB A, F) rerun at the new pin; the 100 B pin stands.
 
 - F1 fix (D107 option (c), 2026-11-17):
   - Backpressure, not a byte bound: `log_state::turn_records` (1, journal seals one record per
