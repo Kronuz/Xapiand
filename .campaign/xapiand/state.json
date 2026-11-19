@@ -8017,6 +8017,8 @@
     "htm-edge-points": {
       "accepted": {},
       "after": [],
+      "base": "cadec57954b838bd0428cfc151e925689d8f2f31",
+      "branch": "quest/xapiand/htm-edge-points",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -8035,6 +8037,7 @@
         "CHANGELOG.md",
         "README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/htm-edge-points",
       "landed": [],
       "lenses": [
         "correctness"
@@ -8044,9 +8047,10 @@
       "provides": [],
       "repo": "../htm",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A point on a root-mesh edge gets its own trixel id",
-      "updated": "2026-11-18T23:13:41"
+      "updated": "2026-11-18T23:13:54",
+      "worktree": "../htm-wt/xapiand/htm-edge-points"
     },
     "http-cancel-race": {
       "accepted": {
