@@ -9450,9 +9450,9 @@
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T16:49:53",
+      "updated": "2026-11-18T20:50:12",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
