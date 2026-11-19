@@ -22691,7 +22691,9 @@
         "CMakeLists.txt",
         "docs/mechanisms/stopword-lists.md",
         "docs/perf/stopword-lists.md",
-        "docs/src/content/docs/**options*"
+        "docs/src/content/docs/**options*",
+        "src/server/http_utils.h",
+        "tests/test_stopword_search.cc"
       ],
       "history": [
         {
@@ -22718,7 +22720,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T10:04:20",
+      "updated": "2026-11-19T10:54:29",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
