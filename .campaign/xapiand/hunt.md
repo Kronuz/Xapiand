@@ -177,6 +177,8 @@ quest starts (name it) or is dropped with a reason.
 | logger-exit-lifetime re-check R2-R3: queue test keeps 3600 lines in Release via `kThreadSanitizer`; fork/LOG-thread skips set `kStopping` so later lines go to stderr | reviews/logger-exit-lifetime-correctness.md Re-check | ../logger test, src/logger.cc | logger | open |
 | logger R4 (pre-existing on main): a fork child that logs can block in `wake_for` if the LOG thread held `mtx` at fork; needs a `pthread_atfork` reset | reviews/logger-exit-lifetime-correctness.md Re-check R4 | ../logger src/logger.cc | logger | open |
 | consensus-flow-bench review F5: the flow bench has no value test (no test/flow_bench*); the VM script exits 0 whatever it measures, and nothing compares committed bytes to proposed payloads; add a check that fails on lost or reordered data and on a bound miss | reviews/consensus-flow-bench-correctness.md F4-F5 | ../consensus bench/flow*, harness | consensus | open |
+| Negative text wraps to a huge unsigned value outside serialize-validation's files: handler.cc:107, query_dsl.cc:579/595, search_views.cc:3156/3212 (strtoull-style parse of a '-'); refuse with a 400 as serialize-validation A1 does | serialize-validation journal (Xapiand:0db7027c2) | those lines | Xapiand | open, after wide-search-loop lands (it holds those files) |
+| An unknown aggregation type nested under a bucket is refused only when the first bucket forms at match time (bucket.h builds sub-aggregations lazily); validate the whole tree before the search | serialize-validation journal | src/aggregations/bucket.h | Xapiand | open |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
