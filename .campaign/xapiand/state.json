@@ -1941,7 +1941,8 @@
         "docs/design/cheap-reopen.md",
         "tests/test_cheap_reopen*",
         "tests/test_pool.cc",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "src/database/handler.cc"
       ],
       "landed": [],
       "lenses": [
@@ -1954,7 +1955,7 @@
       "risk": "high",
       "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T01:33:15",
+      "updated": "2026-11-19T08:43:29",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
