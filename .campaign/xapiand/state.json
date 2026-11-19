@@ -913,6 +913,20 @@
         ]
       },
       "text": "cluster-vm-tier landed: unlocks cluster-net-setup"
+    },
+    {
+      "at": "2026-11-18T20:36:12",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane and group-core pin consensus by hash and take transport/driver changes at their planned repins",
+      "id": "msg-119",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-3s-class"
+      },
+      "text": "detent:groups-upload-3s-class started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
