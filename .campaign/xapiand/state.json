@@ -1039,6 +1039,20 @@
         ]
       },
       "text": "geo-correctness landed: unlocks frees docs/src/content/docs/changelog.md for stopword-lists"
+    },
+    {
+      "at": "2026-11-19T09:02:55",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:driver-witness-removal-sink",
+      "id": "msg-130",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:driver-witness-removal-sink"
+      },
+      "text": "detent:driver-witness-removal-sink started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -7962,7 +7976,8 @@
         "detent:consensus-quiescence",
         "detent:journal-host-guards",
         "strata-nospace-position",
-        "document-gate"
+        "document-gate",
+        "detent:driver-witness-removal-sink"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8027,7 +8042,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-18T13:20:23",
+      "updated": "2026-11-19T09:03:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
