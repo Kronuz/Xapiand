@@ -452,12 +452,10 @@ void test_ewkt_errors() {
 	CHECK_FALSE(EWKT::isEWKT("POINT(1"));
 }
 
-// A coordinate without its separating space formats its error text with a missing argument (ewkt.cc, "Expected ' ' after of
-// longitude [{}]"), so the caller gets std::format_error where it should get an EWKTError (a 400): a finding, kept out of
-// the loop above so the rejection stays checked.
-void test_inputs_that_surface_a_format_error() {
+// A coordinate without its separating space is an EWKTError (a 400), not another type of error.
+void test_inputs_without_a_separating_space_are_ewkt_errors() {
 	for (const char* text : { "POINT()", "POINT(1)", "MULTIPOINT(1 2 3 4)" }) {
-		CHECK_THROW(EWKT(text).getGeometry(), std::exception);
+		CHECK_THROW(EWKT(text).getGeometry(), EWKTError);
 	}
 }
 
@@ -1001,7 +999,7 @@ int main() {
 		{ "test_intersection", test_intersection },
 		{ "test_ewkt_forms", test_ewkt_forms },
 		{ "test_ewkt_errors", test_ewkt_errors },
-		{ "test_inputs_that_surface_a_format_error", test_inputs_that_surface_a_format_error },
+		{ "test_inputs_without_a_separating_space_are_ewkt_errors", test_inputs_without_a_separating_space_are_ewkt_errors },
 		{ "test_geometry_errors", test_geometry_errors },
 		{ "test_map_forms", test_map_forms },
 		{ "test_map_errors", test_map_errors },

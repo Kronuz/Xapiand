@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: ready for review
+State: waiting on jobs (R1-R3 follow-up: coverage_geospatial and geo_correctness at the new head)
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -47,6 +47,12 @@ Jobs prove criteria by their tags (`--for A1`).
 F18-F23 fixed and D130 served (docs/design/geo-correctness.md); htm repinned to 0c09a02; every pinned wrong answer in
 tests/test_coverage_geospatial.cc flipped; the corpus table regenerated with its before/after per row. Review: one
 correctness review (normal risk). Head recorded below.
+
+## Review follow-up
+
+R1 changelog entry (Unreleased, Fixed: reindex all stored geo points, F18/F19/F21-F23, D130) and the design-note id
+sentence; R3 the two stale comments, and the format_error test now checks EWKTError (job below at the new head). R2
+(whole-cell over-coverage of a ring at error 0.3, pre-existing) is the lead's hunt row; R4 noted, no change.
 
 ## Rulings I made
 

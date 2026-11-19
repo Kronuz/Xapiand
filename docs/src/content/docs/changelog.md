@@ -201,6 +201,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **Geo searches by area find points on the mesh edges, and several wrong answers are right.** The HTM library
+  (htm `0c09a02`) gave a point on an edge of the root mesh (latitude 0, longitude 0, 90, 180 or 270, the poles) an id
+  thousands of km away, so a circle around it missed it, and a 9,000 km lens of two circles missed its own center.
+  **Stored geo ids change: reindex all stored geo points.** Points on an edge move far, points at or near a vertex of a
+  deeper trixel move too, and about 0.4% of all other points move by meters. Also fixed:
+  - A circle past a hemisphere (15,011 km) in a convex now covers its own center and leaves out the cap around its antipode.
+  - A ring (a negative circle with a positive one) covers its band whatever the order of its circles.
+  - Circles that never meet match nothing: `CONVEX((a, r), (b, r))` with disjoint circles used to match every document.
+  - `MULTIPOINT(1 2, 3 4)` parses (the form without inner parentheses), and a malformed point answers `400`, not `500`.
+  - A `GEOMETRYCOLLECTION` holding an empty intersection writes `EMPTY`, which parses back.
+  - `_multiconvex` in the map form (`{"_multiconvex": {"_latitude": [[..], [..]], "_longitude": [[..], [..]],
+    "_radius": [[..], [..]]}}`, one convex per inner list; a flat list is one convex) is served at the top level, in
+    `_geometrycollection` and in `_geometryintersection`; it answered `Unknown geometry` before.
 - **Every integer ID is its own document.** Integer IDs past 2^32 could share a key: a `PUT` of 4294967297
   and one of 4311744512 left one document. A numeric ID's key is now its exact number, for every 64-bit
   integer and every float, and new integer IDs run up to 2^63 - 1 (2^53 for float IDs) instead of 2^32 - 1.

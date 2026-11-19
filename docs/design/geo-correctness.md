@@ -9,7 +9,7 @@ them (F23). `tests/test_geo_correctness.cc` guards each; `tests/test_geo_corpus.
 | F19 | a collection of an empty intersection wrote `GEOMETRYCOLLECTION(GEOMETRYINTERSECTION EMPTY)`, which does not parse | `to_string` wrote every intersection, `empty()` counted them | skip empty intersections; `empty()` holds when all are |
 | F20 | the lens of two 9,000 km circles 45 degrees either side of a point did not cover it | not the convex: see below | HTM, outside this repository |
 | F21 | a convex of a circle past a hemisphere (the complement of a cap) left out the trixel holding its center and took whole the trixel holding the hole | the hole test looked for the center of the negative circle; the excluded cap is around its antipode | `HTM::thereisHole`, as `Circle` uses |
-| F22 | a ring (a negative circle with a positive one) added largest first missed points inside both circles | resolution and the "smallest circle" came from `circles.begin()`, which is the smallest only after `simplify()` sorts; a convex added through another kept a stale sign | `smallest()` by arcangle; `add(Convex)` updates the sign |
+| F22 | a ring (a negative circle with a positive one) added largest first missed points inside both circles (whole cells) | resolution and the "smallest circle" came from `circles.begin()`, which is the smallest only after `simplify()` sorts; a convex added through another kept a stale sign | `smallest()` by arcangle; `add(Convex)` updates the sign |
 | F23 | circles that never meet (an empty convex after `simplify()`) covered the whole sphere | `getRanges` read the first circle of an empty vector | an empty convex covers nothing |
 
 The engine reaches a geometry through `EWKT::getGeometry()` and `GeoSpatial::getGeometry()`, which call `simplify()`,
@@ -39,8 +39,9 @@ child at every level. htm `0c09a02` places an edge point in the nearest child th
 `intersectConstraints` clamps its result; the lens covers its center at all four root vertices
 (`test_lens_of_wide_circles_covers_its_center`), and every point above hits its 1 km circle.
 
-Ids move only for points on an edge, so the corpus answers move only for its 15 root-edge points (indexes 6000 to
-6014). Rerun at the new pin, 24 of the 99 answers differ from the pin before it (same code otherwise), in 10
+Stored ids change for points on a root-mesh edge (up to thousands of km), for points at or near a vertex of a deeper
+trixel, and for about 0.4% of all other points, by meters (htm's changelog, 2026-11-18); all stored geo points need a
+reindex. In the corpus only the 15 root-edge points (indexes 6000 to 6014) change an answer. Rerun at the new pin, 24 of the 99 answers differ from the pin before it (same code otherwise), in 10
 queries; the changes are 53 (point, answer) pairs, all of them edge points: 24 gained, 29 lost. Against the exact distance to each circle:
 
 | Class | Count | Exact distance |

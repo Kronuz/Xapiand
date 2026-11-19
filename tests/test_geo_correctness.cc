@@ -157,9 +157,8 @@ void test_collection_writes_its_non_empty_members_only() {
 
 // --- F20: the lens of two wide circles -------------------------------------------------------------
 
-// The lens holds the point between the two centers. The convex covers it wherever it is, except for a point the mesh
-// itself cannot place: one on an edge of a root trixel, which HTM::getId gives the id of the middle of the root
-// (docs/design/geo-correctness.md). So the center sits off those edges, and its neighbors on them are checked.
+// The lens holds the point between the two centers, and the convex covers it wherever it is, off the mesh edges and on
+// them (HTM::getId places a point on an edge of a root trixel in a trixel that holds it: docs/design/geo-correctness.md).
 void test_lens_of_wide_circles_covers_its_center() {
 	for (const double lat : { 0.37, 20.3, -33.7, 60.1, -80.2 }) {
 		for (const double lon : { 0.13, 33.3, 91.7, 135.2, 179.5, -77.7 }) {
