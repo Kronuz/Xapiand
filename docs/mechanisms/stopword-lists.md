@@ -1,4 +1,4 @@
-> Status: CURRENT (2026-11-19) quest/xapiand/stopword-lists (D137); not landed. The index-side recording is pending (see Open).
+> Status: CURRENT (2026-11-19) quest/xapiand/stopword-lists (D137); not landed.
 
 # Stop-word lists: compiled in, overridable, fingerprinted
 
@@ -35,9 +35,19 @@ getStopWords(lang):  overrides[lang]  else  builtin[lang] (an analysis::stopper 
 6. The query side turns `UnknownStopWordsError` into `InvalidTextConfigError` (`src/engine/text.cc`) and the
    index side into an invalid `engine::Error` (`src/multivalue/generate_terms.cc`).
 
+7. A text field with a language stores `_stop_fingerprint` beside `_language` when it is created
+   (`validate_required_data`, `src/database/schema.cc`). `DatabaseHandler::get_schema` calls
+   `Schema::check_stop_words(index, adopt)` on every schema it hands out: each field with a language is
+   checked with `checkStopWords`, and a mismatch is an `Error` that names the index. A field with a language and
+   no record (an index from before the fingerprints) adopts the current list's fingerprint in the mutable
+   schema when the handler is writable, so the next schema write persists it; one info line names the index
+   and the list, once per process. `dispatch_readable` hides the property: it is derived from the list, not a
+   setting a client sends back.
+
 The install copies `stopwords/` to `share/doc/xapiand/stopwords`, a directory nothing reads. A build run from
 the source tree (`build/bin/xapiand`) finds the repository root as its data path and reads the 18 files there as
-overrides with the shipped words.
+overrides. They hold the shipped words, so their fingerprints match the compiled-in ones and no index is
+refused.
 
 ## Why not a perfect hash
 
@@ -45,6 +55,7 @@ constexpr-phf fits (a 781-key set compiles in about 0.7 s), but every consumer t
 `const analysis::stopper*`, so any compiled set is copied into that `unordered_set` at first use; the PHF would
 sit behind the copy unused. Numbers: `docs/perf/stopword-lists.md`.
 
-## Open
+## Cost
 
-Recording the fingerprints in the index (schema property or metadata key) and refusing on open: pending.
+`get_schema` walks the schema's fields on each call and checks each field that has a language (a map lookup, a
+binary search and a string compare). Request-path cost is in `docs/perf/stopword-lists.md`.

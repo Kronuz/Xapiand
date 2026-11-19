@@ -30,6 +30,11 @@ it, or a newer release ships another list), the index is refused with an error t
 list and both fingerprints, because a query that stopped other words than the indexing did would answer
 differently without saying so. Put the earlier file back to open the index again, or re-create it.
 
+The fingerprint is stored in the field's properties, as `_stop_fingerprint` beside `_language`, and is not shown
+in the schema a request reads: it is derived from the list, not a setting, and a schema sent back with a stale one
+would be refused. An index created before the fingerprints has none recorded: it takes the current list's
+fingerprint the first time it is opened for writing, and the node logs one line naming the index and the list.
+
 ### Example
 
 ```rest

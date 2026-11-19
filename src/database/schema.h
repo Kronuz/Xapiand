@@ -978,6 +978,13 @@ public:
 
 	std::shared_ptr<const MsgPack> get_modified_schema();
 
+	/*
+	 * Refuses the schema when a field's stop words list is missing or changed since the field was
+	 * indexed (throws Error naming `index`, the list and both fingerprints). A field with a language and
+	 * no recorded fingerprint adopts the current list's in the mutable schema when `adopt` is set.
+	 */
+	void check_stop_words(std::string_view index, bool adopt);
+
 	std::shared_ptr<const MsgPack> get_const_schema() const;
 
 	void swap(std::unique_ptr<MsgPack>& other) noexcept {

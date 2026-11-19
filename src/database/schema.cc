@@ -56,6 +56,7 @@
 #include "script.h"                               // for Script
 #include "serialize_list.h"                       // for StringList
 #include "split.h"                                // for Split
+#include "stopper.h"                              // for stopWordsFingerprint, checkStopWords
 #include "static_string.hh"                       // for static_string
 #include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
 
@@ -4996,6 +4997,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			if (!specification.language.empty()) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
+				try {
+					mut_properties[RESERVED_STOP_FINGERPRINT] = stopWordsFingerprint(specification.language);
+				} catch (const UnknownStopWordsError& exc) {
+					THROW(ClientError, "{}: {}", repr(RESERVED_LANGUAGE), exc.what());
+				}
 				mut_properties[RESERVED_STOP_STRATEGY] = enum_name(specification.stop_strategy);
 			}
 			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
@@ -9188,6 +9194,7 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 		hh(RESERVED_STEM_LANGUAGE),
 		hh(RESERVED_ACC_PREFIX),
 		hh(RESERVED_SCRIPT),
+		hh(RESERVED_STOP_FINGERPRINT),
 	});
 
 	// Change this item of schema in readable form.
@@ -9227,6 +9234,11 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 						continue;
 					}
 					break;
+				case _.fhh(RESERVED_STOP_FINGERPRINT):
+					// Bookkeeping derived from the stop words list on disk, not a setting: a schema read
+					// back and sent again must not carry a value that no longer matches its list.
+					it = item_schema.erase(it);
+					continue;
 				default:
 					if (!at_root && has_dispatch_set_default_spc(key)) {
 						it = item_schema.erase(it);
@@ -9296,6 +9308,78 @@ Schema::readable_script(MsgPack& prop_obj, MsgPack& /*unused*/)
 
 	dispatch_readable(prop_obj, false);
 	return true;
+}
+
+
+namespace {
+
+struct UnrecordedStopWords {
+	std::vector<std::string> path;
+	std::string language;
+};
+
+// Checks every field below `properties` that has a language against the fingerprint it recorded; the ones that
+// recorded none (indexed before the fingerprints) are collected in `unrecorded`.
+void
+check_field_stop_words(const MsgPack& properties, std::vector<std::string>& path, std::string_view index, std::vector<UnrecordedStopWords>& unrecorded)
+{
+	const auto it_e = properties.end();
+	const auto language_it = properties.find(RESERVED_LANGUAGE);
+	if (language_it != it_e && language_it.value().is_string() && !language_it.value().str_view().empty()) {
+		const auto language = language_it.value().str_view();
+		const auto recorded_it = properties.find(RESERVED_STOP_FINGERPRINT);
+		if (recorded_it == it_e) {
+			unrecorded.push_back({path, std::string(language)});
+		} else {
+			checkStopWords(index, language, recorded_it.value().str_view());
+		}
+	}
+	for (auto it = properties.begin(); it != it_e; ++it) {
+		const auto str_key = it->str_view();
+		if (!is_reserved(str_key) && is_valid(str_key) && it.value().is_map()) {
+			path.emplace_back(str_key);
+			check_field_stop_words(it.value(), path, index, unrecorded);
+			path.pop_back();
+		}
+	}
+}
+
+}  // namespace
+
+
+void
+Schema::check_stop_words(std::string_view index, bool adopt)
+{
+	L_CALL("Schema::check_stop_words({}, {})", repr(index), adopt);
+
+	const auto& root = get_newest_properties();
+	if (!root.is_map()) {
+		return;  // a foreign schema holds no fields of its own
+	}
+	std::vector<UnrecordedStopWords> unrecorded;
+	std::vector<std::string> path;
+	try {
+		check_field_stop_words(root, path, index, unrecorded);
+	} catch (const StopWordsMismatchError& exc) {
+		THROW(Error, "{}", exc.what());
+	}
+	if (!adopt) {
+		return;
+	}
+	static std::mutex adopted_mtx;
+	static std::set<std::string> adopted;
+	for (const auto& field : unrecorded) {
+		auto* properties = &get_mutable_properties();
+		for (const auto& name : field.path) {
+			properties = &properties->get(name);
+		}
+		const auto fingerprint = stopWordsFingerprint(field.language);
+		(*properties)[RESERVED_STOP_FINGERPRINT] = fingerprint;
+		std::lock_guard<std::mutex> lk(adopted_mtx);
+		if (adopted.insert(std::string(index) + '\0' + field.language + '\0' + fingerprint).second) {
+			L_INFO("Index {} adopts stop words list {} (fingerprint {}): it recorded none", repr(index), repr(field.language), fingerprint);
+		}
+	}
 }
 
 

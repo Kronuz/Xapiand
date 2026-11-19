@@ -47,8 +47,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "database/schema.h"
 #include "engine/text.h"
 #include "exception_engine.h"
+#include "msgpack.h"
 #include "stopper.h"
 #include "stopwords/builtin.h"
 
@@ -228,6 +230,83 @@ write(const fs::path& file, const std::string& text)
 	std::ofstream(file) << text;
 }
 
+MsgPack
+text_field(const char* language, const std::string& fingerprint)
+{
+	MsgPack field({{"_type", "text"}, {"_language", language}});
+	if (!fingerprint.empty()) {
+		field["_stop_fingerprint"] = fingerprint;
+	}
+	return field;
+}
+
+// A schema with a text field at the top, one inside an object and a field that has no language.
+std::shared_ptr<Schema>
+schema_of(const std::string& title_fingerprint, const std::string& body_fingerprint, const char* body_language = "fr")
+{
+	MsgPack props = MsgPack::MAP();
+	props["title"] = text_field("en", title_fingerprint);
+	props["plain"] = MsgPack({{"_type", "keyword"}});
+	props["nested"] = MsgPack({{"_type", "object"}});
+	props["nested"]["body"] = text_field(body_language, body_fingerprint);
+	return std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(props)), nullptr, "");
+}
+
+// The fields of a schema, checked against the lists now in use: the index, the list and both fingerprints.
+void
+check_schema_stop_words(const std::string& en_now, const std::string& fr_now)
+{
+	// What the index recorded is still what the lists hold: let through.
+	schema_of(en_now, fr_now)->check_stop_words("idx", false);
+
+	// A field with another fingerprint recorded, at the top or inside an object, refuses the schema.
+	const auto top = thrown<Error>([&] { schema_of("0123456789abcdef", fr_now)->check_stop_words("idx", false); });
+	CHECK(contains(top, "idx"));
+	CHECK(contains(top, "stop words list en"));
+	CHECK(contains(top, "0123456789abcdef"));
+	CHECK(contains(top, en_now));
+	const auto inner = thrown<Error>([&] { schema_of(en_now, "fedcba9876543210")->check_stop_words("idx2", true); });
+	CHECK(contains(inner, "idx2"));
+	CHECK(contains(inner, "stop words list fr"));
+	CHECK(contains(inner, "fedcba9876543210"));
+	CHECK(contains(inner, fr_now));
+
+	// A list that is not there is refused too.
+	const auto gone = thrown<Error>([&] { schema_of(en_now, "fedcba9876543210", "gone")->check_stop_words("idx", false); });
+	CHECK(contains(gone, "stop words list gone"));
+	CHECK(contains(gone, "missing"));
+
+	// A field with no record (indexed before the fingerprints) is let through. It adopts the current list's
+	// fingerprint only when asked to, and then the schema is modified and keeps passing.
+	auto old = schema_of("", "");
+	old->check_stop_words("idx", false);
+	CHECK(old->get_modified_schema() == nullptr);
+	old->check_stop_words("idx", true);
+	const auto adopted = old->get_modified_schema();
+	REQUIRE(adopted != nullptr);
+	CHECK_EQ(std::string(adopted->at("title").at("_stop_fingerprint").str_view()), en_now);
+	CHECK_EQ(std::string(adopted->at("nested").at("body").at("_stop_fingerprint").str_view()), fr_now);
+	CHECK(adopted->find("plain") != adopted->end());
+	CHECK(adopted->at("plain").find("_stop_fingerprint") == adopted->at("plain").end());
+	Schema(adopted, nullptr, "").check_stop_words("idx", false);
+}
+
+// A text field with a language records its list's fingerprint when the schema is written, and the readable
+// schema does not show it.
+void
+check_schema_records(const std::string& en_now)
+{
+	Schema schema(Schema::get_initial_schema(), nullptr, "");
+	schema.write(MsgPack({{"title", MsgPack({{"_type", "text"}, {"_language", "en"}})}}));
+	const auto& title = schema.get_schema().at("title");
+	REQUIRE(title.find("_stop_fingerprint") != title.end());
+	CHECK_EQ(std::string(title.at("_stop_fingerprint").str_view()), en_now);
+	CHECK_EQ(std::string(title.at("_language").str_view()), "en");
+	CHECK(contains(schema.get_schema().to_string(), "_stop_fingerprint"));
+	CHECK(!contains(schema.to_string(), "_stop_fingerprint"));
+	CHECK(contains(schema.to_string(), "_language"));
+}
+
 // With no stopwords directory every shipped language stops exactly the words of its file in the tree.
 void
 scenario_builtin()
@@ -309,6 +388,9 @@ scenario_builtin()
 	CHECK(contains(gone, "gone"));
 	CHECK(contains(gone, "0123456789abcdef"));
 	CHECK(contains(gone, "missing"));
+
+	check_schema_stop_words("d1834faea3c14e55", stopWordsFingerprint("fr"));
+	check_schema_records("d1834faea3c14e55");
 	fs::remove_all(root);
 }
 
@@ -367,6 +449,13 @@ scenario_override()
 	checkStopWords("idx", "fr", fingerprint_of(words));
 	const auto custom = thrown<StopWordsMismatchError>([] { checkStopWords("idx", "xx", "d1834faea3c14e55"); });
 	CHECK(contains(custom, "344b9978a88eed3a"));
+
+	// A schema recorded with the shipped English list is refused by the node whose file replaced it.
+	const auto old_schema = thrown<Error>([] { schema_of("d1834faea3c14e55", stopWordsFingerprint("fr"))->check_stop_words("idx", false); });
+	CHECK(contains(old_schema, "d1834faea3c14e55"));
+	CHECK(contains(old_schema, "ce679203ae8663b7"));
+	check_schema_stop_words("ce679203ae8663b7", stopWordsFingerprint("fr"));
+	check_schema_records("ce679203ae8663b7");
 }
 
 // A file that cannot be read is an error, never a quiet return to the shipped list.

@@ -393,8 +393,10 @@ anyone who can reach the port can use the API.
 
 ## Environment
 
-- `XAPIAND_DATA_PATH` is the directory that holds the node's `stopwords/` and
-  `mime.types`. Without it the node looks beside the executable (`../share/xapiand`,
+- `XAPIAND_DATA_PATH` is the directory that holds the node's `mime.types` and, optionally,
+  a `stopwords/` directory of lists that replace the compiled-in ones (see
+  [Stop Words](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words)).
+  Without it the node looks beside the executable (`../share/xapiand`,
   or the source tree for a build that is not installed) and then in the install
   prefix.
 - `XAPIAND_LAG_PROBE=0` starts the node without the event-loop lag probes (see

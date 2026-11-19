@@ -372,7 +372,9 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 		co_return nullptr;
 	}
 	auto s = co_await manager->schemas->get(this, obj);
-	co_return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
+	auto schema_ptr = std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
+	schema_ptr->check_stop_words(endpoints.to_string(), (flags & DB_WRITABLE) != 0);
+	co_return schema_ptr;
 }
 
 
