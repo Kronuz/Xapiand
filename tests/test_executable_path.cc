@@ -25,8 +25,11 @@
 
 #include "test_harness.h"
 
+// test_stubs.cc defines the global `opts`, so main.cc's own is renamed.
 #define main xapiand_main_not_run
+#define opts main_opts
 #include "../src/main.cc"
+#undef opts
 #undef main
 
 #include <string>
