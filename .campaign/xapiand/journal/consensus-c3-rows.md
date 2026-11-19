@@ -1,0 +1,43 @@
+# consensus-c3-rows: journal
+
+State: waiting on CI at consensus:f3af7f1 (branch pushed; main merged)
+Quest: .campaign/xapiand/quests/consensus-c3-rows.md (the lead's; never edit it)
+
+Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
+status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
+ready for review, fixing <findings>, blocked on <who>: <what>.
+
+## Doing
+
+Rows and mutants committed at consensus:d2a2cc0, Busy pin at consensus:0a11a90; main merged at consensus:f3af7f1 and the branch pushed. Jobs (after the Busy assertion): build-test 9d7a74 (A3), P1 2cb29b (A1), P2 1a8ab1 (A2). Jobs run .scratch/c3rows-mut.sh in the Xapiand home (applies the mutant to a copy of core.h, builds and runs consensus_test; exit 127 on a build problem).
+
+## Next
+
+1. When CI is green, the quest is ready for review/land. Jobs done: both mutants fail the unit suite (exit 1, as required).
+
+## Blocked on
+
+Nothing.
+
+## Evidence
+
+Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
+Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
+checked what), and answer each message by its id (msg-N).
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261118-044855-9d7a74 (build-test, passed at 0a11a9061de6; only merges from main since); fails without: 261118-044856-2cb29b |
+| A2 | 261118-044855-9d7a74 (as above); fails without: 261118-044857-1a8ab1 |
+| A3 | 261118-044855-9d7a74 (as above) |
+
+## Result
+
+<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
+and what it leaves open. Results and how it works go in the docs of the repository it changed
+(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+
+## Rulings I made
+
+- The accept half of A2 ((applied, commit] accepted) is unreachable at Core: with applied < commit a delivery is outstanding or a batch pending, both answer Busy. The row covers the refusal at every boundary in (commit, last_index] on a follower; the existing loop covers acceptance up to applied. Lead to confirm.
+- Renamed "a boundary above applied is refused" to "above commit".
