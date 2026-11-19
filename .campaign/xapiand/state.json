@@ -2762,6 +2762,34 @@
       "title": "One node to a cluster and back, without loss",
       "updated": "2026-11-18T02:55:57"
     },
+    "cluster-net-setup": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/cluster/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "cluster-vm-tier"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "VM net setup is all-or-nothing; IPv6 obeys partitions and shapes",
+      "updated": "2026-11-18T18:14:50"
+    },
     "cluster-vm-tier": {
       "accepted": {
         "correctness": {
