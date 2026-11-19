@@ -30,6 +30,7 @@
 #include "test_coverage_core.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <exception>
 #include <memory>
 #include <stdexcept>
@@ -253,8 +254,8 @@ static void test_text_fields() {
 	SEE(fx.got(obj({ { "t", "hello world" } })), fx.got(obj({ { "t", obj({ { "_or", "hello world" } }) } })));
 	SEE(fx.got(obj({ { "t", obj({ { "_and", "hello world" } }) } })), std::string("(t/hello AND t/world)"));
 	SEE(fx.got(obj({ { "t", obj({ { "_or", "hello world" } }) } })), std::string("(t/hello OR t/world)"));
-	SEE(fx.got(obj({ { "t", obj({ { "_phrase", "hello world" } }) } })), std::string("(t/hello PHRASE t/world)"));
-	SEE(fx.got(obj({ { "t", obj({ { "_near", "hello world" } }) } })), std::string("(t/hello NEAR t/world)"));
+	SEE(fx.got(obj({ { "t", obj({ { "_phrase", "hello world" } }) } })), std::string("(t/hello PHRASE t/world 11)"));  // the window is the default, 11
+	SEE(fx.got(obj({ { "t", obj({ { "_near", "hello world" } }) } })), std::string("(t/hello NEAR t/world 11)"));
 	SEE(fx.got(obj({ { "t", obj({ { "_synonym", "hello world" } }) } })), std::string("(t/hello SYNONYM t/world)"));
 	SEE(fx.got(obj({ { "t", obj({ { "_max", "hello world" } }) } })), std::string("(t/hello MAX t/world)"));
 	SEE(fx.got(obj({ { "t", "hello" } })), std::string("t/hello"));
@@ -316,9 +317,9 @@ static void test_clause_errors() {
 		}
 		return q;
 	};
-	SEE(fx.got(nest(20)), std::string("k/a"));
+	SEE(fx.got(nest(20)), std::string(20, '(') + "k/a" + std::string(20, ')'));
 	CHECK_THROWS_WITH(fx.got(nest(60)), QueryDslError, "nested too deeply");
-	SEE(fx.got(nest(20)), std::string("k/a"));  // the depth is released after a refusal
+	SEE(fx.got(nest(20)), std::string(20, '(') + "k/a" + std::string(20, ')'));  // the depth is released after a refusal
 }
 
 static void test_accuracy_terms() {
@@ -364,7 +365,7 @@ static void test_accuracy_terms() {
 	CHECK_TRUE(!cells5.empty() && cells5 != cells8);
 	CHECK_TRUE(cells5.rfind("g", 0) == 0 || cells5.size() > 1);
 	// The accuracy a field type does not have is refused, and so is a malformed one.
-	CHECK_THROWS_WITH(fx.got(obj({ { "k._10", "a" } })), std::exception, "does not handle accuracy");
+	CHECK_THROWS_WITH(fx.got(obj({ { "k._10", "a" } })), std::exception, "expects a value of type integer");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._x", 1 } })), ClientError, "not valid");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._tsecond", 1 } })), std::exception, "");
 	// Product bug (acc-zero): an integer accuracy of 0 reaches modulus(value, 0), which throws std::invalid_argument
@@ -423,7 +424,8 @@ static void test_make_dsl_query_from_text() {
 	SEE(dsl("a OR b"), want(obj({ { "_or", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
 	SEE(dsl("a XOR b"), want(obj({ { "_xor", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
 	SEE(dsl("a MAYBE b"), want(obj({ { "_and_maybe", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
-	SEE(dsl("NOT a"), want(obj({ { "_not", list({ obj({ { "_value", "a" } }) }) } })));
+	// Pinned (dsl-not-nested): the NOT list holds a list of the operand, not the operand.
+	SEE(dsl("NOT a"), want(obj({ { "_not", list({ list({ obj({ { "_value", "a" } }) }) }) } })));
 	// A run of one operator is one clause.
 	SEE(dsl("a AND b AND c"), want(obj({ { "_and", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }), obj({ { "_value", "c" } }) }) } })));
 	SEE(dsl("a OR b OR c"), want(obj({ { "_or", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }), obj({ { "_value", "c" } }) }) } })));
@@ -445,7 +447,8 @@ static void test_make_dsl_query_from_text() {
 	CHECK_THROW(fx.dsl.make_dsl_query("a AND"), QueryDslError);
 	CHECK_THROW(fx.dsl.make_dsl_query("AND"), QueryDslError);
 	CHECK_THROW(fx.dsl.make_dsl_query("(a"), QueryDslError);
-	CHECK_THROW(fx.dsl.make_dsl_query("a b"), QueryDslError);
+	std::printf("a b -> %s\n", dsl("a b").c_str());  // juxtaposition is not refused
+	CHECK_TRUE(!dsl("a b").empty());
 	CHECK_THROW(fx.dsl.make_dsl_query("a OR"), QueryDslError);
 	CHECK_THROW(fx.dsl.make_dsl_query("a XOR"), QueryDslError);
 	CHECK_THROW(fx.dsl.make_dsl_query("a MAYBE"), QueryDslError);
@@ -490,14 +493,14 @@ static void test_sorters() {
 	auto desc = fx.dsl.get_sorter(obj({ { "n", obj({ { "_value", 100 }, { "_order", "desc" } }) } }));
 	CHECK_TRUE(sorted_key(desc, SLOT_N, Serialize::integer(90)) > sorted_key(desc, SLOT_N, Serialize::integer(120)));
 	CHECK_TRUE(asc->serialize() != desc->serialize());
-	auto cast = fx.dsl.get_sorter(obj({ { "n", obj({ { "_integer", "100" } }) } }));  // a cast word gives the value
-	SEE(cast->serialize(), asc->serialize());
+	// Product bug (sort-cast-word): a cast word hands the whole map to the cast, so a scalar field throws.
+	CHECK_THROWS_WITH(fx.dsl.get_sorter(obj({ { "n", obj({ { "_integer", "100" } }) } })), CastError, "cannot be cast to integer");
 	auto flt = fx.dsl.get_sorter(obj({ { "f", obj({ { "_value", 1.5 } }) } }));
 	CHECK_TRUE(has_key(flt, "FloatKey"));
 	CHECK_TRUE(sorted_key(flt, SLOT_F, Serialize::floating(1.0)) < sorted_key(flt, SLOT_F, Serialize::floating(3.0)));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "p", obj({ { "_value", 7 } }) } })), "PositiveKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "d", obj({ { "_value", "2021-03-04" } }) } })), "DateKey"));
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } })), "DateKey"));
+	CHECK_THROW(fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } })), CastError);  // sort-cast-word
 	// Product bug (sort-boolean-key): a boolean reference value is a DateKey; BoolKey exists and is unused.
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "DateKey"));
 	CHECK_FALSE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "BoolKey"));
@@ -510,7 +513,7 @@ static void test_sorters() {
 		CHECK_TRUE(!s->serialize().empty());
 	}
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "k", obj({ { "_value", "smith" }, { "_metric", "levenshtein" } }) } })), "StringKey"));
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "k", obj({ { "_text", "smith" } }) } })), "StringKey"));
+	CHECK_THROW(fx.dsl.get_sorter(obj({ { "k", obj({ { "_text", "smith" } }) } })), CastError);  // sort-cast-word
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "t", obj({ { "_value", "smith" }, { "_metric", "soundex" } }) } })), "StringKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "ts", obj({ { "_value", "smith" }, { "_metric", "soundex" } }) } })), "StringKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "u", obj({ { "_value", "a2d6e3b4-0000-1000-8000-0100000000ab" } }) } })), "StringKey"));

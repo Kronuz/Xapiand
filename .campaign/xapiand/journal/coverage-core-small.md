@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-025306-f2d437 (four tests, one build, 150 min)
+State: waiting on jobs (see below; resubmitted after f2d437)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -57,3 +57,11 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - endpoint 278/292 lines, 105/128 branches: UUID text is the serialized form (a2d6e3b4-0000-1000 -> 0000000a-2d6e-63b4, 0000..-1000 -> -6000: version-1 time fields reordered, apparently by design, not a bug); partition expectations now use the normalized text, encoded case mirrors the early-return grouping. endpoint-host-port check PASSED: confirmed.
 - query_dsl: compile error (Serialize::serialize takes a non-const tm_t&), fixed. acc-zero, sort-boolean-key, dsl-scale-weight still unknown.
 - cast-words still unknown (cast never ran).
+
+## Job f2d437 (exit 134) readout
+
+- cast: 336/336 lines, 301/302 branches, 214 checks, 3 of 3 runs pass. cast-words stays pinned (serialize-validation fixes it).
+- datetime: 446/485 lines, 253/282 branches (134 checks pass). endpoint: 285/292 lines, 111/128 branches (103 checks pass).
+- query_dsl aborted: uncaught CastError "Type MAP cannot be cast to integer" from get_sorter({"n": {"_integer": "100"}}). NEW finding sort-cast-word: the sorter passes the whole map (`value = &o`, not `&val`) to Cast::cast, so every cast word throws CastError for integer, datetime and text fields (geo works: the cast returns the map). Not a process abort in product code: the test did not expect the throw. Pinned as CHECK_THROW.
+- query_dsl wrong expectations fixed: phrase/near carry window 11; nest(20) keeps 20 pairs of parentheses; "k._10" with "a" throws integer type error; "NOT a" is `_not: [[...]]` (pinned, dsl-not-nested); "a b" is not refused (value printed by the next run, then pinned).
+- Suspects: acc-zero, dsl-scale-weight, sort-boolean-key: unknown until query_dsl runs.
