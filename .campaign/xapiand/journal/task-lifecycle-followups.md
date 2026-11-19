@@ -17,11 +17,8 @@ Nothing: every criterion has evidence at task:4c73dbb; suite, TSan (12/12) and A
 
 ## Blocked on
 
-Nothing. Q1-Q3 built as owner defaults, pending the owner's ruling (see Rulings). For the lead:
-`docs/API.md:107` and `docs/design/service-shape.md:86` still show `debounce`'s old
-`fire(key)` signature and timing; both are outside this quest's file set. `campaign brief` flags
-test/{lifecycle,timers}_test.cc as outside the set: a glob-parsing quirk (the set names them). CI
-has no run: the lead said not to push.
+Nothing. Q1-Q3 built as owner defaults, pending the owner's ruling (see Rulings). The docs/API.md and service-shape.md signatures are updated at task:8cf6793 (msg from the
+lead: file set widened). CI has no run: the lead said not to push.
 
 ## Evidence
 
@@ -47,7 +44,7 @@ Every mutant job fails on the CHECK of its own behavior (logs checked), not on a
 ## Result
 
 task commits: 4aecbae (F6 queued counts inbox), ea2674c (Q3 flushed_inline), 3e46835 (Q1
-cause), 3e5ff12 (Q2 abandoned), dd2c7bd (debounce flags, throttle, fire_pending), 4c73dbb (docs).
+cause), 3e5ff12 (Q2 abandoned), dd2c7bd (debounce flags, throttle, fire_pending), 4c73dbb (docs), 8cf6793 (API.md, service-shape.md).
 How it works: `docs/mechanisms/lifecycle.md` (periodic and debounce; lifecycle).
 
 ## Rulings I made
