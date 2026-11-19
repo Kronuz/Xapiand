@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: review CHANGES folded in (F1-F6) at logger:dec68de; waiting on jobs 261118-211550-396b63 261118-211530-b2be3e 261118-211531-a0d2cc 261118-211551-f2d9be 261118-211533-3692bb 261118-211535-b29cd5 261118-211536-fab87d 261118-211538-f22be9 261118-211539-e2b84a 261118-211539-de38d7 261118-211539-19d855 261118-211540-46d3e1 261118-211540-5fa769 261118-211540-ef50bc 261118-211540-b21587 261118-211541-c3bd82 261118-211541-54fa80 261118-211541-bb2b1d 261118-211542-bf5dcf 261118-211542-b01ba9
+State: review fixes complete at logger:fc698e2; waiting on jobs 261118-213654-ec0596 261118-213656-307888 261118-213657-495b67 261118-213659-24fa6a 261118-213700-cba5c4 261118-213700-bd7a8d 261118-213700-dfe75e 261118-213701-0b38c9 261118-213701-5bf09d 261118-213701-b3b490 261118-213702-278777 261118-213702-35a4ac 261118-213702-10d630 261118-213702-8b6f13 261118-213703-3c2535 261118-213703-ff918e 261118-213703-87e194 261118-213704-9a8ef7; then ready for review
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -103,6 +103,28 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   211540-46d3e1 211540-5fa769, A5 211540-ef50bc 211540-b21587 211541-bb2b1d 211542-bf5dcf
   211542-b01ba9, slow+stall 211541-c3bd82, capped 211541-54fa80. Next: when all pass, CI green,
   evidence table, ready for review.
+- Lead msg (probes exit 3, TSan recipe 19d855 exit 8), read:
+  - Probes 3692bb/b29cd5/fab87d: a build error, not a probe result: the quest slot's
+    build-probe-* cache came from the reviewer's source dir. Rerun --fresh at dec68de
+    (213022-e130d8, 213023-5eb902, 213025-2ee506): late-exc, fork, logexit, echo ok; count a REAL
+    miss: "at most 22" for 17 due (+5 deferred). Cause: the stop abandoned the LOG thread inside
+    close()'s last look, and close() then released the wheel without counting. Fix logger:fc698e2
+    (close() checks `abandoned` after the last look); test logger:385584f (capped child also files
+    5 deferred lines due in an hour). Probes at fc698e2: 213654-ec0596 (plain), 213656-307888 (ASan),
+    213657-495b67 (TSan); the fresh runs at dec68de are its fails-without.
+  - 19d855: only logger_queue's exit flush, a new mode, not main's e96e6a set: "logger: exit stopped
+    the LOG thread (5 s cap): at most 1503 lines not written". Measured: TSan recipe child alone
+    213026-b554b4 1.9-4.7 s per run; 213314-4bbdf2 splits it: drain about 1.1 s for 3600 lines
+    (0.3 ms a line), so beside the suite it reaches the cap. Fix logger:9c3ef8e: the exit flush child
+    queues 900 lines (4 x 200 + 100). No static-init reports in 19d855.
+  - Reruns at fc698e2: suite 213659-24fa6a; ASan 213700-cba5c4 213700-bd7a8d; TSan recipe
+    213700-dfe75e 213701-0b38c9; A2 213701-5bf09d 213701-b3b490; A5 213702-278777 213702-35a4ac
+    213702-10d630 213702-8b6f13 213703-3c2535; slow+stall 213703-ff918e; capped 213703-87e194;
+    late/fork/logexit/capped/slow 213704-9a8ef7.
+  - Since logger:0f1063d (for the re-check): ab42a67 (test, late L_EXC), d037d5b (F4), a3a7ef6 (F1),
+    ef5f968 (test, fork/logexit), e74c64e (F3 + doc), dec68de (F2 report + F5/F6 API doc), 9c3ef8e
+    (test, exit flush 900 lines), 385584f (test, capped + deferred), fc698e2 (F2: abandoned in the
+    last look).
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
@@ -204,6 +226,8 @@ Benchmarks, strict beside light holds (host load high, wide intervals), median r
 
 ## Rulings I made
 
+- logger_queue's exit flush resized to 900 lines (test only): the 5 s cap (lead's ruling) cuts a
+  3600-line TSan Debug drain beside the suite; the test still covers threads, records and main.
 - F1 fails-without filed under A2 and F3's under A4 (A1 is an [artifact] criterion, proven here).
 - The stop reports on stderr when it gives up after a stall too, not only at the cap: lines lost
   either way are never silent.
