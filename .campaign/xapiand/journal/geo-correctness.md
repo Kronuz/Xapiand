@@ -16,6 +16,8 @@ submitted: fails-without 261118-231033-23ce28 (at 673c25282), passing 261118-231
 
 ## Next
 
+0. msg D129 (lead): F20 is fixed in htm quest htm-edge-points; after it lands I repin htm (CMakeLists.txt joins my file set) and flip the F20 pins. Branch not pushed by me: contributors never push; the lead pushes for CI.
+
 1. Read the jobs when they finish (`campaign brief geo-correctness`); fold in a CI failure on any platform.
 2. When coverage-areas lands and the lead merges master and widens the file set: flip the pinned assertions in
    tests/test_coverage_geospatial.cc (F18 `MULTIPOINT(1 2, 3)` is an EWKTError; F19 `with_empty.toWKT()` ends
