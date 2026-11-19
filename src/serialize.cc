@@ -377,6 +377,7 @@ Serialize::object(const required_spc_t& field_spc, const class MsgPack& o)
 				return string(field_spc, Cast::string(o.at(str_key)));
 			case Cast::HashType::UUID:
 				return string(field_spc, Cast::uuid(o.at(str_key)));
+			case Cast::HashType::DATE:
 			case Cast::HashType::DATETIME:
 				return datetime(field_spc, Cast::datetime(o.at(str_key)));
 			case Cast::HashType::TIME:
@@ -392,11 +393,14 @@ Serialize::object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::HashType::CHULL:
 			case Cast::HashType::MULTIPOINT:
 			case Cast::HashType::MULTICIRCLE:
+			case Cast::HashType::MULTICONVEX:
 			case Cast::HashType::MULTIPOLYGON:
 			case Cast::HashType::MULTICHULL:
 			case Cast::HashType::GEO_COLLECTION:
 			case Cast::HashType::GEO_INTERSECTION:
 				return geospatial(field_spc.get_type(), o);
+			case Cast::HashType::LUA:
+				THROW(SerializationError, "{} is a script, not a value", repr(str_key));
 			default:
 				THROW(SerializationError, "Unknown cast type {}", repr(str_key));
 		}
@@ -1104,6 +1108,8 @@ Serialize::guess_type(const class MsgPack& field_value)
 						return FieldType::text;
 					case Cast::HashType::UUID:
 						return FieldType::uuid;
+					case Cast::HashType::DATE:
+						return FieldType::date;
 					case Cast::HashType::DATETIME:
 						return FieldType::datetime;
 					case Cast::HashType::TIME:
@@ -1118,11 +1124,14 @@ Serialize::guess_type(const class MsgPack& field_value)
 					case Cast::HashType::CHULL:
 					case Cast::HashType::MULTIPOINT:
 					case Cast::HashType::MULTICIRCLE:
+					case Cast::HashType::MULTICONVEX:
 					case Cast::HashType::MULTIPOLYGON:
 					case Cast::HashType::MULTICHULL:
 					case Cast::HashType::GEO_COLLECTION:
 					case Cast::HashType::GEO_INTERSECTION:
 						return FieldType::geo;
+					case Cast::HashType::LUA:
+						THROW(SerializationError, "{} is a script, not a value", repr(str_key));
 					default:
 						THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
 				}

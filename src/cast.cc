@@ -74,11 +74,14 @@ Cast::cast(const MsgPack& obj)
 			case HashType::CHULL:
 			case HashType::MULTIPOINT:
 			case HashType::MULTICIRCLE:
+			case HashType::MULTICONVEX:
 			case HashType::MULTIPOLYGON:
 			case HashType::MULTICHULL:
 			case HashType::GEO_COLLECTION:
 			case HashType::GEO_INTERSECTION:
 				return obj;
+			case HashType::LUA:
+				THROW(CastError, "{} is a script, not a value", repr(str_key));
 			default:
 				THROW(CastError, "Unknown cast type {}", str_key);
 		}
@@ -427,6 +430,7 @@ Cast::get_field_type(std::string_view cast_word)
 		case HashType::KEYWORD:           return FieldType::keyword;
 		case HashType::TEXT:              return FieldType::text;
 		case HashType::UUID:              return FieldType::uuid;
+		case HashType::DATE:              return FieldType::date;
 		case HashType::DATETIME:          return FieldType::datetime;
 		case HashType::TIME:              return FieldType::time;
 		case HashType::TIMEDELTA:         return FieldType::timedelta;
@@ -438,6 +442,7 @@ Cast::get_field_type(std::string_view cast_word)
 		case HashType::CHULL:             return FieldType::geo;
 		case HashType::MULTIPOINT:        return FieldType::geo;
 		case HashType::MULTICIRCLE:       return FieldType::geo;
+		case HashType::MULTICONVEX:       return FieldType::geo;
 		case HashType::MULTIPOLYGON:      return FieldType::geo;
 		case HashType::MULTICHULL:        return FieldType::geo;
 		case HashType::GEO_COLLECTION:    return FieldType::geo;
