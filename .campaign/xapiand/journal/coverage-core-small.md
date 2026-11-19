@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-044110-f37689 (four tests; d3a758 aborted on the dt cast-word sort, now pinned as DatetimeError)
+State: waiting on jobs 261119-055652-fae73e (suite), 261119-055658-c4ce88 (query_dsl at 344945a35), 261119-055700-02118e (query_dsl at the CI-failing 4339206eb, must fail)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,14 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
+CI at 4339206eb failed test_coverage_core_query_dsl on all three platforms. Cause 1 (271): stop words are read from <data path>/stopwords, default the install prefix; this Mac has /usr/local/share/xapiand/stopwords, CI has none (only a one-time L_WARNING_ONCE "No stop words found"). Test now writes its own en.txt and preloads it (as test_control_plane.cc does). Cause 2 (428, FreeBSD only): `create_exp_op_dsl`'s `{{ x }}` gives `{"_not":[[x]]}` on macOS and Linux, `{"_not":[x]}` on FreeBSD; test unwraps lists of one. Product finding dsl-not-wrap, for a hunt row (src/query_dsl.cc is not in this quest's file set).
+
 Four tests written (tests/test_coverage_core_{cast,datetime,endpoint,query_dsl}.cc, helper tests/test_coverage_core.h); none compiled yet. Cast probe job running; then one job for the other three with BUILD shared (build-cov-core).
 
 ## Next
 
-1. Read the probe output, fix expectations (a mismatch is my misreading or a product bug: check against the source), then run all four with harness/coverage_one.sh, REPEAT=20.
-2. Full coverage.sh job, per-file numbers, suite job, push, mark ready.
+1. Read c4ce88 (must pass, numbers as f37689), 02118e (must fail at 271), fae73e (suite); fill the Evidence rows with their ids.
+2. Lead pushes and watches CI; mark ready when green.
 
 ## Blocked on
 
@@ -28,7 +30,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | f37689 (REPEAT=3, T13 target 90 lines / 80 branches): cast.cc 336/336 lines (100.0%), 301/302 branches (99.7%); datetime_msgpack.cc 446/485 (92.0%), 253/282 (89.7%); endpoint.cc 285/292 (97.6%), 111/128 (86.7%); query_dsl.cc 1201/1311 (91.6%), 581/702 (82.8%). All met. Rerun at 344945a35: c4ce88 |
+| A2 | Every check compares values (SEE, CHECK_THROWS_WITH); findings are pinned with their current values. The stop-word check fails without the fix: 02118e (4339206eb, no data path) must exit nonzero; c4ce88 passes |
+| A3 | suite fae73e; CI after the lead's push |
 
 ## Result
 
@@ -38,7 +42,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The stop-word test installs its own list rather than reading the source tree's: XAPIAND_SOURCE_DIR is a per-target definition in CMakeLists.txt (not in the file set), and a private list makes the expected query exact.
+- "NOT a" is checked on the operand after unwrapping lists of one, not by shape: the shape is toolchain-dependent (dsl-not-wrap), the operand is not. Not an #ifdef.
 
 ## Findings so far (pinned in tests, from reading the source; confirm against the job output)
 
@@ -48,6 +53,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - acc-zero: `n._0` reaches `modulus(value, 0)` -> std::invalid_argument (500), not a QueryDslError.
 - sort-boolean-key: `get_sorter` sorts a boolean reference value with `add_date` (DateKey); `BoolKey`/`add_bool` exist unused.
 - dsl-scale-weight: `_scale_weight`, `_edit_distance` never build: the array form is refused by the engine, the object form is "Invalid operator". `process()`'s "Unexpected array" is unreachable.
+- dsl-not-wrap: `make_dsl_query("NOT a")` is `{"_not":[[x]]}` (macOS, Linux CI) or `{"_not":[x]}` (FreeBSD CI): `object[op] = {{ stack_msgpack.back() }}` in `QueryDSL::create_exp_op_dsl` (src/query_dsl.cc:1321) is read differently per toolchain; the engine flattens both. Fix: build the list explicitly with push_back.
 - endpoint-host-port: `xapiand://host:port/idx` drops the host (node_name empty).
 
 ## Job 86a323 (exit 1) readout
