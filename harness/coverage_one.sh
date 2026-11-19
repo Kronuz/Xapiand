@@ -20,18 +20,21 @@ rm -f "$BUILD"/prof-*.profraw
 LLVM_PROFILE_FILE="$BUILD/prof-%p.profraw" "$BUILD/bin/xapiand_test_coverage_$TEST"; rc=$?
 echo "test exit: $rc"
 $LLVM/bin/llvm-profdata merge -sparse -o "$BUILD/merged.profdata" "$BUILD"/prof-*.profraw || exit 1
-for src in "$@"; do
-	$LLVM/bin/llvm-cov export -format=lcov -instr-profile "$BUILD/merged.profdata" "$BUILD/bin/xapiand_test_coverage_$TEST" "$ROOT/$src" 2>/dev/null |
-	python3 -I - "$src" <<'PY'
+$LLVM/bin/llvm-cov export -format=lcov -instr-profile "$BUILD/merged.profdata" "$BUILD/bin/xapiand_test_coverage_$TEST" 2>/dev/null >"$BUILD/coverage.lcov"
+python3 -I - "$BUILD/coverage.lcov" "$@" <<'PY'
 import sys
-src = sys.argv[1]
-lines, branches = {}, {}
-for l in sys.stdin:
+lcov, wanted = sys.argv[1], sys.argv[2:]
+files = {}
+cur = None
+for l in open(lcov):
     l = l.strip()
-    if l.startswith("DA:"):
-        n, c = l[3:].split(",")[:2]; lines[int(n)] = int(c)
-    elif l.startswith("BRDA:"):
-        n, _, _, t = l[5:].split(","); branches.setdefault(int(n), []).append(0 if t == "-" else int(t))
+    if l.startswith("SF:"):
+        cur = files.setdefault(l[3:], ({}, {}))
+    elif cur is not None and l.startswith("DA:"):
+        n, c = l[3:].split(",")[:2]; cur[0][int(n)] = cur[0].get(int(n), 0) + int(c)
+    elif cur is not None and l.startswith("BRDA:"):
+        n, b, k, t = l[5:].split(",")
+        key = (int(n), b, k); cur[1][key] = cur[1].get(key, 0) + (0 if t == "-" else int(t))
 def ranges(ns):
     out, ns = [], sorted(ns)
     i = 0
@@ -40,10 +43,14 @@ def ranges(ns):
         while j + 1 < len(ns) and ns[j + 1] == ns[j] + 1: j += 1
         out.append(str(ns[i]) if i == j else f"{ns[i]}-{ns[j]}"); i = j + 1
     return ",".join(out)
-lc = sum(1 for c in lines.values() if c); bt = sum(len(v) for v in branches.values()); bc = sum(1 for v in branches.values() for t in v if t)
-print(f"{src}: lines {lc}/{len(lines)} ({100*lc/max(1,len(lines)):.1f}%), branches {bc}/{bt} ({100*bc/max(1,bt):.1f}%)")
-print("  uncovered lines:", ranges([n for n, c in lines.items() if not c]))
-print("  branch lines with an untaken branch:", ranges([n for n, v in branches.items() if not all(v)]))
+for src in wanted:
+    hit = [f for f in files if f.endswith("/" + src) or f == src]
+    if not hit:
+        print(f"{src}: not in the profile's mapping"); continue
+    lines, branches = files[hit[0]]
+    lc = sum(1 for c in lines.values() if c); bt = len(branches); bc = sum(1 for t in branches.values() if t)
+    print(f"{src}: lines {lc}/{len(lines)} ({100*lc/max(1,len(lines)):.1f}%), branches {bc}/{bt} ({100*bc/max(1,bt):.1f}%)")
+    print("  uncovered lines:", ranges([n for n, c in lines.items() if not c]))
+    print("  branch lines with an untaken branch:", ranges({k[0] for k, t in branches.items() if not t}))
 PY
-done
 exit $rc
