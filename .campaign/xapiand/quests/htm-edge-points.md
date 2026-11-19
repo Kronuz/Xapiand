@@ -1,31 +1,14 @@
-# htm-edge-points: A point on a root-mesh edge gets its own trixel id
+# htm-edge-points
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status htm-edge-points`.
+Outcome: `HTM::getId` gives a point lying on an edge of the root mesh (latitude 0, longitude 0 or 90/180/270, the poles) the id of a trixel that contains it, so a circle around such a point finds it. Today it returns `N3333...` (geo-correctness F20, D129): `inside<Round>` tests `> 0`, which is false on the edge.
 
-## Outcome
+## Criteria
 
-<The behavior that exists when this quest lands, in one paragraph.>
-
-## Acceptance criteria
-
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- A1 Points on every root-mesh edge (lat 0 at several longitudes, lon 0/90/180/270 at several latitudes, both poles) get an id whose trixel contains them, and a 1 km circle around each covers that id: a test failing at the parent commit
+- A2 Ids of points off every edge are unchanged: a golden comparison over at least 10,000 random points, every id identical before and after
+- A3 [artifact] htm's goldens regenerated; `CHANGELOG.md` says which ids change (points on root-mesh edges) and that indexes holding such points must reindex them
+- A4 The suite passes, and CI is green on every platform
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
-
-## May land early
-
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The fix is the one-line change from `> 0` to `>= 0` in `inside<Round>` unless A1/A2 show it assigns a point to two trixels inconsistently; ties go to one trixel deterministically.

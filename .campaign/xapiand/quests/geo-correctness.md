@@ -26,3 +26,6 @@ quest depending on it can start before it lands.>
 
 <Internal code behind tests, unless the quest is a format, wire or public API. "None" when
 everything waits for the review; `land --upto` refuses then.>
+
+
+F20 is an htm bug (D129): it is fixed in quest htm-edge-points, and this quest repins htm to that landed commit (CMakeLists.txt joins the file set then) and flips the F20 pins.
