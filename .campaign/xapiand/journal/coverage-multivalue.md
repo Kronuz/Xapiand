@@ -57,3 +57,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - M3 settled by 7797bd: same global list finds nothing, reversed list finds the document (checks passed).
 - M4 (metric_serialize.h SerializablePhoneticMetric::unserialize): reads and drops the encoder code, so a rebuilt phonetic key serializes shorter (13 to 8 bytes soundex english); pinned. Round trip excludes phonetic slots.
 - 7797bd: geospatialrange 96.0/93.8; remaining failures were wrong expectations (stop words key "en", geodetic vs geocentric angles, M4). Fixed at ad0c8d0a8149; rerun ce5d85.
+- ce5d85: 1 failure (keymaker.cc:466 rebuilt key == plain key). Cause is real bug M5 (StringKey::serialize writes only the metric, not slot/reverse, so a rebuilt string key reads slot 0). Pinned at eeac65125; scalar kinds still round-trip equal. terms 317 and range 138 checks passed.
+- Rerun 261119-044052-c8b854 (--minutes 150, same cmd) at eeac65125. Next: if pass, coverage.sh multivalue job + `campaign verify coverage-multivalue`, then Evidence per-file numbers, ready.
