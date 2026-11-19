@@ -68,7 +68,7 @@ void test_binary_operators_are_lists_of_two() {
 		const auto tree = dsl.make_dsl_query(std::string("a:b ") + op + " c:d");
 		std::fprintf(stderr, "tree: %s\n", tree.to_string().c_str());
 		CHECK_EQ(tree.size(), std::size_t(1));
-		const auto& operands = tree.begin()->second;
+		const auto& operands = tree.at(tree.begin()->str_view());
 		CHECK_TRUE(operands.is_array());
 		CHECK_EQ(operands.size(), std::size_t(2));
 		CHECK_FALSE(operands.at(0).is_array());
