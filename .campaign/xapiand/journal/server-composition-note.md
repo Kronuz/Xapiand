@@ -29,7 +29,7 @@ as detentd does (`src/detentd/main.cc:154-158`); the note follows the code.
 | A3 | `docs/server-composition.md` at cpp-libraries:0579a1a, section Deviations: 18 rows, each with reason and status; adds detent-agent's 1 ms and 20 ms polls, its `signal_set`, and the unbounded stops (detent-authority, relay, agent). |
 | A4 | `docs/server-composition.md` at cpp-libraries:0579a1a, lines 1-4: "Status: CURRENT (2026-11-19), reviewed", naming Xapiand D132, D133, D138 and Detent D122, D123 and the six heads the citations hold at. CURRENT at cpp-libraries:0579a1a. |
 | A5 | Manual, the lead sends it. Source of the Detent text so far: Detent lead cmux 3708c307 (F1, F4, F6). |
-| doc check | job 261119-051022-2f4115 exit 0 at cpp-libraries:21b3d33; job 261119-063111-a8dbca at cpp-libraries:0579a1a |
+| doc check | job 261119-051022-2f4115 exit 0 at cpp-libraries:21b3d33; job 261119-063111-a8dbca exit 0 at cpp-libraries:0579a1a |
 
 ## Result
 
