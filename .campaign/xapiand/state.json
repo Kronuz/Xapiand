@@ -19888,6 +19888,8 @@
     "reactor-server-composition": {
       "accepted": {},
       "after": [],
+      "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
+      "branch": "quest/xapiand/reactor-server-composition",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -19910,6 +19912,7 @@
         "docs/**",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/reactor-server-composition",
       "landed": [],
       "lenses": [
         "correctness"
@@ -19919,9 +19922,10 @@
       "provides": [],
       "repo": "../reactor",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "reactor: server composition, stop phases, tls server_context",
-      "updated": "2026-11-19T13:35:01"
+      "updated": "2026-11-19T13:35:52",
+      "worktree": "../reactor-wt/xapiand/reactor-server-composition"
     },
     "read-only-open": {
       "accepted": {},
