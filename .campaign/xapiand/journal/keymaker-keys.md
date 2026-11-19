@@ -1,6 +1,6 @@
 # keymaker-keys: journal
 
-State: waiting on jobs 261119-140732-acb2c3 261119-140733-9319fb 261119-140735-5f4129
+State: waiting on jobs 261119-141751-bda861 261119-141757-1907bd 261119-140735-5f4129
 Quest: .campaign/xapiand/quests/keymaker-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First jobs failed for real: Restored(unserialize_string(...)) took a string_view (compile error in metric_serialize.h, seen in the suite job's full log a1/log), and the test job used a wrong target name. Fixed at 32749f008 (std::string copy; target xapiand_test_coverage_multivalue); merged origin/master. Mutant commit b9d4c5314c9c (src reverted, tests kept). Jobs: test 261119-140732-acb2c3, mutant 261119-140733-9319fb, suite 261119-140735-5f4129. Local syntax check could not run clean (stale deps in the scratch build), so the jobs are the check.
+First jobs failed for real: Restored(unserialize_string(...)) took a string_view (compile error in metric_serialize.h, seen in the suite job's full log a1/log), and the test job used a wrong target name. Fixed at 32749f008 (std::string copy; target xapiand_test_coverage_multivalue); merged origin/master. Mutant commit b9d4c5314c9c (src reverted, tests kept). Jobs: test 261119-141751-bda861 (binary is build/bin/, first try 140732 built but could not find it), mutant 261119-141757-1907bd, suite 261119-140735-5f4129. Local syntax check could not run clean (stale deps in the scratch build), so the jobs are the check.
 
 ## Next
 
