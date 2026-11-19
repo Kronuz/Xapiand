@@ -2133,7 +2133,38 @@
       "updated": "2026-11-08T13:25:15"
     },
     "cheap-reopen": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:08:10",
+          "base": "7372be3157b3058d499b37fdf29acd8725714fd8",
+          "blobs": {
+            "docs/design/cheap-reopen.md": "100644:f05b75c832b107ecc7291befa1050c6ca73daffe",
+            "src/database/handler.cc": "100644:59226349b75ffa2714c15d0fdd2c52e9123b7e9c",
+            "src/database/pool.cc": "100644:432688d9c8d582c8e664fe2545d5d9be430fdc7e",
+            "src/database/pool.h": "100644:d7babbd16edc6564dc1fd2f844ce9f7207cafb28",
+            "tests/test_cheap_reopen.cc": "100644:cfc90bf8af27ec9b2d8da323a87105283dda0fce",
+            "tests/test_node.cc": "100644:d1366a4a7d6481214073b351ea0f8772cdf69287",
+            "tests/test_pool.cc": "100644:72ba032af6d3ee35190f8a7f553f960e39c67b70"
+          },
+          "by": "review",
+          "commit": "e7584201c4070d2ed7615309c09e6af6ea5034b1",
+          "criteria": "83149462cb405fa5",
+          "diffs": {
+            "docs/design/cheap-reopen.md": "50378438c0f7236f",
+            "src/database/handler.cc": "45154ba07d480028",
+            "src/database/pool.cc": "6ccde1de673a8195",
+            "src/database/pool.h": "0583aeb2e410e21f",
+            "tests/test_cheap_reopen.cc": "a63c619cd689c95e",
+            "tests/test_node.cc": "5f400a7ee88cd93b",
+            "tests/test_pool.cc": "7b04e341fa2b0a2b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "a51a6fb5f2235018fe19c251535cb0c9778bb043",
+          "reviewed": "e7584201c4070d2ed7615309c09e6af6ea5034b1",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "wide-search-loop"
       ],
@@ -2168,7 +2199,7 @@
       "risk": "high",
       "status": "review",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T14:42:43",
+      "updated": "2026-11-19T15:08:10",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
