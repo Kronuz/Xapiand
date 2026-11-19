@@ -304,9 +304,11 @@ check_schema_records(const std::string& en_now)
 	CHECK_EQ(std::string(title.at("_stop_fingerprint").str_view()), en_now);
 	CHECK_EQ(std::string(title.at("_language").str_view()), "en");
 	CHECK(contains(schema.get_schema().to_string(), "_stop_fingerprint"));
-	std::fprintf(stderr, "DEBUG %s\n", schema.to_string().c_str());
+	// The `_schema` of an index's info and search responses is get_full(true), which to_string() prints.
+	CHECK(!contains(schema.get_full(true).to_string(), "_stop_fingerprint"));
 	CHECK(!contains(schema.to_string(), "_stop_fingerprint"));
 	CHECK(contains(schema.to_string(), "_language"));
+	CHECK(contains(schema.get_schema().to_string(), "_stop_fingerprint"));   // hiding it did not touch the schema
 }
 
 // With no stopwords directory every shipped language stops exactly the words of its file in the tree.

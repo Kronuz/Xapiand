@@ -9196,13 +9196,18 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 		hh(RESERVED_STEM_LANGUAGE),
 		hh(RESERVED_ACC_PREFIX),
 		hh(RESERVED_SCRIPT),
-		hh(RESERVED_STOP_FINGERPRINT),
 	});
 
 	// Change this item of schema in readable form.
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->str_view();
 		auto& value = it.value();
+		if (str_key == RESERVED_STOP_FINGERPRINT) {
+			// Derived from the stop words list on disk, not a setting: a schema read back and sent again
+			// must not carry a value that no longer matches its list.
+			it = item_schema.erase(it);
+			continue;
+		}
 		if (is_reserved(str_key)) {
 			auto key = hh(str_key);
 			switch (key) {
@@ -9236,11 +9241,6 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 						continue;
 					}
 					break;
-				case _.fhh(RESERVED_STOP_FINGERPRINT):
-					// Bookkeeping derived from the stop words list on disk, not a setting: a schema read
-					// back and sent again must not carry a value that no longer matches its list.
-					it = item_schema.erase(it);
-					continue;
 				default:
 					if (!at_root && has_dispatch_set_default_spc(key)) {
 						it = item_schema.erase(it);
