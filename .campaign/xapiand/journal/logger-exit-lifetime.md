@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-204609-df150a 261118-204609-7d5079 261118-204610-c89e2b 261118-204610-fedb55 261118-204611-770ed2 261118-204611-969d29 261118-204611-580d8d 261118-204612-0dc795 261118-204612-fdaa15 261118-204612-f4350c 261118-204614-336200 261118-204615-b7d8ee 261118-204617-778bc7 261118-204618-8f59b1 261118-204620-d7ed83 261118-204621-930578 261118-204622-0b0cd4 261118-204624-bc79bc
+State: waiting on jobs 261118-204609-7d5079 261118-204610-c89e2b 261118-204610-fedb55 261118-204611-770ed2 261118-204611-969d29 261118-204612-0dc795 261118-204612-fdaa15 261118-204612-f4350c 261118-204614-336200 261118-204615-b7d8ee 261118-204617-778bc7 261118-204618-8f59b1 261118-204620-d7ed83 261118-204621-930578 261118-204622-0b0cd4 261118-204624-bc79bc
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -79,6 +79,8 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   A2 204611-770ed2 204611-969d29; LLVM 22 TSan full suite (info) 204624-bc79bc. Attribution at
   b6371a4 (before the exit changes), 4 runs: 204618-8f59b1 204620-d7ed83 204621-930578
   204622-0b0cd4.
+  Passed so far: suite 204609-df150a, 79d2fa rerun 204611-580d8d; CI run 44460551314 green at
+  0f1063d. Next: when the rest pass, paste the brief's evidence table, mark ready for review.
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
