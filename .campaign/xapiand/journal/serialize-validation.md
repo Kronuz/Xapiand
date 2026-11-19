@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fixes committed: A1 Xapiand:77324bbed, A2 Xapiand:e121732c6, A4 Xapiand:f06c5fb55, A3 Xapiand:5e3078b65 (tests at
-Xapiand:f12634566). A2 mutant (head with A2 reverted): Xapiand:3a04b5dad, kept at refs/mutants/serialize-validation/a2-type-names.
-Jobs queued: suite 636a02 (A6); fails-without 90be6d (A1 at c87aaf555), e716cb (A2 mutant), caa4d2 (A4 boolean at
-e121732c6), 40b1f9 (A4 time casts at e121732c6), 2630f9 (A3 at f06c5fb55); head pass 6c2a9f (A1-A4). Submitted by .scratch/xapiand/serialize-validation/submit.sh (home).
-Local build in the worktree's `.scratch/serialize-validation/build` (iteration only).
+Branch rewritten 11-18 23:12 (the test commit had a raw-string typo that stopped the suite build, job 636a02):
+tests Xapiand:0ce396821; fixes A1 Xapiand:4a92b06ea, A2 Xapiand:bafdf66d1, A4 Xapiand:fe731c5df, A3 Xapiand:1ef5a9f0d.
+A2 mutant (head with A2 reverted): Xapiand:4b7fde8de at refs/mutants/serialize-validation/a2-type-names.
+Local build in the worktree's `.scratch/serialize-validation/build` checks compile first; then jobs from
+.scratch/xapiand/serialize-validation/submit.sh (home) and `campaign verify`.
 
 ## Next
 
@@ -30,7 +30,8 @@ Local build in the worktree's `.scratch/serialize-validation/build` (iteration o
    - `_lua` is a script, not a value: `Cast::get_field_type` maps it to FieldType::script and the scripting docs use it (reference-guide/documents/scripting.md:57). A script is never a stored value, so the serializer refusing it is right. Recommend: keep the refusal with a message saying so; nothing to remove.
    Lead's default (serve `_date` if an alias, remove the others if nothing serves them) gives: serve `_date`; `_multiconvex` and `_lua` are both served elsewhere, so neither is removed. Not implementing until a Decisions row exists.
 2. **A3's docs note needs a path in my file set.** The set has no docs path (docs/design/geo* is geo-correctness's). Ask: add `docs/mechanisms/geo-exact-term.md`. Draft under Result.
-3. **Out of my file set, for the lead** (same bug class as A2: a `case _.fhh(k)` whose key the phf table lacks is npos and catches every miss):
+3. **The docs E2E pins A3's bug.** reference-guide/search/query-dsl/compound-queries/geospatial-searches.md:18-70 queries the exact point (41.50343, -74.01042) and expects count 10 with `_id` 1..10: every point matched every point. In docs/public/assets/accounts.json exactly three accounts sit there, `_id` 156, 768, 891, so after the fix the example answers count 3 with those ids. docs/src is not in my set: the lead adds it (I change the expectations) or flips it.
+4. **Out of my file set, for the lead** (same bug class as A2: a `case _.fhh(k)` whose key the phf table lacks is npos and catches every miss):
    - src/aggregations/aggregations.cc:217 `case _.fhh(RESERVED_AGGS_AGGS)` is not in the table (line 64), so every unknown aggregation type is taken as `_aggs` instead of "Aggregation type ... is not valid".
    - The cause in one place: constexpr-phf's `find` could fail compilation when a constant-evaluated lookup misses (`if (std::is_constant_evaluated() && miss) throw`), so such a case label cannot compile. Audit script: `.scratch/xapiand/serialize-validation/phf_audit.py` (home) found exactly these three in src/.
    - src/cast.cc:138 (`Cast::cast(FieldType::empty, text)`) has the strtoull wrap I fixed in serialize.cc: "-18446744073709551615" casts to 1.
