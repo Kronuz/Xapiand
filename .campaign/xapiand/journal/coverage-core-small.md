@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-003947-bff9f2 (cast probe), 261119-005309-86aefa (all four, REPEAT=3)
+State: waiting on jobs 261119-011017-86a323 (long, all four tests; the 30-minute cold build timed out job bff9f2)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
