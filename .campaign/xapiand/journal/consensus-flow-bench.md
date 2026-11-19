@@ -1,6 +1,6 @@
 # consensus-flow-bench: journal
 
-State: ready for lead (review CHANGES folded: F1-F4, F6-F8 in consensus:d9605f4; CI on it pending)
+State: ready for lead (review CHANGES folded: F1-F4, F6-F8 in consensus:d9605f4, F9 gates in consensus:122564d; CI pending)
 Quest: .campaign/xapiand/quests/consensus-flow-bench.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
