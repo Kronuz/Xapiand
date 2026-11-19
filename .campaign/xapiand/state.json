@@ -8056,6 +8056,20 @@
         "docs/gates/phase-3r.md",
         "docs/mechanisms/simulator.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-19T06:17:22",
+          "reason": "re-triage by consequence (owner 2026-11-19): no format freeze, durability, concurrency or security surface a defect here could damage; query/analysis features and tooling fail visibly in tests",
+          "risk": [
+            "high",
+            "normal"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> normal"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness"
@@ -8064,10 +8078,10 @@
       "needs": [],
       "provides": [],
       "repo": "../strata",
-      "risk": "high",
+      "risk": "normal",
       "status": "planned",
       "title": "Phase 3R gate rows in the simulator",
-      "updated": "2026-11-15T23:04:59"
+      "updated": "2026-11-19T06:17:22"
     },
     "hashes-cl-1": {
       "accepted": {},
