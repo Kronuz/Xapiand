@@ -21970,19 +21970,47 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T21:35:21",
+          "commit": "405a5bd6b61f13b5f36c43abed3bf4ee0637da90",
+          "criteria": {
+            "A1": "D118 (PLAN.md Decisions)",
+            "A2": "261118-182340-4a8ff4 (passed at 0ad80010f029; only merges from main since); fails without: 261118-182336-f83449",
+            "A3": "261118-182339-5bd2c7 (passed at 0ad80010f029; only merges from main since); fails without: 261118-003721-65702e, 261118-182338-4cee8e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "18511f3282d521927e7d2f2b6199572a22f15c65",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-182339-5bd2c7",
+              "level": "light",
+              "seconds": 535.7,
+              "state": "done",
+              "what": "stemmer-names check build-test at 18511f3282d5"
+            }
+          ],
+          "final": true,
+          "from": "13626e78fbfd8748d7c4c4397075b3c991473901",
+          "reason": "",
+          "tested": "7f3f798c905bb155fbeec8499e292b17e5215165"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T19:54:13",
-      "worktree": "../Xapiand-wt/xapiand/stemmer-names"
+      "updated": "2026-11-18T21:37:42",
+      "worktree": ""
     },
     "storage-phase7c-l6": {
       "accepted": {},
