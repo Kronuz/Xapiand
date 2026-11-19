@@ -22,7 +22,7 @@
 # light_share_t10.sh BIN OUTDIR ARM...
 #
 # T10's flood (harness/lua_bounds.py at 4 loops) once per ARM, in the order given. ARM is "off" or a heavy share
-# (LS_HEAVY_SHARE). Exits nonzero when any arm fails.
+# (LS_HEAVY_SHARE); "SHARE@MS" also sets LS_LIGHT_WINDOW_MS (0: the share always binds). Exits nonzero when any arm fails.
 set -u
 BIN=$(cd "$(dirname "$1")" && pwd)/$(basename "$1"); OUT=$(mkdir -p "$2" && cd "$2" && pwd); shift 2
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -30,10 +30,11 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 i=0; FAILED=0
 for arm in "$@"; do
 	i=$((i + 1))
-	if [ "$arm" = off ]; then unset LS_HEAVY_SHARE; else export LS_HEAVY_SHARE=$arm; fi
+	unset LS_HEAVY_SHARE LS_LIGHT_WINDOW_MS
+	if [ "$arm" != off ]; then export LS_HEAVY_SHARE=${arm%@*}; [ "$arm" = "${arm%@*}" ] || export LS_LIGHT_WINDOW_MS=${arm#*@}; fi
 	python3 "$HERE/lua_bounds.py" "$BIN" --port 18995 --loops 4 --out "$OUT/t10-$i-$arm.json" > "$OUT/t10-$i-$arm.log" 2>&1
 	rc=$?; echo "arm $i $arm rc $rc"; [ $rc -eq 0 ] || FAILED=1
 	grep -h "light GET" "$OUT/t10-$i-$arm.log"
 done
-unset LS_HEAVY_SHARE
+unset LS_HEAVY_SHARE LS_LIGHT_WINDOW_MS
 exit $FAILED
