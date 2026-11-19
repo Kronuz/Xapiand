@@ -25118,7 +25118,9 @@
         "process.hh",
         "test/process_test.cc",
         "docs/mechanisms/process.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "docs/API.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-process-step",
       "landed": [],
@@ -25130,7 +25132,7 @@
       "risk": "normal",
       "status": "active",
       "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
-      "updated": "2026-11-19T13:49:07",
+      "updated": "2026-11-19T13:56:25",
       "worktree": "../task-wt/xapiand/task-process-step"
     },
     "termdict-forward-seek": {
