@@ -115,6 +115,6 @@ struct SerializablePhoneticMetric : PhoneticMetric<Encoder, Metric> {
 	void unserialize(const char** p, const char* p_end) {
 		this->_icase = unserialize_bool(p, p_end);
 		this->_str = unserialize_string(p, p_end);
-		this->_soundex = Restored(unserialize_string(p, p_end));
+		this->_soundex = Restored(std::string(unserialize_string(p, p_end)));
 	}
 };
