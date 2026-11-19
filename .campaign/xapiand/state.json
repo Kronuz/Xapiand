@@ -4239,16 +4239,45 @@
         "src/node.h",
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T00:35:05",
+          "commit": "adda36214202cbb0f435dcf2c18da462d23906af",
+          "criteria": {
+            "A1": "261118-223638-8642ea; fails without: 261118-035634-731f0f, 261118-035636-f2de7d, 261118-035637-6b1e21",
+            "A2": "261119-002802-225819",
+            "A3": "261118-223641-404662",
+            "A4": "261118-223636-e68395; fails without: 261118-223632-217f42"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "4517f42e45d7e82f89f689c17c688ad4b9a370be",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-223641-404662",
+              "level": "light",
+              "seconds": 823.7,
+              "state": "done",
+              "what": "coverage-areas check suite at 4517f42e45d7"
+            }
+          ],
+          "final": true,
+          "from": "23970839156430f627c6dede6f1f296e5faccd17",
+          "reason": "",
+          "tested": "5ab69c838b7750b65dec48325feca8d78a100d67"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-19T00:35:01",
+      "updated": "2026-11-19T00:35:14",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "coverage-core-main": {
