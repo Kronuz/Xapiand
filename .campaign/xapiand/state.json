@@ -7887,6 +7887,8 @@
     "http-halfclose": {
       "accepted": {},
       "after": [],
+      "base": "2671470a488e6fe45148146e98cf3b264308ac82",
+      "branch": "quest/xapiand/http-halfclose",
       "checks": [
         {
           "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure",
@@ -7904,6 +7906,7 @@
         "docs/**",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/http-halfclose",
       "landed": [],
       "lenses": [
         "correctness"
@@ -7913,9 +7916,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T17:49:46"
+      "updated": "2026-11-18T17:50:11",
+      "worktree": "../http-wt/xapiand/http-halfclose"
     },
     "http-lane": {
       "accepted": {},
