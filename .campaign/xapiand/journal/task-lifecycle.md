@@ -1,6 +1,6 @@
 # task-lifecycle: journal
 
-State: waiting on jobs 261119-070103-951ddb 261119-070103-36a333 261119-070126-838b76 261119-070133-ac2bcb 261119-070140-37fb0f 261119-070146-73b92c
+State: ready for review. Suite 951ddb and TSan 36a333 pass at 066a183; mutants 838b76, ac2bcb, 37fb0f, 73b92c fail as required; CI green.
 Quest: .campaign/xapiand/quests/task-lifecycle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -75,3 +75,15 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   fake-clock scheduler is single-threaded; `add_flush` returns a registration removed when the
   driver returns, so a late third signal never flushes a dead set.
 - The process step (`run_daemon`, `ProcessLock`) is not in A1-A7; left for a later quest.
+
+## Evidence
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070126-838b76, 261119-070133-ac2bcb |
+| A2 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A3 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A4 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070140-37fb0f |
+| A5 | 261119-070103-951ddb, 261119-070103-36a333; fails without: 261119-070146-73b92c |
+| A6 | 261119-070103-951ddb, 261119-070103-36a333 |
+| A7 | `docs/design/service-shape.md`: "task::lifecycle" |
