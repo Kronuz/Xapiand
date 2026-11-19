@@ -9132,7 +9132,8 @@
     "http-limits": {
       "accepted": {},
       "after": [
-        "detent:http-drop-user-data"
+        "detent:http-drop-user-data",
+        "detent:http-affinity-death-tsan"
       ],
       "base": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
       "branch": "quest/xapiand/http-limits",
@@ -9165,7 +9166,7 @@
       "risk": "normal",
       "status": "active",
       "title": "http: Limits, timeouts and stop_accepting",
-      "updated": "2026-11-19T15:33:15",
+      "updated": "2026-11-19T15:33:35",
       "worktree": "../http-wt/xapiand/http-limits"
     },
     "http-phase7c-l3": {
