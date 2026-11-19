@@ -24328,7 +24328,8 @@
         "task.hh",
         "lifecycle.hh",
         "test/**",
-        "docs/**"
+        "docs/**",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-inbox-first",
       "landed": [],
@@ -24342,7 +24343,7 @@
       "risk": "high",
       "status": "review",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T12:05:42",
+      "updated": "2026-11-19T12:52:31",
       "worktree": "../task-wt/xapiand/task-inbox-first"
     },
     "task-lanes": {
