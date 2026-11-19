@@ -1,6 +1,6 @@
 # http-halfclose: journal
 
-State: waiting on jobs 261118-201311-bc538f 261118-201313-8f56ef 261118-201316-1f8ff0, CI run 44456767194
+State: ready for review
 Quest: .campaign/xapiand/quests/http-halfclose.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -34,7 +34,7 @@ Local macOS run of ec273dd's tree: 13/13 pass.
 
 ## Next
 
-1. Record the three jobs and CI 44456767194 (Linux); on green, ready for re-acceptance.
+1. Re-acceptance at http:ec273dd: suite 261118-201311-bc538f, F1 mutant 261118-201313-8f56ef and TSan 261118-201316-1f8ff0 passed; CI 44456767194 green on every platform (Linux tsan, asan-ubsan, x86_64 gcc and clang, arm64 gcc; macOS x86_64 and arm64; FreeBSD).
 
 ## Blocked on
 
@@ -48,7 +48,7 @@ Nothing. (The lead widened the file set to AGENTS.md and CHANGELOG.md; done in h
 | A2 | suite 261118-201311-bc538f; F1 `--fails-without` 261118-201313-8f56ef at mutant M2 (coroutine [J] reset and failed-write checks, [C] reset) |
 | A3 | suite 261118-201311-bc538f; `--fails-without` 261118-180449-60722d passed (readahead at the mutant) |
 | A4 | TSan 261118-201316-1f8ff0 at http:ec273dd (passed at cd6ed31: 261118-181018-e0741e) |
-| A5 | suite 261118-201311-bc538f; CI run 44456767194 at ec273dd (cd6ed31's failed on Linux: the [L] probe, fixed) |
+| A5 | suite 261118-201311-bc538f; CI run 44456767194 green on every platform at ec273dd (cd6ed31's failed on Linux: the [L] probe, fixed) |
 | A6 | [artifact] `docs/mechanisms/coroutine-handlers.md`: "One rule reads the socket watch: a read error other than EOF (a reset) is a disconnect, and EOF" (also `http_asio.h`: "One rule reads it: a read error other than EOF (a reset) is a"; `AGENTS.md`: "One rule reads it: a read error other than EOF (a reset, not our own cancellation)"), all at http:ec273dd |
 
 Lead's message (Detent's long-poll shape): done. Lead's message (widen to AGENTS.md, CHANGELOG.md): done in http:cd6ed31. Lead's message (Linux CI, F1): done in http:ec273dd, see Doing.
