@@ -2145,9 +2145,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T08:43:29",
+      "updated": "2026-11-19T14:42:43",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
