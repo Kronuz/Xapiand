@@ -24107,6 +24107,8 @@
     "task-lifecycle": {
       "accepted": {},
       "after": [],
+      "base": "95798a02f68c86f070401329a05c78d326ac2579",
+      "branch": "quest/xapiand/task-lifecycle",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -24131,6 +24133,7 @@
         "README.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle",
       "landed": [],
       "lenses": [
         "correctness"
@@ -24142,9 +24145,10 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T06:34:28"
+      "updated": "2026-11-19T06:34:48",
+      "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
       "accepted": {},
