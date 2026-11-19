@@ -1,6 +1,8 @@
+| A3 | session 4: 214557-802978 before (names p99 13.64 / max 1,336 ms, T5 bound 2.32 ms: exit 1), 214558-d15a54 after (1.91 / 2.55 ms, bound 2.27 ms: pass); the earlier branch run 243767 missed (2.85 vs 2.39 ms), so T5 is near its noise: F3's deciding A/B 210116-568ffe pending (exclusive) |
+| A2 | session 4 at Xapiand:e649ebcb1: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on); macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000): pending (exclusive). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-214345-e0caec 214405-d4ad8f 214416-55f6c4 214430-1d4cc0 214441-5d5798 214452-f8d1d8 214453-f4a3ac 214455-d04574 214548-17cbe8 214550-dea844 214551-71a78d 214552-695322 214554-8a79f5 214555-113315 214557-802978 214558-d15a54 214617-f0c429 214618-1e9519 214620-79eb0b 214621-f82004 214622-52318a 214624-c6c5de 214625-59b5ea 210116-568ffe
+State: waiting on jobs 261119-015540-f34736 (suite at the merged head), 261118-214551-71a78d 214554-8a79f5 214552-695322 214555-113315 (macOS A2, exclusive), 210116-568ffe (F3 A/B, exclusive)
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +10,17 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 5 (resumed). Read the finished session-4 jobs (below); merged master (Xapiand:0b7e4b69a, src change in
+`src/database/schema.cc` only); docs at Xapiand:9b474d811; suite at that head 261119-015540-f34736 (light, 120 min).
+Jobs read:
+- A2 Linux (VM, strict, beside 6-8 light holds), http0 / http1 max since start: 2,500 master 179.9 / 162.6 ms -> branch
+  19.7 / 14.3 ms (9-11x lower); 10,000 master 558.1 / 475.8 ms -> branch 10.4 / 8.8 ms (54x lower). p99 2,048 us
+  (master) vs 2,048-3,584 us (branch); control loop max 17.7-29.9 ms in every run (the guest's floor). Search p50
+  2,611 -> 2,322 ms (2,500), 7,846 -> 6,897 ms (10,000). The branch's max is 8.6-19x over A2's 1,024 us: not met
+  literally on these runs, and below the same run's control loop; see Blocked on.
+- A3 strict (macOS): names, light p99 / max: master 13.64 / 1,336 ms (T5 bound 2.32 ms: FAIL, exit 1), branch 1.91 /
+  2.55 ms (bound 2.27 ms: PASS); pattern: master 2.81 / 1,863 ms, branch 2.14 / 19.6 ms. Alone p99 0.66 / 0.64 ms.
 
 Session 4 (correctness review CHANGES at Xapiand:3e2edbef4, `.campaign/xapiand/reviews/wide-search-loop-correctness.md`).
 Master merged (no src change). Fixes:
@@ -241,6 +254,7 @@ Read so far (src = master, build-prof):
 
 ## Next
 
+0. (session 5) Read 261119-015540-f34736 (suite at the merged head); the lead reads macOS A2 and 568ffe and sends the re-check.
 1. Read session-4 jobs: suite, test_node x5, fails-without (3 test_node, 1 probe), half-close probes; A2 macOS (each
    http loop's max <= the control loop's), A2 Linux (<= 1,024 us), A3; F3 from 568ffe (branch misses T5 in 2 of 3 with
    master passing: the change; then the beat-on sampler at 64 clients). Then the lead accepts correctness.
@@ -252,7 +266,12 @@ Read so far (src = master, build-prof):
 
 ## Blocked on
 
-Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
+A2 on Linux (decision for the lead): the VM runs read the branch's http max at 8.8-19.7 ms (master 162-558 ms) against
+the 1,024 us bound, with the idle control loop at 17.7-29.9 ms in the same runs, so the guest under shared strict
+holds has a floor above the bound and these jobs cannot show the branch under it. Options: 1. rerun the four VM jobs
+as exclusive holds (the host alone; `QUIET_VM` pins the VM's threads), then read the bound; 2. read A2 on Linux as
+R6 reads macOS (each http loop's max no worse than the same run's control loop: met, 8.8-19.7 vs 17.7-29.9 ms).
+Recommendation: 1 first, it settles whether the bound is reachable. Not submitted here: the lead's call.
 
 ## Evidence
 
@@ -261,7 +280,7 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
 | A2 | session 4 at Xapiand:e649ebcb1: macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000); Linux 214621-f82004 / 214622-52318a (2,500), 214624-c6c5de / 214625-59b5ea (10,000); pending. Superseded, at Xapiand:3e2edbef4: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
 | A3 | session 4: 214557-802978 before, 214558-d15a54 after; F3's deciding A/B 210116-568ffe; pending. Superseded, at Xapiand:3e2edbef4: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
-| A4 | session 4: suite 214334-70753d (pass, 44/44), test_node x5 214345-e0caec, probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
+| A4 | session 4: suite 214334-70753d (pass, 44/44 at e649ebcb1; merged head 9b474d811: 261119-015540-f34736 pending), test_node x5 214345-e0caec (5/5), probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 
