@@ -25,10 +25,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261119-093906-b28504 (scenario `builtin`: 18 shipped files vs compiled lists, per-language counts, fingerprints, no data directory) |
-| A2 | 261119-093906-b28504 (scenario `override`; `unreadable` throws) |
-| A3 | 261119-093906-b28504 (unchanged passes, changed and missing refuse with index, list and both fingerprints, through `Schema::check_stop_words`) and 261119-093843-4ea7ac (the same test fails, 16 checks, at the mutant that makes `checkStopWords` return; branch deleted) |
-| A4 | 261119-093906-b28504 (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
+| A1 | 261119-125541-8652c9 (scenario `builtin`: 18 shipped files vs compiled lists, per-language counts, fingerprints, no data directory) |
+| A2 | 261119-125541-8652c9 (scenario `override`; `unreadable` throws) |
+| A3 | 261119-125541-8652c9 (unchanged passes, changed and missing refuse with index, list and both fingerprints, through `Schema::check_stop_words`) and 261119-093843-4ea7ac (the same test fails, 16 checks, at the mutant that makes `checkStopWords` return; branch deleted) |
+| A4 | 261119-125541-8652c9 (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
 | A5 | 261119-083443-f71030 (before), 261119-084202-4abafa and 261119-093907-83563b (after); `docs/perf/stopword-lists.md` |
 | A6 | `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed) |
 | A7 | suite 261119-122950-d249fa passed at eae0478d9; CI not read (the lead's) |
