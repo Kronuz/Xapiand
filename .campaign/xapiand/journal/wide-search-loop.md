@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-170254-9f8b5a 170257-d8055d 170319-9e4695 170300-52f4dd 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112 170529-87c0b4
+State: waiting on jobs 261118-174748-eec809 174750-e0b022 174832-f05da1 174834-15710d 174835-9a2a47 174903-ca5c07 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,25 @@ Session-3 first submissions failed or were redone: the VM build 114932-476f73 hi
 checkout without the slot's binaries and data (now `--slot wide-search-loop`); suite 112500-d8889b failed test_node
 (`test_a_put_whose_client_half_closes_completes_durably`, test_node.cc:1169/1175), unrelated to search; f7bb71 runs
 it at master to show whether it is pre-existing.
+
+Half-close, answered (probe 170529-87c0b4, rc=3): master answers a half-closed GET /hc/1 200 x5 and refuses :search
+and :count 503 x5 (pre-existing: http's EOF policy plus master's own checkpoints; the lead takes it to the owner, not
+changed here); the branch also refused GET /hc/1 (introduced, as the PUT). Fix Xapiand:cffd0190a: only a list of names
+checkpoints (`paths.size() > 1`); a single name resolves whole, reads and writes, as on master; replaces 9a3cfeccf's
+writes-only rule. Bisect 170254-9f8b5a: test_node 0/5 at 8e5040da8 alone (the call sites). Suite 170300-52f4dd at
+9a3cfeccf passed. Probe takes `--baseline` and fails only on a read the baseline answers.
+
+| Job | For | What |
+|---|---|---|
+| 261118-174748-eec809 | | test_node x5 at cffd0190a, exits 0 only at 5/5 |
+| 261118-174750-e0b022 | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
+| 261118-174832-f05da1 | | builds: master src, branch src, mutant (`if (wide)` -> `if (true)`) |
+| 261118-174834-15710d | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
+| 261118-174835-9a2a47 | A4 fails-without | half-close probe on the mutant |
+| 261118-174903-ca5c07 | A4 fails-without | test_node on the mutant |
+
+Gate check for the lead (state is the lead's): `harness/wide_search_halfclose.py BIN OUT PORT --baseline MASTER_BIN`,
+the command of 174834-15710d after the build of 174832-f05da1.
 
 Lead's question (half-closed reads). Where the token is set: Kronuz/http at the pin eb08b59e6aa2, `http_asio.h`
 `ConnectionInput::completed` fires the request's watch on any read error but our own abort, EOF included, and the
@@ -68,7 +87,7 @@ bisect from there and fix. The branch's src touches only search (`search_batch`,
 
 | Job | Level | For | What |
 |---|---|---|---|
-| 261118-132935-f1f8e1 | light | A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
+| 261118-132935-f1f8e1 | light | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
 | 261118-132936-f7bb71 | light | | test_node at master (pre-existing check) |
 | 261118-132928-09c53e | exclusive | A2 macOS before | SR3 2,500, build-prof (master src) |
 | 261118-132932-c9dd00 | exclusive | A2 macOS after | SR3 2,500, build-probe (branch src) |
@@ -130,7 +149,7 @@ build-prof (RelWithDebInfo, -fno-omit-frame-pointer), data in build-wide2500, bu
 | 261118-024337-7a9aec | light | probe | build-probe: Xapiand:c33b7cc79 + `harness/wide_search_callsites.patch` |
 | 261118-025903-1d4a33 | strict | probe | 2,500 gate + sample on build-probe |
 | 261118-025905-94c734 | strict | probe | starve 16,64 on build-probe |
-| 261118-034210-a84949 | light | A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
+| 261118-034210-a84949 | light | A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
 
 Drafted (Xapiand:c33b7cc79): `src/database/wide_search.{h,cc}`, `wide_search::Pins` (node-wide FIFO bound on
 indexes pinned by wide-search batches, sized to the pool's soft_open) and `wide_search::resolve` (per-name budget
@@ -169,7 +188,7 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured); attribution rerun 261118-113058-7cb4e4 |
 | A2 | Linux: 132830-475ea9 / 132836-3c231e (2,500), 132842-a03818 / 132847-f885d2 (10,000), pending. macOS 10,000: 051433-c76a1c before (max 322 / 373 ms), 051434-89f2f5 after (2.07 / 2.07 ms, control 2,560 us bucket); 2,500: 132928-09c53e, 132932-c9dd00 pending |
 | A3 | 261118-132929-bb97fa before, 261118-132933-243767 after (pending); session-2 reads: 051429-5d9b36 vs 050258-4c6f40 |
-| A4 | test_node fixed in 9a3cfeccf: x5 170257-d8055d, fails-without 170319-9e4695, suite 170300-52f4dd pending; CI running |
+| A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
 
 ## Result
 
