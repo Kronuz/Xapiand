@@ -182,6 +182,7 @@ quest starts (name it) or is dropped with a reason.
 | UNCONFIRMED (job 82ceb7: adjustOpenFilesLimit throws SystemExit instead): `--max-files 300 --database-pool-size 200 --max-clients 1000` may leave database_pool_size 34 and max_clients -2 (adjustOpenFilesLimit splits a too-small limit into a negative share); clamp, or refuse start-up naming the needed limit | coverage-core-main test_open_files_limit pin | src/main.cc adjustOpenFilesLimit | Xapiand | open |
 | M1: `MIN_STR_CMPVALUE` in src/multivalue/keymaker.cc is `std::string("\x00")`, which is empty (the const char* constructor stops at the NUL), so a descending string sort key on a missing slot keys as empty instead of a NUL byte; use `std::string(1, '\0')` | coverage-multivalue keymaker test pin | src/multivalue/keymaker.cc | Xapiand | open |
 | (tool) The campaign worker (campaign.py worker, up 1 d 17 h) leaves defunct children: 41 zombies under pid 58801 on 2026-11-19; reap finished job processes (waitpid) | `ps` on 2026-11-19 01:xx | ~/code/dotfiles/home/.agents/skills/campaign/scripts/campaign.py worker loop | agent-campaign | open |
+| Endpoint UUID text is rewritten: index path a2d6e3b4-0000-1000-... comes back as 0000000a-2d6e-63b4-...-6000 (coverage-core-small job 86a323); confirm it is Xapiand's documented UUID normalization and round-trips to the same index, or file a bug | job 261119-011017-86a323 | src/endpoint.cc, src/database/utils.cc, src/uuid* | after coverage-core-small | open |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
