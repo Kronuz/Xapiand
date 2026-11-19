@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-102621-bfeb0c 261119-102623-f1d985 261119-102607-098a1c 261119-102609-9fd6d9 (the wide-search cost probes, strict, queued behind another quest's exclusive hold)
+State: waiting on jobs 261119-112243-6bdb1d 261119-112245-25a678 (before, mutant/stopword-lists-wide e4a75e7e4, pool 100 / 4096) and 261119-112248-434c12 261119-112250-23f8dd (after, 0772ade92, pool 100 / 4096): the wide-search probes, strict, 2,000 indexes. The earlier four (102607-098a1c, 102609-9fd6d9, 102621-bfeb0c, 102623-f1d985) aborted/are superseded: the probe read its arguments from the wrong argv slots (searched 0 indexes, empty endpoints); fixed in 0772ade92, tiny local run (20 indexes) answers 20 hits. Next: write before/after rows in docs/perf/stopword-lists.md.
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
