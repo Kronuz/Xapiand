@@ -1,8 +1,8 @@
 | A3 | session 4: 214557-802978 before (names p99 13.64 / max 1,336 ms, T5 bound 2.32 ms: exit 1), 214558-d15a54 after (1.91 / 2.55 ms, bound 2.27 ms: pass); the earlier branch run 243767 missed (2.85 vs 2.39 ms), so T5 is near its noise: F3's deciding A/B 210116-568ffe pending (exclusive) |
-| A2 | session 4 at Xapiand:e649ebcb1: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on); macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000): pending (exclusive). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
+| A2 | session 4 at Xapiand:e649ebcb1: Linux exclusive reruns 261119-015840-52e913 / 015843-118f54 (2,500), 015846-7c0eec / 015849-58ebd1 (10,000) pending; strict reads: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on); macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000): pending (exclusive). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
 # wide-search-loop: journal
 
-State: waiting on jobs 261119-015540-f34736 (suite at the merged head), 261118-214551-71a78d 214554-8a79f5 214552-695322 214555-113315 (macOS A2, exclusive), 210116-568ffe (F3 A/B, exclusive)
+State: waiting on jobs 261119-015540-f34736 (suite at the merged head), 261119-015840-52e913 015843-118f54 015846-7c0eec 015849-58ebd1 (A2 Linux exclusive), 261118-214551-71a78d 214554-8a79f5 214552-695322 214555-113315 (macOS A2, exclusive), 210116-568ffe (F3 A/B, exclusive)
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -271,7 +271,7 @@ the 1,024 us bound, with the idle control loop at 17.7-29.9 ms in the same runs,
 holds has a floor above the bound and these jobs cannot show the branch under it. Options: 1. rerun the four VM jobs
 as exclusive holds (the host alone; `QUIET_VM` pins the VM's threads), then read the bound; 2. read A2 on Linux as
 R6 reads macOS (each http loop's max no worse than the same run's control loop: met, 8.8-19.7 vs 17.7-29.9 ms).
-Recommendation: 1 first, it settles whether the bound is reachable. Not submitted here: the lead's call.
+Recommendation: 1 first. Lead took option 1 (the owner takes the Linux reading): resubmitted as exclusive, 10 min each, chained, reusing the guest's builds and indexes (guest binaries are e649ebcb1's; the merge changed only schema.cc): 261119-015840-52e913 (master 2,500), 015843-118f54 (branch 2,500), 015846-7c0eec (master 10,000), 015849-58ebd1 (branch 10,000). Read: the control loop's max alone on the host: 17-30 ms again = the VM's floor (record it); else the branch's http max against 1,024 us.
 
 ## Evidence
 
