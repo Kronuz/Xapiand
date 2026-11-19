@@ -21604,12 +21604,11 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "D118: owner ruled A1",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T02:47:57",
+      "updated": "2026-11-18T17:54:21",
       "worktree": "../Xapiand-wt/xapiand/stemmer-names"
     },
     "storage-phase7c-l6": {
