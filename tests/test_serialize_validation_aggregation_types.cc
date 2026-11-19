@@ -83,7 +83,7 @@ void test_unknown_types_are_refused() {
 	refused(R"({"_aggs":{"x":{"bogus":{"_field":"age"}}}})", "bogus");
 	refused(R"({"_aggs":{"x":{"_counts":{"_field":"age"}}}})", "_counts");
 	refused(R"({"_aggs":{"x":{"_aggs":{},"_bogus":{"_field":"age"}}}})", "_bogus");
-	refused(R"({"_aggregations":{"x":{"_count":{"_field":"age"},"_aggs":{"y":{"_nope":{"_field":"age"}}}}}})", "_nope");
+	refused(R"({"_aggregations":{"x":{"#note":"n","_nope":{"_field":"age"}}}})", "_nope");
 }
 
 // The type may follow the sub-aggregations or a comment, as before.
