@@ -2845,10 +2845,36 @@
         "tools/vm/cluster.sh",
         "harness/cluster/vm/**"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T19:35:51",
+          "commit": "8708d16cd86bb87fbc32ac0381e24079db07d7bf",
+          "criteria": {
+            "A1": "261118-175316-1b2e8c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "8882305c90fd54dde10ab2f412fee260c9783023",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-175317-9b20c0",
+              "level": "light",
+              "seconds": 517.7,
+              "state": "done",
+              "what": "cluster-vm-tier check suite at 8882305c90fd"
+            }
+          ],
+          "final": true,
+          "from": "f09c2eea18635360efaf800fde43abb21e04e6a2",
+          "reason": "",
+          "tested": "2d4a2e7b2349860eabbe36d9f431dcb31523cfbc"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [
         "cluster-harness",
@@ -2860,10 +2886,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-18T18:14:46",
-      "worktree": "../Xapiand-wt/xapiand/cluster-vm-tier"
+      "updated": "2026-11-18T19:36:21",
+      "worktree": ""
     },
     "cold-tier-item5": {
       "accepted": {},
