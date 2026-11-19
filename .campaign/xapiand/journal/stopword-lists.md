@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: blocked on lead: schema recording needs schema.h and handler.cc (see Blocked on); jobs 261119-083429-63dc87 261119-083432-825a1e 261119-083435-9bba38 261119-083443-f71030 queued
+State: waiting on jobs 261119-084153-197847 261119-084158-c63615 261119-084202-4abafa 261119-084205-cfa578 261119-083443-f71030 261119-084208-75bb78
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,41 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Lead rulings 1-7 applied except the schema recording (ruling 1, see Blocked on): generate_terms.cc catches the
-throw, test_control_plane expects it, the install copies the lists to share/doc/xapiand/stopwords and the build no
-longer copies them to the read directory, the how-it-works note is docs/mechanisms/stopword-lists.md. Head 2bba60a2f.
+Option A is implemented (head 7b12e5d5e, master merged): `_stop_fingerprint` recorded beside `_language`,
+`Schema::check_stop_words(index, adopt)` called from `DatabaseHandler::get_schema`, property hidden from the readable
+schema, options.md fixed, mechanism note updated. Tests are in tests/test_stopword_lists.cc (schema checks in the
+`builtin` and `override` scenarios, `--probe schema`).
 
 ## Next
 
-1. Read the jobs below. Write docs/perf/stopword-lists.md from the A5 probe (medians per mode, before vs after);
-   decide ruling 7: if start-up or lookup cost is material, add a hunt-row candidate for a view mode in
-   analysis::stopper (hunt.md is the lead's: write it in this journal for the lead), else drop the idea with numbers.
-2. After the lead answers the schema question: record and check, adopt for indexes with no record, then
-   `campaign verify stopword-lists` (A7).
+1. Read the jobs: tests 261119-084153-197847 (A1-A4), mutant 261119-084158-c63615 (A3 fails-without, branch
+   mutant/stopword-lists-fingerprint, delete after), A5 after 261119-084202-4abafa, before 261119-083443-f71030,
+   schema-check cost 261119-084205-cfa578, suite 261119-084208-75bb78 (A7).
+2. Write docs/perf/stopword-lists.md from the probe medians (start-up us, heap bytes, RSS; schema check ns per
+   call); ruling 7: if material, a hunt-row candidate for a view mode in analysis::stopper, else drop with numbers.
+3. Merge master again before the last jobs; fix what the suite shows.
 
 ## Blocked on
 
-The lead: ruling 1 needs two more files and one design choice.
-
-Facts found: `Schema` has no index name (its `origin` is the foreign schema's path, empty for a local index), so the
-error "naming the index" cannot be raised inside schema.cc; `DatabaseHandler::get_schema` (src/database/handler.cc:375)
-knows `endpoints`. A new `_stop_fingerprint` property in a field's stored properties also needs `schema.h`
-declarations (feed/process/consistency/readable functions: the property tables at schema.cc:6198, 6340, 6365, 6474,
-6550, 9188 list every reserved key) and shows up in every schema output (to_string, e2e fixtures with a text field
-and a language) unless `dispatch_readable` hides it.
-
-Options:
-A. (recommended) Field property `_stop_fingerprint` next to `_language` (recorded at schema.cc:4999 when the field
-   is created), hidden from the readable schema. `Schema::check_stop_words(index)` (new, schema.h) walks the
-   fields' properties and calls `checkStopWords`; `DatabaseHandler::get_schema` calls it with the endpoints' name
-   after building the Schema, and the same call adopts the current fingerprint for a field that has a language but
-   no record (ruling 6; persisted with the next schema write, one info log line). No extra metadata read: the
-   fingerprints ride in the cached schema. Files: src/database/schema.h, src/database/handler.cc (+ the already
-   widened schema.cc, reserved/schema.h).
-B. A separate metadata key `_stopwords` = {language: fingerprint} written with `set_metadata` and read by
-   handler.cc on open: one extra metadata read per open unless cached beside the schema, and the languages used
-   must be found by walking the schema anyway. Files: src/database/handler.cc (and schemas_lru.cc for the cache).
-Which one, and widen: src/database/schema.h, src/database/handler.cc.
+Nothing.
 
 ## Evidence
 
