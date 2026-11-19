@@ -1,6 +1,6 @@
 # reactor-server-composition: journal
 
-State: waiting on jobs 261119-135828-bf6eab 261119-135829-521317 261119-135837-88bc47 261119-135840-1dad3b 261119-135842-6ffa4b 261119-135845-fa3dd3 261119-135847-85e4ab 261119-135850-7391bb 261119-135903-7920d2
+State: waiting on jobs 261119-135903-7920d2
 Quest: .campaign/xapiand/quests/reactor-server-composition.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on the suite, TSan, six mutant jobs and the strict A/B at reactor:3626f70.
+Waiting on the strict A/B 261119-135903-7920d2 (queued behind light holds); every other job is done and as expected.
 
 ## Next
 
-1. Read the jobs; paste `campaign brief`'s table; set State to ready for review.
+1. Read the A/B (a vs a, b vs b, a vs b on req/s and ns/pair), fill A5's row and Result, set State to ready for review.
 
 ## Blocked on
 
@@ -38,7 +38,11 @@ branches `mutant/rsc-*` in the reactor repository, never landed:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <from `campaign brief`> |
+| A1 | 261119-135828-bf6eab, 261119-135829-521317; fails without: 261119-135837-88bc47 (every server_context check fails) |
+| A2 | 261119-135828-bf6eab, 261119-135829-521317; fails without: 261119-135840-1dad3b ([R] x3) |
+| A3 | 261119-135828-bf6eab, 261119-135829-521317 (TSan clean); fails without: 261119-135842-6ffa4b ([W] refusal), 261119-135845-fa3dd3 ([W] hangs), 261119-135847-85e4ab ([H] 2.3 s x5, [R] hangs) |
+| A4 | 261119-135828-bf6eab, 261119-135829-521317; fails without: 261119-135850-7391bb ([L]: stop 2005 ms, not cancelled) |
+| A5 | 261119-135828-bf6eab, 261119-135829-521317; strict A/B 261119-135903-7920d2 pending |
 
 ## Result
 
