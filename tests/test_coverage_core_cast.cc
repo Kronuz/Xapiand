@@ -209,8 +209,9 @@ static void test_hash_type_and_field_type() {
 	CHECK_THROWS_WITH(Cast::get_field_type(""), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::get_field_type("integer"), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::get_field_type("_nonsense"), CastError, "Unknown cast type");
-	// Product bug (cast-words): the words _date and _multiconvex are cast words (Cast::cast takes _date, the DSL
-	// takes _multiconvex) but get_field_type has no row for them, so both are refused.
+	// Product bug (cast-words), fixed by quest serialize-validation (D130, in review; changes src/cast.cc): _date and
+	// _multiconvex are cast words but get_field_type has no row for them, so both are refused. Whichever quest lands
+	// second flips these two lines.
 	CHECK_THROWS_WITH(Cast::get_field_type("_date"), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::get_field_type("_multiconvex"), CastError, "Unknown cast type");
 }
