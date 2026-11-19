@@ -40,5 +40,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-- harness/coverage.sh and docs/dev/coverage.md are outside the file set: one `main` workload case, the default WORKLOADS and a doc paragraph, so the E2E driver's profiles merge with the run.
+- Lead 2026-11-19: coverage.sh and docs/dev/coverage.md are in my file set. coverage.sh now discovers harness/coverage_e2e_<name>.* as workload <name> and honors NOBUILD=1; documented (untested until the coverage job runs).
 - Product bug (pinned in test_coverage_main, test_open_files_limit): adjustOpenFilesLimit with --max-files 300, pool 200, clients 1000 leaves database_pool_size 34 and max_clients -2 (negative).
