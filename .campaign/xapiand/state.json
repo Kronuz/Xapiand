@@ -22691,7 +22691,9 @@
         "CMakeLists.txt",
         "docs/mechanisms/stopword-lists.md",
         "docs/perf/stopword-lists.md",
-        "docs/src/content/docs/**options*"
+        "docs/src/content/docs/**options*",
+        "src/server/http_utils.h",
+        "tests/test_stopword_search.cc"
       ],
       "history": [
         {
@@ -22716,9 +22718,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T08:35:24",
+      "updated": "2026-11-19T10:54:29",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
@@ -24192,7 +24194,50 @@
       "worktree": ""
     },
     "task-lifecycle": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T09:22:03",
+          "base": "95798a02f68c86f070401329a05c78d326ac2579",
+          "blobs": {
+            "AGENTS.md": "100644:48ccd830654c71c5484271708d0540ceee36e1db",
+            "ARCHITECTURE.md": "100644:2a4e1be09d4b744da6ca88963ee0d4239b621b44",
+            "CMakeLists.txt": "100644:566667384cbb7dafeac713472717c4d05d62805c",
+            "README.md": "100644:ae81fbfa28aa5bc4f9e7dbefc83481922cc1a05b",
+            "docs/API.md": "100644:a1663d8e4a5493cf094ac70e514694ae875fd71b",
+            "docs/design/service-shape.md": "100644:710316d73d89e6fa42a06a14c5b53f877b5d8dc2",
+            "docs/mechanisms/lifecycle.md": "100644:806ba2ae96bddeda804f21a729092e65d63ef1dd",
+            "lifecycle.hh": "100644:07f0f5f88e781b527c6958792485a332ca4e6f6b",
+            "task.hh": "100644:7c6746dabfc4277b1eee5cdf52df6ab7e92761d1",
+            "task_asio.hh": "100644:3c8e8ee896e664c4b0db4c50a08aab960bec3a43",
+            "task_timers.hh": "100644:24061a6f9c95ec548195011849e58ab4dae6032a",
+            "test/lifecycle_test.cc": "100644:e7da758214cf1a75ed57b79b25d8310673a43463",
+            "test/timers_test.cc": "100644:9f1e376092a82dbeae99429ca27ccf71937978f6"
+          },
+          "by": "review",
+          "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "criteria": "680849eeac9a9464",
+          "diffs": {
+            "AGENTS.md": "f6d6d7ebbf919cd9",
+            "ARCHITECTURE.md": "91ba945f65e7a1d6",
+            "CMakeLists.txt": "32a13b897dc25a52",
+            "README.md": "d1cf1bea4e9b8613",
+            "docs/API.md": "f8cef374b81e199e",
+            "docs/design/service-shape.md": "cf73a0f3351cda2e",
+            "docs/mechanisms/lifecycle.md": "fe62c3c9443a588e",
+            "lifecycle.hh": "122bb1ae278d6d7d",
+            "task.hh": "bbe6740a4838f5ed",
+            "task_asio.hh": "6affd10db5e11b47",
+            "task_timers.hh": "afad57ddf200ff57",
+            "test/lifecycle_test.cc": "5c058f8f5a823e56",
+            "test/timers_test.cc": "3feb5c1dd9e022b8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "53b44272847ad22788ebc0a52d580f7dd01b3e37",
+          "reviewed": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "95798a02f68c86f070401329a05c78d326ac2579",
       "branch": "quest/xapiand/task-lifecycle",
@@ -24237,7 +24282,7 @@
       "risk": "high",
       "status": "review",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T09:11:49",
+      "updated": "2026-11-19T09:22:03",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
@@ -25665,8 +25710,8 @@
     "wide-search-loop": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T05:44:52",
-          "base": "a6de2c57936a95716912a676dee99e48d5011f01",
+          "at": "2026-11-19T09:20:21",
+          "base": "b2e1afce18b16fc259f7c90a9d44e0937715edf4",
           "blobs": {
             "docs/design/wide-search-loop.md": "100644:23d7200b4e7e5c3fdc47ddb30d06ca18c901714c",
             "harness/async_allowlist.tsv": "100644:82d044e7aa9117462bfee2a87e6eba0ebfe0247d",
@@ -25684,7 +25729,7 @@
             "tests/test_wide_search.cc": "100644:3dd76df79ed9d9ad22f1521f1daa711995f1df2f"
           },
           "by": "review",
-          "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+          "commit": "b7d9fd04cc0935ec9ad97a79b7550333a02d1475",
           "criteria": "3be2c18b9e5aedd9",
           "diffs": {
             "docs/design/wide-search-loop.md": "8a8e4780c64f103e",
@@ -25703,7 +25748,7 @@
             "tests/test_wide_search.cc": "6a9a853b7e96922a"
           },
           "findings": {},
-          "note": "",
+          "note": "lead read main's changes since review: geo-correctness (src/geospatial/**, its tests), CI concurrency groups, CMakeLists pin line; none touches wide_search, the loop or handler.cc",
           "review": "7265610722d3cf07ef915cd3c2be7321a33c4b4f",
           "reviewed": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
           "verdict": "APPROVE"
@@ -25733,19 +25778,48 @@
         "tests/test_node.cc",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T11:08:30",
+          "commit": "e11af45a76a37cfa9c0e01dcf5c93b562419ba13",
+          "criteria": {
+            "A1": "`docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261119-054325-0edfb0",
+            "A2": "261119-054322-32d04d (passed at 66da6256a6c8; only merges from main since), 261119-054324-7e5194 (passed at 66da6256a6c8; only merges from main since), 261119-054325-ed6f90 (passed at 66da6256a6c8; only merges from main since), 261119-054330-c7912d (passed at 66da6256a6c8; only merges from main since), 261119-054332-4c0247 (passed at 66da6256a6c8; only merges from main since), 261119-054329-f8ee36 (passed at 66da6256a6c8; only merges from main since), 261119-054331-dc32c3 (passed at 66da6256a6c8; only merges from main since), 261119-054333-3f20a4 (passed at 66da6256a6c8; only merges from main since), 261119-054334-52ec98 (passed at 66da6256a6c8; only merges from main since), 261119-054335-6a3456 (passed at 66da6256a6c8; only merges from main since), 261119-054336-8a53e2 (passed at 66da6256a6c8; only merges from main since), 261119-054337-b0cbe2 (passed at 66da6256a6c8; only merges from main since), 261119-054338-6a009a (passed at 66da6256a6c8; only merges from main since), 261119-054339-649dd6 (passed at 66da6256a6c8; only merges from main since), 261119-054340-8945b4 (passed at 66da6256a6c8; only merges from main since)",
+            "A3": "261119-054323-666a24 (passed at 66da6256a6c8; only merges from main since), 261119-054333-3c23b0 (passed at 66da6256a6c8; only merges from main since)",
+            "A4": "261119-054326-091446 (passed at 66da6256a6c8; only merges from main since), 261119-054328-65c70f (passed at 66da6256a6c8; only merges from main since), 261119-054327-9f2eac (passed at 66da6256a6c8; only merges from main since), 261119-054329-a1e1ee (passed at 66da6256a6c8; only merges from main since), 261119-054336-554e87 (passed at 66da6256a6c8; only merges from main since); fails without: 261118-174835-9a2a47, 261118-174903-ca5c07, 261118-214405-d4ad8f, 261118-214416-55f6c4, 261118-214430-1d4cc0, 261118-214453-f4a3ac"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-054326-091446",
+              "level": "light",
+              "seconds": 483.0,
+              "state": "done",
+              "what": "wide-search-loop check suite at 0240c48e1a62"
+            }
+          ],
+          "final": true,
+          "from": "b6322488a12838f90a5cf32eeb11d47087e7358d",
+          "reason": "",
+          "tested": "b7d9fd04cc0935ec9ad97a79b7550333a02d1475"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T05:44:52",
-      "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
+      "updated": "2026-11-19T11:08:52",
+      "worktree": ""
     },
     "write-buffer": {
       "accepted": {},
