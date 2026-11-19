@@ -110,3 +110,18 @@ A2 numbers (not a finding):
   the owner's decision.
 
 Not run: Linux TSan/ASan and CI arm64 (CI's; arm64 was still running at the head per `campaign brief`).
+
+## Re-check
+
+Commit: 0240c48e1
+Verdict: APPROVE
+Date: 2026-11-19
+
+Read `git diff 5b206efde..0240c48e1 -- harness tests` and `git diff --stat`: the range touches the journal, one
+allowlist row and `tests/test_wide_search.cc`; `src/` is unchanged. No job run: reading settles both questions,
+and CI is green on Linux, arm64 and FreeBSD at the head.
+
+| ID | Blocking | Kind | Evidence |
+|---|---|---|---|
+| R1 | no | test | Closed. Both cases keep every value check (`order == {2,1}`, `held()` 3 then 0, `order.empty()`, `cancelled`, `head_done`) and add `CHECK_FALSE(cancelled)`; only the start order changes, from `when_all` to `spawn` plus `scheduler.run()` on one inline scheduler, which parks each task at its first wait. Without the FIFO `line_` (`wide_search.h:93`), the batch of one takes the free index at the first `run()` and `order.empty()` fails (`test_wide_search.cc` step 3); without cancel leaving the line, `cancelled` stays false after the final `run()`. Not mutation-run: a doubt this small is read, not built. |
+| R2 | no | harness | Closed. The row is `src/database/wide_search.cc  mutex  mutex_  allow  3`: the file has exactly three `lock_guard` sites on `mutex_` (`:56`, `:73`, `:83`), each an O(1) test or swap with no I/O, and `room->set()` runs after the lock is released (`:85-88`). The count of 3 and the file scope match; the pattern is the one member, so it does not cover other mutexes or files. |
