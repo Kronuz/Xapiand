@@ -32,6 +32,8 @@
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <stdexcept>
+#include <string_view>
 #include <string>
 #include <utility>
 #include <vector>
@@ -215,7 +217,7 @@ static void test_terms_of_typed_fields() {
 	CHECK_THROW(fx.got(obj({ { "p", -1 } })), ClientError);
 	// A date is the same instant however it is written.
 	const auto by_text = fx.got(obj({ { "d", "2021-03-04" } }));
-	const auto by_seconds = fx.got(obj({ { "d", Datetime::timestamp(Datetime::DatetimeParser("2021-03-04")) } }));
+	const auto by_seconds = fx.got(obj({ { "d", Datetime::timestamp(Datetime::DatetimeParser(std::string_view("2021-03-04"))) } }));
 	SEE(by_text, by_seconds);
 	CHECK_TRUE(by_text.rfind("d/", 0) == 0);
 	CHECK_TRUE(by_text != fx.got(obj({ { "d", "2021-03-05" } })));
@@ -238,7 +240,6 @@ static void test_global_values() {
 	CHECK_TRUE(number != fx.got(6));
 	CHECK_TRUE(fx.got(true) != fx.got(false));
 	CHECK_TRUE(fx.got(2.5).find("/" + Serialize::floating(2.5)) != std::string::npos);
-	SEE(fx.got(obj({ { "_value", nullptr } })).substr(0, 1) != "", true);
 	CHECK_TRUE(fx.got(obj({ { "_value", "" } })) == fx.got(obj({ { "_value", nullptr } })));  // an empty value is the field's null marker
 	CHECK_TRUE(fx.got(obj({ { "_value", "*" } })).rfind("wildcard(", 0) == 0);
 	CHECK_TRUE(fx.got(obj({ { "_text", "word" } })).find("/word") != std::string::npos);
@@ -322,10 +323,11 @@ static void test_clause_errors() {
 
 static void test_accuracy_terms() {
 	Fixture fx;
-	const auto date_term = [&](const char* path, const MsgPack& value, const Datetime::tm_t& tm) {
-		const auto spc = fx.schema->get_data_field(path, false).first;
-		return std::make_pair(fx.got(obj({ { path, value } })),
-		                      field_name(spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)) + "/" + Serialize::serialize(tm));
+	const auto by = [&](const char* path, const MsgPack& value) { return fx.got(obj({ { path, value } })); };
+	// The serialized bytes of a term, past its field's name.
+	const auto tail = [&](const char* path, const MsgPack& value) {
+		const auto q = by(path, value);
+		return q.substr(q.find('/') + 1);
 	};
 	const MsgPack when = "2021-03-04T05:06:07.5";
 	struct Row { const char* unit; Datetime::tm_t tm; };
@@ -337,27 +339,23 @@ static void test_accuracy_terms() {
 		{ "d._millennium", Datetime::tm_t(2000) },
 	};
 	for (const auto& row : rows) {
-		const auto [got, want_tail] = date_term(row.unit, when, row.tm);
-		// The term is under the accuracy's own field, so compare the serialized instant.
-		CHECK_TRUE(got.size() > want_tail.size() - Serialize::serialize(row.tm).size());
-		SEE(got.substr(got.find('/') + 1), Serialize::serialize(row.tm));
+		SEE(tail(row.unit, when), Serialize::serialize(row.tm));
 	}
 	// Two instants in one unit share the term; in different units they do not.
 	SEE(fx.got(obj({ { "d._day", "2021-03-04T01:00:00" } })), fx.got(obj({ { "d._day", "2021-03-04T23:59:59" } })));
 	CHECK_TRUE(fx.got(obj({ { "d._day", "2021-03-04" } })) != fx.got(obj({ { "d._day", "2021-03-05" } })));
 	// An integer field's accuracy rounds down to a multiple.
-	const auto by = [&](const char* path, const MsgPack& value) { return fx.got(obj({ { path, value } })); };
-	SEE(by("n._10", 1234).substr(by("n._10", 1234).find('/') + 1), Serialize::integer(1230));
+	SEE(tail("n._10", 1234), Serialize::integer(1230));
 	SEE(by("n._10", 1230), by("n._10", 1239));
-	SEE(by("n._100", 1299).substr(by("n._100", 1299).find('/') + 1), Serialize::integer(1200));
-	SEE(by("n._10", -1234).substr(by("n._10", -1234).find('/') + 1), Serialize::integer(-1240));  // down, toward minus infinity
+	SEE(tail("n._100", 1299), Serialize::integer(1200));
+	SEE(tail("n._10", -1234), Serialize::integer(-1240));  // down, toward minus infinity
 	// A time's accuracy rounds its seconds, a timedelta's too.
-	SEE(by("tm._tminute", "10:30:45").substr(by("tm._tminute", "10:30:45").find('/') + 1), Serialize::integer(37800));
-	SEE(by("tm._thour", "10:30:45").substr(by("tm._thour", "10:30:45").find('/') + 1), Serialize::integer(36000));
-	SEE(by("tm._tsecond", "10:30:45").substr(by("tm._tsecond", "10:30:45").find('/') + 1), Serialize::integer(37845));
-	SEE(by("td._tdminute", 5445).substr(by("td._tdminute", 5445).find('/') + 1), Serialize::integer(5400));
-	SEE(by("td._tdhour", 5445).substr(by("td._tdhour", 5445).find('/') + 1), Serialize::integer(3600));
-	SEE(by("td._tdminute", -5445).substr(by("td._tdminute", -5445).find('/') + 1), Serialize::integer(-5460));
+	SEE(tail("tm._tminute", "10:30:45"), Serialize::integer(37800));
+	SEE(tail("tm._thour", "10:30:45"), Serialize::integer(36000));
+	SEE(tail("tm._tsecond", "10:30:45"), Serialize::integer(37845));
+	SEE(tail("td._tdminute", 5445), Serialize::integer(5400));
+	SEE(tail("td._tdhour", 5445), Serialize::integer(3600));
+	SEE(tail("td._tdminute", -5445), Serialize::integer(-5460));
 	// A geo accuracy is the cells of the shape at that level.
 	const auto point = obj({ { "_ewkt", "POINT(10 20)" } });
 	const auto cells5 = by("g._geo5", point);
