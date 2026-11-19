@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-201716-0c19dd 261118-201706-a7fe03 261118-201651-0c4cbe 261118-201651-95cb5d 261118-201707-d5031e 261118-201652-34809c 261118-201652-2ff32a 261118-201653-1b9363 261118-201653-39af86 261118-201653-28f0e6 261118-200515-17b386
+State: waiting on jobs 261118-201716-0c19dd 261118-202715-a8a813 261118-202715-8697af 261118-202716-10cb25 261118-202716-acc745 261118-202717-fdc85d 261118-202717-6ea3dd 261118-202718-79d2fa 261118-202718-f4715b 261118-202719-f5790d 261118-202723-694dbd 261118-202727-7e8fc4; CI run 44458400155
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -33,6 +33,14 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
 - logger:70e3c36 fix: the exit-time stop joins while the LOG thread takes lines (`taken_`, one
   relaxed store per line) and abandons only after 200 ms without one. Docs: ARCHITECTURE.md,
   docs/exit-lifetime.md. Pushed.
+- logger:107d707 test only: `logger_exit_test capped` (ctest logger_exit_capped), 200 lines at 50 ms
+  queued at exit; the stop must cut at 5 s and report the cut count, which with the handler's own
+  adds to 200. Must fail.
+- logger:cfcec69 lead's ruling: `kExitCap` 5 s total (docker stop's 10 s SIGKILL grace, Kubernetes
+  30 s) beside `kExitStall` 200 ms; either way the stop writes "logger: exit stopped the LOG thread
+  (5 s cap|stalled 200 ms): N lines not written" to stderr. A pass that sees `abandoned` adds its
+  written lines to `completed_` first, so N (pending_count) is exact. Docs name the cap and reason.
+  Pushed.
 - Probe branches (local, never pushed): probe/exit-abandon logger:333e7ff (b6371a4 + a stderr report
   when the exit join times out), probe/exit-abandon-main logger:832db5e (the same on main).
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
@@ -52,6 +60,12 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
   and 201707-d5031e, TSan recipe 201652-34809c, A2 201652-2ff32a 201653-1b9363, A5 201653-39af86
   201653-28f0e6. CI run 44457207582 at 70e3c36: green on all 9 platforms (linux-asan-ubsan,
   linux-tsan, freebsd, macos x86_64/arm64, linux gcc/clang/arm64).
+- Lead ruling (5 s cap): logger:107d707 + logger:cfcec69. Jobs at cfcec69: suite 202715-a8a813, ASan
+  202715-8697af 202716-10cb25, TSan recipe 202716-acc745, A2 202717-fdc85d 202717-6ea3dd, A5
+  202718-79d2fa 202718-f4715b, slow+stall 202719-f5790d, capped pass 202727-7e8fc4, capped
+  fails-without 202723-694dbd (107d707), slow fails-without 201716-0c19dd (46d3d0b). CI run
+  44458400155. Jobs at 70e3c36 are superseded. Main TSan probe 17b386 cancelled (the ASan main
+  probe already attributes it).
 
 Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
 every criterion has evidence.
@@ -122,7 +136,8 @@ Bench results so far (strict beside light holds, host load high: wide intervals)
 
 ## Blocked on
 
-Lead to confirm (implemented, reversible): the exit-time stop now waits as long as the drain keeps
+Nothing. (Resolved by the lead's ruling, msg after the fifth session: keep the progress wait, add a
+5 s cap with a stderr report; done in logger:cfcec69.) Earlier text, kept for the record: Lead to confirm (implemented, reversible): the exit-time stop now waits as long as the drain keeps
 writing (abandons after 200 ms without a line) instead of 200 ms in all. Effect a host sees: a
 process exiting with many lines queued behind a slow handler takes longer to exit and loses no
 lines; a stalled handler is still given up on after 200 ms. Options: (a) this (recommended: it is
@@ -152,6 +167,8 @@ Benchmarks, strict beside light holds (host load high, wide intervals), median r
 
 ## Rulings I made
 
+- The stop reports on stderr when it gives up after a stall too, not only at the cap: lines lost
+  either way are never silent.
 - Exit-flush loss (A3): proved by probe, not bisected: the probe names the mechanism directly
   (timeout report), and the budget is main's, not the quest's.
 
