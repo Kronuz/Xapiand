@@ -1644,6 +1644,7 @@ Unserialize::get_field_type(std::string_view str_type)
 		hhl("k"),
 		hhl("u"),
 		hhl("x"),
+		hhl("t"),
 		hhl("datetime"),
 		hhl("term"),  // FIXME: remove legacy term
 		hhl("text"),

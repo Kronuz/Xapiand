@@ -709,6 +709,7 @@ _get_type(std::string_view str_type)
 		hhl("float"),
 		hhl("floating"),
 		hhl("geo"),
+		hhl("geospatial"),
 		hhl("integer"),
 		hhl("positive"),
 		hhl("script"),
@@ -734,6 +735,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/array"),
 		hhl("array/geo"),
 		hhl("geo/array"),
+		hhl("array/geospatial"),
+		hhl("geospatial/array"),
 		hhl("array/integer"),
 		hhl("integer/array"),
 		hhl("array/positive"),
@@ -769,6 +772,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/foreign"),
 		hhl("foreign/geo"),
 		hhl("geo/foreign"),
+		hhl("foreign/geospatial"),
+		hhl("geospatial/foreign"),
 		hhl("foreign/integer"),
 		hhl("integer/foreign"),
 		hhl("foreign/positive"),
@@ -833,6 +838,12 @@ _get_type(std::string_view str_type)
 		hhl("array/geo/foreign"),
 		hhl("geo/foreign/array"),
 		hhl("geo/array/foreign"),
+		hhl("foreign/array/geospatial"),
+		hhl("foreign/geospatial/array"),
+		hhl("array/foreign/geospatial"),
+		hhl("array/geospatial/foreign"),
+		hhl("geospatial/foreign/array"),
+		hhl("geospatial/array/foreign"),
 		hhl("foreign/array/integer"),
 		hhl("foreign/integer/array"),
 		hhl("array/foreign/integer"),
@@ -992,6 +1003,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array"):
+		case _.fhhl("array/geospatial"):
 		case _.fhhl("geo/array"):
 		case _.fhhl("array/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::geo }};
@@ -1072,6 +1085,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/foreign"):
+		case _.fhhl("foreign/geospatial"):
 		case _.fhhl("geo/foreign"):
 		case _.fhhl("foreign/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::geo }};
@@ -1177,6 +1192,12 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array/foreign"):
+		case _.fhhl("geospatial/foreign/array"):
+		case _.fhhl("array/geospatial/foreign"):
+		case _.fhhl("array/foreign/geospatial"):
+		case _.fhhl("foreign/geospatial/array"):
+		case _.fhhl("foreign/array/geospatial"):
 		case _.fhhl("geo/array/foreign"):
 		case _.fhhl("geo/foreign/array"):
 		case _.fhhl("array/geo/foreign"):
@@ -2016,7 +2037,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
