@@ -2287,7 +2287,9 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
 
 	auto paths = co_await expand_paths(request, query_field.patterns);
-	static_cast<std::vector<Endpoint>&>(request.endpoints) = co_await wide_search::resolve(paths, query_field.writable, settings, *request.budget);
+	// Only a search or a count (the views that take patterns) yields between its names and ends when its client leaves.
+	auto* const budget = query_field.patterns ? &*request.budget : nullptr;
+	static_cast<std::vector<Endpoint>&>(request.endpoints) = co_await wide_search::resolve(paths, query_field.writable, settings, budget);
 	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
 	co_return paths.size();

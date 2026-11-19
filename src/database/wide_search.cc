@@ -125,14 +125,14 @@ pins()
 
 
 task::task<std::vector<Endpoint>>
-resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* settings, task::budget& budget)
+resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* settings, task::budget* budget)
 {
 	std::vector<Endpoint> resolved;
 	resolved.reserve(paths.size());
-	const bool wide = paths.size() > 1;
+	auto* const yields = paths.size() > 1 ? budget : nullptr;
 	for (const auto& path : paths) {
-		if (wide) {
-			co_await budget.checkpoint();
+		if (yields != nullptr) {
+			co_await yields->checkpoint();
 		}
 		auto endpoints = co_await XapiandManager::resolve_index_endpoints(Endpoint(path), writable, settings);
 		if (endpoints.empty()) {

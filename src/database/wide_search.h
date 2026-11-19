@@ -104,8 +104,9 @@ private:
 Pins& pins();
 
 
-// Each name to its shards, sorted and without repeats. A list of names yields the loop between slices of `budget`
-// and ends when its token is cancelled; a single name resolves whole, as every document and write view names one.
-task::task<std::vector<Endpoint>> resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* settings, task::budget& budget);
+// Each name to its shards, sorted and without repeats. With a `budget` (a search's or a count's), a list of names
+// yields the loop between its slices and ends when its token is cancelled; without one, or for a single name, the
+// names resolve whole, so a client that leaves does not end a commit or a document view.
+task::task<std::vector<Endpoint>> resolve(const std::vector<std::string>& paths, bool writable, const MsgPack* settings, task::budget* budget);
 
 }  // namespace wide_search
