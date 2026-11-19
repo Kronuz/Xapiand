@@ -9379,8 +9379,7 @@
       "files": [
         "src/multivalue/keymaker.*",
         "tests/test_keymaker*",
-        "tests/test_coverage_multivalue*",
-        "docs/src/content/docs/changelog.md"
+        "tests/test_coverage_multivalue*"
       ],
       "landed": [],
       "lenses": [],
@@ -9391,7 +9390,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T12:22:52"
+      "updated": "2026-11-19T12:23:32"
     },
     "kv-scan": {
       "accepted": {},
