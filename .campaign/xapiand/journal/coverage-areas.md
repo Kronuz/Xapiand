@@ -1,6 +1,6 @@
 # coverage-areas: journal
 
-State: waiting on jobs 261118-223632-217f42 (A4 fails-without at 8545f5964, old pin) 261118-223636-e68395 (A4 aggregations x20 at 4517f42e4) 261118-223638-8642ea (coverage) 261118-223641-404662 (suite); then fill Evidence, mark ready
+State: waiting on job 261119-002802-225819 (A2 registry bytes rerun at head); then ready for review
 Quest: .campaign/xapiand/quests/coverage-areas.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -77,23 +77,16 @@ Follow-up quests, gaps named: (1) multivalue (generate_terms, keymaker, range: ~
 
 ## Blocked on
 
-Ruled by the lead 11-18: option 2 (wait for logger-exit-lifetime to land; no bump to an unlanded commit). When it lands: bump CMakeLists.txt:563 to the landed commit, aggregations x20 (A4), rerun coverage and the suite. Until then 20d14b/64a6fb give the decoders number (expect 2514+ of 2558 lines) and will show the same aggregations abort. Record their results here when they finish.
-
-Pin decision (lead, answered above): the aggregations test aborts at exit until the logger fix is pinned, which fails A3 (suite) and costs A1 its aggregations profile. Options: (1) bump CMakeLists.txt:563 to logger:dec68de now (pushed, in review; only logger.cc/logger.h change for Xapiand; repin to the landed commit later), run suite and coverage, 20 runs for A4; (2) wait for logger-exit-lifetime to land, then the same bump; (3) close the logger in the coverage tests before exit (hides the bug A4 must catch; not recommended). Recommendation (1). Older entry follows.
-
-A4's frame is not in Xapiand: diag8 b09a49 shows the abort is on the log thread (`Xapiand:LOG`), LogWorker::close() draining at exit into Logging::emit, which takes `static OnceFilter filter`'s mutex (Kronuz/logger logger.cc:1765, pin 6e7ab9e). The function-local static is constructed after the logger's own state, so it is destroyed first, and the drain locks its destroyed std::mutex (LLVM's libc++ returns EINVAL; Apple's tolerated it, so Xapiand's normal build never showed it). The fix is in the logger repository (make the filter a member of the logger or never-destroyed: `static OnceFilter& filter = *new OnceFilter;`) plus a pin bump in CMakeLists.txt (line 563), both outside this quest's file set and repository. Proof job 50b1a8 runs the aggregations test 20 times against a patched copy (the job's checkout only). Options for the lead: (a) a logger quest/commit, then pin bump here, with a logger test that fails without; (b) widen this quest to CMakeLists.txt and keep the logger change as a separate landing. Recommendation (a). Until then the aggregations test (20 of 20 abort under one libc++, instrumented build only) is A4's check, and its coverage lines still count only if the profile is written: to keep the coverage run honest meanwhile, the instrumented tests could close the logger before exit.
-
-<What, and who decides. "Nothing" when nothing.>
+Nothing. (A4's logger fix landed at logger:455cad0 and is pinned; the older notes are in git history.)
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261118-223638-8642ea (full coverage at 35eae3866, exit 0): decoders 98.4/96.8 (T13 98/95), aggregations 95.9/92.3, lua 92.9/82.3, geospatial 95.3/92.3 (T13 90/80), all met; before: d4c5ad. Mutants killed: 261118-035634-731f0f, 261118-035636-f2de7d, 261118-035637-6b1e21 |
+| A2 | 261119-002802-225819 (rerun of 261118-131217-8aa284 at head): idle 120 B, first reader 440 B, 194 readers 15,800 B per open index |
+| A3 | suite 261118-223641-404662 passed at 35eae3866; CI green at 35eae3866 |
+| A4 | 261118-223636-e68395 (aggregations x20 under one libc++ at the logger pin 455cad0, 0 of 20 fail); fails without: 261118-223632-217f42 (old pin, exit 134) |
 
 ## Result
 
@@ -104,3 +97,6 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+- Pinned the logger at 455cad0 only after it landed (the lead ruled option 2).
+- `REPEAT=N` in coverage_one.sh is the A4 check: the old-pin commit 8545f5964 has the script, the pin commit 4517f42e4 does not change it.
+- The decoders gap (6 lines) was closed with tests in tests/test_coverage_document.cc and test_coverage_y2j.cc; the field parser's unreachable lines and its hang case (F7) stay uncovered.
