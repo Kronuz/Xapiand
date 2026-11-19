@@ -1,6 +1,6 @@
 # htm-edge-points: journal
 
-State: waiting on jobs 261119-003445-380f20 261119-003446-097d2d 261119-003448-692923 261119-003449-9282f5 261119-003450-7f1ba0
+State: waiting on jobs CI run 44488771810 (Kronuz/htm, 0c09a02); all campaign jobs green
 Quest: .campaign/xapiand/quests/htm-edge-points.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,7 @@ Jobs at 0c09a02:
 
 ## Next
 
-1. If all jobs and CI on 0c09a02 are green: ready for review (F1-F4 answered).
+1. When CI run 44488771810 is green: ready for review (F1-F4 answered).
 
 ## Blocked on
 
@@ -36,14 +36,15 @@ Nothing. msg (lead: take b): done. msg (review CHANGES): F1, F3, F4 fixed and F2
 
 ## Evidence
 
-At head d529b49 (option b):
+At head htm:0c09a02:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-235302-13c067 (htm_edge, 10,360 edge points; same tree at 7c33b0a, reused). Fails without: 261118-235815-bffda3 (b572ff0's closed-only htm.cc: 394 of 10,360 fail), 261118-235817-c86c33 (cadec57's open htm.cc: 4,225 fail) |
-| A2 | 261118-235818-798d95 (htm_diff 1000000: random ids differ from the open rule only where the descent finds a sliver), pending |
-| A3 | [artifact] htm test/golden.h: 238 of 396 ids change from cadec57, and a re-id at head changes 0. The 48 fusing probes in htm.cc carry new ids (19 changed). CHANGELOG.md 2026-11-18 lists which ids change: root-mesh edge points, exact deeper vertices and midpoints, and 0.42% at levels 20-25 that were up to 7.74 m outside their trixel. It names what to reindex: every point with a zero coordinate, or all points for exact ids |
-| A4 | Release suite 261118-235821-6b7b9b; Debug ctest 261118-235820-219166; CI 44483693645 green on every platform |
+| A1 | 261119-003445-380f20 (htm_edge: 10,360 edge points held, 1 km cover). Fails without: 261118-235815-bffda3 (the closed-only rule, 394 fail) and 261118-235817-c86c33 (the open rule, 4,225 fail) |
+| A2 | 261119-003448-692923 (htm_diff 1000000). Every changed random id needs a no-child level, and the new trixel must be within 5 cm. 4,700 of 1,125,000 changed, worst 6.68 mm |
+| A3 | [artifact] htm test/golden.h: 238 of 396 ids changed (a re-id at head changes 0), and the fusing probes 19 of 48. CHANGELOG.md 2026-11-18 says which ids change and to reindex all stored geo points |
+| A4 | Release suite 261119-003450-7f1ba0, Debug ctest 261119-003449-9282f5. CI run 44488771810 is in progress; d529b49's run 44483693645 was green |
+| A5 | 261119-003445-380f20 (1 m and 3 m circles around 50,000 random centers: 0 misses). Fails without the clamp (sed mutant): 261119-003446-097d2d, 49 misses |
 
 ## Result
 
