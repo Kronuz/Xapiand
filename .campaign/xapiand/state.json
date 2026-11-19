@@ -24104,6 +24104,48 @@
       "updated": "2026-11-12T22:21:31",
       "worktree": ""
     },
+    "task-lifecycle": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_asio.hh",
+        "lifecycle*.hh",
+        "test/**",
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "task:lifecycle"
+      ],
+      "repo": "../task",
+      "risk": "high",
+      "status": "planned",
+      "title": "task::lifecycle: components, stop sources, periodic and debounce",
+      "updated": "2026-11-19T06:34:28"
+    },
     "task-lifecycle-rename": {
       "accepted": {},
       "after": [],
