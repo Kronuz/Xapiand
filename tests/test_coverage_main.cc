@@ -118,6 +118,10 @@ int in_child(F fn) {
 	}
 	int status = 0;
 	::waitpid(pid, &status, 0);
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		std::fprintf(stderr, "DIAG in_child: %s %d\n", WIFEXITED(status) ? "exited" : "killed by signal",
+			WIFEXITED(status) ? WEXITSTATUS(status) : WTERMSIG(status));
+	}
 	return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
 }
 
@@ -229,6 +233,7 @@ void test_signal_handler_without_a_manager() {
 		struct rlimit rl;
 		::getrlimit(RLIMIT_NOFILE, &rl);
 		errno = 0;
+		std::atexit([] { std::fprintf(stderr, "DIAG sig_handler child: atexit reached\n"); });
 		const int probe = ::open("/dev/null", O_RDONLY);  // what sig_handler's own open sees
 		std::fprintf(stderr, "DIAG sig_handler child: rlim_cur %llu rlim_max %llu, probe open fd %d errno %d, fcntl 0/1/2: %d %d %d\n",
 			static_cast<unsigned long long>(rl.rlim_cur), static_cast<unsigned long long>(rl.rlim_max), probe, errno,
@@ -463,6 +468,16 @@ void expect_refusal(ssize_t limit, ssize_t slack = 0) {
 	CHECK(false);
 }
 
+// Whether the process may raise its (just lowered) hard limit to `to`, as root can; the limit is put back after.
+bool can_raise_to(rlim_t to) {
+	struct rlimit before;
+	::getrlimit(RLIMIT_NOFILE, &before);
+	struct rlimit rl = {to, to};
+	const bool raised = ::setrlimit(RLIMIT_NOFILE, &rl) == 0;
+	::setrlimit(RLIMIT_NOFILE, &before);
+	return raised;
+}
+
 // adjustOpenFilesLimit for a case that must not refuse: a refusal ends the child with status 2.
 void adjust_or_report() {
 	try {
@@ -507,25 +522,32 @@ void test_open_files_limit() {
 		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(4096));
 	}), 0);
 
-	// With no explicit limit and a hard limit of 1024 (which cannot be raised) the default pool and clients are
-	// refused as well, for the same minimum.
+	// With no explicit limit and a hard limit of 1024 the default pool and clients are refused for the same minimum,
+	// unless the process may raise its hard limit (root): then the raise to the system's per-process maximum succeeds.
 	CHECK_EQ(in_child([] {
 		lower_limit(1024);
+		const bool can_raise = can_raise_to(1500);  // above the minimum of 1471
 		main_opts.max_files = 0;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
-		expect_refusal(1024, 16);
+		if (can_raise) {
+			adjust_or_report();
+			CHECK_GE(static_cast<ssize_t>(get_max_files_per_proc()), static_cast<ssize_t>(1471));
+		} else {
+			expect_refusal(1024, 16);
+		}
 	}), 0);
 
 	// Explicit limits the process can only lower, and a request above them: the raise fails and the limit it gets is
 	// reported, and the pool and the clients still fit.
 	CHECK_EQ(in_child([] {
 		lower_limit(512);
+		const bool can_raise = can_raise_to(5000);
 		main_opts.max_files = 5000;
 		main_opts.database_pool_size = 2;
 		main_opts.max_clients = 2;
 		adjust_or_report();
-		CHECK_LE(main_opts.max_files, static_cast<ssize_t>(512));
+		CHECK_LE(main_opts.max_files, static_cast<ssize_t>(can_raise ? 5000 : 512));
 		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>(2));
 		CHECK_EQ(main_opts.max_clients, static_cast<ssize_t>(2));
 	}), 0);
@@ -546,11 +568,14 @@ void test_open_files_limit() {
 	for (rlim_t limit : {2000, 3000, 4000}) {
 		CHECK_EQ(in_child([limit] {
 			lower_limit(limit);
+			const bool can_raise = can_raise_to(5000);
 			main_opts.max_files = 0;
 			main_opts.database_pool_size = 200;
 			main_opts.max_clients = 1000;
 			adjust_or_report();
-			CHECK_LE(main_opts.max_files, static_cast<ssize_t>(limit));
+			if (!can_raise) {
+				CHECK_LE(main_opts.max_files, static_cast<ssize_t>(limit));
+			}
 			CHECK_LE(main_opts.database_pool_size, static_cast<ssize_t>(200));
 			CHECK_LE(main_opts.max_clients, static_cast<ssize_t>(1000));
 		}), 0);
