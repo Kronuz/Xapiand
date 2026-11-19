@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+coverage-areas' serialize tests (tests/test_coverage_serialize.cc, Xapiand:306690573) found two silent acceptances: a negative text such as "-1" serializes as a positive number (strtoull wraps it to U64_MAX), and `get_field_type` maps a word that is no type name to a real type (its perfect hash has no membership check). Both are refused with a 400 naming the value.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 "-1", "-0x1" and " -1" for a positive field are refused; "0" and U64_MAX still serialize: a test failing at the parent commit (`--fails-without`)
+- A2 Every non-type word tried (the coverage test's list plus 10,000 random words) is refused, and every real type name still maps to its type: a test failing at the parent commit
+- A3 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +20,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: refusing is a bug fix, not a narrowing: these inputs were silently wrong, never served correctly.
 
 ## May land early
 
