@@ -20,24 +20,40 @@
  * THE SOFTWARE.
  */
 
-// Stop-word lists: the start-up probe (`--probe MODE`) that measures what loading the lists costs.
+// Stop-word lists (D137): the shipped lists are compiled in, a file under <data path>/stopwords overrides
+// or adds a list, an unknown language is refused, and a list's fingerprint tells an index when it changed.
+// The lists load once per process, so each scenario runs in a process of its own (`--scenario NAME`); with no
+// argument the binary runs them all. `--probe MODE` measures what loading the lists costs.
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <new>
+#include <set>
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <vector>
 
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "engine/text.h"
+#include "exception_engine.h"
 #include "stopper.h"
+#include "stopwords/builtin.h"
 
 #if defined(__APPLE__)
 #include <mach/mach.h>
-#elif defined(__linux__)
-#include <unistd.h>
 #endif
 
 namespace {
@@ -132,14 +148,303 @@ probe(const std::string& mode, const char* language)
 	return 0;
 }
 
+namespace fs = std::filesystem;
+
+// The shipped lists, as files of the source tree.
+fs::path
+shipped_dir()
+{
+	std::vector<fs::path> candidates{fs::path(__FILE__).parent_path().parent_path() / "stopwords"};
+	for (auto dir = fs::current_path(); dir.has_parent_path() && dir != dir.parent_path(); dir = dir.parent_path()) {
+		candidates.push_back(dir / "stopwords");
+	}
+	for (const auto& candidate : candidates) {
+		if (fs::exists(candidate / "en.txt")) {
+			return candidate;
+		}
+	}
+	return candidates.front();
+}
+
+std::set<std::string>
+words_of(const fs::path& file)
+{
+	std::ifstream in(file);
+	return {std::istream_iterator<std::string>(in), std::istream_iterator<std::string>()};
+}
+
+// FNV-1a 64 of the sorted words, each followed by a NUL, as 16 hex digits: written out here, not shared with
+// the code under test.
+std::string
+fingerprint_of(const std::set<std::string>& words)
+{
+	std::uint64_t hash = 14695981039346656037ull;
+	for (const auto& word : words) {
+		for (const char byte : word + std::string(1, '\0')) {
+			hash = (hash ^ static_cast<unsigned char>(byte)) * 1099511628211ull;
+		}
+	}
+	char text[17];
+	std::snprintf(text, sizeof(text), "%016llx", static_cast<unsigned long long>(hash));
+	return text;
+}
+
+bool
+contains(const std::string& text, std::string_view part)
+{
+	return text.find(part) != std::string::npos;
+}
+
+// The what() of the exception `E` the call throws; "<none>" when it throws nothing, "<other>" otherwise.
+template <class E, class F>
+std::string
+thrown(F&& call)
+{
+	try {
+		call();
+	} catch (const E& exc) {
+		return exc.what();
+	} catch (...) {
+		return "<other>";
+	}
+	return "<none>";
+}
+
+// A fresh directory for the scenario, made the data path.
+fs::path
+data_path(const char* name)
+{
+	const auto root = fs::current_path() / (std::string("stopword_lists_") + name);
+	fs::remove_all(root);
+	fs::create_directories(root);
+	::setenv("XAPIAND_DATA_PATH", root.c_str(), 1);
+	return root;
+}
+
+void
+write(const fs::path& file, const std::string& text)
+{
+	fs::create_directories(file.parent_path());
+	std::ofstream(file) << text;
+}
+
+// With no stopwords directory every shipped language stops exactly the words of its file in the tree.
+void
+scenario_builtin()
+{
+	const auto root = data_path("builtin");   // nothing under it: no file can stand in for a list
+	const auto dir = shipped_dir();
+	std::size_t languages = 0, total = 0;
+	for (const auto& entry : fs::directory_iterator(dir)) {
+		if (entry.path().extension() != ".txt") {
+			continue;
+		}
+		const auto language = entry.path().stem().string();
+		const auto words = words_of(entry.path());
+		++languages;
+		total += words.size();
+		const auto* stop = getStopWords(language);
+		REQUIRE(stop != nullptr);
+		std::size_t missing = 0;
+		for (const auto& word : words) {
+			missing += !(*stop)(word);
+		}
+		CHECK_EQ(missing, std::size_t(0));
+		const auto* listed = std::find_if(std::begin(stopwords::builtin), std::end(stopwords::builtin), [&](const auto& entry_) {
+			return entry_.language == language;
+		});
+		REQUIRE(listed != std::end(stopwords::builtin));
+		CHECK_EQ(listed->count, words.size());   // nothing beyond the file's words
+		CHECK_EQ(stopWordsFingerprint(language), fingerprint_of(words));
+		CHECK_FALSE((*stop)("xyzzy"));
+		CHECK_FALSE((*stop)(""));
+	}
+	CHECK_EQ(languages, std::size_t(18));
+	CHECK_EQ(languages, std::size(stopwords::builtin));
+	CHECK_EQ(total, std::size_t(7326));
+
+	const auto& en = *getStopWords("en");
+	CHECK(en("the"));
+	CHECK(en("a's"));
+	CHECK_FALSE(en("dog"));
+	CHECK(!(*getStopWords("fr"))("the"));
+	CHECK((*getStopWords("fr"))("le"));
+	CHECK(getStopWords("en") == getStopWords("en"));
+	CHECK_EQ(stopWordsFingerprint("en"), "d1834faea3c14e55");
+
+	// A language without a list is refused, in the lookup, the fingerprint and the query text.
+	CHECK(contains(thrown<UnknownStopWordsError>([] { getStopWords("xx"); }), "xx"));
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords("xx"); }), "Stop words list xx unknown");
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { stopWordsFingerprint("xx"); }), "Stop words list xx unknown");
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords("EN"); }), "Stop words list EN unknown");
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords(""); }), "Stop words list  unknown");
+
+	engine::TextConfig config;
+	config.stop_language = "xx";
+	try {
+		engine::parse_text("the dog", config);
+		CHECK_TRUE(false);
+	} catch (const InvalidTextConfigError& exc) {
+		CHECK_EQ(exc.reason(), "Stop words list xx unknown");
+	}
+	std::string description;
+	engine::parse_text("the dog", engine::TextConfig{}, &description);
+	CHECK(contains(description, "the"));
+	config.stop_language = "en";
+	std::string stopped;
+	engine::parse_text("the dog", config, &stopped);
+	CHECK(!contains(stopped, "the"));
+	CHECK(contains(stopped, "dog"));
+
+	// An index that recorded the list's fingerprint is let through; any other fingerprint, or a list that
+	// is not there, is refused with the index, the list and both fingerprints.
+	checkStopWords("idx", "en", "d1834faea3c14e55");
+	const auto changed = thrown<StopWordsMismatchError>([] { checkStopWords("idx", "en", "0123456789abcdef"); });
+	CHECK(contains(changed, "idx"));
+	CHECK(contains(changed, "stop words list en"));
+	CHECK(contains(changed, "0123456789abcdef"));
+	CHECK(contains(changed, "d1834faea3c14e55"));
+	const auto gone = thrown<StopWordsMismatchError>([] { checkStopWords("idx", "gone", "0123456789abcdef"); });
+	CHECK(contains(gone, "idx"));
+	CHECK(contains(gone, "gone"));
+	CHECK(contains(gone, "0123456789abcdef"));
+	CHECK(contains(gone, "missing"));
+	fs::remove_all(root);
+}
+
+// A file replaces its language's list; a custom name adds a list; the rest stay as shipped.
+void
+scenario_override()
+{
+	const auto root = data_path("override");
+	write(root / "stopwords" / "en.txt", "zzz\nfoo zzz\n");
+	write(root / "stopwords" / "xx.txt", "alpha beta\ngamma\n");
+	write(root / "stopwords" / "notes.md", "dog\n");   // not a list
+	std::string reversed;   // the shipped French words, backwards, each twice: the same list
+	{
+		const auto words = words_of(shipped_dir() / "fr.txt");
+		for (auto it = words.rbegin(); it != words.rend(); ++it) {
+			reversed += *it + "\n" + *it + "\n";
+		}
+	}
+	write(root / "stopwords" / "fr.txt", reversed);
+	preloadStopWords();
+	fs::remove_all(root);   // the lists stay: nothing reads a file after the preload
+
+	const auto& en = *getStopWords("en");
+	CHECK(en("zzz"));
+	CHECK(en("foo"));
+	CHECK_FALSE(en("the"));   // the shipped words are gone
+	CHECK_FALSE(en("dog"));
+	CHECK_EQ(stopWordsFingerprint("en"), "ce679203ae8663b7");
+
+	const auto& xx = *getStopWords("xx");
+	CHECK(xx("alpha"));
+	CHECK(xx("beta"));
+	CHECK(xx("gamma"));
+	CHECK_FALSE(xx("delta"));
+	CHECK_EQ(stopWordsFingerprint("xx"), "344b9978a88eed3a");
+
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords("notes"); }), "Stop words list notes unknown");
+	CHECK_EQ(thrown<UnknownStopWordsError>([] { getStopWords("yy"); }), "Stop words list yy unknown");
+
+	// An override with the shipped words has the shipped fingerprint, whatever its order and repeats.
+	const auto words = words_of(shipped_dir() / "fr.txt");
+	CHECK_EQ(stopWordsFingerprint("fr"), fingerprint_of(words));
+	CHECK((*getStopWords("fr"))("le"));
+
+	// A language with no file keeps the shipped list.
+	CHECK((*getStopWords("de"))("und"));
+	CHECK_EQ(stopWordsFingerprint("de"), fingerprint_of(words_of(shipped_dir() / "de.txt")));
+
+	// An index built with the shipped English list is refused now that a file replaced it.
+	const auto changed = thrown<StopWordsMismatchError>([] { checkStopWords("idx", "en", "d1834faea3c14e55"); });
+	CHECK(contains(changed, "idx"));
+	CHECK(contains(changed, "d1834faea3c14e55"));
+	CHECK(contains(changed, "ce679203ae8663b7"));
+	checkStopWords("idx", "en", "ce679203ae8663b7");
+	checkStopWords("idx", "xx", "344b9978a88eed3a");
+	checkStopWords("idx", "fr", fingerprint_of(words));
+	const auto custom = thrown<StopWordsMismatchError>([] { checkStopWords("idx", "xx", "d1834faea3c14e55"); });
+	CHECK(contains(custom, "344b9978a88eed3a"));
+}
+
+// A file that cannot be read is an error, never a quiet return to the shipped list.
+void
+scenario_unreadable()
+{
+	const auto root = data_path("unreadable");
+	write(root / "stopwords" / "en.txt", "zzz\n");
+	::chmod((root / "stopwords" / "en.txt").c_str(), 0);
+	if (std::ifstream(root / "stopwords" / "en.txt").is_open()) {
+		std::printf("skip: the file is readable here (running as root)\n");
+		return;
+	}
+	const auto error = thrown<std::runtime_error>([] { getStopWords("en"); });
+	CHECK(contains(error, "Cannot open stop words file"));
+	CHECK(contains(error, "en.txt"));
+	CHECK_EQ(thrown<std::runtime_error>([] { getStopWords("de"); }), error);   // and so is every lookup
+	::chmod((root / "stopwords" / "en.txt").c_str(), 0600);
+	fs::remove_all(root);
+}
+
+struct Scenario {
+	const char* name;
+	void (*run)();
+};
+
+const Scenario scenarios[] = {
+	{"builtin", scenario_builtin},
+	{"override", scenario_override},
+	{"unreadable", scenario_unreadable},
+};
+
+// Runs each scenario in a process of its own.
+int
+run_all(const char* self)
+{
+	int failed = 0;
+	for (const auto& scenario : scenarios) {
+		const std::string command = std::string("\"") + self + "\" --scenario " + scenario.name;
+		const int status = std::system(command.c_str());
+		std::fprintf(stderr, "%s %s\n", status == 0 ? "ok  " : "FAIL", scenario.name);
+		failed += status != 0;
+	}
+	if (failed != 0) {
+		std::fprintf(stderr, "%d of %zu scenarios FAILED\n", failed, std::size(scenarios));
+		return 1;
+	}
+	std::printf("OK: %zu scenarios passed\n", std::size(scenarios));
+	return 0;
+}
+
 }  // namespace
 
 int
 main(int argc, char** argv)
 {
+	if (argc > 2 && std::string(argv[1]) == "--scenario") {
+		for (const auto& scenario : scenarios) {
+			if (std::string(argv[2]) == scenario.name) {
+				try {
+					scenario.run();
+				} catch (const std::exception& exc) {
+					std::fprintf(stderr, "  FAIL %s: threw %s\n", scenario.name, exc.what());
+					return 1;
+				}
+				if (testh::failures != 0) {
+					std::fprintf(stderr, "%d of %d checks FAILED\n", testh::failures, testh::checks);
+					return 1;
+				}
+				std::printf("OK: %d checks passed\n", testh::checks);
+				return 0;
+			}
+		}
+		std::fprintf(stderr, "no scenario %s\n", argv[2]);
+		return 2;
+	}
 	if (argc > 2 && std::string(argv[1]) == "--probe") {
 		return probe(argv[2], argc > 3 ? argv[3] : "en");
 	}
-	std::printf("OK: %d checks passed\n", testh::checks);
-	return 0;
+	return run_all(argv[0]);
 }
