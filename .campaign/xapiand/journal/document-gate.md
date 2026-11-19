@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261118-202755-3d88cf 261118-202758-1425d5 261118-202802-fb1582 261118-202804-4d7ad8
+State: waiting on jobs 261119-053901-2db986 261119-053903-78cd57 261119-053905-93b87c 261119-053908-95f546 261119-053910-2d1731 261119-053912-c499bc 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,31 +9,30 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-2026-11-18: main (strata:aca39c6c, docs only) merged as strata:3ec3adbb; gate report gains the A6
-VM rows, A7 checks and the VM wal1 miss (strata:69b1d4b9); build.sh builds RocksDB without
-io_uring (strata:cbf08ebf, the lead's); calibrate runs trials and checks the pin (strata:a93f2b59,
-pushed; CI 44440356088). Code under include/ unchanged since cc8ba3aa. build-test 261118-132434-8660f1
-passed at 69b1d4b9.
+2026-11-19, strata head 723a5e97 (main merged again, docs only; pushed). Code under include/ is
+cc8ba3aa's; since then bench/kv/run.py (a93f2b59, calibrate trials and pin check) and build.sh
+(cbf08ebf, no io_uring) changed, so A6 and A7 rerun at the head.
 
-A5: the first calibration at 100 B (261118-132449-745336) failed on my own exact-match check,
-not an assertion: one trial picked lvl-4k-none, the pin scored 0.989 of it (fillrandom favors
-lvl-16k-lz4, readrandom lvl-4k-none). 1 KiB 261118-132457-0e435f cancelled as superseded.
-At a93f2b59: build-test 261118-175420-dca1f5 passed; CI 44440356088 green. Calibration, 5
-trials: 100 B 261118-175418-fa1d4d passed (lvl-16k-lz4 fastest outright, next lvl-4k-lz4-hash
-0.967); 1 KiB 261118-175419-c46cd4 failed: lvl-4k-none fastest, the pin 0.970 (fillrandom 343k
-against 301k ops/s, spreads 3.8% and 8.3%; readrandom 0.94x, ycsb_a tie). A real miss, so 1 KiB
-re-pins to lvl-4k-none. On the host only sync1's YCSB A and F use 1 KiB (wal1 and N-log are 100 B).
-Queued: sync1 x3 at the new pin 261118-202755-3d88cf, -202758-1425d5, -202802-fb1582; a fresh
-1 KiB calibration checking lvl-4k-none 261118-202804-4d7ad8.
+- A5 done: 5-trial calibration keeps lvl-16k-lz4 at 100 B (261118-175418-fa1d4d) and re-pins
+  1 KiB to lvl-4k-none (261118-175419-c46cd4 failed the old pin at 0.970; 261118-202804-4d7ad8
+  passes the new one, old pin 0.983). sync1 at the new pin, 3 trials: 261118-202755-3d88cf,
+  -202758-1425d5, -202802-fb1582, all rows tie (0.98-1.11x). Gate report and perf note at
+  strata:3cce248a. build-test 261118-175420-dca1f5 passed at a93f2b59; CI green there.
+- A6 at the head, per VM build -> dry -> exclusive sync1+wal1 once (1 KiB on lvl-4k-none),
+  the build boots the VM, the timed job stops it (~/.scratch/vm-document-gate/short.sh):
+  Linux 261119-053901-2db986, -053903-78cd57, -053905-93b87c; FreeBSD 261119-053908-95f546,
+  -053910-2d1731, -053912-c499bc. The build scripts now archive the job's own checkout at HEAD
+  (they hardcoded db443563).
+- A7 reruns at the head: 261119-053923-c092f8 261119-053924-1e162e 261119-053924-155c5d 261119-053925-4b79df 261119-053926-7e89f0 261119-053927-7e3649.
 
 ## Next
 
-1. Read the four jobs above; replace the sync1 rows (gate report, perf note) with the 1 KiB
-   re-pinned ones, state the pins per size, then mark ready for review.
-2. The lead's: the A/A sync rows and the VM syncaa 1 KiB row ran on lvl-16k-lz4 (A/A measures
-   noise; VM rows check the platform); rerun them on the new pin or accept.
-3. Review of the F1 fix at strata:db443563 (code cc8ba3aa); the lead's.
-4. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
+1. When the A6 jobs end: confirm both VMs stopped (`vm.sh linux|freebsd status`), replace the
+   gate report's VM rows from ~/.scratch/vm-document-gate/results/*-short, then fill A6/A7
+   Evidence and mark ready for review.
+2. The lead's: the A/A sync rows ran on lvl-16k-lz4 at 1 KiB (A/A measures noise); durability
+   re-accept for bench/kv/run.py (calibrate only).
+3. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
 ## Blocked on
 
@@ -113,12 +112,12 @@ Queued: sync1 x3 at the new pin 261118-202755-3d88cf, -202758-1425d5, -202802-fb
 |---|---|
 | A1 | At strata:cc8ba3aa: build-test 261117-134744-7f0c17; TSan lag+served+T4+T12+T3+T8+t6w 261117-122105-d69a24 and batch TSan 261117-122114-58e309 (3d5ecedb, same code but t9o's test). T1 200-seed sweep 261117-033250-f42f82 (9d7c7710). Fails without: M-s 261117-122123-3b0f9a, M-t 261117-122132-b7e7f7 (lag); M-v 261117-180849-82b11b (t9o, rebuilt on cc8ba3aa as df87b29f; queued, its first run was lost; 261117-122140-f6bc36 does not count, t9o failed on the fix too); M-r 261117-055220-ecd5d0, M-d 261117-052940-986f82, M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3, M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2, M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc, and 261116-211626-0daa5f, 261116-211632-9ff248, 261117-025010-4c8220, 261117-025013-a6cec4, 261117-025017-0b218d, 261117-025020-93f7da, 261117-025032-8fc28b, 261117-025046-ec1d6e, 261117-025050-ee8915 |
 | A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of cc8ba3aa |
-| A3 | Durable tiers at cc8ba3aa, exclusive: wal1 261117-134809-8409da; sync1 261117-134818-6068ec, 261117-134824-199dc8, 261117-134834-f21397; N-log and group commit 261117-134842-7d024d; review probe 261117-134801-f716c7 (lag 2 records). A/A 261117-055320-5ca39d, 261117-055327-074989 (193e6e32). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
-| A4 | The same jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` (db443563): sync ties (0.93-1.01x); wal1 1.68-1.94x faster, p99 7.8-11.9x lower, p99.99 113-179x higher; group commit tie at K=1 and K=8, 1.32-1.39x slower at K=4 (turn-log-parity A6); memory 2.5-3.4x, disk 3.3x on batched fills, 57-91% more written |
+| A3 | Durable tiers, exclusive: sync1 at a93f2b59 (RocksDB 1 KiB on lvl-4k-none) 261118-202755-3d88cf, 261118-202758-1425d5, 261118-202802-fb1582; wal1 (100 B only) 261117-134809-8409da and N-log 261117-134842-7d024d at cc8ba3aa (code unchanged since); review probe 261117-134801-f716c7. A/A 261117-055320-5ca39d, 261117-055327-074989 (193e6e32). none tier fits/2x: main 75d1e7e (`core-vs-rocksdb-f14.md`). Owed: 10x rows, none tier at the gate commit |
+| A4 | The same jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` (3cce248a): sync ties (0.98-1.11x); wal1 1.68-1.94x faster, p99 7.8-11.9x lower, p99.99 113-179x higher; group commit tie at K=1 and K=8, 1.32-1.39x slower at K=4 (turn-log-parity A6); memory 2.5-3.4x, disk 3.3x on batched fills, 36-92% more written |
 | A5 | Calibration at strata:a93f2b59, exclusive, 5 interleaved trials, a pin passing within 3% of the fastest: 100 B 261118-175418-fa1d4d (lvl-16k-lz4 fastest); 1 KiB re-pinned to lvl-4k-none after 261118-175419-c46cd4 (lvl-16k-lz4 at 0.970), checked by 261118-202804-4d7ad8 (candidates lvl-4k-lz4, lvl-4k-none, lvl-4k-zstd, lvl-4k-lz4-hash, uni-4k-lz4); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
-| A6 | D105, D114, at db443563 (code cc8ba3aa). Linux: build 261117-200358-f31d88, dry 261117-200358-e66125, sync+wal1 once 261117-200358-1336ac. FreeBSD: build 261117-200402-b01248, dry 261117-200402-6b0f87, sync+wal1 once 261117-200402-ed7288. Rows in strata `docs/gates/document-profile.md` "VM rows" (69b1d4b9). Failed first builds 261117-181304-9e575f (Linux), 261117-181307-6a39bf (FreeBSD): causes under Rulings; replaced by the two builds above. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
-| A7 | At db443563: fuzz (3 workers x 25 min, ASan+UBSan) stored 261117-181138-259eee, manifest_log 261117-181138-24cc48, manifest_log_file 261117-181138-0354ba, command 261117-181139-098eed; version rejection and fixtures 261117-181139-9949e7; coverage 261117-181139-6e2a77; ASan/UBSan/TSan on CI. Scale statement: [artifact] gate report "Scale" (strata:69b1d4b9) |
-| A8 | [artifact] strata `docs/gates/document-profile.md` (69b1d4b9): every measured row with commit, platform and jobs, the A7 checks, and the owed list |
+| A6 | D105, D114, at 723a5e97: Linux build 261119-053901-2db986, dry 261119-053903-78cd57, sync1+wal1 261119-053905-93b87c; FreeBSD build 261119-053908-95f546, dry 261119-053910-2d1731, sync1+wal1 261119-053912-c499bc (queued). At db443563, replaced: Linux 261117-200358-{f31d88,e66125,1336ac}, FreeBSD 261117-200402-{b01248,6b0f87,ed7288}; failed first builds 261117-181304-9e575f, 261117-181307-6a39bf (causes under Rulings). arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
+| A7 | At 723a5e97 (queued): fuzz stored 261119-053924-155c5d, manifest_log 261119-053924-1e162e, manifest_log_file 261119-053923-c092f8, command 261119-053925-4b79df (3 workers x 25 min, ASan+UBSan); version rejection and fixtures 261119-053927-7e3649; coverage 261119-053926-7e89f0. At db443563 (passed, replaced): 261117-181138-{259eee,24cc48,0354ba}, 261117-181139-{098eed,9949e7,6e2a77}. ASan/UBSan/TSan on CI. Scale: [artifact] gate report "Scale" (strata:3cce248a) |
+| A8 | [artifact] strata `docs/gates/document-profile.md` (3cce248a): every measured row with commit, platform and jobs, the pins, the A7 checks, and the owed list |
 
 ## Result
 
