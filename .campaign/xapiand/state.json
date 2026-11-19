@@ -1189,6 +1189,19 @@
         "quest": "detent:logger-slack-mutant"
       },
       "text": "detent:logger-slack-mutant started and may change files your logger-fork-reset changes (order them with --after detent:logger-slack-mutant, or narrow the files)"
+    },
+    {
+      "at": "2026-11-19T14:40:02",
+      "by": "campaign detent",
+      "closed": "noted; group-core is planned, not started",
+      "id": "msg-138",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-close-in-doubt"
+      },
+      "text": "detent:journal-close-in-doubt started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
