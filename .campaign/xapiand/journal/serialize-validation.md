@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs 41ab85 01e205
+State: ready for review
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -38,7 +38,7 @@ rerun; the reviewer's.
 
 ## Next
 
-1. Read jobs 41ab85 (coverage_serialize pins + the seven tests) and 01e205 (suite); fix what fails (the pin for "uuid"/"date" as unknown words in test_coverage_serialize's get_field_type loop is a guess: refused count 9 is unverified); older head jobs f13d5c e9f90f 367e06 859ec0 f41436 are at Xapiand:ba766afee, superseded by 41ab85/01e205 but their fails-without runs stand; fill Evidence at the new head; then ready for review.
+1. Correctness review (high risk). CI at Xapiand:7093caf5b: the earlier red was the docs E2E (fixed Xapiand:72be2396c).
 2. The lead pushes the branch for CI (contributors never push).
 3. After coverage-areas lands and is merged here: flip its pins (lead): tests/test_coverage_serialize.cc lines 558-562,
    642-643, 704-705 expect `_date` and `_multiconvex` refused; `_date` is now served, `_multiconvex` serializes once
@@ -53,13 +53,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 76dfe9 failed without the fix (exit 1, 11 of 30 checks); head f13d5c pending |
-| A2 | 159564 failed at the mutant (exit 1, 22 of 149 checks); head f13d5c pending |
-| A3 | 222d40 failed without the fix (exit 1, 2220 of 4469 checks); note docs/mechanisms/geo-exact-term.md (Xapiand:c95f679d0); head f13d5c pending |
-| A4 | 7f59ed failed without the fix (exit 1, boolean read as datetime), b9fd21 failed without it (exit 1, 7 of 53 checks); head f13d5c pending |
+| A1 | 261119-142617-01e205; fails without: 261118-232539-76dfe9 |
+| A2 | 261119-142617-01e205; fails without: 261118-232543-159564 |
+| A3 | 261119-142617-01e205; fails without: 261118-232554-222d40; note docs/mechanisms/geo-exact-term.md |
+| A4 | 261119-142617-01e205; fails without: 261118-232546-7f59ed, 261118-232550-b9fd21 |
 | A5 | D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script |
-| A7 | pending: e9f90f, 367e06, 859ec0 (fails-without), f13d5c (head) |
-| A6 | pending: f41436 (suite); CI after the lead pushes |
+| A7 | 261119-142617-01e205; fails without: 261118-235902-e9f90f, 261118-235904-367e06, 261118-235913-859ec0 |
+| A6 | suite 261119-142617-01e205 passed at Xapiand:72be2396c; 41ab85 (coverage_serialize with flipped pins, 698 checks, + the seven quest tests) passed, the refused-word count 9 was right; CI at Xapiand:7093caf5b running (lead pushed) |
 
 ## Result
 
