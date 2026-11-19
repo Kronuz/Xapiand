@@ -1176,6 +1176,19 @@
         "quest": "detent:peers-busy-roundtrip-bound"
       },
       "text": "detent:peers-busy-roundtrip-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-busy-roundtrip-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:40:35",
+      "by": "campaign detent",
+      "closed": "logger-fork-reset touches logger.cc/h, test/exit.cc, docs/fork.md; it lands after CI today. Merge it before detent:logger-slack-mutant lands",
+      "id": "msg-142",
+      "settles": {
+        "ours": [
+          "logger-fork-reset"
+        ],
+        "quest": "detent:logger-slack-mutant"
+      },
+      "text": "detent:logger-slack-mutant started and may change files your logger-fork-reset changes (order them with --after detent:logger-slack-mutant, or narrow the files)"
     }
   ],
   "quests": {
