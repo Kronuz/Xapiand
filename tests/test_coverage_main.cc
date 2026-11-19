@@ -223,7 +223,21 @@ void test_signal_handler_without_a_manager() {
 		CHECK_EQ(errno, EBADF);  // the handler restores errno
 	}
 	// With no descriptor left to open /dev/null, SIGTERM ends the process with EX_OSFILE.
-	CHECK_EQ(in_child([] { fill_stdio(); lower_limit(3); sig_handler(SIGTERM); }), static_cast<int>(EX_OSFILE));
+	CHECK_EQ(in_child([] {
+		fill_stdio();
+		lower_limit(3);
+		struct rlimit rl;
+		::getrlimit(RLIMIT_NOFILE, &rl);
+		errno = 0;
+		const int probe = ::open("/dev/null", O_RDONLY);  // what sig_handler's own open sees
+		std::fprintf(stderr, "DIAG sig_handler child: rlim_cur %llu rlim_max %llu, probe open fd %d errno %d, fcntl 0/1/2: %d %d %d\n",
+			static_cast<unsigned long long>(rl.rlim_cur), static_cast<unsigned long long>(rl.rlim_max), probe, errno,
+			::fcntl(0, F_GETFD), ::fcntl(1, F_GETFD), ::fcntl(2, F_GETFD));
+		if (probe != -1) {
+			::close(probe);
+		}
+		sig_handler(SIGTERM);
+	}), static_cast<int>(EX_OSFILE));
 	// With no manager to hand it to, SIGTERM and SIGINT end the process with EX_SOFTWARE.
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGTERM); }); }), static_cast<int>(EX_SOFTWARE));
 	CHECK_EQ(in_child([] { capture_stderr([] { sig_handler(SIGINT); }); }), static_cast<int>(EX_SOFTWARE));
@@ -424,9 +438,18 @@ void lower_limit(rlim_t to) {
 // adjustOpenFilesLimit refusing the start: the child ends with 0 when it threw SystemExit(EX_OSFILE), with the descriptors
 // the process holds (3 here: stdin, stdout and stderr) and the limit it ended with checked.
 void expect_refusal(ssize_t limit, ssize_t slack = 0) {
+	const auto diag = [limit](const char* what, int code) {
+		struct rlimit rl;
+		::getrlimit(RLIMIT_NOFILE, &rl);
+		std::fprintf(stderr, "DIAG expect_refusal(%zd) %s: code %d, rlim_cur %llu rlim_max %llu, open %zd, max_per_proc %zd, "
+			"pool %zd clients %zd max_files %zd\n", limit, what, code, static_cast<unsigned long long>(rl.rlim_cur),
+			static_cast<unsigned long long>(rl.rlim_max), static_cast<ssize_t>(get_open_files_per_proc()),
+			static_cast<ssize_t>(get_max_files_per_proc()), main_opts.database_pool_size, main_opts.max_clients, main_opts.max_files);
+	};
 	try {
 		adjustOpenFilesLimit();
 	} catch (const SystemExit& exc) {
+		diag("threw", exc.code);
 		CHECK_EQ(exc.code, static_cast<int>(EX_OSFILE));
 		CHECK_LE(static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(64));
 		// get_max_files_per_proc is min(sysconf(_SC_OPEN_MAX), RLIMIT_NOFILE soft). An explicit limit is set exactly; an
@@ -436,6 +459,7 @@ void expect_refusal(ssize_t limit, ssize_t slack = 0) {
 		CHECK_GT(max_files, limit - slack - 1);
 		return;
 	}
+	diag("did not throw", 0);
 	CHECK(false);
 }
 
