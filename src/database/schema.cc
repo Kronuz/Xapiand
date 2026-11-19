@@ -6472,6 +6472,7 @@ has_dispatch_process_concrete_properties(uint64_t key)
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6548,6 +6549,7 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6662,6 +6664,9 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_STRING):
+			Schema::process_cast_object(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_DATE):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_DATETIME):
