@@ -4687,8 +4687,36 @@
       "files": [
         "tests/test_coverage_core*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T15:09:07",
+          "commit": "27b4691660ec930cdbe7bebdb55fb8a7578f6ea4",
+          "criteria": {
+            "A1": "261119-081849-d12123 (passed at a7e09fcd80de; only merges from main since)",
+            "A2": "261119-081849-d12123 (passed at a7e09fcd80de; only merges from main since); fails without: 261119-055700-02118e",
+            "A3": "261119-081851-090187 (suite; only merges from master since); CI on the branch"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "a7e09fcd80de2ee24f47062eb4770b2dcb2d31b3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-081851-090187",
+              "level": "light",
+              "seconds": 407.4,
+              "state": "done",
+              "what": "coverage-core-small check suite at a7e09fcd80de"
+            }
+          ],
+          "final": true,
+          "from": "dab64235ff41ad06387ec41e13f503a25a2c5908",
+          "reason": "",
+          "tested": "7180a88209e753cdebdbb207e801c89988842623"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -4696,10 +4724,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "cast, datetime_msgpack, endpoint and query_dsl reach T13 coverage",
-      "updated": "2026-11-19T00:35:34",
-      "worktree": "../Xapiand-wt/xapiand/coverage-core-small"
+      "updated": "2026-11-19T15:09:20",
+      "worktree": ""
     },
     "coverage-database": {
       "accepted": {},
