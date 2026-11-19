@@ -24423,20 +24423,48 @@
         "test/**",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-driver-layout",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T13:22:00",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": {
+            "A1": "261119-131530-b00b7b; fails without: 261119-125658-e4aa1e, 261119-131528-361954",
+            "A2": "261119-131533-48d7b2",
+            "A3": "261119-125708-077ad8 (suite); CI on the branch"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-125708-077ad8",
+              "level": "light",
+              "seconds": 85.0,
+              "state": "done",
+              "what": "task-driver-layout check suite at 63b43bd06881"
+            }
+          ],
+          "final": true,
+          "from": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "reason": "",
+          "tested": "63b43bd06881acf56a4fe82303469cdf54dd05b2"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "task: inline_scheduler layout identical in Debug and release (F7)",
-      "updated": "2026-11-19T13:19:27",
-      "worktree": "../task-wt/xapiand/task-driver-layout"
+      "updated": "2026-11-19T13:22:06",
+      "worktree": ""
     },
     "task-inbox-first": {
       "accepted": {
