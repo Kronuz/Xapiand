@@ -4003,6 +4003,35 @@
       "title": "cast, datetime_msgpack, endpoint and query_dsl reach T13 coverage",
       "updated": "2026-11-18T16:36:37"
     },
+    "coverage-database": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_database*",
+        "tests/test_coverage_schema*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "database (schema.cc) reaches T13 coverage",
+      "updated": "2026-11-18T16:36:42"
+    },
     "coverage-multivalue": {
       "accepted": {},
       "after": [],
