@@ -16321,7 +16321,7 @@
       "branch": "quest/xapiand/nightly-retry",
       "checks": [
         {
-          "cmd": "python3 -m pytest -q tools",
+          "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
           "level": "none",
           "minutes": 5,
           "name": "test"
@@ -16331,6 +16331,34 @@
       "files": [
         "tools/nightly_dispatch.py",
         "tools/test_nightly_dispatch*"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T14:44:19",
+          "checks": [
+            [
+              {
+                "cmd": "python3 -m pytest -q tools",
+                "level": "none",
+                "minutes": 5,
+                "name": "test"
+              }
+            ],
+            [
+              {
+                "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
+                "level": "none",
+                "minutes": 5,
+                "name": "test"
+              }
+            ]
+          ],
+          "reason": "pytest is not installed; the same tests under unittest, stdlib only",
+          "voided": [],
+          "weakened": [
+            "gate check test changed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/nightly-retry",
       "landed": [],
@@ -16342,7 +16370,7 @@
       "risk": "low",
       "status": "active",
       "title": "nightly dispatcher retries transient GitHub errors",
-      "updated": "2026-11-19T14:41:33",
+      "updated": "2026-11-19T14:44:19",
       "worktree": "../cpp-libraries-wt/xapiand/nightly-retry"
     },
     "no-stalls": {
