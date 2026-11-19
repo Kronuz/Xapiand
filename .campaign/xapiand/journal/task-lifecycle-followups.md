@@ -9,32 +9,32 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+A5: debounce flags, throttle, fire_pending in task_timers.hh (task worktree).
 
 ## Next
 
-1. <step>
+1. A5 debounce: touch(key, flags), timing::throttle, fire_pending(); hook tests.
+2. Docs (docs/mechanisms/lifecycle.md); mutant branches; verify + TSan/ASan jobs.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing. Q1-Q3 built as owner defaults, pending the owner's ruling (see Rulings).
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Pending.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Q1 (owner default, pending): the fail() that caused the stop is listed first. Commit
+  task:3e46835, revertable alone. `stop_source` records whether its first fail() came before any
+  other stop request (`cause()`).
+- Q2 (owner default, pending): `stopped.abandoned`. Commit task:3e5ff12, revertable alone.
+- Q3 (owner default, pending): `stopped.flushed_inline` holds the thread start's error. Commit
+  task:ea2674c, revertable alone.
