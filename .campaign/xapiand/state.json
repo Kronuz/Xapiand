@@ -870,6 +870,19 @@
         "quest": "detent:turn-seal-forget-flake"
       },
       "text": "detent:turn-seal-forget-flake started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T17:08:51",
+      "by": "campaign detent",
+      "closed": "group-core pins the journal by hash; journal-host-ranges-race reaches it at the planned journal repin",
+      "id": "msg-116",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-host-ranges-race"
+      },
+      "text": "detent:journal-host-ranges-race started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
