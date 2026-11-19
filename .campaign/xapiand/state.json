@@ -22657,7 +22657,14 @@
         "src/engine/text.cc",
         "tests/test_stopword*",
         "docs/src/content/docs/**stop*",
-        "docs/src/content/docs/changelog.md"
+        "docs/src/content/docs/changelog.md",
+        "src/reserved/schema.h",
+        "src/database/schema.cc",
+        "src/multivalue/generate_terms.cc",
+        "tests/test_control_plane.cc",
+        "CMakeLists.txt",
+        "docs/mechanisms/stopword-lists.md",
+        "docs/perf/stopword-lists.md"
       ],
       "history": [
         {
@@ -22684,7 +22691,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T08:19:40",
+      "updated": "2026-11-19T08:31:56",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
