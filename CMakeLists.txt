@@ -560,7 +560,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 6e7ab9ea01578d60e459137940e9e645a6727744)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 455cad0a185b2c9037bb3bb65c99a4e3736b0cc3)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
