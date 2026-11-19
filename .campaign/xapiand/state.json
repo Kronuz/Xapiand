@@ -25295,7 +25295,8 @@
         "harness/wide_search*",
         "tests/test_wide_search*",
         "docs/design/wide-search-loop.md",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [
@@ -25308,7 +25309,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T03:24:56",
+      "updated": "2026-11-19T04:18:10",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
