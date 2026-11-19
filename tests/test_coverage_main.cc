@@ -389,6 +389,17 @@ void lower_limit(rlim_t to) {
 	::setrlimit(RLIMIT_NOFILE, &rl);
 }
 
+// adjustOpenFilesLimit, reporting the exit code it throws with and the descriptors the process holds (a diagnostic).
+void adjust_or_report() {
+	try {
+		adjustOpenFilesLimit();
+	} catch (const SystemExit& exc) {
+		std::fprintf(stderr, "adjustOpenFilesLimit threw SystemExit(%d): %zd open, max %zd, requested max_files %zd\n",
+			exc.code, static_cast<ssize_t>(get_open_files_per_proc()), static_cast<ssize_t>(get_max_files_per_proc()), main_opts.max_files);
+		std::exit(2);
+	}
+}
+
 void test_open_files_limit() {
 	// An explicit limit too low for even one database and one client ends the start with EX_OSFILE.
 	CHECK_EQ(in_child([] {
@@ -408,7 +419,7 @@ void test_open_files_limit() {
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
 		main_opts.concurrent_search_indexes = 100;
-		adjustOpenFilesLimit();
+		adjust_or_report();
 		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(300));
 		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>(34));
 		CHECK_EQ(main_opts.concurrent_search_indexes, static_cast<ssize_t>(34));
@@ -438,7 +449,7 @@ void test_open_files_limit() {
 		main_opts.max_files = 0;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
-		adjustOpenFilesLimit();
+		adjust_or_report();
 		CHECK_LE(main_opts.database_pool_size, static_cast<ssize_t>(200));
 		CHECK_LE(main_opts.max_clients, static_cast<ssize_t>(1000));
 		if (::getuid() != 0) {
