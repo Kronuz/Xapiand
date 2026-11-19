@@ -3796,20 +3796,52 @@
         "test/flow_bench*",
         "docs/perf/flow*"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-18T23:27:21",
+          "commit": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "criteria": {
+            "A1": "261118-114928-9bef7d (passed at e7a453b78635; only merges from main since)",
+            "A2": "261118-114946-13cf10 (passed at e7a453b78635; only merges from main since)",
+            "A3": "261118-135806-e23693 (passed at e7a453b78635; only merges from main since)",
+            "A4": "`docs/perf/flow-control.md` in consensus (A1, A2, A3 rows, consensus:afea684)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d7091f66de9d08f2d16ead6c40ac978d423f4d82",
+              "docs": [
+                "docs/perf/flow-control.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-222741-9273aa",
+              "level": "light",
+              "seconds": 267.4,
+              "state": "done",
+              "what": "consensus-flow-bench check build-test at d7091f66de9d"
+            }
+          ],
+          "final": true,
+          "from": "84608ccb0f885d6b689f4db895e30a72154d0054",
+          "reason": "",
+          "tested": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T23:16:51",
-      "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
+      "updated": "2026-11-18T23:27:23",
+      "worktree": ""
     },
     "consensus-hello-limits": {
       "accepted": {},
