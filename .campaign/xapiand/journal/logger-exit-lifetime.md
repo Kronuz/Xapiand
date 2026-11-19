@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: waiting on jobs 261118-180847-4a6030 261118-181931-f6bb3e 261118-181933-1d17de 261118-181938-42e95e 261118-181941-f02f00 261118-181946-1fef45 261118-181949-5797ca 261118-181954-0ec300 261118-180856-e0632e 261118-180858-55c995
+State: waiting on jobs 261118-193213-a62d6d 261118-193214-e96e6a
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -30,6 +30,23 @@ branch quest/xapiand/logger-exit-lifetime (pushed for CI).
 Job scripts (ignored scratch): .scratch/xapiand/logger-exit-lifetime/{llvm.sh,ab_build.sh,ab_run.sh}.
 
 ## Doing
+
+Lead (fourth message): attribute the ASan exit-flush loss; TSan recipe at main; push; ready when
+every criterion has evidence.
+- Results at logger:b6371a4: A5 fails-without f6bb3e (LLVM 22), 1d17de (AGENTS recipe) abort with
+  "data race on vptr (ctor/dtor vs virtual call)", ~Boom from __cxa_end_catch /
+  __cxa_decrement_exception_refcount vs the LOG thread; clean at the fix 42e95e, f02f00; suite
+  1fef45 (18 of 18).
+- ASan 181949-5797ca and TSan recipe 181954-0ec300 at b6371a4 both fail only logger_queue's exit
+  flush (CHECK test/queue.cc:757). The TSan recipe shows none of the static-init reports the LLVM 22
+  libc++ build gave. Exit flush has failed in every sanitizer suite at a fix commit (170152-8be416,
+  171603-985f5d, 5797ca, 0ec300) and passed once at main alone (171634-64599a).
+- Experiment 180847-4a6030 (exit child direct, 20 runs per arm, ASan): alone main 0/20 short, fix
+  1/20; beside 3 ASan tests main 0/20, fix 0/20; each child 0.25-0.3 s. Inconclusive (1 of 20).
+- Attribution in the suite's own conditions: ASan suite at main 193213-a62d6d, TSan recipe suite
+  at main 193214-e96e6a. If main passes both, the loss is introduced: next, find what in
+  logger:9a7c6b6 slows or loses the exit drain (instrument the exit child: does the 200 ms join time
+  out and abandon). If main fails too, it is pre-existing and load-sensitive.
 
 A5 (lead, third message): Xapiand TSan run 44281033140 (test_node): vptr race, LOG thread's
 default_describe_exception vs ~StorageCorruptWAL on the throwing thread. Reading: the record held
@@ -88,13 +105,20 @@ Nothing.
 |---|---|
 | A1 | docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c) |
 | A2 | 261118-170114-f2778f (--fails-without at logger:d031751, LLVM 22 libc++): child aborts `system_error: mutex lock failed: Invalid argument`, status 6; 261118-170117-86f821 (same, Apple clang): the same abort; 261118-170120-b58cbb: passes at logger:9a7c6b6 (LLVM 22 libc++) |
-| A3 | pending at db35b6c: 171603-985f5d (ASan), 171605-c73004 (TSan); at 9a7c6b6 ASan 170152-8be416 failed logger_queue exit flush (attribution 171634-64599a); CI linux-asan-ubsan and linux-tsan green at 9a7c6b6 (run 44433808350) |
-| A5 | pending: fails-without at the mutant logger:fff8ba9 181931-f6bb3e, 181933-1d17de; clean at logger:b6371a4 181938-42e95e, 181941-f02f00 |
-| A4 | pending: suite 171608-1a6cec at db35b6c; CI green on all platforms at logger:9a7c6b6 (run 44433808350) and logger:db35b6c (run 44435549806) (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
+| A3 | open: ASan 181949-5797ca and TSan 181954-0ec300 at b6371a4 fail logger_queue exit flush (attribution 193213-a62d6d, 193214-e96e6a at main); CI linux-asan-ubsan and linux-tsan green at 9a7c6b6 (run 44433808350) |
+| A5 | 261118-181931-f6bb3e, 261118-181933-1d17de (--fails-without at the mutant logger:fff8ba9: TSan "data race on vptr", exit 134); 261118-181938-42e95e, 261118-181941-f02f00 (clean at logger:b6371a4) |
+| A4 | suite 261118-181946-1fef45 at logger:b6371a4 (18 of 18); CI green on all platforms at logger:9a7c6b6 (run 44433808350) and logger:db35b6c (run 44435549806) (main's last red, run 43887623328, was a macos-arm64 runner never acquired) |
 
 ## Result
 
-<pending>
+Benchmarks, strict beside light holds (host load high, wide intervals), median ratio [95%]:
+- Producer 6e7ab9e -> logger:cc66e3a (logger code identical to b6371a4), 180856-e0632e, 8 rounds:
+  burst 1p 1.038 [0.968, 1.095], back to back 1p 0.998 [0.989, 1.151], end-to-end 1p 0.952
+  [0.898, 1.033], burst 4p 0.957 [0.877, 1.105], back to back 4p 1.031 [0.925, 1.316], end-to-end
+  4p 0.972 [0.919, 0.988]. No slowdown; the teardown load is on the LOG thread, not the producer.
+- Producer 9a7c6b6 -> db35b6c (the teardown load alone), 171612-9b1d05: every interval spans 1.
+- Drain (emit per line) 6e7ab9e -> cc66e3a, 180858-55c995, 15 paired rounds: 910.8 -> 877.2 ns per
+  line, median ratio 0.985.
 
 ## Rulings I made
 
