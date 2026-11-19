@@ -24076,6 +24076,8 @@
     "task-lifecycle-rename": {
       "accepted": {},
       "after": [],
+      "base": "95798a02f68c86f070401329a05c78d326ac2579",
+      "branch": "quest/xapiand/task-lifecycle-rename",
       "checks": [
         {
           "cmd": "! grep -nwE \"serve|stop_signals\\b.*&|concept service\" docs/design/service-shape.md docs/API.md",
@@ -24089,6 +24091,7 @@
         "docs/design/service-shape.md",
         "docs/API.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-lifecycle-rename",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -24096,9 +24099,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "task docs: serve/service become lifecycle/component",
-      "updated": "2026-11-19T06:32:30"
+      "updated": "2026-11-19T06:32:39",
+      "worktree": "../task-wt/xapiand/task-lifecycle-rename"
     },
     "task-phase7c-l1": {
       "accepted": {},
