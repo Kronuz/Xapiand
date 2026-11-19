@@ -1,7 +1,7 @@
 # Cheap reopen: an evicted index reopens near the cost of finding it open
 
-Status: measured at main 4adce97ce (strata 397c02d5). D1 and D2 are built on quest/xapiand/cheap-reopen; D3 waits
-for wide-search-loop (it holds `search_batch`), D4's strata half is a follow-up, its Xapiand half is refused.
+Status: measured at main 4adce97ce (strata 397c02d5). D1, D2 and D3 are built on quest/xapiand/cheap-reopen
+(D3 at Xapiand:3b8d41c39); D4's strata half is a follow-up, its Xapiand half is refused.
 
 ## Problem
 
@@ -49,11 +49,18 @@ next. Sixteen work threads sit idle (191,801 of the window's samples are waits) 
 | main | 1,079, 979 ms (quiet); 1,536-2,291 ms beside 6 light holds | 129, 134 ms | 060120-5b74f3; 060951-f40471 |
 | H1: `search_batch` pins its batch concurrently (`task::when_all`) | 1,105-1,945 ms: no gain | 128 ms | 060440-baf657 |
 | H2: H1 plus 8 items per group (probe only: the catalog assumes one lane) | 383, 415 ms | 136 ms | 060951-f40471 |
+| D1 (lanes) alone, against the merge-base f722ff939 | 884, 888 ms (base 948, 977) | 131, 143 ms (base 125, 153) | 131125-16ca52 |
+| H3: D1 plus D3 (concurrent pins), against D1 alone | 291, 284 ms (D1 869, 843) | 118, 126 ms (D1 128, 129) | 150608-5ad670 |
 
 H1 confirms the lane: concurrent pins queue on the catalog's one group. H2 gives the lane eight slots: the same job's
 main arm ran 1,536-2,291 ms beside 6 light holds, the lanes 383-415 ms, 3.0x the pool-5000 run. The rest is CPU:
 2,300 reopens x 300 us is 0.69 CPU-seconds a search, which the strict hold's share of a loaded host does not
 parallelize eight ways. The first search at pool 5000 (2,500 cold opens) went from 974 to 400 ms with lanes.
+
+D1 alone gains 8%: a profile of it (job 261118-145656-a26428) holds 0.76 opens in flight on 8 lanes, because
+`search_batch` still pins one index at a time. With D3 the lanes fill: 3.0x faster at pool 200, 2.4x the pool-5000
+run. In that profile `open(2)` and `close(2)` are over half the busy time; strata `recover`'s per-file
+open-for-its-size is the largest single caller, about a quarter of each open (D4's strata half).
 
 ## Decisions
 
@@ -70,10 +77,10 @@ parallelize eight ways. The first search at pool 5000 (2,500 cold opens) went fr
 - **D2. The directory's open is its existence check** (built, Xapiand:bd6e5d50c): resolve opens `<index>/strata`
   once and maps ENOENT or ENOTDIR to `index_not_created`, instead of a stat and then the open. About 7% of a
   reopen's CPU. A permission error now fails the pin as itself, not as a missing index.
-- **D3. A search pins its batch concurrently**: H1's `when_all` in `search_batch`. Alone it gains nothing; with D1
-  it is how the lanes fill. Deferred by the lead: wide-search-loop is changing `search_batch` to yield per index;
-  this follows it (hunt.md). Without D3 a search still opens one index at a time; D1 alone moves closes and the
-  other reactor's search into their own lanes.
+- **D3. A search pins its batch concurrently** (built, Xapiand:3b8d41c39): `search_batch` pins its batch with
+  `when_all`, which rethrows the first error after every pin ends, so a pin's failure never leaves a sibling
+  running. Alone (H1) it gains nothing; with D1 it is how the lanes fill (H3). wide-search-loop changes the same
+  loop (a budget checkpoint per index); its merge keeps the checkpoint in the loop and the pins after it.
 - **D4. Fewer path walks per reopen** (CPU, about 40% of a reopen):
   - strata, its own quest: `recover` takes each file's size from one `fstatat` on the directory descriptor (or the
     scan's own attributes: `getattrlistbulk` on macOS) instead of `open`+`fstat`+`close`; and the catalog keeps a
