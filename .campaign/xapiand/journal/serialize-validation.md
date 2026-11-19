@@ -9,32 +9,54 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Tests committed (Xapiand:f12634566, all four expected to fail there); local build in
+`.scratch/serialize-validation/build` (worktree) running. Next the fixes, one commit each.
 
 ## Next
 
-1. <step>
+1. Fix commits: A1 (`positive_of`), A2 (serialize.cc "t" key; schema.cc "geospatial" and its variants), A4 ("boolean"; guess_serialize's map branch through `object`), A3 (ranges_hash = SHA-256 truncated to 128 bits).
+2. Local run of the four tests at the test commit (fail) and at head (pass).
+3. Jobs: `--fails-without` per criterion at f12634566; suite via `campaign verify`.
+4. A3 note in docs once the file set has a docs path (Blocked on 2).
+5. After coverage-areas lands and is merged here: flip its pins in tests/test_coverage_serialize.cc (lead merges; file then needs to be in my set or the lead flips it).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+1. **A5, owner's decision** (`_date`, `_multiconvex`, `_lua` casts). Findings:
+   - `_date` is already an alias: `Cast::cast` serves it as datetime (src/cast.cc:61), `FieldType::date` exists and serializes exactly as datetime (`Serialize::serialize`, date and datetime share a case), docs show it as a cast (reference-guide/search/query-dsl/leaf-queries/casting-values.md:119). Only `Serialize::object`, `guess_type`, `guess_serialize` (mine) and `Cast::get_field_type` (src/cast.cc:417, not in my set; the schema's index path at schema.cc:5235 calls it) refuse it. Recommend: serve, `_date` -> FieldType::date with datetime bytes; needs src/cast.cc in the file set.
+   - `_multiconvex` is served everywhere but the map form: MultiConvex geometry, EWKT `MULTICONVEX(...)` (src/geospatial/ewkt.cc:194), collection and intersection members, docs (geospatial-type.md:199, casting-values.md:108). `GeoSpatial(const MsgPack&)` (src/geospatial/geospatial.cc:117-160, geo-correctness's files) has no `_multiconvex` case, and none for `_multichull` either, though the serializer accepts `_multichull` and then fails in GeoSpatial. Recommend: serve both map forms (a `make_multiconvex` beside `make_multicircle`) in geo-correctness, not remove: removal would strand the EWKT form and the docs.
+   - `_lua` is a script, not a value: `Cast::get_field_type` maps it to FieldType::script and the scripting docs use it (reference-guide/documents/scripting.md:57). A script is never a stored value, so the serializer refusing it is right. Recommend: keep the refusal with a message saying so; nothing to remove.
+   Lead's default (serve `_date` if an alias, remove the others if nothing serves them) gives: serve `_date`; `_multiconvex` and `_lua` are both served elsewhere, so neither is removed. Not implementing until a Decisions row exists.
+2. **A3's docs note needs a path in my file set.** The set has no docs path (docs/design/geo* is geo-correctness's). Ask: add `docs/mechanisms/geo-exact-term.md`. Draft under Result.
+3. **Out of my file set, for the lead** (same bug class as A2: a `case _.fhh(k)` whose key the phf table lacks is npos and catches every miss):
+   - src/aggregations/aggregations.cc:217 `case _.fhh(RESERVED_AGGS_AGGS)` is not in the table (line 64), so every unknown aggregation type is taken as `_aggs` instead of "Aggregation type ... is not valid".
+   - The cause in one place: constexpr-phf's `find` could fail compilation when a constant-evaluated lookup misses (`if (std::is_constant_evaluated() && miss) throw`), so such a case label cannot compile. Audit script: `.scratch/xapiand/serialize-validation/phf_audit.py` (home) found exactly these three in src/.
+   - src/cast.cc:138 (`Cast::cast(FieldType::empty, text)`) has the strtoull wrap I fixed in serialize.cc: "-18446744073709551615" casts to 1.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pending |
+| A2 | pending |
+| A3 | pending |
+| A4 | pending |
+| A5 | Blocked on 1 |
+| A6 | pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Draft of the A3 note (docs/mechanisms/geo-exact-term.md once allowed):
+
+A geo field's whole geometry is one exact-match term, `Serialize::ranges_hash` of its trixel ranges: the first 16
+bytes of SHA-256 over the ranges' fixed 14-byte encodings. Users of those bytes: the indexer (Schema::index_item,
+FieldType::geo, the field and global terms, ctype 'G', with the field's partials and error) and the exact-match
+query (`get_regular_query` -> `Serialize::MsgPack` -> `object`/`string` -> `geospatial`, and `get_global_query`
+through `guess_serialize`). Not users: sorting (centroids in the value slot, keymaker), aggregations (the value
+slot's ranges), geo range and within queries (accuracy trixel terms and the value slot), all written by
+`ranges_centroids` and `GenerateTerms::geo`, which this does not change.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- "-0" for a positive is refused with the other negatives: a positive's text has no '-', the rule `Cast::positive` already applies (src/cast.cc:223).
+- Type names stay case-insensitive (the tables hash with `hhl`): "Text" is the type text, not an unknown word, though coverage-areas listed it as one.
