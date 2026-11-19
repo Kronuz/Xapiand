@@ -1148,6 +1148,20 @@
         "quest": "detent:reactor-tls-cache"
       },
       "text": "detent:reactor-tls-cache started and may change files your reactor-server-composition changes (order them with --after detent:reactor-tls-cache, or narrow the files)"
+    },
+    {
+      "at": "2026-11-19T14:40:23",
+      "by": "campaign detent",
+      "closed": "noted; group-core and consensus-rpc-lane are planned, not started, and will build on whatever lands",
+      "id": "msg-140",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-loop-stall"
+      },
+      "text": "detent:groups-upload-loop-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
