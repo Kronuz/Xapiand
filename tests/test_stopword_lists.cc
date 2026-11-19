@@ -477,6 +477,30 @@ scenario_unreadable()
 	fs::remove_all(root);
 }
 
+// `--probe schema`: nanoseconds per Schema::check_stop_words over 200 text fields (a language each), which
+// DatabaseHandler::get_schema runs on every schema it hands out.
+int
+probe_schema()
+{
+	using clock = std::chrono::steady_clock;
+	const char* const languages[] = {"en", "fr", "de", "es", "it"};
+	MsgPack props = MsgPack::MAP();
+	for (int i = 0; i < 200; ++i) {
+		const auto* language = languages[i % 5];
+		props["field" + std::to_string(i)] = text_field(language, stopWordsFingerprint(language));
+	}
+	Schema schema(std::make_shared<const MsgPack>(std::move(props)), nullptr, "");
+	schema.check_stop_words("idx", false);   // the first call builds the lists
+	constexpr int rounds = 2000;
+	const auto t0 = clock::now();
+	for (int i = 0; i < rounds; ++i) {
+		schema.check_stop_words("idx", false);
+	}
+	const auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - t0).count();
+	std::printf("probe schema fields=200 ns_per_check=%.0f\n", static_cast<double>(ns) / rounds);
+	return 0;
+}
+
 struct Scenario {
 	const char* name;
 	void (*run)();
@@ -531,6 +555,9 @@ main(int argc, char** argv)
 		}
 		std::fprintf(stderr, "no scenario %s\n", argv[2]);
 		return 2;
+	}
+	if (argc > 2 && std::string(argv[1]) == "--probe" && std::string(argv[2]) == "schema") {
+		return probe_schema();
 	}
 	if (argc > 2 && std::string(argv[1]) == "--probe") {
 		return probe(argv[2], argc > 3 ? argv[3] : "en");
