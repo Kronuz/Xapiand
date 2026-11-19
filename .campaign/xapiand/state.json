@@ -3753,7 +3753,32 @@
       "worktree": ""
     },
     "consensus-flow-bench": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T23:16:51",
+          "base": "84608ccb0f885d6b689f4db895e30a72154d0054",
+          "blobs": {
+            "bench/flow_bench.cc": "100644:8ab03fd8b3e9e82ef104e649654cc739aac13104",
+            "bench/flow_bench.cmake": "100644:65ad576d173ae82f1a6846129fd10a3bc8d518c8",
+            "bench/flow_bench_vm.sh": "100755:9aae850c78cadb33b3edcc2d61e99924a3728753",
+            "docs/perf/flow-control.md": "100644:b26c56018cd5bfc4943389a6a54fcc4bcfa3723c"
+          },
+          "by": "review",
+          "commit": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "criteria": "6514629604a24b3e",
+          "diffs": {
+            "bench/flow_bench.cc": "a5367707107f54b1",
+            "bench/flow_bench.cmake": "4070865b18f340b3",
+            "bench/flow_bench_vm.sh": "c50031c1d5f67042",
+            "docs/perf/flow-control.md": "c20a56c443dbee8b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "5313d8fab50b4ad74a4301d09f9b9eb048622fbd",
+          "reviewed": "122564d61c2f8cd5ac1273a9c5746c7fc2419b8e",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
       "branch": "quest/xapiand/consensus-flow-bench",
@@ -3773,7 +3798,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-flow-bench",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -3781,7 +3808,7 @@
       "risk": "normal",
       "status": "review",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T22:33:18",
+      "updated": "2026-11-18T23:16:51",
       "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
     },
     "consensus-hello-limits": {
