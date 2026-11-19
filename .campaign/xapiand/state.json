@@ -3939,8 +3939,7 @@
         "detent:peers-tsan-timeout",
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
-        "detent:driver-apply-gap",
-        "detent:consensus-transport"
+        "detent:driver-apply-gap"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4129,7 +4128,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T05:57:06",
+      "updated": "2026-11-19T05:57:20",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
