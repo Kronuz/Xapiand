@@ -130,10 +130,10 @@ static void test_object_part_errors() {
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_date", "2020-01-01" } })), DatetimeError, "'_date' must be a map value");
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_datetime", 5 } })), DatetimeError, "'_datetime' must be a map value");
 	// A key the part does not take.
-	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_time", map_of({ { "_year", 1 } }) } })), DatetimeError, "Unsupported Key: \"_year\" in time");
-	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_date", map_of({ { "_hour", 1 } }) } })), DatetimeError, "Unsupported Key: \"_hour\" in date");
-	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_datetime", map_of({ { "_zone", 1 } }) } })), DatetimeError, "Unsupported Key: \"_zone\" in datetime");
-	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_zone", 1 } })), std::exception, "Unsupported Datetime: \"_zone\"");
+	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_time", map_of({ { "_year", 1 } }) } })), DatetimeError, "Unsupported Key: '_year' in time");
+	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_date", map_of({ { "_hour", 1 } }) } })), DatetimeError, "Unsupported Key: '_hour' in date");
+	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_datetime", map_of({ { "_zone", 1 } }) } })), DatetimeError, "Unsupported Key: '_zone' in datetime");
+	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_zone", 1 } })), std::exception, "Unsupported Datetime: '_zone'");
 }
 
 // Product bug (datetime-map-range): an object's hour, minute, second and fraction are not range-checked (a time

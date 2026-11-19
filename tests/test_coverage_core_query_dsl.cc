@@ -339,7 +339,8 @@ static void test_accuracy_terms() {
 		{ "d._millennium", Datetime::tm_t(2000) },
 	};
 	for (const auto& row : rows) {
-		SEE(tail(row.unit, when), Serialize::serialize(row.tm));
+		auto tm = row.tm;
+		SEE(tail(row.unit, when), Serialize::serialize(tm));
 	}
 	// Two instants in one unit share the term; in different units they do not.
 	SEE(fx.got(obj({ { "d._day", "2021-03-04T01:00:00" } })), fx.got(obj({ { "d._day", "2021-03-04T23:59:59" } })));

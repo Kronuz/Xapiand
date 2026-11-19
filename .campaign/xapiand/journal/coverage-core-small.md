@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-011017-86a323 (long, all four tests; the 30-minute cold build timed out job bff9f2)
+State: working (fixed expectations after job 86a323; resubmitting)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -49,3 +49,11 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - sort-boolean-key: `get_sorter` sorts a boolean reference value with `add_date` (DateKey); `BoolKey`/`add_bool` exist unused.
 - dsl-scale-weight: `_scale_weight`, `_edit_distance` never build: the array form is refused by the engine, the object form is "Invalid operator". `process()`'s "Unexpected array" is unreachable.
 - endpoint-host-port: `xapiand://host:port/idx` drops the host (node_name empty).
+
+## Job 86a323 (exit 1) readout
+
+- cast: aborted, uncaught CastError: the test used `_geo_collection`; the words are `_geometrycollection`, `_geometryintersection` (fixed). No cast numbers yet.
+- datetime 446/485 lines, 253/282 branches: only 4 wrong quote styles ('x' not "x"); datetime-map-range and datetime-zone-order checks PASSED, so confirmed.
+- endpoint 278/292 lines, 105/128 branches: UUID text is the serialized form (a2d6e3b4-0000-1000 -> 0000000a-2d6e-63b4, 0000..-1000 -> -6000: version-1 time fields reordered, apparently by design, not a bug); partition expectations now use the normalized text, encoded case mirrors the early-return grouping. endpoint-host-port check PASSED: confirmed.
+- query_dsl: compile error (Serialize::serialize takes a non-const tm_t&), fixed. acc-zero, sort-boolean-key, dsl-scale-weight still unknown.
+- cast-words still unknown (cast never ran).

@@ -243,7 +243,8 @@ std::string normalized(const std::string& uuid, UUIDRepr repr) {
 static void test_uuid_normalized() {
 	set_up();
 	const std::string upper = "A2D6E3B4-0000-1000-8000-0100000000AB";
-	const std::string lower = "a2d6e3b4-0000-1000-8000-0100000000ab";
+	// A UUID is stored in its serialized form, whose vanilla text reorders a version 1 UUID's time fields (a2d6e3b4-0000-1000 is 0000000a-2d6e-63b4).
+	const std::string lower = "0000000a-2d6e-63b4-8000-0100000000ab";
 	SEE(path_of(upper, UUIDRepr::vanilla, false), lower);
 	SEE(path_of(lower, UUIDRepr::vanilla, false), lower);
 #ifdef XAPIAND_UUID_GUID
@@ -271,26 +272,27 @@ static void test_uuid_normalized() {
 
 static void test_uuid_partitioned() {
 	set_up();
-	const std::string n = UUID_A;
-	// vanilla: characters 14-17, then 9-12, then the whole UUID.
+	const std::string n = normalized(UUID_A, UUIDRepr::vanilla);
+	SEE(n, std::string("00000000-0000-6000-8000-010000000000"));
+	// vanilla: characters 14-17, then 9-12, then the whole normalized UUID.
 	SEE(path_of(UUID_A, UUIDRepr::vanilla, true), n.substr(14, 4) + "/" + n.substr(9, 4) + "/" + n);
-	SEE(path_of(UUID_A, UUIDRepr::vanilla, true), std::string("1000/0000/") + UUID_A);
+	SEE(path_of(UUID_A, UUIDRepr::vanilla, true), std::string("6000/0000/") + n);
 	// Inside a longer path, and a name that is not a UUID stays as it is.
 	opts.uuid_repr = static_cast<uint32_t>(UUIDRepr::vanilla);
 	opts.uuid_partition = true;
-	SEE(Endpoint("idx/" + UUID_A).path, "idx/1000/0000/" + UUID_A);
+	SEE(Endpoint("idx/" + UUID_A).path, "idx/6000/0000/" + n);
 	SEE(Endpoint("plain/name").path, std::string("plain/name"));
 #ifdef XAPIAND_UUID_GUID
 	{
 		const auto g = normalized(UUID_A, UUIDRepr::guid);
-		SEE(g, "{" + UUID_A + "}");
+		SEE(g, "{" + n + "}");
 		SEE(path_of(UUID_A, UUIDRepr::guid, true), g.substr(15, 4) + "/" + g.substr(10, 4) + "/" + g);
 	}
 #endif
 #ifdef XAPIAND_UUID_URN
 	{
 		const auto u = normalized(UUID_A, UUIDRepr::urn);
-		SEE(u, "urn:uuid:" + UUID_A);
+		SEE(u, "urn:uuid:" + n);
 		SEE(path_of(UUID_A, UUIDRepr::urn, true), u.substr(23, 4) + "/" + u.substr(18, 4) + "/" + u);
 	}
 #endif
@@ -305,8 +307,16 @@ static void test_uuid_partitioned() {
 		const bool condensed = serialized.front() != 1 && ((serialized.back() & 1) != 0 || (serialized.size() > 5 && (*(serialized.rbegin() + 5) & 2) != 0));
 		const auto got = path_of(uuid, UUIDRepr::encoded, true);
 		if (condensed) {
-			REQUIRE(norm.size() >= 8);
-			const auto want = norm.substr(0, 1) + "/" + norm.substr(1, 2) + "/" + norm.substr(3, 2) + "/" + norm.substr(5, 2) + "/" + norm.substr(7);
+			// Groups of 1, 2, 2, 2 characters, then the rest; a separator only when characters remain.
+			std::string want;
+			size_t pos = 0;
+			for (size_t g : { 1, 2, 2, 2 }) {
+				if (pos >= norm.size()) break;
+				if (pos) want += '/';
+				want += norm.substr(pos, g);
+				pos += g;
+			}
+			if (pos < norm.size()) want += "/" + norm.substr(pos);
 			SEE(got, want);
 		} else {
 			REQUIRE(norm.size() >= 18);

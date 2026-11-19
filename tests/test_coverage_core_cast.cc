@@ -196,8 +196,8 @@ static void test_hash_type_and_field_type() {
 		{ "_timedelta", FieldType::timedelta }, { "_ewkt", FieldType::geo }, { "_point", FieldType::geo },
 		{ "_circle", FieldType::geo }, { "_convex", FieldType::geo }, { "_polygon", FieldType::geo },
 		{ "_chull", FieldType::geo }, { "_multipoint", FieldType::geo }, { "_multicircle", FieldType::geo },
-		{ "_multipolygon", FieldType::geo }, { "_multichull", FieldType::geo }, { "_geo_collection", FieldType::geo },
-		{ "_geo_intersection", FieldType::geo }, { "_lua", FieldType::script },
+		{ "_multipolygon", FieldType::geo }, { "_multichull", FieldType::geo }, { "_geometrycollection", FieldType::geo },
+		{ "_geometryintersection", FieldType::geo }, { "_lua", FieldType::script },
 	};
 	for (const auto& row : rows) {
 		CHECK_TRUE(Cast::get_field_type(row.word) == row.type);
@@ -231,7 +231,7 @@ static void test_cast_map() {
 	SEE(Cast::cast(cast_word("_ewkt", MsgPack("POINT(1 2)"))).str(), std::string("POINT(1 2)"));
 	// A geometry is returned whole, with its cast word.
 	for (const char* geo : { "_point", "_circle", "_convex", "_polygon", "_chull", "_multipoint", "_multicircle", "_multipolygon",
-	                         "_multichull", "_geo_collection", "_geo_intersection" }) {
+	                         "_multichull", "_geometrycollection", "_geometryintersection" }) {
 		const auto m = cast_word(geo, MsgPack({ { "_latitude", 1 } }));
 		SEE(Cast::cast(m).to_string(), m.to_string());
 	}
