@@ -4375,6 +4375,8 @@
     "coverage-multivalue": {
       "accepted": {},
       "after": [],
+      "base": "963ebca0f49ba33aaaa17481e4ec4961a91797af",
+      "branch": "quest/xapiand/coverage-multivalue",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4397,9 +4399,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "multivalue and reserved reach T13 coverage",
-      "updated": "2026-11-18T16:36:34"
+      "updated": "2026-11-19T00:35:40",
+      "worktree": "../Xapiand-wt/xapiand/coverage-multivalue"
     },
     "coverage-server": {
       "accepted": {},
