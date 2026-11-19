@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-112243-6bdb1d 261119-112245-25a678 (before, mutant/stopword-lists-wide e4a75e7e4, pool 100 / 4096) and 261119-112248-434c12 261119-112250-23f8dd (after, 0772ade92, pool 100 / 4096): the wide-search probes, strict, 2,000 indexes. The earlier four (102607-098a1c, 102609-9fd6d9, 102621-bfeb0c, 102623-f1d985) aborted/are superseded: the probe read its arguments from the wrong argv slots (searched 0 indexes, empty endpoints); fixed in 0772ade92, tiny local run (20 indexes) answers 20 hits. Next: write before/after rows in docs/perf/stopword-lists.md.
+State: waiting on jobs 261119-121016-295597 (after, pool 100) 261119-121017-3c611b (after, pool 4096) at 18108e527, strict; 261119-121018-cdaf3a (search test). Regression found by lead (pool 100: 3-18x slower, mechanism: the per-index check goes through the schema LRU, 2,000 schemas through 100 slots reload each search; metadata-only check rejected: default metadata is a foreign link, the fingerprints live in the foreign doc). Fix: per-process agreeing-index set (handler.cc). Before jobs reused: 261119-112243-6bdb1d (100), 261119-112245-25a678 (4096); uncached after: 261119-112248-434c12, 261119-112250-23f8dd. Next: rows in docs/perf/stopword-lists.md.
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
