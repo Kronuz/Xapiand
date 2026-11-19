@@ -1,6 +1,6 @@
 # logger-exit-lifetime: journal
 
-State: review fixes complete at logger:fc698e2; waiting on jobs 261118-213654-ec0596 261118-213656-307888 261118-213657-495b67 261118-213659-24fa6a 261118-213700-cba5c4 261118-213700-bd7a8d 261118-213700-dfe75e 261118-213701-0b38c9 261118-213701-5bf09d 261118-213701-b3b490 261118-213702-278777 261118-213702-35a4ac 261118-213702-10d630 261118-213702-8b6f13 261118-213703-3c2535 261118-213703-ff918e 261118-213703-87e194 261118-213704-9a8ef7; then ready for review
+State: review fixes complete at logger:fc698e2; waiting on jobs 261118-213659-24fa6a 261118-213700-cba5c4 261118-213700-bd7a8d 261118-213700-dfe75e 261118-213701-0b38c9 261118-213701-5bf09d 261118-213701-b3b490 261118-213702-278777 261118-213702-35a4ac 261118-213702-10d630 261118-213702-8b6f13 261118-213703-3c2535 261118-213703-ff918e 261118-213703-87e194 261118-213704-9a8ef7; then ready for review
 Quest: .campaign/xapiand/quests/logger-exit-lifetime.md (the lead's; never edit it)
 
 Code: logger repo, worktree /Users/kronuz/code/Kronuz/logger-wt/xapiand/logger-exit-lifetime,
@@ -111,7 +111,9 @@ Fifth session (fresh context): find and fix the A3 exit-flush loss.
     close()'s last look, and close() then released the wheel without counting. Fix logger:fc698e2
     (close() checks `abandoned` after the last look); test logger:385584f (capped child also files
     5 deferred lines due in an hour). Probes at fc698e2: 213654-ec0596 (plain), 213656-307888 (ASan),
-    213657-495b67 (TSan); the fresh runs at dec68de are its fails-without.
+    213657-495b67 (TSan); the fresh runs at dec68de are its fails-without. Probes PASSED at fc698e2 in all
+    three: count "17 reported not written + 3 written = 20"; late-exc's "late line is missing" is its
+    literal match on "late exc line", now "late exc line: late boom" (F4), status 0.
   - 19d855: only logger_queue's exit flush, a new mode, not main's e96e6a set: "logger: exit stopped
     the LOG thread (5 s cap): at most 1503 lines not written". Measured: TSan recipe child alone
     213026-b554b4 1.9-4.7 s per run; 213314-4bbdf2 splits it: drain about 1.1 s for 3600 lines
