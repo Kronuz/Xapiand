@@ -24128,11 +24128,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "folded into task-lifecycle, which builds the code and renames the design doc together",
       "repo": "../task",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "task docs: serve/service become lifecycle/component",
-      "updated": "2026-11-19T06:32:39",
+      "updated": "2026-11-19T06:34:19",
       "worktree": "../task-wt/xapiand/task-lifecycle-rename"
     },
     "task-phase7c-l1": {
