@@ -25228,20 +25228,51 @@
         "docs/mechanisms/lifecycle.md",
         "docs/API.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-fire-pending-guard",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:33:55",
+          "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+          "criteria": {
+            "A1": "261119-145232-a31610; fails without: 261119-145237-42104f",
+            "A2": "261119-145232-a31610, 261119-145234-48e3e7; fails without: 261119-145239-811bb9",
+            "A3": "261119-145232-a31610, 261119-145234-48e3e7, 261119-145249-853290"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-145232-a31610",
+              "level": "light",
+              "seconds": 35.6,
+              "state": "done",
+              "what": "task-fire-pending-guard check suite at f937bc2f513f"
+            }
+          ],
+          "final": true,
+          "from": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "later": [
+            "261119-153355-704ef3"
+          ],
+          "reason": "",
+          "tested": "f937bc2f513ff83e1cd810d528c79f0b55434c04"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "debounce: fire_pending() from inside a fire is caught, not a hang",
-      "updated": "2026-11-19T15:09:35",
-      "worktree": "../task-wt/xapiand/task-fire-pending-guard"
+      "updated": "2026-11-19T15:33:56",
+      "worktree": ""
     },
     "task-inbox-first": {
       "accepted": {
