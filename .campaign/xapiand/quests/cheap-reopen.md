@@ -10,7 +10,7 @@ Reopening an index the catalog evicted costs close to finding it open: a search 
 ## Acceptance criteria
 
 - A1 [artifact] Design note with the measured reopen breakdown and the chosen mechanism: `docs/design/cheap-reopen.md`
-- A2 2,500-index search at a pool of 200: p50 within 2x of the pool-5000 run at the same commit (884 vs 132 ms at 0d97b2da7 today): strict jobs before and after
+- A2 2,500-index search at a pool of 200: p50 within 2.2x of the pool-5000 run at the same commit (D135, owner 2026-11-19; was 2x): strict jobs before and after. The remaining gap goes to fstatat sizes, the 16-partition cap and strata's reopen-state cache (hunt rows)
 - A3 Durability unchanged: the crash and recovery checks pass, and a reopened index serves exactly its last commit: the suite plus a reopen-after-crash test
 - A4 The suite passes and CI is green at the landed code
 
