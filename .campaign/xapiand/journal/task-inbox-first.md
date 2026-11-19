@@ -1,6 +1,6 @@
 # task-inbox-first: journal
 
-State: ready for review
+State: waiting on jobs 261119-114206-73a222 261119-114200-848297 261119-114200-363a83
 Quest: .campaign/xapiand/quests/task-inbox-first.md (the lead's; never edit it)
 
 ## Doing
@@ -8,6 +8,26 @@ Quest: .campaign/xapiand/quests/task-inbox-first.md (the lead's; never edit it)
 Done at task:aa92196: every job passed, and each mutant failed at its own check (r1 at
 deadline_test.cc:393 during.at, r2 at lifecycle_test.cc:387 !r->failure, r4 a TSan data race at
 task.hh:451 against post_call :404). Not pushed (lead's instruction).
+
+## Review fold-in (reviews/task-inbox-first-correctness.md, CHANGES at aa92196)
+
+Fix commit task:b7e2449.
+
+- F1: ARCHITECTURE.md:37-39 gives the per-step inbox order; no doc outside docs/reviews/ says
+  "once it is empty" of the inbox.
+- F2: service-shape.md step 5 and D16, and docs/mechanisms/lifecycle.md, say the flushes run
+  inline on the loop when off_loop's thread cannot start, so a flush() must never wait on the
+  loop. Docs only: the reviewer's deadlock.cc shows the hazard but cannot assert the rule
+  without waiting, so no test.
+- F3: owner's call (silent fallback); left as is.
+- F4: Debug assert in run_until (atomic driver id, same-thread nesting allowed). Test
+  `deadline_test two-drivers` (child process, expects SIGABRT; deadline_test undefines NDEBUG,
+  being its own program). Mutant f4 (task:85819b1) fails-without 261119-114206-73a222.
+- F5 (note): ready path about 2 ns/step slower with an empty inbox (reviewer's noisy strict
+  bench, macOS arm64); inline_scheduler serves tests and simulation, so not pursued.
+- F6 (note): a post_call landing as run() exits waits in the inbox for the next run(), and
+  queued() does not count it; predates this quest; lifecycle drive loops are unaffected.
+- Suite 261119-114200-848297, tsan 261119-114200-363a83 at b7e2449.
 
 ## Next
 
