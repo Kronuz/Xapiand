@@ -10227,6 +10227,8 @@
     "logger-fork-reset": {
       "accepted": {},
       "after": [],
+      "base": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+      "branch": "quest/xapiand/logger-fork-reset",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10249,6 +10251,7 @@
         "docs/**",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/logger-fork-reset",
       "landed": [],
       "lenses": [
         "correctness"
@@ -10258,9 +10261,10 @@
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
-      "updated": "2026-11-19T14:19:45"
+      "updated": "2026-11-19T14:20:02",
+      "worktree": "../logger-wt/xapiand/logger-fork-reset"
     },
     "logger-producer-path": {
       "accepted": {},
