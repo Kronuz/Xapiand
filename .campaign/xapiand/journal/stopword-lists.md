@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-084153-197847 261119-084158-c63615 261119-084202-4abafa 261119-084205-cfa578 261119-083443-f71030 261119-084208-75bb78
+State: waiting on jobs 261119-093906-670fdd 261119-093907-83563b 261119-093907-ca11c3
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,19 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Option A is implemented (head 7b12e5d5e, master merged): `_stop_fingerprint` recorded beside `_language`,
-`Schema::check_stop_words(index, adopt)` called from `DatabaseHandler::get_schema`, property hidden from the readable
-schema, options.md fixed, mechanism note updated. Tests are in tests/test_stopword_lists.cc (schema checks in the
-`builtin` and `override` scenarios, `--probe schema`).
+Fixing the first run's two failures and the per-request schema cost (head eae0478d9). The lists, schema
+recording, check and docs are in; tests pass (261119-093906-b28504), the fingerprint mutant fails them
+(261119-093843-4ea7ac, branch deleted). Waiting on the strict probes and the suite.
 
 ## Next
 
-1. Read the jobs: tests 261119-084153-197847 (A1-A4), mutant 261119-084158-c63615 (A3 fails-without, branch
-   mutant/stopword-lists-fingerprint, delete after), A5 after 261119-084202-4abafa, before 261119-083443-f71030,
-   schema-check cost 261119-084205-cfa578, suite 261119-084208-75bb78 (A7).
-2. Write docs/perf/stopword-lists.md from the probe medians (start-up us, heap bytes, RSS; schema check ns per
-   call); ruling 7: if material, a hunt-row candidate for a view mode in analysis::stopper, else drop with numbers.
-3. Merge master again before the last jobs; fix what the suite shows.
+1. Read 261119-093906-670fdd (schema check, cold and warm) and 261119-093907-83563b (A5 after); write both into
+   docs/perf/stopword-lists.md (medians per mode: `python3 -I ~/.scratch/xapiand/stopword-lists/med.py LOG`).
+2. Read the suite 261119-093907-ca11c3 (A7); fix what it shows.
+3. Fill Result; State ready for review.
 
 ## Blocked on
 

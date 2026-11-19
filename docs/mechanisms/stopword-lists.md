@@ -41,8 +41,8 @@ getStopWords(lang):  overrides[lang]  else  builtin[lang] (an analysis::stopper 
    checked with `checkStopWords`, and a mismatch is an `Error` that names the index. A field with a language and
    no record (an index from before the fingerprints) adopts the current list's fingerprint in the mutable
    schema when the handler is writable, so the next schema write persists it; one info line names the index
-   and the list, once per process. `dispatch_readable` hides the property: it is derived from the list, not a
-   setting a client sends back.
+   and the list, once per process. `dispatch_readable` (behind `get_full(true)`, the `_schema` of info and
+   search responses) hides the property: it is derived from the list, not a setting a client sends back.
 
 The install copies `stopwords/` to `share/doc/xapiand/stopwords`, a directory nothing reads. A build run from
 the source tree (`build/bin/xapiand`) finds the repository root as its data path and reads the 18 files there as
@@ -57,5 +57,7 @@ sit behind the copy unused. Numbers: `docs/perf/stopword-lists.md`.
 
 ## Cost
 
-`get_schema` walks the schema's fields on each call and checks each field that has a language (a map lookup, a
-binary search and a string compare). Request-path cost is in `docs/perf/stopword-lists.md`.
+`check_stop_words` walks the schema's fields once per schema version and thread: a schema that passed with
+nothing to adopt is remembered by identity (a `thread_local` map of weak pointers, at most 4096 entries), and
+the next request that gets the same schema pays one lookup. A schema with fields still to adopt, or one
+modified in place, is walked each time. Numbers: `docs/perf/stopword-lists.md`.
