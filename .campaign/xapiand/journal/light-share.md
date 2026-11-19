@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: blocked on owner: the heavy-share cap (decision request below); E1/E2 read and folded in
+State: blocked on owner: the heavy-share cap (decision request below); E1/E2 folded in at Xapiand:8860f642f
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
