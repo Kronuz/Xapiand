@@ -4323,7 +4323,8 @@
         "tests/test_coverage_main*",
         "harness/coverage_e2e_main*",
         "harness/coverage.sh",
-        "docs/dev/coverage.md"
+        "docs/dev/coverage.md",
+        "harness/coverage_one.sh"
       ],
       "landed": [],
       "lenses": [],
@@ -4336,7 +4337,7 @@
       "risk": "low",
       "status": "active",
       "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
-      "updated": "2026-11-19T00:46:09",
+      "updated": "2026-11-19T02:39:39",
       "worktree": "../Xapiand-wt/xapiand/coverage-core-main"
     },
     "coverage-core-small": {
