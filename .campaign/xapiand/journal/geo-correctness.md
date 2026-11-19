@@ -1,6 +1,6 @@
 # geo-correctness: journal
 
-State: waiting on jobs 261119-040317-8d9156 (corpus check) 261119-040319-57eeba (suite), at fdc169e74
+State: ready for review
 Quest: .campaign/xapiand/quests/geo-correctness.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,16 +30,7 @@ No random or cluster point changes. Detail and classes: docs/design/geo-correctn
 
 ## Blocked on
 
-F20, the lead's decision (owner for the id change): the lens is right; `HTM::getId` is wrong for a point on an
-edge of the root mesh (lat 0, lon 0, poles): it returns the id of the middle of the octant, `N3333...`, so a
-point at (0, 10) is indexed in a trixel the 1 km circle around it does not cover. Real search bug, not only the
-lens. The fix is one line in the htm library (`inside<Round>`: `> 0` to `>= 0`, closed edges). Measured on a
-scratch copy of the pinned htm: all 8 pinned lens misses gone; every edge point hits its own 1 km circle. It
-changes ids of edge points only, but htm's test/golden.h pins them (92 of 396 golden points mismatch) and ids
-live in indexes. Options: (A, recommended) fix in htm, regenerate its goldens, repin Xapiand, flip the F20
-assertions; edge-point ids were wrong anyway; (B) leave it and document that lat 0 / lon 0 points are not
-searchable by area (not acceptable by the lead's own decision on wrong answers); (C) a workaround inside
-Xapiand's Point/MultiPoint (a second id rule next to htm's): not recommended. docs/design/geo-correctness.md.
+Nothing. (F20, formerly here, is fixed by the htm repin, D129.)
 
 ## Evidence
 
@@ -47,13 +38,15 @@ Jobs prove criteria by their tags (`--for A1`).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | F18, F19, F21, F22 (and F23): fails-without and passing jobs below. F20: [decision] the convex is right (lens covers its center at 60 generic centers, tests/test_geo_correctness.cc `test_lens_of_wide_circles_covers_its_center`, and at all four root vertices once HTM::getId places them: scratch htm patch, 8 of 8 fixed); the wrong answer is HTM::getId, in the htm library; docs/design/geo-correctness.md |
-| A2 | tests/test_geo_corpus.cc: 6,015 corpus points, 33 queries, 3 settings = 99 answers; 12 change, all listed in its table (`before`): convex apart x3 (6015 hits to 0, F23), convex negative p=false (4396 to 5340, F21), convex negative hole 1000km x2 (6015 to 6007, 5071 to 5978, F21), multipoint plain x3 and multipoint plain one x3 (error to parsed, F18). The other 87 are equal: jobs below |
-| A3 | suite job 261118-231044-1e0858 at bb8403367; CI: the lead pushes, I do not |
+| A1 | Fixes F18, F19, F21, F22, F23 and D130 (`_multiconvex` map form), and the F20 htm repin: tests/test_geo_correctness.cc (incl. `test_multiconvex_serves_in_the_map_form`, root-vertex lens) and the flipped assertions in tests/test_coverage_geospatial.cc. Pass at head: 261119-041250-4fe1c5 (earlier at 532e055a5, same test and src files: 261119-004657-a00f7c). Fail without the fixes, htm pin and `_multiconvex` (xapiand:4866a9a0f, the head's tests over master's src/geospatial and CMakeLists): 261119-004729-f41c38 (test_geo_correctness, exit 8) and 261119-004732-82117a (test_coverage_geospatial, exit 8), both `--fails-without`. Coverage of src/geospatial from test_coverage_geospatial: 261119-004744-fa34d7 (geospatial.cc 85.7% lines, convex.cc 96.5%, collection.cc and multiconvex.cc 100%, ewkt.cc 95.1%) |
+| A2 | tests/test_geo_corpus.cc: 6,015 corpus points, 33 queries, 3 settings = 99 answers. Before the htm fix 12 answers changed by the F-fixes (listed in the table's `before`; convex apart x3 6015 to 0 (F23), convex negative p=false 4396 to 5340 and hole rows (F21), multipoint plain x6 error to parsed (F18)). The htm edge-point fix moves 24 more, 10 queries, 53 (point, answer) changes, all on the 15 root-edge points: gained 23 inside the shape by exact distance and 1 outside (a partial cell, 220 km out), lost 0 inside and 29 outside (504 to 6,198 km); per-point jobs 261119-024749-524b1b (after) and 261119-024740-da1dc6 (before); detail in docs/design/geo-correctness.md. Table check at the htm fix: 261119-040317-8d9156 (exit 0). The corpus calls `getRanges` on geometries directly: it does not exercise geo global prefixes or an accuracy list, so M3 (coverage-multivalue, src/multivalue/generate_terms.cc: prefixes indexed in accuracy order, looked up reversed) is out of scope here |
+| A3 | Suite at head: 261119-041251-84206c; earlier green at fdc169e74: 261119-040319-57eeba; CI: the lead pushes, I do not |
 
 ## Result
 
-<When ready for review.>
+F18-F23 fixed and D130 served (docs/design/geo-correctness.md); htm repinned to 0c09a02; every pinned wrong answer in
+tests/test_coverage_geospatial.cc flipped; the corpus table regenerated with its before/after per row. Review: one
+correctness review (normal risk). Head recorded below.
 
 ## Rulings I made
 
@@ -65,4 +58,5 @@ Jobs prove criteria by their tags (`--for A1`).
 - F22 is the order of circles in an unsimplified convex; the engine simplifies (getGeometry), so only a
   directly built convex showed it. Fixed in the convex (`smallest()` by arcangle, sign kept by `add(Convex)`),
   not by sorting on add: that would change the order circles are written in.
-- F20 not fixed here: the cause is outside my file set and changes stored ids (Blocked on).
+- F20 fixed by the htm repin (D129); the Blocked on entry is resolved.
+- D130 map form: nested lists, one convex per inner list (as polygon rings); a flat list is one convex.
