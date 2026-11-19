@@ -5,16 +5,12 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Xapiand pins http at ec273dd (http-halfclose, D126), so a half-closed client gets its :search and :count response (probe 261118-170529-87c0b4 showed 503 on master).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 harness/wide_search_halfclose.py answers GET, :search and :count with 200 for a half-closed client, and fails at the old pin: a job and a `--fails-without` job
+- A2 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +19,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: after coverage-areas, which holds CMakeLists.txt for the logger repin. TLS half-close (http review F4) is a hunt row.
 
 ## May land early
 
