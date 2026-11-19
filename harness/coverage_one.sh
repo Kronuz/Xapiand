@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# coverage_one.sh TEST FILE...: builds tests/test_TEST.cc with the coverage instrumentation of harness/coverage.sh (LLVM's libc++
+# only), runs it, and prints for each source FILE (src/...) its line and branch coverage and the uncovered lines and branches.
+# Env: BUILD (default build-cov-TEST), JOBS (default 4), LLVM (default: Homebrew's llvm@22 or llvm).
+set -u
+TEST=$1; shift
+ROOT=$(cd "$(dirname "$0")/.." && pwd); cd "$ROOT" || exit 126
+BUILD=${BUILD:-$ROOT/build-cov-$TEST}; JOBS=${JOBS:-4}
+for p in ${LLVM:-} /usr/local/opt/llvm@22 /usr/local/opt/llvm /opt/homebrew/opt/llvm@22 /opt/homebrew/opt/llvm; do
+	[ -x "$p/bin/llvm-cov" ] && { LLVM=$p; break; }
+done
+F="-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer"
+mkdir -p sdkinc; for f in zlib.h zconf.h uuid; do ln -sfn "$(xcrun --show-sdk-path)/usr/include/$f" sdkinc/$f; done
+cmake -S . -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+	-DCMAKE_C_COMPILER=$LLVM/bin/clang -DCMAKE_CXX_COMPILER=$LLVM/bin/clang++ "-DCMAKE_C_FLAGS=$F" "-DCMAKE_CXX_FLAGS=$F" \
+	"-DCMAKE_EXE_LINKER_FLAGS=$F -L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++" -DLIBCPP_LIBRARIES=$LLVM/lib/c++/libc++.dylib \
+	-DLIBCPPABI_LIBRARIES=$LLVM/lib/c++/libc++abi.dylib -DZLIB_INCLUDE_DIR="$ROOT/sdkinc" -DUUID_INCLUDE_DIR="$ROOT/sdkinc" >"$BUILD.log" 2>&1 || { tail -20 "$BUILD.log"; exit 1; }
+cmake --build "$BUILD" -j"$JOBS" --target "xapiand_test_coverage_$TEST" >>"$BUILD.log" 2>&1 || { grep -E "error|Error" "$BUILD.log" | head -30; exit 1; }
+rm -f "$BUILD"/prof-*.profraw
+LLVM_PROFILE_FILE="$BUILD/prof-%p.profraw" "$BUILD/bin/xapiand_test_coverage_$TEST"; rc=$?
+echo "test exit: $rc"
+$LLVM/bin/llvm-profdata merge -sparse -o "$BUILD/merged.profdata" "$BUILD"/prof-*.profraw || exit 1
+for src in "$@"; do
+	$LLVM/bin/llvm-cov export -format=lcov -instr-profile "$BUILD/merged.profdata" "$BUILD/bin/xapiand_test_coverage_$TEST" "$ROOT/$src" 2>/dev/null |
+	python3 -I - "$src" <<'PY'
+import sys
+src = sys.argv[1]
+lines, branches = {}, {}
+for l in sys.stdin:
+    l = l.strip()
+    if l.startswith("DA:"):
+        n, c = l[3:].split(",")[:2]; lines[int(n)] = int(c)
+    elif l.startswith("BRDA:"):
+        n, _, _, t = l[5:].split(","); branches.setdefault(int(n), []).append(0 if t == "-" else int(t))
+def ranges(ns):
+    out, ns = [], sorted(ns)
+    i = 0
+    while i < len(ns):
+        j = i
+        while j + 1 < len(ns) and ns[j + 1] == ns[j] + 1: j += 1
+        out.append(str(ns[i]) if i == j else f"{ns[i]}-{ns[j]}"); i = j + 1
+    return ",".join(out)
+lc = sum(1 for c in lines.values() if c); bt = sum(len(v) for v in branches.values()); bc = sum(1 for v in branches.values() for t in v if t)
+print(f"{src}: lines {lc}/{len(lines)} ({100*lc/max(1,len(lines)):.1f}%), branches {bc}/{bt} ({100*bc/max(1,bt):.1f}%)")
+print("  uncovered lines:", ranges([n for n, c in lines.items() if not c]))
+print("  branch lines with an untaken branch:", ranges([n for n, v in branches.items() if not all(v)]))
+PY
+done
+exit $rc
