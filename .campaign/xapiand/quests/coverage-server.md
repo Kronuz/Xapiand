@@ -5,16 +5,13 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The server area reaches T13's target, search_views.cc first (792 uncovered branches; server was 76.8% lines, 49.4% branches at 277715). Unit tests can't reach it, so the coverage comes from E2E drivers run in the instrumented build.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Line and branch coverage of server at or above T13's target: harness/coverage.sh before and after
+- A2 Every new test checks values, not only that code ran; a test of a fixed bug fails without the fix
+- A3 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +20,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: split from coverage-areas (its journal, "Proposed split"); floors stay at T13, never reset as a ratchet.
 
 ## May land early
 

@@ -5,16 +5,13 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+multivalue and reserved-field handling reach x7-gate's T13 coverage target (about 480 uncovered lines at coverage-areas' 277715: 70.4% lines, 69.8% branches).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Line and branch coverage of multivalue and reserved at or above T13's target: harness/coverage.sh before and after
+- A2 Every new test checks values, not only that code ran; a test of a fixed bug fails without the fix
+- A3 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +20,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: split from coverage-areas (its journal, "Proposed split"); floors stay at T13, never reset as a ratchet.
 
 ## May land early
 
