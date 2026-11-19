@@ -25026,9 +25026,9 @@
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "debounce: fire_pending() from inside a fire is caught, not a hang",
-      "updated": "2026-11-19T14:41:31",
+      "updated": "2026-11-19T15:04:03",
       "worktree": "../task-wt/xapiand/task-fire-pending-guard"
     },
     "task-inbox-first": {
