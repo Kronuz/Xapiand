@@ -5,16 +5,13 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+coverage-areas found five wrong geospatial answers (tests/test_coverage_geospatial.cc, findings F18-F22, pinned there as today's behavior): malformed `MULTIPOINT(1 2, 3)` raises a non-EWKTError (500, not 400) (F18); a collection holding an empty intersection does not write EMPTY (F19); the lens of two 9,000 km circles 45 degrees either side of a center does not cover it (F20); a 15,011 km circle (past a hemisphere) does not cover its own center (F21); a point 5,500 km from the antipode inside both circles of a ring is not covered (F22). Each is fixed, or ruled correct with the geometry that shows it.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Each of F18-F22: a test asserting the correct answer, failing at the parent commit (`--fails-without`), or a [decision] row showing the current answer is right
+- A2 Geo queries over a corpus give the same hits before and after except where F18-F22 change them, listed: a job with values
+- A3 The suite passes and CI is green
 
 ## Contracts
 
@@ -23,7 +20,7 @@ quest depending on it can start before it lands.>
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead 2026-11-18: wrong search answers are correctness bugs; tests that pin them stay only until this quest replaces them.
 
 ## May land early
 
