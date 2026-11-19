@@ -10224,6 +10224,44 @@
       "updated": "2026-11-18T22:35:16",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
+    "logger-fork-reset": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "logger.*",
+        "src/**",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../logger",
+      "risk": "high",
+      "status": "planned",
+      "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
+      "updated": "2026-11-19T14:19:45"
+    },
     "logger-producer-path": {
       "accepted": {},
       "after": [],
