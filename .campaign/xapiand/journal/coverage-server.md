@@ -38,3 +38,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+Lead ruling (msg): harness/coverage.sh is coverage-core-main's; my edit is reverted (bc5fd77fa, plain commit). It will discover harness/coverage_e2e_<name>.* as workload <name> and add NOBUILD=1. Until then run the driver directly on the slot's build-cov/bin/xapiand. coverage-server lands after coverage-core-main. Job 444b1a ran at b0957c548 (with my old edit) and is only the build.
