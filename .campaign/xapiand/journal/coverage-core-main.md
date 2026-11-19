@@ -36,7 +36,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | 261119-050554-5cd724 (coverage ctest+main, E2E 92/92, ctest green). main.cc 606/743 lines (81.6%), 293/465 branches (63.0%); manager.cc 665/835 lines (79.6%), 225/428 branches (52.6%). Baseline (8642ea): main.cc 377/743, 164/465; manager.cc 610/835, 179/428. Below the 90/80 targets; the lead amends them (no fault-injection hooks; manager.cc slated for removal, D74). |
-| A2 | tests/test_coverage_main.cc checks values (exit codes, fd counts, limits); product facts pinned: open-files refusal EX_OSFILE (minimum 1471), restore of a non-dump exits 0 with "unsupported type". No fixed bug in this quest. |
+| A2 | 261119-121932-49544b (the value-checking tests pass); tests/test_coverage_main.cc checks values (exit codes, fd counts, limits); product facts pinned: open-files refusal EX_OSFILE (minimum 1471), restore of a non-dump exits 0 with "unsupported type". No fixed bug in this quest. |
 | A3 | suite 261119-052702-edbcb8 at head (the earlier f3a2a3 passed at 737496e23); CI runs on the pushed branch |
 
 Uncovered, main.cc lines: 192,217,224 (tty only: is_tty is a static const), 240-241 and 257-258 (sig_handler: /dev/null open fails in a live node; manager throws), 270-285 (backtrace_sig_handler: dies by signal, no profile flush), 366-367,388-389,393-394,426-428 (system-wide file warnings, setrlimit failure text), 507-543 and 588-591 (demote: root only, setuid failure), 618-619, 710-718 (chdir/getcwd failure), 731-753 (resolve_index_endpoints fallback), 918-925 (cleanup_manager with a manager), 945-981 (executable-path fallbacks), 1085-1103 (logger hook lambdas), 1137-1155 (end-of-main teardown branches).
