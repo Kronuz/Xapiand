@@ -15,6 +15,7 @@ src/database/pool.cc	wait	state\.cv\.wait	allow	3	join() and ~DatabasePool await
 src/database/pool.cc	file	fs	allow	4	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
 src/database/pool.cc	sleep	sleep_for\(std::chrono::milliseconds\(1\)\)	allow	1	IndexChores::cancel_all polls the groups at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached task with no control loop runs to its end on the thread that started it (a timer thread, the CLI); guarded by check_may_block
+src/database/wide_search.cc	mutex	mutex_	allow	3	Pins' count and room event: O(1) sections that test or change the free count or swap the room pointer, none with I/O; they run on the loops (take, and give from a batch's end) and the event is set outside the lock (wide-search-loop D3)
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
 src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
