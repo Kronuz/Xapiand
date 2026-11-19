@@ -1254,6 +1254,31 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 
 namespace {
 
+// The indexes found to agree with the stop words lists, by path. The lists are fixed for the process and a schema
+// written here records the current ones, so the verdict stands: a wide search over a small schema pool loads each
+// schema once, not once per search. Bounded by the working set of a wide search; a full set starts over.
+class AgreeingIndexes {
+	static constexpr std::size_t limit = 65536;
+	std::mutex mtx;
+	std::unordered_set<std::string> paths;
+
+public:
+	bool has(const std::string& path) {
+		std::lock_guard<std::mutex> lk(mtx);
+		return paths.contains(path);
+	}
+
+	void add(const std::string& path) {
+		std::lock_guard<std::mutex> lk(mtx);
+		if (paths.size() >= limit) {
+			paths.clear();
+		}
+		paths.insert(path);
+	}
+};
+
+AgreeingIndexes agreeing_indexes;
+
 // Checks the schema the cache holds for `handler`'s index against the stop words lists it recorded.
 task::task<void>
 check_stop_words_of(DatabaseHandler& handler, std::string_view index)
@@ -1262,8 +1287,13 @@ check_stop_words_of(DatabaseHandler& handler, std::string_view index)
 	if (!manager) {
 		co_return;
 	}
+	const std::string path(index);
+	if (agreeing_indexes.has(path)) {
+		co_return;
+	}
 	auto schema = co_await manager->schemas->get(&handler, nullptr);
 	Schema::check_cached_stop_words(index, std::get<0>(schema));
+	agreeing_indexes.add(path);
 }
 
 }  // namespace

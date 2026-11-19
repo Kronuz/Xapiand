@@ -42,7 +42,10 @@ getStopWords(lang):  overrides[lang]  else  builtin[lang] (an analysis::stopper 
    first shard's path without the shard suffix) and answers `409`: the request and the index are fine, the node's
    list is not the one the index was built with. `DatabaseHandler::get_mset` also checks every other distinct index
    of the search with `Schema::check_cached_stop_words` on the schema the cache holds (no adoption); an index that
-   does not load is left to the search. A field with a language and
+   does not load is left to the search. An index found to agree is remembered by path for the process (the lists are
+   fixed and a schema written here records the current ones), so a wide search over a schema pool smaller than its
+   index count loads each schema once, not on every search (evicting and reloading 2,000 schemas through 100
+   slots on each search is what the uncached check cost). A field with a language and
    no record (an index from before the fingerprints) adopts the current list's fingerprint in the mutable
    schema when the handler is writable, so the next schema write persists it; one info line names the index
    and the list, once per process. `dispatch_readable` (behind `get_full(true)`, the `_schema` of info and
