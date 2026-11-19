@@ -24347,6 +24347,36 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-asio-layout": {
+      "accepted": {},
+      "after": [
+        "task-driver-layout"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task_asio.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "planned",
+      "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
+      "updated": "2026-11-19T13:20:03"
+    },
     "task-driver-layout": {
       "accepted": {
         "correctness": {
