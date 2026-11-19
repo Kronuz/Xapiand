@@ -64,7 +64,7 @@ void test_not_of_a_group() {
 
 void test_binary_operators_are_lists_of_two() {
 	auto dsl = make_dsl();
-	for (const char* op : { "AND", "OR", "XOR" }) {
+	for (const char* op : { "AND", "OR", "XOR", "MAYBE" }) {
 		const auto tree = dsl.make_dsl_query(std::string("a:b ") + op + " c:d");
 		std::fprintf(stderr, "tree: %s\n", tree.to_string().c_str());
 		CHECK_EQ(tree.size(), std::size_t(1));
