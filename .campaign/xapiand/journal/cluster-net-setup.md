@@ -30,7 +30,7 @@ a prio-only guest and is judged by effect (partition: 3->1 loss 100% then heal r
 | Criterion | Evidence |
 |---|---|
 | A1 | fails-without 261118-194233-3dc361 (net_test.py at Xapiand:fbe0aa24a, old net.py); passing 261118-194500-d0da34 at Xapiand:3a0187e2b |
-| A2 | netcheck 261118-194503-0ec526 (IPv4 and IPv6 values); l2probe 261118-194506-5a7494 |
+| A2 | netcheck 261118-202126-c9a5a2 (IPv4 and IPv6 values); l2probe 261118-202125-ad447b |
 | A3 | suite 261118-194512-0404ca, CI on the pushed branch; park_test 261118-194509-6f88ff |
 
 ## Result
