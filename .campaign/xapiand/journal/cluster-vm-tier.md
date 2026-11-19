@@ -1,6 +1,6 @@
 # cluster-vm-tier: journal
 
-State: ready for review
+State: waiting on jobs 261118-175316-1b2e8c 261118-175314-8ff976 261118-175317-9b20c0
 Quest: .campaign/xapiand/quests/cluster-vm-tier.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Ready for review. Queued at Xapiand:fb026cc9e: net_test 261118-135912-244d58, net_test on the
-pre-fix net.py (exit 0 when it fails) 261118-135921-f6d2e5, netcheck 261118-135913-76ff29, check
-suite 261118-135922-9079eb; A1 rerun 261118-140248-721145 at Xapiand:1edfc348c (guest/net.py changed since e7a755).
+netcheck 261118-135913-76ff29 failed in the guest on nft: the one-line table needs a newline or ';'
+after each set or chain's closing brace. Fixed at Xapiand:8882305c9 (netlab's one-declaration-per-line
+table); net_test.py now checks nft input too: passes on the fix (261118-175312-a267a3) and fails on
+the previous net.py (261118-175313-6dec6a, exit 0 when it fails). Queued at Xapiand:8882305c9:
+netcheck 261118-175314-8ff976, A1 rerun 261118-175316-1b2e8c (exclusive; guest code changed, so
+e7a755 no longer counts), check suite 261118-175317-9b20c0. The earlier rerun 261118-140248-721145
+was superseded.
 
 ## Next
 
-1. Correctness review (the lead's).
+1. When 1b2e8c, 8ff976 and 9b20c0 pass: State "ready for review", then the correctness review.
 
 ## Blocked on
 
@@ -25,7 +29,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-115443-e7a755 (exclusive, Xapiand:d5bd31053): each of 3 guests heard both others over the hub L2; in each, the planted write was absent at `before` 5/5 and present at `after` 5/5; 0.194 s median per replay, 0.525 s max, 30 replays, log about 158 MiB. Rerun 261118-140248-721145 at Xapiand:1edfc348c queued (net.py changed since) |
+| A1 | 261118-115443-e7a755 (exclusive, Xapiand:d5bd31053): each of 3 guests heard both others over the hub L2; in each, the planted write was absent at `before` 5/5 and present at `after` 5/5; 0.194 s median per replay, 0.525 s max, 30 replays, log about 158 MiB. Rerun 261118-175316-1b2e8c at Xapiand:8882305c9 queued (guest net.py changed since) |
 
 Other jobs: dev check 261118-115433-265d2c passed; park_test 261118-115436-e3d7ad (caller's group
 SIGKILL, SIGTERM, guardian SIGKILL then sweep) and 261118-115437-6ea361 (keeper SIGKILL, down,
@@ -43,7 +47,7 @@ Xapiand:d5bd31053 and Xapiand:fb026cc9e and the jobs above.
 How it works: `harness/cluster/vm/README.md`. A replay costs 0.194 s median (0.525 s max) over a
 158 MiB log, against D14's 5 to 10 s estimate, so 60 replays take about 12 s of a run, not 10 min.
 Open: the hub relays in Python, so its throughput for D14's large uploads is unmeasured; netlab's
-per-peer shapes are proven by netcheck only once 261118-135913-76ff29 passes.
+per-peer shapes are proven by netcheck only once 261118-175314-8ff976 passes.
 
 ## Rulings I made
 
