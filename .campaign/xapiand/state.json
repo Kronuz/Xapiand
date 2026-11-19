@@ -3836,7 +3836,8 @@
     "consensus-sim-loops": {
       "accepted": {},
       "after": [
-        "detent:consensus-close-fenced"
+        "detent:consensus-close-fenced",
+        "detent:driver-apply-gap"
       ],
       "base": "b7f48b2414d8b5822ba2924b9a2df1a252e4364a",
       "branch": "quest/xapiand/consensus-sim-loops",
@@ -3863,7 +3864,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
-      "updated": "2026-11-18T04:04:27",
+      "updated": "2026-11-18T17:24:50",
       "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
     },
     "core-lifecycle-tests": {
