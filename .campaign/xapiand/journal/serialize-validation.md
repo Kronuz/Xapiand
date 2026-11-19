@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: ready for review
+State: waiting on jobs ef840f eb6c56 bb0952
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -35,6 +35,15 @@ tests/test_coverage_serialize.cc that master brought in (it pinned the bugs this
 plus the seven serialize_validation tests at Xapiand:72be2396c; `campaign verify` suite job 01e205 (A6) queued at the same head.
 Stale jobs 261119-002707-c3d713, 261119-003619-41690e (review probes) failed/timed out before any review: not mine to
 rerun; the reviewer's.
+
+## Fix round 1 (review S1, blocking)
+
+S1: `_date` served over HTTP. `RESERVED_DATE` joins `RESERVED_DATETIME` in schema.cc's two property tables and the
+dispatch (Xapiand:e5114e3a3). HTTP test tests/test_serialize_validation_date_http.py (PUT text and number `_date`, GET
+back, schema type, a bad value 400). Jobs: head ef840f; fails-without mutant eb6c56 (schema.cc reverted,
+refs/mutants/serialize-validation/s1-date-http, filed under A6 since A5 takes no job); suite bb0952
+(`campaign verify`). S1=ef840f for `--confirm`. query_dsl.cc untouched (dsl-date-operators). S2, S3, S4, S5, S7, S8 are
+non-blocking and not mine this round.
 
 ## Next
 
@@ -75,4 +84,4 @@ Nothing.
 - Cast::cast(empty) skips the positive try for any text with a '-' (as Serialize's positive_of): a negative out of int64 is the float it spells.
 - Aggregations: `_aggs` and `_aggregations` join the phf and both skip to the type; a comment key (`#...`) is still skipped, as the old catch-all did, so only non-comment unknown words become refusals.
 - A nested unknown type is refused when its bucket builds sub-aggregations (per bucket, at match time), not at parse; validating eagerly would construct each subtree once per ancestor in bucket.h, outside my set. The test covers parse-time refusal only.
-- Out of my file set, for the lead (same strtoull wrap, not Cast): src/database/handler.cc:107 (docid "&-1"), src/query_dsl.cc:579,595 and src/database/schema.cc:1602,1611 (accuracy suffixes), src/server/search_views.cc:3156,3212 (Content-Length "-1").
+- Out of my file set, for the lead (same strtoull wrap, not Cast): src/database/handler.cc:107 (docid "&-1"), src/query_dsl.cc:579,595 (accuracy suffixes), src/server/search_views.cc:3156,3212 (Content-Length "-1"). src/database/schema.cc:1602,1611 (accuracy suffixes, `_-1` reads U64_MAX) are IN this quest's file set and still unfixed (review S6, non-blocking): left for the lead's hunt row or a later serialize quest.
