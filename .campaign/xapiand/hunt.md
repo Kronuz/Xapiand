@@ -180,6 +180,7 @@ quest starts (name it) or is dropped with a reason.
 | Negative text wraps to a huge unsigned value outside serialize-validation's files: handler.cc:107, query_dsl.cc:579/595, search_views.cc:3156/3212 (strtoull-style parse of a '-'); refuse with a 400 as serialize-validation A1 does | serialize-validation journal (Xapiand:0db7027c2) | those lines | Xapiand | open, after wide-search-loop lands (it holds those files) |
 | An unknown aggregation type nested under a bucket is refused only when the first bucket forms at match time (bucket.h builds sub-aggregations lazily); validate the whole tree before the search | serialize-validation journal | src/aggregations/bucket.h | Xapiand | open |
 | `--max-files 300 --database-pool-size 200 --max-clients 1000` leaves database_pool_size 34 and max_clients -2 (adjustOpenFilesLimit splits a too-small limit into a negative share); clamp, or refuse start-up naming the needed limit | coverage-core-main test_open_files_limit pin | src/main.cc adjustOpenFilesLimit | Xapiand | open |
+| M1: `MIN_STR_CMPVALUE` in src/multivalue/keymaker.cc is `std::string("\x00")`, which is empty (the const char* constructor stops at the NUL), so a descending string sort key on a missing slot keys as empty instead of a NUL byte; use `std::string(1, '\0')` | coverage-multivalue keymaker test pin | src/multivalue/keymaker.cc | Xapiand | open |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
