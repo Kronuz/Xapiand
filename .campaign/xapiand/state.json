@@ -25778,19 +25778,48 @@
         "tests/test_node.cc",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T11:08:30",
+          "commit": "e11af45a76a37cfa9c0e01dcf5c93b562419ba13",
+          "criteria": {
+            "A1": "`docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261119-054325-0edfb0",
+            "A2": "261119-054322-32d04d (passed at 66da6256a6c8; only merges from main since), 261119-054324-7e5194 (passed at 66da6256a6c8; only merges from main since), 261119-054325-ed6f90 (passed at 66da6256a6c8; only merges from main since), 261119-054330-c7912d (passed at 66da6256a6c8; only merges from main since), 261119-054332-4c0247 (passed at 66da6256a6c8; only merges from main since), 261119-054329-f8ee36 (passed at 66da6256a6c8; only merges from main since), 261119-054331-dc32c3 (passed at 66da6256a6c8; only merges from main since), 261119-054333-3f20a4 (passed at 66da6256a6c8; only merges from main since), 261119-054334-52ec98 (passed at 66da6256a6c8; only merges from main since), 261119-054335-6a3456 (passed at 66da6256a6c8; only merges from main since), 261119-054336-8a53e2 (passed at 66da6256a6c8; only merges from main since), 261119-054337-b0cbe2 (passed at 66da6256a6c8; only merges from main since), 261119-054338-6a009a (passed at 66da6256a6c8; only merges from main since), 261119-054339-649dd6 (passed at 66da6256a6c8; only merges from main since), 261119-054340-8945b4 (passed at 66da6256a6c8; only merges from main since)",
+            "A3": "261119-054323-666a24 (passed at 66da6256a6c8; only merges from main since), 261119-054333-3c23b0 (passed at 66da6256a6c8; only merges from main since)",
+            "A4": "261119-054326-091446 (passed at 66da6256a6c8; only merges from main since), 261119-054328-65c70f (passed at 66da6256a6c8; only merges from main since), 261119-054327-9f2eac (passed at 66da6256a6c8; only merges from main since), 261119-054329-a1e1ee (passed at 66da6256a6c8; only merges from main since), 261119-054336-554e87 (passed at 66da6256a6c8; only merges from main since); fails without: 261118-174835-9a2a47, 261118-174903-ca5c07, 261118-214405-d4ad8f, 261118-214416-55f6c4, 261118-214430-1d4cc0, 261118-214453-f4a3ac"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-054326-091446",
+              "level": "light",
+              "seconds": 483.0,
+              "state": "done",
+              "what": "wide-search-loop check suite at 0240c48e1a62"
+            }
+          ],
+          "final": true,
+          "from": "b6322488a12838f90a5cf32eeb11d47087e7358d",
+          "reason": "",
+          "tested": "b7d9fd04cc0935ec9ad97a79b7550333a02d1475"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T09:20:21",
-      "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
+      "updated": "2026-11-19T11:08:52",
+      "worktree": ""
     },
     "write-buffer": {
       "accepted": {},
