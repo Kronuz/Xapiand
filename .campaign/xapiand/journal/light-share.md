@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: fixing F1 F2 F6 (review CHANGES): waiting on job 261118-200446-6e671a (build-ls); then the sweep
+State: waiting on jobs 261118-200446-6e671a (build-ls) then, after it: sweep 201177 d6e961 06e41d ea3869 (T4/T5, 6 interleaved arms per share); heavy-only b611b8 91c121; settle T4 abeb06 (per-turn wall vs CPU); T10 ef5844 4c99e0 46c66e d4e3d3; T12 abe252
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
