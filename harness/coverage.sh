@@ -25,18 +25,19 @@
 #   ctest      every unit test
 #   corpora    harness/restore_corpora.sh check, on the instrumented node
 #   e2e        harness/engine_e2e.sh, the docs E2E on the instrumented node (needs newman 6 first on PATH; skipped without it)
+#   server     harness/coverage_e2e_server.py, the server's views driven value by value on instrumented nodes
 # WORKLOADS picks them (default "ctest corpora e2e"). The profiles are merged and llvm-cov exports one summary per source file
 # (.cc files; COV_HEADERS=1 adds the headers), grouped in the areas of AREAS below. Writes OUTDIR/coverage.txt (the table),
 # OUTDIR/coverage-files.txt (every file) and OUTDIR/coverage.json (the export). `report` redoes the table from OUTDIR's
 # merged profile; OUTDIR/coverage-uncovered.txt lists each file's uncovered lines and unexecuted branches (from the lcov export). STRICT=1 exits 3 when an area is below its target. Run it under a hold:
 #   quiet light NAME MIN "coverage" -- harness/coverage.sh OUTDIR
 # Env: BUILD, JOBS (default 4), LLVM (a prefix with bin/clang++, bin/llvm-cov and bin/llvm-profdata; default: Homebrew's
-# llvm@22, llvm, or the tools on PATH), WORKLOADS, COV_HEADERS, STRICT.
+# llvm@22, llvm, or the tools on PATH), WORKLOADS, NOBUILD=1 (reuse BUILD), COV_HEADERS, STRICT.
 . "$(dirname "$0")/env.sh"
 HERE=$(cd "$(dirname "$0")" && pwd); ROOT=$(cd "$HERE/.." && pwd)
 MODE=build; [ "${1:-}" = report ] && { MODE=report; shift; }
 OUT=$(mkdir -p "${1:-$ROOT/.scratch/coverage}" && cd "${1:-$ROOT/.scratch/coverage}" && pwd)
-BUILD=${BUILD:-$ROOT/build-cov}; JOBS=${JOBS:-4}; WORKLOADS=${WORKLOADS:-ctest corpora e2e}
+BUILD=${BUILD:-$ROOT/build-cov}; JOBS=${JOBS:-4}; WORKLOADS=${WORKLOADS:-ctest corpora e2e server}
 export HARNESS_TMP=${HARNESS_TMP:-$OUT}
 
 if [ -z "${LLVM:-}" ]; then
@@ -94,6 +95,8 @@ workloads() {
 				"$HERE/engine_e2e.sh" "$BUILD/bin/xapiand" "$OUT/e2e" >"$OUT/e2e.log" 2>&1 || { echo "FAIL: e2e (see $OUT/e2e.log)"; rc=1; }
 				tail -2 "$OUT/e2e.log"
 			else echo "skip: e2e (no newman on PATH)"; fi ;;
+		server) "$PY" -I "$HERE/coverage_e2e_server.py" "$BUILD/bin/xapiand" "$OUT/server" >"$OUT/server.log" 2>&1 || { echo "FAIL: server (see $OUT/server.log)"; rc=1; }
+			tail -2 "$OUT/server.log" ;;
 		*) echo "coverage: unknown workload '$w'" >&2; rc=1 ;;
 		esac
 	done
@@ -208,7 +211,7 @@ PYEOF
 
 rc=0
 if [ $MODE = build ]; then
-	build || { echo "coverage: the build failed" >&2; exit 1; }
+	[ "${NOBUILD:-0}" = 1 ] || build || { echo "coverage: the build failed" >&2; exit 1; }
 	workloads || rc=1
 	export_json || { echo "coverage: no profile data merged or exported (see $OUT/llvm-cov.err)" >&2; exit 1; }
 fi
