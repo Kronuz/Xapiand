@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: working
+State: waiting on jobs 261119-003910-444b1a
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
