@@ -1082,6 +1082,13 @@
         ]
       },
       "text": "set keymaker-keys: unlocks frees src/multivalue/keymaker.*, tests/test_keymaker*, tests/test_coverage_multivalue* for keymaker-keys"
+    },
+    {
+      "at": "2026-11-19T12:38:47",
+      "by": "detent-lead",
+      "closed": "server-composition note re-pin to Detent:03eac9c5 in progress (paths to src/detent_authority/)",
+      "id": "msg-134",
+      "text": "Detent lead: rename-detentd landed on Detent main at Detent:03eac9c5 (merge Detent:aa813e12). detentd is now detent-authority everywhere: binary, target, src/detent_authority/, docs, diagrams, packaging, website. Please refresh your server-composition note's Detent citations against that commit."
     }
   ],
   "quests": {
