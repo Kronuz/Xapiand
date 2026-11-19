@@ -152,10 +152,16 @@ def sweep_run(run: Path, reason: str) -> None:
 
 
 def sweep(root: Path = ROOT) -> list[Path]:
-    """Parks every run whose guardian died (SIGKILL runs nothing); returns them."""
+    """Parks every run whose guardian died (SIGKILL runs nothing); returns them. A run with no state
+    file, whose `up` died before its guardian wrote one, loses its disks once its owner is dead."""
     swept = []
     for run in sorted(root.glob("run-*")):
         state = read_state(run)
+        if not state and any(run.glob("node*.qcow2")):
+            owner = (run / "owner").read_text().strip() if (run / "owner").exists() else ""
+            if owner.isdigit() and not alive(int(owner)):
+                discard_disks(run)
+                swept.append(run)
         if state and state.get("status") != "parked" and not ours(int_of(state, "guard"), run):
             sweep_run(run, "swept: its guardian died")
             swept.append(run)
@@ -235,7 +241,8 @@ def guard(run: Path) -> int:
     try:
         hub.bind(("127.0.0.1", plan["hub"]))
         links = {("127.0.0.1", node["link"]) for node in plan["nodes"]}
-        threading.Thread(target=relay, args=(hub, links), daemon=True).start()
+        hub_thread = threading.Thread(target=relay, args=(hub, links), daemon=True)
+        hub_thread.start()
         for node in plan["nodes"]:
             read, write = os.pipe()
             pidfile = run / f"qemu{node['index']}.pid"
@@ -281,6 +288,8 @@ def guard(run: Path) -> int:
             for node, keeper in zip(nodes_of(state), keepers, strict=True):
                 if keeper.poll() is not None:
                     raise Stop(f"node {node['index']} stopped")
+            if not hub_thread.is_alive():
+                raise Stop("the L2 hub stopped")
             time.sleep(1)
     except Stop as stop:
         reason = str(stop)
@@ -642,10 +651,20 @@ def check(run: Path, out: Path, seconds: float, repeat: int, fill_mb: int) -> in
     return 0 if ok else 1
 
 
-def ping(run: Path, source: int, target: int, count: int = 10) -> tuple[float, float]:
-    """Packet loss (0 to 1) and average round trip (ms, or inf when none came back) from guest to guest."""
+def link_local(run: Path, index: int) -> str:
+    """Guest `index`'s IPv6 link-local address on the L2."""
+    out = ssh(run, index, "ip -6 -o addr show dev l2 scope link")
+    if not (found := re.search(r"inet6 (fe80:[0-9a-f:]+)/", out)):
+        raise HarnessError(f"node{index} has no IPv6 link-local address on l2: {out.strip()!r}")
+    return found[1]
+
+
+def ping(run: Path, source: int, target: int, count: int = 10, ipv6: bool = False) -> tuple[float, float]:
+    """Packet loss (0 to 1) and average round trip (ms, or inf when none came back) from guest to guest,
+    over IPv4 or, with `ipv6`, the target's link-local address."""
+    where = f"-6 -I l2 {link_local(run, target)}" if ipv6 else f"{L2}.{target}"
     out = subprocess.run(
-        [*ssh_argv(run, source), f"ping -n -q -c {count} -i 0.2 -W 1 {L2}.{target}"],
+        [*ssh_argv(run, source), f"ping -n -q -c {count} -i 0.2 -W 1 {where}"],
         capture_output=True,
         text=True,
         timeout=120,
@@ -658,8 +677,9 @@ def ping(run: Path, source: int, target: int, count: int = 10) -> tuple[float, f
 
 
 def netcheck(run: Path) -> int:
-    """netlab's shapes on the L2: a 50 ms delay from guest 1 to 2 shows in their round trip and not in
-    1 to 3's, and a partition of 1 and 2 drops their packets and leaves 1 and 3 talking until heal."""
+    """netlab's shapes on the L2, over IPv4 and IPv6 (link-local): a 50 ms delay from guest 1 to 2 shows in
+    their round trip and not in 1 to 3's, and a partition of 1 and 2 drops their packets and leaves 1 and 3
+    and 2 and 3 talking until heal."""
     net = f"sudo python3 -I {GUEST}/guest/net.py"
     ok = True
 
@@ -668,25 +688,39 @@ def netcheck(run: Path) -> int:
         ok &= passed
         print(f"{'ok  ' if passed else 'FAIL'} {what}: {seen}", flush=True)
 
-    base = ping(run, 1, 2)
-    expect("baseline 1->2", base[0] == 0 and base[1] < 10, f"loss {base[0]:.0%}, rtt {base[1]:.2f} ms")
+    for ipv6 in (False, True):
+        family = "ipv6" if ipv6 else "ipv4"
+        base = ping(run, 1, 2, ipv6=ipv6)
+        expect(f"{family} baseline 1->2", base[0] == 0 and base[1] < 10, f"loss {base[0]:.0%}, rtt {base[1]:.2f} ms")
     ssh(run, 1, f"{net} shape 2 --ms 50")
-    shaped, other = ping(run, 1, 2), ping(run, 1, 3)
-    expect("shape 1->2 50 ms", shaped[0] == 0 and 50 <= shaped[1] < 60, f"rtt {shaped[1]:.2f} ms")
-    expect("1->3 unshaped", other[0] == 0 and other[1] < 10, f"rtt {other[1]:.2f} ms")
+    for ipv6 in (False, True):
+        family = "ipv6" if ipv6 else "ipv4"
+        shaped, other = ping(run, 1, 2, ipv6=ipv6), ping(run, 1, 3, ipv6=ipv6)
+        expect(f"{family} shape 1->2 50 ms", shaped[0] == 0 and 50 <= shaped[1] < 60, f"rtt {shaped[1]:.2f} ms")
+        expect(f"{family} 1->3 unshaped", other[0] == 0 and other[1] < 10, f"rtt {other[1]:.2f} ms")
     ssh(run, 1, f"{net} partition 2")
     ssh(run, 2, f"{net} partition 1")
-    cut, other = ping(run, 1, 2, 5), ping(run, 1, 3, 5)
-    expect("partition 1|2", cut[0] == 1, f"loss {cut[0]:.0%}")
-    expect("1->3 through the partition", other[0] == 0, f"loss {other[0]:.0%}")
+    for ipv6 in (False, True):
+        family = "ipv6" if ipv6 else "ipv4"
+        cut, other, third = ping(run, 1, 2, 5, ipv6), ping(run, 1, 3, 5, ipv6), ping(run, 2, 3, 5, ipv6)
+        expect(f"{family} partition 1|2", cut[0] == 1, f"loss {cut[0]:.0%}")
+        expect(f"{family} 1->3 through the partition", other[0] == 0, f"loss {other[0]:.0%}")
+        expect(f"{family} 2->3 through the partition", third[0] == 0, f"loss {third[0]:.0%}")
     ssh(run, 1, f"{net} heal")
     ssh(run, 2, f"{net} heal 1")
-    healed = ping(run, 1, 2, 5)
-    expect("heal 1|2", healed[0] == 0, f"loss {healed[0]:.0%}, rtt {healed[1]:.2f} ms")
+    ssh(run, 2, f"{net} heal 1")  # a peer that is not cut heals to exit 0
+    for ipv6 in (False, True):
+        healed = ping(run, 1, 2, 5, ipv6)
+        expect(
+            f"{'ipv6' if ipv6 else 'ipv4'} heal 1|2", healed[0] == 0, f"loss {healed[0]:.0%}, rtt {healed[1]:.2f} ms"
+        )
     for index in (1, 2):
         ssh(run, index, f"{net} clear")
-    cleared = ping(run, 1, 2)
-    expect("clear 1->2", cleared[0] == 0 and cleared[1] < 10, f"rtt {cleared[1]:.2f} ms")
+    for ipv6 in (False, True):
+        cleared = ping(run, 1, 2, ipv6=ipv6)
+        expect(
+            f"{'ipv6' if ipv6 else 'ipv4'} clear 1->2", cleared[0] == 0 and cleared[1] < 10, f"rtt {cleared[1]:.2f} ms"
+        )
     print(f"netcheck {'PASS' if ok else 'FAIL'}", flush=True)
     return 0 if ok else 1
 
