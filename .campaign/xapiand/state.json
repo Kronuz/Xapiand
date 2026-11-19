@@ -24894,7 +24894,8 @@
         "src/index_resolver_lru.*",
         "harness/wide_search*",
         "tests/test_wide_search*",
-        "docs/design/wide-search-loop.md"
+        "docs/design/wide-search-loop.md",
+        "tests/test_node.cc"
       ],
       "landed": [],
       "lenses": [
@@ -24907,7 +24908,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-18T20:50:54",
+      "updated": "2026-11-18T22:00:15",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
