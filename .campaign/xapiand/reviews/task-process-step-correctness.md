@@ -1,7 +1,7 @@
 # task-process-step review: correctness
 
 Commit: e68d46f7a170 (task:e68d46f)
-Verdict: APPROVE
+Verdict: APPROVE (first pass); see Re-check
 Date: 2026-11-19
 
 APPROVE: lands as is, at this commit's code, with no blocking finding. F1 is a real defect that the
@@ -59,3 +59,19 @@ are met, but the fix is two lines and a test, and cheaper here than after proces
 - No NFS or other network filesystem behavior of `flock`.
 - I did not rerun the suite or the mutants.
 - process-and-node's use of these primitives (Q4, Q5) is outside this quest.
+
+## Re-check
+
+Commit: ef353dd
+Verdict: CHANGES
+
+Scope: `git diff e68d46f ef353dd`. F1 (`FD_CLOEXEC` on both pipe ends, with the `exec-child` test), F2
+(header and doc line, `lock-in-run` test), F4 (clamp of the deadline and of the poll timeout) and F6
+(`lock-cloexec` test) read correct. The new `waitpid` at the timeout (F5) introduced a defect.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | yes | defect | The timeout branch now does `kill(pid, SIGTERM)` then an unbounded blocking `waitpid`. A child that ignores, blocks or only flags SIGTERM (a lifecycle `stop_signals` handler installed in `run` before `ready()` does exactly this, and a hung startup never honors the flag) keeps the parent waiting for as long as the child lives, so the startup timeout no longer bounds the parent. Before the change the parent threw at the timeout. Probe: the child ignores SIGTERM and sleeps 8 s with a 1 s timeout; the parent returns after 8003 ms, and would block forever on a truly hung child. | job ca077f at ef353dd (`.scratch/xapiand/review-task-process-step-correctness/{run2.sh,probe2.cc}`) | After SIGTERM, wait a bounded grace (poll `waitpid(WNOHANG)` for about 1-2 s), then `SIGKILL` and `waitpid`; add a test with a SIGTERM-ignoring child, and a mutant that removes the SIGKILL. |
+
+F5 as filed (zombie left behind) is otherwise resolved by the reap. I did not rerun the pass job, the
+suite or the mutants (d1a5e2, 362a8a, e5c800, b42af2, af456c); I accepted them for F1, F6 and the reap.
