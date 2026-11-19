@@ -25,7 +25,9 @@
 
 #include "test_harness.h"
 
+#include <cstdio>
 #include <memory>
+#include <string>
 
 #include "database/schema.h"
 #include "msgpack.h"
