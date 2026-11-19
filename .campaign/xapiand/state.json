@@ -7884,6 +7884,39 @@
       "updated": "2026-11-12T04:29:49",
       "worktree": ""
     },
+    "http-halfclose": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "http_message.h",
+        "tests/**",
+        "test/**",
+        "docs/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "high",
+      "status": "planned",
+      "title": "A half-closed client gets its response",
+      "updated": "2026-11-18T17:49:46"
+    },
     "http-lane": {
       "accepted": {},
       "after": [
