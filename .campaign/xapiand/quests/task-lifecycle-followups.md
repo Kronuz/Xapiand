@@ -5,27 +5,25 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+task's open lifecycle follow-ups and D5's debounce additions; high because `fire_pending` is the fsyncher's third-signal path. Plan: docs/design/lifecycle-adoption.md quest 1 (about 450 lines). After task-driver-layout.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 F6: a `post_call` landing as `run()` exits runs on the next `run()`, counted by `queued()`: test
+- A2 F3 (Q3): the inline-flush fallback is reported in `stopped`: test, thread start failed by a hook
+- A3 R3 (Q1): the `fail()` that caused the stop is `stopped.failure` though a later drain throws: test
+- A4 N4 (Q2): `stopped.abandoned` is set when a drain reached `abandon`: test
+- A5 D5's flags, throttle and `fire_pending()`: tests with mutants; hooks pin `fire_pending()` against a key mid-fire on the loop (fired once) and a touch after `stop` (returns false). Suite, TSan and ASan
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides: `task::debounce` `touch(key, flags)` (flags OR-ed into the pending entry and passed to `fire(key, flags)`), `timing::throttle` (keeps a fired key's entry until `throttle` passes, bounded by the keys fired in the last `throttle`), `fire_pending()` (takes the pending keys and fires them on the calling thread); a `stopped` field for the inline-flush fallback, `stopped.failure` as the causing `fail()`, `stopped.abandoned`. Consumed by fsyncher-on-task and xapiand-lifecycle.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D5 (debounce additions with today's fsyncher timing), D8 (latched flush; `fire_pending` serves the third signal).
+- Q1 (R3): recommended (a), the causing `fail()` wins. Q2 (N4): recommended (a), add `stopped.abandoned`. Q3 (F3): recommended yes, report the fallback in `stopped`. Open with the owner; the criteria assume the recommendations.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

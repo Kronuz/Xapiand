@@ -5,27 +5,25 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The note's (cpp-libraries:04a75c0 docs/server-composition.md) C1, Settled 1 and 6. Plan: docs/design/lifecycle-adoption.md quest 3 (about 1,200 lines). Needs reactor-server-composition.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 `HttpAsioService(handler, reactors, const Limits&, Tls)` replaces the setters, `tls_connection_factory` and `AsioResponseOptions`' limits: a test per field at its bound, plain and TLS
+- A2 Idle, header and inactivity timeouts, plain and TLS; `close_idle()` closes idle connections at once and busy ones after their response: tests
+- A3 After `stop_accepting()`, a request on an open keep-alive connection is refused and an in-flight response carries `Connection: close`: test
+- A4 Settled 1: a held poll with complete headers and no body read trips neither timeout: test. Suite, TSan and CI
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides: `http::Limits` and the `HttpAsioService(handler, reactors, const Limits&, Tls)` constructor, `close_idle()`, keep-alive refusal after `stop_accepting()`. Consumes reactor-server-composition's stop phases and `tls::server_context`. Consumed by server-limits and xapiand-lifecycle.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D1 (library quests filed here, Detent D81), D2 (stop phases consumed), D77 (the grace is `Limits`' fixed 5 s), D72 (`--max-clients` bounds plain and TLS connections, applied in server-limits).
+- Settled 1 and 6 of the note as the plan cites them.
+- No open owner question touches this quest.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.

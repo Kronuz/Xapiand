@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The note's (cpp-libraries:04a75c0 docs/server-composition.md) C7: Detent's `run_daemon`, `ProcessLock` and `locked_pid` (`detent_cli/daemon.hh:10-30`) move to task. Plan: docs/design/lifecycle-adoption.md quest 4 (about 400 lines). After task-driver-layout.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A detached child's `ready()` releases the parent with 0; a throw before it exits the parent with its status and message; the startup timeout exits nonzero: tests (fork)
+- A2 A second lock on a held path fails; `locked_pid` names no process for a stale file: tests. Suite and CI
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Provides: `run_daemon`, `ProcessLock`, `locked_pid` in task `process.hh`. Consumed by process-and-node, which replaces Xapiand's `detach` and `writepid`.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D1 (library quests filed here, Detent D81), C7 of the note.
+- Q4 (second-instance exit status) and Q5 (tools on a live directory) bind process-and-node, not this quest; the primitive only reports a held lock.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
