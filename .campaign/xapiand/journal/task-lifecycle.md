@@ -1,6 +1,6 @@
 # task-lifecycle: journal
 
-State: ready for review. Suite 951ddb and TSan 36a333 pass at 066a183; mutants 838b76, ac2bcb, 37fb0f, 73b92c fail as required; CI green.
+State: fixing F1, F2, F3, F4, N2, N3, N5, N6, N7 (correctness review CHANGES at 066a183, D140).
 Quest: .campaign/xapiand/quests/task-lifecycle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
