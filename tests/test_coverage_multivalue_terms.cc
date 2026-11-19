@@ -56,6 +56,8 @@ namespace {
 
 using Docs = std::set<engine::docid>;
 
+std::time_t gm(Datetime::tm_t t) { return Datetime::timegm(t); }
+
 std::string integer_field(const std::string& prefix) { return field_name(prefix, ctype_integer); }
 std::string date_field(const std::string& prefix) { return field_name(prefix, ctype_date); }
 std::string geo_field(const std::string& prefix) { return field_name(prefix, ctype_geo); }
@@ -242,7 +244,7 @@ void test_year_truncation() {
 	GenerateTerms::datetime(doc, { toUType(UnitTime::millennium) }, { "ma" }, Datetime::tm_t(5, 3, 4));
 	add(*shard, doc);
 	commit(*shard);
-	CHECK(hits_of(*shard, date_field("ma"), Serialize::timestamp(Datetime::timegm(Datetime::tm_t(1000)))) == Docs({ 1 }));
+	CHECK(hits_of(*shard, date_field("ma"), Serialize::timestamp(gm(Datetime::tm_t(1000)))) == Docs({ 1 }));
 }
 
 // A truncated double: toward zero, and saturating at the limits of the type.
@@ -348,8 +350,8 @@ void test_datetime_query_finds_the_buckets() {
 
 	for (std::size_t i = 0; i < anchors.size(); ++i) {
 		for (std::size_t j = i; j < anchors.size(); ++j) {
-			const auto start = static_cast<double>(Datetime::timegm(anchors[i]));
-			const auto end = static_cast<double>(Datetime::timegm(anchors[j]));
+			const auto start = static_cast<double>(gm(anchors[i]));
+			const auto end = static_cast<double>(gm(anchors[j]));
 			const auto unit = needed_unit(anchors[i], anchors[j]);
 			Docs expected;
 			for (std::size_t k = 0; k < anchors.size(); ++k) {
@@ -369,22 +371,22 @@ void test_datetime_query_structure() {
 	const std::vector<UnitTime> list = { UnitTime::hour, UnitTime::day, UnitTime::month, UnitTime::year };
 	const auto accuracy = accuracy_of(list);
 	const auto prefix = prefixes("ds", list.size());
-	auto day = [&](int d) { return std::make_pair(date_field(prefix[1]), Serialize::timestamp(Datetime::timegm(Datetime::tm_t(2020, 3, d)))); };
+	auto day = [&](int d) { return std::make_pair(date_field(prefix[1]), Serialize::timestamp(gm(Datetime::tm_t(2020, 3, d)))); };
 
-	const auto start = static_cast<double>(Datetime::timegm(Datetime::tm_t(2020, 3, 1)));
-	const auto end = static_cast<double>(Datetime::timegm(Datetime::tm_t(2020, 3, 9, 12)));
+	const auto start = static_cast<double>(gm(Datetime::tm_t(2020, 3, 1)));
+	const auto end = static_cast<double>(gm(Datetime::tm_t(2020, 3, 9, 12)));
 	std::vector<std::pair<std::string, std::string>> days = { day(9) };
 	for (int d = 1; d <= 8; ++d) {
 		days.push_back(day(d));
 	}
-	const auto month = any_of({ { date_field(prefix[2]), Serialize::timestamp(Datetime::timegm(Datetime::tm_t(2020, 3, 1))) } });
+	const auto month = any_of({ { date_field(prefix[2]), Serialize::timestamp(gm(Datetime::tm_t(2020, 3, 1))) } });
 	CHECK_EQ(GenerateTerms::datetime(start, end, accuracy, prefix).description(),
 		engine::Query::combine(engine::Op::AND, month, any_of(days)).description());
 
 	// An accuracy list without the needed unit keeps the coarser one: the month's term only.
 	const auto coarse = accuracy_of({ UnitTime::month, UnitTime::year });
 	CHECK_EQ(GenerateTerms::datetime(start, end, coarse, { "c0", "c1" }).description(),
-		any_of({ { date_field("c0"), Serialize::timestamp(Datetime::timegm(Datetime::tm_t(2020, 3, 1))) } }).description());
+		any_of({ { date_field("c0"), Serialize::timestamp(gm(Datetime::tm_t(2020, 3, 1))) } }).description());
 
 	// Only finer ones than the range needs: no term filters it.
 	CHECK(GenerateTerms::datetime(start, end, accuracy_of({ UnitTime::hour }), { "f0" }).empty());
@@ -398,8 +400,8 @@ void test_datetime_query_structure() {
 void test_datetime_query_floors_the_seconds() {
 	const auto accuracy = accuracy_of({ UnitTime::day });
 	const std::vector<std::string> prefix = { "fl" };
-	const auto dec31 = Serialize::timestamp(Datetime::timegm(Datetime::tm_t(1969, 12, 31)));
-	const auto jan1 = Serialize::timestamp(Datetime::timegm(Datetime::tm_t(1970, 1, 1)));
+	const auto dec31 = Serialize::timestamp(gm(Datetime::tm_t(1969, 12, 31)));
+	const auto jan1 = Serialize::timestamp(gm(Datetime::tm_t(1970, 1, 1)));
 	CHECK_EQ(GenerateTerms::datetime(-0.5, -0.5, accuracy, prefix).description(), any_of({ { date_field("fl"), dec31 } }).description());
 	CHECK_EQ(GenerateTerms::datetime(0.0, 0.5, accuracy, prefix).description(), any_of({ { date_field("fl"), jan1 } }).description());
 }

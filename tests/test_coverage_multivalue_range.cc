@@ -60,10 +60,22 @@ std::string multi(const std::vector<std::string>& values) {
 }
 
 // A list whose second length is cut short: it does not decode.
+// The templated constructors are inlined away in range.cc, so a source is built through unserialize.
+std::unique_ptr<engine::PostingSource> make_range(engine::valueno slot, const std::string& from, const std::string& to) {
+	return MultipleValueRange().unserialize(multi({ serialize_length(slot), from, to }));
+}
+std::unique_ptr<engine::PostingSource> make_ge(engine::valueno slot, const std::string& from) {
+	return MultipleValueGE().unserialize(multi({ serialize_length(slot), from }));
+}
+std::unique_ptr<engine::PostingSource> make_le(engine::valueno slot, const std::string& to) {
+	return MultipleValueLE().unserialize(multi({ serialize_length(slot), to }));
+}
+
 const std::string broken_list = std::string(1, SERIALIZED_LIST_MAGIC) + "\x05" "ab";
 
 void test_range_source_accepts_a_value_inside() {
-	MultipleValueRange range(7, "c"s, "f"s);
+	auto range_p = make_range(7, "c"s, "f"s);
+	auto& range = *range_p;
 	CHECK_EQ(range.slot(), 7u);
 	CHECK(range.accept("c"));
 	CHECK(range.accept("f"));
@@ -85,7 +97,8 @@ void test_range_source_accepts_a_value_inside() {
 }
 
 void test_ge_source_accepts_a_value_at_or_above() {
-	MultipleValueGE ge(3, "m"s);
+	auto ge_p = make_ge(3, "m"s);
+	auto& ge = *ge_p;
 	CHECK_EQ(ge.slot(), 3u);
 	CHECK(ge.accept("m"));
 	CHECK(ge.accept("z"));
@@ -100,7 +113,8 @@ void test_ge_source_accepts_a_value_at_or_above() {
 }
 
 void test_le_source_accepts_a_value_at_or_below() {
-	MultipleValueLE le(4, "m"s);
+	auto le_p = make_le(4, "m"s);
+	auto& le = *le_p;
 	CHECK_EQ(le.slot(), 4u);
 	CHECK(le.accept("m"));
 	CHECK(le.accept("a"));
@@ -136,7 +150,8 @@ void check_refused(const Source& prototype, const std::string& bytes, const std:
 
 // A source rebuilds from its serialized form with the same slot and bounds, whole or cloned.
 void test_sources_round_trip() {
-	MultipleValueRange range(7, "c"s, "f"s);
+	auto range_p = make_range(7, "c"s, "f"s);
+	auto& range = *range_p;
 	auto range_back = range.unserialize(range.serialize());
 	CHECK_EQ(range_back->description(), range.description());
 	CHECK_EQ(range_back->serialize(), range.serialize());
@@ -144,13 +159,15 @@ void test_sources_round_trip() {
 	CHECK(range_back->accept("d"));
 	CHECK_FALSE(range_back->accept("g"));
 
-	MultipleValueGE ge(3, "m"s);
+	auto ge_p = make_ge(3, "m"s);
+	auto& ge = *ge_p;
 	auto ge_back = ge.unserialize(ge.serialize());
 	CHECK_EQ(ge_back->description(), "MultipleValueGE 3 m");
 	CHECK_EQ(ge.clone()->description(), ge.description());
 	CHECK(ge_back->accept("z"));
 
-	MultipleValueLE le(4, "m"s);
+	auto le_p = make_le(4, "m"s);
+	auto& le = *le_p;
 	auto le_back = le.unserialize(le.serialize());
 	CHECK_EQ(le_back->description(), "MultipleValueLE 4 m");
 	CHECK_EQ(le.clone()->description(), le.description());
@@ -191,15 +208,15 @@ std::string described(const engine::Query& query) {
 }
 
 std::string range_source(engine::valueno slot, const std::string& from, const std::string& to) {
-	return described(engine::Query::source(std::make_unique<MultipleValueRange>(slot, std::string(from), std::string(to))));
+	return described(engine::Query::source(make_range(slot, std::string(from), std::string(to))));
 }
 
 std::string ge_source(engine::valueno slot, const std::string& from) {
-	return described(engine::Query::source(std::make_unique<MultipleValueGE>(slot, std::string(from))));
+	return described(engine::Query::source(make_ge(slot, std::string(from))));
 }
 
 std::string le_source(engine::valueno slot, const std::string& to) {
-	return described(engine::Query::source(std::make_unique<MultipleValueLE>(slot, std::string(to))));
+	return described(engine::Query::source(make_le(slot, std::string(to))));
 }
 
 // A source with the terms of the accuracies filtering it.
@@ -219,7 +236,7 @@ void test_numeric_range_query() {
 	const auto terms = GenerateTerms::numeric(int64_t(-3), int64_t(9), accuracy, prefix);
 	CHECK_FALSE(terms.empty());
 	CHECK_EQ(described(MultipleValueRange::getQuery(integer, range_of(&neg, &pos))),
-		filtered(std::make_unique<MultipleValueRange>(7, Serialize::integer(-3), Serialize::positive(9)), terms));
+		filtered(make_range(7, Serialize::integer(-3), Serialize::positive(9)), terms));
 
 	// A range too wide for the terms is the source alone.
 	CHECK_EQ(described(MultipleValueRange::getQuery(integer, range_of(&small, &big))),
@@ -237,14 +254,14 @@ void test_numeric_range_query() {
 	const auto floating = spc(8, FieldType::floating, accuracy, prefix);
 	const auto fterms = GenerateTerms::numeric(int64_t(2), int64_t(9), accuracy, prefix);
 	CHECK_EQ(described(MultipleValueRange::getQuery(floating, range_of(&fraction, &pos))),
-		filtered(std::make_unique<MultipleValueRange>(8, Serialize::floating(2.5), Serialize::positive(9)), fterms));
+		filtered(make_range(8, Serialize::floating(2.5), Serialize::positive(9)), fterms));
 
 	// A positive field.
 	const auto positive = spc(9, FieldType::positive, accuracy, prefix);
 	const MsgPack six(6);
 	const auto pterms = GenerateTerms::numeric(uint64_t(6), uint64_t(9), accuracy, prefix);
 	CHECK_EQ(described(MultipleValueRange::getQuery(positive, range_of(&six, &pos))),
-		filtered(std::make_unique<MultipleValueRange>(9, Serialize::positive(6), Serialize::positive(9)), pterms));
+		filtered(make_range(9, Serialize::positive(6), Serialize::positive(9)), pterms));
 
 	// A bound that is not a number, or is NaN, is a query error naming the field's type.
 	const MsgPack text("abc"), nan(std::nan(""));
@@ -288,7 +305,7 @@ void test_date_range_query() {
 	for (auto type : { FieldType::datetime, FieldType::date }) {
 		const auto field = spc(4, type, accuracy, prefix);
 		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(&from, &to))),
-			filtered(std::make_unique<MultipleValueRange>(4, Serialize::timestamp(start), Serialize::timestamp(end)),
+			filtered(make_range(4, Serialize::timestamp(start), Serialize::timestamp(end)),
 				GenerateTerms::datetime(start, end, accuracy, prefix)));
 		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(&from, nullptr))), ge_source(4, Serialize::timestamp(start)));
 		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(nullptr, &to))), le_source(4, Serialize::timestamp(end)));
@@ -311,7 +328,7 @@ void test_time_range_query() {
 	const auto te = Datetime::time_to_double(t_to);
 	const auto time = spc(2, FieldType::time, accuracy, prefix);
 	CHECK_EQ(described(MultipleValueRange::getQuery(time, range_of(&t_from, &t_to))),
-		filtered(std::make_unique<MultipleValueRange>(2, Serialize::timestamp(ts), Serialize::timestamp(te)),
+		filtered(make_range(2, Serialize::timestamp(ts), Serialize::timestamp(te)),
 			GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(ts), GenerateTerms::truncate<int64_t>(te), accuracy, prefix)));
 	CHECK_EQ(described(MultipleValueRange::getQuery(time, range_of(&t_from, nullptr))), ge_source(2, Serialize::timestamp(ts)));
 	CHECK_EQ(described(MultipleValueRange::getQuery(time, range_of(nullptr, &t_to))), le_source(2, Serialize::timestamp(te)));
@@ -322,7 +339,7 @@ void test_time_range_query() {
 	const auto de = Datetime::timedelta_to_double(d_to);
 	const auto delta = spc(3, FieldType::timedelta, accuracy, prefix);
 	CHECK_EQ(described(MultipleValueRange::getQuery(delta, range_of(&d_from, &d_to))),
-		filtered(std::make_unique<MultipleValueRange>(3, Serialize::timestamp(ds), Serialize::timestamp(de)),
+		filtered(make_range(3, Serialize::timestamp(ds), Serialize::timestamp(de)),
 			GenerateTerms::numeric(GenerateTerms::truncate<int64_t>(ds), GenerateTerms::truncate<int64_t>(de), accuracy, prefix)));
 	CHECK_EQ(described(MultipleValueRange::getQuery(delta, range_of(&d_from, nullptr))), ge_source(3, Serialize::timestamp(ds)));
 	CHECK_EQ(described(MultipleValueRange::getQuery(delta, range_of(nullptr, &d_to))), le_source(3, Serialize::timestamp(de)));
