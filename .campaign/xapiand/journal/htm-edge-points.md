@@ -1,6 +1,6 @@
 # htm-edge-points: journal
 
-State: waiting on jobs 261118-235818-798d95
+State: waiting on jobs 261119-003445-380f20 261119-003446-097d2d 261119-003448-692923 261119-003449-9282f5 261119-003450-7f1ba0
 Quest: .campaign/xapiand/quests/htm-edge-points.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,20 +9,30 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Lead took (b). The quest branch was fast-forwarded to explore/htm-edge-nearest (htm:7c33b0a),
-then htm:d529b49 (CHANGELOG: what changes and what to reindex). Pushed with no force; CI run
-44483693645 is green on every platform. The goldens match the head reference again: a re-id
-leaves 0 of 396 changed and 0 of 48 probes changed. Pending: the A2 job
-261118-235818-798d95 (htm_diff 1000000). Locally the same run gave 4,705 of 1,125,000
-random points in slivers and 0 failures.
+The review (CHANGES at d529b49) is folded in at htm:0c09a02, which is pushed:
+- F1: CHANGELOG and ARCHITECTURE drop the sample bounds ("7.74 m", "levels 20 to 25").
+  The guidance is now to reindex all stored geo points.
+- F3/A5: `intersectConstraints` clamps the dot to [-1, 1]. htm_edge checks 1 m and 3 m
+  circles around 50,000 random centers. Locally 0 of 100,000 miss.
+- F4: getId is about 3% slower (820 against 797 ns, job 261119-002604-50bf6d).
+- F2/A2: htm_diff already fails any changed random id without a no-child level, which
+  means the old trixel excludes the point. It now also bounds the new trixel's distance at
+  5 cm. Locally, over 1,125,000 random points, 4,700 changed with a worst of 6.7 mm.
+
+Jobs at 0c09a02:
+- A1,A5 htm_edge: 261119-003445-380f20
+- A5 fails without the clamp (sed mutant): 261119-003446-097d2d
+- A2 htm_diff 1000000: 261119-003448-692923
+- Debug ctest: 261119-003449-9282f5
+- Release suite: 261119-003450-7f1ba0
 
 ## Next
 
-1. When 261118-235818-798d95 passes: State ready for review.
+1. If all jobs and CI on 0c09a02 are green: ready for review (F1-F4 answered).
 
 ## Blocked on
 
-Nothing. msg (lead: take b): done as described under Doing.
+Nothing. msg (lead: take b): done. msg (review CHANGES): F1, F3, F4 fixed and F2 checked at htm:0c09a02.
 
 ## Evidence
 
@@ -37,7 +47,7 @@ At head d529b49 (option b):
 
 ## Result
 
-Landed shape (b): htm:aa46816, htm:b572ff0, htm:7c33b0a, htm:d529b49. Numbers from the decision: 0 of 655,340 dyadic edge points missed (one-liner: 22,374; open: 262,181); 0.42% of random ids change, all previously outside their trixel by up to 7.74 m; no getId speed change measured. Docs:
+Landed shape (b): htm:aa46816, htm:b572ff0, htm:7c33b0a, htm:d529b49. Numbers from the decision: 0 of 655,340 dyadic edge points missed (one-liner: 22,374; open: 262,181); about 0.4% of random ids change, all previously outside their trixel (review: up to 40.8 m random, 2,120 km near deeper vertices); no getId speed change measured. Docs:
 htm ARCHITECTURE.md "Naming a point" (tie rule; on (b) the nearest-child rule),
 CHANGELOG.md 2026-11-18. Scratch probes in ~/.scratch/xapiand/htm-edge-points (probe.cc
 dyadic sweep, rand.cc random sliver count, holds.cc golden distances).
