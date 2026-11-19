@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: waiting on jobs 261118-213949-011031 261118-223530-9e3c57
+State: waiting on jobs 261119-033144-b85265 261119-033151-f32bdd
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -39,18 +39,27 @@ At 3b8d41c39: suite 261118-184756-bf6036 passed (45 of 45; A3, A4). CI green at 
 in the job): pool 200 base 959/881 ms, head 285/283 ms (3.2x faster); pool 5000 base 122/123, head 128/129 ms.
 Head's pool 200 is 2.2x its pool 5000: A2 (within 2x) is not met.
 
-H4 (261118-213949-011031, exclusive, queued behind light holds until about 05:17): head against head with up to 16
-partitions (`.scratch/lanes16.patch`: 12 at pool 200, P = min(threads, 16, soft_open / 16)). Profile of head
-261118-223530-9e3c57 (strict) reruns 184759-013c96, whose `sample` wrote an empty call graph; profile.sh now takes it
-again once and fails on an empty one. If H4 loses, H5 is recover's sizes by `fstatat` (strata probe).
+H4 (261118-213949-011031, exclusive, ABAB x2, 10 searches): p16 is head with up to 16 partitions (12 at pool 200,
+`.scratch/lanes16.patch`). p50 pool 200: head 283/281 ms, p16 264/262 ms (7% faster); pool 5000: head 125/126, p16
+125/124. p16 is 2.1x its pool 5000, head 2.25x: H4 loses narrowly, so the cap is not committed.
+
+Profile 261118-223530-9e3c57 failed (exit 4, empty graph): the 12 s sample outlasted the gate's 20 searches (about
+8 s), the server exited under the first take and was gone for the second. A sampling problem, not the code; profile.sh
+now takes RUNS, and the rerun samples 8 s inside 60 searches.
+
+H5 (261119-033144-b85265, exclusive, ABAB x2, 10 searches): strata recover's per-file `open_existing(n)->size()`
+becomes `entry_footprint(n)` (one fstatat on PosixIO's directory fd, counted_io forwards it; an IO without entry
+inspection still opens). Probe `.scratch/strata-h5.patch` on the fetched strata 397c02d5, built by
+`.scratch/build-h5.sh`: arms head, h5, p16, p16+h5 at pool 200 and 5000. Profile rerun 261119-033151-f32bdd (strict,
+after H5) shows what remains at head.
 
 ## Next
 
-1. Read H4 261118-213949-011031: p16 pool 200 within 2x of its pool 5000? If it wins, commit the cap (pool.cc,
-   not handler.cc) and rerun the A2 before/after at that commit; ready for review (high risk) after wide-search-loop
-   lands and master is merged. Budget: H1-H4 used of about five.
-2. Read profile 261118-223530-9e3c57; H5 (recover sizes by fstatat, a strata probe) if H4 loses.
-3. Per-index memory at 2,500 open from the row's pool-5000 arms, lanes vs main.
+1. Read H5 261119-033144-b85265: h5 or p16+h5 pool 200 within 2x of its pool 5000? If so, the fstatat change is a
+   strata quest (the lead files it, `after` this design); p16 joins it only if p16+h5 needs it. If not, A2 stays at
+   2.1-2.25x: report it to the lead with the profile. Budget: H1-H5 used of about five.
+2. Read profile 261119-033151-f32bdd; update docs/design/cheap-reopen.md with H4, H5 and the head breakdown.
+3. Per-index memory at 2,500 open from the rows' pool-5000 arms: head 41.3 KiB per open index (H4).
 
 ## Blocked on
 
@@ -79,7 +88,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/cheap-reopen.md` (breakdown from profile 261118-060438-5fb87b; H1 060440-baf657, H2 060951-f40471) |
-| A2 | before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
+| A2 | H4 261118-213949-011031: p16 pool 200 264/262 vs 125/124 ms, 2.1x (not met); before at main: 261118-060120-5b74f3 (pool 200 p50 1,079/979 ms, pool 5000 129/134 ms); after (lanes only): 261118-131125-16ca52, pool 200 884/888 vs pool 5000 131/143 ms; after (lanes + D3, 3b8d41c39): 261118-184757-7f0046, pool 200 285/283 vs 128/129 ms, 2.2x (not met) |
 | A3 | suite 261118-184756-bf6036 at 3b8d41c39; earlier 261118-112223-56c3f7 (tests/test_cheap_reopen.cc: evicted, crashed, partitions) |
 | A4 | suite 261118-184756-bf6036; CI green at 937a5e94e (44447325291, 44447325350, 44447325397) |
 
