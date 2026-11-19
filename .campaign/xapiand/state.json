@@ -9076,6 +9076,8 @@
     "logger-exit-lifetime": {
       "accepted": {},
       "after": [],
+      "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
+      "branch": "quest/xapiand/logger-exit-lifetime",
       "checks": [
         {
           "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure --stop-on-failure",
@@ -9093,6 +9095,7 @@
         "docs/**",
         "ARCHITECTURE.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/logger-exit-lifetime",
       "landed": [],
       "lenses": [
         "correctness"
@@ -9102,9 +9105,10 @@
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T16:44:57"
+      "updated": "2026-11-18T16:49:53",
+      "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
       "accepted": {},
