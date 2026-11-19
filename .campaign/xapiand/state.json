@@ -9402,6 +9402,7 @@
       "consumes": [],
       "files": [
         "src/multivalue/keymaker.*",
+        "src/metric_serialize.h",
         "tests/test_keymaker*",
         "tests/test_coverage_multivalue*"
       ],
@@ -9414,7 +9415,7 @@
       "risk": "normal",
       "status": "active",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T12:23:34",
+      "updated": "2026-11-19T12:41:20",
       "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
