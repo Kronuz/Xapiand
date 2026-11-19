@@ -1,8 +1,6 @@
-| A3 | session 4: 214557-802978 before (names p99 13.64 / max 1,336 ms, T5 bound 2.32 ms: exit 1), 214558-d15a54 after (1.91 / 2.55 ms, bound 2.27 ms: pass); the earlier branch run 243767 missed (2.85 vs 2.39 ms), so T5 is near its noise: F3's deciding A/B 210116-568ffe pending (exclusive) |
-| A2 | session 4 at Xapiand:e649ebcb1: Linux exclusive reruns 261119-015840-52e913 / 015843-118f54 (2,500), 015846-7c0eec / 015849-58ebd1 (10,000) pending; strict reads: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on); macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000): pending (exclusive). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
 # wide-search-loop: journal
 
-State: waiting on jobs 261119-015540-f34736 (suite at the merged head), 261119-015840-52e913 015843-118f54 015846-7c0eec 015849-58ebd1 (A2 Linux exclusive), 261118-214551-71a78d 214554-8a79f5 214552-695322 214555-113315 (macOS A2, exclusive), 210116-568ffe (F3 A/B, exclusive)
+State: ready for review (re-check): every criterion has evidence; A2 Linux's 1,024 us bound is literally unmet, see Blocked on
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,6 +8,18 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Session 5, last step: all ten jobs read (design doc "Branch measured again"). Head recorded below.
+- Suite at the merged head 261119-015540-f34736: exit 0, 52/52.
+- A2 Linux exclusive (015840-52e913 / 015843-118f54 at 2,500; 015846-7c0eec / 015849-58ebd1 at 10,000): http0 / http1
+  max since start 60.5 / 76.7 ms -> 6.95 / 2.77 ms (2,500), 329.2 / 299.3 -> 7.38 / 7.39 ms (10,000); window max
+  <= 65.5 / 81.9 ms -> <= 2.05 / 2.05 ms and <= 393 / 2.56 -> <= 3.07 / 3.58 ms; p99 1.5-2.0 ms every arm. Control loop alone: window
+  max <= 2.05-2.56 ms, max since start 21.5-39.7 ms, p99 1.8-2.0 ms. The guest's idle wake (about twice 1,024 us)
+  explains 2,500 (branch window = control's) but not all of 10,000 (3.07 / 3.58 vs 2.05 ms).
+- A2 macOS exclusive: 2,500 max since start 105.4 / 75.9 -> 2.08 / 2.05 ms, 10,000 281.0 / 232.0 -> 2.05 / 2.08 ms;
+  control window max <= 2.56 ms; p99 448-768 us (branch) vs 384-1,280 us (master).
+- F3 (568ffe, exclusive, 3 reps): light p99 master 1.51 / 0.68 / 1.09 ms vs branch 1.86 / 1.58 / 1.57 ms, T5 bound
+  3.09-3.21 ms: PASS on all six; max 473 / 1,299 / 1,982 ms vs 9.9 / 5.3 / 9.4 ms.
 
 Session 5 (resumed). Read the finished session-4 jobs (below); merged master (Xapiand:0b7e4b69a, src change in
 `src/database/schema.cc` only); docs at Xapiand:9b474d811; suite at that head 261119-015540-f34736 (light, 120 min).
@@ -266,7 +276,7 @@ Read so far (src = master, build-prof):
 
 ## Blocked on
 
-A2 on Linux (decision for the lead): the VM runs read the branch's http max at 8.8-19.7 ms (master 162-558 ms) against
+A2 on Linux (decision for the owner; the lead takes it): exclusive reruns (session 5) read the branch's http window max at 2.05-3.58 ms and max since start 2.8-7.4 ms (master 60-329 ms), with the guest's idle control loop at <= 2.05-2.56 ms window max / p99 1.8-2.0 ms alone on the host: the bound is below the guest's idle floor at 2,500 and 1.5-1.75x the control's at 10,000. Question for the owner: read A2 on Linux against the control loop (as R6 does for macOS: met at 2,500, 1.5-1.75x at 10,000), or give the VM a finer wake (the bound is not measurable in it as it is). Earlier, strict: the VM runs read the branch's http max at 8.8-19.7 ms (master 162-558 ms) against
 the 1,024 us bound, with the idle control loop at 17.7-29.9 ms in the same runs, so the guest under shared strict
 holds has a floor above the bound and these jobs cannot show the branch under it. Options: 1. rerun the four VM jobs
 as exclusive holds (the host alone; `QUIET_VM` pins the VM's threads), then read the bound; 2. read A2 on Linux as
@@ -278,9 +288,9 @@ Recommendation: 1 first. Lead took option 1 (the owner takes the Linux reading):
 | Criterion | Evidence |
 |---|---|
 | A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
-| A2 | session 4 at Xapiand:e649ebcb1: macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000); Linux 214621-f82004 / 214622-52318a (2,500), 214624-c6c5de / 214625-59b5ea (10,000); pending. Superseded, at Xapiand:3e2edbef4: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
-| A3 | session 4: 214557-802978 before, 214558-d15a54 after; F3's deciding A/B 210116-568ffe; pending. Superseded, at Xapiand:3e2edbef4: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
-| A4 | session 4: suite 214334-70753d (pass, 44/44 at e649ebcb1; merged head 9b474d811: 261119-015540-f34736 pending), test_node x5 214345-e0caec (5/5), probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
+| A2 | Linux exclusive 261119-015840-52e913 / 015843-118f54 (2,500: http max since start 60.5 / 76.7 -> 6.95 / 2.77 ms), 015846-7c0eec / 015849-58ebd1 (10,000: 329.2 / 299.3 -> 7.38 / 7.39 ms; control alone <= 2.05-2.56 ms window; 1,024 us literally unmet, question in Blocked on); macOS exclusive 214551-71a78d / 214554-8a79f5 (2,500: 105.4 / 75.9 -> 2.08 / 2.05 ms), 214552-695322 / 214555-113315 (10,000: 281.0 / 232.0 -> 2.05 / 2.08 ms; control <= 2.56 ms); strict Linux reads: Linux 214621-f82004 / 214622-52318a (2,500: http max 179.9 / 162.6 ms -> 19.7 / 14.3 ms), 214624-c6c5de / 214625-59b5ea (10,000: 558.1 / 475.8 ms -> 10.4 / 8.8 ms; control loop 17.7-29.9 ms; 1,024 us bound not met, see Blocked on); macOS 214551-71a78d / 214554-8a79f5 (2,500), 214552-695322 / 214555-113315 (10,000): pending (exclusive). Pre-fix macOS reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us. Superseded sets at 3e2edbef4 (204xxx) dropped |
+| A3 | session 4: 214557-802978 before (names p99 13.64 / max 1,336 ms, T5 bound 2.32 ms: exit 1), 214558-d15a54 after (1.91 / 2.55 ms, bound 2.27 ms: pass); the earlier branch run 243767 missed (2.85 vs 2.39 ms); F3's A/B 210116-568ffe, exclusive x3: light p99 master 1.51 / 0.68 / 1.09 vs branch 1.86 / 1.58 / 1.57 ms, bound 3.09-3.21 ms, all six pass; max 473-1,982 ms vs 5.3-9.9 ms |
+| A4 | session 4: suite 214334-70753d (pass, 44/44 at e649ebcb1; merged head 9b474d811: 261119-015540-f34736 pass, 52/52), test_node x5 214345-e0caec (5/5), probes 214452-f8d1d8 / 214455-d04574; fails without: 214405-d4ad8f (F2), 214416-55f6c4 (F1), 214430-1d4cc0 (F5), 214453-f4a3ac (F1 probe); pending. Earlier, fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 

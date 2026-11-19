@@ -126,14 +126,69 @@ Loops' max is the max since start; "window" is the timed searches' bucket edge.
 | S2 64 by names, strict, macOS: light GET p99 / max | 13.64 / 1,336 ms | 1.91 / 2.55 ms | 214557-802978, 214558-d15a54 |
 | S2 64 by pattern, same: light GET p99 / max | 2.81 / 1,863 ms | 2.14 / 19.6 ms | same |
 
-The loops' max falls 9-11x at 2,500 and 54x at 10,000 (a loop's longest turn follows the list's size on master, not on
-the branch), and both arms pass every search with the same count and a peak of 100 pinned indexes. The branch's max is
-still 8.6-19x over A2's 1,024 us on Linux, and it is of the control loop's size in the same runs (8.8-19.7 ms against
-17.7-29.9 ms): the guest's wake and preemption under shared strict holds put a floor under every loop, so these runs
-bound the branch's turn from above only; they cannot show it under 1,024 us. S2's T5 bound (2x alone p99 + 1 ms) fails
-on master (13.64 against 2.32 ms) and passes on the branch (1.91 against 2.27 ms); the branch's earlier strict run
-missed it (2.85 against 2.39 ms), so T5's p99 sits within the run-to-run noise of the bound and the exclusive A/B decides
-the verdict.
+Strict, beside light holds, the loops' max falls 9-11x at 2,500 and 54x at 10,000 (a loop's longest turn follows the
+list's size on master, not on the branch), and both arms pass every search with the same count and a peak of 100 pinned
+indexes. The guest's wake and preemption under shared holds put a floor under every loop there (the control loop's max
+17.7-29.9 ms), so those runs bound the branch's turn from above only. The exclusive reruns follow.
+
+### Linux, exclusive (the host alone; the same guest builds and indexes, binaries of Xapiand:e649ebcb1)
+
+"Window" is the bucket edge above the max over the timed searches; "since start" includes the node's start and the
+first search, which the control loop, running no search, also shows.
+
+| Row | master | branch | Jobs |
+|---|---|---|---|
+| SR3 2,500: http0 / http1 window max | <= 65.5 / 81.9 ms | <= 2.05 / 2.05 ms | 015840-52e913, 015843-118f54 |
+| SR3 2,500: http0 / http1 max since start | 60.5 / 76.7 ms | 6.95 / 2.77 ms | same |
+| SR3 2,500: http0 / http1 p99 | 1,792 / 1,536 us | 1,536 / 1,792 us | same |
+| SR3 2,500: control window max, since start, p99 | <= 2.56 ms, 32.4 ms, 1,792 us | <= 2.05 ms, 39.7 ms, 1,792 us | same |
+| SR3 2,500: search p50 / p99 | 1,038 / 1,099 ms | 1,076 / 1,277 ms | same |
+| SR3 10,000: http0 / http1 window max | <= 393.2 / 2.56 ms | <= 3.07 / 3.58 ms | 015846-7c0eec, 015849-58ebd1 |
+| SR3 10,000: http0 / http1 max since start | 329.2 / 299.3 ms | 7.38 / 7.39 ms | same |
+| SR3 10,000: http0 / http1 p99 | 1,792 / 1,792 us | 1,792 / 2,048 us | same |
+| SR3 10,000: control window max, since start, p99 | <= 2.05 ms, 36.7 ms, 2,048 us | <= 2.05 ms, 21.5 ms, 2,048 us | same |
+| SR3 10,000: search p50 / p99 | 4,345 / 4,539 ms | 4,602 / 4,844 ms | same |
+
+The stall is gone (60-77 ms -> 2.8-7.0 ms since start at 2,500; 299-329 ms -> 7.4 ms at 10,000: 9-28x and 40-45x
+lower), but A2's 1,024 us bound is not met on Linux, even alone on the host. The guest's idle loop explains most of
+it: the control loop, with no search, has a 1,792-2,048 us p99 and a window max in the 2,048-2,560 us bucket in all four
+runs, so the guest's wake slack is already twice the bound, and the branch's http window max at 2,500 equals the
+control's (2.05 ms). At 10,000 it is one to two buckets above the control's (3.07 / 3.58 against 2.05 ms): up to
+1.75x the floor, which the floor does not explain. Whether the VM can read 1,024 us at all (a guest whose idle loop
+wakes within 1 ms) is the owner's question. Master's http1 at 10,000 reads a 2.56 ms window max and a 299 ms max since
+start: its stall fell in the first search, outside the timed window.
+
+### macOS, exclusive (SR3, no pinning of threads; Xapiand:e649ebcb1 src)
+
+| Row | master | branch | Jobs |
+|---|---|---|---|
+| SR3 2,500: http0 / http1 max since start | 105.4 / 75.9 ms (window <= 114.7 / 65.5 ms) | 2.08 / 2.05 ms (window <= 2.56 ms) | 214551-71a78d, 214554-8a79f5 |
+| SR3 2,500: http0 / http1 p99 | 384 / 384 us | 448 / 448 us | same |
+| SR3 2,500: control window max, since start | <= 2.56 ms, 27.8 ms | <= 2.56 ms, 19.8 ms | same |
+| SR3 2,500: search p50 / p99 | 898 / 1,003 ms | 948 / 1,028 ms | same |
+| SR3 10,000: http0 / http1 max since start | 281.0 / 232.0 ms (window <= 327.7 / 262.1 ms) | 2.05 / 2.08 ms (window <= 2.05 / 2.56 ms) | 214552-695322, 214555-113315 |
+| SR3 10,000: http0 / http1 p99 | 448 / 1,280 us | 512 / 768 us | same |
+| SR3 10,000: control window max, since start | <= 2.56 ms, 33.9 ms | <= 2.56 ms, 32.4 ms | same |
+| SR3 10,000: search p50 / p99 | 3,823 / 4,134 ms | 3,880 / 3,904 ms | same |
+
+The branch's http max (2.05-2.08 ms) is at the control loop's window max (2.56 ms) at both sizes, 37-51x lower than
+master at 2,500 and 112-137x lower at 10,000 (R6's macOS reading). The p99 rise the strict runs showed (1.5-2 ms) is
+gone alone on the host: 448-768 us against master's 384-1,280 us, so it was idle-wake slack under shared holds.
+
+### S2, exclusive A/B (the review's F3; `ab_starve.sh`, three reps, T5's bound 2x alone p99 + 1 ms, 3.09-3.21 ms)
+
+| Rep | master light p99 / max | branch light p99 / max | T5 |
+|---|---|---|---|
+| 1 | 1.51 / 473.3 ms | 1.86 / 9.92 ms | both pass |
+| 2 | 0.68 / 1,299 ms | 1.58 / 5.29 ms | both pass |
+| 3 | 1.09 / 1,982 ms | 1.57 / 9.36 ms | both pass |
+
+Job 261118-210116-568ffe. The branch meets T5 in 3 of 3 (alone p99 1.05-1.10 ms in every arm), and so does master: a
+p99 bound cannot see master's stall, which reaches less than 1% of the light GETs (its max is 0.47-1.98 s, the
+branch's 5.3-9.9 ms: 48-246x lower, rep by rep). The branch's p99 is the higher of the two (median 1.58 against 1.09 ms, 1.45x),
+inside the bound; the wide searches complete more on the branch (205-256 of 256 against 128-200). The strict A3 runs
+(214557-802978 master failing at 13.64 ms, 214558-d15a54 branch passing at 1.91 ms) and the pre-fix miss (2.85 ms) sit
+on either side of the bound: T5's p99 is noisy near it, and the max is the stable difference.
 
 ## search_batch for concurrent pins (cheap-reopen D3)
 
