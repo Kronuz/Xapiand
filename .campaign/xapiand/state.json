@@ -24093,6 +24093,8 @@
     "task-inbox-first": {
       "accepted": {},
       "after": [],
+      "base": "4b6a0965a6eb59a414df65605ca40e7bc38633a2",
+      "branch": "quest/xapiand/task-inbox-first",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -24114,6 +24116,7 @@
         "test/**",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-inbox-first",
       "landed": [],
       "lenses": [
         "correctness"
@@ -24123,9 +24126,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "task: cross-thread post_call before demoted handles; flush inline when off_loop cannot start",
-      "updated": "2026-11-19T11:20:33"
+      "updated": "2026-11-19T11:20:44",
+      "worktree": "../task-wt/xapiand/task-inbox-first"
     },
     "task-lanes": {
       "accepted": {
