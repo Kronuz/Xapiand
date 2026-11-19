@@ -20729,7 +20729,12 @@
         "src/serialize.h",
         "src/database/schema.cc",
         "tests/test_serialise*.cc",
-        "tests/test_serialize_validation*"
+        "tests/test_serialize_validation*",
+        "src/cast.cc",
+        "src/cast.h",
+        "src/aggregations/aggregations.cc",
+        "docs/mechanisms/geo-exact-term.md",
+        "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md"
       ],
       "history": [
         {
@@ -20760,7 +20765,7 @@
       "risk": "high",
       "status": "active",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T22:29:01",
+      "updated": "2026-11-18T23:39:42",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "sha256-cl-10": {
