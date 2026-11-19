@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: waiting on jobs 261118-135313-0d4d30 261118-135314-eb475b 261118-135315-63667c 261118-135316-88308e
+State: ready for review
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,11 +24,9 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Read X1b/X2/X3 (below) against A2-A4; decide whether the share wins (see "Reading so far").
-2. If it wins: write `docs/design/light-share.md` (A1) with the share and numbers, and record here that the generic
-   part belongs in Kronuz/task as the follow-up quest light-share-task; then bump the pin and set the slot count in
-   `src/manager.cc` (after that quest lands). If it does not win: write A1 as the negative finding and say so.
-3. Check suite 261118-112158-d26d97 (A5), then write "ready for review" in State.
+1. Correctness review (lead). Then light-share-task (Kronuz/task, own quest): the generic slot count in
+   `task_asio.hh`; this quest then bumps the pin and sets the slot count in `src/manager.cc`; A2/A3/A4's
+   before/after rerun against the landed code, with a share sweep between 4 and 8.
 
 ## Blocked on
 
@@ -69,19 +67,32 @@ evidence; harness-only commits since). Superseded list: X1b 261118-112144-650d76
 
 ## Evidence
 
+Exclusive jobs, medians (full table in `docs/design/light-share.md`); arms off / share 12 / share 8:
+
 | Criterion | Evidence |
 |---|---|
-| A1 | <pending: docs/design/light-share.md> |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
-| A5 | <no evidence yet> |
+| A1 | `docs/design/light-share.md`: the wait is CPU on the loops, not the pool or shard turns; share 8 chosen |
+| A2 | X1b 261118-135313-0d4d30 (6 arms): T5 loaded light p99 33.2 / 31.2 / 12.2 ms vs limit 8.6-9.0 (one of two share-8 arms passes); T4 lag p99 5.12 / 4.61 / 2.30 ms vs 1.024. Improved, bounds NOT yet met; before/after at the landed code pending |
+| A3 | X2a 261118-135314-eb475b (off 12 off) + X2b 261118-135315-63667c (8 off 8): flood p99 46.3 / 28.2 / 21.2 ms vs about 20 (at the bound, 54% down) |
+| A4 | X3 261118-135316-88308e: RESTORE 9,318 / 9,303 / 9,328 docs/s (flat); QPS 3,925 / 3,993 / 4,612 (inside or above the A/A band); heavy searches -0.4% / -11%, heavy p99 149 / 150 / 130 ms |
+| A5 | suite 261118-112158-d26d97 passed at 34710b05b2da (later commits touch harness and docs only); CI: branch pushed |
+
+Earlier jobs (022842-883d3a, 022854-f0e080, 112144-650d76, 112147-f7cdd0, 112151-1f9d36, 112154-12be10) are
+superseded: noisy, timed out, or ran without build-ls. The X1 numbers from before are not used.
 
 ## Result
 
-<pending>
+The loaded light wait is CPU on the 16 loops, not the pool or shard turns. A process-wide cap of 8 loops running a
+heavy turn at once cuts loaded light p99 63%, worst loop lag 55% and T10 flood p99 54%, at 11% of heavy searches and
+no RESTORE or QPS cost; a cap of 12 does nothing. T4 (2.2x over) and T5 (12.2 vs 9.0 ms) are not yet at their bounds;
+a share between 4 and 8 is the next measurement. The generic part belongs in Kronuz/task (follow-up quest
+light-share-task). Design note: `docs/design/light-share.md`.
 
 ## Rulings I made
 
 - R1: the diagnosis uses one patched build and toggles the share by environment (`LS_HEAVY_SHARE` unset is
   today's drain), so arms differ only in the share; A2/A3's before/after run unpatched master against the landed code.
+- R2: the diagnosis stands on the exclusive reruns only (135313/135314/135315/135316); every earlier run was noisy,
+  invalid or measured nothing.
+- R3: A2-A4's before/after at landed code cannot exist before light-share-task lands; this quest's review covers the
+  diagnosis, the harnesses and the design note.
