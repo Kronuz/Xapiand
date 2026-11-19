@@ -6224,7 +6224,8 @@
       "files": [
         "src/query_dsl.cc",
         "src/query_dsl.h",
-        "tests/test_query_dsl_not*"
+        "tests/test_query_dsl_not*",
+        "tests/test_coverage_core_query_dsl.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -6235,7 +6236,7 @@
       "risk": "normal",
       "status": "active",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T14:41:26",
+      "updated": "2026-11-19T15:48:23",
       "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
     },
     "e2e-harness": {
