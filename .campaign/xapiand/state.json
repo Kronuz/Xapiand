@@ -7904,7 +7904,9 @@
         "tests/**",
         "test/**",
         "docs/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/http-halfclose",
       "landed": [],
@@ -7918,7 +7920,7 @@
       "risk": "high",
       "status": "active",
       "title": "A half-closed client gets its response",
-      "updated": "2026-11-18T17:50:11",
+      "updated": "2026-11-18T18:09:23",
       "worktree": "../http-wt/xapiand/http-halfclose"
     },
     "http-lane": {
