@@ -6084,6 +6084,8 @@
       "after": [
         "coverage-core-small"
       ],
+      "base": "7372be3157b3058d499b37fdf29acd8725714fd8",
+      "branch": "quest/xapiand/dsl-not-wrap",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6105,9 +6107,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T14:40:32"
+      "updated": "2026-11-19T14:41:26",
+      "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
     },
     "e2e-harness": {
       "accepted": {},
