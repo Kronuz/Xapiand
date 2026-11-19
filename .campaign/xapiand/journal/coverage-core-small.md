@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-003947-bff9f2 (cast probe)
+State: waiting on jobs 261119-003947-bff9f2 (cast probe), 261119-005309-86aefa (all four, REPEAT=3)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -39,3 +39,13 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## Findings so far (pinned in tests, from reading the source; confirm against the job output)
+
+- cast-words: `Cast::get_field_type` has no row for `_date` or `_multiconvex`; `Cast::cast(map)` throws for `_multiconvex` and `_lua`.
+- datetime-map-range: an object's hour/min/sec/fsec are not range-checked (`{"_hour": 99}` parses); a time string's are.
+- datetime-zone-order: a zone offset in `_time` moves the date parsed so far, so `_time` before `_date` loses the day carry.
+- acc-zero: `n._0` reaches `modulus(value, 0)` -> std::invalid_argument (500), not a QueryDslError.
+- sort-boolean-key: `get_sorter` sorts a boolean reference value with `add_date` (DateKey); `BoolKey`/`add_bool` exist unused.
+- dsl-scale-weight: `_scale_weight`, `_edit_distance` never build: the array form is refused by the engine, the object form is "Invalid operator". `process()`'s "Unexpected array" is unreachable.
+- endpoint-host-port: `xapiand://host:port/idx` drops the host (node_name empty).
