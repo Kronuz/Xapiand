@@ -1,6 +1,6 @@
 # wide-search-loop: journal
 
-State: waiting on jobs 261118-174748-eec809 174750-e0b022 174832-f05da1 174834-15710d 174835-9a2a47 174903-ca5c07 132813-32aa11 132819-66b8f7 132826-b0ada4 132830-475ea9 132836-3c231e 132842-a03818 132847-f885d2 132928-09c53e 132929-bb97fa 132931-6328f9 132932-c9dd00 132933-243767 132934-2ba112
+State: ready for review (A2/A3 reruns at the head pending: 261118-204934-64d3ad 204936-89b870 204937-0379fa 204938-0b8425 204940-5102a8 204941-e7215b 204943-b5ecc2 204944-67b125 204945-b054bc 204947-345e6f 204948-5f181c 204950-07c772 204952-37627c 204953-ab2050 204956-040046 204958-a9c88b 204959-bf947d)
 Quest: .campaign/xapiand/quests/wide-search-loop.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,6 +25,30 @@ Session-3 first submissions failed or were redone: the VM build 114932-476f73 hi
 checkout without the slot's binaries and data (now `--slot wide-search-loop`); suite 112500-d8889b failed test_node
 (`test_a_put_whose_client_half_closes_completes_durably`, test_node.cc:1169/1175), unrelated to search; f7bb71 runs
 it at master to show whether it is pre-existing.
+
+Session 3, last step (lead: cffd0190a proven). Read before the fix (reads unchanged by it):
+- Beat A/B at 10,000, exclusive: master http p99 320 us, max 267 / 333 ms; branch p99 448 us, max 915 / 1,011 us
+  (6328f9, 2ba112): the p99 rise without the beat is idle-wake delay, not longer turns (R6's question).
+- macOS 2,500, exclusive: http max 73.5 / 77.8 ms -> 2.06 / 2.33 ms, control 2,560 us bucket (09c53e, c9dd00).
+- A3 strict: master 64 names light p99 1.26 / max 928 ms PASS on p99 (bb97fa); branch p99 2.85 vs bound 2.39 ms
+  FAIL, max 16.5 ms (243767). Session 2's branch run passed (1.69 / 2.63): T5's p99 is noisy at strict; the rerun
+  decides, exclusive if it misses again.
+- VM create 132819-66b8f7 failed: no data directory (fixed, Xapiand:adc71378b).
+
+Reruns at the head (Xapiand:adc71378b):
+
+| Job | Level | For | What |
+|---|---|---|---|
+| 261118-204934-64d3ad | light | | build-probe (branch src) |
+| 261118-204936-89b870 | light | | build-prof (master src: the branch's src diff reversed) |
+| 261118-204937-0379fa / 204943-b5ecc2 | exclusive | A2 macOS | SR3 2,500 before / after |
+| 261118-204938-0b8425 / 204944-67b125 | exclusive | A2 macOS | SR3 10,000 before / after |
+| 261118-204940-5102a8 / 204945-b054bc | strict | A3 | starve 64 before / after |
+| 261118-204941-e7215b / 204947-345e6f | exclusive | R6 p99 | beat A/B at 10,000 before / after |
+| 261118-204948-5f181c | light | | VM build both arms |
+| 261118-204950-07c772 / 204952-37627c | light | | VM create 2,500 / 10,000 |
+| 261118-204953-ab2050 / 204956-040046 | strict | A2 Linux | SR3 2,500 before / after |
+| 261118-204958-a9c88b / 204959-bf947d | strict | A2 Linux | SR3 10,000 before / after |
 
 Half-close, answered (probe 170529-87c0b4, rc=3): master answers a half-closed GET /hc/1 200 x5 and refuses :search
 and :count 503 x5 (pre-existing: http's EOF policy plus master's own checkpoints; the lead takes it to the owner, not
@@ -185,10 +209,10 @@ Nothing (R6 ruled by the lead at Xapiand:86a50e08e).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured); attribution rerun 261118-113058-7cb4e4 |
-| A2 | Linux: 132830-475ea9 / 132836-3c231e (2,500), 132842-a03818 / 132847-f885d2 (10,000), pending. macOS 10,000: 051433-c76a1c before (max 322 / 373 ms), 051434-89f2f5 after (2.07 / 2.07 ms, control 2,560 us bucket); 2,500: 132928-09c53e, 132932-c9dd00 pending |
-| A3 | 261118-132929-bb97fa before, 261118-132933-243767 after (pending); session-2 reads: 051429-5d9b36 vs 050258-4c6f40 |
-| A4 | fix cffd0190a: test_node x5 174748-eec809, probe 174834-15710d, fails-without 174835-9a2a47 / 174903-ca5c07, suite 174750-e0b022 pending; CI running |
+| A1 | `docs/design/wide-search-loop.md` (Attribution; Branch measured; beat A/B); attribution rerun 261118-113058-7cb4e4 |
+| A2 | at the head: Linux 204953-ab2050 / 204956-040046 (2,500), 204958-a9c88b / 204959-bf947d (10,000); macOS 204937-0379fa / 204943-b5ecc2 (2,500), 204938-0b8425 / 204944-67b125 (10,000); pending. Pre-fix reads: 10,000 max 322 / 373 ms -> 2.07 ms, 2,500 max 73.5 / 77.8 -> 2.06 / 2.33 ms, control 2,560 us; beat on: branch max 1,011 us |
+| A3 | at the head: 204940-5102a8 before, 204945-b054bc after, pending (pre-fix branch run 243767 missed T5's p99, 2.85 vs 2.39 ms) |
+| A4 | fix cffd0190a: test_node x5 261118-174748-eec809 (5/5), suite 174750-e0b022 (pass), half-close probe vs master 174834-15710d (pass); fails without: probe 174835-9a2a47 (exit 1), test_node 174903-ca5c07 (fails); CI on the head |
 
 ## Result
 

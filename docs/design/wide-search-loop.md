@@ -92,6 +92,12 @@ keeping the loops awake their p99 is 512 us. One reading disagrees: master's exc
 exclusive A/B with the beat on (jobs in the journal). The resolver's `std::mutex` is still taken on the loops; at
 64 clients the branch meets T5, so it stays.
 
+The exclusive A/B with a 250 us beat keeping every loop awake (jobs 261118-132931-6328f9 master src, 132934-2ba112
+branch src, before the single-name fix, whose reads are the same) settles the p99: master's http loops p99 320 us, max
+267-333 ms; the branch's p99 448 us, max 915 / 1,011 us, within T4's 1,024 us. The branch's 1.5-2 ms p99 without the
+beat is the idle loop's wake, not longer turns. At 2,500 indexes, exclusive, no beat (132928-09c53e, 132932-c9dd00):
+http max 73.5 / 77.8 ms (master) against 2.06 / 2.33 ms (branch), the control loop in the 2,560 us bucket.
+
 Two hypotheses measured and dropped:
 
 - A resolver cache sized past the search (`--resolver-cache-size 100000`) changes nothing measurable: SR3 10,000
