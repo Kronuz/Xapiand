@@ -1,6 +1,6 @@
 # serialize-validation: journal
 
-State: waiting on jobs ef840f eb6c56 bb0952
+State: waiting on jobs 4fbe57 ff5706 (mutant eb6c56 reused)
 Quest: .campaign/xapiand/quests/serialize-validation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -38,12 +38,18 @@ rerun; the reviewer's.
 
 ## Fix round 1 (review S1, blocking)
 
-S1: `_date` served over HTTP. `RESERVED_DATE` joins `RESERVED_DATETIME` in schema.cc's two property tables and the
-dispatch (Xapiand:e5114e3a3). HTTP test tests/test_serialize_validation_date_http.py (PUT text and number `_date`, GET
-back, schema type, a bad value 400). Jobs: head ef840f; fails-without mutant eb6c56 (schema.cc reverted,
-refs/mutants/serialize-validation/s1-date-http, filed under A6 since A5 takes no job); suite bb0952
-(`campaign verify`). S1=ef840f for `--confirm`. query_dsl.cc untouched (dsl-date-operators). S2, S3, S4, S5, S7, S8 are
-non-blocking and not mine this round.
+S1: `_date` served over HTTP. Two causes, both in schema.cc. (1) `RESERVED_DATE` was missing beside `RESERVED_DATETIME` in
+the two property tables and the dispatch (Xapiand:e5114e3a3). (2) With that, ef840f still answered 400 "'_date' must be
+a map value": `Schema::store_item` gave the whole cast object `{"_date": ...}` to `Datetime::DatetimeParser`, whose map
+form reads `_date` as the date-parts map of a datetime (and `_datetime` as a whole-datetime key, which is why a plain
+date under `_datetime` fails there: review S8's "Error format in _time"). index_item already read the value through
+`Cast::cast`; store_item now does the same for date/datetime. The unit tests could not see it: they never reach
+store_item. HTTP test tests/test_serialize_validation_date_http.py (PUT text and number `_date`, GET back, schema type,
+a bad value 400). Jobs: head 4fbe57; fails-without mutant eb6c56 (schema.cc at its pre-fix state, failing on the
+assertions with "Field '_date' in 'f' is not valid"; refs/mutants/serialize-validation/s1-date-http; filed under A6 since
+A5 takes no job; the same tree as the new mutant, so reused); suite ff5706 (`campaign verify --force`).
+S1=4fbe57 for `--confirm`. query_dsl.cc untouched (dsl-date-operators). Side effect worth a look (S8, not asserted):
+`{"_datetime": "2020-01-02"}` over HTTP goes through the same store_item line and may now work too.
 
 ## Next
 
