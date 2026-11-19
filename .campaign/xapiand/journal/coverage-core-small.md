@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs (see below; resubmitted after f2d437)
+State: waiting on jobs 261119-040443-36eeba (four tests, one build, 150 min)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
