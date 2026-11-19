@@ -36,7 +36,7 @@
 namespace {
 
 QueryDSL make_dsl() {
-	return QueryDSL(std::make_shared<Schema>(nullptr, nullptr, ""));
+	return QueryDSL(std::make_shared<Schema>(std::make_shared<const MsgPack>(MsgPack::MAP()), nullptr, ""));
 }
 
 void test_not_is_a_flat_list_of_one() {
