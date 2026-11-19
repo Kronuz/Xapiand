@@ -33,7 +33,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | 261119-044052-c8b854 (coverage_one, exit 0, at eeac65125; src and tests unchanged since): keymaker.cc 96.9% lines / 96.8% branches; generate_terms.cc 93.7 / 86.3; range.cc 91.7 / 87.9; geospatialrange.cc 96.0 / 93.8. Area 1546 of 1638 lines (94.4%), above 90 / 80 (was 70.4 / 69.8). 307 + 317 + 138 checks passed. No reserved source file or test exists in this area. |
-| A2 | [manual] tests use CHECK_EQ/LT/NE on keys, terms, queries and bytes (77, 85, 116 checks); the 4 CHECK_THROW name QueryParserError. No src bug is fixed (M1-M5 are pinned as current behavior, src untouched), so no fails-without applies. |
+| A2 | 261119-055223-ed6ece: the suite runs the new tests, which use CHECK_EQ/LT/NE on keys, terms, queries and bytes (77, 85, 116 checks); the 4 CHECK_THROW name QueryParserError. No src bug is fixed (M1-M5 are pinned as current behavior, src untouched), so no fails-without applies. |
 | A3 | suite 261119-055223-ed6ece at fb2437c12; CI green needs the lead's push |
 
 ## Result
