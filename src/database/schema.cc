@@ -9562,7 +9562,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 				if (stem_language_it != it_e) {
-					res.stem_language = stem_language_it.value().str();
+					res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 				}
 				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
@@ -9617,7 +9617,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 				if (stem_language_it != it_e) {
-					res.stem_language = stem_language_it.value().str();
+					res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 				}
 				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
@@ -9717,7 +9717,7 @@ Schema::get_slot_field(std::string_view field_name) const
 			}
 			auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 			if (stem_language_it != it_e) {
-				res.stem_language = stem_language_it.value().str();
+				res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 			}
 			if (!res.stem_language.empty()) {
 				auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);

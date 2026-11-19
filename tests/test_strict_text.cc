@@ -36,6 +36,7 @@
 
 #include "aggregations/aggregations.h"
 #include "database/schema.h"
+#include "engine/text.h"
 #include "exception_engine.h"
 #include "msgpack.h"
 #include "serialize.h"
@@ -195,4 +196,37 @@ static void test_stem_refusal_names_the_accepted() {
 	}
 }
 
-TEST_MAIN(test_numeric_text_is_a_json_number, test_term_filter_reads_exactly, test_stem_aliases_store_their_stemmer, test_stem_refusal_names_the_accepted)
+// A schema stored with a raw name (as before the aliases) reads, as a search does, through the
+// same stemmer name the write path uses: its text parses with a snowball stemmer.
+static void test_stored_alias_reads_its_stemmer() {
+	for (const auto& [stored, stemmer] : std::vector<std::pair<std::string, std::string>>{
+	         {"nb", "norwegian"}, {"nn", "norwegian"}, {"NB", "norwegian"},
+	         {"german2", "german"}, {"German2", "german"}, {"English", "english"}}) {
+		Schema first(Schema::get_initial_schema(), nullptr, "");
+		first.update(text_field("english"));
+		MsgPack copy(*first.get_modified_schema());
+		bool set = false;
+		auto set_stored = [&](auto&& self, MsgPack& obj) -> void {
+			if (!obj.is_map() || set) { return; }
+			if (obj.find("_stem_language") != obj.end()) { obj["_stem_language"] = stored; set = true; return; }
+			for (auto it = obj.begin(); it != obj.end(); ++it) { self(self, it.value()); }
+		};
+		set_stored(set_stored, copy);
+		CHECK(set);
+		Schema schema(std::make_shared<const MsgPack>(std::move(copy)), nullptr, "");
+		const auto read = schema.get_data_field("body", false).first.stem_language;
+		CHECK_EQ(read, stemmer);
+		engine::TextConfig config;
+		config.field = "body";
+		config.stem_language = read;
+		bool built = true;
+		try {
+			engine::parse_text("houses", config);
+		} catch (const std::exception&) {
+			built = false;
+		}
+		CHECK(built);
+	}
+}
+
+TEST_MAIN(test_numeric_text_is_a_json_number, test_term_filter_reads_exactly, test_stem_aliases_store_their_stemmer, test_stem_refusal_names_the_accepted, test_stored_alias_reads_its_stemmer)
