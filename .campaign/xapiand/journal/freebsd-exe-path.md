@@ -1,6 +1,6 @@
 # freebsd-exe-path: journal
 
-State: waiting on jobs 261119-144302-05db76 261119-144308-997915
+State: waiting on jobs 261119-151950-269667 261119-151953-11ac9b
 Quest: .campaign/xapiand/quests/freebsd-exe-path.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Implemented at b6d1dc4b2: FreeBSD KERN_PROC_PATHNAME branch in src/main.cc get_executable_path; tests/test_executable_path.cc (includes main.cc, calls get_executable_path(nullptr), compares to the binary name and to a call with a bogus argv0). Jobs queued: A1 targeted build+run 261119-144302-05db76; check suite 261119-144308-997915.
+Link fix (opts renamed) at 53b316116; first jobs failed duplicate _opts. Implemented at b6d1dc4b2: FreeBSD KERN_PROC_PATHNAME branch in src/main.cc get_executable_path; tests/test_executable_path.cc (includes main.cc, calls get_executable_path(nullptr), compares to the binary name and to a call with a bogus argv0). Jobs queued: A1 targeted build+run 261119-144302-05db76; check suite 261119-144308-997915.
 
 ## Next
 
