@@ -24272,6 +24272,8 @@
     "task-driver-layout": {
       "accepted": {},
       "after": [],
+      "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+      "branch": "quest/xapiand/task-driver-layout",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -24285,6 +24287,7 @@
         "task.hh",
         "test/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-driver-layout",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -24292,9 +24295,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "task: inline_scheduler layout identical in Debug and release (F7)",
-      "updated": "2026-11-19T12:53:48"
+      "updated": "2026-11-19T12:53:55",
+      "worktree": "../task-wt/xapiand/task-driver-layout"
     },
     "task-inbox-first": {
       "accepted": {
