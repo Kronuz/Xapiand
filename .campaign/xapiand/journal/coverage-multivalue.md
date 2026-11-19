@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: waiting on jobs 261119-044052-c8b854
+State: waiting on jobs 261119-055223-ed6ece (suite at fb2437c12)
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,7 +32,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261119-044052-c8b854 (coverage_one, exit 0, at eeac65125; src and tests unchanged since): keymaker.cc 96.9% lines / 96.8% branches; generate_terms.cc 93.7 / 86.3; range.cc 91.7 / 87.9; geospatialrange.cc 96.0 / 93.8. Area 1546 of 1638 lines (94.4%), above 90 / 80 (was 70.4 / 69.8). 307 + 317 + 138 checks passed. No reserved source file or test exists in this area. |
+| A2 | [manual] tests use CHECK_EQ/LT/NE on keys, terms, queries and bytes (77, 85, 116 checks); the 4 CHECK_THROW name QueryParserError. No src bug is fixed (M1-M5 are pinned as current behavior, src untouched), so no fails-without applies. |
+| A3 | suite 261119-055223-ed6ece at fb2437c12; CI green needs the lead's push |
 
 ## Result
 
@@ -59,3 +61,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - 7797bd: geospatialrange 96.0/93.8; remaining failures were wrong expectations (stop words key "en", geodetic vs geocentric angles, M4). Fixed at ad0c8d0a8149; rerun ce5d85.
 - ce5d85: 1 failure (keymaker.cc:466 rebuilt key == plain key). Cause is real bug M5 (StringKey::serialize writes only the metric, not slot/reverse, so a rebuilt string key reads slot 0). Pinned at eeac65125; scalar kinds still round-trip equal. terms 317 and range 138 checks passed.
 - Rerun 261119-044052-c8b854 (--minutes 150, same cmd) at eeac65125. Next: if pass, coverage.sh multivalue job + `campaign verify coverage-multivalue`, then Evidence per-file numbers, ready.
+
+- Syntax check via quiet light was denied by the permission classifier; the three tests compiled in c8b854 at eeac65125 and `git diff eeac65125 HEAD -- tests src` is empty.
