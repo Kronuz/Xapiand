@@ -89,13 +89,14 @@ def check(lines: list[str]) -> list[str]:
 class Kernel:
     """The tc and nft state a guest keeps, as far as net.py's commands change it, with injectable faults:
     `tc_lines` is how many lines of a tc batch apply before the next fails, `nft_refuses` makes nft
-    refuse the table."""
+    refuse the table. A filter or a cut counts only if it keys on the MAC, which every protocol has."""
 
     def __init__(self) -> None:
         self.prio = False
         self.filters: set[int] = set()
         self.leaves: dict[int, str] = {}
         self.table = False
+        self.by_mac = False
         self.cut: set[str] = set()
         self.tc_lines: int | None = None
         self.nft_refuses = False
@@ -104,20 +105,28 @@ class Kernel:
         raise SystemExit(f"model kernel: {' '.join(argv)}: {why}")
 
     def tc_line(self, line: str) -> None:
-        if m := re.match(r"qdisc replace dev \S+ root handle 1: prio", line):
+        if re.match(r"qdisc replace dev \S+ root handle 1: prio", line):
             self.prio = True
         elif m := re.match(r"qdisc replace dev \S+ parent 1:([0-9a-f]+) handle \S+ netem(.*)", line):
             if not self.prio:
                 self.fail([line], "no root qdisc")
             self.leaves[int(m[1], 16) - 1] = m[2].strip()
-        elif m := re.search(r"match ip dst 10\.87\.0\.(\d+)/32", line):
+        elif m := re.search(
+            r"protocol all .* match u16 0x5254 0xffff at -14 match u32 0x008701([0-9a-f]{2}) 0xffffffff at -12", line
+        ):
             if not self.prio:
                 self.fail([line], "no root qdisc")
-            self.filters.add(int(m[1]))
+            self.filters.add(int(m[1], 16))
 
     def run(self, argv: list[str], stdin: str | None = None, check: bool = True) -> str:
-        if argv[:3] == ["tc", "qdisc", "show"]:
-            return " prio 1: " if self.prio else ""
+        try:
+            return self.apply(argv, stdin)
+        except SystemExit:
+            if check:
+                raise
+            return ""
+
+    def apply(self, argv: list[str], stdin: str | None) -> str:
         if argv[:2] == ["tc", "-batch"]:
             for number, line in enumerate((stdin or "").splitlines()):
                 if self.tc_lines is not None and number >= self.tc_lines:
@@ -125,17 +134,27 @@ class Kernel:
                 self.tc_line(line)
         elif argv[:3] == ["tc", "qdisc", "replace"]:
             self.tc_line(" ".join(argv[1:]))
+        elif argv[:3] == ["tc", "qdisc", "del"]:
+            self.prio = False
+            self.filters.clear()
+            self.leaves.clear()
+        elif argv[:3] == ["nft", "list", "table"]:
+            return "table inet cluster {}" if self.table else self.fail(argv, "no such table")
+        elif argv[:3] == ["nft", "delete", "table"]:
+            self.table = False
+            self.cut.clear()
         elif argv[:2] == ["nft", "-f"] and "table inet" in (stdin or ""):
             if self.nft_refuses:
                 return self.fail(argv, "refused")
             self.table = True
+            self.by_mac = "type ether_addr" in (stdin or "") and "ether saddr @cut drop" in (stdin or "")
         else:
-            self.other(argv, stdin)
+            self.elements(argv, stdin)
         return ""
 
-    def other(self, argv: list[str], stdin: str | None) -> None:
+    def elements(self, argv: list[str], stdin: str | None) -> None:
         text = stdin or " ".join(argv[1:])
-        if m := re.search(r"(add|delete) element inet cluster cut \{ (\S+) \}", text):
+        for m in re.finditer(r"(add|delete) element inet cluster cut \{ (\S+) \}", text):
             if not self.table:
                 self.fail(argv, "no such table")
             if m[1] == "add":
@@ -144,16 +163,16 @@ class Kernel:
                 self.cut.remove(m[2])
             else:
                 self.fail(argv, "no such element")
-        elif "flush set inet cluster cut" in text:
+        if "flush set inet cluster cut" in text:
             self.cut.clear()
 
 
-def applied(kernel: Kernel, argv: list[str]) -> bool:
+def applied(kernel: Kernel, net: Any, argv: list[str]) -> bool:
     """Whether main(argv) having exited 0 left the effect it names in the kernel."""
+    peer = int(argv[1])
     if argv[0] == "shape":
-        peer = int(argv[1])
         return kernel.prio and peer in kernel.filters and "delay" in kernel.leaves.get(peer, "")
-    return kernel.table and f"10.87.0.{argv[1]}" in kernel.cut
+    return kernel.table and kernel.by_mac and net.mac(peer) in kernel.cut
 
 
 def interrupted(net_py: Path) -> list[str]:
@@ -183,19 +202,37 @@ def interrupted(net_py: Path) -> list[str]:
         except SystemExit as stop:
             errors.append(f"after {what}, `{' '.join(argv)}` fails again: {stop}")
             continue
-        if not applied(kernel, argv):
+        if not applied(kernel, net, argv):
             errors.append(f"after {what}, `{' '.join(argv)}` exits 0 and applies nothing")
+    return errors
+
+
+def healing(net_py: Path) -> list[str]:
+    """heal removes a cut and is idempotent: a peer that is not cut heals to exit 0."""
+    kernel = Kernel()
+    net = load(net_py)
+    net.run = kernel.run
+    errors: list[str] = []
+    argv: list[str] = []
+    try:
+        for argv in (["partition", "4"], ["heal", "4"], ["heal", "4"], ["partition", "5"], ["heal"]):
+            net.main(argv)
+            if argv[0] == "heal" and kernel.cut:
+                errors.append(f"`{' '.join(argv)}` leaves {sorted(kernel.cut)} cut")
+    except SystemExit as stop:
+        errors.append(f"`{' '.join(argv)}` fails: {stop}")
     return errors
 
 
 def main(argv: list[str]) -> int:
     net_py = Path(argv[0]) if argv else HERE / "net.py"
     failed = False
-    errors = interrupted(net_py)
-    failed |= bool(errors)
-    print(
-        f"{'FAIL' if errors else 'ok  '} net.py after a setup stopped partway{''.join(chr(10) + '     ' + e for e in errors)}"
-    )
+    for what, errors in (
+        ("after a setup stopped partway", interrupted(net_py)),
+        ("heal of a peer that is not cut", healing(net_py)),
+    ):
+        failed |= bool(errors)
+        print(f"{'FAIL' if errors else 'ok  '} net.py {what}{''.join(chr(10) + '     ' + e for e in errors)}")
     for case in (["shape", "2", "--ms", "50"], ["shape", "15", "--loss", "0.1"], ["partition", "3"]):
         errors = check(commands(net_py, case))
         failed |= bool(errors)

@@ -24,11 +24,16 @@
     net.py shape PEER [--ms MS] [--loss P] [--reorder P] [--duplicate P] [--mbit M]   (as root)
     net.py partition PEER | heal [PEER] | clear
 
-Egress on `l2` is a prio qdisc with one band per peer: band 1 (the default, multicast included) is
-unshaped, and peer j's address goes to band j + 1 by a u32 filter, where a netem qdisc carries the
-direction's Shape. A partition adds the peer's address to the nftables set `cut`, whose input rule
-drops what arrives from it: the sender sees silence and TCP retransmits after heal, as in netlab.
-Run `partition` on both guests to cut both directions.
+Peers are told apart by MAC address (guest i's `l2` is 52:54:00:87:01:i), so every protocol on the
+L2 obeys, IPv4 and IPv6 alike. Egress on `l2` is a prio qdisc with one band per peer: band 1 (the
+default, multicast and broadcast included) is unshaped, and a frame to peer j's MAC goes to band
+j + 1 by a u32 filter, where a netem qdisc carries the direction's Shape. A partition adds the
+peer's MAC to the nftables set `cut`, whose input rule drops what arrives from it: the sender sees
+silence and TCP retransmits after heal, as in netlab. Run `partition` on both guests to cut both
+directions.
+
+The nftables table is built last, so its existence means the setup is complete: a command that
+finds it missing clears what is there and builds everything again.
 """
 
 from __future__ import annotations
@@ -43,9 +48,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "faultlab" / "pytho
 from faultlab.netlab import Shape
 
 DEV = "l2"
-L2 = "10.87.0"
+MAC = "52:54:00:87:01"  # guest i's l2 is MAC:i, in hex
 PEERS = range(1, 16)  # prio has at most 16 bands
 TABLE = "cluster"
+
+
+def mac(peer: int) -> str:
+    return f"{MAC}:{peer:02x}"
 
 
 def band(peer: int) -> str:
@@ -58,30 +67,40 @@ def leaf(peer: int) -> str:
     return f"{peer + 0x10:x}:"
 
 
-def run(argv: list[str], stdin: str | None = None) -> str:
+def run(argv: list[str], stdin: str | None = None, check: bool = True) -> str:
     done = subprocess.run(argv, input=stdin, capture_output=True, text=True, check=False)
-    if done.returncode:
+    if done.returncode and check:
         raise SystemExit(f"net.py: {' '.join(argv)}: exit {done.returncode}: {done.stderr.strip()}")
-    return done.stdout
+    return "" if done.returncode else done.stdout
+
+
+def clear() -> None:
+    run(["tc", "qdisc", "del", "dev", DEV, "root"], check=False)
+    run(["nft", "delete", "table", "inet", TABLE], check=False)
 
 
 def setup() -> None:
-    """Once per boot: the prio root, an unshaped netem per peer band with its filter, and the nftables table."""
-    if " prio 1: " in run(["tc", "qdisc", "show", "dev", DEV]):
+    """The prio root, an unshaped netem per peer band with its filter, and the nftables table, in that
+    order; the table's existence marks a complete setup, so anything less is cleared and redone."""
+    if run(["nft", "list", "table", "inet", TABLE], check=False):
         return
+    clear()
     batch = [f"qdisc replace dev {DEV} root handle 1: prio bands 16 priomap {' '.join(['0'] * 16)}"]
     for peer in PEERS:
+        octets = bytes.fromhex(mac(peer).replace(":", ""))
         batch.append(
             f"qdisc replace dev {DEV} parent {band(peer)} handle {leaf(peer)} netem {' '.join(Shape().netem())}"
         )
         batch.append(
-            f"filter add dev {DEV} parent 1: protocol ip prio 1 u32 match ip dst {L2}.{peer}/32 flowid {band(peer)}"
+            f"filter add dev {DEV} parent 1: protocol all prio 1 u32 "
+            f"match u16 0x{octets[:2].hex()} 0xffff at -14 match u32 0x{octets[2:].hex()} 0xffffffff at -12 "
+            f"flowid {band(peer)}"
         )
     run(["tc", "-batch", "-"], "\n".join(batch) + "\n")
     table = (
         f"table inet {TABLE} {{\n"
-        "  set cut { type ipv4_addr; }\n"
-        "  chain input { type filter hook input priority filter - 10; policy accept; ip saddr @cut drop; }\n"
+        "  set cut { type ether_addr; }\n"
+        "  chain input { type filter hook input priority filter - 10; policy accept; ether saddr @cut drop; }\n"
         "}\n"
     )
     run(["nft", "-f", "-"], table)
@@ -101,8 +120,7 @@ def main(argv: list[str]) -> int:
     sub.add_parser("clear", help="remove every shape and cut")
     args = parser.parse_args(argv)
     if args.command == "clear":
-        subprocess.run(["tc", "qdisc", "del", "dev", DEV, "root"], capture_output=True, check=False)
-        subprocess.run(["nft", "delete", "table", "inet", TABLE], capture_output=True, check=False)
+        clear()
         return 0
     setup()
     if args.command == "shape":
@@ -112,9 +130,10 @@ def main(argv: list[str]) -> int:
         handle = f"parent {band(args.peer)} handle {leaf(args.peer)}"
         run(["tc", "qdisc", "replace", "dev", DEV, *handle.split(), "netem", *shape.netem()])
     elif args.command == "partition":
-        run(["nft", f"add element inet {TABLE} cut {{ {L2}.{args.peer} }}"])
+        run(["nft", f"add element inet {TABLE} cut {{ {mac(args.peer)} }}"])
     elif args.peer is not None:
-        run(["nft", f"delete element inet {TABLE} cut {{ {L2}.{args.peer} }}"])
+        element = f"element inet {TABLE} cut {{ {mac(args.peer)} }}"
+        run(["nft", "-f", "-"], f"add {element}\ndelete {element}\n")  # the add makes heal idempotent
     else:
         run(["nft", f"flush set inet {TABLE} cut"])
     return 0
