@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-041419-d3a758 (four tests); full coverage and suite follow when it passes
+State: waiting on jobs 261119-044110-f37689 (four tests; d3a758 aborted on the dt cast-word sort, now pinned as DatetimeError)
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
