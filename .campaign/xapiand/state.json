@@ -16502,18 +16502,45 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/nightly-retry",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:32:55",
+          "commit": "7f144b6dd5c0b4a33ddd3abbaeb232e85ab93efd",
+          "criteria": {
+            "A1": "261119-144336-a6a4a1 (passed at d3823519f4f3; only merges from main since); fails without: 261119-144343-378e22",
+            "A2": "261119-144336-a6a4a1 (passed at d3823519f4f3; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
+              "commit": "d3823519f4f3ce30bbdea10ec14c76443f6f4f6f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-144427-decc96",
+              "level": "none",
+              "seconds": 3.2,
+              "state": "done",
+              "what": "nightly-retry check test at d3823519f4f3"
+            }
+          ],
+          "final": true,
+          "from": "072db68211fdee0922f3c85e59474253ff91ed93",
+          "reason": "",
+          "tested": "7f144b6dd5c0b4a33ddd3abbaeb232e85ab93efd"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "nightly dispatcher retries transient GitHub errors",
-      "updated": "2026-11-19T14:44:19",
-      "worktree": "../cpp-libraries-wt/xapiand/nightly-retry"
+      "updated": "2026-11-19T15:32:58",
+      "worktree": ""
     },
     "no-stalls": {
       "accepted": {},
