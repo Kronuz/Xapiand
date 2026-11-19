@@ -1,6 +1,6 @@
 # cheap-reopen: journal
 
-State: blocked on owner: A2 decision (accept 2.2x or build the remembered log state)
+State: waiting on jobs 261119-112058-686d62 261119-112059-d1220b 261119-112102-8426f3
 Quest: .campaign/xapiand/quests/cheap-reopen.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,24 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+11-19: D135 amended A2 to 2.2x (owner). wide-search-loop landed; master merged at Xapiand:0dc08322a. search_batch
+keeps both: the wide-search pin hold and the per-index budget checkpoint first, then the batch's pins together
+(`when_all`, D3), as the design note says. Syntax check (`.scratch/syntax.sh`, light hold) of handler.cc,
+test_node.cc and test_pool.cc passed. Queued at 0dc08322a: A1 profile 261119-112058-686d62 (rerun of 060438-5fb87b),
+A2 pair 261119-112059-d1220b (rerun of 184757-7f0046, base f722ff939), suite 261119-112102-8426f3.
+
+For the correctness reviewer, probe:
+- Cache staleness after a write: an index written (or replaced) while evicted, then reopened, serves its last
+  commit; nothing kept past eviction (one directory open per reopen, D2; the per-partition catalog, D1) outlives a
+  write it should see.
+- A reopen racing a close: a pin's reopen in one partition while the same key is being evicted or closed, and
+  `when_all`'s error path (a failing pin waits for its siblings, and a cancelled budget token mid-batch releases
+  every pin and the wide-search hold).
+- The bound on memory: open indexes stay within soft_open across partitions (each partition's pass relieves an
+  overage); per-index memory +1.3 KiB (3%); the wide-search hold bounds a batch's concurrent pins.
+
+Earlier:
 
 Suite 261118-063506-98ae6b at 0889ae829 failed to compile, introduced here: test_pool.cc:1757,1780-1781 read
 `indexes.one_catalog(pool)`; fixed to `one_catalog(indexes.pool)` (Xapiand:84ce2e1bc). Its timing build and
@@ -62,13 +80,13 @@ Per-index memory at 2,500 open (pool 5000): head 41.1-41.9 KiB against base 40.0
 
 ## Next
 
-1. The owner's A2 ruling (below). If accept: correctness review, then land after wide-search-loop and a master
-   merge. If build: the remembered log state is a strata quest `after` this design; A2 is measured again with it.
-2. After wide-search-loop lands: merge master, resolve search_batch (D3 after the budget checkpoint).
+1. Fill Evidence from the three jobs at 0dc08322a; A2 passes at <= 2.2x (D135); then State: ready for review.
+2. Correctness review (questions under Doing).
 
 ## Blocked on
 
-Landing waits for wide-search-loop (lead ruling 11-19); then merge master and resolve search_batch.
+Nothing. A2 answered by D135 (owner 11-19: accept 2.2x; fstatat and the partition cap follow as small quests; 2x
+moves to a strata quest). The request, for the record:
 
 A2 decision (owner): five experiments done; the best arm is 2.0x, the shippable head 2.2x (283 vs 128 ms).
 - Accept 2.2x: land D1-D3 (pool 200 3.4x faster, 959 to 283 ms; +1.3 KiB per open index) and amend A2. The
