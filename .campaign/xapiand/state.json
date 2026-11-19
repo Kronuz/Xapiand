@@ -24073,6 +24073,33 @@
       "updated": "2026-11-12T22:21:31",
       "worktree": ""
     },
+    "task-lifecycle-rename": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "! grep -nwE \"serve|stop_signals\\b.*&|concept service\" docs/design/service-shape.md docs/API.md",
+          "level": "none",
+          "minutes": 30,
+          "name": "doc"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/design/service-shape.md",
+        "docs/API.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "low",
+      "status": "planned",
+      "title": "task docs: serve/service become lifecycle/component",
+      "updated": "2026-11-19T06:32:30"
+    },
     "task-phase7c-l1": {
       "accepted": {},
       "after": [],
