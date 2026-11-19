@@ -72,3 +72,64 @@ against `$JOB_SRC` with the job's own FetchContent deps). A probe job exits 1 wh
   the last `finish()`, were read, not stressed.
 - Detent's and Prism's components were not modelled; F1's case is server-composition step 8's
   shape, not a measured adopter.
+
+## Re-check
+
+Commit: 27028a0
+Verdict: APPROVE
+Date: 2026-11-19
+
+A scoped re-check of fix round 1 (task:27028a038fb6), against Xapiand D140.
+
+Evidence accepted: the suite (261119-090341-1360aa) and TSan (261119-090341-37aa0c) at 27028a0;
+the probe jobs 0559d4 (lifecycle), ff6d94 (lifecycle, ASan+UBSan), 6cc987 (sleep race: 0 stalls
+in 30,000 rounds, against 69 before), e27174 and d1a7c8 (lifecycle end races under TSan and
+ASan), and 3d1640 (the note's `main`: `io.run()` waits 302 ms for the stop, then the lifecycle
+ends flushed); the nine mutants in the journal. My own probe: 261119-091929-77b81e
+(`run.sh inbox`).
+
+1. **The inbox.** A cross-thread `post_call` goes into a locked vector with a release flag that
+   `run_until` drains under the same lock (`task.hh:401-410`, `:469-476`), so nothing posted is
+   lost while a driver keeps calling `run()`. `off_loop` joins its thread in `resume` and
+   in its destructor, so the frame never outlives the thread's last touch
+   (`lifecycle.hh:437-478`). Ordering against `post()`: a same-thread `post_call` stays FIFO with
+   posts, but a cross-thread call is taken only once ready *and demoted* are both empty
+   (`task.hh:447`). The class's rule is that demoted handles run only when nothing else is ready,
+   so this breaks it: R1.
+2. **The adapted probes keep their meaning.** P7 now waits for the flush thread and still requires
+   no throw, every other stop, drain and flush, and an ASan-clean run of the bound timer. P5b now
+   follows the note's revised pattern (the parent forwards `flush()` to `children`,
+   `service-shape.md:172-176`). Since F4's fix is that pattern, P5b checks the right thing:
+   whether a component written as the note says gets flushed at the third signal. The suite's
+   `parent` case checks the same thing.
+3. **Failure order.** The order is now start, ready, stop, drain, flush, which is chronological,
+   and `drain_all` and `flush` keep their first throw in the order they ran
+   (`lifecycle.hh:509-528`). The exception is `fail()`, which still ranks last (`:528`) even
+   when it requested the stop and so came before every stop, drain and flush error. That is what
+   the note says ("else fail()'s"), but a failing control task's cause is then reported as the
+   drain or flush error it led to: R3. Otherwise the order is right.
+4. **Findings:**
+   - **Closed:**
+     - F1: a start or ready failure now ends what ran on the start token (`lifecycle.hh:484`, `:500`; P8a, P8b).
+     - F2: `components::stop` catches per component (`lifecycle.hh:122-132`), and `run_lifecycle` catches stop and drain and joins the timer (`:508-519`; P7 under ASan).
+     - F3: the lost fire settles the token (`task.hh:1598`; 6cc987).
+     - F4: the parent pattern forwards its flush (`service-shape.md:172-176`; P5b, suite `parent`).
+     - N1: the order is stated (`service-shape.md:175`).
+     - N2: work guard (`lifecycle.hh:553`; 3d1640).
+     - N3: flushes run off the loop (`lifecycle.hh:523`, D16 revised).
+     - N5: the destructor waits for handlers still writing (`lifecycle.hh:336`, `:359`).
+     - N6: `run_flushes` drops the lock and `remove_flush` waits for idle (`lifecycle.hh:277-296`).
+     - N7: assert (`task.hh:1581`).
+   - **Open, non-blocking:**
+     - N4: there is still no abandoned flag. Optional, the owner's call.
+     - N8: the note's step 1 still lists `event::wait` (`service-shape.md:291`).
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | defect | A cross-thread `post_call` on `inline_scheduler` runs only after every demoted handle, including ones posted after it, so a demoted loop that keeps re-posting starves it: a flush thread's resume or a sleep's cancel hop waits for the loop to end, and never runs if the loop does not end. | 261119-091929-77b81e: posted at step 10 and run after step 10,000; a same-thread call ran at step 10. `task.hh:447` | Take the inbox when `ready_` is empty, before falling back to demoted. Test: the probe's ordering. |
+| R2 | no | gap | When `off_loop` cannot start its thread (`std::system_error` from `await_suspend`, `lifecycle.hh:450`), the end-of-lifecycle flush never runs; it is only reported as `failure`. That breaks "every path ends with the flushes" under thread exhaustion. | By reading, `lifecycle.hh:448-458`, `:522-526` | On a failed spawn, run `f` inline on the loop. |
+| R3 | no | gap | `fail()` ranks after every other error even when it caused the stop, so a failing control task's cause is replaced by the drain or flush throw it led to. | `lifecycle.hh:528` | Owner's call: keep it (the note's rule), or record `fail()` first when it arrived before the stop. |
+| R4 | no | nit | `owner_` is read relaxed from other threads, so a thread that drove the scheduler earlier and now posts while another thread drives it can match its own stale id and push into `ready_` unlocked. | `task.hh:402` | Document one driving thread per `inline_scheduler`, or compare with acquire against a run counter. |
+
+Not run in this re-check: Linux and FreeBSD, and R1 or R2 under a sanitizer. I did not stress
+`off_loop` against teardown destroying a lifecycle frame mid-flush on asio.

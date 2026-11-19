@@ -1039,6 +1039,27 @@
         ]
       },
       "text": "geo-correctness landed: unlocks frees docs/src/content/docs/changelog.md for stopword-lists"
+    },
+    {
+      "at": "2026-11-19T09:02:55",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:driver-witness-removal-sink",
+      "id": "msg-130",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:driver-witness-removal-sink"
+      },
+      "text": "detent:driver-witness-removal-sink started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T09:03:19",
+      "by": "detent-lead",
+      "closed": "noted: driver-apply-gap landed at consensus:c64b5cd; consensus-rpc-lane's after list includes it",
+      "id": "msg-131",
+      "text": "Detent lead: driver-apply-gap landed on consensus main (consensus:c64b5cd, 4b0b214 Merge branch 'main' into quest/detent/driver-apply-gap), first in D127's order. consensus-dns-threads landed earlier. peers-tsan-timeout is next, then consensus-worker-release starts once it lands (same files). driver-witness-removal-sink started now. Please pass this to whoever on your side waits on the apply gap (xapiand-d8)."
     }
   ],
   "quests": {
@@ -1941,7 +1962,8 @@
         "docs/design/cheap-reopen.md",
         "tests/test_cheap_reopen*",
         "tests/test_pool.cc",
-        "tests/test_node.cc"
+        "tests/test_node.cc",
+        "src/database/handler.cc"
       ],
       "landed": [],
       "lenses": [
@@ -1954,7 +1976,7 @@
       "risk": "high",
       "status": "active",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T01:33:15",
+      "updated": "2026-11-19T08:43:29",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
@@ -4008,7 +4030,8 @@
         "detent:peers-tsan-timeout",
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
-        "detent:driver-apply-gap"
+        "detent:driver-apply-gap",
+        "detent:driver-witness-removal-sink"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4197,7 +4220,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T05:57:20",
+      "updated": "2026-11-19T09:03:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -7960,7 +7983,8 @@
         "detent:consensus-quiescence",
         "detent:journal-host-guards",
         "strata-nospace-position",
-        "document-gate"
+        "document-gate",
+        "detent:driver-witness-removal-sink"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8025,7 +8049,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-18T13:20:23",
+      "updated": "2026-11-19T09:03:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -24168,7 +24192,50 @@
       "worktree": ""
     },
     "task-lifecycle": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T09:22:03",
+          "base": "95798a02f68c86f070401329a05c78d326ac2579",
+          "blobs": {
+            "AGENTS.md": "100644:48ccd830654c71c5484271708d0540ceee36e1db",
+            "ARCHITECTURE.md": "100644:2a4e1be09d4b744da6ca88963ee0d4239b621b44",
+            "CMakeLists.txt": "100644:566667384cbb7dafeac713472717c4d05d62805c",
+            "README.md": "100644:ae81fbfa28aa5bc4f9e7dbefc83481922cc1a05b",
+            "docs/API.md": "100644:a1663d8e4a5493cf094ac70e514694ae875fd71b",
+            "docs/design/service-shape.md": "100644:710316d73d89e6fa42a06a14c5b53f877b5d8dc2",
+            "docs/mechanisms/lifecycle.md": "100644:806ba2ae96bddeda804f21a729092e65d63ef1dd",
+            "lifecycle.hh": "100644:07f0f5f88e781b527c6958792485a332ca4e6f6b",
+            "task.hh": "100644:7c6746dabfc4277b1eee5cdf52df6ab7e92761d1",
+            "task_asio.hh": "100644:3c8e8ee896e664c4b0db4c50a08aab960bec3a43",
+            "task_timers.hh": "100644:24061a6f9c95ec548195011849e58ab4dae6032a",
+            "test/lifecycle_test.cc": "100644:e7da758214cf1a75ed57b79b25d8310673a43463",
+            "test/timers_test.cc": "100644:9f1e376092a82dbeae99429ca27ccf71937978f6"
+          },
+          "by": "review",
+          "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "criteria": "680849eeac9a9464",
+          "diffs": {
+            "AGENTS.md": "f6d6d7ebbf919cd9",
+            "ARCHITECTURE.md": "91ba945f65e7a1d6",
+            "CMakeLists.txt": "32a13b897dc25a52",
+            "README.md": "d1cf1bea4e9b8613",
+            "docs/API.md": "f8cef374b81e199e",
+            "docs/design/service-shape.md": "cf73a0f3351cda2e",
+            "docs/mechanisms/lifecycle.md": "fe62c3c9443a588e",
+            "lifecycle.hh": "122bb1ae278d6d7d",
+            "task.hh": "bbe6740a4838f5ed",
+            "task_asio.hh": "6affd10db5e11b47",
+            "task_timers.hh": "afad57ddf200ff57",
+            "test/lifecycle_test.cc": "5c058f8f5a823e56",
+            "test/timers_test.cc": "3feb5c1dd9e022b8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "53b44272847ad22788ebc0a52d580f7dd01b3e37",
+          "reviewed": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "95798a02f68c86f070401329a05c78d326ac2579",
       "branch": "quest/xapiand/task-lifecycle",
@@ -24196,7 +24263,8 @@
         "docs/**",
         "README.md",
         "CMakeLists.txt",
-        "AGENTS.md"
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-lifecycle",
       "landed": [],
@@ -24212,7 +24280,7 @@
       "risk": "high",
       "status": "review",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T08:22:38",
+      "updated": "2026-11-19T09:22:03",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
@@ -25640,8 +25708,8 @@
     "wide-search-loop": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T05:44:52",
-          "base": "a6de2c57936a95716912a676dee99e48d5011f01",
+          "at": "2026-11-19T09:20:21",
+          "base": "b2e1afce18b16fc259f7c90a9d44e0937715edf4",
           "blobs": {
             "docs/design/wide-search-loop.md": "100644:23d7200b4e7e5c3fdc47ddb30d06ca18c901714c",
             "harness/async_allowlist.tsv": "100644:82d044e7aa9117462bfee2a87e6eba0ebfe0247d",
@@ -25659,7 +25727,7 @@
             "tests/test_wide_search.cc": "100644:3dd76df79ed9d9ad22f1521f1daa711995f1df2f"
           },
           "by": "review",
-          "commit": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
+          "commit": "b7d9fd04cc0935ec9ad97a79b7550333a02d1475",
           "criteria": "3be2c18b9e5aedd9",
           "diffs": {
             "docs/design/wide-search-loop.md": "8a8e4780c64f103e",
@@ -25678,7 +25746,7 @@
             "tests/test_wide_search.cc": "6a9a853b7e96922a"
           },
           "findings": {},
-          "note": "",
+          "note": "lead read main's changes since review: geo-correctness (src/geospatial/**, its tests), CI concurrency groups, CMakeLists pin line; none touches wide_search, the loop or handler.cc",
           "review": "7265610722d3cf07ef915cd3c2be7321a33c4b4f",
           "reviewed": "0240c48e1a62e61c679da2cd8a9cd40100ee703e",
           "verdict": "APPROVE"
@@ -25719,7 +25787,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-19T05:44:52",
+      "updated": "2026-11-19T09:20:21",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
