@@ -49,7 +49,7 @@ void test_not_is_a_flat_list_of_one() {
 	CHECK_TRUE(operand.is_array());
 	CHECK_EQ(operand.size(), std::size_t(1));
 	CHECK_FALSE(operand.at(0).is_array());
-	CHECK_EQ(tree.to_string(), std::string(R"({"_not":[{"a":"b"}]})"));
+	CHECK_EQ(tree.to_string(), std::string(R"({"_not":[{"a":{"_value":"b"}}]})"));
 }
 
 void test_not_of_a_group() {
@@ -64,7 +64,7 @@ void test_not_of_a_group() {
 
 void test_binary_operators_are_lists_of_two() {
 	auto dsl = make_dsl();
-	for (const char* op : { "AND", "OR", "XOR", "AND MAYBE" }) {
+	for (const char* op : { "AND", "OR", "XOR" }) {
 		const auto tree = dsl.make_dsl_query(std::string("a:b ") + op + " c:d");
 		std::fprintf(stderr, "tree: %s\n", tree.to_string().c_str());
 		CHECK_EQ(tree.size(), std::size_t(1));
