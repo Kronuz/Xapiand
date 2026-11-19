@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-082832-0fe0b6 261119-082834-ac95e7 261119-082835-32cd27 261119-082841-e595c8
+State: blocked on lead: schema recording needs schema.h and handler.cc (see Blocked on); jobs 261119-083429-63dc87 261119-083432-825a1e 261119-083435-9bba38 261119-083443-f71030 queued
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,40 +9,41 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Built-in lists, overrides, fingerprint API, refusal for unknown languages and the docs are committed
-(quest/xapiand/stopword-lists: c7e5061ac probe, 16ef67206 code and tests, ae39eb0f9 docs). The index-metadata
-recording (A3 integration) needs files outside the set: see Blocked on. Jobs are queued; read their logs.
+Lead rulings 1-7 applied except the schema recording (ruling 1, see Blocked on): generate_terms.cc catches the
+throw, test_control_plane expects it, the install copies the lists to share/doc/xapiand/stopwords and the build no
+longer copies them to the read directory, the how-it-works note is docs/mechanisms/stopword-lists.md. Head 2bba60a2f.
 
 ## Next
 
-1. Read jobs: tests 261119-082832-0fe0b6 (A1-A4), mutant 261119-082834-ac95e7 (A3 fails-without, at the
-   branch mutant/stopword-lists-fingerprint 93f14fe71: delete that branch after), probe before 261119-082841-e595c8
-   (c7e5061ac) and after 261119-082835-32cd27 (A5). Summarize the A5 medians (awk over the probe lines) here.
-2. After the lead widens the set: record and check the fingerprint in the schema (see Blocked on), then the suite (A7).
+1. Read the jobs below. Write docs/perf/stopword-lists.md from the A5 probe (medians per mode, before vs after);
+   decide ruling 7: if start-up or lookup cost is material, add a hunt-row candidate for a view mode in
+   analysis::stopper (hunt.md is the lead's: write it in this journal for the lead), else drop the idea with numbers.
+2. After the lead answers the schema question: record and check, adopt for indexes with no record, then
+   `campaign verify stopword-lists` (A7).
 
 ## Blocked on
 
-The lead: widen the file set for the A3 integration (the API is done: `stopWordsFingerprint(lang)` at
-index time, `checkStopWords(index, lang, recorded)` on open and query; both throw as the quest asks).
+The lead: ruling 1 needs two more files and one design choice.
 
-1. `src/reserved/schema.h`: a reserved property name, e.g. `RESERVED_STOP_FINGERPRINT` (`_stop_fingerprint`).
-2. `src/database/schema.cc`: record it beside `mut_properties[RESERVED_LANGUAGE]` (line ~4997, a text field
-   with a language: `stopWordsFingerprint(language)`); check it where the field's stored properties become a
-   specification (lines ~9276, 9553, 9608, 9708, next to `res.language = ...`) with
-   `checkStopWords(index, res.language, recorded)`. The schema is the index's persisted metadata
-   (RESERVED_SCHEMA), so this is the "persisted key". Open question for the lead: an index whose fields have a
-   language but no recorded fingerprint (built before this change) is let through and then records one on its
-   next schema write, or refused; formats are open until release, so refusing is allowed.
-3. `src/multivalue/generate_terms.cc:534`: `getStopWords(language)` now throws `UnknownStopWordsError`
-   (a `std::invalid_argument`); map it to `engine::Error(errc::invalid, ...)` as `getStemmer` does at ~516.
-4. `tests/test_control_plane.cc:544`: `CHECK(getStopWords("yy") == nullptr)` becomes
-   `CHECK_THROW(getStopWords("yy"), UnknownStopWordsError)`. Without it the suite (A7) fails on that line.
-5. `CMakeLists.txt:1318-1319` (`install(DIRECTORY stopwords ...)`): with the lists compiled in, the install
-   copies 18 files that a node then reads at start-up as overrides (the same bytes; cost is the "files18" rows
-   of the probe). Drop the install rule so a default install reads nothing; the repo's `stopwords/` stays as
-   the source of the generated `builtin.inc`. Also `docs/mechanisms/` and `docs/perf/` are outside the set:
-   where should the how-it-works note and the A5 numbers go?
-6. Decision for the lead (changes a contract: the quest's "perfect-hash sets"): see Rulings I made 1.
+Facts found: `Schema` has no index name (its `origin` is the foreign schema's path, empty for a local index), so the
+error "naming the index" cannot be raised inside schema.cc; `DatabaseHandler::get_schema` (src/database/handler.cc:375)
+knows `endpoints`. A new `_stop_fingerprint` property in a field's stored properties also needs `schema.h`
+declarations (feed/process/consistency/readable functions: the property tables at schema.cc:6198, 6340, 6365, 6474,
+6550, 9188 list every reserved key) and shows up in every schema output (to_string, e2e fixtures with a text field
+and a language) unless `dispatch_readable` hides it.
+
+Options:
+A. (recommended) Field property `_stop_fingerprint` next to `_language` (recorded at schema.cc:4999 when the field
+   is created), hidden from the readable schema. `Schema::check_stop_words(index)` (new, schema.h) walks the
+   fields' properties and calls `checkStopWords`; `DatabaseHandler::get_schema` calls it with the endpoints' name
+   after building the Schema, and the same call adopts the current fingerprint for a field that has a language but
+   no record (ruling 6; persisted with the next schema write, one info log line). No extra metadata read: the
+   fingerprints ride in the cached schema. Files: src/database/schema.h, src/database/handler.cc (+ the already
+   widened schema.cc, reserved/schema.h).
+B. A separate metadata key `_stopwords` = {language: fingerprint} written with `set_metadata` and read by
+   handler.cc on open: one extra metadata read per open unless cached beside the schema, and the languages used
+   must be found by walking the schema anyway. Files: src/database/handler.cc (and schemas_lru.cc for the cache).
+Which one, and widen: src/database/schema.h, src/database/handler.cc.
 
 ## Evidence
 
@@ -50,13 +51,13 @@ Jobs prove criteria by their tags (`--for A1`); `campaign brief` generates the t
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261119-082832-0fe0b6 (scenario `builtin`: 18 shipped files vs compiled lists, counts, fingerprints, no data directory) |
-| A2 | job 261119-082832-0fe0b6 (scenario `override`: en replaced, xx custom, fr same words same fingerprint, de untouched, files deleted after preload; `unreadable` throws) |
-| A3 | job 261119-082832-0fe0b6 (unchanged passes, changed and missing refuse with index, list and both fingerprints) and 261119-082834-ac95e7 (the same test fails at the mutant). The integration into the schema is Blocked on 1-2 |
-| A4 | job 261119-082832-0fe0b6 (`getStopWords`, `stopWordsFingerprint`, `parse_text` with an unknown language throw naming it); generate_terms.cc is Blocked on 3 |
-| A5 | jobs 261119-082841-e595c8 (before) and 261119-082835-32cd27 (after); numbers under Result |
+| A1 | job 261119-083429-63dc87 (scenario `builtin`: 18 shipped files vs compiled lists, counts, fingerprints, no data directory) |
+| A2 | job 261119-083429-63dc87 (scenario `override`: en replaced, xx custom, fr same words same fingerprint, de untouched, files deleted after preload; `unreadable` throws) |
+| A3 | job 261119-083429-63dc87 (unchanged passes, changed and missing refuse with index, list and both fingerprints) and 261119-083432-825a1e (the same test fails at the mutant). The mutant is branch mutant/stopword-lists-fingerprint (11d4f7004), to delete after. The schema integration is Blocked on |
+| A4 | job 261119-083429-63dc87 (`getStopWords`, `stopWordsFingerprint`, `parse_text` with an unknown language throw naming it); generate_terms.cc maps the throw to an invalid engine error |
+| A5 | jobs 261119-083443-f71030 (before) and 261119-083435-9bba38 (after); numbers under Result |
 | A6 | `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed) |
-| A7 | pending Blocked on 4 |
+| A7 | pending the schema recording; `campaign verify stopword-lists` after |
 
 ## Result
 
