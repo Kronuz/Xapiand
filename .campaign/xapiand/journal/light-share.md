@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: waiting on jobs 261119-030739-c88e70 261119-030741-9184b7 261119-030742-53715a (E1a, E1b, E2: the fixed patch with the share always binding)
+State: blocked on owner: the heavy-share cap (decision request below); E1/E2 read and folded in
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,39 +24,37 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Read E1a c88e70 and E1b 9184b7 (`light_share_report.py` and `light_share_turns.py` print in each log): T5 arms
-   within the limit, T4 lag, heavy searches at off/4@0/6@0/8@0 on the fixed patch, and heavy turns' CPU/wall under a
-   binding share (decides "What bounds T4"). Read E2 53715a: T10 flood p99 and answered at off/4@0/6@0. Fold both into
-   `docs/design/light-share.md` and the Evidence below; confirm or change the recommendation.
-2. Correctness review F6: its fix is ineffective (the gate never opens under real light traffic; design note "Why the
-   fixed share does not bind"). The gate's signal moves to Xapiand (light requests in flight) in light-share-task;
-   this quest's cap evidence stands on the always-binding arms. Tell the reviewer before `campaign accept`.
+1. Owner decides the cap (below). Then light-share-task lands the share in Kronuz/task with a light-in-flight gate
+   signalled by Xapiand (the fixed patch's gate never opens: design note "Why the fixed share does not bind").
+2. Correctness review F6: its fix is ineffective under real traffic; tell the reviewer before `campaign accept`.
 3. Lead: merge master into the branch, `campaign verify light-share` at the head (A5), push.
 
 ## Blocked on
 
-Owner: the heavy-share cap. Decision request (also in `docs/design/light-share.md`, "Decision: the cap"):
+Owner: the heavy-share cap. Decision request (also in `docs/design/light-share.md`, "Decision: the cap"), with E1/E2:
 
-> **Decision request: the heavy-share cap.** No value is clearly best. On a share that always binds (18 mix arms, 10
-> T10 arms, 10 T12 arms; 16 CPUs, 16 loops), only share 4 meets both T5 and T10, it costs the most heavy throughput,
-> and no share meets T4.
+> **Decision request: the heavy-share cap.** No value is clearly best. On a share that always binds (both patches:
+> 7 mix arms per share, 4 T10 arms each at 4 and 6, 10 T12 arms; 16 CPUs, 16 loops), share 4 meets T10 and meets T5
+> most often, but not reliably, at the highest heavy cost; no share meets T4.
 >
-> 1. **Share 4.** T5 in 4 of 4 arms (light p99 6.5 ms vs limit 7.3-9.5; p50 3.42 to 1.42 ms); T10 17.1 ms (bound
->    about 20). Costs under saturation: heavy searches -36% in the mix (-38% heavy only), worst heavy p99 +22% (149 to
->    182 ms), T10 flood throughput -42%, server CPU 267 to 191 s per phase (about 3.6 of 16 cores idle while heavy
->    clients wait). T12 RESTORE and QPS flat. T4 1.92 ms, 1.9x its bound.
-> 2. **Share 6.** T10 18.0 ms (met); T5 in 1 of 4 arms (p99 median 19.3 ms, bimodal 7.7-30.3). Costs: heavy searches
->    -25%, flood -17%, heavy p99 +6%. T4 2.05 ms.
-> 3. **Share 8.** T5 in 2 of 4 (median 9.0 ms); T10 21.2 ms (misses by 6%). Costs: heavy searches -15%, flood -4%,
->    heavy p99 -9% (136 ms). T4 2.56 ms.
-> 4. **No cap.** No cost; T5 33.2 ms (about 4x its limit), T10 46.3 ms, T4 5.12 ms, all missed.
+> 1. **Share 4.** T10 17.0-17.4 ms (bound about 20). T5 in 5 of 7 arms (first patch 4 of 4, fixed patch 1 of 3; light
+>    p99 median 6.5 ms, up to 14.8, against limits of 7.3-9.5; p50 3.3 to 1.4 ms). Costs under saturation: heavy
+>    searches -36 to -39%, worst heavy p99 +22 to +34% (to 183 ms), flood throughput -41 to -42%, server CPU -29 to -31%
+>    (about 4 of 16 cores idle while heavy clients wait). T12 flat. T4 1.54-2.05 ms.
+> 2. **Share 6.** T10 17.7-18.3 ms (met); T5 in 2 of 7 (median 12.8 ms). Costs: searches -25 to -28%, flood -17 to
+>    -19%, heavy p99 +6 to +12%. T4 1.79-2.05 ms.
+> 3. **Share 8.** T5 in 4 of 7 (median 8.4 ms); T10 21.2 ms (misses by 6%). Costs: searches -15 to -18%, flood -4%,
+>    heavy p99 flat (132-136 ms), CPU -9 to -12%. T4 2.05-2.56 ms.
+> 4. **No cap.** No cost; T5 34.9 ms (0 of 7), T10 46 ms, T4 3.6-7.2 ms, all missed.
 >
-> Recommendation: share 4, landed (light-share-task) only with a gate driven by light requests in flight, which
-> Xapiand's HTTP server signals, so heavy-only load is never capped and the cost above is paid only while light
-> requests are present; T4 goes to its own quest (the long heavy turns, see "What bounds T4"). Share 5 is unmeasured
-> and may meet T5 for less. Conditional on E1/E2 reproducing share 4 on the fixed patch.
+> Recommendation: share 4 behind a light-in-flight gate (Xapiand's HTTP server signals light requests in flight, so
+> heavy-only load is never capped and the cost is paid only while light requests are present), still, as the only
+> value that meets T10 and the one that meets T5 most often. E2 confirms its T10; E1 weakens its T5 (1 of 3 on the
+> fixed patch). Land it with T5 and T4 not yet claimed, and give the residual to the stall quests: E1 measured the
+> long heavy turns under a binding share as CPU (0.92-0.94 CPU/wall), which only checkpoints remove. If 39% of heavy
+> searches under saturation is too much, share 8 halves the cost and gives up T10.
 >
-> Deferring costs: x7-gate stays red on T4, T5 and T10; loaded light p99 stays about 33 ms (4x its bound) and flood
+> Deferring costs: x7-gate stays red on T4, T5 and T10; loaded light p99 stays about 35 ms (4x its limit) and flood
 > p99 about 46 ms; light-share-task cannot start (it needs the value and the gate's contract). It costs no heavy
 > throughput.
 
@@ -105,24 +103,36 @@ share in both patches, inside off's 3,532-4,564.
 | Criterion | Evidence |
 |---|---|
 | A1 | MET: `docs/design/light-share.md`: the wait is CPU on the loops; a binding share fixes T5/T10, not T4; the fixed gate does not bind |
-| A2 | NOT MET. T5: share 4 (binding) 4 of 4 arms, prototype only. T4: no share (plateau 1.79-2.05 ms vs 1.024). No landed code (R3) |
-| A3 | MET ON THE PROTOTYPE at shares 6 and 4 (binding, 18.0 and 17.1 ms); not at landed code (R3); fixed patch at 10 ms misses (44 ms) |
+| A2 | NOT MET. T5: share 4 (binding) 5 of 7 arms over both patches (fixed patch 1 of 3), prototype only. T4: no share (plateau 1.79-2.05 ms vs 1.024). No landed code (R3) |
+| A3 | MET ON THE PROTOTYPE at shares 6 and 4, both patches (binding, 17.7-18.3 and 17.0-17.4 ms; E2 53715a); not at landed code (R3); fixed patch at 10 ms misses (44 ms) |
 | A4 | MET ON THE PROTOTYPE: T12 RESTORE and QPS inside off's band at every share, both patches (abe252, 135316-88308e, 184049-f10605); the mix's heavy searches are not A4's measure but cost 36% at share 4 |
 | A5 | NOT MET at the head: suite last passed at 37f06f732607 (261118-184002-4c0fa6); since then harness and docs only; master not merged |
 
-Head with these tables: Xapiand:3b7d33194 (the lead pushes). Pending: E1a 261119-030739-c88e70, E1b 261119-030741-9184b7 (mix, off/4@0/6@0/8@0, 3 arms each, per-turn wall vs
-CPU); E2 261119-030742-53715a (T10, off/4@0/6@0, 2 arms each). Exclusive, at f1154e7b0.
+E1 (fixed patch, share always binds; 261119-030739-c88e70, 030741-9184b7, 3 arms each). Heavy turn wall p99; turns
+over 1.024 ms and their CPU/wall:
+
+| Share | Light p50 / p99 / max, ms | T5 within | T4 lag p99 | Heavy searches | Heavy p99 | Server CPU | Turn wall p99 | Long turns; CPU/wall |
+|---|---|---|---|---|---|---|---|---|
+| off | 3.21 / 34.9 / 100 | 0 of 3 | 3.58 | 32,504 | 137 | 278 s | 1.14 ms | 1.49%; 0.41 |
+| 8@0 | 1.94 / 7.7 / 61 | 2 of 3 | 2.05 | -18% | 132 | 244 s | 0.86 ms | 0.61%; 0.76 |
+| 6@0 | 1.71 / 12.8 / 81 | 1 of 3 | 2.05 | -28% | 153 | 220 s | 0.86 ms | 0.71%; 0.81 |
+| 4@0 | 1.40 / 12.4 / 112 | 1 of 3 | 1.79 | -39% | 183 | 192 s | 0.72 ms | 0.33%; 0.93 |
+
+E2 (261119-030742-53715a) T10 flood p99 (answered): off 46.0 (1,601), 6@0 17.8 (-19%), 4@0 17.2 ms (-41%).
+E1/E2 confirm T10 at 4 and 6 and the cost; they weaken T5 at 4 (1 of 3; pooled 5 of 7); long turns under a binding
+share are CPU, so T4's residual is un-checkpointed computation.
 
 Superseded: 022842-883d3a, 022854-f0e080, 112144-650d76, 112147-f7cdd0, 112151-1f9d36, 112154-12be10 (noisy, timed
 out, or ran without build-ls).
 
 ## Result
 
-The loaded light wait is CPU on the 16 loops, not the pool or shard turns. A cap on loops running a heavy turn fixes T5
-and T10 at share 4 (6.5 ms; 17.1 ms) for 36% of heavy searches and 42% of flood throughput under saturation, T12
-flat; 6 fixes T10 only; 12 does nothing. No share reaches T4 (1.79-2.05 ms). The review's F6 gate, as built, never
-opens under real light traffic, so the fixed patch at its default window measures as off; its signal belongs in
-Xapiand. The long heavy turns are two thirds off-CPU when unbound. Design note: `docs/design/light-share.md`.
+The loaded light wait is CPU on the 16 loops, not the pool or shard turns. A binding cap on loops running a heavy
+turn meets T10 at shares 4 and 6 on both patches (17.0-18.3 ms); T5 is met most often at 4 (5 of 7 arms) but not
+reliably; 12 does nothing; no share reaches T4 (1.54-2.05 ms). Share 4 costs 36-39% of heavy searches and 41-42% of
+flood throughput under saturation, T12 flat. Under a binding share the long heavy turns are CPU (0.92-0.94
+CPU/wall): T4's and T5's residual is un-checkpointed heavy computation. The review's F6 gate never opens under real
+light traffic; its signal belongs in Xapiand. Design note: `docs/design/light-share.md`.
 
 ## Rulings I made
 
