@@ -148,6 +148,9 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 				case Cast::HashType::MULTICIRCLE:
 					geometry = std::make_unique<MultiCircle>(make_multicircle(it.value()));
 					return;
+				case Cast::HashType::MULTICONVEX:
+					geometry = std::make_unique<MultiConvex>(make_multiconvex(it.value()));
+					return;
 				case Cast::HashType::MULTIPOLYGON:
 					geometry = std::make_unique<MultiPolygon>(make_multipolygon(it.value()));
 					return;
@@ -377,6 +380,29 @@ GeoSpatial::make_circle(const MsgPack& o)
 
 
 Convex
+GeoSpatial::getConvex(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack& radius, const MsgPack* height)
+{
+	if ((latitude.size() != longitude.size()) || (latitude.size() != radius.size()) || ((height != nullptr) && (latitude.size() != height->size()))) {
+		THROW(GeoSpatialError, "{}, {}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE, RESERVED_GEO_RADIUS);
+	}
+	Convex convex;
+	convex.reserve(latitude.size());
+	auto it = longitude.begin();
+	auto it_radius = radius.begin();
+	auto hit = height != nullptr ? height->begin() : it;
+	for (const auto& lat : latitude) {
+		convex.add(Circle(Cartesian(lat.f64(), it->f64(), height != nullptr ? hit->f64() : 0, data.units, data.srid), distance(*it_radius)));
+		++it;
+		++it_radius;
+		if (height != nullptr) {
+			++hit;
+		}
+	}
+	return convex;
+}
+
+
+Convex
 GeoSpatial::make_convex(const MsgPack& o)
 {
 	if (!o.is_map()) {
@@ -390,38 +416,47 @@ GeoSpatial::make_convex(const MsgPack& o)
 		THROW(GeoSpatialError, "{} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE);
 	}
 	try {
-		Convex convex;
-		if (data.alt != nullptr) {
-			if (data.lat->size() != data.alt->size()) {
-				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE);
+		return getConvex(data, *data.lat, *data.lon, *data.radius, data.alt);
+	} catch (const msgpack::type_error&) {
+		THROW(GeoSpatialError, "{}, {}, {} and {} must be array of numbers", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE, RESERVED_GEO_RADIUS);
+	}
+}
+
+
+MultiConvex
+GeoSpatial::make_multiconvex(const MsgPack& o)
+{
+	if (!o.is_map()) {
+		THROW(GeoSpatialError, "{} must be map", RESERVED_MULTICONVEX);
+	}
+	const auto data = get_data(o, true);
+	if ((data.lat == nullptr) || (data.lon == nullptr) || (data.radius == nullptr)) {
+		THROW(GeoSpatialError, "{} must contain {}, {} and {}", RESERVED_MULTICONVEX, RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
+	}
+	if ((data.lat->size() != data.lon->size()) || (data.lat->size() != data.radius->size()) || ((data.alt != nullptr) && (data.lat->size() != data.alt->size()))) {
+		THROW(GeoSpatialError, "{}, {}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE, RESERVED_GEO_RADIUS);
+	}
+	try {
+		MultiConvex multiconvex;
+		// A flat list is one convex; a list of lists, one convex per inner list.
+		if (data.lat->size() == 0 || !data.lat->begin()->is_array()) {
+			if (data.lat->size() != 0) {
+				multiconvex.add(getConvex(data, *data.lat, *data.lon, *data.radius, data.alt));
 			}
-			if (data.lat->size() != data.radius->size()) {
-				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
-			}
-			auto it = data.lon->begin();
-			auto hit = data.alt->begin();
-			auto it_radius = data.radius->begin();
-			convex.reserve(data.lat->size());
-			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), distance(*it_radius)));
-				++it;
+			return multiconvex;
+		}
+		auto it = data.lon->begin();
+		auto it_radius = data.radius->begin();
+		auto hit = data.alt != nullptr ? data.alt->begin() : it;
+		for (const auto& lat : *data.lat) {
+			multiconvex.add(getConvex(data, lat, *it, *it_radius, data.alt != nullptr ? &*hit : nullptr));
+			++it;
+			++it_radius;
+			if (data.alt != nullptr) {
 				++hit;
-				++it_radius;
-			}
-		} else {
-			if (data.lat->size() != data.radius->size()) {
-				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
-			}
-			auto it = data.lon->begin();
-			auto it_radius = data.radius->begin();
-			convex.reserve(data.lat->size());
-			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), distance(*it_radius)));
-				++it;
-				++it_radius;
 			}
 		}
-		return convex;
+		return multiconvex;
 	} catch (const msgpack::type_error&) {
 		THROW(GeoSpatialError, "{}, {}, {} and {} must be array of numbers", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE, RESERVED_GEO_RADIUS);
 	}
@@ -668,6 +703,9 @@ GeoSpatial::make_collection(const MsgPack& o)
 				case Cast::HashType::MULTICIRCLE:
 					collection.add_multicircle(make_multicircle(it.value()));
 					break;
+				case Cast::HashType::MULTICONVEX:
+					collection.add_multiconvex(make_multiconvex(it.value()));
+					break;
 				case Cast::HashType::MULTIPOLYGON:
 					collection.add_multipolygon(make_multipolygon(it.value()));
 					break;
@@ -717,6 +755,9 @@ GeoSpatial::make_intersection(const MsgPack& o)
 					break;
 				case Cast::HashType::MULTICIRCLE:
 					intersection.add(std::make_shared<MultiCircle>(make_multicircle(it.value())));
+					break;
+				case Cast::HashType::MULTICONVEX:
+					intersection.add(std::make_shared<MultiConvex>(make_multiconvex(it.value())));
 					break;
 				case Cast::HashType::MULTIPOLYGON:
 					intersection.add(std::make_shared<MultiPolygon>(make_multipolygon(it.value())));

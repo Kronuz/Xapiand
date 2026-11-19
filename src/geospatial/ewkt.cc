@@ -311,7 +311,7 @@ EWKT::_parse_cartesian(int SRID, Iterator first, Iterator last)
 		++first;
 	}
 	if (first == last) {
-		THROW(InvalidArgument, "Expected ' ' after of longitude [{}]");
+		THROW(InvalidArgument, "Expected ' ' after of longitude");
 	}
 	double lon = strict_stod(std::string_view(_first, first - _first));
 
@@ -492,19 +492,20 @@ EWKT::_parse_multipoint(int SRID, Iterator first, Iterator last)
 		}
 		THROW(EWKTError, "Invalid MULTIPOINT specification [expected '('");
 	} else {
-		while (first != last) {
-			while (first != last && *first != ',') {
-				++first;
+		for (;;) {
+			auto comma = first;
+			while (comma != last && *comma != ',') {
+				++comma;
 			}
-			multipoint.add(Point(_parse_cartesian(SRID, first, first)));
-			if (first == last) {
+			multipoint.add(Point(_parse_cartesian(SRID, first, comma)));
+			if (comma == last) {
 				return multipoint;
 			}
-			if (*(++first) == ' ') {
+			first = comma + 1;
+			if (first != last && *first == ' ') {
 				++first;
 			}
 		}
-		THROW(EWKTError, "Invalid MULTIPOINT specification [{}]", std::string(first, last));
 	}
 }
 
