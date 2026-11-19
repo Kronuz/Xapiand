@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: arm64-${{ github.ref }}
+  group: arm64-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
