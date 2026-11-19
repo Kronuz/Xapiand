@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: fixing F1 F2 F6 (review CHANGES): waiting on jobs 261118-200443-31c214 261118-200453-0b8e42 261118-200446-6e671a
+State: fixing F1 F2 F6 (review CHANGES): waiting on job 261118-200446-6e671a (build-ls); then the sweep
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -49,6 +49,16 @@ Owner decision (does not stop the review): A2's T4 (1.024 ms) is not reachable b
 T4 needs the un-checkpointed heavy sections (post-I/O resumes, response serialization) cut to checkpoints (stall
 quests), since lag plateaus at 1.8-2.05 ms from share 6 down. That is inferred from the plateau and the census, not
 profiled per turn.
+
+## Review fixes: probe evidence
+
+- 261118-200443-31c214 (exit 0, TSan clean): task asio/lanes/deadline_asio tests with the share off, 1, 2; `cap`
+  (share 1 and 3: max concurrent heavy 1 and 3, no slot leaked); `parked` ran the light handle while the slot was
+  held (F1); `bypass` heavy head ran after 0 of 1000 light turns (F2); `heavyonly` 4 of 4 overlapped with share 2 (F6);
+  `gate` exactly 2 overlapped while light waits.
+- 261118-200453-0b8e42 (`--fails-without`, v1 patch from 2b8c66958, exit 1 as required): `parked` FAIL (light waited
+  until the holder released), `bypass` FAIL (heavy head ran after 1000 of 1000 light turns), `heavyonly` FAIL (2 of 4
+  overlapped). The task tests pass under v1 and TSan reports nothing.
 
 ## Messages
 
