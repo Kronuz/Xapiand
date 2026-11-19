@@ -25045,6 +25045,37 @@
       "title": "Task primitives for Phase 7c (L1)",
       "updated": "2026-11-08T15:40:16"
     },
+    "task-process-step": {
+      "accepted": {},
+      "after": [
+        "task-driver-layout"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "process.hh",
+        "test/process_test.cc",
+        "docs/mechanisms/process.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "planned",
+      "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
+      "updated": "2026-11-19T13:35:03"
+    },
     "termdict-forward-seek": {
       "accepted": {},
       "after": [],
