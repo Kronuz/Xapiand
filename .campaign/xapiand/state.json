@@ -8142,7 +8142,46 @@
       "worktree": ""
     },
     "htm-edge-points": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T00:42:09",
+          "base": "cadec57954b838bd0428cfc151e925689d8f2f31",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:1c1e18f810c1b7d1c02aa7fba32813559b9443c1",
+            "CHANGELOG.md": "100644:757f4e801e03986b24d12c780891736b123dace5",
+            "CMakeLists.txt": "100644:b751d84d8a3b61efcb1831e20a5139637be1a362",
+            "README.md": "100644:67ea6d8d2d2015bff437433b6c15bc198db88791",
+            "htm.cc": "100644:dc5b5a8c307017975efe779640838df7bb7015d5",
+            "test/diff_test.cc": "100644:c5c20ea0b2c9af0d9359c7453372808dd38c6236",
+            "test/edge_test.cc": "100644:11332b838850c52c13de04b1de80495f8585459b",
+            "test/frozen.h": "100644:12fec58eaae4f8b65c71a7bd504449ac0dbdc874",
+            "test/golden.h": "100644:49354d53190e657290206249eade0107398c82d5",
+            "test/ieee.h": "100644:d83269aacbe52b02d6e70c65e3957c07d721462b",
+            "test/test.cc": "100644:caf0f52b256790c2cd076e1cd98a4a229a215668"
+          },
+          "by": "review",
+          "commit": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "criteria": "7b182fc62236d9ad",
+          "diffs": {
+            "ARCHITECTURE.md": "249044e29993004d",
+            "CHANGELOG.md": "a30344ae68251b44",
+            "CMakeLists.txt": "a5c86c673fa715d5",
+            "README.md": "1030fbcc624e3383",
+            "htm.cc": "17821ccebe0ea7c4",
+            "test/diff_test.cc": "e41f489b6592b49f",
+            "test/edge_test.cc": "51c6d209be665752",
+            "test/frozen.h": "bbb9ca267982adee",
+            "test/golden.h": "19ff1dc6075a4610",
+            "test/ieee.h": "ba1bacbff662fa60",
+            "test/test.cc": "d68b4e644fed31c1"
+          },
+          "findings": {},
+          "note": "",
+          "review": "4363013a12d1d468d028ebd8a34e6163ba9d868f",
+          "reviewed": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "cadec57954b838bd0428cfc151e925689d8f2f31",
       "branch": "quest/xapiand/htm-edge-points",
@@ -8181,7 +8220,7 @@
       "risk": "high",
       "status": "review",
       "title": "A point on a root-mesh edge gets its own trixel id",
-      "updated": "2026-11-19T00:05:25",
+      "updated": "2026-11-19T00:42:09",
       "worktree": "../htm-wt/xapiand/htm-edge-points"
     },
     "http-cancel-race": {
