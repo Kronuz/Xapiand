@@ -25,7 +25,8 @@
     python3 net_test.py [NET_PY]   (default: net.py beside it; no root, no Linux)
 
 tc reads class and handle numbers in hex, so a band written in decimal past 9 names a class the
-prio qdisc never made; the kernel refuses it only in a guest, and this finds it on any host.
+prio qdisc never made; the kernel refuses it only in a guest, and this finds it on any host. nft
+likewise wants a newline or ';' after each closing brace of a table's set or chain.
 """
 
 from __future__ import annotations
@@ -48,7 +49,9 @@ def commands(net_py: Path, argv: list[str]) -> list[str]:
     seen: list[str] = []
 
     def record(argv: list[str], stdin: str | None = None) -> str:
-        if argv[:2] == ["tc", "-batch"] and stdin is not None:
+        if argv[:2] == ["nft", "-f"] and stdin is not None:
+            seen.extend(f"nft-file {line}" for line in stdin.splitlines())
+        elif argv[:2] == ["tc", "-batch"] and stdin is not None:
             seen.extend(stdin.splitlines())
         elif argv[:2] != ["tc", "qdisc"] or argv[2] != "show":
             seen.append(" ".join(argv[1:] if argv[0] == "tc" else argv))
@@ -60,7 +63,8 @@ def commands(net_py: Path, argv: list[str]) -> list[str]:
 
 
 def check(lines: list[str]) -> list[str]:
-    """What is wrong with a command sequence: each class it names beyond the prio's bands."""
+    """What is wrong with a command sequence: each class it names beyond the prio's bands, and each
+    nft block closed with something after it on the same line, which nft's parser refuses."""
     errors: list[str] = []
     bands = 0
     for line in lines:
@@ -69,6 +73,8 @@ def check(lines: list[str]) -> list[str]:
         for word in re.findall(r"(?:parent|flowid) 1:([0-9a-f]+)\b", line):
             if not 1 <= int(word, 16) <= bands:
                 errors.append(f"class 1:{word} is not one of the {bands} bands: {line}")
+        if line.startswith("nft-file ") and re.search(r"\}\s*[^\s;}]", line):
+            errors.append(f"nft needs a newline or ';' after a block's closing brace: {line}")
     return errors
 
 

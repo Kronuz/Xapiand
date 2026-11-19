@@ -78,8 +78,13 @@ def setup() -> None:
             f"filter add dev {DEV} parent 1: protocol ip prio 1 u32 match ip dst {L2}.{peer}/32 flowid {band(peer)}"
         )
     run(["tc", "-batch", "-"], "\n".join(batch) + "\n")
-    table = f"table inet {TABLE} {{ set cut {{ type ipv4_addr; }} chain input {{ type filter hook input priority 0; ip saddr @cut drop; }} }}"
-    run(["nft", "-f", "-"], table + "\n")
+    table = (
+        f"table inet {TABLE} {{\n"
+        "  set cut { type ipv4_addr; }\n"
+        "  chain input { type filter hook input priority filter - 10; policy accept; ip saddr @cut drop; }\n"
+        "}\n"
+    )
+    run(["nft", "-f", "-"], table)
 
 
 def main(argv: list[str]) -> int:
