@@ -7374,7 +7374,9 @@
     },
     "geo-correctness": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "coverage-areas"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7386,22 +7388,19 @@
       "consumes": [],
       "files": [
         "src/geospatial/**",
-        "tests/test_coverage_geospatial.cc",
         "tests/test_geo*.cc",
-        "docs/**"
+        "docs/design/geo*"
       ],
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [
-        "coverage-areas"
-      ],
+      "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
       "status": "planned",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-18T19:58:54"
+      "updated": "2026-11-18T22:28:19"
     },
     "github-triage": {
       "accepted": {},
