@@ -226,6 +226,7 @@ quest starts (name it) or is dropped with a reason.
 | reactor F4: Xapiand raises the hard limit as root and lowers it via --max-files; raise_open_files does neither (owner call in server-limits) | same | reactor.h | server-limits | open |
 | logger-fork-reset N2 (owner call, default: option 2): a fork child that keeps running without exec queues every async line forever (no LOG thread), so memory grows unbounded. Options: document; set kStopping in the child so its lines go inline; start a LOG thread on first use in the child | reviews/logger-fork-reset-correctness.md | logger.cc | logger | open, decision |
 | logger-fork-reset N1/N3-N8: docs/fork.md misses workpool's thread_names_mutex, handlers' locks and the `once` filter lock; cv reset has no failing test (hook fires before cv.wait); fork during first-use setup can still hang (pre-existing); pthread_atfork return ignored; the future's state not reset (finish(n) in a child forked mid-join); TSan cannot see the child; docs/fork.md linked from nowhere | same | logger.cc, docs/fork.md, test/exit.cc | logger | open, small |
+| cpp-libraries docs/server-composition.md: when Detent's prism-server-composition lands (prism:4eb7074, task pinned 0316bef), update Prism's cells (Process: run_daemon + ProcessLock, --daemonize) and drop the 'No daemon mode (Prism) Stays' row; re-pin the header to the landed prism commit | Detent msg-145 | cpp-libraries docs/server-composition.md | lead, small | open, after detent:prism-server-composition |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
