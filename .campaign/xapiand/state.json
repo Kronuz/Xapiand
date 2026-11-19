@@ -10360,7 +10360,36 @@
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-fork-reset": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T14:55:11",
+          "base": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "blobs": {
+            "CHANGELOG.md": "100644:90b67b0e6031e4614e8c97c988bd4c461fed8cf9",
+            "docs/fork.md": "100644:564a7a75aa71e347ebc9f722a3debfd1e7088850",
+            "logger.cc": "100644:ba7b9b2908830ee31e186dca021cebecb2b8d42f",
+            "logger.h": "100644:a678404a49ada2c6dab998eaf9d6ad10eaf2f6fb",
+            "test/exit.cc": "100644:8e56bc332661d6f9c640138e6aabfd513b1a86c8",
+            "test/fork_mutant.sh": "100755:5c958e3fed12930528552c765617e6f4e54952ec"
+          },
+          "by": "review",
+          "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+          "criteria": "43e6935f631264d0",
+          "diffs": {
+            "CHANGELOG.md": "24730ac472bff3aa",
+            "docs/fork.md": "8204f63e5f714dd1",
+            "logger.cc": "66493f6331f546bb",
+            "logger.h": "5391022d200c182a",
+            "test/exit.cc": "e32f3e7e8489df3e",
+            "test/fork_mutant.sh": "392a34ce86549276"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dd2d0ae01b475b38669b741b901481fb62326818",
+          "reviewed": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
       "branch": "quest/xapiand/logger-fork-reset",
@@ -10398,7 +10427,7 @@
       "risk": "high",
       "status": "review",
       "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
-      "updated": "2026-11-19T14:43:10",
+      "updated": "2026-11-19T14:55:11",
       "worktree": "../logger-wt/xapiand/logger-fork-reset"
     },
     "logger-producer-path": {
