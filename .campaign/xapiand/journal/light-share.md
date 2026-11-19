@@ -110,7 +110,7 @@ share in both patches, inside off's 3,532-4,564.
 | A4 | MET ON THE PROTOTYPE: T12 RESTORE and QPS inside off's band at every share, both patches (abe252, 135316-88308e, 184049-f10605); the mix's heavy searches are not A4's measure but cost 36% at share 4 |
 | A5 | NOT MET at the head: suite last passed at 37f06f732607 (261118-184002-4c0fa6); since then harness and docs only; master not merged |
 
-Pending: E1a 261119-030739-c88e70, E1b 261119-030741-9184b7 (mix, off/4@0/6@0/8@0, 3 arms each, per-turn wall vs
+Head with these tables: Xapiand:3b7d33194 (the lead pushes). Pending: E1a 261119-030739-c88e70, E1b 261119-030741-9184b7 (mix, off/4@0/6@0/8@0, 3 arms each, per-turn wall vs
 CPU); E2 261119-030742-53715a (T10, off/4@0/6@0, 2 arms each). Exclusive, at f1154e7b0.
 
 Superseded: 022842-883d3a, 022854-f0e080, 112144-650d76, 112147-f7cdd0, 112151-1f9d36, 112154-12be10 (noisy, timed
