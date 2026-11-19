@@ -181,6 +181,7 @@ quest starts (name it) or is dropped with a reason.
 | An unknown aggregation type nested under a bucket is refused only when the first bucket forms at match time (bucket.h builds sub-aggregations lazily); validate the whole tree before the search | serialize-validation journal | src/aggregations/bucket.h | Xapiand | open |
 | `--max-files 300 --database-pool-size 200 --max-clients 1000` leaves database_pool_size 34 and max_clients -2 (adjustOpenFilesLimit splits a too-small limit into a negative share); clamp, or refuse start-up naming the needed limit | coverage-core-main test_open_files_limit pin | src/main.cc adjustOpenFilesLimit | Xapiand | open |
 | M1: `MIN_STR_CMPVALUE` in src/multivalue/keymaker.cc is `std::string("\x00")`, which is empty (the const char* constructor stops at the NUL), so a descending string sort key on a missing slot keys as empty instead of a NUL byte; use `std::string(1, '\0')` | coverage-multivalue keymaker test pin | src/multivalue/keymaker.cc | Xapiand | open |
+| (tool) The campaign worker (campaign.py worker, up 1 d 17 h) leaves defunct children: 41 zombies under pid 58801 on 2026-11-19; reap finished job processes (waitpid) | `ps` on 2026-11-19 01:xx | ~/code/dotfiles/home/.agents/skills/campaign/scripts/campaign.py worker loop | agent-campaign | open |
 
 ## turn-seal durability review follow-ups (non-blocking, 2026-11-17)
 
