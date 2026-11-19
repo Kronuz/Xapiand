@@ -1,6 +1,6 @@
 # coverage-core-small: journal
 
-State: waiting on jobs 261119-040443-36eeba (four tests, one build, 150 min)
+State: waiting on jobs 261119-041419-d3a758 (four tests); full coverage and suite follow when it passes
 Quest: .campaign/xapiand/quests/coverage-core-small.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
