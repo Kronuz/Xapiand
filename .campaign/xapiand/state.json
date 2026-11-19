@@ -24348,7 +24348,34 @@
       "updated": "2026-11-08T13:25:30"
     },
     "task-driver-layout": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:19:27",
+          "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "blobs": {
+            "CMakeLists.txt": "100644:0b5a7210faa6c6784889a875f0c4ac92839fc21a",
+            "task.hh": "100644:1b08b76669d390a719c8355fa7be13e128d0357a",
+            "test/layout_debug.cc": "100644:4aad8e866d4bbf2ad76a6679f4eb01b251d94536",
+            "test/layout_release.cc": "100644:6b8db450d60eedf472d9faa2e538e63889badb5e",
+            "test/layout_test.cc": "100644:6c710e05c70dcbbc1692aadceff8e819db09db30"
+          },
+          "by": "review",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": "07f28c4f2e860afd",
+          "diffs": {
+            "CMakeLists.txt": "f24701f0e9b7e52f",
+            "task.hh": "0bea1c6b91d3322d",
+            "test/layout_debug.cc": "357541a782323975",
+            "test/layout_release.cc": "83e6442e8f1b8d0e",
+            "test/layout_test.cc": "0d32935293e37559"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8db659d95ef06c22901b35f858dc418bb408e2f2",
+          "reviewed": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
       "branch": "quest/xapiand/task-driver-layout",
@@ -24368,7 +24395,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/task-driver-layout",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -24376,7 +24405,7 @@
       "risk": "normal",
       "status": "active",
       "title": "task: inline_scheduler layout identical in Debug and release (F7)",
-      "updated": "2026-11-19T13:03:45",
+      "updated": "2026-11-19T13:19:27",
       "worktree": "../task-wt/xapiand/task-driver-layout"
     },
     "task-inbox-first": {
