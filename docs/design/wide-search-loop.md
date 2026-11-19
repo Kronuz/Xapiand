@@ -107,6 +107,34 @@ Two hypotheses measured and dropped:
 - The 6.6-9.2 ms turns of the probe build at 10,000 (045057-0e3792) were the probe patch's; the branch's call sites
   do not show them (above).
 
+## Branch measured again (Xapiand:e649ebcb1 src, the review's fixes in)
+
+Linux x86_64 in the VM (`harness/wide_search_vm.sh`, strict jobs; 6-8 light holds ran beside each, so the guest's
+idle wake is late: the control loop, which runs no search, has a 1.8-4.1 ms p99 and a 17.7-29.9 ms max in every run).
+Loops' max is the max since start; "window" is the timed searches' bucket edge.
+
+| Row | master | branch | Jobs |
+|---|---|---|---|
+| SR3 2,500: http0 / http1 max | 179.9 / 162.6 ms (window <= 163.8 ms) | 19.7 / 14.3 ms (window <= 20.5 / 14.3 ms) | 214621-f82004, 214622-52318a |
+| SR3 2,500: http0 / http1 p99 | 2,048 / 2,048 us | 2,048 / 3,072 us | same |
+| SR3 2,500: control max, p99 | 25.6 ms, 2,048 us | 29.9 ms, 4,096 us | same |
+| SR3 2,500: search p50 / p99 | 2,611 / 2,894 ms | 2,322 / 2,977 ms | same |
+| SR3 10,000: http0 / http1 max | 558.1 / 475.8 ms (window <= 655.4 / 524.3 ms) | 10.4 / 8.8 ms (window <= 12.3 / 10.2 ms) | 214624-c6c5de, 214625-59b5ea |
+| SR3 10,000: http0 / http1 p99 | 2,048 / 2,048 us | 3,584 / 2,048 us | same |
+| SR3 10,000: control max, p99 | 28.6 ms, 1,792 us | 17.7 ms, 3,072 us | same |
+| SR3 10,000: search p50 / p99 | 7,846 / 8,039 ms | 6,897 / 7,649 ms | same |
+| S2 64 by names, strict, macOS: light GET p99 / max | 13.64 / 1,336 ms | 1.91 / 2.55 ms | 214557-802978, 214558-d15a54 |
+| S2 64 by pattern, same: light GET p99 / max | 2.81 / 1,863 ms | 2.14 / 19.6 ms | same |
+
+The loops' max falls 9-11x at 2,500 and 54x at 10,000 (a loop's longest turn follows the list's size on master, not on
+the branch), and both arms pass every search with the same count and a peak of 100 pinned indexes. The branch's max is
+still 8.6-19x over A2's 1,024 us on Linux, and it is of the control loop's size in the same runs (8.8-19.7 ms against
+17.7-29.9 ms): the guest's wake and preemption under shared strict holds put a floor under every loop, so these runs
+bound the branch's turn from above only; they cannot show it under 1,024 us. S2's T5 bound (2x alone p99 + 1 ms) fails
+on master (13.64 against 2.32 ms) and passes on the branch (1.91 against 2.27 ms); the branch's earlier strict run
+missed it (2.85 against 2.39 ms), so T5's p99 sits within the run-to-run noise of the bound and the exclusive A/B decides
+the verdict.
+
 ## search_batch for concurrent pins (cheap-reopen D3)
 
 A change that pins a batch concurrently keeps three things of `DatabaseHandler::search_batch`:
