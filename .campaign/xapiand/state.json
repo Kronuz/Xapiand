@@ -2763,7 +2763,44 @@
       "updated": "2026-11-18T02:55:57"
     },
     "cluster-vm-tier": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T18:14:46",
+          "base": "eb950b074efcd8d3fc091cf610302d04a6ac4f96",
+          "blobs": {
+            "harness/cluster/vm/.gitignore": "100644:cf153de9c7a431f69c568b91c97edff7f8601215",
+            "harness/cluster/vm/README.md": "100644:06260bf5c270cf9d98923d7a2cfab4c856964346",
+            "harness/cluster/vm/guest/disk.py": "100755:7ba9214b7b7bca42ad0599407459d98ec8ba03b8",
+            "harness/cluster/vm/guest/net.py": "100755:025a5f0b612d7b5c2abeeca09d3c224dd67558d0",
+            "harness/cluster/vm/guest/net_test.py": "100755:ff8849eac32e7493a85243d3abffcff89711e219",
+            "harness/cluster/vm/guest/probe.py": "100755:5aa961c98adfe13a4645db649fd3fb3e387cf625",
+            "harness/cluster/vm/park_test.sh": "100755:52fb148e9b864a16cb7f5204cc7d396f838cec4a",
+            "harness/cluster/vm/pyrefly.toml": "100644:5e23e5c7a9b71238156ffe4ee87329b9c3e5fb4b",
+            "harness/cluster/vm/vm.py": "100755:caa33793b1d60728936818cc0e886df7ade8d684",
+            "tools/vm/cluster.sh": "100755:1e032a44198a58b7938fbc917e920bb4b03a1a4b"
+          },
+          "by": "review",
+          "commit": "2d4a2e7b2349860eabbe36d9f431dcb31523cfbc",
+          "criteria": "980db95d5a67c284",
+          "diffs": {
+            "harness/cluster/vm/.gitignore": "70002a25996b8040",
+            "harness/cluster/vm/README.md": "f38feac59a0902cf",
+            "harness/cluster/vm/guest/disk.py": "319e9ed2bc821301",
+            "harness/cluster/vm/guest/net.py": "f03285fa2c32bf26",
+            "harness/cluster/vm/guest/net_test.py": "e4efa21064c57a3b",
+            "harness/cluster/vm/guest/probe.py": "5a346f22bd7e3944",
+            "harness/cluster/vm/park_test.sh": "2dce32376b8b9fac",
+            "harness/cluster/vm/pyrefly.toml": "32e95fa3870a9fd0",
+            "harness/cluster/vm/vm.py": "7dd2bc927b92ada1",
+            "tools/vm/cluster.sh": "c14ba26baa9b2cad"
+          },
+          "findings": {},
+          "note": "",
+          "review": "ba3608e63b852492dda932718e21b7962ed55a77",
+          "reviewed": "2d4a2e7b2349860eabbe36d9f431dcb31523cfbc",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "eb950b074efcd8d3fc091cf610302d04a6ac4f96",
       "branch": "quest/xapiand/cluster-vm-tier",
@@ -2797,7 +2834,7 @@
       "risk": "high",
       "status": "review",
       "title": "The VM tier of the cluster harness",
-      "updated": "2026-11-18T17:59:09",
+      "updated": "2026-11-18T18:14:46",
       "worktree": "../Xapiand-wt/xapiand/cluster-vm-tier"
     },
     "cold-tier-item5": {
