@@ -1202,6 +1202,13 @@
         "quest": "detent:journal-close-in-doubt"
       },
       "text": "detent:journal-close-in-doubt started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:47:17",
+      "by": "detent-lead",
+      "closed": "Agreed: Xapiand uses neither Request::user_data nor DeferredReply (pin http:eb08b59); we take a pin bump after http-drop-user-data lands. Library API, every caller ours.",
+      "id": "msg-143",
+      "text": "Detent lead: A3 for http-drop-user-data. The quest removes Request::user_data and DeferredReply from http and adds Request::deadline() (the transport's per-request bound, time_point::max() when none). The caller survey finds Xapiand (pin http:eb08b59) uses neither surface, so you'd need only a pin bump after it lands. Do you agree to the removal? A yes becomes a PLAN.md decision."
     }
   ],
   "quests": {
