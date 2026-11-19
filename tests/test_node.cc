@@ -1178,6 +1178,97 @@ static void test_a_put_whose_client_half_closes_completes_durably() {
 	}
 }
 
+// ---- a commit of a list of indexes whose client half-closes ----
+
+static const int half_close_list_port = free_port();
+static constexpr int NO_LOG = WRITE_QUIET | DB_DISABLE_WAL;   // only a commit keeps the write
+
+// The child: a write applied to hcl_kept and not committed, then a half-closed POST /hcl_new,hcl_kept/:commit whose
+// resolution of hcl_new waits in its settings load (the reserved index's turn is held) while the server reads the EOF.
+// The process then ends without a stop, as a kill -9 ends it.
+[[noreturn]] static void half_closed_list_commit_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port));
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	auto& pool = *manager()->database_pool;
+	{
+		auto entry = pin_index(pool, endpoints_of("hcl_kept")[0].path, NO_LOG);
+		Shard shard = use_index(entry, NO_LOG);
+		engine::sync_wait(shard.add_document(make("K1")));
+	}
+	const auto reserved = endpoints_of(".xapiand/indexes");
+	auto entry = pin_index(pool, reserved[0].path, WRITE);
+	Shard shard = use_index(entry, WRITE_QUIET);
+	engine::sync_wait(shard.add_document(make("hcl_marker")));   // so that a read of the index takes its turn
+	auto& resolver = *manager()->index_settings_resolver;
+	const auto loads = resolver.loads();
+	std::optional<HoldTurn> hold(std::in_place, entry.entry(), WRITE);
+	const int fd = connect_to(half_close_list_port);
+	if (fd < 0) {
+		std::_Exit(3);
+	}
+	const char* request = "POST /hcl_new,hcl_kept/:commit HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 0\r\n\r\n";
+	::send(fd, request, std::strlen(request), 0);
+	::shutdown(fd, SHUT_WR);
+	if (!eventually([&] { return resolver.loads() > loads; })) {
+		std::_Exit(4);   // a resolution that ends before it names hcl_new
+	}
+	std::this_thread::sleep_for(300ms);   // the server has read the EOF while hcl_new's settings load waits
+	hold.reset();
+	timeval timeout{10, 0};
+	::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	std::string response;
+	char buf[4096];
+	ssize_t n;
+	while ((n = ::recv(fd, buf, sizeof(buf), 0)) > 0) {
+		response.append(buf, static_cast<std::size_t>(n));
+	}
+	::close(fd);
+	if (response.rfind("HTTP/1.1 200", 0) != 0) {
+		std::fprintf(stderr, "HALF-CLOSED COMMIT answered: %s\n", response.substr(0, 80).c_str());
+		std::_Exit(5);
+	}
+	std::_Exit(0);
+}
+
+// The restart: the write the half-closed commit committed is there.
+[[noreturn]] static void half_closed_list_restart_child(const char* log_path) {
+	std::freopen(log_path, "w", stderr);
+	std::setvbuf(stderr, nullptr, _IONBF, 0);
+	Logging::handlers.push_back(std::make_unique<StderrLogger>());
+	RunningNode node("node_half_close_list_data", std::to_string(half_close_list_port), true);
+	if (!node.ready()) {
+		std::_Exit(2);
+	}
+	const auto hits = engine::sync_wait(DatabaseHandler(endpoints_of("hcl_kept"), DB_OPEN).get_mset(engine::Query::term("f", "body"))).hits.size();
+	if (hits != 1) {
+		std::fprintf(stderr, "MISSING the write the half-closed commit committed: %zu hits\n", hits);
+		std::_Exit(10);
+	}
+	std::_Exit(0);
+}
+
+// A commit that names a list of indexes, whose client half-closes, commits and is answered: only a search or a count
+// gives up between its names when its client leaves (docs/design/wide-search-loop.md, D1).
+static void test_a_half_closed_commit_of_a_list_commits_durably() {
+	const auto result = run_child([&] { half_closed_list_commit_child("node_half_close_list.log"); }, 90s);
+	CHECK(result.exited);
+	CHECK_EQ(result.code, 0);
+	if (result.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close_list.log").c_str());
+	}
+	const auto restart = run_child([&] { half_closed_list_restart_child("node_half_close_list_restart.log"); }, 90s);
+	CHECK(restart.exited);
+	CHECK_EQ(restart.code, 0);
+	if (restart.code != 0) {
+		std::fprintf(stderr, "%s\n", read_file("node_half_close_list_restart.log").c_str());
+	}
+}
+
 // ---- a kill during create, and the names after the restart (docs/design/name-index.md, D8) ----
 
 static const int names_crash_port = free_port();
@@ -3582,6 +3673,7 @@ int main(int argc, char** argv) {
 		{"test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time", test_a_write_waiting_for_its_turn_is_let_finish_while_the_budget_has_time},
 		{"test_a_second_signal_ends_the_shutdowns_wait", test_a_second_signal_ends_the_shutdowns_wait},
 		{"test_a_put_whose_client_half_closes_completes_durably", test_a_put_whose_client_half_closes_completes_durably},
+		{"test_a_half_closed_commit_of_a_list_commits_durably", test_a_half_closed_commit_of_a_list_commits_durably},
 		{"test_a_kill_during_create_leaves_the_names_consistent", test_a_kill_during_create_leaves_the_names_consistent},
 	};
 	for (const auto& f : forked) {

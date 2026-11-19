@@ -3,9 +3,10 @@
 
     wide_search_halfclose.py BIN OUT PORT [--baseline BASE_BIN]
 
-Starts a node, writes a document, and sends each read plainly once and half-closed five times: a read misses when a
-half-closed reply's status differs from the plain one's. Alone it exits 1 on any miss; with --baseline it runs the
-same reads on BASE_BIN too and exits 1 only when BIN misses a read the baseline answers (a regression).
+Starts a node, writes a document to two indexes, and sends each request plainly once and half-closed five times: a
+request misses when a half-closed reply's status differs from the plain one's. A list's HEAD and :commit are answered
+as a single name's are. Alone it exits 1 on any miss; with --baseline it runs the same requests on BASE_BIN too and
+exits 1 only when BIN misses one the baseline answers (a regression).
 """
 
 from __future__ import annotations
@@ -18,7 +19,13 @@ import socket
 import subprocess
 import time
 
-READS = [("GET", "/hc/1"), ("GET", "/hc/:search?q=marker:half-way"), ("GET", "/hc/:count")]
+REQUESTS = [
+    ("GET", "/hc/1"),
+    ("GET", "/hc/:search?q=marker:half-way"),
+    ("GET", "/hc/:count"),
+    ("HEAD", "/hc,hc2/1"),
+    ("POST", "/hc,hc2/:commit"),
+]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("bin")
@@ -30,7 +37,7 @@ args = ap.parse_args()
 
 def send(port: int, method: str, target: str, body: bytes = b"", half_close: bool = False) -> str:
     head = f"{method} {target} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n"
-    if body:
+    if body or method in ("PUT", "POST"):
         head += f"Content-Type: application/json\r\nContent-Length: {len(body)}\r\n"
     with socket.create_connection(("127.0.0.1", port), timeout=10) as s:
         s.sendall(head.encode() + b"\r\n" + body)
@@ -64,9 +71,10 @@ def run(name: str, binary: str, out: str, port: int) -> dict[str, bool]:
                 time.sleep(0.5)
         else:
             raise SystemExit(f"{name}: the server did not start")
-        put = send(port, "PUT", "/hc/1?commit", b'{"marker": "half-way"}')
-        print(f"{name}: PUT {put}")
-        for method, target in READS:
+        for index in ("hc", "hc2"):
+            put = send(port, "PUT", f"/{index}/1?commit", b'{"marker": "half-way"}')
+            print(f"{name}: PUT {index} {put}")
+        for method, target in REQUESTS:
             plain = status(send(port, method, target))
             halves = [status(send(port, method, target, half_close=True)) for _ in range(5)]
             ok[target] = all(h == plain for h in halves)
@@ -81,7 +89,9 @@ got = run("bin", args.bin, os.path.join(args.out, "bin"), args.port)
 if args.baseline:
     base = run("baseline", args.baseline, os.path.join(args.out, "baseline"), args.port + 1)
     misses = [t for t in got if base[t] and not got[t]]
-    print("PASS: no read the baseline answers is missed" if not misses else "FAIL (regressions): " + ", ".join(misses))
+    print(
+        "PASS: no request the baseline answers is missed" if not misses else "FAIL (regressions): " + ", ".join(misses)
+    )
 else:
     misses = [t for t in got if not got[t]]
     print("PASS" if not misses else "FAIL: " + ", ".join(misses))
