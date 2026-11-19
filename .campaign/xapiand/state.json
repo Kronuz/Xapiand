@@ -3963,7 +3963,8 @@
         "harness/coverage*",
         "docs/dev/coverage.md",
         "src/node.cc",
-        "src/node.h"
+        "src/node.h",
+        "CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -3974,7 +3975,7 @@
       "risk": "low",
       "status": "active",
       "title": "The six areas below 7c's coverage target reach it",
-      "updated": "2026-11-18T16:45:11",
+      "updated": "2026-11-18T16:45:12",
       "worktree": "../Xapiand-wt/xapiand/coverage-areas"
     },
     "coverage-core-main": {
