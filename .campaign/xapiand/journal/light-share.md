@@ -1,6 +1,6 @@
 # light-share: journal
 
-State: ready for review (A2 unmet on T4 at every share; owner decision named under Blocked on)
+State: fixing F1 F2 F6 (review CHANGES): waiting on jobs 261118-200443-31c214 261118-200453-0b8e42 261118-200446-6e671a
 Quest: .campaign/xapiand/quests/light-share.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,8 +24,18 @@ turn at once (a process-wide share, `LS_HEAVY_SHARE`), leaving CPUs for light wo
 
 ## Next
 
-1. Correctness review (lead). Then light-share-task (Kronuz/task, own quest) for the generic slot count; this quest
-   then bumps the pin and sets the slot count in `src/manager.cc`; A2-A4's before/after rerun at the landed code.
+Review CHANGES (`.campaign/xapiand/reviews/light-share-correctness.md`), lead's order:
+1. F1/F2/F6/F7 are in `harness/light_share_task.patch` (7ef26e7cca32): parked loop serves light entries, heavy head
+   asks for a slot first, the share binds only while light waited within LS_LIGHT_WINDOW_MS (10 ms), grant posted
+   under the lock, destructor returns a slot. Probes `harness/light_share_probe.sh`: job 31c214 must pass (exit 0),
+   job 0b8e42 runs the v1 patch (2b8c66958) and must fail (--fails-without; read its log: parked, bypass, heavyonly
+   each FAIL, not a build error). 6e671a rebuilds build-ls with the new patch.
+2. After the build: sweep 8/6/4/off, 6 arms each interleaved (order from seed 20261118: `6 off 4 8 8 6`,
+   `4 off off 6 8 4`, `8 off 6 4 4 off`, `6 8 4 off 6 8`), 4 jobs of `light_share_ab.sh`; heavy-only A4 row
+   (`-- --phase loaded --rate 0`, arms off 4 4@0, x3); T10 and T12 at off/8/6/4; the settle job (`TURNS=1`, arms 4 off,
+   `harness/light_share_turns.py`). Then the table with each arm's position, p99 and p99.9, RESTORE; F3-F5, F6.
+3. F8 (Debug `Counted` bypasses the share, `src/engine/host_asio.h`) and F9 (demoted admission cap) are
+   light-share-task's: noted in the design note, outside this file set.
 
 ## Blocked on
 
