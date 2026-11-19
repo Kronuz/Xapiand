@@ -9,6 +9,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
+CI red at 5b206efde (tests and allowlist only; the mechanism is unchanged), fixed at Xapiand:6a99cf152:
+- test_wide_search.cc:559 `CHECK(cancelled)`: cause is the start order, not timing. Without symmetric transfer (GCC,
+  and the sanitizer builds) awaiting a task queues it on a per-thread trampoline, so a `when_all`'s children do not
+  reach their first wait in order: `cancel_then_release` ran before the batches had queued, the head finished, and the
+  cancelled batch found the line free (a free lock is taken whatever the token) and took it. macOS clang transfers
+  symmetrically, so it passed locally. The waiting-batch test passed vacuously the same way. Both now spawn on one
+  `task::inline_scheduler` and run it dry between steps (no `when_all`, no sleeps). Evidence: the old shape on gcc-13 in
+  the Linux VM fails (cancelled=0, got=1: 261119-041053-47f93c), the new shape passes -O2 and ASan (261119-041250-f42e9e);
+  the real binary x50 on macOS: 261119-041251-1cffc2 (22,317 checks each run). CI on the push is the sanitizer check.
+- async_check --strict: one allowlist row for `wide_search.cc` mutex_ (count 3: take's check, held, give: O(1), no I/O;
+  they do run on the loops, and the room event is set outside the lock). `--strict --owed` rc 0, test_gate_tools.py OK.
+- FreeBSD gate7c_rows: the failing rows were t1_strict_owed and gate_tools, both the same three async_check hits (fixed
+  by the row). Master's a465288dc fails a different row, t3_crash_asan ("strata D recovered 4501, 1 wrong"): pre-existing,
+  the lead's.
+
 Session 5, last step: all ten jobs read (design doc "Branch measured again"). Head recorded below.
 - Suite at the merged head 261119-015540-f34736: exit 0, 52/52.
 - A2 Linux exclusive (015840-52e913 / 015843-118f54 at 2,500; 015846-7c0eec / 015849-58ebd1 at 10,000): http0 / http1
