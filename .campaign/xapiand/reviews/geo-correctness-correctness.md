@@ -93,3 +93,43 @@ The scripts are in the worktree at `.scratch/xapiand/review-geo-correctness-corr
   against exact membership.
 - No diagnosis of R2's mechanism beyond showing it is pre-existing.
 - No end-to-end HTTP search through the engine.
+
+## Re-check
+
+Commit: Xapiand:05fcde57c
+Verdict: APPROVE
+Date: 2026-11-19
+
+Scope: `git diff d2ba9e963..05fcde57c -- docs tests`. `--stat` over `src` between the two commits is empty, so the
+approval of the code stands. The two tests and the changelog hold up, and the four earlier findings R1, R3 and R4
+that touched these files are closed.
+
+1. **`EWKTError` is what every path throws for the three inputs.** The inputs are `POINT()`, `POINT(1)` and
+   `MULTIPOINT(1 2 3 4)`. `find_geometry` accepts all three. They reach `_parse_cartesian`, which throws
+   `InvalidArgument` (a `std::invalid_argument`, `ewkt.cc:314`) when there is no space, or `strict_stod` throws
+   `std::invalid_argument`/`std::out_of_range` for `3 4` (`strict_stox.hh`). `parse_geometry` wraps both in
+   `EWKTError` for POINT and MULTIPOINT (`ewkt.cc:132-148`). With an `SRID=` prefix the same `parse_geometry` runs
+   inside the constructor, and an `EWKTError` is not a `std::invalid_argument`, so it passes through. The message
+   format-argument fix is in 56afff06b, before d2ba9e963. I proved this by reading the throw sites; the suite and
+   coverage jobs at 05fcde57c (261119-055628-79a85b, 261119-055658-705b95) are still queued, and CI is green on the
+   three platforms.
+2. **No value check weakened.** The test diff is one `CHECK_THROW` type (`std::exception` to `EWKTError`, a
+   narrowing), a renamed function and registration, and two comments. The lens test body is untouched and still
+   checks the off-edge centers and the four root vertices (`test_geo_correctness.cc:181-196`), so the new comment,
+   "off the mesh edges and on them", is true.
+3. **The changelog is accurate.** It matches htm `0c09a02`'s CHANGELOG (2026-11-18): edge set (equator, meridians
+   0/90/180/270, poles), "thousands of km", about 0.4% of other points by meters, deeper vertices. 15,011 km is
+   `15011335.5` in the F21 test; 9,000 km is the F20 lens; the `MULTIPOINT`, `EMPTY` and `_multiconvex` entries
+   match the tests and `geospatial.cc` (the `Unknown geometry` throw is the old behavior for the map form). It sits
+   under `[Unreleased]` / Fixed and carries the reindex instruction. The design note's "ids move only for points
+   on an edge" sentence is corrected the same way.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | closed | The reindex and answer-change changelog entry now exists, and the design note no longer says ids move only on edges. | `changelog.md:204-216`, `docs/design/geo-correctness.md:40-44` | None. |
+| R3 | no | closed | The format-error comment is gone and the check is `EWKTError`; the lens comment is updated. | `test_coverage_geospatial.cc:455-460`, `test_geo_correctness.cc:160-162` | None. |
+| R4 | no | closed | The F22 row now says "(whole cells)". | `docs/design/geo-correctness.md:12` | None. |
+| R5 | no | nit | The design note's new paragraph is one 194-character line, past the 120-column wrap of the rest of the file. | `docs/design/geo-correctness.md:43` | Rewrap it. |
+
+Not run: the 05fcde57c suite and coverage jobs were queued when I finished; the `EWKTError` claim rests on the
+throw sites above and on CI.
