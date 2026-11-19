@@ -1,6 +1,6 @@
 # coverage-multivalue: journal
 
-State: waiting on jobs 2d327a 6819b2 0f1a51
+State: waiting on jobs 7b8d1a
 Quest: .campaign/xapiand/quests/coverage-multivalue.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,6 +12,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Three test files written (tests/test_coverage_multivalue.cc keymaker; _terms.cc generate_terms; _range.cc range + geospatialrange), never compiled until jobs 2d327a (keymaker), 6819b2 (terms), 0f1a51 (range) finish: read their out/ logs, fix failures (pin real behavior, list bugs below), then full coverage + suite jobs.
 
 ## Next
+
+0. Old jobs failed in the build step: coverage_one.sh's `grep error | head -30` showed only asio error_code lines, so the real errors were hidden. Job 261119-023919-7b8d1a rebuilds all three in one BUILD and greps `error:` outside .deps. Fix compile errors it shows, then resubmit.
 
 1. Read the three coverage_one jobs; fix tests; per-file numbers vs 90 lines / 80 branches (area total 1166/1657 lines at coverage-areas 8642ea).
 2. Coverage job (harness/coverage.sh, WORKLOADS="ctest corpora e2e", newman on PATH) and suite job at the head; Evidence rows; push; ready.
