@@ -26,7 +26,7 @@ build)
 	;;
 create)
 	n=$1
-	$V ssh "cd ~/wsl/src-tree && python3 harness/wide_search_check.py gate \$(find ~/wsl/build-master -maxdepth 2 -name xapiand -type f | head -1) ~/wsl/wide$n 18431 --indexes $n --create-only --reuse"
+	$V ssh "mkdir -p ~/wsl/wide$n && cd ~/wsl/src-tree && python3 harness/wide_search_check.py gate \$(find ~/wsl/build-master -maxdepth 2 -name xapiand -type f | head -1) ~/wsl/wide$n 18431 --indexes $n --create-only --reuse"
 	;;
 gate)
 	arm=$1 n=$2 runs=$3
