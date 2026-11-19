@@ -9186,9 +9186,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Light requests keep their bound under heavy load",
-      "updated": "2026-11-18T05:36:36",
+      "updated": "2026-11-18T19:40:08",
       "worktree": "../Xapiand-wt/xapiand/light-share"
     },
     "linux-sanitizers": {
