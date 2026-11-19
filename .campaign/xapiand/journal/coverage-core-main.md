@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs 261119-004113-82ceb7
+State: waiting on jobs 261119-012453-e1a2b8
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,6 +13,8 @@ Baseline (coverage-areas job 8642ea at 4517f42e4): main.cc 377/743 lines, 164/46
 Written, not yet run: tests/test_coverage_main.cc (includes src/main.cc under `#define main`/`#define opts main_opts`; job 82ceb7 builds it via coverage_one.sh) and harness/coverage_e2e_main.sh (the `main` workload, added to harness/coverage.sh and its default WORKLOADS).
 
 ## Next
+
+0. Job 82ceb7 built and ran test_coverage_main (main.cc 304/733 lines alone): 88 of 90 checks held; the two open-files cases died on an uncaught SystemExit from adjustOpenFilesLimit (300 explicit; process limit 1024). Now they print its code and the fd counts (adjust_or_report); e1a2b8 (coverage, WORKLOADS="ctest main", at be0e1ca33) shows them and the E2E checks in $JOB_OUT/cov/main.log and ctest.log. Fix the guessed expectations, then rerun with NOBUILD=1 where the build dir is reusable, then the suite (campaign verify --for A3).
 
 1. Read 82ceb7: fix compile errors or failed checks in test_coverage_main.
 2. Submit a coverage job: `WORKLOADS="ctest main" harness/coverage.sh $JOB_OUT/cov` (newman PATH as job 8642ea uses); read main.log for failed E2E checks, fix the driver's guesses (log formats, exit statuses) and pin real values.
