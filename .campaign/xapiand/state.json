@@ -9511,18 +9511,48 @@
         "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/logger-exit-lifetime",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T22:35:07",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": {
+            "A1": "docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c)",
+            "A2": "261118-214918-1cd38b, 261118-214918-35cf03; fails without: 261118-170114-f2778f, 261118-170117-86f821, 261118-171555-da551f, 261118-171557-af5502, 261118-211550-396b63",
+            "A3": "261118-214915-84fc5a, 261118-214917-50faa0, 261118-214916-ce95b6, 261118-214917-0177e9; fails without: 261118-201716-0c19dd, 261118-202723-694dbd",
+            "A4": "261118-214915-0e2ec6, 261118-214922-5150a7; fails without: 261118-211530-b2be3e, 261118-211531-a0d2cc",
+            "A5": "261118-214918-7f4e7e, 261118-214919-1e22af, 261118-214920-4695f1, 261118-214920-31f08e, 261118-214920-9f753a; fails without: 261118-181931-f6bb3e, 261118-181933-1d17de"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure --stop-on-failure",
+              "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-214915-0e2ec6",
+              "level": "light",
+              "seconds": 67.8,
+              "state": "done",
+              "what": "logger-exit-lifetime check suite at 455cad0a185b"
+            }
+          ],
+          "final": true,
+          "from": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "reason": "",
+          "tested": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T22:35:02",
+      "updated": "2026-11-18T22:35:16",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
