@@ -24192,7 +24192,50 @@
       "worktree": ""
     },
     "task-lifecycle": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T09:22:03",
+          "base": "95798a02f68c86f070401329a05c78d326ac2579",
+          "blobs": {
+            "AGENTS.md": "100644:48ccd830654c71c5484271708d0540ceee36e1db",
+            "ARCHITECTURE.md": "100644:2a4e1be09d4b744da6ca88963ee0d4239b621b44",
+            "CMakeLists.txt": "100644:566667384cbb7dafeac713472717c4d05d62805c",
+            "README.md": "100644:ae81fbfa28aa5bc4f9e7dbefc83481922cc1a05b",
+            "docs/API.md": "100644:a1663d8e4a5493cf094ac70e514694ae875fd71b",
+            "docs/design/service-shape.md": "100644:710316d73d89e6fa42a06a14c5b53f877b5d8dc2",
+            "docs/mechanisms/lifecycle.md": "100644:806ba2ae96bddeda804f21a729092e65d63ef1dd",
+            "lifecycle.hh": "100644:07f0f5f88e781b527c6958792485a332ca4e6f6b",
+            "task.hh": "100644:7c6746dabfc4277b1eee5cdf52df6ab7e92761d1",
+            "task_asio.hh": "100644:3c8e8ee896e664c4b0db4c50a08aab960bec3a43",
+            "task_timers.hh": "100644:24061a6f9c95ec548195011849e58ab4dae6032a",
+            "test/lifecycle_test.cc": "100644:e7da758214cf1a75ed57b79b25d8310673a43463",
+            "test/timers_test.cc": "100644:9f1e376092a82dbeae99429ca27ccf71937978f6"
+          },
+          "by": "review",
+          "commit": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "criteria": "680849eeac9a9464",
+          "diffs": {
+            "AGENTS.md": "f6d6d7ebbf919cd9",
+            "ARCHITECTURE.md": "91ba945f65e7a1d6",
+            "CMakeLists.txt": "32a13b897dc25a52",
+            "README.md": "d1cf1bea4e9b8613",
+            "docs/API.md": "f8cef374b81e199e",
+            "docs/design/service-shape.md": "cf73a0f3351cda2e",
+            "docs/mechanisms/lifecycle.md": "fe62c3c9443a588e",
+            "lifecycle.hh": "122bb1ae278d6d7d",
+            "task.hh": "bbe6740a4838f5ed",
+            "task_asio.hh": "6affd10db5e11b47",
+            "task_timers.hh": "afad57ddf200ff57",
+            "test/lifecycle_test.cc": "5c058f8f5a823e56",
+            "test/timers_test.cc": "3feb5c1dd9e022b8"
+          },
+          "findings": {},
+          "note": "",
+          "review": "53b44272847ad22788ebc0a52d580f7dd01b3e37",
+          "reviewed": "27028a038fb6b23cf305db1d4a65a1935d8b890a",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "95798a02f68c86f070401329a05c78d326ac2579",
       "branch": "quest/xapiand/task-lifecycle",
@@ -24237,7 +24280,7 @@
       "risk": "high",
       "status": "review",
       "title": "task::lifecycle: components, stop sources, periodic and debounce",
-      "updated": "2026-11-19T09:11:49",
+      "updated": "2026-11-19T09:22:03",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
     "task-lifecycle-rename": {
