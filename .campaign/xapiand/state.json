@@ -20471,6 +20471,36 @@
       "title": "Indexing throughput research and prototypes",
       "updated": "2026-11-08T15:39:15"
     },
+    "restore-exit-status": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/main.cc",
+        "src/manager.cc",
+        "tests/test_coverage_core_main*",
+        "tests/test_restore*",
+        "docs/src/content/docs/changelog.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "xapiand --restore exits nonzero when the restore fails",
+      "updated": "2026-11-19T12:22:53"
+    },
     "restore-free-off-loop": {
       "accepted": {
         "correctness": {
