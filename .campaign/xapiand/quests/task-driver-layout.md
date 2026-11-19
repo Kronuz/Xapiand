@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+inline_scheduler has one layout in every build: the one-driver member (`driver_`) exists whatever NDEBUG is, and only the check is Debug-only (task-inbox-first review F7). A Debug sanitizer build linking a Release library otherwise sees two layouts of one class (an ODR break); Detent's adoption waits on this.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test (static_assert or a two-TU build, one with NDEBUG and one without) shows sizeof/offsets of inline_scheduler are identical with and without NDEBUG, and fails at task:b7e2449
+- A2 The two-drivers assert test still aborts in Debug
+- A3 The suite passes and CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+No API change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Detent's lead treats F7 as blocking their adoption (2026-11-19).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
