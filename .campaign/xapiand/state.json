@@ -7330,6 +7330,37 @@
       "title": "Gate verification and safety fixes",
       "updated": "2026-11-08T13:25:33"
     },
+    "geo-correctness": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/geospatial/**",
+        "tests/test_coverage_geospatial.cc",
+        "tests/test_geo*.cc",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "coverage-areas"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
+      "updated": "2026-11-18T19:58:54"
+    },
     "github-triage": {
       "accepted": {},
       "after": [],
