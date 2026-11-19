@@ -53,7 +53,7 @@ src/net.hh	file	.	allow	4	setsockopt on an accepted socket: one syscall, no wait
 src/node.cc	mutex	.	allow	5	the node map under _nodes_mtx: lookup and insert, O(log n)
 src/server/mime_types.cc	file	.	allow	2	preload_mime_types reads mime.types at startup, before the listeners open; mime_type reads the loaded table (D1)
 src/server/search_views.cc	wal	co_await db_handler\.repr_wal	allow	1	wal_view awaits the chore that reads the log
-src/stopper.cc	file	.	allow	3	preloadStopWords reads the stop word files at startup, before the listeners open; getStopWords reads the loaded table (D1)
+src/stopper.cc	file	.	allow	4	preloadStopWords reads the stop word files (directory scan, is_regular_file, ifstream) at startup, before the listeners open; getStopWords reads the loaded table (D1, D137)
 src/tls.cc	file	.	allow	1	stat of --tls-key while the TLS context is built, before the listeners open
 src/xapiand_fsyncher.h	file	.	allow	2	runs on the FS debouncer thread (D8, until 7b), never on a reactor
 src/xapiand_storage_io.h	file	.	allow	11	Storage IO policy wrappers; their callers are chores (D9) or the WL thread (D8)
