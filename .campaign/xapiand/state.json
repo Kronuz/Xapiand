@@ -927,6 +927,38 @@
         "quest": "detent:groups-upload-3s-class"
       },
       "text": "detent:groups-upload-3s-class started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T22:28:19",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-120",
+      "items": {
+        "geo-correctness": "geo-correctness"
+      },
+      "settles": {
+        "start": [
+          "geo-correctness"
+        ]
+      },
+      "text": "set geo-correctness: unlocks geo-correctness"
+    },
+    {
+      "at": "2026-11-18T22:28:21",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-121",
+      "items": {
+        "geo-correctness": "geo-correctness",
+        "serialize-validation": "serialize-validation"
+      },
+      "settles": {
+        "start": [
+          "geo-correctness",
+          "serialize-validation"
+        ]
+      },
+      "text": "set serialize-validation: unlocks serialize-validation; geo-correctness"
     }
   ],
   "quests": {
@@ -3747,9 +3779,9 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "T7 on the host transport: throughput at 0/1/10 ms RTT, 100 groups with a slow follower, control-frame gap (R19)",
-      "updated": "2026-11-18T04:02:20",
+      "updated": "2026-11-18T22:33:18",
       "worktree": "../consensus-wt/xapiand/consensus-flow-bench"
     },
     "consensus-hello-limits": {
@@ -3773,7 +3805,8 @@
         "include/consensus/host*",
         "test/transport*",
         "test/host*",
-        "docs/**"
+        "docs/mechanisms/hello*",
+        "docs/design/hello*"
       ],
       "landed": [],
       "lenses": [
@@ -3788,7 +3821,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
-      "updated": "2026-11-18T02:57:38"
+      "updated": "2026-11-18T22:28:34"
     },
     "consensus-rpc-lane": {
       "accepted": {},
@@ -7374,7 +7407,11 @@
     },
     "geo-correctness": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "coverage-areas"
+      ],
+      "base": "3a7c8b1ed09044c9dd5276408ba7ee19403ad3e7",
+      "branch": "quest/xapiand/geo-correctness",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -7386,22 +7423,20 @@
       "consumes": [],
       "files": [
         "src/geospatial/**",
-        "tests/test_coverage_geospatial.cc",
         "tests/test_geo*.cc",
-        "docs/**"
+        "docs/design/geo*"
       ],
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [
-        "coverage-areas"
-      ],
+      "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Geospatial answers are right for wide circles, lenses, rings and bad WKT",
-      "updated": "2026-11-18T19:58:54"
+      "updated": "2026-11-18T22:28:53",
+      "worktree": "../Xapiand-wt/xapiand/geo-correctness"
     },
     "github-triage": {
       "accepted": {},
@@ -9419,7 +9454,42 @@
       "updated": "2026-11-08T15:40:31"
     },
     "logger-exit-lifetime": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-18T22:35:02",
+          "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "blobs": {
+            "ARCHITECTURE.md": "100644:4fc883897fa6cd0f3294dd6974a98ef33a30f096",
+            "CMakeLists.txt": "100644:6ff1fb7d87b481c0228e65693303cd8927183b6e",
+            "docs/API.md": "100644:bbada675a4e9efea85cc549ceb6e9d30553be75f",
+            "docs/exit-lifetime.md": "100644:76916d4f986fbc8d4b3ea083cc3e44852e56f9de",
+            "logger.cc": "100644:1dcdfa57718e01d4aca4df5ef1d38f9615226711",
+            "logger.h": "100644:0fe9611f42cb333f2974843e7eaa5676adf9cbd1",
+            "test/exception.cc": "100644:12fcb3efe74c05668a458d4c79574133ed3c1312",
+            "test/exit.cc": "100644:915ff5dce3ed0b8f283de48daf58617aeee32f4d",
+            "test/queue.cc": "100644:0c381b10e7228a1a1af61198deaf3315251b1e2d"
+          },
+          "by": "review",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": "9a7ff1643648af3d",
+          "diffs": {
+            "ARCHITECTURE.md": "6dbdaa0c9bbc80ce",
+            "CMakeLists.txt": "71cd5dff8e29c8c3",
+            "docs/API.md": "2aa6d61335d6fda2",
+            "docs/exit-lifetime.md": "5f2ac4860adc3e03",
+            "logger.cc": "b0c3773b46a1174a",
+            "logger.h": "4d7d7c5fabbb57ca",
+            "test/exception.cc": "7abd90ee538177b3",
+            "test/exit.cc": "39f2f3fc95cbd1a5",
+            "test/queue.cc": "b461ba9726ade5e7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "7aaf4db7baf7a5598a67155aed00186eac3f96a2",
+          "reviewed": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "6e7ab9ea01578d60e459137940e9e645a6727744",
       "branch": "quest/xapiand/logger-exit-lifetime",
@@ -9441,18 +9511,48 @@
         "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/logger-exit-lifetime",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T22:35:07",
+          "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+          "criteria": {
+            "A1": "docs/exit-lifetime.md in the logger repo (logger:9a7c6b6, teardown fence logger:db35b6c)",
+            "A2": "261118-214918-1cd38b, 261118-214918-35cf03; fails without: 261118-170114-f2778f, 261118-170117-86f821, 261118-171555-da551f, 261118-171557-af5502, 261118-211550-396b63",
+            "A3": "261118-214915-84fc5a, 261118-214917-50faa0, 261118-214916-ce95b6, 261118-214917-0177e9; fails without: 261118-201716-0c19dd, 261118-202723-694dbd",
+            "A4": "261118-214915-0e2ec6, 261118-214922-5150a7; fails without: 261118-211530-b2be3e, 261118-211531-a0d2cc",
+            "A5": "261118-214918-7f4e7e, 261118-214919-1e22af, 261118-214920-4695f1, 261118-214920-31f08e, 261118-214920-9f753a; fails without: 261118-181931-f6bb3e, 261118-181933-1d17de"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build-q -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON && cmake --build build-q -j4 && ctest --test-dir build-q --output-on-failure --stop-on-failure",
+              "commit": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-214915-0e2ec6",
+              "level": "light",
+              "seconds": 67.8,
+              "state": "done",
+              "what": "logger-exit-lifetime check suite at 455cad0a185b"
+            }
+          ],
+          "final": true,
+          "from": "6e7ab9ea01578d60e459137940e9e645a6727744",
+          "reason": "",
+          "tested": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "logger's worker never touches destroyed statics at exit",
-      "updated": "2026-11-18T20:50:12",
+      "updated": "2026-11-18T22:35:16",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
     },
     "logger-producer-path": {
@@ -20512,7 +20612,11 @@
     },
     "serialize-validation": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "coverage-areas"
+      ],
+      "base": "ba35940e12c838d802b918bf60a046adb202f0b2",
+      "branch": "quest/xapiand/serialize-validation",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -20526,8 +20630,8 @@
         "src/serialize.cc",
         "src/serialize.h",
         "src/database/schema.cc",
-        "tests/test_coverage_serialize.cc",
-        "tests/test_serialise*.cc"
+        "tests/test_serialise*.cc",
+        "tests/test_serialize_validation*"
       ],
       "history": [
         {
@@ -20552,15 +20656,14 @@
         "correctness"
       ],
       "milestone": "",
-      "needs": [
-        "coverage-areas"
-      ],
+      "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T20:55:41"
+      "updated": "2026-11-18T22:29:01",
+      "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "sha256-cl-10": {
       "accepted": {},
@@ -21970,19 +22073,47 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-18T21:35:21",
+          "commit": "405a5bd6b61f13b5f36c43abed3bf4ee0637da90",
+          "criteria": {
+            "A1": "D118 (PLAN.md Decisions)",
+            "A2": "261118-182340-4a8ff4 (passed at 0ad80010f029; only merges from main since); fails without: 261118-182336-f83449",
+            "A3": "261118-182339-5bd2c7 (passed at 0ad80010f029; only merges from main since); fails without: 261118-003721-65702e, 261118-182338-4cee8e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+              "commit": "18511f3282d521927e7d2f2b6199572a22f15c65",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261118-182339-5bd2c7",
+              "level": "light",
+              "seconds": 535.7,
+              "state": "done",
+              "what": "stemmer-names check build-test at 18511f3282d5"
+            }
+          ],
+          "final": true,
+          "from": "13626e78fbfd8748d7c4c4397075b3c991473901",
+          "reason": "",
+          "tested": "7f3f798c905bb155fbeec8499e292b17e5215165"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Every stemmer name Xapiand's schema accepts stems as the Xapian-era release did, or is removed",
-      "updated": "2026-11-18T19:54:13",
-      "worktree": "../Xapiand-wt/xapiand/stemmer-names"
+      "updated": "2026-11-18T21:37:42",
+      "worktree": ""
     },
     "storage-phase7c-l6": {
       "accepted": {},
@@ -24866,7 +24997,8 @@
         "src/index_resolver_lru.*",
         "harness/wide_search*",
         "tests/test_wide_search*",
-        "docs/design/wide-search-loop.md"
+        "docs/design/wide-search-loop.md",
+        "tests/test_node.cc"
       ],
       "landed": [],
       "lenses": [
@@ -24879,7 +25011,7 @@
       "risk": "high",
       "status": "review",
       "title": "A wide search never stalls the HTTP loops, alone or concurrent",
-      "updated": "2026-11-18T20:50:54",
+      "updated": "2026-11-18T22:00:15",
       "worktree": "../Xapiand-wt/xapiand/wide-search-loop"
     },
     "write-buffer": {
