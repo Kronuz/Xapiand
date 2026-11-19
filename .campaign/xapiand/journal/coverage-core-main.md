@@ -1,6 +1,6 @@
 # coverage-core-main: journal
 
-State: waiting on jobs (coverage rerun, see Next 0)
+State: waiting on jobs 261119-050554-5cd724
 Quest: .campaign/xapiand/quests/coverage-core-main.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
