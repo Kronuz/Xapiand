@@ -1162,6 +1162,20 @@
         "quest": "detent:groups-upload-loop-stall"
       },
       "text": "detent:groups-upload-loop-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:40:25",
+      "by": "campaign detent",
+      "closed": "noted; consensus-rpc-lane is planned, not started",
+      "id": "msg-141",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:peers-busy-roundtrip-bound"
+      },
+      "text": "detent:peers-busy-roundtrip-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-busy-roundtrip-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
