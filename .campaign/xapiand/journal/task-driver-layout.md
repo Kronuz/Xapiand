@@ -30,7 +30,7 @@ checked what), and answer each message by its id (msg-N).
 |---|---|
 | A1 | 361954 mutant at b7b76b5 exits 1 on the assertion ("layout: release 216/8, debug 224/8: FAILED"); b00b7b at 63b43bd "release 224/8, debug 224/8: ok" (CMake build) |
 | A2 | 48d7b2 deadline_test two-drivers: the assert aborts, "two-drivers ok" |
-| A3 | suite 077ad8 passes; CI at 63b43bd |
+| A3 | 261119-125708-077ad8 (suite); CI on the branch |
 
 ## Result
 
