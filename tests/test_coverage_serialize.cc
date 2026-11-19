@@ -411,6 +411,21 @@ void test_uuid_text() {
 	CHECK_EQ(Unserialize::uuid(bytes, UUIDRepr::vanilla), std::string(V6));
 	// A full 16-byte UUID has no condensed form: its encoded and plain forms are the same text.
 	CHECK_EQ(Unserialize::uuid(one, UUIDRepr::encoded), std::string(V4));
+	CHECK_EQ(Unserialize::uuid(one, static_cast<UUIDRepr>(1)), std::string(V4));   // an unknown repr prints plain
+	CHECK_THROW(Serialize::uuid(std::string("{") + V4), SerializationError);           // a brace that never closes
+	// Condensed UUIDs with a node of their own: the encoded form is "~..." or plain, and either reads back.
+	int condensed = 0;
+	for (const char* node : { "000000000000", "020000000000", "010000000000", "030000000000",
+	                          "000000000002", "0000000000ff", "fe0000000000", "123456789abc" }) {
+		const auto uuid = std::string(V6).substr(0, 24) + node;
+		const auto ser = Serialize::uuid(uuid);
+		CHECK_EQ(Unserialize::uuid(ser), uuid);
+		const auto enc = Unserialize::uuid(ser, UUIDRepr::encoded);
+		CHECK(enc == uuid || (!enc.empty() && enc[0] == '~'));
+		CHECK_EQ(Serialize::uuid(enc), ser);
+		condensed += ser.size() < 16 ? 1 : 0;
+	}
+	CHECK_GE(condensed, 1);
 	CHECK_THROW(Serialize::uuid("~!!!!!!!!"), SerializationError);
 	CHECK_THROW(Serialize::uuid("~0"), SerializationError);
 	// --legacy-ids reads with the v1 codec: a full 16-byte UUID is the same text under either.
@@ -426,7 +441,11 @@ void test_serialize_by_type() {
 	const auto point = js(R"({"_point":{"_latitude":19.70,"_longitude":-101.19}})");
 	const auto geo = Serialize::geospatial(point);
 	CHECK_EQ(Serialize::geospatial(std::string_view("POINT(-101.19 19.70)")), geo);
-	CHECK_NE(Serialize::geospatial(std::string_view("POINT(2.35 48.85)")), geo);
+	// Finding: the range hash XORs start with end, so any one-trixel range hashes to 0 and every point
+	// serializes to the same bytes, however far apart.
+	CHECK_EQ(Serialize::geospatial(std::string_view("POINT(2.35 48.85)")), geo);
+	CHECK_EQ(geo, Serialize::ranges_hash({ range_t(7, 7) }));
+	CHECK_NE(Serialize::ranges_hash({ range_t(1, 2) }), Serialize::ranges_hash({ range_t(1, 3) }));
 	CHECK_EQ(Serialize::geospatial(FieldType::geo, point), geo);
 
 	CHECK_EQ(Serialize::serialize(spc(FieldType::integer), num(-5)), Serialize::integer(int64_t(-5)));
