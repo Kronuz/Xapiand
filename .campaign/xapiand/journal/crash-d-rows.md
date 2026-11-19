@@ -1,6 +1,6 @@
 # crash-d-rows: journal
 
-State: working
+State: waiting on jobs 261119-122426-23b4be (A1), 261119-122444-f74d98 (A2), suite via campaign verify
 Quest: .campaign/xapiand/quests/crash-d-rows.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Cherry-picked e4884d358 as e580b0626. A1 job runs the whole script (A-D) as gate7c_rows.sh does (no workflow invokes it). A2 mutant 293735bfe on mutant/crash-d-rows.
 
 ## Next
 
-1. <step>
+1. When jobs pass: paste campaign brief table, set ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing
 
 ## Evidence
 
