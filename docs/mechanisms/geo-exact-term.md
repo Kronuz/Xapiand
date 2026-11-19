@@ -16,7 +16,7 @@ fixed-width, so two lists hash alike only by collision.
 
 The term used to be `std::hash` of the range list, which xored each range's start with its end. A point's range has start
 equal to end, so every point hashed to 0 and indexed the same term: an exact point query matched every document with
-a point (the docs example answered 10 accounts, the page size, instead of the 3 at that point).
+a point (the docs example answered 10 accounts, the page size, instead of the 4 at that point: _id 156, 768, 891 hold it in the data and the page before it moves _id 6 there).
 
 ## Cost
 

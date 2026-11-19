@@ -46,21 +46,21 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Geospatial Point count", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.count).to.equal(3);
+  pm.expect(jsonData.count).to.equal(4);
 });
 ```
 
 ```js
 pm.test("Geospatial Point size", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.hits.length).to.equal(3);
+  pm.expect(jsonData.hits.length).to.equal(4);
 });
 ```
 
 ```js
 pm.test("Geospatial Point values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [156, 768, 891];
+  var expected = [6, 156, 768, 891];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
