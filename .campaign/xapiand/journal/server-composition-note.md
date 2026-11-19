@@ -1,43 +1,42 @@
 # server-composition-note: journal
 
-State: ready for review
+State: ready for review (owner rulings folded at cpp-libraries:0579a1a)
 Quest: .campaign/xapiand/quests/server-composition-note.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing: the note is committed at cpp-libraries:21b3d33 on quest/xapiand/server-composition-note
-(worktree cpp-libraries-wt/xapiand/server-composition-note). The lead pushes.
+Nothing: the note is committed at cpp-libraries:0579a1a on quest/xapiand/server-composition-note
+(worktree cpp-libraries-wt/xapiand/server-composition-note), on top of the review fold at
+cpp-libraries:21b3d33. The lead pushes and sends A5.
 
 ## Next
 
-1. Lead: confirm A5 with Detent's lead on the one point below (relay's daemonizing), then land.
+1. Lead: A5 with Detent's lead (F1, F4, F6, the detent-agent column, the relay daemonizing point
+   below), then land.
 
 ## Blocked on
 
-Nothing. One point for Detent's lead (A5): their F4 text says detent-relay does not daemonize
-through detent_cli, but Detent:372e95c7 `src/detent_relay/main.cc:62-68` calls
-`detent_cli::run_daemon` and `ProcessLock` exactly as detentd does (`src/detentd/main.cc:154-158`).
-The note follows the code (relay: "the same"), so no relay deviation is listed. If they meant
-something else (the relay's readiness comes from `turn`, `host.cc:367-377`), it is a value, not a
-path.
+Nothing. For A5: Detent's F4 text said detent-relay does not daemonize through detent_cli, but
+Detent:372e95c7 `src/detent_relay/main.cc:62-68` calls `detent_cli::run_daemon` and `ProcessLock`
+as detentd does (`src/detentd/main.cc:154-158`); the note follows the code.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `docs/server-composition.md` at cpp-libraries:21b3d33. F1: "Options" paragraph and C9 (--upstream-ca). F2: step 4's descriptor check, C5. F3: step 4's Limits and Tls, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded (Options, C2, step 3, ledger-prefixed IDs, Settled 1 and 5). |
-| A2 | `docs/server-composition.md` at cpp-libraries:21b3d33: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80 (git -C ... show); the Mains Housekeeping row names Xapiand's 5 s control::Periodic retry (manager.cc:184,706-709); Sizing 8.6 KB / 40 KB, 41 MB per 1024 TLS (http docs/perf/idle.md:56,75-82); the relay's mirror in Mains and the upstream-CA row (host.cc:155-296, configuration.cc:101-103,151,157); C2 corrected. |
-| A3 | `docs/server-composition.md` at cpp-libraries:21b3d33, section Deviations: 17 rows, each with its reason and status (removed by which decision, or stays and why). |
-| A4 | `docs/server-composition.md` at cpp-libraries:21b3d33, line 1: "Status: CURRENT (2026-11-19), reviewed", naming the six heads the citations hold at. |
-| A5 | Source: Detent lead cmux 3708c307 (wording for F1, F4, F6, relayed by the lead; no message sent). F1 used with the `--upstream-ca` rename (Xapiand and Prism have no CA option: opts.cc:199-201, prism main.cc:246,258-259). F6 used as C8. F4 used except the relay point under Blocked on. |
-| doc check | job 261119-051022-2f4115, exit 0 at cpp-libraries:21b3d33 |
+| A1 | `docs/server-composition.md` at cpp-libraries:0579a1a. F1: "Options" paragraph and C9 (--upstream-ca). F2: step 4's descriptor check, C5 (D133: explicit value exits EX_CONFIG, default shrinks). F3: step 4's Limits and Tls, C1. F4: step 2, C7. F5: step 6, C6. F6: step 8, C8, Deviations row. F7, F10-F14 also folded. |
+| A2 | `docs/server-composition.md` at cpp-libraries:0579a1a: every cite re-read at task:95798a0, http:ec273dd, reactor:bf874dc, Detent:372e95c7, prism:4d3c96d, Xapiand:eb3dcfa80; detent-agent cites (`detent_agent/main.cc:105-116`, `config.hh:9`, `managed_host.cc:28-112,186-190,198-228`, `detent_delivery/coordinator.cc:253,316,446`) read at Detent:372e95c7; the cited Detent sources have no diff 372e95c7..d3141878. |
+| A3 | `docs/server-composition.md` at cpp-libraries:0579a1a, section Deviations: 18 rows, each with reason and status; adds detent-agent's 1 ms and 20 ms polls, its `signal_set`, and the unbounded stops (detent-authority, relay, agent). |
+| A4 | `docs/server-composition.md` at cpp-libraries:0579a1a, lines 1-4: "Status: CURRENT (2026-11-19), reviewed", naming Xapiand D132, D133, D138 and Detent D122, D123 and the six heads the citations hold at. CURRENT at cpp-libraries:0579a1a. |
+| A5 | Manual, the lead sends it. Source of the Detent text so far: Detent lead cmux 3708c307 (F1, F4, F6). |
+| doc check | job 261119-051022-2f4115 exit 0 at cpp-libraries:21b3d33; job 261119-063111-a8dbca at cpp-libraries:0579a1a |
 
 ## Result
 
-`cpp-libraries/docs/server-composition.md` (cpp-libraries:21b3d33) is the composition every Kronuz
-server adopts: eight steps, rules C1-C9, Options and Mains tables at today's heads, a Deviations
-table, and an appendix "Xapiand's adoption" (the review's manager.cc map with destinations updated
-to the rulings, and the five-step order) for Xapiand's adoption quest. Docs only; no code.
+`cpp-libraries/docs/server-composition.md` (cpp-libraries:0579a1a) is the composition every Kronuz
+daemon adopts (Xapiand, Prism, detent-authority, detent-relay, detent-agent): eight steps, rules
+C1-C10, Options and Mains tables at the pinned heads, a Deviations table, and an appendix for
+Xapiand's adoption. Docs only.
 
 ## Rulings I made
 
@@ -67,3 +66,15 @@ to the rulings, and the five-step order) for Xapiand's adoption quest. Docs only
 - F7: Xapiand adds `--reactors` defaulting from `--processors`.
 - The 1.000 descriptors/connection job (261112-101615-0bdb50) is not in either job store; marked
   unchecked in the note.
+
+- D132: the driver is `task::lifecycle(loop, stop, {}, ready, components...)`; `stop` is a stop
+  source whose type task names; C10 records it. Dump and restore now run the Registry under
+  `lifecycle` with the tool's end as stop source (D132 names "a tool's end"); before, "without
+  `serve`". `served` dropped from the appendix (task names the result).
+- D138: the detent-agent Process cell is filled (`run_daemon`, `ProcessLock`, main.cc:105-116), not
+  "no listener" as D138's wording reads: the agent runs that code, and "no listener" there would
+  say it skips the C7 step. Its `ready()` call sits in the Housekeeping cell (the 20 ms monitor),
+  so the `lifecycle`, ready row reads "no listener". Adoption order: Xapiand first, then Detent's
+  daemons and Prism (Detent D122), replacing "Prism first".
+- D123 (lead msg, mid-task): detentd is detent-authority in prose and headers; `detentd/` paths
+  stay as at Detent:372e95c7; one line names D123.
