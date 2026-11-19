@@ -41,3 +41,7 @@ Source: Detent src/detent_cli/daemon.cc and daemon.hh, last changed at Detent:27
 
 F1 cloexec startup pipe, F2 lock-in-run documented and tested, F4 clamp, F5 waitpid at timeout, F6 pidfile cloexec test. Pass job 261119-140041-d1a5e2; suite 261119-140051-362a8a. Mutants: F1 261119-140043-e5c800 (exec-child), F5 261119-140046-b42af2 (timeout), F6 261119-140049-af456c (lock-cloexec).
 F3 (locked_pid takes the lock for an instant; nullopt means unknown, not lockable): Q5, process-and-node's. Callers must take the lock to decide and not probe in a loop against a starting daemon.
+
+## R1 fix (task:3ce0f0c)
+
+Timeout reap bounded: SIGTERM, term_grace (1 s) of waitpid(WNOHANG), SIGKILL, reap. Test `term` (child ignores SIGTERM). Pass job 261119-140516-0c982a; suite 261119-140521-dfbfec; mutant (no SIGKILL) 261119-140519-1f4501.
