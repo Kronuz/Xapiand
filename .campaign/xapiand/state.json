@@ -942,6 +942,23 @@
         ]
       },
       "text": "set geo-correctness: unlocks geo-correctness"
+    },
+    {
+      "at": "2026-11-18T22:28:21",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-121",
+      "items": {
+        "geo-correctness": "geo-correctness",
+        "serialize-validation": "serialize-validation"
+      },
+      "settles": {
+        "start": [
+          "geo-correctness",
+          "serialize-validation"
+        ]
+      },
+      "text": "set serialize-validation: unlocks serialize-validation; geo-correctness"
     }
   ],
   "quests": {
@@ -20533,6 +20550,8 @@
       "after": [
         "coverage-areas"
       ],
+      "base": "ba35940e12c838d802b918bf60a046adb202f0b2",
+      "branch": "quest/xapiand/serialize-validation",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -20576,9 +20595,10 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T22:28:21"
+      "updated": "2026-11-18T22:29:01",
+      "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "sha256-cl-10": {
       "accepted": {},
