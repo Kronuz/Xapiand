@@ -1,6 +1,6 @@
 # task-inbox-first: journal
 
-State: waiting on jobs 261119-114206-73a222 261119-114200-848297 261119-114200-363a83
+State: ready for review
 Quest: .campaign/xapiand/quests/task-inbox-first.md (the lead's; never edit it)
 
 ## Doing
@@ -27,7 +27,7 @@ Fix commit task:b7e2449.
   bench, macOS arm64); inline_scheduler serves tests and simulation, so not pursued.
 - F6 (note): a post_call landing as run() exits waits in the inbox for the next run(), and
   queued() does not count it; predates this quest; lifecycle drive loops are unaffected.
-- Suite 261119-114200-848297, tsan 261119-114200-363a83 at b7e2449.
+- Suite 261119-114200-848297 and tsan 261119-114200-363a83 pass at b7e2449; mutant f4 fails at deadline_test.cc:450 (no SIGABRT).
 
 ## Next
 
