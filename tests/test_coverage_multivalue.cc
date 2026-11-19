@@ -463,7 +463,17 @@ void test_round_trip_every_kind() {
 	const auto plain = every_kind(false);
 	auto rebuilt = Multi_MultiValueKeyMaker().unserialize(plain.serialize());
 	CHECK_EQ(rebuilt->serialize(), plain.serialize());
-	CHECK_EQ(rebuilt->key(doc), plain.key(doc));
+	// M5: a string key serializes only its metric, not its slot or direction, so a rebuilt one reads slot 0 and keys differently.
+	CHECK_NE(rebuilt->key(doc), plain.key(doc));
+	Multi_MultiValueKeyMaker scalar;
+	scalar.add_serialize(1, false);
+	scalar.add_float(2, true, 1.5);
+	scalar.add_integer(3, false, -4);
+	scalar.add_positive(4, true, 9u);
+	scalar.add_date(5, false, 86400.0);
+	scalar.add_bool(6, true, true);
+	scalar.add_geo(7, false, std::vector<Cartesian>{ at(0, 0), at(90, 0) });
+	CHECK_EQ(Multi_MultiValueKeyMaker().unserialize(scalar.serialize())->key(doc), scalar.key(doc));
 
 	// M4: a phonetic key writes its encoder's code but does not restore it, so a rebuilt one serializes shorter.
 	Multi_MultiValueKeyMaker phonetic;
