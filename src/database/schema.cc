@@ -33,9 +33,11 @@
 #include <limits>                                 // for std::numeric_limits
 #include <mutex>                                  // for std::mutex
 #include <ostream>                                // for operator<<, basic_ostream
+#include <memory>                                 // for std::weak_ptr
 #include <set>                                    // for std::set
 #include <stdexcept>                              // for std::out_of_range
 #include <type_traits>                            // for remove_reference<>::type
+#include <unordered_map>                          // for std::unordered_map
 #include <utility>
 
 #include "base_x.hh"                              // for Base64
@@ -9344,6 +9346,31 @@ check_field_stop_words(const MsgPack& properties, std::vector<std::string>& path
 	}
 }
 
+// The schemas this thread verified with nothing left to adopt, by identity: a request that gets the same schema
+// again pays a lookup, not a walk. The weak pointer keeps a freed schema's address from matching a new one.
+class VerifiedSchemas {
+	static constexpr std::size_t limit = 4096;
+	std::unordered_map<const MsgPack*, std::weak_ptr<const MsgPack>> verified;
+
+public:
+	bool has(const std::shared_ptr<const MsgPack>& schema) const {
+		const auto it = verified.find(schema.get());
+		return it != verified.end() && it->second.lock() == schema;
+	}
+
+	void add(const std::shared_ptr<const MsgPack>& schema) {
+		if (verified.size() >= limit) {
+			std::erase_if(verified, [](const auto& entry) { return entry.second.expired(); });
+			if (verified.size() >= limit) {
+				verified.clear();
+			}
+		}
+		verified[schema.get()] = schema;
+	}
+};
+
+thread_local VerifiedSchemas verified_schemas;
+
 }  // namespace
 
 
@@ -9356,12 +9383,18 @@ Schema::check_stop_words(std::string_view index, bool adopt)
 	if (!root.is_map()) {
 		return;  // a foreign schema holds no fields of its own
 	}
+	if (!mut_schema && verified_schemas.has(schema)) {
+		return;
+	}
 	std::vector<UnrecordedStopWords> unrecorded;
 	std::vector<std::string> path;
 	try {
 		check_field_stop_words(root, path, index, unrecorded);
 	} catch (const StopWordsMismatchError& exc) {
 		THROW(Error, "{}", exc.what());
+	}
+	if (unrecorded.empty() && !mut_schema) {
+		verified_schemas.add(schema);
 	}
 	if (!adopt) {
 		return;

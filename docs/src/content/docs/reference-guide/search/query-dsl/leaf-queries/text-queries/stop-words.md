@@ -13,7 +13,7 @@ is an error, never a field that quietly stops nothing.
 ## Where the Lists Come From
 
 The lists of the 18 shipped languages (`ca`, `da`, `de`, `en`, `es`, `eu`, `fi`, `fr`, `hu`, `hy`, `it`, `nl`,
-`no`, `pt`, `ro`, `ru`, `sv` and `tr`, 7,326 words in all) are compiled into the `xapiand` binary: a node reads
+`no`, `pt`, `ro`, `ru`, `sv` and `tr`, 7,342 words in all) are compiled into the `xapiand` binary: a node reads
 no file for them and a lookup of a shipped language never fails.
 
 A file `<data path>/stopwords/<language>.txt` replaces the list of that language. It holds words separated by
