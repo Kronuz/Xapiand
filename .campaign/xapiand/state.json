@@ -22843,7 +22843,7 @@
     "stopword-lists": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T12:54:29",
+          "at": "2026-11-19T12:54:55",
           "base": "f1cc6dcfdf7f0930bee2e92251fd6a596927deb3",
           "blobs": {
             "CMakeLists.txt": "100644:a21ef66ee7805f1d65935fb787f1f46dee6803eb",
@@ -22961,7 +22961,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T12:54:51",
+      "updated": "2026-11-19T12:54:55",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
