@@ -927,6 +927,21 @@
         "quest": "detent:groups-upload-3s-class"
       },
       "text": "detent:groups-upload-3s-class started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-18T22:28:19",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-120",
+      "items": {
+        "geo-correctness": "geo-correctness"
+      },
+      "settles": {
+        "start": [
+          "geo-correctness"
+        ]
+      },
+      "text": "set geo-correctness: unlocks geo-correctness"
     }
   ],
   "quests": {
@@ -20511,7 +20526,9 @@
     },
     "serialize-validation": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "coverage-areas"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -20525,8 +20542,8 @@
         "src/serialize.cc",
         "src/serialize.h",
         "src/database/schema.cc",
-        "tests/test_coverage_serialize.cc",
-        "tests/test_serialise*.cc"
+        "tests/test_serialise*.cc",
+        "tests/test_serialize_validation*"
       ],
       "history": [
         {
@@ -20551,15 +20568,13 @@
         "correctness"
       ],
       "milestone": "",
-      "needs": [
-        "coverage-areas"
-      ],
+      "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
       "status": "planned",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-18T20:55:41"
+      "updated": "2026-11-18T22:28:21"
     },
     "sha256-cl-10": {
       "accepted": {},
