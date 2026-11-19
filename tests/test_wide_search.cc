@@ -507,23 +507,26 @@ task::task<void> take_in_line(wide_search::Pins& pins, std::size_t n, std::vecto
 	order.push_back(hold.size());
 }
 
-// The tasks of one when_all start in order on one thread, each up to its first wait: by the time `control` runs, every
-// batch before it is in line or holds its count.
-task::task<void> release_after_checking(wide_search::Pins& pins, wide_search::Pins::Hold& held, const std::vector<std::size_t>& order) {
-	// One index is free, but the batch of two waits at the head of the line, so the batch of one behind it does not
-	// take it.
-	CHECK_EQ(pins.held(), std::size_t{3});
-	CHECK_TRUE(order.empty());
-	held = {};   // room comes back: the head takes it, then the batch behind it
-	co_return;
-}
+// Each step below runs on one inline scheduler: spawn() queues a task and run() returns when nothing is ready, so a
+// step ends with every task it started parked at its first wait, whatever order the compiler's transfers start the
+// awaited tasks in.
+task::scheduler_ref on(task::inline_scheduler& scheduler) { return task::scheduler_ref::of(scheduler); }
 
 // A batch that does not fit waits for room, holding no thread, and is first in line: a narrower batch does not pass it.
 void test_a_waiting_batch_keeps_its_place() {
 	wide_search::Pins pins(4);
 	auto three = engine::sync_wait(pins.take(3, {}));
 	std::vector<std::size_t> order;
-	engine::sync_wait(task::when_all(take_in_line(pins, 2, order), take_in_line(pins, 1, order), release_after_checking(pins, three, order)));
+	task::inline_scheduler scheduler;
+	task::spawn(on(scheduler), take_in_line(pins, 2, order));
+	scheduler.run();   // the batch of two waits at the head of the line
+	task::spawn(on(scheduler), take_in_line(pins, 1, order));
+	scheduler.run();   // the batch of one waits behind it
+	// One index is free, but the batch of two is first, so the batch of one does not take it.
+	CHECK_EQ(pins.held(), std::size_t{3});
+	CHECK_TRUE(order.empty());
+	three = {};   // room comes back: the head takes it, then the batch behind it
+	scheduler.run();
 	CHECK_TRUE(order == (std::vector<std::size_t>{2, 1}));
 	CHECK_EQ(pins.held(), std::size_t{0});
 }
@@ -541,13 +544,6 @@ task::task<void> behind_the_head(wide_search::Pins& pins, task::cancel_token tok
 	}
 }
 
-task::task<void> cancel_then_release(task::cancel_source& source, wide_search::Pins::Hold& held, const bool& head_done) {
-	source.request();   // the batch behind the head leaves the line
-	CHECK_FALSE(head_done);
-	held = {};          // room for the head; the cancelled batch is not given the line after it
-	co_return;
-}
-
 // A batch behind the head of the line leaves it when its search is cancelled.
 void test_a_cancelled_batch_leaves_the_line() {
 	wide_search::Pins pins(2);
@@ -555,7 +551,16 @@ void test_a_cancelled_batch_leaves_the_line() {
 	task::cancel_source source;
 	bool head_done = false;
 	bool cancelled = false;
-	engine::sync_wait(task::when_all(head_of_line(pins, head_done), behind_the_head(pins, source.token(), cancelled), cancel_then_release(source, two, head_done)));
+	task::inline_scheduler scheduler;
+	task::spawn(on(scheduler), head_of_line(pins, head_done));
+	scheduler.run();   // the head holds the line and waits for room
+	task::spawn(on(scheduler), behind_the_head(pins, source.token(), cancelled));
+	scheduler.run();   // the batch behind it waits for the line
+	CHECK_FALSE(head_done);
+	CHECK_FALSE(cancelled);
+	source.request();  // the batch behind the head leaves the line
+	two = {};          // room for the head; the cancelled batch is not given the line after it
+	scheduler.run();
 	CHECK_TRUE(cancelled);
 	CHECK_TRUE(head_done);
 	CHECK_EQ(pins.held(), std::size_t{0});
