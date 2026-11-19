@@ -23057,7 +23057,8 @@
         "docs/src/content/docs/**options*",
         "src/server/http_utils.h",
         "tests/test_stopword_search.cc",
-        "src/database/handler.h"
+        "src/database/handler.h",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -23084,7 +23085,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T12:54:55",
+      "updated": "2026-11-19T14:05:39",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
