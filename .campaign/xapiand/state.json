@@ -5076,6 +5076,38 @@
       "updated": "2026-11-19T00:35:37",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
+    "coverage-database-t13": {
+      "accepted": {},
+      "after": [
+        "coverage-database"
+      ],
+      "checks": [
+        {
+          "cmd": "harness/coverage.sh database",
+          "level": "light",
+          "minutes": 120,
+          "name": "coverage"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_database_*",
+        "tests/test_coverage_handler*",
+        "tests/test_coverage_wal*",
+        "tests/test_coverage_shard*",
+        "tests/test_coverage_name_index*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Database coverage reaches T13's target",
+      "updated": "2026-11-19T23:26:14"
+    },
     "coverage-multivalue": {
       "accepted": {},
       "after": [],
