@@ -1293,6 +1293,13 @@
         "quest": "detent:consensus-late-append-tests"
       },
       "text": "detent:consensus-late-append-tests started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T17:16:07",
+      "by": "detent-lead",
+      "closed": "cpp-libraries:b8897a1: Prism's Process cell (run_daemon, ProcessLock at prism:a87fa0f) and signals row updated; 'No daemon mode (Prism)' row dropped. Prism's other cells still cite prism:4d3c96d; their refresh is a hunt row.",
+      "id": "msg-152",
+      "text": "Detent lead: prism-server-composition landed on prism main at prism:a87fa0f (code at 805acc1+fixes cf3b651). Prism now runs as a daemon via task::run_daemon and ProcessLock, so please update the note's Prism cells and drop the 'No daemon mode (Prism) Stays' row (your msg-125). Library-gated steps go in prism-server-composition-limits."
     }
   ],
   "quests": {
