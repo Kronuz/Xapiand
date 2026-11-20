@@ -123,6 +123,11 @@ void check_search_fanout(size_t shards, size_t max_search_indexes);
 // indexes the pool holds open (the pool size over the reactors, at least 1).
 size_t search_batch_indexes();
 
+// The indexes a search found to agree with the stop words lists and remembers, and a reset that forgets them and
+// sets the bound at which the set starts over (65,536 by default; a test lowers it).
+size_t agreeing_indexes_size();
+void reset_agreeing_indexes(size_t limit = 65536);
+
 // The indexes searches hold open now, or the most they have held at once since the process started.
 size_t search_pinned_indexes(bool most);
 

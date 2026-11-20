@@ -33,6 +33,7 @@
 #include "log.h"                                  // for L_EXC
 #include "phf.hh"                                 // for phf::*
 #include "http_parser.h"                          // for HTTP_STATUS_*
+#include "stopper.h"                              // for StopWordsMismatchError
 
 
 struct http_errors_t {
@@ -124,6 +125,10 @@ catch_http_errors(Func&& func)
 		// (cartesian) as a std::runtime_error subtype rather than a ClientError,
 		// so catch it explicitly to keep a bad coordinate/SRID a 400 not a 500.
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
+	} catch (const StopWordsMismatchError& exc) {
+		// The index is fine and so is the request: the stop words list the index was built with is not the node's.
+		http_errors.error_code = HTTP_STATUS_CONFLICT;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
 	} catch (const PayloadTooLarge& exc) {
 		http_errors.error_code = HTTP_STATUS_PAYLOAD_TOO_LARGE;
