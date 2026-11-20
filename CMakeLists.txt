@@ -1240,6 +1240,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	allocators::allocators
 	cartesian::cartesian
 	analysis::analysis
+	analysis::cjk
 	queryparser::queryparser
 	prospect::prospect
 	task::asio
