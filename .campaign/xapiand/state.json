@@ -6759,19 +6759,48 @@
         "docs/src/content/docs/options.md",
         "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T22:23:07",
+          "commit": "621c59fc466453a0d512c6d296ea8bd16a13c075",
+          "criteria": {
+            "A1": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since)",
+            "A2": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since); fails without: 261119-164341-1d09a8, 261119-180304-eeab13",
+            "A3": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since); fails without: 261119-164343-ac082d, 261119-180306-f79912",
+            "A4": "261119-180250-f48c78 (passed at 3b821c009f6c; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ede2230eaf21dc85162de26df123f762582d88aa",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-180250-f48c78",
+              "level": "light",
+              "seconds": 518.2,
+              "state": "done",
+              "what": "endpoint-uuid check suite at ede2230eaf21"
+            }
+          ],
+          "final": true,
+          "from": "c4afa991c60992b487e3f2a21eede787f03dd773",
+          "reason": "",
+          "tested": "fcafe7bcaaf0c7bcb06f8e5e09c54a13436e84b8"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T20:35:51",
-      "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
+      "updated": "2026-11-19T22:23:14",
+      "worktree": ""
     },
     "engine-core": {
       "accepted": {},
