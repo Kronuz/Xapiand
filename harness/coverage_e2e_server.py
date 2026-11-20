@@ -397,6 +397,8 @@ def edges(n):
     for method, path, body in (("CHECK", "/t,u/", None), ("WAL", "/t,u/", None), ("PUT", "/t,u/", {"a": 1}),
                                ("UPSERT", "/t,u/x", {"a": 1}), ("DELETE", "/t,u/x", None), ("INFO", "/t,u/", None)):
         error("%s %s" % (method, path), n.call(method, path, body), 400, "Bad Request: Method can only be used with single indexes")
+    error("GET metadata over two indexes", n.call("GET", "/t,u/:mykey"), 400, "Bad Request: Method can only be used with single indexes")
+    error("PUT metadata over two indexes", n.call("PUT", "/t,u/:mykey", {"a": 1}), 400, "Bad Request: Method can only be used with single indexes")
     eq("COMMIT over two indexes", (n.call("COMMIT", "/t,u/").status, n.call("COMMIT", "/t,u/").body), (200, b""))
     eq("COMMIT of a document id", n.call("COMMIT", "/t,u/d1").status, 405)
     r = n.call("RESTORE", "/t,u/", [])
@@ -835,6 +837,26 @@ def verbose(n):
 
 
 @group
+def logged_bodies(n):
+    """At the highest verbosity the access log renders each body it can (JSON, YAML, MsgPack, images)."""
+    png = b"\x89PNG\r\n\x1a\n" + bytes(range(64))
+    mp = b"\x82\xa4name\xa6mpcase\xa1n\x07"
+    for ct, data in (("application/json", '{"a":1}'), ("application/x-yaml", "a: 1\n"), ("application/msgpack", mp),
+                     ("image/png", png), ("application/pdf", b"%PDF-1.4 x"), ("text/plain", "hello"),
+                     ("application/octet-stream", b"\x00\x01"), ("application/json", "{broken")):
+        n.call("PUT", "/l/%s?commit" % ct.replace("/", "_"), data, headers={"Content-Type": ct})
+    for accept in ("application/json", "application/x-yaml", "application/msgpack", "image/png", "text/plain", "text/html"):
+        n.call("GET", "/l/application_json", headers={"Accept": accept})
+        n.call("GET", "/l/image_png", headers={"Accept": accept})
+        n.call("GET", "/l/application_pdf", headers={"Accept": accept})
+        n.call("SEARCH", "/l/", headers={"Accept": accept})
+        n.call("GET", "/l/nope", headers={"Accept": accept})
+    eq("the node answers", n.call("GET", "/l/application_json").json["a"], 1)
+    log = open(os.path.join(n.dir, "node.log"), errors="replace").read()
+    check("the log names the requests", "/l/application_json" in log, log[-300:])
+
+
+@group
 def limits(n):
     """--max-search-indexes bounds what a pattern may name."""
     for name in ("p1", "p2", "p3"):
@@ -883,6 +905,7 @@ NODES = {
     "pretty_flags": dict(flags=["--pretty", "--human", "--echo", "--comments"]),
     "plain_flags": dict(flags=["--no-pretty", "--no-human", "--no-echo", "--no-comments"]),
     "verbose": dict(flags=["--verbosity", "3"]),
+    "logged_bodies": dict(flags=["--verbosity", "5"]),
     "limits": dict(flags=["--max-search-indexes", "10"]),
     "admin": dict(admin=False),
 }
