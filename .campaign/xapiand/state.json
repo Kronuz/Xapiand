@@ -1404,6 +1404,25 @@
         "quest": "detent:consensus-batch-turn-room"
       },
       "text": "detent:consensus-batch-turn-room started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T01:11:53",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-161",
+      "items": {
+        "control-plane-wallclock": "control-plane-wallclock",
+        "http-pin-halfclose": "frees CMakeLists.txt for http-pin-halfclose",
+        "strata-pin-catalog": "strata-pin-catalog"
+      },
+      "settles": {
+        "start": [
+          "control-plane-wallclock",
+          "http-pin-halfclose",
+          "strata-pin-catalog"
+        ]
+      },
+      "text": "stopword-lists landed: unlocks control-plane-wallclock; strata-pin-catalog; frees CMakeLists.txt for http-pin-halfclose"
     }
   ],
   "quests": {
@@ -27953,18 +27972,48 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/track-p",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T03:48:22",
+          "commit": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "criteria": {
+            "A1": "261117-155032-ecb275 (passed at bd60f39769e0; only merges from main since); fails without: 261117-121859-d28384, 261117-121924-2b4aee, 261117-121932-c981c4, 261117-121941-230f53, 261117-121958-98b81c, 261117-122016-ef86f3, 261117-122028-16a1f0, 261117-122035-212d65, 261117-123155-1419b0",
+            "A10": "261119-165452-b53291 (passed at 2ce63ac08bac; only merges from main since), 261119-225047-cd30ff (passed at 162b5d0c6a7d; only merges from main since), 261119-225048-424d5f (passed at 162b5d0c6a7d; only merges from main since), 261119-225047-032deb (passed at 162b5d0c6a7d; only merges from main since), 261119-165445-56d539 (passed at 2ce63ac08bac; only merges from main since)",
+            "A14": "261119-165524-86e55d (passed at 2ce63ac08bac; only merges from main since)",
+            "A5": "261117-155032-ecb275 (passed at bd60f39769e0; only merges from main since), 261117-155033-63b78b (passed at bd60f39769e0; only merges from main since), 261117-155036-9088e8 (passed at bd60f39769e0; only merges from main since); fails without: 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027, 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843, 261119-165425-f30bdd",
+            "A7": "261119-165438-2cf08a (passed at 2ce63ac08bac; only merges from main since), 261119-165439-7fcba3 (passed at 2ce63ac08bac; only merges from main since), 261119-165432-b1efdc (passed at 2ce63ac08bac; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "bd60f39769e0775aea3b7d9ddc6677fe49a38087",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261117-155032-ecb275",
+              "level": "light",
+              "seconds": 625.5,
+              "state": "done",
+              "what": "track-p check build-test at bd60f39769e0"
+            }
+          ],
+          "final": true,
+          "from": "9603a13ee355fb393cf39b6cb18a1bca727339ca",
+          "reason": "",
+          "tested": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Track P",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-20T03:46:38",
+      "updated": "2026-11-20T03:49:08",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "track-p-research": {
