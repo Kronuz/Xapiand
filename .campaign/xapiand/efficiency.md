@@ -494,3 +494,8 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Agents: multicast-seeds build 218k plus fixes 179k (Opus); multicast review 132k (Opus, CHANGES, 2 blockers); cluster 325k (Opus, shard RPC built); group-core A3 230k (Opus); tool adaptation 275k (Opus); phrase mutant 79k (Sonnet); coverage-server 82k (Sonnet).
 - Started: node-admission (consensus, Opus), filed from cluster's B2.
 - Quota: 33% weekly, 0.30%/h. Light slots 81% used. Disk: 34 GiB free.
+
+## 2026-11-20 11h
+- Landed: nothing; master was red from the APFS quick fix (async_check, then the gate-tools count check). Fixed at Xapiand:bf593a759 and 7290c10d8; the quick-fix agent ran only its own test, and the lead's first fix ran async_check but not test_gate_tools.
+- Agents: cluster pins 214k (Sonnet); node-admission 311k (Opus); group-core turn-log fix 134k (Opus); multicast fixes 191k (Opus, the SIGPIPE cause found by Linux CI); group-core review running; membership design (Opus, max) and placement simulation (Opus) running.
+- Quota: 35% weekly, 0.32%/h. Load 8-12. Disk: 34 GiB free.

@@ -1574,6 +1574,20 @@
       "closed": "Taken: turn-log-parity tasks 3 and 5 add the copy flag, with tests for recovery and for the reported loss",
       "id": "msg-173",
       "text": "journal-double-damage (journal:cca2427, in review): double damage was silent loss on journal main through two holes; the fix reports it. Ruling R3: damage that no manifest names now loses every group, loudly. A copy flag in the record format would let recovery keep groups that write again after the damage. turn-log-parity's record-format tasks (3, 5) are the natural place for that flag; please take it there."
+    },
+    {
+      "at": "2026-11-20T10:46:27",
+      "by": "lead",
+      "closed": "Taken into turn-log-parity: F3 refusal in task 9, per-fragment checksum in tasks 3/5, copy flag",
+      "id": "msg-175",
+      "text": "journal-double-damage is accepted (journal:178030b) and lands once CI is green. Three follow-ups for turn-log-parity's journal tasks:\n1. F3: refuse a block_bytes that isn't a multiple or divisor of 512 at construction (task 9's refusal).\n2. Residual silent cases at some block sizes, a damaged fragment that crosses a sector, and a damaged header in some cases: these need a format change, a per-fragment checksum, in tasks 3 or 5.\n3. The copy flag (R3).\nThe review: Detent .campaign/detent/reviews/journal-double-damage-durability.md."
+    },
+    {
+      "at": "2026-11-20T11:32:31",
+      "by": "lead",
+      "closed": "group-core takes consensus:b8de3b8 for A7 after its review verdict (pin returns to consensus main when quiescence lands); forward_slice scan recorded in turn-log-parity",
+      "id": "msg-176",
+      "text": "consensus-quiescence:\n1. A1's Driver part is pushed at consensus:b8de3b8: reopen_barriers gives 2 barriers instead of 5, which is what group-core's A7 needs.\n2. A2's LeaderGone and the per-pair detector are at d291fac, after merging consensus-transport. A stopped leader node's groups elect 1.6 s later.\n3. 1M groups at rest: 0 wakes/s. TSan is clean over 300 seeds.\n4. The idle row is 5,703 B against your 6,984 B.\nLands after consensus-transport, with one review first.\nJournal finding for turn-log-parity: TurnLog::forward_slice scans every live group on each turn, so setup grows quadratically with group count. journal-idle-groups' parked groups leave that scan; I'm checking that it does."
     }
   ],
   "quests": {
@@ -10002,7 +10016,8 @@
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md",
         "docs/REPLICATION.md",
-        "include/strata/core/index.hh"
+        "include/strata/core/index.hh",
+        "test/standalone_turn_log_test.cc"
       ],
       "history": [
         {
@@ -10034,9 +10049,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T05:33:25",
+      "updated": "2026-11-20T11:12:44",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
@@ -18594,7 +18609,9 @@
         "test/transport/peers*",
         "docs/mechanisms/admission.md",
         "CMakeLists.txt",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "include/consensus/transport/links.h",
+        "include/consensus/transport/host_transport.h"
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
       "landed": [],
@@ -18606,12 +18623,11 @@
       "provides": [
         "consensus:node-admission"
       ],
-      "reason": "started by force: overlap is CMakeLists.txt and CHANGELOG.md only (a test target and a line each); whichever lands second merges main",
       "repo": "../consensus",
       "risk": "high",
       "status": "active",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T10:14:32",
+      "updated": "2026-11-20T10:55:07",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
@@ -20941,6 +20957,38 @@
       "status": "planned",
       "title": "The root authority places and repairs groups",
       "updated": "2026-11-20T05:21:55"
+    },
+    "placement-locality-sim": {
+      "accepted": {},
+      "after": [],
+      "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+      "branch": "quest/xapiand/placement-locality-sim",
+      "checks": [
+        {
+          "cmd": "python3 sim/placement/run.py --smoke",
+          "level": "light",
+          "minutes": 30,
+          "name": "sim"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "sim/placement/**",
+        "docs/perf/placement-strategies-sim.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/placement-locality-sim",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: new files only (sim/placement/** and one new docs/perf note); turn-log-parity's docs/perf glob never touches them",
+      "repo": "../strata",
+      "risk": "low",
+      "status": "active",
+      "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
+      "updated": "2026-11-20T11:05:25",
+      "worktree": "../strata-wt/xapiand/placement-locality-sim"
     },
     "placement-repair": {
       "accepted": {},
