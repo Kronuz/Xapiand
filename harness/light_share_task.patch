@@ -1,0 +1,210 @@
+diff --git a/task_asio.hh b/task_asio.hh
+index 54a36d3..3d213e4 100644
+--- a/task_asio.hh
++++ b/task_asio.hh
+@@ -38,7 +38,13 @@
+ #include <algorithm>
+ #include <atomic>
+ #include <cassert>
++#include <cstdlib>
++#include <deque>
++#include <mutex>
+ #include <chrono>
++#include <cstdint>
++#include <cstdio>
++#include <ctime>
+ #include <exception>
+ #include <memory>
+ #include <optional>
+@@ -69,6 +75,9 @@ public:
+ 	~asio_scheduler() {
+ 		close();
+ 		destroy_roots();
++		auto& hs = heavy_share::get();
++		std::lock_guard<std::mutex> lk(hs.m);
++		hs.waiting.erase(std::remove(hs.waiting.begin(), hs.waiting.end(), this), hs.waiting.end());
+ 	}
+ 	asio_scheduler(const asio_scheduler&) = delete;
+ 	asio_scheduler& operator=(const asio_scheduler&) = delete;
+@@ -242,24 +251,164 @@ private:
+ 		assert((io_ || !current() || current() == scheduler_ref::of(*this)) && "post_demoted from another thread needs an io_context's executor");
+ 		demoted_.push_back(e);
+ 		demoted_count_.fetch_add(1, std::memory_order_relaxed);
++		if (!e.heavy) {
++			if (auto& hs = heavy_share::get(); hs.on) { hs.light_seen(std::int64_t(now())); }
++		}
+ 		if (!draining_) {
+ 			draining_ = true;
+ 			asio::post(executor_, [this] { drain(); });
+ 		}
+ 	}
+ 
+-	void drain() {
+-		if (demoted_.empty()) {  // destroy_roots() forgot them
+-			draining_ = false;
++	// light-share prototype: the process's share of heavy turns. While light work waits (a light handle
++	// queued or run within LS_LIGHT_WINDOW_MS, default 10; 0: always) at most LS_HEAVY_SHARE loops run a heavy
++	// turn at once (unset or 0: no share). A loop whose heavy head finds no slot parks on a FIFO and keeps
++	// serving its light entries; a finishing heavy turn hands its slot to the first parked loop.
++	struct heavy_share {
++		std::mutex m;
++		int free = 0;
++		bool on = false;
++		std::int64_t window_ns = 10'000'000;
++		std::atomic<std::int64_t> light_at{INT64_MIN / 2};
++		std::deque<asio_scheduler*> waiting;  // guarded by m, as is every parked_
++		const char* hist = std::getenv("LS_TURN_HIST");  // per-turn wall and CPU histogram snapshots (JSON lines)
++		std::atomic<int> sched_count{0};
++		heavy_share() {
++			if (const char* v = std::getenv("LS_HEAVY_SHARE")) { free = std::atoi(v); on = free > 0; }
++			if (const char* v = std::getenv("LS_LIGHT_WINDOW_MS")) { window_ns = std::atoll(v) * 1'000'000; }
++		}
++		bool light_waiting(std::int64_t now) const noexcept {
++			return window_ns == 0 || now - light_at.load(std::memory_order_relaxed) < window_ns;
++		}
++		void light_seen(std::int64_t now) noexcept {
++			if (now - light_at.load(std::memory_order_relaxed) > window_ns / 8) { light_at.store(now, std::memory_order_relaxed); }
++		}
++		static heavy_share& get() { static heavy_share s; return s; }
++	};
++
++	// Per-turn wall and thread-CPU time of drain() resumes, log-scale buckets (4 per octave).
++	struct turn_hist {
++		static constexpr int buckets = 224;
++		struct kind {
++			std::uint64_t wall_n[buckets] = {}, wall_sum[buckets] = {}, cpu_in_wall[buckets] = {}, cpu_n[buckets] = {};
++		} k[2];  // light, heavy
++		std::uint64_t last_dump = 0;
++		static int bucket(std::uint64_t ns) noexcept {
++			if (ns < 4) { return int(ns); }
++			const int l = 63 - __builtin_clzll(ns);
++			return std::min(buckets - 1, l * 4 + int((ns >> (l - 2)) & 3));
++		}
++	};
++	static std::uint64_t thread_cpu_ns() noexcept {
++		timespec ts;
++		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
++		return std::uint64_t(ts.tv_sec) * 1'000'000'000u + std::uint64_t(ts.tv_nsec);
++	}
++	void dump_hist(heavy_share& hs) {
++		std::lock_guard<std::mutex> lk(hs.m);
++		if (FILE* f = std::fopen(hs.hist, "a")) {
++			const auto t = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
++			for (int kd = 0; kd < 2; ++kd) {
++				const auto& k = hist_->k[kd];
++				std::fprintf(f, "{\"t\":%lld,\"s\":%d,\"heavy\":%d,\"w\":[", (long long)t, id_, kd);
++				bool first = true;
++				for (int b = 0; b < turn_hist::buckets; ++b) {
++					if (!k.wall_n[b] && !k.cpu_n[b]) { continue; }
++					std::fprintf(f, "%s[%d,%llu,%llu,%llu,%llu]", first ? "" : ",", b, (unsigned long long)k.wall_n[b],
++						(unsigned long long)k.wall_sum[b], (unsigned long long)k.cpu_in_wall[b], (unsigned long long)k.cpu_n[b]);
++					first = false;
++				}
++				std::fprintf(f, "]}\n");
++			}
++			std::fclose(f);
++		}
++	}
++
++	// Runs e on this loop in its lane's scope; with LS_TURN_HIST set, records the turn's wall and CPU time.
++	void run_turn(const demoted_entry& e, heavy_share& hs) {
++		if (!hs.hist) {
++			running_on scope(scheduler_ref::of(*this).with_heavy(e.heavy));
++			e.h.resume();
+ 			return;
+ 		}
+-		const demoted_entry e = demoted_.front();
+-		demoted_.pop_front();
+-		demoted_count_.fetch_sub(1, std::memory_order_relaxed);
++		if (!hist_) { hist_ = std::make_unique<turn_hist>(); id_ = hs.sched_count.fetch_add(1); }
++		const std::uint64_t w0 = now(), c0 = thread_cpu_ns();
+ 		{
+ 			running_on scope(scheduler_ref::of(*this).with_heavy(e.heavy));
+ 			e.h.resume();
+ 		}
++		const std::uint64_t w1 = now(), c1 = thread_cpu_ns(), wall = w1 - w0, cpu = c1 - c0;
++		auto& k = hist_->k[e.heavy ? 1 : 0];
++		const int bw = turn_hist::bucket(wall);
++		++k.wall_n[bw];
++		k.wall_sum[bw] += wall;
++		k.cpu_in_wall[bw] += cpu;
++		++k.cpu_n[turn_hist::bucket(cpu)];
++		if (w1 - hist_->last_dump > 500'000'000ull) {
++			hist_->last_dump = w1;
++			dump_hist(hs);
++		}
++	}
++
++	// Hands this loop's slot on: to the first parked loop (its drain() is posted under the lock, so a
++	// destroyed scheduler is never reached), else back to the pool.
++	void release_slot() {
++		auto& hs = heavy_share::get();
++		slot_.store(false, std::memory_order_relaxed);
++		std::lock_guard<std::mutex> lk(hs.m);
++		if (hs.waiting.empty()) { ++hs.free; return; }
++		asio_scheduler* w = hs.waiting.front();
++		hs.waiting.pop_front();
++		w->parked_ = false;
++		w->slot_.store(true, std::memory_order_relaxed);
++		asio::post(w->executor_, [w] {
++			if (!w->draining_) {
++				w->draining_ = true;
++				w->drain();
++			}
++		});
++	}
++
++	void drain() {
++		if (demoted_.empty()) {  // destroy_roots() forgot them
++			draining_ = false;
++			if (slot_.load(std::memory_order_relaxed)) { release_slot(); }
++			return;
++		}
++		auto& hs = heavy_share::get();
++		auto it = demoted_.begin();
++		if (hs.on && it->heavy && !slot_.load(std::memory_order_relaxed)) {
++			// The heavy head needs a slot while light work waits: ask first, so light entries behind it
++			// never starve it; with none free, park and run a light entry, if any, meanwhile.
++			std::unique_lock<std::mutex> lk(hs.m);
++			if (slot_.load(std::memory_order_relaxed)) {  // granted since the check
++			} else if (!hs.light_waiting(std::int64_t(now()))) {  // heavy-only: no cap, and no claim on a slot
++				if (parked_) {
++					hs.waiting.erase(std::find(hs.waiting.begin(), hs.waiting.end(), this));
++					parked_ = false;
++				}
++			} else if (!parked_ && hs.free > 0) {
++				--hs.free;
++				slot_.store(true, std::memory_order_relaxed);
++			} else {
++				if (!parked_) {
++					parked_ = true;
++					hs.waiting.push_back(this);
++				}
++				lk.unlock();
++				it = std::find_if(demoted_.begin(), demoted_.end(), [](const demoted_entry& d) { return !d.heavy; });
++				if (it == demoted_.end()) {  // only heavy entries: idle until the grant or a light arrival
++					draining_ = false;
++					return;
++				}
++			}
++		}
++		const demoted_entry e = *it;
++		demoted_.erase(it);
++		demoted_count_.fetch_sub(1, std::memory_order_relaxed);
++		if (hs.on && !e.heavy) { hs.light_seen(std::int64_t(now())); }
++		run_turn(e, hs);
++		if (e.heavy && slot_.load(std::memory_order_relaxed)) { release_slot(); }
+ 		if (demoted_.empty()) {
+ 			draining_ = false;
+ 		} else {
+@@ -273,6 +422,10 @@ private:
+ 	std::deque<demoted_entry> demoted_;
+ 	std::atomic<std::size_t> demoted_count_{0};
+ 	bool draining_ = false;
++	std::atomic<bool> slot_{false};
++	bool parked_ = false;  // on heavy_share::waiting; guarded by heavy_share::m
++	std::unique_ptr<turn_hist> hist_;
++	int id_ = -1;
+ 	std::unique_ptr<timer_loop> timers_;
+ };
+ 
