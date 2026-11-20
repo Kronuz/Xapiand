@@ -2214,6 +2214,42 @@
       "title": "Remote branch cleanup triage",
       "updated": "2026-11-08T15:39:46"
     },
+    "catalog-post-lifetime": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R catalog",
+          "level": "light",
+          "minutes": 120,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/catalog.hh",
+        "test/**",
+        "docs/mechanisms/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Catalog delivery never posts to a torn-down scheduler",
+      "updated": "2026-11-19T21:31:56"
+    },
     "census": {
       "accepted": {},
       "after": [],
