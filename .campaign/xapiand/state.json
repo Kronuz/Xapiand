@@ -25835,11 +25835,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "folded into group-core (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "A refused apply never moves strata's position",
-      "updated": "2026-11-17T02:54:34"
+      "updated": "2026-11-20T05:27:06"
     },
     "strata-pin-catalog": {
       "accepted": {},
