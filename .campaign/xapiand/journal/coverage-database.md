@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-023502-f03bab (probe 3) and the baseline coverage job (see campaign job list); cabf22 failed on my test file's compile error (extra namespace), fixed; probe 900c61 had silently failed the same way
+State: waiting on jobs 261119-165221-1484b6 (probe 4: widened scenarios, output .scratch/probe4.out in the job's checkout)
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,6 +12,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Baseline coverage job 4358ca (ctest, warms build-cov; its coverage-uncovered.txt lists the database gaps in .scratch/cov-before). Probe job 08fd11 (--unversioned: builds tests/test_coverage_database.cc under harness/coverage_one.sh database src/database/schema.cc, output .scratch/probe1.out). tests/test_coverage_database.cc is an in-process node (RunningNode and http_call from test_loop_yield.cc) driven by requests; main() is still an exploration that prints each reply (P/R lines): turn them into value checks.
 
 ## Next
+
+0. Merged origin/master. Probe 3 aborted on an empty (204) reply parsed as JSON; fixed (json_of tolerant, 2xx printed). Baseline numbers (job d792cf, ctest corpora, test aborted so adds nothing): database 55.3% lines / 45.4% branches of 15516 / 6874; target 90 / 80. Needs ~5400 more lines.
 
 1. Read probe1.out: pin the property-refusal messages (R lines) in a table of checks; then the type matrix, schema writes, updates, scripts, deletes, WAL/shard paths, driven by coverage-uncovered.txt.
 2. Final coverage job (WORKLOADS ctest corpora e2e; newman is at /usr/local/bin/newman) and suite job at the head, Evidence rows, push, ready.
