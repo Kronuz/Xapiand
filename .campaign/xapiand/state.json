@@ -20224,13 +20224,26 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:52",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed",
+            "lens security removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness",
-        "security"
-      ],
+      "lenses": [],
       "milestone": "Phase 5",
       "needs": [
         "automata"
@@ -20240,7 +20253,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-19T06:17:11"
+      "updated": "2026-11-20T05:25:52"
     },
     "pins-2026-11": {
       "accepted": {},
