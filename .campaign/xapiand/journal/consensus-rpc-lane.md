@@ -68,3 +68,4 @@ a sender pool, separate serving and calling pools, T1-T8. This quest changes no 
   take the bytes a host's own calls need (review F8's hold-and-wait).
 - R8 (rev 2) Call.window must be nonzero; Drain's call field may be 0 (none accepted).
 - R9 (rev 2) The model's rules run as three jobs; all three together outgrow a Python run.
+- Decoder corpus: 2 stale 64-byte hello seeds replaced by seed.cc's 152-byte ones (382 seeds before and after); replay clean, hello round-trips (rpc-lane:83792cf).
