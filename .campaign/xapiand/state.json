@@ -4832,20 +4832,50 @@
         "test/driver_simulation.cc",
         "test/driver_mutants.py"
       ],
-      "journal": "../Xapiand-wt/xapiand/consensus-sim-loops",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T03:37:29",
+          "commit": "8bdbd750a7b683753ea16f79fa9161b63550273a",
+          "criteria": {
+            "A1": "261119-195629-82eb70 (passed at 98298fb16925; only merges from main since), 261119-195631-e40a04 (passed at 98298fb16925; only merges from main since), 261119-195633-cd71f4 (passed at 98298fb16925; only merges from main since), 261119-195636-1b8937 (passed at 98298fb16925; only merges from main since)",
+            "A2": "261119-195629-82eb70 (passed at 98298fb16925; only merges from main since), 261119-195631-e40a04 (passed at 98298fb16925; only merges from main since), 261119-195633-cd71f4 (passed at 98298fb16925; only merges from main since), 261119-195636-1b8937 (passed at 98298fb16925; only merges from main since); fails without: 261118-043818-1a72cb, 261119-171422-30e20c, 261119-195638-0e5689",
+            "A3": "261119-195629-82eb70 (passed at 98298fb16925; only merges from main since), 261119-195631-e40a04 (passed at 98298fb16925; only merges from main since), 261119-195633-cd71f4 (passed at 98298fb16925; only merges from main since), 261119-195636-1b8937 (passed at 98298fb16925; only merges from main since); fails without: 261118-043821-13551b, 261119-171425-e6bd03, 261119-195639-9537ee",
+            "A4": "261119-195641-9da6b4 (passed at 98298fb16925; only merges from main since)",
+            "A5": "261119-195629-82eb70 (passed at 98298fb16925; only merges from main since), 261119-195631-e40a04 (passed at 98298fb16925; only merges from main since), 261119-195633-cd71f4 (passed at 98298fb16925; only merges from main since), 261119-195636-1b8937 (passed at 98298fb16925; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "98298fb169254636e036a7548bfaccc4404e21c9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-195641-9da6b4",
+              "level": "light",
+              "seconds": 1500.9,
+              "state": "done",
+              "what": "consensus-sim-loops check build-test at 98298fb16925"
+            }
+          ],
+          "final": true,
+          "from": "a5fe5f01b85d64cb78175a1f6f987536e3387035",
+          "reason": "",
+          "tested": "8bdbd750a7b683753ea16f79fa9161b63550273a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
-      "updated": "2026-11-20T00:12:38",
-      "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
+      "updated": "2026-11-20T03:37:32",
+      "worktree": ""
     },
     "control-plane-wallclock": {
       "accepted": {},
