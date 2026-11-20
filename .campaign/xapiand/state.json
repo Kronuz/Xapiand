@@ -5590,19 +5590,47 @@
         "src/datetime.h",
         "tests/test_datetime*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T02:17:07",
+          "commit": "dd8f377f8748c684334f6839ba2eb511bca0c7d8",
+          "criteria": {
+            "A1": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since); fails without: 261119-163518-7d7ef0",
+            "A2": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since); fails without: 261119-163518-7d7ef0",
+            "A3": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18395fff1e47ab8d46e4f9a1e68f51303c7c4c75",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-163519-1b1b09",
+              "level": "light",
+              "seconds": 477.2,
+              "state": "done",
+              "what": "datetime-range-zone check suite at 18395fff1e47"
+            }
+          ],
+          "final": true,
+          "from": "2d48f38fc2d0bacd364fb0c6a55bf5df30d6280e",
+          "reason": "",
+          "tested": "d7fa8fa14265e96c6db26b842dea1c7a5d1b9d18"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T19:29:27",
-      "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
+      "updated": "2026-11-20T02:17:14",
+      "worktree": ""
     },
     "dir-shared-lock": {
       "accepted": {
