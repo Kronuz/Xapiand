@@ -107,8 +107,12 @@ static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
 			}
 			tm.hour = hour.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (hour.i64() < 0 || hour.i64() >= 24) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+			}
+			tm.hour = hour.i64();
+			return;
 		default:
 			throw DatetimeError(strings::format("'{}' must be a positive integer value", RESERVED_HOUR));
 	}
@@ -123,8 +127,12 @@ static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
 			}
 			tm.min = min.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (min.i64() < 0 || min.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+			}
+			tm.min = min.i64();
+			return;
 		default:
 			throw DatetimeError(strings::format("'{}' must be a positive integer value", RESERVED_MIN));
 	}
@@ -139,8 +147,12 @@ static inline void process_date_sec(Datetime::tm_t& tm, const MsgPack& sec) {
 			}
 			tm.sec = sec.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
-			throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (sec.i64() < 0 || sec.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+			}
+			tm.sec = sec.i64();
+			return;
 		default:
 			throw DatetimeError(strings::format("'{}' must be a positive integer value", RESERVED_SEC));
 	}
