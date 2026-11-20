@@ -64,13 +64,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261119-142617-01e205; fails without: 261118-232539-76dfe9 |
-| A2 | 261119-142617-01e205; fails without: 261118-232543-159564 |
-| A3 | 261119-142617-01e205; fails without: 261118-232554-222d40; note docs/mechanisms/geo-exact-term.md |
-| A4 | 261119-142617-01e205; fails without: 261118-232546-7f59ed, 261118-232550-b9fd21 |
+| A1 | 261119-154842-ff5706; fails without: 261118-232539-76dfe9 |
+| A2 | 261119-154842-ff5706; fails without: 261118-232543-159564 |
+| A3 | 261119-154842-ff5706; fails without: 261118-232554-222d40; note docs/mechanisms/geo-exact-term.md |
+| A4 | 261119-154842-ff5706; fails without: 261118-232546-7f59ed, 261118-232550-b9fd21 |
 | A5 | D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script |
-| A7 | 261119-142617-01e205; fails without: 261118-235902-e9f90f, 261118-235904-367e06, 261118-235913-859ec0 |
-| A6 | suite 261119-142617-01e205 passed at Xapiand:72be2396c; 41ab85 (coverage_serialize with flipped pins, 698 checks, + the seven quest tests) passed, the refused-word count 9 was right; CI at Xapiand:7093caf5b running (lead pushed) |
+| A7 | 261119-154842-ff5706; fails without: 261118-235902-e9f90f, 261118-235904-367e06, 261118-235913-859ec0 |
+| A6 | suite 261119-154842-ff5706 passed at Xapiand:72be2396c; 41ab85 (coverage_serialize with flipped pins, 698 checks, + the seven quest tests) passed, the refused-word count 9 was right; CI at Xapiand:7093caf5b running (lead pushed) |
 
 ## Result
 
