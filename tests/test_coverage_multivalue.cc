@@ -228,11 +228,11 @@ void test_serialize_key() {
 	CHECK_EQ(smallest(one, add), "solo");
 	CHECK_EQ(biggest(one, add), "solo");
 
-	// A missing slot sorts after every value ascending and, descending, keys as the minimum: one NUL byte.
+	// A missing slot sorts after every value ascending and, descending, keys as the minimum: the empty string.
 	Doc none;
 	CHECK_EQ(smallest(none, add), "\xff"s);
-	CHECK_EQ(biggest(none, add), "\0"s);
-	CHECK_EQ(MIN_STR_CMPVALUE, "\0"s);
+	CHECK_EQ(biggest(none, add), ""s);
+	CHECK_EQ(MIN_STR_CMPVALUE, ""s);
 
 	// Descending order: a value comes first and the missing slot last.
 	Multi_MultiValueKeyMaker down;
@@ -245,6 +245,17 @@ void test_serialize_key() {
 	gap.set(SLOT + 1, "x"s);
 	CHECK_LT(down.key(high), down.key(low));
 	CHECK_LT(down.key(low), down.key(gap));
+
+	// The empty string is the least byte string: a slot whose largest value is a NUL byte sorts ahead of a
+	// missing slot, and a slot of only empty values ties with it.
+	Multi_MultiValueKeyMaker down_one;
+	down_one.add_serialize(SLOT, true);
+	Doc nul_doc, empty_doc;
+	nul_doc.set(SLOT, multi({ ""s, "\0"s }));
+	empty_doc.set(SLOT, multi({ ""s, ""s }));
+	const Doc missing;
+	CHECK_LT(down_one.key(nul_doc), down_one.key(missing));
+	CHECK_EQ(down_one.key(empty_doc), down_one.key(missing));
 }
 
 void test_bool_key() {

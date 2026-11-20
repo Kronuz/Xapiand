@@ -54,7 +54,8 @@ const std::string SERIALIZED_ONE(Serialize::floating(1));
 const std::string SERIALIZED_M_PI(Serialize::floating(M_PI));
 
 const std::string MAX_STR_CMPVALUE("\xff");
-const std::string MIN_STR_CMPVALUE(1, '\0');
+// The least byte string: a missing slot keys at or below every value.
+const std::string MIN_STR_CMPVALUE;
 
 
 class Multi_MultiValueKeyMaker;
