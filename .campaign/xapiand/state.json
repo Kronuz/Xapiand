@@ -1519,6 +1519,20 @@
         ]
       },
       "text": "set turn-log-parity: unlocks frees include/strata/core/turn_seal.hh, include/strata/core/merge_policy.hh, test/test_turn*, test/test_merge*, test/test_reopen*, test/test_barrier*, bench/kv/**, docs/design/rocksdb-parity.md, docs/perf/** for turn-log-parity; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T09:02:38",
+      "by": "campaign detent",
+      "closed": "Overlap is in globs only: multicast-seeds touches transport/seeds* and CHANGELOG.md, while consensus-quiescence's globs are broad (transport/**, test/**, docs/**). Whichever lands second merges main and resolves CHANGELOG; no ordering is needed. The driver contract change is the one group-core waits for (A7).",
+      "id": "msg-169",
+      "settles": {
+        "ours": [
+          "group-core",
+          "multicast-seeds"
+        ],
+        "quest": "detent:consensus-quiescence"
+      },
+      "text": "detent:consensus-quiescence started and may change files your multicast-seeds changes (order them with --after detent:consensus-quiescence, or narrow the files); changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
