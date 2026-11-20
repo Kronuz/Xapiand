@@ -20990,12 +20990,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: new files only (sim/placement/** and one new docs/perf note); turn-log-parity's docs/perf glob never touches them",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
-      "updated": "2026-11-20T11:05:25",
+      "updated": "2026-11-20T11:53:31",
       "worktree": "../strata-wt/xapiand/placement-locality-sim"
     },
     "placement-repair": {
