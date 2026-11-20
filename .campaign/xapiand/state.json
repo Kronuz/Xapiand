@@ -20733,11 +20733,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "The open-index pool is sized from memory, not a fixed 200",
-      "updated": "2026-11-18T05:36:19"
+      "updated": "2026-11-20T05:27:28"
     },
     "pool-sweep-wait": {
       "accepted": {},
