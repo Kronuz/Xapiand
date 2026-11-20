@@ -3236,7 +3236,7 @@
     "cjk-words": {
       "accepted": {},
       "after": [],
-      "base": "45a5ed56dbd568aaa832efa5f367fbd63d0a1a4d",
+      "base": "c8472852369dbe8a3b62e5a68b9cac435a55f3ae",
       "branch": "quest/xapiand/cjk-words",
       "checks": [
         {
@@ -3369,11 +3369,12 @@
         "cjk-segmenter"
       ],
       "provides": [],
+      "reason": "started by force: overlaps only CMakeLists.txt's analysis pin line (cluster and strata-pin-catalog change other lines) and text-type.md inside cluster's reference-guide/** glob, a page cluster does not edit; git merges disjoint lines",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T15:52:55",
+      "updated": "2026-11-20T15:53:31",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
