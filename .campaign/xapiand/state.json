@@ -1489,6 +1489,19 @@
         ]
       },
       "text": "automata landed: unlocks phrase-expansion; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T08:14:22",
+      "by": "campaign detent",
+      "closed": "Expected: we asked Detent for it (msg-150, D148 Q3). group-core pins the landed journal driver; it moves its pin when journal-idle-groups lands, and turn-log-parity's journal tasks are ordered after it.",
+      "id": "msg-167",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-idle-groups"
+      },
+      "text": "detent:journal-idle-groups started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
