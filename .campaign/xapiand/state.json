@@ -3196,6 +3196,105 @@
       ],
       "updated": "2026-11-08T15:40:13"
     },
+    "cluster": {
+      "accepted": {},
+      "after": [
+        "journal-replaces-wal",
+        "group-heal",
+        "placement"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "consensus:rpc-lane",
+        "strata:group-install",
+        "strata:placement-records",
+        "strata:placement-repair",
+        "prospect:supplied-stats",
+        "xapiand:command"
+      ],
+      "files": [
+        "src/cluster/**",
+        "tests/cluster/**",
+        "harness/cluster/**",
+        "src/index_resolver_lru.*",
+        "src/database/pool.*",
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/opts.*",
+        "src/manager.*",
+        "src/engine/search.*",
+        "src/engine/strata/search.*",
+        "src/server/search_views.cc",
+        "src/index_pattern.*",
+        "src/walk_gate.h",
+        "tests/test_index_pattern.cc",
+        "tests/fuzz_index_pattern.cc",
+        "tests/fuzz_index_expand.cc",
+        "docs/mechanisms/shard-rpc.md",
+        "docs/mechanisms/cluster-membership.md",
+        "docs/mechanisms/shard-groups.md",
+        "docs/mechanisms/distributed-search.md",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/installation.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/faq.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/upgrade.md",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/tutorials/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "xapiand:shard-rpc",
+        "xapiand:node-directory",
+        "xapiand:shard-map",
+        "xapiand:search-fanout",
+        "xapiand:cluster-routes"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
+      "updated": "2026-11-20T05:22:19"
+    },
     "cluster-api": {
       "accepted": {},
       "after": [
