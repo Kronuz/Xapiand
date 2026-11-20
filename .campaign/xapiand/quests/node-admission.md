@@ -5,32 +5,24 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A running consensus transport admits a new node: its address and TLS pin are added (and removed)
+after construction, so Xapiand's `--join` and multicast seeds (consensus:seed-discovery) can grow a
+cluster. Today `peers` and `node_pins` are fixed when the transport is built (cluster journal B2).
+Which credential makes a joining pin trusted is a policy the caller passes; the default is the
+owner's decision (cluster B3, recommended: the cluster CA as trust anchor, pin recorded at first
+join). Reviewed by Detent's lead; lands after detent:consensus-transport.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- A1 A node added at runtime is dialed and completes the hello against its admitted pin; a node
+  never admitted, or presenting a different pin, is refused with a named failure (test plus a
+  `--fails-without` mutant that skips the pin check).
+- A2 Removing a node closes its links and refuses its later dials; adding and removing while
+  traffic flows on other pairs loses no in-flight request on them (TSan job).
+- A3 The trust policy is the caller's: a policy that accepts a CA-signed certificate and records
+  its pin at first join, and one that accepts only pre-approved pins, both pass the same tests.
+- A4 [artifact] `docs/mechanisms/admission.md`: how admission, removal and the trust policy work.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: the admission path is the part the review exists for.
