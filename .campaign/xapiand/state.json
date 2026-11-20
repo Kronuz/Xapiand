@@ -11238,15 +11238,15 @@
       "milestone": "Library family",
       "needs": [],
       "provides": [],
-      "reason": "owner 2026-11-02: after the release",
+      "reason": "owner 2026-11-02: after the release; then as hunt rows and quick fixes in each library, not a quest (replan-2026-11-20 section 4)",
       "repo": "../cpp-libraries",
       "risk": "normal",
       "status": "blocked",
       "title": "The library performance issues the cpp-libraries gate filed",
       "until": [
-        "owner"
+        "release"
       ],
-      "updated": "2026-11-08T15:41:43"
+      "updated": "2026-11-20T05:28:30"
     },
     "license-audit": {
       "accepted": {},
