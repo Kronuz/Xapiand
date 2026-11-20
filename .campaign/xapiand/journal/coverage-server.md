@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: waiting on jobs RERUN_ID
+State: waiting on jobs 261120-121254-2ad180
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,6 +12,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Driver harness/coverage_e2e_server.py (groups per node flag set) + tests/test_coverage_server.cc written blind against an old binary; coverage.sh has a `server` workload and NOBUILD=1. Job 444b1a is the first coverage build (slot xapiand-coverage-server keeps build-cov: run the driver against its bin/xapiand to fix expectations, then NOBUILD=1 jobs). Baseline (coverage-areas job 8642ea): server 76.8/49.4, search_views.cc 76.3/48.9, mime_types.cc 88.2/66.0.
 
 ## Next
+
+00000. 1f1407604: group `verbs` (all 30 table verbs as override header, `:verb` path command and the method itself, plus the mismatch refusals; `/:info`,`/:head`,`/:get`,`/:metrics`,`/:stats`) measured locally on the slot's build-cov (scratch ~/.scratch/xapiand/cov-server-work/cov.sh, same llvm-cov method as coverage.sh): server 90.1% lines, 85.6% branches (1423/1663; 80% needs 1331). Job 261120-121254-2ad180 is the evidence run (A1); then `campaign verify coverage-server` and ready for review. The other clusters (negotiation, flags, locators, streams) are not needed for the target and stay open. Only 3 of is_node_command's 30 verb cases are reachable (it is called only from info, head and retrieve-database views, so only :info, :head, :get reach the switch).
 
 0000. 9bd410: server 89.4% lines (2063/2308), 61.8% branches (1028/1663). Added: mime_odd, mime_short, mime_missing (node env XAPIAND_DATA_PATH with a stray/short/absent mime.types: ~11 lines) and four more multi-index refusals in edges (~6 lines): expect ~2080 lines >= 2078 (90%). Rerun id in State. Classification below.
 
@@ -66,6 +68,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - SEARCH with an Accept that names no renderable type (text/html, ndjson, image/png) answers 200 with an empty body (GET of a document answers 406).
 - INFO ?raw puts raw bytes into the JSON text (invalid UTF-8).
 - RESTORE of an empty array answers took 4295797.02 (an unset start time).
+- INFO of an index with an empty shard (one document in five shards) answers last_id 4294967295, doc_del 4294967294, doc_len_lower near 2^32 (unsigned wrap-around of an empty shard's values); INFO of a document puts raw value bytes (\xbe) into the JSON text, not only with ?raw.
+- The method override header refusal (PUT with X-HTTP-Method-Override) answers 400 with an empty body; the :verb mapping refusal answers a JSON body naming the cause.
 - --max-search-indexes counts shards: /p1,p2/ with 5 shards each "names 10".
 
 ## Rulings I made
