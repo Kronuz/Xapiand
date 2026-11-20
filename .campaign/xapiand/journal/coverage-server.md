@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: waiting on jobs 261120-092943-82afc7
+State: waiting on jobs 261120-095920-b03f29
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Driver harness/coverage_e2e_server.py (groups per node flag set) + tests/test_co
 
 ## Next
 
-0. Merged origin/master at 72547e782 (2026-11-20). Job 261120-092943-82afc7 = build + server driver only (WORKLOADS=server, out .scratch/cov-server); 444b1a was only the build (driver never ran). Read its log, then:
+0. Job 261120-092943 failed: tests/test_coverage_server.cc lacked <unistd.h> (fixed); rerun is 261120-095920-b03f29. Merged origin/master at 72547e782 (2026-11-20). Job 261120-092943-82afc7 = build + server driver only (WORKLOADS=server, out .scratch/cov-server); 444b1a was only the build (driver never ran). Read its log, then:
 1.  fix the driver's expectations against the real binary, then read coverage-uncovered.txt and add scenarios until server >= 90 lines / 80 branches.
 
 ## Blocked on
