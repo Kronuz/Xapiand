@@ -20400,11 +20400,12 @@
       "provides": [
         "strata:placement-repair"
       ],
+      "reason": "folded into F2 placement (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-18T02:55:58"
+      "updated": "2026-11-20T05:26:33"
     },
     "placement-root": {
       "accepted": {},
