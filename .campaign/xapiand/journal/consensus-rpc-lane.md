@@ -64,8 +64,8 @@ Correctness review (`.campaign/xapiand/reviews/consensus-rpc-lane-correctness.md
 |---|---|
 | A1 | `rpc_host_test calls`, `group-full`, `call-full`, `local-throw` (F7) and `rpc_test` (incl. `late-deadline`, T7) in build-test 261120-074701-268a9a at 22b979e (pending); controls `--fails-without`: rpc-shared-credit (mutant 858f25f) 261120-074650-d657bc, late-deadline (a1e77b5) 261120-074656-03dba7, local-throw-closes (6b14807) 261120-074659-a5a3bd. Superseded: 261120-063245-5d4c86 (failed: idle, F1) and 063253-b0630d (build failed, F2) |
 | A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-074701-268a9a (pending) |
-| A3 | `rpc_host_test stream` (32 MiB under credit; heartbeat gaps < 1,000 ms) in build-test 261120-074701-268a9a (pending); control rpc-past-credit (mutant 7caaa5a, F12) `--fails-without` 261120-074652-9c5498 |
-| A4 | `hello_test leader`, `codec`, `version` (now also refuses a 32 KiB frame below the lane's 65,584, F3) in build-test 261120-074701-268a9a (pending); controls `--fails-without`: hello-limits-ignored (mutant d6967cb) 261120-074654-e15f02, lane-frame-unchecked (24da848) 261120-074657-36a217 |
+| A3 | `rpc_host_test stream` (32 MiB under credit; heartbeat gaps < 1,000 ms) in 261120-085347-8daf82 (passed at e1f249d8d); control rpc-past-credit (mutant 7caaa5a, F12) `--fails-without` 261120-074652-9c5498 |
+| A4 | `hello_test leader`, `codec`, `version` (now also refuses a 32 KiB frame below the lane's 65,584, F3) in 261120-085349-81eac6 (passed at e1f249d8d); controls `--fails-without`: hello-limits-ignored (mutant d6967cb) 261120-074654-e15f02, lane-frame-unchecked (24da848) 261120-074657-36a217 |
 | A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at 22b979e |
 
 ## Result
