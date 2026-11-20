@@ -9176,7 +9176,11 @@
         "test/**",
         "docs/**",
         "examples/**",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "CMakeLists.txt",
+        "bench/**",
+        "README.md",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/http-limits",
       "landed": [],
@@ -9190,7 +9194,7 @@
       "risk": "normal",
       "status": "active",
       "title": "http: Limits, timeouts and stop_accepting",
-      "updated": "2026-11-19T15:33:35",
+      "updated": "2026-11-19T16:20:02",
       "worktree": "../http-wt/xapiand/http-limits"
     },
     "http-phase7c-l3": {
