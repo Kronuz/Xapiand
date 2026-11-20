@@ -30,6 +30,9 @@ mechanism ("Direct path first"), is A3's job.
 - A4 Group commit: with K concurrent writers, no writer that arrives during a barrier waits more
   than the next barrier, counted per writer; a mutant that defers it a whole barrier fails (a test,
   `--fails-without`)
+- A6 Against RocksDB on document-gate's rows (D143), at the feature end: group commit at 4 writers
+  and durable overwrite no slower than 1.1x, disk within 1.5x and memory within 1.5x (now 1.39x,
+  1.13x, up to 39.5x and up to 3.4x): one exclusive row per metric after a seconds-long smoke
 - A5 [artifact] `docs/design/standalone-turn-log.md` records Q3 to Q5 closed, with the mechanisms
 
 ## Tasks

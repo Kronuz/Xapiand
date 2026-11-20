@@ -457,3 +457,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - automata feature-complete (Opus, ~350k + compaction): 1,188 brute-force queries, 10/10 mutants caught locally; fuzz and timings moved to the feature end.
 - document-gate: contributor's reruns denied by the permission classifier; held for the owner.
 - Load 30+ (Detent's ddb builds plus ours, all light holds). Light slots 32%. Quota weekly 21% (0.20%/h). Disk 45 GiB.
+
+## 2026-11-20 06h
+- Landed: dsl-date-operators (Xapiand:440902ac4, merge 8e3c4cafb). Quick fix on master: nested MAYBE (Xapiand:280c47aef, 6ee8f3ed9; explorer's proven fix).
+- Skill: quests are features built by tasks, one gate when done (agent-campaign:21248b4, dotfiles:8344017); suite 285/286, the one failure was the lead's template edit, fixed.
+- Re-plan applied (Sonnet, 187k tokens): 33 -> 11 planned; 22 dropped (folded or quick fixes), 9 parked.
+- automata: one feature review (Opus) launched at the end, per the new model.
+- coverage-database: CI exposed a platform-dependent validation error (hash order names v14 vs v15); pin shortened, hunt row.
+- Light slots 26%. Quota weekly 23% (0.22%/h). Load 34 (Detent builds). Disk 36 GiB.

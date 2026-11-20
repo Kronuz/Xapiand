@@ -740,6 +740,10 @@ blocks quest 17's plan only.
 - (c) Keep the old discovery messages. Rejected here: its Raft is gone, and its messages are
   unauthenticated.
 
+*Owner's answer (2026-11-20, D141): (b),* for the zero-flag demo of nodes finding each other on one
+network. Multicast only yields seeds; joining and membership stay TLS with node certificates, so an
+announcement is a hint, never a member. `--join` seeds remain the way on Kubernetes and clouds.
+
 *Recommendation: (a).* DNS seeds cover every deployment the docs describe, Kubernetes included
 (old `kubernetes.md:19-24`), and a removed option is cleaner than one kept for LANs. Deferring
 blocks quest 12's options.

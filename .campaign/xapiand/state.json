@@ -1689,9 +1689,9 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-20T03:50:16",
+      "updated": "2026-11-20T06:29:22",
       "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
@@ -3215,7 +3215,8 @@
       "after": [
         "journal-replaces-wal",
         "group-heal",
-        "placement"
+        "placement",
+        "multicast-seeds"
       ],
       "checks": [
         {
@@ -3393,7 +3394,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T05:23:35"
+      "updated": "2026-11-20T06:56:55"
     },
     "cluster-api": {
       "accepted": {},
@@ -4900,7 +4901,10 @@
         "test/host*",
         "test/transport/hello*",
         "docs/mechanisms/hello*",
-        "docs/design/hello*"
+        "docs/design/hello*",
+        "test/transport/node_hello_test.cc",
+        "fuzz/corpus/decoders/**",
+        "fuzz/seed.cc"
       ],
       "history": [
         {
@@ -5063,7 +5067,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T05:24:37",
+      "updated": "2026-11-20T06:46:04",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -17476,6 +17480,50 @@
       "status": "landed",
       "title": "Unpacker reserves only what the bytes justify",
       "updated": "2026-11-08T15:40:38"
+    },
+    "multicast-seeds": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/transport/seeds*",
+        "src/transport/seeds*",
+        "test/transport/seeds*",
+        "fuzz/seeds*",
+        "docs/mechanisms/seeds.md",
+        "CMakeLists.txt",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "consensus:seed-discovery"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
+      "updated": "2026-11-20T06:56:41"
     },
     "name-index": {
       "accepted": {

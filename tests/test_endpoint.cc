@@ -238,6 +238,17 @@ static void test_a_colon_is_part_of_a_file_path() {
 	CHECK_EQ(Endpoint("urn:uuid:5759b016-10c3-4526-a981-47d6a8fd9c30").path, std::string("5759b016-10c3-4526-a981-47d6a8fd9c30"));
 }
 
+// `.xapiand/node` is the node's id file: an index named so answers 400, its siblings stay valid.
+static void test_the_nodes_id_file_is_a_reserved_name() {
+	for (auto uri : {".xapiand/node", ".xapiand/node/", ".xapiand/node/x", "a/../.xapiand/node"}) {
+		CHECK_TRUE(refused("/var/db/xapiand/", uri));
+	}
+	for (auto uri : {".xapiand/indexes", ".xapiand/nodes", ".xapiand/node2", "x/.xapiand/node"}) {
+		CHECK_FALSE(refused("/var/db/xapiand/", uri));
+	}
+}
+
+
 // A node is named by its name: a URI whose authority has a port is malformed, not a URI of no node.
 static void test_a_node_uri_with_a_port_is_refused() {
 	for (const char* uri : {"xapiand://host:8880/idx", "xapiand://host:8880", "xapiand://host:/idx", "xapiand://:8880/idx"}) {
@@ -255,4 +266,5 @@ static void test_a_node_uri_with_a_port_is_refused() {
 
 TEST_MAIN(test_endpoint_path, test_normalize_path, test_endpoint_refuses_paths_outside_the_base,
           test_endpoint_refuses_nul_and_unholdable_bytes, test_index_path_valid, test_a_normalized_path_normalizes_to_itself,
-          test_a_colon_is_part_of_a_file_path, test_a_node_uri_with_a_port_is_refused)
+          test_a_colon_is_part_of_a_file_path, test_a_node_uri_with_a_port_is_refused,
+          test_the_nodes_id_file_is_a_reserved_name)
