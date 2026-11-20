@@ -22348,7 +22348,7 @@
       "milestone": "Recovery tooling",
       "needs": [],
       "provides": [],
-      "reason": "the owner: after the engine is complete (2026-10-18, D28; strata docs/PLAN.md, Recovery tooling)",
+      "reason": "owner: after the engine is complete (D28) (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "high",
       "status": "blocked",
@@ -22356,7 +22356,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-09T04:14:32"
+      "updated": "2026-11-20T05:28:34"
     },
     "release": {
       "accepted": {},
