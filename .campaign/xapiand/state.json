@@ -1472,6 +1472,23 @@
         ]
       },
       "text": "serialize-validation landed: unlocks frees src/aggregations/** for agg-validate-tree; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
+    },
+    {
+      "at": "2026-11-20T08:01:52",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-165",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "phrase-expansion": "phrase-expansion"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "phrase-expansion"
+        ]
+      },
+      "text": "automata landed: unlocks phrase-expansion; frees include/**, test/**, bench/**, docs/perf/** for phase5"
     }
   ],
   "quests": {
@@ -28749,14 +28766,13 @@
       "files": [
         "include/strata/core/turn_seal.hh",
         "include/strata/core/merge_policy.hh",
-        "test/*.cc",
-        "test/fixtures/**",
+        "test/test_turn*",
+        "test/test_merge*",
+        "test/test_reopen*",
+        "test/test_barrier*",
         "bench/kv/**",
-        "docs/design/standalone-turn-log.md",
         "docs/design/rocksdb-parity.md",
-        "docs/perf/**",
-        "docs/mechanisms/**",
-        "fuzz/**"
+        "docs/perf/**"
       ],
       "history": [
         {
@@ -28787,7 +28803,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T08:07:56"
+      "updated": "2026-11-20T08:08:04"
     },
     "turn-seal": {
       "accepted": {
