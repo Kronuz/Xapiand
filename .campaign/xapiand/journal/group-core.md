@@ -30,8 +30,9 @@ Step 12 (lead: CI run 44816782044 red at d1793ae0), strata:6421d4b3.
   seeds 8, 12, 16, 23 FAIL, as on CI).
 - Jobs at 6421d4b3: gate build-test 261120-143826-fc1ff1, crash 261120-143827-809109; full suite
   assertions on 261120-143835-d4f803; ASan+UBSan on standalone_turn_log and group_* 261120-143838-68581e.
-- Correctness review (accepted at ffab229e) saw neither changed hunk's subject: t6w is core's
-  test (unchanged since before the review), and voters_test.cc's draw is test harness only.
+- Touches two files the correctness review (accepted at ffab229e) saw, both tests:
+  test/standalone_turn_log_test.cc (t6w itself is main's, unchanged by the quest) and
+  test/group/voters_test.cc (one draw's order). No include/ change.
 
 Step 11 (lead: correctness review CHANGES at 6a230264, `reviews/group-core-correctness.md`;
 rulings 1-7), strata:274fc243 e7b9acd2 429b4976 ffab229e. Jobs: Evidence, all at ffab229e
