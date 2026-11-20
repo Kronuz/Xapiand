@@ -6401,9 +6401,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T15:48:23",
+      "updated": "2026-11-19T18:20:33",
       "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
     },
     "e2e-harness": {
