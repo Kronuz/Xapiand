@@ -1863,11 +1863,12 @@
         "barrier-warning-strata"
       ],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-19T06:17:05",
+      "updated": "2026-11-20T05:27:25",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
