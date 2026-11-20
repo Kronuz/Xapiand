@@ -1,20 +1,32 @@
 # queue-drain-throughput: journal
 
-State: waiting on jobs 261119-181741-d96412 261119-181752-2d57bb 261119-181755-3c70de 261119-181809-a1b066
+State: waiting on jobs 261119-201528-0aac13 261119-201532-834039 261119-201535-340225 261119-201537-dced95 261119-201541-c6641b
 Quest: .campaign/xapiand/quests/queue-drain-throughput.md (the lead's; never edit it)
 
 Code: agent-campaign worktree /Users/kronuz/code/Kronuz/agent-campaign-wt/xapiand/queue-drain-throughput,
-branch quest/xapiand/queue-drain-throughput, agent-campaign:a3c1939 (not pushed: the lead said don't push).
+branch quest/xapiand/queue-drain-throughput, head agent-campaign:f3a59fd (main 63cc071 merged; not pushed).
 
 ## Doing
 
-Waiting on the suite (A1-A3), the two fails-without jobs at main's commit (A1, A3) and the replay (A4).
+msg (lead, 11-19 20h): suite 261119-181741-d96412 at agent-campaign:a3c1939 failed 5 tests. Answer:
+1. test_drains_and_light_work_take_turns and test_direct_path_work_that_waited_a_turn_ends_it_after_the_running_drain
+   were mine: the batch join outside a drain turn (a queued exclusive job joining a finished batch at
+   once). Removed in agent-campaign:d768ed1; no assertion changed.
+2. The rule "no light job or build starts beside a running drain" is removed too: it broke main's
+   replay assertion (staged builds cut drains, 3.33 against 2.83 an hour) and, under quiet's model, it
+   gained nothing once full batches yield to light work. main's replay tests are back unchanged.
+3. GitMirrors.test_jobs_clone_through_one_mirror..., Identity.test_a_ctest_run_stops_at_its_first_failure...,
+   Identity.test_a_light_job_builds_with_a_light_holds_parallelism: not scheduler code; the last two see
+   CMAKE_BUILD_PARALLEL_LEVEL=4 that a light suite job inherits. Baseline job at main 63cc071:
+   261119-201541-c6641b (also runs the two turn tests at main).
+
+Waiting on: suite 0aac13 (A1-A3), fails-without at main 834039 (A1) and 340225 (A3), replay dced95 (A4),
+baseline at main c6641b.
 
 ## Next
 
-1. When the jobs finish: paste `campaign brief`'s Evidence table, copy the replay table from
-   261119-181809-a1b066's log into Result, set "ready for review".
-2. Merge main once the lead's `unattended()` status-line change lands; rerun the suite.
+1. When the jobs finish: Evidence table from `campaign brief`, the replay table from dced95's log into
+   Result, then "ready for review" if the suite is green or only main's failures remain.
 
 ## Blocked on
 
