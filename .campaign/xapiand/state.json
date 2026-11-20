@@ -28232,9 +28232,7 @@
       ],
       "consumes": [],
       "files": [
-        "sim/**",
         "CMakeLists.txt",
-        "docs/design/simulator.md",
         "docs/reviews/simulator-design.md",
         "docs/status/simulator.md",
         "docs/DISTRIBUTION.md",
@@ -28342,7 +28340,7 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:28:03"
+      "updated": "2026-11-20T05:28:42"
     },
     "track-p": {
       "accepted": {
