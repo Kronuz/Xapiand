@@ -3265,9 +3265,8 @@
         "src/multivalue/generate_terms.h",
         "src/query_dsl.cc",
         "CMakeLists.txt",
-        "cmake/**",
         "docs/mechanisms/cjk-words.md",
-        "docs/src/content/docs/**",
+        "docs/src/content/docs/reference-guide/schemas/field-types/text-type.md",
         "tests/test_cjk_words*"
       ],
       "history": [
@@ -3374,7 +3373,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T15:51:37",
+      "updated": "2026-11-20T15:52:55",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
