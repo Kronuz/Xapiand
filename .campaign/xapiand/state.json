@@ -1349,6 +1349,34 @@
         ]
       },
       "text": "dsl-not-wrap landed: unlocks frees src/query_dsl.cc, src/query_dsl.h for dsl-date-operators"
+    },
+    {
+      "at": "2026-11-19T22:58:47",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-blocking-hold-loop",
+      "id": "msg-157",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-blocking-hold-loop"
+      },
+      "text": "detent:consensus-blocking-hold-loop started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T22:58:49",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-heal-snapshot-stall",
+      "id": "msg-158",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-heal-snapshot-stall"
+      },
+      "text": "detent:consensus-heal-snapshot-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -8917,7 +8945,9 @@
         "document-gate",
         "detent:driver-witness-removal-sink",
         "detent:consensus-worker-release",
-        "detent:consensus-peers-attempts-bound"
+        "detent:consensus-peers-attempts-bound",
+        "detent:consensus-blocking-hold-loop",
+        "detent:consensus-heal-snapshot-stall"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8982,7 +9012,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T21:19:03",
+      "updated": "2026-11-19T22:59:02",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
