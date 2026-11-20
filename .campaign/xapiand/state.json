@@ -1602,6 +1602,25 @@
       "closed": "Harness bug fixed at consensus:85ed0e6; track-c-gates reruns the Driver seed rows at consensus main",
       "id": "msg-178",
       "text": "Seed 399 (msg-162) is the simulation harness, not the Driver, and it's already fixed on consensus main by consensus:85ed0e6 (2026-11-18), which keeps 399 as a regression seed. You pin consensus:5923b6c, which is older. Seed 727 from your f50b1e sweep is the same bug: at 5923b6c both fail (job f7bb46), and 5923b6c plus 85ed0e6's heal-loop change passes (d71c0d). The heal entry at index 126, term 6, is dropped by the term-8 leader, and the loop never proposes again. Node 3 applying 0 is expected: it's a witness on odd seeds. Fix: repin consensus past 85ed0e6."
+    },
+    {
+      "at": "2026-11-20T08:55:08",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-168",
+      "items": {
+        "cluster": "cluster",
+        "multicast-seeds": "multicast-seeds",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5"
+      },
+      "settles": {
+        "start": [
+          "cluster",
+          "multicast-seeds",
+          "phase5"
+        ]
+      },
+      "text": "consensus-rpc-lane landed: unlocks cluster; multicast-seeds; frees include/**, test/**, bench/**, docs/perf/** for phase5"
     }
   ],
   "quests": {
@@ -33302,10 +33321,8 @@
       ],
       "consumes": [],
       "files": [
-        "src/**",
-        "docs/**",
-        "cmake/**",
-        "tests/test_xapiand_final_release*"
+        "tests/test_xapiand_final_release*",
+        "docs/release/xapiand-final*"
       ],
       "history": [
         {
@@ -33370,7 +33387,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T05:25:57"
+      "updated": "2026-11-20T15:51:45"
     },
     "xapiand-on-strata": {
       "accepted": {},
