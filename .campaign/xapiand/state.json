@@ -4965,7 +4965,109 @@
       "updated": "2026-11-20T05:27:03"
     },
     "consensus-rpc-lane": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T08:51:35",
+          "base": "1c08c9fc40620c0be445069bb3b1e319aa4a28f1",
+          "blobs": {
+            "CMakeLists.txt": "100644:61288538ea80f2315cdaceb2e5b59a549ddda440",
+            "docs/design/rpc-lane-model.py": "100755:fc566b9a0860406b13af1317e17c5530cccef0e8",
+            "docs/design/rpc-lane.md": "100644:47c6cb8d140173a8fc06d693cd2849ef9669aceb",
+            "docs/mechanisms/hello.md": "100644:7fb3d95b1645ba923b8e0acfcc90bac7404efc25",
+            "docs/mechanisms/host-transport.md": "100644:721b94efd2f6c321b4712d0007ad681407543505",
+            "docs/mechanisms/rpc-lane.md": "100644:af5a100b09761774aa53ca369bd298d6caaa433e",
+            "fuzz/corpus/decoders/374c7d50206e2783608b6d6daa9eedcdbb17fc75": "100644:a852daa452fa545bd125d0f22c704e610a953116",
+            "fuzz/corpus/decoders/92cba8759543da45fe5b5a6f421a1b9e9935ec9a": "deleted",
+            "fuzz/corpus/decoders/aab57da87ebd0dc3d156bd1fe8b780beb7c1014a": "100644:57ac03e6d5843aba0ecac0e04db745fd74935760",
+            "fuzz/corpus/decoders/db9a5f8875d8a19c434be2b0991658b3f967f70f": "deleted",
+            "include/consensus/transport/deadline.h": "100644:799dfd579689f5413f10895848b2c092c5fc4283",
+            "include/consensus/transport/host_transport.h": "100644:55048b89f801debc36a1968909064d54e709233e",
+            "include/consensus/transport/links.h": "100644:3db64b2a60244d56ae97d72ac4e0f25c8b3e5bda",
+            "include/consensus/transport/node_hello.h": "100644:8902fc53be95c6cca34646b7fdbc29ca16851a65",
+            "include/consensus/transport/rpc.h": "100644:6b7ac29af6db17a8037dc15e86ecf974788e5e15",
+            "test/transport/hello_test.cc": "100644:0f1b13d59a3a621e95687321c85dc3a8e7511da4",
+            "test/transport/node_hello_test.cc": "100644:da12b81e6e5f106c02021d5ed0b1308698cdc5cc",
+            "test/transport/rpc_host_test.cc": "100644:540ea97492c0a614f71bcfae3ee6cbdcc77ecbb6",
+            "test/transport/rpc_hosts.h": "100644:e79c33246f75eec6957b73c635103dc45a075207",
+            "test/transport/rpc_mutants.py": "100644:440965057828e8c7d54a743cce93b1d144112dbf",
+            "test/transport/rpc_test.cc": "100644:4291ef13ec51a8712a6e83521a87f177fb8fbd6d"
+          },
+          "by": "review",
+          "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "criteria": "75bd3261d155e6a5",
+          "diffs": {
+            "": "4afc103dee42c90d",
+            "CMakeLists.txt": "da81da3ea2cd7cfb",
+            "docs/design/rpc-lane-model.py": "f82311ab2b75a21b",
+            "docs/design/rpc-lane.md": "5896a7637b3cc473",
+            "docs/mechanisms/hello.md": "3aad610fc2a5677e",
+            "docs/mechanisms/host-transport.md": "3ee3719a3a4bb271",
+            "docs/mechanisms/rpc-lane.md": "06933f7f812504b4",
+            "include/consensus/transport/deadline.h": "d7769e91f15d97ce",
+            "include/consensus/transport/host_transport.h": "222f89d1dd4e8db5",
+            "include/consensus/transport/links.h": "ee44b4b320f5c8c7",
+            "include/consensus/transport/node_hello.h": "afd9d79ec4e62db5",
+            "include/consensus/transport/rpc.h": "d15a6cb5a06b3020",
+            "test/transport/hello_test.cc": "02f3bb0b21aaebb4",
+            "test/transport/node_hello_test.cc": "798297ff8b7dc83a",
+            "test/transport/rpc_host_test.cc": "b4e58c582455ba6f",
+            "test/transport/rpc_hosts.h": "ba854b57216e8f68",
+            "test/transport/rpc_mutants.py": "5ff60fd7ad28a4f8",
+            "test/transport/rpc_test.cc": "5466d9573480e248"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-082541-e38907",
+                  "level": "light",
+                  "seconds": 353.9,
+                  "state": "done",
+                  "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-082541-e38907",
+                  "level": "light",
+                  "seconds": 353.9,
+                  "state": "done",
+                  "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": true
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "fuzz/corpus/decoders/374c7d50206e2783608b6d6daa9eedcdbb17fc75",
+              "fuzz/corpus/decoders/92cba8759543da45fe5b5a6f421a1b9e9935ec9a",
+              "fuzz/corpus/decoders/aab57da87ebd0dc3d156bd1fe8b780beb7c1014a",
+              "fuzz/corpus/decoders/db9a5f8875d8a19c434be2b0991658b3f967f70f",
+              "include/consensus/transport/deadline.h",
+              "test/transport/rpc_test.cc"
+            ],
+            "reason": "the files the review never saw are the regenerated fuzz seeds (the hello frame's new size), test assertions for the two CI failures, and doc lines; no new mechanism; F2's controls ran as fails-without jobs (261120-082602-299054 and the A3/A4 controls)"
+          },
+          "note": "",
+          "review": "ca794af809b2746c2ab03d45508972e1cbcb3ff5",
+          "reviewed": "1cd353fb82b900499ca962b37f93847972924347",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-driver",
         "detent:transport-connection",
@@ -5221,7 +5323,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T08:22:21",
+      "updated": "2026-11-20T08:51:35",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
