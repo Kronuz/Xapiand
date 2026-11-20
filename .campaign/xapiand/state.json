@@ -10589,19 +10589,48 @@
         "tests/test_coverage_multivalue*",
         "tests/test_coverage_multivalue.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T00:10:47",
+          "commit": "237a15bb4c1534d9acd548847fccde14da297a34",
+          "criteria": {
+            "A1": "261119-200941-018efe (passed at baad6cb02d9e; only merges from main since); fails without: 261119-123354-0d438a, 261119-165358-64761d, 261119-200950-c8b5f6",
+            "A2": "261119-200941-018efe (passed at baad6cb02d9e; only merges from main since); fails without: 261119-123354-0d438a, 261119-165358-64761d",
+            "A3": "261119-200941-018efe (passed at baad6cb02d9e; only merges from main since); fails without: 261119-165358-64761d",
+            "A4": "261119-200952-0d34b1 (passed at baad6cb02d9e; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "fb0704f1860ed0373d4133cdea0352d13ae9d7cb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-200952-0d34b1",
+              "level": "light",
+              "seconds": 226.1,
+              "state": "done",
+              "what": "keymaker-keys check suite at fb0704f1860e"
+            }
+          ],
+          "final": true,
+          "from": "853cd60e22b753b2d79a0713ca909549e3040d3f",
+          "reason": "",
+          "tested": "f20c92c892df2272b3e84739cebc45124361caf7"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T21:21:55",
-      "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
+      "updated": "2026-11-20T00:12:29",
+      "worktree": ""
     },
     "kv-scan": {
       "accepted": {},
