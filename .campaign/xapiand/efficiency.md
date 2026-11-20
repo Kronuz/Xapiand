@@ -429,3 +429,23 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Explorer nested-MAYBE: fix proven (job ab6ff7 pass, mutant dd82b5 fail), ~87k tokens; queued as a quest after dsl-date-operators.
 - Started: strata-pin-catalog, control-plane-wallclock (Sonnet). serialize-validation re-check of the lead's test-pin flip.
 - Light slots 32%, drains 13 min, 28 jobs ended (8 failed). Quota weekly 15%. Load 4-6. Disk 31 GiB free.
+
+## 2026-11-20 02h
+- Landed: datetime-range-zone (Xapiand:d7fa8fa14, merge dd8f377f8).
+- Accepted: serialize-validation (narrow Sonnet re-check of the lead's pin flip, 67k tokens, APPROVE), landing. control-plane-wallclock ready (mutant: wakes idle 330 vs parked 67), landing. strata-pin-catalog jobs queued.
+- Disk: removed 5 landed quests' build slots `land` had kept (cheap-reopen, license-closure, lua-name-miss, metrics-fd-count, name-index): 28 -> 40 GiB free. `job prune` freed 0 (v3 note: land should drop the slot unless a job still names it).
+- Light slots 38%, drains 28 min, 24 jobs ended (2 failed). Quota weekly 15%. Load 4-8.
+
+## 2026-11-20 03h
+- Landed: none this hour. Five land loops chase one master (serialize-validation, dsl-date-operators after it, control-plane-wallclock, freebsd-exe-path, then coverage-core-main) plus consensus-sim-loops chasing Detent's consensus landings; each landing forces the rest through another merge + CI round (v3: a merge queue would serialize this).
+- coverage-core-main red on test_node's 800 ms shutdown bound under Linux ASan (flake, hunt row); failed job rerun.
+- hybrid-go-no-go: Opus resume, 138k tokens; results + decision request for the owner (strata warm p99 3.1x faster than Qdrant; cold 1.2x behind after int8).
+- strata-pin-catalog: A1 and A2 proven (old pin: heap-use-after-free); build-test check fixed twice by the lead (target name, BUILD_TESTS).
+- track-p: Opus resume on P13's finished reruns.
+- Light slots 21%, drains 37 min. Quota weekly 16%. Load 3. Disk 41 GiB.
+
+## 2026-11-20 04h
+- Landed: consensus-sim-loops (consensus:8bdbd750), track-p (prospect:0a2af7dfe; Opus review 234k tokens, APPROVE, caught a hollow mutant job). Detent landed consensus-heal-snapshot-stall (consensus:39d9f1d).
+- Started: automata (Opus). Resumed with fresh contributors: document-gate (Opus), coverage-database (Sonnet).
+- Lead bug: a chained land watcher deadlocked on `pgrep -f 'landloop.sh X'` matching another watcher's own command line; coverage-core-main sat ~1 h unlanded. Restarted directly. (v3: the driver owns ordering, no pgrep chains.)
+- Light slots 40%, drains 15 min, 41 jobs ended (3 failed). Quota weekly 17%. Load 5-6. Disk 42 GiB.
