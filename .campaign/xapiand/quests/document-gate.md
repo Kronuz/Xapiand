@@ -24,7 +24,7 @@ From strata `docs/PLAN.md`, "The `document` profile gate (after Phase 4)", and s
 - A4 [artifact] Gate (D143): all four axes per row, losses stated with their magnitude; the losses become turn-log-parity's A6: `docs/gates/document-profile.md`
 - A5 [artifact] Gate (D143): RocksDB pinned on its fastest configuration per value-size class, the fairness audit applied: `docs/perf/rocksdb-fairness-audit.md`
 - A6 [artifact] Gate (D143): the Linux and FreeBSD VM rows (dry run and VM-virtio timing, D114) as measured; arm64 before Phase 3R's next gate: `docs/gates/document-profile.md`
-- A7 Every gate: ASan, UBSan and TSan green in CI at the landing commit; readers reject unknown versions; fixtures: tests in the build-test check. The CPU-hour of fuzzing per changed decoder is a deferred check (`--later`)
+- A7 [decision] Every gate's checks: waived by the owner; CI's ASan, UBSan and TSan at the landing commit stand in, the fuzz CPU-hour deferred: D147
 - A8 [artifact] The gate report, every row with its commit, platform and jobs: `docs/gates/document-profile.md`
 
 ## Contracts

@@ -388,6 +388,18 @@ status: 400
 ---
 e2e:end -->
 
+A root command that reads index metadata, such as `/:stats` or `/:schema`, names no index and answers `400` too.
+
+```rest
+GET /:stats
+```
+
+<!-- e2e:begin
+---
+status: 400
+---
+e2e:end -->
+
 ---
 
 ## JSON, MessagePack, and YAML

@@ -1451,6 +1451,115 @@
         ]
       },
       "text": "track-p landed: unlocks frees  for automata; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
+    },
+    {
+      "at": "2026-11-20T05:04:32",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-164",
+      "items": {
+        "agg-validate-tree": "frees src/aggregations/** for agg-validate-tree",
+        "http-pin-halfclose": "frees CMakeLists.txt for http-pin-halfclose",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "track-p-research": "frees docs/perf/** for track-p-research"
+      },
+      "settles": {
+        "start": [
+          "agg-validate-tree",
+          "http-pin-halfclose",
+          "phase5",
+          "track-p-research"
+        ]
+      },
+      "text": "serialize-validation landed: unlocks frees src/aggregations/** for agg-validate-tree; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
+    },
+    {
+      "at": "2026-11-20T08:01:52",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-165",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "phrase-expansion": "phrase-expansion"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "phrase-expansion"
+        ]
+      },
+      "text": "automata landed: unlocks phrase-expansion; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T08:14:22",
+      "by": "campaign detent",
+      "closed": "Expected: we asked Detent for it (msg-150, D148 Q3). group-core pins the landed journal driver; it moves its pin when journal-idle-groups lands, and turn-log-parity's journal tasks are ordered after it.",
+      "id": "msg-167",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-idle-groups"
+      },
+      "text": "detent:journal-idle-groups started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T08:08:04",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-166",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "turn-log-parity": "frees include/strata/core/turn_seal.hh, include/strata/core/merge_policy.hh, test/test_turn*, test/test_merge*, test/test_reopen*, test/test_barrier*, bench/kv/**, docs/design/rocksdb-parity.md, docs/perf/** for turn-log-parity"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "turn-log-parity"
+        ]
+      },
+      "text": "set turn-log-parity: unlocks frees include/strata/core/turn_seal.hh, include/strata/core/merge_policy.hh, test/test_turn*, test/test_merge*, test/test_reopen*, test/test_barrier*, bench/kv/**, docs/design/rocksdb-parity.md, docs/perf/** for turn-log-parity; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T09:02:38",
+      "by": "campaign detent",
+      "closed": "Overlap is in globs only: multicast-seeds touches transport/seeds* and CHANGELOG.md, while consensus-quiescence's globs are broad (transport/**, test/**, docs/**). Whichever lands second merges main and resolves CHANGELOG; no ordering is needed. The driver contract change is the one group-core waits for (A7).",
+      "id": "msg-169",
+      "settles": {
+        "ours": [
+          "group-core",
+          "multicast-seeds"
+        ],
+        "quest": "detent:consensus-quiescence"
+      },
+      "text": "detent:consensus-quiescence started and may change files your multicast-seeds changes (order them with --after detent:consensus-quiescence, or narrow the files); changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T09:02:53",
+      "by": "campaign detent",
+      "closed": "Glob overlap: consensus-transport works in host_transport and groups_test, multicast-seeds adds seeds* files. Both may add a test target to CMakeLists.txt and a CHANGELOG line, and the second to land merges main. The driver contract change is consumed by group-core by design.",
+      "id": "msg-170",
+      "settles": {
+        "ours": [
+          "group-core",
+          "multicast-seeds"
+        ],
+        "quest": "detent:consensus-transport"
+      },
+      "text": "detent:consensus-transport started and may change files your multicast-seeds changes (order them with --after detent:consensus-transport, or narrow the files); changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T09:10:35",
+      "by": "campaign detent",
+      "closed": "Recovery fix in journal: it reports a damaged block followed by a damaged header instead of dropping acknowledged records. group-core picks it up at its next pin move. turn-log-parity's journal tasks (3, 5, 9, 10) are not started, and their diffs go to Detent before landing.",
+      "id": "msg-171",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-double-damage"
+      },
+      "text": "detent:journal-double-damage started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -1654,7 +1763,77 @@
       "updated": "2026-11-20T05:28:38"
     },
     "automata": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T07:44:17",
+          "base": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "blobs": {
+            "CMakeLists.txt": "100644:33a6a3b32dfae7e5df386ab11ded24a83faba870",
+            "docs/mechanisms/automata.md": "100644:67be251284605ebdd526cfdfd04d71cace3ccd56",
+            "include/prospect/expand.hh": "100644:5b564370339a350125405e5ec995699767ff226d",
+            "include/prospect/fielddict.hh": "100644:3bc51587ed89ed2fce8f7ab1f48f13151d350093",
+            "include/prospect/reader.hh": "100644:88f2201b78900708caf3e64e407a91279c75ff70",
+            "include/prospect/searcher.hh": "100644:c030a86db7c64d36b5e5b4698a837b4a51abc394",
+            "test/expand_mutants.py": "100755:ebcedad79956be81d14b204eaec1cbc4aaaf36d6",
+            "test/expand_test.cc": "100644:4701dee46f26b9b8db2a4cdd61f7a0355aa3245e",
+            "test/stats_mutants.py": "100755:05bbe36dc7a483efd615e4688085ec44be5d5b92"
+          },
+          "by": "review",
+          "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "criteria": "48b573952496068c",
+          "diffs": {
+            "CMakeLists.txt": "c5cebc8399efe447",
+            "docs/mechanisms/automata.md": "54720369595df288",
+            "include/prospect/expand.hh": "1c6707fbc2ca7428",
+            "include/prospect/fielddict.hh": "72e66ac755770251",
+            "include/prospect/reader.hh": "6947eeabd7d769be",
+            "include/prospect/searcher.hh": "b94b0e27cedd4b94",
+            "test/expand_mutants.py": "2df0b35d3f0c7036",
+            "test/expand_test.cc": "05297d08bfe3b753",
+            "test/stats_mutants.py": "262fa8ce508b0435"
+          },
+          "findings": {
+            "A1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'ctest --test-dir build-suite --output-on-failure -j4'",
+                  "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-065925-7b6ca5",
+                  "level": "light",
+                  "seconds": 114.1,
+                  "state": "done",
+                  "what": "A2: prospect suite (all ctest) with automata and termdict at their unpushed refs at 5d746f878d4d"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "A2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'git -C /Users/kronuz/code/Kronuz/termdict merge-base --is-ancestor e3f6f548465feed9cebfee2964bc29f38a79be02 main && git -C /Users/kronuz/code/Kronuz/automata merge-base --is-ancestor a289a073d7dfae10ca6226abaa53e4ce459fedc5 main && echo pins-on-main'",
+                  "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-071943-6a0765",
+                  "level": "none",
+                  "seconds": 0.2,
+                  "state": "done",
+                  "what": "sh -c 'git -C /Users/kronuz/code/Kronuz/termdict merge-base  at 5d746f878d4d"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "3b2b49179ae44f311325dcc060759d46c2d06fcc",
+          "reviewed": "cbe3fe7118db863fd819339c71335561add80724",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
       "branch": "quest/xapiand/automata",
@@ -1676,10 +1855,26 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/automata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T08:01:48",
+          "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "criteria": {
+            "A1": "261120-074420-877551, 261120-074420-14f799, 261120-074420-31f674",
+            "A2": "261120-065925-7b6ca5",
+            "A3": "`docs/mechanisms/automata.md`"
+          },
+          "evidence": [],
+          "final": true,
+          "from": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "reason": "",
+          "tested": "5d746f878d4d91184153f3f80158debca1b2ba42"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "automata-evaluation"
@@ -1689,9 +1884,9 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-20T06:29:22",
+      "updated": "2026-11-20T08:01:52",
       "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
@@ -4828,7 +5023,109 @@
       "updated": "2026-11-20T05:27:03"
     },
     "consensus-rpc-lane": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T08:51:35",
+          "base": "1c08c9fc40620c0be445069bb3b1e319aa4a28f1",
+          "blobs": {
+            "CMakeLists.txt": "100644:61288538ea80f2315cdaceb2e5b59a549ddda440",
+            "docs/design/rpc-lane-model.py": "100755:fc566b9a0860406b13af1317e17c5530cccef0e8",
+            "docs/design/rpc-lane.md": "100644:47c6cb8d140173a8fc06d693cd2849ef9669aceb",
+            "docs/mechanisms/hello.md": "100644:7fb3d95b1645ba923b8e0acfcc90bac7404efc25",
+            "docs/mechanisms/host-transport.md": "100644:721b94efd2f6c321b4712d0007ad681407543505",
+            "docs/mechanisms/rpc-lane.md": "100644:af5a100b09761774aa53ca369bd298d6caaa433e",
+            "fuzz/corpus/decoders/374c7d50206e2783608b6d6daa9eedcdbb17fc75": "100644:a852daa452fa545bd125d0f22c704e610a953116",
+            "fuzz/corpus/decoders/92cba8759543da45fe5b5a6f421a1b9e9935ec9a": "deleted",
+            "fuzz/corpus/decoders/aab57da87ebd0dc3d156bd1fe8b780beb7c1014a": "100644:57ac03e6d5843aba0ecac0e04db745fd74935760",
+            "fuzz/corpus/decoders/db9a5f8875d8a19c434be2b0991658b3f967f70f": "deleted",
+            "include/consensus/transport/deadline.h": "100644:799dfd579689f5413f10895848b2c092c5fc4283",
+            "include/consensus/transport/host_transport.h": "100644:55048b89f801debc36a1968909064d54e709233e",
+            "include/consensus/transport/links.h": "100644:3db64b2a60244d56ae97d72ac4e0f25c8b3e5bda",
+            "include/consensus/transport/node_hello.h": "100644:8902fc53be95c6cca34646b7fdbc29ca16851a65",
+            "include/consensus/transport/rpc.h": "100644:6b7ac29af6db17a8037dc15e86ecf974788e5e15",
+            "test/transport/hello_test.cc": "100644:0f1b13d59a3a621e95687321c85dc3a8e7511da4",
+            "test/transport/node_hello_test.cc": "100644:da12b81e6e5f106c02021d5ed0b1308698cdc5cc",
+            "test/transport/rpc_host_test.cc": "100644:540ea97492c0a614f71bcfae3ee6cbdcc77ecbb6",
+            "test/transport/rpc_hosts.h": "100644:e79c33246f75eec6957b73c635103dc45a075207",
+            "test/transport/rpc_mutants.py": "100644:440965057828e8c7d54a743cce93b1d144112dbf",
+            "test/transport/rpc_test.cc": "100644:4291ef13ec51a8712a6e83521a87f177fb8fbd6d"
+          },
+          "by": "review",
+          "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "criteria": "75bd3261d155e6a5",
+          "diffs": {
+            "": "4afc103dee42c90d",
+            "CMakeLists.txt": "da81da3ea2cd7cfb",
+            "docs/design/rpc-lane-model.py": "f82311ab2b75a21b",
+            "docs/design/rpc-lane.md": "5896a7637b3cc473",
+            "docs/mechanisms/hello.md": "3aad610fc2a5677e",
+            "docs/mechanisms/host-transport.md": "3ee3719a3a4bb271",
+            "docs/mechanisms/rpc-lane.md": "06933f7f812504b4",
+            "include/consensus/transport/deadline.h": "d7769e91f15d97ce",
+            "include/consensus/transport/host_transport.h": "222f89d1dd4e8db5",
+            "include/consensus/transport/links.h": "ee44b4b320f5c8c7",
+            "include/consensus/transport/node_hello.h": "afd9d79ec4e62db5",
+            "include/consensus/transport/rpc.h": "d15a6cb5a06b3020",
+            "test/transport/hello_test.cc": "02f3bb0b21aaebb4",
+            "test/transport/node_hello_test.cc": "798297ff8b7dc83a",
+            "test/transport/rpc_host_test.cc": "b4e58c582455ba6f",
+            "test/transport/rpc_hosts.h": "ba854b57216e8f68",
+            "test/transport/rpc_mutants.py": "5ff60fd7ad28a4f8",
+            "test/transport/rpc_test.cc": "5466d9573480e248"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-082541-e38907",
+                  "level": "light",
+                  "seconds": 353.9,
+                  "state": "done",
+                  "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": true
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-082541-e38907",
+                  "level": "light",
+                  "seconds": 353.9,
+                  "state": "done",
+                  "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": true
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "fuzz/corpus/decoders/374c7d50206e2783608b6d6daa9eedcdbb17fc75",
+              "fuzz/corpus/decoders/92cba8759543da45fe5b5a6f421a1b9e9935ec9a",
+              "fuzz/corpus/decoders/aab57da87ebd0dc3d156bd1fe8b780beb7c1014a",
+              "fuzz/corpus/decoders/db9a5f8875d8a19c434be2b0991658b3f967f70f",
+              "include/consensus/transport/deadline.h",
+              "test/transport/rpc_test.cc"
+            ],
+            "reason": "the files the review never saw are the regenerated fuzz seeds (the hello frame's new size), test assertions for the two CI failures, and doc lines; no new mechanism; F2's controls ran as fails-without jobs (261120-082602-299054 and the A3/A4 controls)"
+          },
+          "note": "",
+          "review": "ca794af809b2746c2ab03d45508972e1cbcb3ff5",
+          "reviewed": "1cd353fb82b900499ca962b37f93847972924347",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-driver",
         "detent:transport-connection",
@@ -4904,7 +5201,8 @@
         "docs/design/hello*",
         "test/transport/node_hello_test.cc",
         "fuzz/corpus/decoders/**",
-        "fuzz/seed.cc"
+        "fuzz/seed.cc",
+        "docs/mechanisms/host-transport.md"
       ],
       "history": [
         {
@@ -5050,13 +5348,74 @@
           "weakened": [
             "lens correctness removed"
           ]
+        },
+        {
+          "at": "2026-11-20T08:22:21",
+          "lenses": [
+            [
+              "security"
+            ],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "one review per feature (owner, 2026-11-20): the correctness review carried the wire and malformed-input questions (reviews/consensus-rpc-lane-correctness.md, question 2)",
+          "voided": [],
+          "weakened": [
+            "lens security removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
-      "landed": [],
-      "lenses": [
-        "security"
+      "landed": [
+        {
+          "at": "2026-11-20T08:55:05",
+          "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "criteria": {
+            "A1": "261120-082541-e38907; fails without: 261120-073255-4083da, 261120-073303-5d2242, 261120-073309-5b931e, 261120-074650-d657bc, 261120-074656-03dba7, 261120-074659-a5a3bd, 261120-082602-299054",
+            "A2": "`rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-074701-268a9a (pending)",
+            "A3": "261120-085347-8daf82; fails without: 261120-074652-9c5498",
+            "A4": "261120-085349-81eac6; fails without: 261120-073259-715956, 261120-073306-214cf2, 261120-074654-e15f02, 261120-074657-36a217",
+            "A5": "[artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at 22b979e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-082541-e38907",
+              "level": "light",
+              "seconds": 353.9,
+              "state": "done",
+              "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "1c08c9fc40620c0be445069bb3b1e319aa4a28f1",
+          "later": [
+            "261120-085507-4feb50"
+          ],
+          "reason": "",
+          "tested": "e1f249d8d9ff64410f87042ba90f4c218d9ec336"
+        }
       ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -5065,9 +5424,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T06:46:04",
+      "updated": "2026-11-20T08:55:08",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -5363,8 +5722,36 @@
         "docs/dev/coverage.md",
         "harness/coverage_one.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T08:30:06",
+          "commit": "1c1e8b8ae685e28e90a0c5dad597e069af2b501b",
+          "criteria": {
+            "A1": "261119-121932-49544b (passed at 1ea0b1e3ec1c; only merges from main since)",
+            "A2": "261119-121932-49544b (the value-checking tests pass); tests/test_coverage_main.cc checks values (exit codes, fd counts, limits); product facts pinned: open-files refusal EX_OSFILE (minimum 1471), restore of a non-dump exits 0 with \"unsupported type\". No fixed bug in this quest.",
+            "A3": "261119-121932-7af433 (passed at 1ea0b1e3ec1c; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "1ea0b1e3ec1c5e1658141a2337a07ae7d2243624",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-121932-7af433",
+              "level": "light",
+              "seconds": 654.7,
+              "state": "done",
+              "what": "coverage-core-main check suite at 1ea0b1e3ec1c"
+            }
+          ],
+          "final": true,
+          "from": "86f946932d3bc15110cf881addc18cc1e7c70d0b",
+          "reason": "",
+          "tested": "3c1548ca1219407aa129cfd772d73fa8a8da5fb1"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -5372,10 +5759,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "main.cc and manager.cc reach T13 coverage through E2E drivers",
-      "updated": "2026-11-19T02:39:39",
-      "worktree": "../Xapiand-wt/xapiand/coverage-core-main"
+      "updated": "2026-11-20T08:30:23",
+      "worktree": ""
     },
     "coverage-core-small": {
       "accepted": {},
@@ -5452,7 +5839,9 @@
       "consumes": [],
       "files": [
         "tests/test_coverage_database*",
-        "tests/test_coverage_schema*"
+        "tests/test_coverage_schema*",
+        "src/datetime_msgpack.cc",
+        "tests/test_coverage_core_datetime.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -5465,7 +5854,7 @@
       "risk": "low",
       "status": "active",
       "title": "database (schema.cc) reaches T13 coverage",
-      "updated": "2026-11-19T00:35:37",
+      "updated": "2026-11-20T07:37:14",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
     "coverage-database-t13": {
@@ -6719,21 +7108,22 @@
     "document-gate": {
       "accepted": {
         "durability": {
-          "at": "2026-11-18T14:43:22",
-          "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+          "at": "2026-11-20T07:58:08",
+          "base": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
           "blobs": {
-            "CMakeLists.txt": "100644:0a57c425e1da0771dd06b513fd583290e3d98b40",
+            "CMakeLists.txt": "100644:054640458755f225fecf90b86ead31dcf27c8b1d",
             "bench/engines/rocksdb-11.11/build.sh": "100755:b13e4b78b65c218c916ede7edc3cfb1fc7f7fa3e",
             "bench/kv/barriers.py": "100755:2fbf2826f676515882529a73af27c79ae8916646",
             "bench/kv/floor.c": "100644:ccff3bada96238eee92ee29b96ddc52deac20352",
             "bench/kv/kv_strata.cc": "100644:7a183f83d37444409451fc95df0b49601945baf5",
             "bench/kv/kv_strata.hh": "100644:9eab57dbea21fba378802b89f7ec0884356ccd67",
             "bench/kv/nlog.py": "100755:9bbbb0a6d162397dd9c35d88f53c221a9d5c9031",
-            "bench/kv/run.py": "100644:518999043b34066b0bbb242dcd4a785143fe74ad",
+            "bench/kv/run.py": "100644:40d0e800a65b2cdb867555f2906eda511471d7bf",
             "cmake/check_core_includes.cmake": "100644:ed4a1afd8ca9fcf55156d313345951920aee01f1",
             "docs/design/standalone-turn-log.md": "100644:71590a4d28334680a68f66ac4ddb96cdea340163",
-            "docs/gates/document-profile.md": "100644:ccbfcd71e447da8c6626363e434fac25f373dce5",
-            "docs/perf/standalone-turn-log.md": "100644:3f685e4925fc60add694d4151a8b66548ce99448",
+            "docs/gates/document-profile.md": "100644:35671d3eabe0d97957486024b1da55ebcb8137bc",
+            "docs/perf/rocksdb-fairness-audit.md": "100644:75c157f35607c2da7ec26ef5332e0862ec6c0081",
+            "docs/perf/standalone-turn-log.md": "100644:a78e60f63bfc29d946b849f55ddb47a86d1f8ef3",
             "fuzz/corpus/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
             "fuzz/corpus/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
             "fuzz/corpus/command/checkpoint.bin": "100644:4406dca00e4a8bc59f81e512f0fc6ba0510d14be",
@@ -6754,8 +7144,8 @@
             "test/standalone_turn_log_test.cc": "100644:8a22c82c4263d8b09b3c02901d36ab3c49841c20"
           },
           "by": "review",
-          "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
-          "criteria": "964dd2896d778795",
+          "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "criteria": "37a7edbb1350d60b",
           "diffs": {
             "": "98762c87cd0c34d0",
             "CMakeLists.txt": "e6af7f9e01a18e1f",
@@ -6765,11 +7155,12 @@
             "bench/kv/kv_strata.cc": "7e5dc2588f55be8b",
             "bench/kv/kv_strata.hh": "752d161e3ace71d9",
             "bench/kv/nlog.py": "24cabcbd650f5efc",
-            "bench/kv/run.py": "1a827dcf3e7d98dc",
+            "bench/kv/run.py": "525bed6befdddcf4",
             "cmake/check_core_includes.cmake": "aaa6dfafd8396acb",
             "docs/design/standalone-turn-log.md": "82fef7d547ae20d5",
-            "docs/gates/document-profile.md": "3204eaa4a5415e21",
-            "docs/perf/standalone-turn-log.md": "28f1895335917c41",
+            "docs/gates/document-profile.md": "e271df8a77932432",
+            "docs/perf/rocksdb-fairness-audit.md": "68be29502822cc78",
+            "docs/perf/standalone-turn-log.md": "af957914f1ce33b2",
             "fuzz/fuzz_command.cc": "6a3a19a0046ab392",
             "include/strata/core/command.hh": "abfddc5a4b9c49d2",
             "include/strata/core/faultfs.hh": "424ff2df4840b876",
@@ -6785,14 +7176,14 @@
               "jobs": [
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
+                  "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261118-132716-c99eab",
+                  "job": "261120-065738-302256",
                   "level": "light",
-                  "seconds": 286.3,
+                  "seconds": 544.5,
                   "state": "done",
-                  "what": "document-gate check build-test at cbf08ebf2aa3"
+                  "what": "document-gate check build-test at d956c0f413f0"
                 }
               ],
               "kind": "defect",
@@ -6803,7 +7194,7 @@
             "paths": [
               "bench/engines/rocksdb-11.11/build.sh"
             ],
-            "reason": "only bench/engines/rocksdb-11.11/build.sh changed since acceptance: RocksDB baseline built without io_uring; benchmark tooling, no strata mechanism"
+            "reason": "only bench/kv/run.py and the gate report changed since the accepted review; no engine code"
           },
           "note": "",
           "review": "c951d14bdfc6b20bd348296b8e4956bc9db0916a",
@@ -6869,20 +7260,68 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/document-gate",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T07:59:34",
+          "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "criteria": {
+            "A1": "261120-065738-302256; fails without: 261116-211626-0daa5f, 261116-211632-9ff248, 261117-025010-4c8220, 261117-025013-a6cec4, 261117-025017-0b218d, 261117-025020-93f7da, 261117-025024-24bfef, 261117-025028-47bf98, 261117-025032-8fc28b, 261117-025035-d9bfa2, 261117-025039-d9b68d, 261117-025043-a4a6fc, 261117-025046-ec1d6e, 261117-025050-ee8915, 261117-030347-7f586d, 261117-030357-c294a1, 261117-030405-14df88, 261117-030412-4cd813, 261117-030420-64cdd2, 261117-033229-e6ebfc, 261117-033233-7e4d9b, 261117-033236-b7fbb6, 261117-033244-6cd288, 261117-033248-e735a3, 261117-052940-986f82, 261117-055220-ecd5d0, 261117-122123-3b0f9a, 261117-122132-b7e7f7, 261117-122140-f6bc36, 261117-180849-82b11b",
+            "A2": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Prerequisites\": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30",
+            "A3": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Rows measured\": fits1, twox1, big1, tenx1, sync1, wal1 and group-commit rows at dd02c63d, each with its job ids in the report",
+            "A4": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Losses against RocksDB\": every loss with its magnitude (K=4 1.39x slower, fits1 overwrite to durable 1.14x slower, p99.99 wal 130-193x, peak memory up to 3.4x, disk up to 39.5x, bytes written up to 3.2x, CPU up to 1.97x); the report names turn-log-parity A6 as where they close",
+            "A5": "[artifact] strata `docs/perf/rocksdb-fairness-audit.md` (d956c0f4), \"RocksDB's pin per value-size class\": 100 B lvl-16k-lz4, 1 KiB lvl-4k-none, each the fastest over five interleaved trials at dd02c63d; jobs in the audit",
+            "A6": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"VM rows\": Linux and FreeBSD dry run and VM-virtio sync1+wal1 as measured at dd02c63d (D114); arm64 owed before Phase 3R's next gate (D105); jobs in the report",
+            "A7": "D147",
+            "A8": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4): every row with its commit, platform and jobs, the pins, the A7 checks, the scale"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-065738-302256",
+              "level": "light",
+              "seconds": 544.5,
+              "state": "done",
+              "what": "document-gate check build-test at d956c0f413f0"
+            }
+          ],
+          "final": true,
+          "from": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
+          "reason": "",
+          "tested": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1"
+        }
+      ],
       "lenses": [
         "durability"
+      ],
+      "messages": [
+        {
+          "answered": "d956c0f413f0",
+          "at": "2026-11-17T04:39:56",
+          "by": "lead",
+          "id": "msg-1",
+          "text": "journal-host-guards (journal:cc95ba6, not landed) changes TurnDriver::forget: linked durable() waiters fail with group_closed, and a reopened group skips its retired sequences. Before landing: repin to its landing commit, map group_closed in await_durable (or the group's wait), and test a waiter across close/reopen plus recovery over a sequence gap."
+        },
+        {
+          "answered": "d956c0f413f0",
+          "at": "2026-11-19T23:20:11",
+          "by": "lead",
+          "id": "msg-2",
+          "text": "Lead 2026-11-19 23h: cancelled 12 queued exclusive jobs to unblock the shared queue (A/A x,y: 165706-d9da0c, 165707-20d6c9; trials b,c of sync1/fits1/twox1/big1/tenx1). Kept trial a of each row, wal1, N-log, both calibrations and the two A6 VM jobs. Policy: one trial per row first; add trials and A/A only for a row whose trial-a margin is within its noise; record those rows in the journal and resubmit just them."
+        }
       ],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-18T14:43:22",
-      "worktree": "../strata-wt/xapiand/document-gate"
+      "updated": "2026-11-20T07:59:41",
+      "worktree": ""
     },
     "drop-dir-reader": {
       "accepted": {},
@@ -17484,6 +17923,8 @@
     "multicast-seeds": {
       "accepted": {},
       "after": [],
+      "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+      "branch": "quest/xapiand/multicast-seeds",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -17508,6 +17949,7 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/multicast-seeds",
       "landed": [],
       "lenses": [
         "correctness"
@@ -17521,9 +17963,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T06:56:41"
+      "updated": "2026-11-20T08:56:00",
+      "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
       "accepted": {
@@ -20183,6 +20626,8 @@
     "phrase-expansion": {
       "accepted": {},
       "after": [],
+      "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
+      "branch": "quest/xapiand/phrase-expansion",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -20330,6 +20775,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/phrase-expansion",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 5",
@@ -20339,9 +20785,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T05:25:52"
+      "updated": "2026-11-20T08:02:26",
+      "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
       "accepted": {},
@@ -28573,6 +29020,8 @@
       "after": [
         "document-gate"
       ],
+      "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+      "branch": "quest/xapiand/turn-log-parity",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -28583,14 +29032,15 @@
       ],
       "consumes": [],
       "files": [
-        "include/strata/core/**",
-        "test/*.cc",
-        "test/fixtures/**",
+        "include/strata/core/turn_seal.hh",
+        "include/strata/core/merge_policy.hh",
+        "test/test_turn*",
+        "test/test_merge*",
+        "test/test_reopen*",
+        "test/test_barrier*",
         "bench/kv/**",
-        "docs/design/standalone-turn-log.md",
-        "docs/perf/**",
-        "docs/mechanisms/**",
-        "fuzz/**"
+        "docs/design/rocksdb-parity.md",
+        "docs/perf/**"
       ],
       "history": [
         {
@@ -28610,6 +29060,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/turn-log-parity",
       "landed": [],
       "lenses": [
         "durability"
@@ -28619,9 +29070,33 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
+      "tasks": {
+        "cohort-wait": {
+          "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
+          "branch": "quest/xapiand/turn-log-parity--cohort-wait",
+          "files": [
+            "include/strata/core/turn_seal.hh",
+            "test/test_barrier*",
+            "test/test_turn*"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--cohort-wait",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--cohort-wait"
+        },
+        "merge-runs": {
+          "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
+          "branch": "quest/xapiand/turn-log-parity--merge-runs",
+          "files": [
+            "include/strata/core/merge_policy.hh",
+            "test/test_merge*"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--merge-runs",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--merge-runs"
+        }
+      },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T05:25:16"
+      "updated": "2026-11-20T08:08:27",
+      "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
       "accepted": {

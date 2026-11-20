@@ -465,3 +465,19 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - automata: one feature review (Opus) launched at the end, per the new model.
 - coverage-database: CI exposed a platform-dependent validation error (hash order names v14 vs v15); pin shortened, hunt row.
 - Light slots 26%. Quota weekly 23% (0.22%/h). Load 34 (Detent builds). Disk 36 GiB.
+
+## 2026-11-20 07h
+- Landed: automata and termdict libraries on their mains (automata:a289a07, termdict:edac74c merge keeping the pinned e3f6f54); prospect's landing waits on the pin-check job (the first, with a fetch, failed in the job's environment).
+- Feature reviews (Opus, one each): automata CHANGES (2 blockers, fixed by one Sonnet task in 10 min, 87k tokens); consensus-rpc-lane CHANGES (idle memory 373 B against a 372 B budget, controls never ran); fix task (Opus) running.
+- Owner decisions D141-D146 recorded; multicast-seeds quest created in consensus, shared with Detent (Detent filed its consumer quest).
+- Land loops: v2 churn. coverage-core-main and control-plane-wallclock chase master merges; coverage-database CI found a real platform divergence (Linux accepts years macOS refuses); document-gate's A7 needs its tagged jobs rerun at the landing code, and that rerun was denied by the permission classifier (owner decision).
+- Light slots 32%. Quota weekly 25% (0.24%/h). Load 11. Disk 34 GiB.
+
+## 2026-11-20 08h
+- Landed: automata across three repos (prospect, automata:a289a07, termdict:edac74c), document-gate (strata:d956c0f4, A7 waived D147). Master CI green on both quick-fix batches (Xapiand:7c627045a).
+- Owner decisions D141-D148: multicast seeds (shared in consensus), cluster questions, document-gate on its numbers, hybrid go, parity with RocksDB on every row, one log per device.
+- Design pass (Opus, 198k): every RocksDB loss's cause measured; prototype cohort wait 1.23x faster at K=4, 1.87x at K=8; one shared log 2.6x faster than per-loop at K=8. Design review (Opus, 214k): CHANGES, 6 protocol gaps, D148 holds; revision task running.
+- turn-log-parity started with two tool-registered tasks (cohort wait, sorted runs); sorted runs blocked on index.hh, held by group-core (resumed, idle 2 days: a lead miss).
+- Tooling: Opus adapting v2 (evidence across merges by inputs, land --merge-main, [ci] tag, task merge).
+- Detent: started journal-idle-groups at our ask; folded 15 step quests into 4 features.
+- Light slots 22%. Quota weekly 27% (0.25%/h). Load 10. Disk 35 GiB.

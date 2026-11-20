@@ -1449,7 +1449,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 							}
 							value = &val;
 							break;
-						// Reserved cast words
+						// Scalar cast words: the reference value is the cast's operand
 						case _.fhh(RESERVED_FLOAT):
 						case _.fhh(RESERVED_POSITIVE):
 						case _.fhh(RESERVED_INTEGER):
@@ -1460,6 +1460,12 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						case _.fhh(RESERVED_TEXT):
 						case _.fhh(RESERVED_DATETIME):
 						case _.fhh(RESERVED_UUID):
+							if (value) {
+								THROW(QueryDslError, "Value for field {} is already defined", field);
+							}
+							value = &val;
+							break;
+						// Geo cast words: the geometry reads the word's own map
 						case _.fhh(RESERVED_EWKT):
 						case _.fhh(RESERVED_POINT):
 						case _.fhh(RESERVED_POLYGON):
