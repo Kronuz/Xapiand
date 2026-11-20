@@ -5,27 +5,22 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A datetime given as a map selects the range it names, and a zone offset is applied in the right order, so a datetime with an offset indexes and queries as the same instant as its UTC form. coverage-core-small pinned both as wrong (job 261119-011017-86a323; its tests pin today's output).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A datetime map range (e.g. `{"_year": 2020, "_month": 1}` forms) selects exactly its span: test with boundary instants; fails without the fix
+- A2 `2020-01-02T10:00:00+02:00` equals `2020-01-02T08:00:00Z` when indexed, stored and queried, for positive, negative and half-hour offsets: test; fails without the fix
+- A3 coverage-core-small's pins for these two cases flip to the correct values (tests/test_coverage_core*: name them in the journal; if outside the set, say so for the lead); suite passes and CI green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Index path handling (user-visible: fixes only; `:port` URIs are refused).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- From hunt.md rows (coverage-core-small, cheap-reopen F2); filed 2026-11-19.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
