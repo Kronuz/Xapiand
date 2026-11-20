@@ -328,6 +328,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D143 | 2026-11-20 | document-gate lands on its strata:dd02c63d numbers; the classifier-denied reruns are not run (main moved outside the measured code). Its losses against RocksDB (group commit 1.39x slower at 4 writers, durable overwrite 1.13x slower, disk up to 39.5x larger, memory up to 3.4x larger) become required criteria of turn-log-parity, disk within 1.5x of RocksDB among them, instead of blocking group-core. | owner |
 | D144 | 2026-11-20 | Hybrid AI retrieval: go on steps 1 to 4; step 4 is conditional on cold p99 (now 1.2x behind, mostly a fixed 4 ms per-tenant open cost). | owner |
 | D145 | 2026-11-20 | Lua: a cyclic document past the result budget answers "too large", the budget being what was hit. `_fsec` refuses non-finite values and values outside [0,1). Global time and timedelta prefixes stay. Root commands not routed to a node answer 400 for every method (Xapiand:2c406ec53). | owner |
+| D146 | 2026-11-20 | Supersedes D143's "within 1.5x": strata must be at par or better than RocksDB on every row and axis of document-gate's report (turn-log-parity A6). A design pass on the turn log and flush path comes first, since the group-commit and tail losses come from mechanisms, not tuning. | owner |
 
 ## Pending owner
 
