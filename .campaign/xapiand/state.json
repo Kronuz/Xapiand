@@ -23979,11 +23979,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "query DSL: cast words in sorts; _not wraps the same on every toolchain",
-      "updated": "2026-11-19T12:23:18"
+      "updated": "2026-11-20T05:27:14"
     },
     "sortable-encoding": {
       "accepted": {
