@@ -25233,13 +25233,15 @@
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [],
+      "needs": [
+        "stopword-lists"
+      ],
       "provides": [],
       "repo": ".",
       "risk": "low",
       "status": "planned",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T00:12:56"
+      "updated": "2026-11-20T00:13:15"
     },
     "strata-pins-2026-11": {
       "accepted": {},
