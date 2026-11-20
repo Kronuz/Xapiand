@@ -27975,7 +27975,6 @@
     "track-c": {
       "accepted": {},
       "after": [
-        "consensus-hello-limits",
         "consensus-sim-loops",
         "track-c-c3-gate",
         "goal5-audit",
@@ -28040,7 +28039,7 @@
       "risk": "high",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-18T02:56:40",
+      "updated": "2026-11-20T05:31:21",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
