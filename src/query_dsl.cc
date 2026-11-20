@@ -391,11 +391,7 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_MULTICHULL):
 							case _.fhh(RESERVED_GEO_COLLECTION):
 							case _.fhh(RESERVED_GEO_INTERSECTION):
-								{
-									MsgPack cast = MsgPack::MAP();
-									cast[name] = o;  // the cast word and its value.
-									query = get_value_query(path, cast, default_op, wqf, flags);
-								}
+								query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
 								break;
 							default:
 								THROW(QueryDslError, "Invalid operator: {}", name);
@@ -1321,10 +1317,8 @@ QueryDSL::create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::stri
 {
 	L_CALL("QueryDSL::create_exp_op_dsl({})", repr(operator_dsl));
 
-	MsgPack expression = MsgPack::ARRAY();
-	expression.push_back(std::move(stack_msgpack.back()));  // a list of one expression.
-	MsgPack object = MsgPack::MAP();
-	object[operator_dsl] = std::move(expression);
+	MsgPack object;
+	object[operator_dsl] = {{ stack_msgpack.back() }}; // expression.
 	stack_msgpack.pop_back();
 	stack_msgpack.push_back(std::move(object));
 }
