@@ -11325,6 +11325,32 @@
       "updated": "2026-11-18T10:02:10",
       "worktree": ""
     },
+    "loop-yield-tsan": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_loop_yield.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Fix the TSan race in test_loop_yield's count_delete",
+      "updated": "2026-11-19T17:50:27"
+    },
     "lua-memory-bound": {
       "accepted": {
         "correctness": {
