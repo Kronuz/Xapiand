@@ -1,6 +1,6 @@
 # datetime-range-zone: journal
 
-State: waiting on jobs 261119-163517-332cfd (test passes), 261119-163518-7d7ef0 (mutant, old source must fail), 261119-163519-1b1b09 (suite)
+State: ready for review
 Quest: .campaign/xapiand/quests/datetime-range-zone.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,13 +29,13 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261119-163517-332cfd; fails without: 261119-163518-7d7ef0 |
+| A2 | 261119-163517-332cfd; fails without: 261119-163518-7d7ef0 |
+| A3 | 261119-163517-332cfd (pins flipped in tests/test_coverage_core_datetime.cc: test_object_time_is_range_checked, test_time_strings zone-order); suite 261119-163519-1b1b09 passed; CI running |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Object _hour/_min/_sec are range-checked like a time string's; a `_time` zone applies after the whole datetime is parsed. Code in src/datetime_msgpack.cc, tests in tests/test_coverage_core_datetime.cc. Open: `_fsec` unchecked in the object form.
 
 ## Rulings I made
 
