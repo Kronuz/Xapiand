@@ -1,6 +1,6 @@
 # multicast-seeds: journal
 
-State: waiting on jobs (review fixes at consensus:8213720; ids under Doing)
+State: ready for review at consensus:8213720; waiting on jobs (ids under Doing): 12 mutants, probe 261120-100407-204477, suite 261120-100256-fc6a26
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
 Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
@@ -22,7 +22,7 @@ Review fixes at consensus:8213720 (review `reviews/multicast-seeds-correctness.m
   forged impostor dials >= 3 -> >= 2 (-1). Lower (rate-limit) bounds unchanged.
 
 Jobs at consensus:8213720:
-- seeds cases, multicast required: 261120-100254-bede01; suite (verify): 261120-100256-fc6a26
+- seeds cases, multicast required: 261120-100254-bede01 (exit 0, all 13 seeds tests Passed, none skipped); suite (verify): 261120-100256-fc6a26
 - reviewer probe rerun: 261120-100407-204477 (prints PASS/FAIL, exits 0: read its output)
 - mutants (--fails-without): no-backoff 261120-100323-1a8e61, any-cluster 261120-100326-b38b03,
   unwanted-seeded 261120-100328-759c29, trailing-accepted 261120-100331-e86063,
