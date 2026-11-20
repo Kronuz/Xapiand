@@ -4791,7 +4791,28 @@
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T00:12:38",
+          "base": "a8e867bb01b6767b3180d3751469bb600212ed90",
+          "blobs": {
+            "test/driver_mutants.py": "100644:a1741f0e223339302231d0eca211c6aad2c08f30",
+            "test/driver_simulation.cc": "100644:f09c76e7aacd5ca999ae2bb8bb52cf81091f0284"
+          },
+          "by": "review",
+          "commit": "61e2f3adcea830cdb9c0f7943f143f0ad4156b66",
+          "criteria": "f12be53b0016f66c",
+          "diffs": {
+            "test/driver_mutants.py": "967e9f2a2ed65990",
+            "test/driver_simulation.cc": "df38b9693349e837"
+          },
+          "findings": {},
+          "note": "",
+          "review": "ab056be8f99c9cb2203ccb155d8c15b96f78bec1",
+          "reviewed": "61e2f3adcea830cdb9c0f7943f143f0ad4156b66",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "detent:consensus-close-fenced",
         "detent:driver-apply-gap"
@@ -4813,7 +4834,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-sim-loops",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -4821,7 +4844,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
-      "updated": "2026-11-19T23:52:13",
+      "updated": "2026-11-20T00:12:38",
       "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
     },
     "control-plane-wallclock": {
