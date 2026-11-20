@@ -1,19 +1,26 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-141708-9ccd3e 261120-141710-78f9a8
+State: waiting on jobs 261120-143710-c96916 261120-143711-cc6bda 261120-143713-e3c9fd 261120-143716-9444ba
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
 
-Dry runs: selftest green (261120-141201-2d02d1), node built in a guest in 194 s
-(261120-141202-44cee0), 3 nodes at loopback quick passed 6 of 6 checks (261120-141208-19c21e).
-Now every shape, quick, at 3 (261120-141708-9ccd3e) and 5 nodes (261120-141710-78f9a8), consensus:113572a.
+Sweep at consensus:85f1968: selftest 261120-143710-c96916; smoke (3 nodes, loopback, 1ms,
+partition, quick, light) 261120-143711-cc6bda; then exclusive rows `vm.sh run --nodes 3`
+261120-143713-e3c9fd and `--nodes 5` 261120-143716-9444ba (`--for A1,A2`, after the smoke).
+
+Quick dry runs of every shape at consensus:113572a (3 nodes 261120-141708-9ccd3e, 5 nodes
+261120-141710-78f9a8, light, a busy host): every check passed but the 1 ms round trip (ping
+2.3-2.9 ms against 2 ms set, the guest's netem timer). Fixed in 85f1968 by measuring the held
+floor. Seen: 1 ms commit p50 4.7-5.2 ms and RPC p50 4.1-4.7 ms against ping 2.5-2.8 (not at 20
+ms); 64 KiB commit at 80 ms one way takes 2 round trips (325 ms); the first RPC call costs 4
+round trips (Bulk dial, TLS, hellos).
 
 ## Next
 
-1. Read the dry run's log; fix what it shows (guest tools, clock check, timings).
-2. Full sweep: one exclusive job per node count, `bench/netlab/vm.sh run --nodes 3|5`, `--for A1,A2`.
-3. Write `docs/perf/netlab-consensus.md` from `bench.py table` with the job ids (A3).
+1. Read the exclusive rows; rerun a row only if it straddles a check.
+2. Write `docs/perf/netlab-consensus.md` from `bench.py table` with the job ids (A3), findings and
+   hunt rows; commit, push.
 
 ## Blocked on
 
@@ -23,8 +30,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-141201-2d02d1; VM jobs pending |
-| A2 | VM jobs pending |
+| A1 | selftest 261120-143710-c96916; rows 261120-143713-e3c9fd (3), 261120-143716-9444ba (5) pending |
+| A2 | the same rows' partition-1ms history check, pending |
 | A3 | `docs/perf/netlab-consensus.md` pending |
 
 ## Result
@@ -52,8 +59,14 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
   them on the guest's disk and loopback commit p50 read 3.0 ms of fdatasync; on tmpfs a shape's
   delta over loopback is the network's. 64 KiB runs stop at 2,048 entries (128 MiB per node).
 - A1 round trip: ping's median from node 1 to each peer within 10% of the set round trip, past the
-  unshaped path's own round trip (the floor, measured first), which is also the jitter allowed (at
-  least 0.1 ms).
+  held floor (ping with netem holding each packet 1 us each way: the path plus the guest timer's
+  latency on a hold, measured first), which is also the jitter allowed (at least 0.1 ms). The
+  unshaped round trip is recorded beside it.
+- Hunt rows use ping's measured round trip with A1's 10% margin: commit p50 (one in flight) over
+  RTT + loopback p99, commit p99 over 2 RTT + loopback p99, RPC p99 over RTT + loopback p99, an
+  election over 3 timeouts.
+- Throughput: 256 small or 32 large entries in flight (the append batch's 256 entries and 2 MiB).
+  RPC: one cold call opens the lane's Bulk link, reported apart from the timed calls.
 - A1 majority only: per shape, the leader and as many followers as keep it a minority are cut off;
   a write there must stay unacknowledged through heal while the majority's new leader commits one.
 - A2 election bound: election_max + heartbeat + 2 RTT + 200 ms (one timeout and a vote round); the
