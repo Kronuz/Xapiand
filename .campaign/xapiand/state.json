@@ -26840,6 +26840,34 @@
       "updated": "2026-11-17T15:52:12",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
+    "track-p-research": {
+      "accepted": {},
+      "after": [
+        "track-p"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/perf/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Track P research items not yet started (split per item at start)",
+      "updated": "2026-11-19T17:01:53"
+    },
     "turn-log-parity": {
       "accepted": {},
       "after": [
