@@ -51,7 +51,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | P2 kept in part then selector removed, `docs/perf/p2-intersection.md`: 261117-155032-ecb275 (passed at bd60f39769e0; docs-only since); fails without: 261117-121859-d28384, 261117-121924-2b4aee, 261117-121932-c981c4, 261117-121941-230f53, 261117-121958-98b81c, 261117-122016-ef86f3, 261117-122028-16a1f0, 261117-122035-212d65, 261117-123155-1419b0 |
-| A5 | P7 bit 1 kept, `docs/perf/p7-exclusion.md`: 261117-155032-ecb275, 261117-155033-63b78b, 261117-155036-9088e8 (passed at bd60f39769e0; docs-only since); fails without: 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027, 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843, 261119-165425-f30bdd |
+| A5 | P7 bit 1 kept, `docs/perf/p7-exclusion.md`: 261117-155032-ecb275, 261117-155033-63b78b, 261117-155036-9088e8 (passed at bd60f39769e0; docs-only since); fails without: 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027, 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843, 261120-033237-f21aea (replaces f30bdd, whose build never ran: review P1) |
 | A7 | P9 removed, `docs/perf/p9-planner.md`: 261119-165438-2cf08a, 261119-165439-7fcba3, 261119-165432-b1efdc (passed at 2ce63ac08bac; docs-only since) |
 | A10 | P13 removed, `docs/perf/p13-positions.md`: 261119-165452-b53291, 261119-165445-56d539 (passed at 2ce63ac08bac), 261119-225047-cd30ff, 261119-225048-424d5f, 261119-225047-032deb (passed at 162b5d0c6a7d); docs-only since |
 | A14 | gap rows at head, `docs/perf/p7-exclusion.md` "Gap rows at the quest's head": 261119-165524-86e55d (passed at 2ce63ac08bac; docs-only since) |
