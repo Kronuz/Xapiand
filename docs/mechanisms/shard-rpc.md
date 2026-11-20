@@ -40,6 +40,24 @@ The server runs the method's handler once the envelope is in. Payload bytes that
 the handler sets its sink wait unconsumed, so they hold the caller's credit instead of memory
 beyond the window.
 
+## Messages
+
+`src/cluster/rpc_methods.{h,cc}`: each envelope is one MessagePack map with short keys. A decoder
+takes exactly one map, requires every key it knows, ignores keys it does not (a newer sender may
+add fields), and throws `Malformed` on anything else; `request<T>(call)` answers that
+`bad_request`.
+
+| Method | Request envelope, payload | Answer envelope, payload |
+|---|---|---|
+| `forward_write`, `get` | `Relayed`: verb, path, query, content type, accept, group, incarnation, hops; the request body | `Answer`: HTTP status, content type, headers; the response body or the stored blob |
+| `stats` | groups, `(field, term)` pairs | per group: documents, total length, `df` and `cf` by field and term (prospect's `supplied_statistics`) |
+| `search_partial`, `count` | groups, the query DSL, options, merged statistics | the engine's serialized partial, matches, groups not served; a count |
+| `info` | groups | a map by group id |
+| `keepalive` | name, HTTP and peer addresses, boot id, groups held | the root leader this node knows, the directory's version |
+
+`forward_write` and `get` relay the HTTP request itself, so the node that serves it runs the same
+handler a local request runs, and `hops` counts relays for D8's bound.
+
 ## Versions
 
 Every request carries the caller's version of this service. A server outside its range
@@ -93,5 +111,9 @@ ctest entry per case: `unary` (a 100,000-byte envelope reversed and a 1 MiB payl
 `versions` (a newer caller and an N - 1 caller refused by name, no handler run), `deadline`
 (both ends near 300 ms), `cancel` (each end once), `lane-faults` (`unknown_method`,
 `not_connected`) and `framing` (an envelope past the bound refused before any is buffered, a bad
-version word). Until the top-level build pins consensus, `tests/cluster/CMakeLists.txt` builds
+version word). `tests/cluster/test_rpc_methods.cc`: `codec` (each message with values and
+extremes), `malformed` (every truncation, wrong types, missing keys, trailing bytes, 20,000 random
+mutations across eleven decoders: decoded or `Malformed`, nothing else) and `wire` (each method
+between two hosts, a 3 MiB relayed body and a 1 MiB blob streamed, a malformed envelope answered
+`bad_request`). Until the top-level build pins consensus, `tests/cluster/CMakeLists.txt` builds
 them standalone.
