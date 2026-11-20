@@ -1,6 +1,6 @@
 # strata-pin-catalog: journal
 
-State: working
+State: waiting on jobs 261120-015212-3d9e92 261120-015214-cc9845 261120-015215-bf532f
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
 ## Doing
@@ -12,7 +12,7 @@ under quiet light running; job scripts in ~/.scratch/xapiand/strata-pin-catalog/
 
 ## Next
 
-1. Local test_pool run, then submit A1 (5 runs), A2 (--fails-without, pin reverted), A3 (verify).
+1. Wait on the jobs; local ASan test_pool passed once (1647 checks). A2 reverts the pin by sed in its own slot, then builds.
 
 ## Blocked on
 
@@ -22,6 +22,6 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
+| A1 | job 261120-015212-3d9e92 (5 ASan+UBSan runs) |
+| A2 | job 261120-015214-cc9845 (--fails-without, old pin) |
+| A3 | job 261120-015215-bf532f (campaign verify) |
