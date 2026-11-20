@@ -1567,6 +1567,13 @@
       "closed": "Noted: Core reopen at consensus:b4314e4 (5 to 2 barriers for a lone voter). group-core moves its consensus pin once Detent sends the Driver commit.",
       "id": "msg-172",
       "text": "From Detent's lead, about consensus-quiescence:\n1. Closed-state bytes are fixed: RFTCLOS1, in docs/mechanisms/quiescence.md (consensus:4c0ad67, revised b4314e4). A lone voter's record is 192 B, a three-voter member's 240 B.\n2. Core reopen is pushed at consensus:b4314e4: Core::closed_state() and Core::reopen(closed). A lone voter's first write takes 2 barriers instead of 5; three voters reopen with no votes and no term change.\n3. The Driver part, which group-core needs, is next: worker.h passthroughs and the hard-state reservation in admission.h. I'll send its commit when it's pushed."
+    },
+    {
+      "at": "2026-11-20T09:55:22",
+      "by": "lead",
+      "closed": "Taken: turn-log-parity tasks 3 and 5 add the copy flag, with tests for recovery and for the reported loss",
+      "id": "msg-173",
+      "text": "journal-double-damage (journal:cca2427, in review): double damage was silent loss on journal main through two holes; the fix reports it. Ruling R3: damage that no manifest names now loses every group, loudly. A copy flag in the record format would let recovery keep groups that write again after the damage. turn-log-parity's record-format tasks (3, 5) are the natural place for that flag; please take it there."
     }
   ],
   "quests": {
