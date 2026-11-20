@@ -4454,7 +4454,9 @@
         "detent:consensus-worker-release",
         "detent:consensus-dns-notes",
         "detent:peers-busy-roundtrip-bound",
-        "detent:consensus-peers-attempts-bound"
+        "detent:consensus-peers-attempts-bound",
+        "detent:consensus-blocking-hold-loop",
+        "detent:consensus-heal-snapshot-stall"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4643,7 +4645,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T21:19:00",
+      "updated": "2026-11-19T22:59:00",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
