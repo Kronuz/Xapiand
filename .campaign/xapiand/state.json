@@ -4925,17 +4925,45 @@
       "files": [
         "harness/engine_crash_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T16:31:05",
+          "commit": "854a62f298c1a4de29aa0a3c76eef96e1017e7dd",
+          "criteria": {
+            "A1": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since)",
+            "A2": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since), 261119-131239-b80edb (passed at d4801e6d339b; only merges from main since); fails without: 261119-122444-f74d98",
+            "A3": "suite 261119-122452-83d60f passed; CI on the branch (FreeBSD, arm64) was running at 9f510b4e8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "e580b06268fc7494946021e292307d1d962320a4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-122452-83d60f",
+              "level": "light",
+              "seconds": 471.6,
+              "state": "done",
+              "what": "crash-d-rows check suite at e580b06268fc"
+            }
+          ],
+          "final": true,
+          "from": "058d7077fcbc6ca49b1abf70381bcb196602af57",
+          "reason": "",
+          "tested": "73d050d004b0aab82eeca97cf1e519f9631b3dff"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "harness: crash check prints every wrong row (land explore/crash-d-wrong)",
-      "updated": "2026-11-19T12:23:23",
-      "worktree": "../Xapiand-wt/xapiand/crash-d-rows"
+      "updated": "2026-11-19T16:31:14",
+      "worktree": ""
     },
     "cross-shard-followups": {
       "accepted": {},
