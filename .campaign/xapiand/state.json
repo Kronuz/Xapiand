@@ -8125,15 +8125,15 @@
     "freebsd-exe-path": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T15:49:15",
-          "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+          "at": "2026-11-19T22:11:55",
+          "base": "9e6a0100f2b6a56c5141e5bb0f907bbcabe3003e",
           "blobs": {
             "src/main.cc": "100644:5dfe4100ed844983283468356be22837e3d2bc5b",
             "tests/test_executable_path.cc": "100644:989450e7c76c3785daee293149b8d47a88602c45"
           },
           "by": "review",
-          "commit": "72cc2d0babf1149411265a19fd5b5803bb56b8cc",
-          "criteria": "7bf6ef1d8f457b21",
+          "commit": "69cba3385a28ee663c38e93b173336efd4677a8d",
+          "criteria": "2ae539f01e8c9072",
           "diffs": {
             "src/main.cc": "79d55ee96727549d",
             "tests/test_executable_path.cc": "b09c649d1fc7b931"
@@ -8174,7 +8174,7 @@
       "risk": "normal",
       "status": "review",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T15:49:15",
+      "updated": "2026-11-19T22:11:55",
       "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
     },
     "fuzz-cpu-hour": {
