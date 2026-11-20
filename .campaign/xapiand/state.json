@@ -3757,11 +3757,12 @@
         "shard-groups"
       ],
       "provides": [],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "One node to a cluster and back, without loss",
-      "updated": "2026-11-18T02:55:57"
+      "updated": "2026-11-20T05:26:57"
     },
     "cluster-net-setup": {
       "accepted": {},
