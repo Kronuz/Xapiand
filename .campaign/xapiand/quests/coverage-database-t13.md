@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+src/database reaches T13's coverage target (90% lines, 80% branches) suite-wide. coverage-database left it at 64.2% / 53.8% (job 261119-230342-b6192c); the largest gaps were handler.cc 28.3%, wal.cc 32.9%, name_index.cc 17.8% and schema.cc 49.5% from that test alone. Split into tasks per file when started; each new test checks values and pins defects with a hunt row.
 
 ## Acceptance criteria
 
@@ -14,7 +14,9 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 Line and branch coverage of database at or above T13's target: harness/coverage.sh before and after
+- A2 Every new test checks values, not only that code ran; a test of a fixed bug fails without the fix
+- A3 The suite passes and CI is green
 
 ## Contracts
 

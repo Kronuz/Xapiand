@@ -9,7 +9,7 @@ The database area reaches T13's target, schema.cc first (3,969 lines; database w
 
 ## Acceptance criteria
 
-- A1 Line and branch coverage of database at or above T13's target: harness/coverage.sh before and after
+- A1 Line and branch coverage of database rises from the 55.3% / 45.4% baseline: harness/coverage.sh before and after (lead, 2026-11-19: T13's 90/80 moved to quest coverage-database-t13; the gap, ~4,000 lines at 64.2% / 53.8%, is several quests of work)
 - A2 Every new test checks values, not only that code ran; a test of a fixed bug fails without the fix
 - A3 The suite passes and CI is green
 
