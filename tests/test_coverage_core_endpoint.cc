@@ -126,8 +126,8 @@ static void test_node_uri() {
 	CHECK_FALSE(unknown.is_local());
 	CHECK_FALSE(unknown.is_active());
 	CHECK_TRUE(unknown.node() == nullptr);
-	// Pinned (endpoint-host-port): "host:port" in the URI drops the host.
-	SEE(Endpoint("xapiand://beta:8881/idx").node_name, std::string());
+	// A node is named without a port: "host:port" is refused as malformed.
+	CHECK_THROW(Endpoint("xapiand://beta:8881/idx"), ClientError);
 
 	// A node known but never touched is not active.
 	Endpoint idle("xapiand://gamma/idx");

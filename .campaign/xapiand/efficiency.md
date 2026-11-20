@@ -398,3 +398,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Merge interaction: serialize-validation vs coverage-core-small's cast pins; lead flipped 4 pins (Xapiand:c7db5eeeb), test job 261119-212131-2230f8.
 - Reviews: endpoint-uuid APPROVE, stopword-lists re-check APPROVE; keymaker-keys accepted after the F1 revert (jobs 200941/200950/200952).
 - Queue: 55 queued, 15 running; light 51%, drains 31 min; load 8-10. Quota weekly 12%, 0.12%/h. Disk 38 GiB free.
+
+## 2026-11-19 22h
+- Landed: dsl-not-wrap (Xapiand:45d38fc40, merge 15293bc17), http-limits (http:aed0314, Xapiand:9e6a0100f).
+- v2-replay evidence complete (agent-campaign:e821a15), moved to campaign-v3; handoff campaign-v3:033e971. Its tool-cost pass accidentally ran 56 copied jobs (31 exclusive, 4.6 machine-h) through a v2 read command starting a worker.
+- New quest: catalog-post-lifetime (strata catalog delivery race, reproduced 5/5; fix passed 5 jobs; Opus review running). Started dsl-date-operators.
+- coverage-database's journal claimed ready with another quest's job ids; 2 evidence jobs that could not pass were cancelled.
+- Landing is a chain: each landing moves master, the next loop merges and waits a CI round (keymaker-keys, endpoint-uuid refused after dsl-not-wrap).
+- Queue: 41 queued, 10 running; light 48%, drains 5 min; load 5-12. Quota weekly 13%, 0.13%/h. Disk 40 GiB free.
