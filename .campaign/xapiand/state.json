@@ -4297,7 +4297,8 @@
         "detent:consensus-dns-threads",
         "detent:driver-apply-gap",
         "detent:driver-witness-removal-sink",
-        "detent:consensus-worker-release"
+        "detent:consensus-worker-release",
+        "detent:consensus-dns-notes"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4486,7 +4487,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T12:57:03",
+      "updated": "2026-11-19T16:51:31",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
