@@ -18195,7 +18195,88 @@
       "updated": "2026-11-08T15:40:38"
     },
     "multicast-seeds": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T14:30:47",
+          "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "blobs": {
+            "CHANGELOG.md": "100644:85e66e72794e48b56371f80c430ae1c70a8226d2",
+            "CMakeLists.txt": "100644:2415e229180d0b29633d4f97ff0ea105e39d946f",
+            "docs/mechanisms/seeds.md": "100644:25619b446232e44fc8f7aa47db0826c65304d001",
+            "fuzz/seeds_corpus/oversized": "100644:74f7124e9bd488a5400568a86bd5daccbb0b445e",
+            "fuzz/seeds_corpus/port-0": "100644:192180176ce584415ffe9e76a2ad62ec9ca27e0d",
+            "fuzz/seeds_corpus/repeated": "100644:5fc22cc3595f4d2d005e408cbb2933927b682bc7",
+            "fuzz/seeds_corpus/truncated": "100644:2f3bbf5b95b6ff5bea32182765e09120e173e351",
+            "fuzz/seeds_corpus/valid-eight": "100644:92babd98f238a78961c048d3ef84f62ca488350b",
+            "fuzz/seeds_corpus/valid-one": "100644:d41b7bda8f774730a534b0fd7b3a679684f3ddb8",
+            "fuzz/seeds_corpus/valid-three": "100644:17fa9d2120d0a5941821fdc09c0e95d9c4c23b5e",
+            "fuzz/seeds_corpus/version-2": "100644:b7caa9d6fe7982d5354771f8e754c0a45d1b5971",
+            "fuzz/seeds_fuzz.cc": "100644:ed69b6467767ef26d5b0e5355f978f5ddfecafd1",
+            "include/consensus/transport/seeds.h": "100644:86ce2bc2e8499f49066f767a82b67f340da81aa3",
+            "include/consensus/transport/seeds_codec.h": "100644:abc94ecee29ddbfb9bfbcd2b1ae2c07a7d2d52ea",
+            "test/transport/seeds_mutants.py": "100755:50d25670edab77cc036c354c9e3fcd69f16324ff",
+            "test/transport/seeds_test.cc": "100644:9b39651edaf8fe5dcc22ecfedf1bff88fa6a6954"
+          },
+          "by": "review",
+          "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "criteria": "626c6a159534c75f",
+          "diffs": {
+            "": "4254a72db85db5fd",
+            "CHANGELOG.md": "ef8a1572d87bf183",
+            "CMakeLists.txt": "c2fe64d335f6b332",
+            "docs/mechanisms/seeds.md": "555d82fdfd21ce21",
+            "fuzz/seeds_corpus/oversized": "08910a2597b2f6ed",
+            "fuzz/seeds_corpus/truncated": "687023595e5767ba",
+            "fuzz/seeds_corpus/valid-one": "578b34cea307956e",
+            "fuzz/seeds_corpus/valid-three": "aae4052430b19aa0",
+            "fuzz/seeds_fuzz.cc": "fb4ddc9389ceab84",
+            "include/consensus/transport/seeds.h": "61603f502e5abfab",
+            "include/consensus/transport/seeds_codec.h": "6ca3f6aba23c2887",
+            "test/transport/seeds_mutants.py": "09cbfff01f8a1ab1",
+            "test/transport/seeds_test.cc": "5f5c0755f1a78577"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R seeds --output-on-failure",
+                  "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-111956-ba7a28",
+                  "level": "light",
+                  "seconds": 4.5,
+                  "state": "done",
+                  "what": "seeds tests with SIGPIPE ignored, multicast required"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R seeds --output-on-failure",
+                  "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-111956-ba7a28",
+                  "level": "light",
+                  "seconds": 4.5,
+                  "state": "done",
+                  "what": "seeds tests with SIGPIPE ignored, multicast required"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "8f56969b3ce662621ad109287db5c59c731bf835",
+          "reviewed": "8a369580128b7095bbb41cb08fc8e6ca06eba4ef",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/multicast-seeds",
@@ -18224,7 +18305,42 @@
         "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/multicast-seeds",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T14:31:16",
+          "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "criteria": {
+            "A1": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-100345-e85866, 261120-100348-7f49a7, 261120-100354-550a87",
+            "A2": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092026-224cdc, 261120-092029-329d7f, 261120-092033-db89f5, 261120-100326-b38b03, 261120-100328-759c29, 261120-100331-e86063",
+            "A3": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092022-771814, 261120-100323-1a8e61, 261120-100339-a47bd4, 261120-100342-f417d9, 261120-100351-c74582",
+            "A4": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092039-8aa185, 261120-092042-ddf978, 261120-100334-2f2af7, 261120-100336-6d4973",
+            "A5": "`docs/mechanisms/seeds.md` in consensus, consensus:8a36958"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-111958-eba46c",
+              "level": "light",
+              "seconds": 144.7,
+              "state": "done",
+              "what": "multicast-seeds check build-test at 8801b99025ba"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "reason": "",
+          "tested": "8801b99025ba4f094e2566e7284d76b5b119a8b0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -18237,9 +18353,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T09:32:55",
+      "updated": "2026-11-20T14:31:16",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
@@ -20982,7 +21098,109 @@
       "updated": "2026-11-08T13:25:29"
     },
     "phrase-expansion": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T14:28:47",
+          "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "blobs": {
+            "CMakeLists.txt": "100644:63a2c9c5d0a095debe7e17e23a52c540ba481599",
+            "docs/mechanisms/phrase-expansion.md": "100644:06c2490d06b1fdc5aada4558644a3aa3b21af55a",
+            "fuzz/corpus/phrase/fuzzy_gap": "100644:9567ee76e6565096c59ea957b227a806c1e10a79",
+            "fuzz/corpus/phrase/glob_near": "100644:1684131646bb6f2d60d1c9769094b2626e9587a2",
+            "fuzz/corpus/phrase/limited": "100644:baae9c51bc804b42395c3967a96af18cfb13be03",
+            "fuzz/corpus/phrase/literal_dead": "100644:bb5d23613dceea6b55bfbdf2c8b1c1c3489dfa2a",
+            "fuzz/corpus/phrase/prefix_pool": "100644:2e594b61f3baf060b45ad8ac86ac62bf047308e1",
+            "fuzz/corpus/phrase/r00": "100644:b6cf5b851f0aa2538bfd46974eb82db17b49a63b",
+            "fuzz/corpus/phrase/r01": "100644:417bf166731ae79418b5581a370dd85537e862eb",
+            "fuzz/corpus/phrase/r02": "100644:45e71698d6662dd2311e66d5f0f2525f34be98e6",
+            "fuzz/corpus/phrase/r03": "100644:2b7a6f0acbd1c28a2c77eabfd23140c1a97911d6",
+            "fuzz/corpus/phrase/r04": "100644:b4dbfc16aabc935c304776040505c7f60694e0f0",
+            "fuzz/corpus/phrase/r05": "100644:8a657249d209cd054700dbb800a1cf2b8ef879e9",
+            "fuzz/corpus/phrase/r06": "100644:a563dee9447ff8c80f592afbbe6f23c31008c603",
+            "fuzz/corpus/phrase/r07": "100644:77da02ef965cff3af0ab324540a3b0461c972a2b",
+            "fuzz/corpus/phrase/r08": "100644:0fa885d7f0c3c04e3f29f85612634bb9ba6daae4",
+            "fuzz/corpus/phrase/r09": "100644:58f463c710b2d1d6fa9bcb47cbcc6ee8c423fad5",
+            "fuzz/corpus/phrase/r10": "100644:03076510dd886cf2e16caa1c8223780f943a0ddf",
+            "fuzz/corpus/phrase/r11": "100644:9a21157c79c2a33378eb26c267f6f9b26c57b2e4",
+            "fuzz/corpus/phrase/r12": "100644:6e014096843f7865d8c184f2c77b478982b205ea",
+            "fuzz/corpus/phrase/r13": "100644:71a83f7f32b00c89e109298be0f447178e503030",
+            "fuzz/corpus/phrase/r14": "100644:93f2beb91ff852ea04b41ad5f796b3ae90519c00",
+            "fuzz/corpus/phrase/r15": "100644:17cb307e32c1c6a3eec77962b240eb38da19c17e",
+            "fuzz/corpus/phrase/r16": "100644:dc73bada17c0902b17164c2b63065d9cb5f569f0",
+            "fuzz/corpus/phrase/r17": "100644:5297fe571c029741961c93134c8b82d2323b4233",
+            "fuzz/corpus/phrase/raw_bytes": "100644:c03a102c58ab4d179bdf6b356d01b45bfad82bc5",
+            "fuzz/fuzz_phrase.cc": "100644:04bb36ded6ce4b7bb2d7c13982a544df72e7feb2",
+            "include/prospect/phrase_expand.hh": "100644:027a987fc465cfd145e01bef7e37c4e6edf6150d",
+            "test/expansion_bounds_test.cc": "100644:50d04a8d612a401db19752d0fbe6721a114ad2d1",
+            "test/phrase_expansion_fixture.hh": "100644:8cd0541eb261e1d0a026212cc9387e4aa7aceeac",
+            "test/phrase_expansion_mutants.py": "100755:f0c53f1eae5c6c661164d078740b4291e1ab792e",
+            "test/phrase_expansion_test.cc": "100644:2a5a0102b38ecff8c0dacc2e583c4272c0cd6f1e",
+            "test/scorer_budget_test.cc": "100644:e8945fc3a039ed84cf26bd36c1c8fbc793b8254c"
+          },
+          "by": "review",
+          "commit": "15d2830eea3425a773628233fbc982fad852352a",
+          "criteria": "de191e8d1df19bb7",
+          "diffs": {
+            "": "3f6345fbb4f16f60",
+            "CMakeLists.txt": "b97ef5d6992be816",
+            "docs/mechanisms/phrase-expansion.md": "10826173327f3a32",
+            "fuzz/corpus/phrase/r00": "735bec96b0468e01",
+            "fuzz/corpus/phrase/r01": "acf5b2347375ee12",
+            "fuzz/corpus/phrase/r02": "5faff7f2aa3db81f",
+            "fuzz/corpus/phrase/r03": "ff7b1bcebc30b66a",
+            "fuzz/corpus/phrase/r04": "acc54c9944c2a2c0",
+            "fuzz/corpus/phrase/r05": "b0049a49f5678951",
+            "fuzz/corpus/phrase/r06": "5721cc04f5a356ae",
+            "fuzz/corpus/phrase/r07": "4480453685b96b3e",
+            "fuzz/corpus/phrase/r08": "82800b507e4f3ad9",
+            "fuzz/corpus/phrase/r09": "00265c4b9ac3538f",
+            "fuzz/corpus/phrase/r10": "ef4e86ede6c54991",
+            "fuzz/corpus/phrase/r11": "8c14442c85d2dd2f",
+            "fuzz/corpus/phrase/r12": "9fca11dc9077b2d9",
+            "fuzz/corpus/phrase/r13": "d302d7e94acb8b70",
+            "fuzz/corpus/phrase/r14": "17553405593833ba",
+            "fuzz/corpus/phrase/r15": "d649e1f1a645b9ba",
+            "fuzz/corpus/phrase/r16": "578bd4e17fe6f425",
+            "fuzz/corpus/phrase/r17": "21b942729e21184c",
+            "fuzz/fuzz_phrase.cc": "c66dfaed44594fee",
+            "include/prospect/phrase_expand.hh": "d024d09bf217423d",
+            "test/expansion_bounds_test.cc": "e810e2fa4c41772c",
+            "test/phrase_expansion_fixture.hh": "e965029b1fd5ac06",
+            "test/phrase_expansion_mutants.py": "7992e69b1c182a22",
+            "test/phrase_expansion_test.cc": "6705eccee2c5d6b0",
+            "test/scorer_budget_test.cc": "aaf16b28470feb7e"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                  "commit": "15d2830eea3425a773628233fbc982fad852352a",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-134019-bd8050",
+                  "level": "light",
+                  "seconds": 192.8,
+                  "state": "done",
+                  "what": "phrase-expansion check build-test at 15d2830eea34"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "test/scorer_budget_test.cc"
+            ],
+            "reason": "test/scorer_budget_test.cc is F1's regression test (the scorer charge against the measured heap); it adds no mechanism"
+          },
+          "note": "",
+          "review": "2b0c4ff77988db3d37de33a5694a7ec38aee9b07",
+          "reviewed": "facbd3eec57b637cda5df8994f6171f1b57e0df0",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
       "branch": "quest/xapiand/phrase-expansion",
@@ -21135,7 +21353,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/phrase-expansion",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 5",
       "needs": [
         "automata"
@@ -21145,7 +21365,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T12:03:27",
+      "updated": "2026-11-20T14:28:47",
       "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
