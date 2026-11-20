@@ -11293,8 +11293,55 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/hybrid-go-no-go",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T14:15:43",
+          "commit": "e328cf92809a136ea69f53fc2bc55f3d56ba3e9f",
+          "criteria": {
+            "A1": "261119-173416-dd03e0 (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json), 261119-173422-9a6925 (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json)",
+            "A2": "261119-165320-4c7aab (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json), 261119-173348-7e0d04 (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json), 261119-173354-6399a6 (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json), 261119-173359-d32394 (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json), 261119-173408-a8663d (passed at 7b02184a70cf; 2 merges from main since, none touching its files; ignores docs-only docs/design/hybrid-search.md, docs/design/hybrid-search/c1-rerun.md, docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-1000.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json, docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json, docs/design/hybrid-search/c1-rerun/es-1000-load.json, docs/design/hybrid-search/c1-rerun/es-1000-tune.json, docs/design/hybrid-search/c1-rerun/es-1000.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json, docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json, docs/design/hybrid-search/c1-rerun/qdrant-1000.json)",
+            "A3": "`docs/design/hybrid-search.md` (C1 rerun and fit verdict, strata:08f372bc; tables in `docs/design/hybrid-search/c1-rerun.md`)",
+            "A4": "D155"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7b02184a70cfdb65dcd709c8c466746ebd2da3cb",
+              "docs": [
+                "docs/design/hybrid-search.md",
+                "docs/design/hybrid-search/c1-rerun.md",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-100-load.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-100.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-1000-load.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-1000.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-i8-100-load.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-i8-100.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000-load.json",
+                "docs/design/hybrid-search/c1-rerun/a2/strata-i8-1000.json",
+                "docs/design/hybrid-search/c1-rerun/es-1000-load.json",
+                "docs/design/hybrid-search/c1-rerun/es-1000-tune.json",
+                "docs/design/hybrid-search/c1-rerun/es-1000.json",
+                "docs/design/hybrid-search/c1-rerun/qdrant-1000-load.json",
+                "docs/design/hybrid-search/c1-rerun/qdrant-1000-tune.json",
+                "docs/design/hybrid-search/c1-rerun/qdrant-1000.json"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-165343-b6aa97",
+              "level": "light",
+              "seconds": 1494.2,
+              "state": "done",
+              "what": "hybrid-go-no-go check build-test at 7b02184a70cf"
+            }
+          ],
+          "final": true,
+          "from": "a2619696c7b03c2824fdc962b3fc58bc8fed0345",
+          "reason": "",
+          "tested": "e328cf92809a136ea69f53fc2bc55f3d56ba3e9f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "the strata lane",
       "needs": [
         "cold-tier-step2"
@@ -11303,9 +11350,9 @@
       "reason": "its blocker landed",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "The hybrid-search go/no-go run",
-      "updated": "2026-11-17T23:28:11",
+      "updated": "2026-11-20T14:15:49",
       "worktree": "../strata-wt/xapiand/hybrid-go-no-go"
     },
     "idle-index": {
