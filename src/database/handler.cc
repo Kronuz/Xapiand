@@ -47,6 +47,7 @@
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
 #include "database/wal.h"                   // for DatabaseWAL
+#include "stopper.h"                       // for StopWordsMismatchError
 #include "database/wide_search.h"           // for wide_search::pins
 #include "xapiand_exception.h"                      // for ClientError
 #include "sha256.h"                         // for SHA256
@@ -373,7 +374,9 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 		co_return nullptr;
 	}
 	auto s = co_await manager->schemas->get(this, obj);
-	co_return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
+	auto schema_ptr = std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
+	schema_ptr->check_stop_words(unsharded_path(endpoints[0].path).first, (flags & DB_WRITABLE) != 0);
+	co_return schema_ptr;
 }
 
 
@@ -1250,12 +1253,101 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 }
 
 
+namespace {
+
+// The indexes found to agree with the stop words lists, by path. The lists are fixed for the process and a schema
+// written here records the current ones, so the verdict stands: a wide search over a small schema pool loads each
+// schema once, not once per search. Bounded by the working set of a wide search; a full set starts over.
+class AgreeingIndexes {
+	std::mutex mtx;
+	std::size_t limit = 65536;
+	std::unordered_set<std::string> paths;
+
+public:
+	bool has(const std::string& path) {
+		std::lock_guard<std::mutex> lk(mtx);
+		return paths.contains(path);
+	}
+
+	std::size_t size() {
+		std::lock_guard<std::mutex> lk(mtx);
+		return paths.size();
+	}
+
+	void reset(std::size_t new_limit) {
+		std::lock_guard<std::mutex> lk(mtx);
+		limit = new_limit;
+		paths.clear();
+	}
+
+	void add(const std::string& path) {
+		std::lock_guard<std::mutex> lk(mtx);
+		if (paths.size() >= limit) {
+			paths.clear();
+		}
+		paths.insert(path);
+	}
+};
+
+AgreeingIndexes agreeing_indexes;
+
+// Checks the schema the cache holds for `handler`'s index against the stop words lists it recorded.
+task::task<void>
+check_stop_words_of(DatabaseHandler& handler, std::string_view index)
+{
+	auto manager = XapiandManager::manager();
+	if (!manager) {
+		co_return;
+	}
+	const std::string path(index);
+	if (agreeing_indexes.has(path)) {
+		co_return;
+	}
+	auto schema = co_await manager->schemas->get(&handler, nullptr);
+	Schema::check_cached_stop_words(index, std::get<0>(schema));
+	agreeing_indexes.add(path);
+}
+
+}  // namespace
+
+
+size_t
+agreeing_indexes_size()
+{
+	return agreeing_indexes.size();
+}
+
+
+void
+reset_agreeing_indexes(size_t limit)
+{
+	agreeing_indexes.reset(limit);
+}
+
+
 task::task<std::tuple<engine::SearchResult, MsgPack, engine::Query>>
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, engine::MatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
 	schema = co_await get_schema();
+
+	// get_schema checked the first index; each other index the search covers answers to its own record.
+	for (size_t i = 1, n = endpoints.size(); i < n; ++i) {
+		const auto index = unsharded_path(endpoints[i].path).first;
+		if (index == unsharded_path(endpoints[i - 1].path).first) {
+			continue;
+		}
+		try {
+			DatabaseHandler other(Endpoints(endpoints[i]), flags, context);
+			other.budget = budget;
+			co_await check_stop_words_of(other, index);
+		} catch (const StopWordsMismatchError&) {
+			throw;
+		} catch (...) {
+			// An index that does not load (a pattern may name one that is gone) is the search's to report.
+		}
+	}
 
 	engine::doccount first = query_field.offset;
 	engine::doccount maxitems = query_field.limit;

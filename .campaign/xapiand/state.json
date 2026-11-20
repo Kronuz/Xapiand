@@ -4850,6 +4850,8 @@
     "control-plane-wallclock": {
       "accepted": {},
       "after": [],
+      "base": "0ffcf731721bca4018c1eb510a7295e760dd9ef8",
+      "branch": "quest/xapiand/control-plane-wallclock",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4871,9 +4873,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-19T17:51:18"
+      "updated": "2026-11-20T01:13:17",
+      "worktree": "../Xapiand-wt/xapiand/control-plane-wallclock"
     },
     "core-lifecycle-tests": {
       "accepted": {},
@@ -21379,7 +21382,36 @@
       "worktree": ""
     },
     "queue-drain-throughput": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T01:16:41",
+          "base": "63cc071130b5a4acf44647945f3d4fdaefd67abc",
+          "blobs": {
+            "references/host.md": "100644:2338284d72d5f96f0f8ed18700d55fa60a3478aa",
+            "scripts/campaign_tool.py": "100644:d546d3947e7270dd9d95b949b21f35b57e404154",
+            "tests/harness.py": "100644:e966ea9ffd1f2429a08b9d333ea325d6820d730b",
+            "tests/queue_sim.py": "100644:f9ee40efdea188ab0d46da491382a47ceed81824",
+            "tests/test_jobs.py": "100644:289e9d2b558a32901e7f06529bd3d7adfa2259c0",
+            "tests/test_quiet.py": "100644:4f9d8824862276603c6ea4df0e707900ccb36e86"
+          },
+          "by": "review",
+          "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "criteria": "c5fe8700cb7ed91d",
+          "diffs": {
+            "references/host.md": "52963735513024fd",
+            "scripts/campaign_tool.py": "37b9bca2c389745a",
+            "tests/harness.py": "df75e4997161a979",
+            "tests/queue_sim.py": "fb715a211e2dffd8",
+            "tests/test_jobs.py": "4f2295eea3249d23",
+            "tests/test_quiet.py": "3913eaea352e87b7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "21a7347fb0bf479983994037abcfbfc98017cd74",
+          "reviewed": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "bde14754b0372b50928ac6d697522e03b2a57c95",
       "branch": "quest/xapiand/queue-drain-throughput",
@@ -21398,18 +21430,49 @@
         "tests/**",
         "references/host.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/queue-drain-throughput",
-      "landed": [],
-      "lenses": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T01:23:59",
+          "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "criteria": {
+            "A1": "261120-004854-a85314; fails without: 261119-181752-2d57bb, 261119-201532-834039",
+            "A2": "261120-004854-a85314",
+            "A3": "261120-004854-a85314; fails without: 261119-181755-3c70de, 261119-201535-340225",
+            "A4": "261120-004855-db9849"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 tests/run.py -j 4",
+              "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-004854-a85314",
+              "level": "light",
+              "seconds": 462.8,
+              "state": "done",
+              "what": "queue-drain-throughput check tests at ad0308431e2b"
+            }
+          ],
+          "final": true,
+          "from": "63cc071130b5a4acf44647945f3d4fdaefd67abc",
+          "reason": "",
+          "tested": "ad0308431e2b5a8a7c176f36317aa0a625386a4c"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../agent-campaign",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Keep light slots busy around exclusive drains",
-      "updated": "2026-11-19T17:51:47",
-      "worktree": "../agent-campaign-wt/xapiand/queue-drain-throughput"
+      "updated": "2026-11-20T01:24:04",
+      "worktree": ""
     },
     "reactor-server-composition": {
       "accepted": {
@@ -24724,19 +24787,51 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T01:11:45",
+          "commit": "4be13e4b2d987689f3eb45135901527292a9169a",
+          "criteria": {
+            "A1": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A2": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A3": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-a6cba7 (passed at c8fca1f2c2c6; only merges from main since); fails without: 261119-084158-c63615, 261119-093843-4ea7ac, 261119-102559-196ab6",
+            "A4": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A5": "261119-235812-d1318c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A6": "`docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed)",
+            "A7": "261119-231940-9592de (passed at c8fca1f2c2c6; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c8fca1f2c2c62ec3f83230071524ed5b1ba25a28",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-231940-9592de",
+              "level": "light",
+              "seconds": 484.7,
+              "state": "done",
+              "what": "stopword-lists check suite at c8fca1f2c2c6"
+            }
+          ],
+          "final": true,
+          "from": "252ab991958f7d508b9d713d898d9fbec668be4b",
+          "reason": "",
+          "tested": "f786e2fed32d7d70f1736eb71707e52073a253ba"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T20:25:53",
-      "worktree": "../Xapiand-wt/xapiand/stopword-lists"
+      "updated": "2026-11-20T01:12:51",
+      "worktree": ""
     },
     "storage-phase7c-l6": {
       "accepted": {},
@@ -25217,6 +25312,8 @@
     "strata-pin-catalog": {
       "accepted": {},
       "after": [],
+      "base": "a09a9b650d7a4dbf5759365b09f8adb28b085731",
+      "branch": "quest/xapiand/strata-pin-catalog",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target test_pool && build/bin/test_pool",
@@ -25233,13 +25330,16 @@
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [],
+      "needs": [
+        "stopword-lists"
+      ],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T00:12:56"
+      "updated": "2026-11-20T01:12:25",
+      "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
       "accepted": {},
