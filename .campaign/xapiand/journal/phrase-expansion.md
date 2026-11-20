@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-134019-bd8050 (build-test) 261120-134020-aaa9c5 (20 mutants) at prospect:15d2830. At 33dce8a the mutant 'a slot with no term in the segment does not stop it' survived: with F1 an empty slot builds an empty scorer and matches nothing, so only the work differs (the other slots' scorers built and their bytes charged); 15d2830 tests that such a segment builds no scorer and charges nothing
+State: ready for review (prospect:15d2830)
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
@@ -91,11 +91,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261120-112928-913880 (build-test: phrase_expansion, expansion_bounds, fuzz_phrase_replay and the suite) and 261120-112930-ced038 (all 19 mutants killed, 0 survivors), at prospect:facbd3e. Locally: phrase_expansion_test 2,080 phrases, 0 failures |
-| A2 | the same two jobs. Locally: expansion_bounds_test 7,046 answered, 1,027 refused past a bound, 0 failures |
-| A3 | `docs/mechanisms/phrase-expansion.md` |
+| A1 | build-test 261120-134019-bd8050 (58 of 58 tests: phrase_expansion, expansion_bounds, scorer_budget, fuzz_phrase_replay and the suite) and mutants 261120-134020-aaa9c5 (20 of 20 killed, 0 survivors), at prospect:15d2830 |
+| A2 | the same two jobs; scorer budget probe 261120-130859-359099 (charge 0.965-0.968x of the scorers' heap at 1 and 16 segments, within 10%) |
+| A3 | `docs/mechanisms/phrase-expansion.md` (states what the byte budget covers) |
+| Review F1 (scorer bytes charged) | expansion_bounds_test "The byte budget covers the scorers too" and `scorer_budget_test`, in 261120-134019-bd8050 and 261120-130859-359099; mutant "a segment's scorer bytes are not charged" killed in 261120-134020-aaa9c5 |
+| Review F2 (a refused most_frequent word stops early) | expansion_bounds_test entry counts equal across limit types, in 261120-134019-bd8050; mutant "a word the query refuses keeps its first or most_frequent type" killed in 261120-134020-aaa9c5 |
 
-Superseded: 261120-083059-d7f012, 261120-083120-3e94b6 (8e4df48); 261120-085333-ef26eb, 261120-085334-deefb6 (a69a08d); 261120-095312-0f3c21, 261120-095314-390e6c (1f7ddaf).
+Superseded jobs: 261120-122152-e989f4, 261120-122153-0a987b, 261120-130855-0a1e98, 261120-130856-f2bab7 and earlier.
 
 ## Result
 
