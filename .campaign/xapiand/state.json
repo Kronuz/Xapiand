@@ -1627,6 +1627,8 @@
     "automata": {
       "accepted": {},
       "after": [],
+      "base": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+      "branch": "quest/xapiand/automata",
       "checks": [],
       "consumes": [],
       "files": [],
@@ -1644,6 +1646,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/automata",
       "landed": [],
       "lenses": [
         "correctness"
@@ -1657,9 +1660,10 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-19T06:17:14"
+      "updated": "2026-11-20T03:50:16",
+      "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
       "accepted": {},
