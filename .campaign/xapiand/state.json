@@ -6491,7 +6491,8 @@
       "files": [
         "src/query_dsl.cc",
         "src/query_dsl.h",
-        "tests/test_query_dsl_date*"
+        "tests/test_query_dsl_date*",
+        "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6502,7 +6503,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-19T22:19:27",
+      "updated": "2026-11-19T22:28:40",
       "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
     },
     "dsl-not-wrap": {
