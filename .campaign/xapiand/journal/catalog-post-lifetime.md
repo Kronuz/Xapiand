@@ -1,17 +1,24 @@
 # catalog-post-lifetime: journal
 
-State: ready for review (all five jobs passed; lead fixed the stale catalog.md section at strata:246bb67de, 2026-11-19 22h).
+State: waiting on jobs 261119-225202-ee1e10 261119-225210-db3d1f 261119-225210-192fe6
 Quest: .campaign/xapiand/quests/catalog-post-lifetime.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs queued at strata:87ac2001 (fix), strata:152ee0e1 (test only, unfixed catalog) and the A2 mutant
-strata:c7a36046 (off-branch, kept by refs/mutants/catalog-post-lifetime/no-wait in the strata repo).
+Review CHANGES (reviews/catalog-post-lifetime-correctness.md, Xapiand:30fff2d9d) folded in at strata:765fbd3e:
+- F1: catalog-delivery.md gains a Preconditions section (scheduler closed before its frames die; a
+  scheduler-less frame never destroyed while a delivery may run); catalog.md's `st` bullet and abandon's item 2
+  describe the five states and point at it.
+- F2: the A1 test runs a second time with a failed open (gone_pins 0, slot failed, pins 0); job
+  261119-225202-ee1e10 (ASan+UBSan x5).
+- F3: precondition 3, a post never destroys the frame it is given.
+- F4: the note names the load, the diagram has the exchange after a waited post, the contract says "touches only
+  the reference-counted waiter".
+Checks rerun at strata:765fbd3e (the test changed): build-test 261119-225210-db3d1f, tsan 261119-225210-192fe6.
 
 ## Next
 
-1. Read the five jobs; if the unfixed or mutant job is invalid (126: mixed or non-UAF failures), read its log.
-2. Paste `campaign brief`'s table here; State to ready for review (correctness lens); the lead pushes for CI (A4).
+1. Read the three jobs; then `campaign accept catalog-post-lifetime correctness --confirm F1=... F2=261119-225202-ee1e10` is the lead's.
 
 ## Blocked on
 
@@ -21,10 +28,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261119-214111-0c0179 (fix, ASan+UBSan, 5/5 pass); 261119-214124-9cbf69 (fails-without at strata:152ee0e1, UAF 5/5) |
+| A1 | 261119-225202-ee1e10 at strata:765fbd3e (pin and failed-open variants); 261119-214111-0c0179 (strata:87ac2001, 5/5 pass); 261119-214124-9cbf69 (fails-without at strata:152ee0e1, UAF 5/5) |
 | A2 | 261119-214111-0c0179; 261119-214113-02be57 (fails-without at mutant strata:c7a36046, abandon's hook and wait removed) |
-| A3 | check tsan 261119-214115-72aa8d (`-R catalog` includes catalog_post_lifetime) |
-| A4 | check build-test 261119-214114-d7e56a; CI after the lead pushes |
+| A3 | check tsan 261119-225210-192fe6 (strata:765fbd3e); 261119-214115-72aa8d passed at strata:87ac2001 (`-R catalog` includes catalog_post_lifetime) |
+| A4 | check build-test 261119-225210-db3d1f (strata:765fbd3e); 261119-214114-d7e56a passed 76/76 at strata:87ac2001; CI after the lead pushes |
 | A5 | [artifact] `docs/mechanisms/catalog-delivery.md` (strata:87ac2001) |
 
 The ASan job's command exits 0 only if 5/5 runs pass, 1 only if 5/5 report heap-use-after-free, else 126
@@ -45,9 +52,6 @@ while the test thread closes the scheduler, destroys the frame, destroys the sch
 `abandon.posting` (fixed) or after the scheduler's destruction (unfixed: the post reads freed memory). No
 sleeps or timeouts. Note: `docs/mechanisms/catalog-delivery.md`.
 
-Left open: `docs/mechanisms/catalog.md` "Waiters whose frames die" still says "st is decided by one exchange
-each side" and that the post comes after the frame is gone; it is outside this quest's file set, so the lead
-should point it at catalog-delivery.md.
 
 ## Rulings I made
 
