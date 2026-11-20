@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review at strata:ffab229e; waiting on jobs 261120-121525-807eb8 261120-121525-6eba6d 261120-121535-6b10fe 261120-121536-1b02bc 261120-121538-1d9cc7 261120-121539-279b80 261120-121540-67ed09 261120-121542-01253e 261120-121544-aeb1f7 261120-121545-005bf5 261120-121547-534c19 261120-121549-49be3a 261120-121551-0fb5d1 261120-121553-724c76
+State: ready for review at strata:ffab229e; waiting on jobs 261120-121525-807eb8 261120-121542-01253e 261120-121544-aeb1f7 261120-121545-005bf5 261120-121547-534c19 261120-121549-49be3a 261120-121551-0fb5d1 261120-121553-724c76
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -45,6 +45,9 @@ unless named.
   reopened voter leads in its closed term (in-process and after a restart); `reopen-turn` issues
   the reopen and the write together: 2 barriers, an open group's 2 (local). New ctest
   `group_lifetime_reopen_turn`. The pin returns to consensus main when quiescence lands there.
+- Green at ffab229e: crash 261120-121525-6eba6d, voters named 261120-121535-6b10fe, points
+  261120-121536-1b02bc, held 261120-121538-1d9cc7, file set 261120-121539-279b80, A7 reopen-turn
+  261120-121540-67ed09. Still queued: State.
 - Mutant anchors moved: no-hand-off (indent), checkpoints-overlap (now in `checkpoint()`);
   rerun as jobs. Local: all six new or moved mutants killed.
 - N2, N5: recorded only (Rulings), per ruling 6.
