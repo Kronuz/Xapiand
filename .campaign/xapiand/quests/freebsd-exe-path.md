@@ -10,7 +10,7 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 ## Acceptance criteria
 
 - A1 A new test checks get_executable_path directly against the real binary path on every platform; it fails on FreeBSD without the fix (CI row)
-- A2 test_coverage_main's workaround (e0ad77c2c) resolving the path itself is removed once A1 holds, if it lies in this quest's files; otherwise noted
+- A2 [manual] test_coverage_main's workaround (e0ad77c2c) resolving the path itself is removed once A1 holds, if it lies in this quest's files; otherwise noted in the journal and filed in hunt.md: the lead checks the note
 - A3 The suite passes and CI is green on all platforms
 
 ## Contracts
