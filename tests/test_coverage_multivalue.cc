@@ -501,13 +501,10 @@ void test_round_trip_every_kind() {
 	auto whole = Multi_MultiValueKeyMaker().unserialize(serialized);
 	CHECK_EQ(whole->serialize(), serialized);
 	CHECK_EQ(whole->key(doc), key);
-	// Each slot alone rebuilds to the same key.
+	// Each slot alone rebuilds to the same key (Jaccard restores its character set).
 	for (engine::valueno slot = 1; slot <= 19; ++slot) {
 		Doc one_slot;
 		one_slot.set(slot, doc.value(slot));
-		if (whole->key(one_slot) != maker.key(one_slot)) {
-			std::cerr << "slot " << slot << " rebuilds to a different key\n";
-		}
 		CHECK_EQ(whole->key(one_slot), maker.key(one_slot));
 	}
 	Multi_MultiValueKeyMaker phonetic;

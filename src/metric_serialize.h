@@ -49,8 +49,9 @@ struct SerializableMetric : Metric {
 		return s;
 	}
 	void unserialize(const char** p, const char* p_end) {
-		this->_icase = unserialize_bool(p, p_end);
-		this->_str = unserialize_string(p, p_end);
+		const bool icase = unserialize_bool(p, p_end);
+		// Rebuild the metric so state derived from the string (Jaccard's character set) is restored.
+		static_cast<Metric&>(*this) = Metric(std::string(unserialize_string(p, p_end)), icase);
 	}
 };
 
