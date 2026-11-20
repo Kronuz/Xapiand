@@ -1,23 +1,50 @@
 # multicast-seeds: journal
 
-State: waiting on jobs 261120-092016-dd0882 261120-092045-08a731
+State: waiting on jobs (review fixes at consensus:8213720; ids under Doing)
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
 Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
 consensus:32d9c9b (feature), consensus:db6d7f9 (failed() after joined), consensus:8a36958
-(receiver only when seeding; burst 1..16). Not pushed (the lead pushes).
+(receiver only when seeding; burst 1..16), consensus:8213720 (correctness review fixes F1, F2,
+N1, N2, N5, N6). Not pushed (the lead pushes).
 
 ## Doing
 
-Waiting on the suite at consensus:8a36958 (261120-092016-dd0882, queued) and the 300 s libFuzzer run
-(261120-092045-08a731, running). Done and passing: seeds cases with multicast required
-(261120-092018-d9b51c, exit 0) and all six mutants (each test failed at its mutant, ctest exit 8).
-The suite at consensus:db6d7f9 passed (261120-091403-d07446), before the receiver/burst change.
+Review fixes at consensus:8213720 (review `reviews/multicast-seeds-correctness.md`, lead's rulings):
+- F1: a seed is its dial target (source address + asked-for services, sorted); sender only drops
+  own announcements; `per_address` (16) caps one address's entries (`address_full`).
+- F2: `required()` = `CI` or `CONSENSUS_SEEDS_REQUIRE`; vmactions/freebsd-vm SendEnv's `CI`.
+- N1: `receive_failures`, reported once, next receive after the doubling backoff.
+- N2: a failed setup retries after the doubling backoff (`setup_failures`); success clears
+  `unavailable()`.
+- N5: a throwing `on_dial` counts as `failed(id)`, the receive re-arms, the exception leaves run().
+- N6: rate burst < 50 -> < 80 ms (+30), gap slack 60 -> 100 ms (+40), count >= 12 -> >= 10 (-2);
+  forged impostor dials >= 3 -> >= 2 (-1). Lower (rate-limit) bounds unchanged.
+
+Jobs at consensus:8213720:
+- seeds cases, multicast required: 261120-100254-bede01; suite (verify): 261120-100256-fc6a26
+- reviewer probe rerun: 261120-100407-204477 (prints PASS/FAIL, exits 0: read its output)
+- mutants (--fails-without): no-backoff 261120-100323-1a8e61, any-cluster 261120-100326-b38b03,
+  unwanted-seeded 261120-100328-759c29, trailing-accepted 261120-100331-e86063,
+  no-burst 261120-100334-2f2af7, no-interval 261120-100336-6d4973,
+  sender-keyed 261120-100339-a47bd4, no-address-cap 261120-100342-f417d9,
+  no-setup-retry 261120-100345-e85866, receive-spins 261120-100348-7f49a7,
+  throw-keeps-entry 261120-100351-c74582, ci-skips 261120-100354-550a87
 
 ## Next
 
-1. When the jobs pass: paste `campaign brief`'s table, set State to "ready for review".
+1. When the jobs pass: read the probe's output (rotate <= 5, starve PASS), paste `campaign brief`'s
+   table, set State to "ready for review" at consensus:8213720.
 2. A failing mutant job (the test passed at the mutant) means a weak test: strengthen it, resubmit.
+3. CI at the landing commit must show the multicast cases Passed, not Skipped, on linux-asan-ubsan,
+   linux-tsan and freebsd-x86_64 (F2).
+
+## For the cluster wiring (no change here, lead's ruling)
+
+- N3: destroying `Seeds` before `drained()` is a use-after-free (handlers hold `this`), asserted only
+  in Debug and tests; same contract as `Links` (`links.h:71`). The wiring must stop() and drain.
+- N4: under spoofing, a genuine address with other ports is now a new target with its own backoff;
+  the genuine target's backoff is untouched. Inside the trusted-cluster model.
 
 ## Blocked on
 
@@ -55,8 +82,20 @@ Open for the lead: AGENTS.md asks each landed change be recorded in Detent's
   sender cannot aim listeners at a third host without spoofing its source.
 - Version lives in the magic's digits (`DTSD0001`), like `DTRPnnnn`; another version is dropped
   and counted (`version`), never parsed.
-- Sender identity is 16 random bytes per `Seeds`, used to drop a process's own announcements and to
-  key seeds with the source address (three processes on one host share an address).
+- Sender identity is 16 random bytes per `Seeds`, used only to drop a process's own announcements.
+- (F1) The seed key is (source address, asked-for services sorted by name, with ports): a set of
+  services is what the caller dials. For one wanted service it is exactly address + service port.
+  A changed port set is a new target (N4). Default `per_address` 16, validated 1..`seeds`.
+- (F1) The flood in `forged_rotating` repeats one port: on loopback the genuine node shares the
+  forger's address, so a port-rotating flood would take that address's cap by design; the cap is
+  proven in `drops` (64 ports from one address, `per_address` 4: 4 held, rest `address_full`).
+- (N1, N2) Setup retries and receive-error waits reuse `backoff`/`backoff_max` (1 s..60 s) and the
+  one `backoff_after()` the dial backoff uses, reset on success; no new options.
+- (N2) `on_unavailable` fires once per outage: a retry that succeeds clears `unavailable()`.
+- (N5) A throwing `on_dial` is not swallowed: it counts as failed(id) and propagates out of run(),
+  the receive re-armed first so the source keeps listening.
+- (F2) `recovers` exhausts RLIMIT_NOFILE to fail setup, then restores it; `receive_errors` dup2s a
+  pipe over the receiving descriptor inside on_dial so asio's speculative receive fails each time.
 - Backoff state lives on the seed and survives re-announcement; an entry backing off is kept past
   `expire` until its backoff ends, so a returning forger resumes its backoff.
 - `on_dial`/`failed`/`joined` instead of a dialer inside the library: the product dials with its own
