@@ -1,23 +1,39 @@
 # cluster: journal
 
-State: waiting on jobs 261120-095830-2935c9 261120-095833-f98de7
+State: waiting on jobs 261120-104100-17872a 261120-104101-6fec3b 261120-104101-0779b2 261120-104101-65db6c (suite), 261120-104107-5a4591 (A5 tests), 261120-104118-187dc4 then 261120-104125-6ca616 261120-104127-4d45de 261120-104128-564b3a (fuzz); 261120-095830-2935c9 261120-095833-f98de7 (A5 TSan, ASan at Xapiand:37f0c5a5f)
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
 
-Task `rpc` (A5) built: `src/cluster/rpc.{h,cc}` (call layer over consensus:e1f249d's lane),
-`src/cluster/rpc_methods.{h,cc}` (the seven methods' MessagePack envelopes),
-`tests/cluster/{test_rpc,test_rpc_methods}.cc`, `docs/mechanisms/shard-rpc.md`. Built and tested
-through `tests/cluster/CMakeLists.txt`, standalone inside the file set (B1): 12 ctest cases green
-locally (macOS arm64). Jobs at Xapiand:37f0c5a5f: plain 261120-095828-2b5e4d, TSan
-261120-095830-2935c9, ASan+UBSan 261120-095833-f98de7; control 261120-095855-16a31d at
-`mutant/xapiand/cluster-version` (Xapiand:7d7a90722, the server skips its range check:
-`cluster_rpc_versions` must fail).
+B1 answered (lead: `CMakeLists.txt` and `cmake/**` are in the file set). At Xapiand:f49d0e0f7:
+consensus is pinned at consensus:e1f249d8d (main, the RPC lane), task 18eb516 to 95798a02f, journal
+5bbeedc to 9e11713ed and completion e49f288 to d8b538c67 (the commits consensus pins; consensus's
+reactor pin ab69cf2 is older than Xapiand's 886131b, kept). `tests/cluster/` is no longer a
+standalone project: the top-level build adds it under `BUILD_TESTS` with TLS on, and
+`consensus` is made available only then. Configure and the three cluster binaries build clean
+locally (macOS x86_64, scratch build; `codec` and `malformed` pass). The RPC decoders' libFuzzer
+target `fuzz_rpc_methods` is under `-DFUZZ=ON` beside the other five (`fuzz_rpc_seed DIR` writes
+the seed corpus). Task `rpc` (A5) otherwise as before: `src/cluster/rpc*`,
+`tests/cluster/test_rpc*`, `docs/mechanisms/shard-rpc.md`.
+
+Jobs at Xapiand:f49d0e0f7:
+- suite (`campaign verify cluster`): build-test 261120-104100-17872a (now runs tests/cluster too),
+  e2e 261120-104101-6fec3b, cluster 261120-104101-0779b2, no-walk 261120-104101-65db6c;
+- A5's tests: 261120-104107-5a4591 (the 12 `cluster_rpc*` cases through the top-level build);
+- fuzz, one hour as four jobs: smoke 261120-104118-187dc4 (60 s, builds `build-fuzz` with Homebrew
+  clang 23 and proves the target runs), then three 30-minute jobs, `-max_total_time=1500` each
+  (75 minutes in all), seeds 1, 2 and 3, each in its own corpus dir from `fuzz_rpc_seed`, `--after`
+  the smoke: 261120-104125-6ca616 (seed 1), 261120-104127-4d45de (seed 2), 261120-104128-564b3a
+  (seed 3). They all run on the quest's one slot, so one at a time.
+- still pending from before: A5 TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 at
+  Xapiand:37f0c5a5f (the RPC sources are unchanged since; the test build moved).
 
 ## Next
 
-1. Read the four A5 jobs; fold in any red. Fuzz target for the envelope decoders (A5's decoders;
-   the random-mutation case covers 20,000 inputs, not a CPU-hour) once the top-level build has FUZZ.
+1. Read the jobs above; fold in any red. If the smoke fails to build with clang 23, the fuzz jobs
+   never start: fix the build, resubmit. The A5 control (a mutant that must fail) is still the one at
+   37f0c5a5f (mutant/xapiand/cluster-version, Xapiand:7d7a90722): rebuild it on the new build if the
+   lead wants the control at this head.
 2. `membership` once B2 and B3 are answered: node identity, `--join`, keepalives, `suspect`/`down`
    over the `keepalive` method, the directory behind an interface the root fills (placement).
 3. `shard-map`, `search`, `migration`, `api`: after `group-core`, `journal-replaces-wal` and
@@ -37,14 +53,10 @@ locally (macOS arm64). Jobs at Xapiand:37f0c5a5f: plain 261120-095828-2b5e4d, TS
 
 ## Blocked on
 
-- B1 (lead): `CMakeLists.txt` is outside the file set, and Xapiand pins no consensus and globs
-  neither `src/cluster/` nor `tests/cluster/`. Recommendation: add `CMakeLists.txt` to the file set
-  for three edits only: `FetchContent_Declare(consensus ...)` with `CONSENSUS_TRANSPORT ON`,
-  `src/cluster/*` in `XAPIAND_SRC_LIST`, and `add_subdirectory(tests/cluster)` under `BUILD_TESTS`.
-  The pin also moves journal (Xapiand's, via strata, is journal:5bbeedc; consensus needs
-  journal:9e11713, 10 commits newer) and task (Xapiand's task:18eb516 is older than consensus's
-  task:95798a0): a pin bump the lead owns. Until then `rpc` builds standalone from
-  `tests/cluster/CMakeLists.txt` at consensus's own pins.
+- B1 answered by the lead: `CMakeLists.txt` and `cmake/**` are in the file set; done at
+  Xapiand:f49d0e0f7 (pins and `add_subdirectory(tests/cluster)`). `src/cluster/*` is still not in
+  `XAPIAND_SRC_LIST`: the server does not call the RPC yet, so the tests build it themselves; the
+  first caller (`membership`) adds it, with consensus linked into the server.
 - B2 (lead, consensus): `HostTransport`, `Links` and `NodePins` take every node's address and pin at
   construction (consensus:e1f249d `host_transport.h:270`, `links.h:50`, `node_pins.h:14`); nothing
   adds or forgets a node later, and a dial needs the peer's node id. `--join` (A4: three nodes
@@ -73,7 +85,7 @@ locally (macOS arm64). Jobs at Xapiand:37f0c5a5f: plain 261120-095828-2b5e4d, TS
 | A2 | none yet |
 | A3 | none yet |
 | A4 | none yet |
-| A5 | 261120-095828-2b5e4d green (12 cases at Xapiand:37f0c5a5f); control 261120-095855-16a31d fails as required (exit 8 at the range-check mutant); TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 pending. Open: a CPU-hour fuzz of the decoders (needs the top-level FUZZ build, B1) |
+| A5 | at Xapiand:f49d0e0f7: tests 261120-104107-5a4591, fuzz 261120-104118-187dc4 (smoke) and 261120-104125-6ca616, 261120-104127-4d45de, 261120-104128-564b3a (seeds 1-3, 25 min each); earlier, at Xapiand:37f0c5a5f: 261120-095828-2b5e4d green (12 cases at Xapiand:37f0c5a5f); control 261120-095855-16a31d fails as required (exit 8 at the range-check mutant); TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 pending. |
 | A6 | none yet |
 
 ## Tasks for other agents
@@ -104,3 +116,18 @@ Not yet.
   server's range, which the client names `PeerVersionRefused`.
 - R2: method ids are `0x58530000 + n` ("XS"), so other users of the same host transport
   (consensus's own methods, Detent's fetch) never collide with Xapiand's.
+- R7: completion is pinned in Xapiand too (d8b538c67, newer than strata's e49f288): journal 9e11713ed
+  needs it, and its `completion::task` needs `COMPLETION_TASK` on before strata makes completion
+  available, so the root sets it. journal is declared with no Xapiand include site, so
+  `harness/pins_check.py` A1 now also lists journal (varint was already listed); the lead may
+  prefer journal declared by strata at its next pin and the declaration dropped then.
+- R8: `tests/cluster/CMakeLists.txt` drops the root's `MSGPACK_EXCEPTION_HEADER` and
+  `RAPIDJSON_PARSE_DEFAULT_FLAGS` definitions in its directory, so the cluster code builds against
+  `msgpack::msgpack` exactly as the library ships it (the build that was green standalone); linking
+  `XAPIAND_OBJ` instead would pull the whole server into a decoder fuzz target.
+- R9: the fuzz target adds `-fno-sanitize-recover=all` to the other targets' flags, so a UBSan
+  report stops the run and leaves a crash file. Its oracle: a decoder returns a value whose
+  re-encoding decodes to the same value, or throws `Malformed` (MsgPack-holding messages are
+  re-decoded only: NaN never equals itself).
+- R10: the hour is three 25-minute runs (75 minutes, seeds 1 to 3) behind a 60-second smoke: a
+  light fuzz job is capped at 30 minutes including the run.
