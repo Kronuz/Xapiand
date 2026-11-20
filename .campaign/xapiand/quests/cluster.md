@@ -23,7 +23,7 @@ cluster and back. The docs and changelog describe it.
 
 ## Acceptance criteria
 
-Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`) and CI (`asan`, `tsan`).
+Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`), `no-walk` and CI (`asan`, `tsan`).
 
 - A1 `docs/design/cluster-release.md` section 1's parity checklist, items 1 to 6, passes on 3 and 5
   processes (the `cluster` check)
@@ -35,8 +35,7 @@ Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`) and CI (`asa
   two-shards-per-node placements, replaces included, and a dropped partial fails it; a replica killed
   mid-search is retried or named in `_shards.failed`; wildcard, partial and fuzzy terms expand once at
   the coordinator and match one merged index (a mutant expanding per shard fails); patterns from the
-  root return what master's walk returns for the glob set, and the walk is gone (the `no-walk` check:
-  `git grep -n "expand(Endpoint::cwd" -- src` is empty)
+  root return what master's walk returns for the glob set, and the walk is gone (the `no-walk` check: `git grep -n "expand(Endpoint::cwd" -- src` is empty)
 - A4 Three nodes form from one seed; a node of another cluster and one whose certificate is not pinned
   are refused with named errors; plaintext peers only behind the flag and only on loopback; a killed
   node is logged `down` within 2 s: tests and the `cluster` check
@@ -48,9 +47,6 @@ Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`) and CI (`asa
   data, stored blobs included, seeds three nodes and shrinks back with digests equal; every route and
   setting documented with docs E2E examples, `upgrade.md` and the changelog's `[Unreleased]` written:
   the `cluster` and `e2e` checks
-
-The `no-walk` check (`! git grep -n "expand(Endpoint::cwd" -- src`) is a gate of A3; the lead adds it
-with `campaign set cluster --check` when the task that removes the walk starts.
 
 ## Tasks
 
