@@ -1,6 +1,6 @@
 # catalog-post-lifetime: journal
 
-State: waiting on jobs 261119-214111-0c0179 261119-214124-9cbf69 261119-214113-02be57 261119-214114-d7e56a 261119-214115-72aa8d
+State: ready for review (all five jobs passed; lead fixed the stale catalog.md section at strata:246bb67de, 2026-11-19 22h).
 Quest: .campaign/xapiand/quests/catalog-post-lifetime.md (the lead's; never edit it)
 
 ## Doing
