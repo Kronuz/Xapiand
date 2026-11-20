@@ -11354,6 +11354,8 @@
     "loop-yield-tsan": {
       "accepted": {},
       "after": [],
+      "base": "7cd7c084da6573973ec0acd2d2d26f02c5606431",
+      "branch": "quest/xapiand/loop-yield-tsan",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -11373,9 +11375,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Fix the TSan race in test_loop_yield's count_delete",
-      "updated": "2026-11-19T17:50:27"
+      "updated": "2026-11-19T17:50:56",
+      "worktree": "../Xapiand-wt/xapiand/loop-yield-tsan"
     },
     "lua-memory-bound": {
       "accepted": {
