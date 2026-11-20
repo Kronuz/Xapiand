@@ -2574,6 +2574,36 @@
       "title": "Remote branch cleanup triage",
       "updated": "2026-11-08T15:39:46"
     },
+    "bulk-load-rerun": {
+      "accepted": {},
+      "after": [],
+      "base": "b2cd24fa0317200a1046e4a6cfce37e27491c9ca",
+      "branch": "quest/xapiand/bulk-load-rerun",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/perf/bulk-load-rerun.md",
+        "harness/bench/bulk_load*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
+      "updated": "2026-11-20T14:48:40",
+      "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
+    },
     "catalog-post-lifetime": {
       "accepted": {
         "correctness": {
@@ -21473,16 +21503,47 @@
         "docs/perf/placement-strategies-sim.md"
       ],
       "journal": "../Xapiand-wt/xapiand/placement-locality-sim",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T15:12:21",
+          "commit": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5",
+          "criteria": {
+            "A1": "261120-113014-f2178d (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md)",
+            "A2": "261120-113018-d8cecc (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113022-e0eb42 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113031-f76ac7 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113034-79ca70 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113041-eb2b90 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113043-241386 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113047-03a766 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113049-c6cae1 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113016-34489c (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113025-27329d (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113028-7a1b5f (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113036-5cc371 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113039-a24e16 (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md), 261120-113045-1109aa (passed at 7d31634b9e64; 2 merges from main since, none touching its files; ignores docs-only docs/perf/placement-strategies-sim.md)",
+            "A3": "[artifact] docs/perf/placement-strategies-sim.md at strata:4a641459: per-graph tables at 10/100/1,000 nodes, budget and hysteresis sweeps, SPAR comparison, root-index section, scoring seam, recommendation"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 sim/placement/run.py --smoke",
+              "commit": "7d31634b9e64c4c32b8a4402e17b65e6c0077f3d",
+              "docs": [
+                "docs/perf/placement-strategies-sim.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-113014-f2178d",
+              "level": "light",
+              "seconds": 1.5,
+              "state": "done",
+              "what": "placement-locality-sim check sim at 7d31634b9e64"
+            }
+          ],
+          "final": true,
+          "from": "e328cf92809a136ea69f53fc2bc55f3d56ba3e9f",
+          "reason": "",
+          "tested": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
-      "updated": "2026-11-20T11:53:31",
+      "updated": "2026-11-20T15:12:22",
       "worktree": "../strata-wt/xapiand/placement-locality-sim"
     },
     "placement-repair": {
