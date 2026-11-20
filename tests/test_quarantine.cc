@@ -71,6 +71,7 @@ void test_a_damaged_wal_is_moved_aside() {
 		aside += entry.is_directory() && fsys::exists(entry.path() / "wal.0");
 	}
 	CHECK_EQ(aside, 1u);
+	fsys::remove_all(dir.parent_path());
 }
 
 void test_a_directory_that_cannot_be_made_is_logged_not_fatal() {
@@ -84,6 +85,7 @@ void test_a_directory_that_cannot_be_made_is_logged_not_fatal() {
 	quarantine_files(dir.string(), {"wal.*"});   // mkdtemp fails with EACCES and the failure is logged
 	fsys::permissions(dir, fsys::perms::owner_all);
 	CHECK(fsys::exists(dir / "wal.0"));          // nothing moved
+	fsys::remove_all(dir.parent_path());
 }
 
 void test_a_path_past_path_max_is_logged_not_fatal() {
@@ -97,10 +99,17 @@ void test_a_path_past_path_max_is_logged_not_fatal() {
 	fsys::remove_all(dir);
 }
 
+void test_the_suite_leaves_no_directories() {
+	for (const char* name : {"quarantine_ok", "quarantine_denied", "quarantine_long"}) {
+		CHECK(!fsys::exists(fsys::current_path() / name));
+	}
+}
+
 }  // namespace
 
 TEST_MAIN(
 	test_a_damaged_wal_is_moved_aside,
 	test_a_directory_that_cannot_be_made_is_logged_not_fatal,
-	test_a_path_past_path_max_is_logged_not_fatal
+	test_a_path_past_path_max_is_logged_not_fatal,
+	test_the_suite_leaves_no_directories
 )
