@@ -1,6 +1,6 @@
 # consensus-rpc-lane: journal
 
-State: review fixes built at consensus f748f79; waiting on jobs 261120-073315-436234 (build-test), 261120-073255-4083da, 261120-073257-1c9ed0, 261120-073259-715956, 261120-073303-5d2242, 261120-073306-214cf2, 261120-073309-5b931e (controls)
+State: review fixes built at consensus 22b979e; waiting on jobs 261120-074701-268a9a (build-test), 261120-074650-d657bc, 261120-074652-9c5498, 261120-074654-e15f02, 261120-074656-03dba7, 261120-074657-36a217, 261120-074659-a5a3bd (controls)
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
 
 ## Doing
@@ -21,6 +21,12 @@ Correctness review (`.campaign/xapiand/reviews/consensus-rpc-lane-correctness.md
 - F4/T7: `late_extension()` in deadline.h is the rule; `late_deadline` and the call deadlines
   (Lane via `LaneOptions::late`, and calls waiting to dial) use it. `rpc_test late-deadline`.
 - F10 pools declared before `loops_`; F12 A3's control is `rpc-past-credit`; F13 encode first.
+- F12 follow-up 22b979e: at f748f79 rpc-past-credit passed `stream` (job 261120-073257-1c9ed0,
+  exit 0: an instant consumer regrants ahead of every chunk, so rule 7.6 never fires). `stream`
+  now checks the sender's queued bytes (`outgoing` high water) within one window: 4,194,304 B
+  at base, 4 of 4 runs. At f748f79 the other five controls failed as intended (exit 8, 8, 134,
+  8, 8: 261120-073255-4083da, 073259-715956, 073303-5d2242, 073306-214cf2, 073309-5b931e);
+  all six rerun at 22b979e.
 - Local `quiet light` runs at e7d615c: rpc, rpc_host 6/6, hello 3/3, both fuzz replays, idle pass.
 
 ## Next
@@ -49,11 +55,11 @@ Correctness review (`.campaign/xapiand/reviews/consensus-rpc-lane-correctness.md
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `rpc_host_test calls`, `group-full`, `call-full`, `local-throw` (F7) and `rpc_test` (incl. `late-deadline`, T7) in build-test 261120-073315-436234 at f748f79 (pending); controls `--fails-without`: rpc-shared-credit (mutant 9c64665) 261120-073255-4083da, late-deadline (413826c) 261120-073303-5d2242, local-throw-closes (5f0443c) 261120-073309-5b931e. Superseded: 261120-063245-5d4c86 (failed: idle, F1) and 063253-b0630d (build failed, F2) |
-| A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-073315-436234 (pending) |
-| A3 | `rpc_host_test stream` (32 MiB under credit; heartbeat gaps < 1,000 ms) in build-test 261120-073315-436234 (pending); control rpc-past-credit (mutant 45d9e0c, F12) `--fails-without` 261120-073257-1c9ed0 |
-| A4 | `hello_test leader`, `codec`, `version` (now also refuses a 32 KiB frame below the lane's 65,584, F3) in build-test 261120-073315-436234 (pending); controls `--fails-without`: hello-limits-ignored (mutant 0c8ffc9) 261120-073259-715956, lane-frame-unchecked (543d870) 261120-073306-214cf2 |
-| A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at f748f79 |
+| A1 | `rpc_host_test calls`, `group-full`, `call-full`, `local-throw` (F7) and `rpc_test` (incl. `late-deadline`, T7) in build-test 261120-074701-268a9a at 22b979e (pending); controls `--fails-without`: rpc-shared-credit (mutant 858f25f) 261120-074650-d657bc, late-deadline (a1e77b5) 261120-074656-03dba7, local-throw-closes (6b14807) 261120-074659-a5a3bd. Superseded: 261120-063245-5d4c86 (failed: idle, F1) and 063253-b0630d (build failed, F2) |
+| A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-074701-268a9a (pending) |
+| A3 | `rpc_host_test stream` (32 MiB under credit; heartbeat gaps < 1,000 ms) in build-test 261120-074701-268a9a (pending); control rpc-past-credit (mutant 7caaa5a, F12) `--fails-without` 261120-074652-9c5498 |
+| A4 | `hello_test leader`, `codec`, `version` (now also refuses a 32 KiB frame below the lane's 65,584, F3) in build-test 261120-074701-268a9a (pending); controls `--fails-without`: hello-limits-ignored (mutant d6967cb) 261120-074654-e15f02, lane-frame-unchecked (24da848) 261120-074657-36a217 |
+| A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at 22b979e |
 
 ## Result
 
@@ -108,14 +114,14 @@ a sender pool, separate serving and calling pools, T1-T8. This quest changes no 
 
 | ID | Done |
 |---|---|
-| F1 | fixed e7d615c; idle 316.2 B (budget 372); build-test 261120-073315-436234 |
-| F2 | resubmitted with own build dirs: 261120-073255-4083da, 073257-1c9ed0, 073259-715956 |
-| F3 | fixed e7d615c (lead's ruling a); `hello_test version`; control 261120-073306-214cf2 |
-| F4 | T7 built e7d615c; `rpc_test late-deadline`; control 261120-073303-5d2242 |
+| F1 | fixed e7d615c; idle 316.2 B (budget 372); build-test 261120-074701-268a9a |
+| F2 | resubmitted with own build dirs: 261120-074650-d657bc, 074652-9c5498, 074654-e15f02 |
+| F3 | fixed e7d615c (lead's ruling a); `hello_test version`; control 261120-074657-36a217 |
+| F4 | T7 built e7d615c; `rpc_test late-deadline`; control 261120-074656-03dba7 |
 | F5 | not built: not small (Blocked on 3) |
 | F6 | kept (R13); listed |
-| F7 | fixed e7d615c; `rpc_host_test local-throw`; control 261120-073309-5b931e |
+| F7 | fixed e7d615c; `rpc_host_test local-throw`; control 261120-074659-a5a3bd |
 | F8, F9, F11 | listed (Blocked on 4) |
 | F10 | fixed e7d615c |
-| F12 | control replaced: rpc-past-credit 261120-073257-1c9ed0 |
+| F12 | control replaced: rpc-past-credit 261120-074652-9c5498 |
 | F13 | fixed e7d615c |
