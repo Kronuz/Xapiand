@@ -5,32 +5,27 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The owner wants to see how strata can keep related indexes on the same nodes (SPAR, "The Little
+Engine(s) That Could") and how that compares with other replication and placement algorithms, before
+any of it is built. A simulator over the design in strata `docs/design/placement-strategies.md`
+answers that with numbers, without hardware and without touching the first release's placement.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
-
-## Contracts
-
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- A1 A simulator places units (path subtrees, or index-shard pairs) on N nodes under each strategy:
+  hash or random, count (rf voters plus read copies), affinity and follow (declared), offline graph
+  partitioning (METIS-style, as the ideal), SPAR's online algorithm as published, and the design's
+  corrected adaptive locality (read copies only, budgets, hysteresis, hub promotion). Each strategy
+  has a unit test on a small graph with a hand-checked placement.
+- A2 It replays co-access graphs: at least one public social graph (SNAP or similar, with its license
+  noted) and one synthetic many-indexes workload shaped like ours (millions of small indexes, a few
+  hubs, nested paths). It reports per strategy: replication overhead (copies per unit), the fraction
+  of requests served on one node, fan-out per request, bytes moved per 1% membership churn, peers per
+  node (the copyset bound), and voter spread over failure domains.
+- A3 [artifact] `docs/perf/placement-strategies-sim.md`: the results table per graph and node count
+  (10, 100, 1,000), what SPAR gets right and where the corrected design differs, and a recommendation
+  for which strategies the placement after the first release should build first.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Everything: it is a simulator and a note, not product code.
