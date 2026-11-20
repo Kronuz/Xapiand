@@ -74,7 +74,7 @@ builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 | A1 | Rows, exclusive, VM: 261118-002831-fab1cd (strata 100), 261118-002859-39b455 (pg 100), 261118-002847-822bcf (lance 100), 261118-044446-7f14e4 (qdrant 100), 261118-044448-81dd25 (es 100), 261118-044452-9ca15f (strata 1,000), 261118-044458-428db2 (pg 1,000), 261118-044455-07f613 (lance 1,000), 261119-173419-733f81 (qdrant 1,000), 261119-173425-b0afb9 (es 1,000); loads 261119-173416-dd03e0, 261119-173422-9a6925 |
 | A2 | `i8` against `f32`, both at strata:7b02184a (the i8 arm's commit; f32 is main's storage), one chain: rows 261119-173357-5a1aac (f32 100), 261119-173351-6dabcb (i8 100), 261119-173414-b5197c (f32 1,000), 261119-173402-06e84b (i8 1,000); loads 261119-173354-6399a6, 261119-173348-7e0d04, 261119-173408-a8663d, 261119-173359-d32394 |
 | A3 | strata:08f372bc `docs/design/hybrid-search.md` (C1 rerun, fit verdict) and `docs/design/hybrid-search/c1-rerun.md` (tables, A2, dollars; raw JSON in `c1-rerun/`) |
-| A4 | <owner's decision pending> |
+| A4 | D155 |
 
 ## Result
 
