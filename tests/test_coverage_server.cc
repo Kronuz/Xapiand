@@ -33,6 +33,8 @@
 #include <string>
 #include <string_view>
 
+#include <unistd.h>
+
 #include "database/data.h"
 #include "server/mime_types.h"
 
