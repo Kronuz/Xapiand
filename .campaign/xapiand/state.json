@@ -3200,7 +3200,7 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "owner: the design publishes from AWS metal (Q7); the 2026-11-04 host rule is no AWS and campaign rents no machines (PLAN open question 4)",
+      "reason": "owner names the published run host (PLAN open question 4; no AWS, campaign rents no machines); also needs xapiand-final-release tag (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "low",
       "status": "blocked",
@@ -3208,7 +3208,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-08T15:40:13"
+      "updated": "2026-11-20T05:28:23"
     },
     "cluster": {
       "accepted": {},
