@@ -98,6 +98,20 @@ Runs once, when the feature is complete and before it lands.
 - The cluster gate (`cluster-gate`) is this feature's measurement and the milestone's review: it runs
   its rows R1 to R10 over `group-heal`, `placement`, `journal-replaces-wal` and this feature, once all
   have landed; its rows are not gates of this landing.
+- A7 A node starts with zero key configuration (D150): the first node creates the cluster CA and prints
+  its join token; a second node joins with `--join host:port --token T`, or `--token T` alone where
+  multicast finds the address; every link is TLS; no flag disables authentication.
+- A8 Without `--token` a node creates a new cluster (D150): two nodes started without tokens form two
+  clusters with different ids, CAs and tokens, on the same multicast group; neither seeds from the
+  other; a token for one is refused by the other; a joiner refuses a server whose CA fingerprint
+  differs from its token's.
+- A9 A node given `--token` whose cluster is not reachable never creates one (D150): it retries with
+  backoff, logs the cluster id it waits for, answers not-ready, and joins once a member appears; a
+  malformed token exits nonzero with a named error.
+- A10 The founder is not special (D151): a 5-node cluster restarts with its founder's data directory
+  deleted and the other four started with or without `--token`; they rejoin from their persisted
+  state, elect, serve, and admit a new node with the original token through any surviving voter; a
+  node holding another cluster's token on an existing data directory is refused.
 
 ## May land early
 

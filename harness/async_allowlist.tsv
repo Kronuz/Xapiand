@@ -13,6 +13,7 @@ src/database/pool.cc	mutex	weak\.lock\(\)	allow	1	std::weak_ptr::lock in the cat
 src/database/pool.cc	mutex	.	allow	5	the shutdown's state: O(1) sections that set or read its flag and the keys whose commit failed, none with I/O (x-pool D10)
 src/database/pool.cc	wait	state\.cv\.wait	allow	3	join() and ~DatabasePool await the catalog's shutdown on the main thread after the loops stopped; join is guarded by check_may_block (x-pool D10, C24)
 src/database/pool.cc	file	fs	allow	4	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
+src/database/pool.cc	file	filesystem	allow	2	create_index_directory makes the index directory in the catalog's resolve, in its open chore on a WorkPool worker, and maps APFS's EILSEQ to a 400 (x-pool D6)
 src/database/pool.cc	sleep	sleep_for\(std::chrono::milliseconds\(1\)\)	allow	1	IndexChores::cancel_all polls the groups at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached task with no control loop runs to its end on the thread that started it (a timer thread, the CLI); guarded by check_may_block
 src/database/wide_search.cc	mutex	mutex_	allow	3	Pins' count and room event: O(1) sections that test or change the free count or swap the room pointer, none with I/O; they run on the loops (take, and give from a batch's end) and the event is set outside the lock (wide-search-loop D3)

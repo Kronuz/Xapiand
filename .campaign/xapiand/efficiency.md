@@ -488,3 +488,9 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Started: multicast-seeds (Opus) and cluster (Opus).
 - Quota: 29% weekly, 0.27%/h. Load 21-33 on 16 CPUs; 34 GiB free (97% used).
 - Friction: stale lead watchers (pgrep self-match, a stale CI watch); an untagged A3/A4 with no passing job blocked rpc-lane's landing for about 1 h.
+
+## 2026-11-20 10h
+- Landed: nothing new. Four quests (freebsd-exe-path, strata-pin-catalog, control-plane-wallclock, coverage-database) are green but lose the race: master moves during each roughly 30 min CI wait, so each land asks for another merge. The fix is the v2 `land --merge-main` with evidence carried by inputs (agent-campaign tool/feature-model, merged locally, suite rerunning).
+- Agents: multicast-seeds build 218k plus fixes 179k (Opus); multicast review 132k (Opus, CHANGES, 2 blockers); cluster 325k (Opus, shard RPC built); group-core A3 230k (Opus); tool adaptation 275k (Opus); phrase mutant 79k (Sonnet); coverage-server 82k (Sonnet).
+- Started: node-admission (consensus, Opus), filed from cluster's B2.
+- Quota: 33% weekly, 0.30%/h. Light slots 81% used. Disk: 34 GiB free.
