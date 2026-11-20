@@ -1,12 +1,13 @@
 # http-limits: journal
 
-State: waiting on jobs 261119-160804-917397
+State: waiting on jobs 261119-173928-7c7cb6 261119-173931-41b5d2 261119-173934-32f89e 261119-173936-a4bb4f 261119-173943-ac3d8a
 Quest: .campaign/xapiand/quests/http-limits.md (the lead's; never edit it)
 
 ## Doing
 
-Done at http:121aa41 on quest/xapiand/http-limits (not pushed, per the lead). Waiting on the
-suite job; then ready for review.
+Review http-limits-correctness (CHANGES, F1 blocking) folded in at http:e62a7e3: merged http
+main (http:52451be), F1 fixed (http:6aff813), its tests (http:e62a7e3), mutant
+`mutant/xapiand/http-limits-f1-recheck` (http:b45fd0b). Waiting on the jobs; then ready for review.
 
 ## Next
 
@@ -17,6 +18,13 @@ suite job; then ready for review.
 2. Push for CI (the lead's call); A4 names CI.
 
 ## Blocked on
+
+Lead, decision (review F2, not changed): the gate holds a `max_in_flight` slot from a request's
+first byte, so a slow-header client occupies one for up to `header_timeout` (30 s). With the
+defaults a loop cannot fill; with `max_clients` 0, or more clients than one loop's cap (Xapiand:
+1024 clients, 1000 per loop), slow-header peers can fill it and the rest get 503. Options: (a)
+keep, bounded by `header_timeout` and `max_clients`; (b) keep and state the bound in
+TRANSPORT.md beside `max_in_flight`. Recommend (b): one sentence, no behavior change.
 
 Lead (msg-147 to the lead): the file set lacks CMakeLists.txt (the reactor pin, limits_test's
 registration), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed API;
@@ -41,6 +49,11 @@ code, never landed; each must fail `limits_test`:
 | 261119-155949-3bb6e3 | a3-flag (stop_accepting leaves the flag clear): keep-alive request served, replies keep-alive |
 | 261119-155951-43f37e | a3-gate (gate at headers-complete, the old code): wait_requests misses a request mid-headers |
 | 261119-155953-7e73c2 | a4-header (header timeout bounds the handler): the held poll gets no reply |
+| 261119-173928-7c7cb6 | limits_test at http:e62a7e3 (F1's [S] framed case and [R] stop race) |
+| 261119-173931-41b5d2 | f1-recheck (post-write `!stays_open()` restored), fails-without: limits_test must fail |
+| 261119-173934-32f89e | TSan suite at http:e62a7e3 |
+| 261119-173936-a4bb4f | reviewer's stop_race probe (run.sh) at http:e62a7e3: must show 0 drops |
+| 261119-173943-ac3d8a | campaign verify suite at http:e62a7e3 |
 
 | Criterion | Evidence |
 |---|---|
@@ -69,6 +82,17 @@ deadline per read on paths that had none, one io handler per request (handler_co
 now sets them off); Xapiand, Detent and Prism move with server-limits and their adoptions.
 
 ## Rulings I made
+
+- F1 (correctness review): break on the framed keep-alive decision only (both post-write
+  `|| !stays_open()` dropped). After stop_accepting() the next request reads the flag at
+  `first_byte()` and is refused 503 + close; a close_idle() after framing closes at the idle
+  wait. Tests: [S] a 32 MiB reply blocked in its write across stop_accepting() (wait_requests()
+  proves the write pending) must arrive keep-alive and the next request get 503, not a reset;
+  deterministic. [R] the reviewer's stop_race, 40 rounds plain and TLS, fails on any unanswered
+  close of a served connection and prints the 503 count (checks it is above 0).
+- F3: the comment now says request_timeout runs from the wait for the first byte, idle time
+  included (behavior unchanged). F5: one clause in coroutine-handlers.md "Closing idle connections".
+- F4: no change (relaxed read is harmless after F1, per the review).
 
 - F1 (reactor review): option (b), the gate at a request's first byte. `first_byte()` enters the
   gate, a seq_cst fence, then reads `closing`: a request that read it clear is counted by
