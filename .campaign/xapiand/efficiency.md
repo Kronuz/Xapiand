@@ -499,3 +499,8 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: nothing; master was red from the APFS quick fix (async_check, then the gate-tools count check). Fixed at Xapiand:bf593a759 and 7290c10d8; the quick-fix agent ran only its own test, and the lead's first fix ran async_check but not test_gate_tools.
 - Agents: cluster pins 214k (Sonnet); node-admission 311k (Opus); group-core turn-log fix 134k (Opus); multicast fixes 191k (Opus, the SIGPIPE cause found by Linux CI); group-core review running; membership design (Opus, max) and placement simulation (Opus) running.
 - Quota: 35% weekly, 0.32%/h. Load 8-12. Disk: 34 GiB free.
+
+## 2026-11-20 12h
+- Landed: nothing on master; agent-campaign:64e661b (feature-model tool: evidence by inputs, land --merge-main, [ci], task merge; suite 291 OK in 40 min) and dotfiles:0d45817, 60cea91, 078d89d (skill bump; sentiment emoji). Four quests merged with master by `land --merge-main`, landing on CI green; landloop.sh retired.
+- Agents: placement simulation done 264k (Opus; 17 jobs, two design flaws found); membership design 297k (Opus max) then its review 241k (Opus max, CHANGES: 3 blockers proven by models M7/M9); group-core review 252k (Opus, CHANGES: C1/C2 probed); phrase-expansion review 133k (Opus, CHANGES: scorer memory 10.3x its charge); coverage-server 200k then 158k (Sonnet; branches 62.7% to 85.6%); phrase-expansion fixes 152k (Opus). Running: group-core fix (Opus), membership revision (Opus), turn-log-parity design review (Opus max), track-c-gates (Sonnet).
+- Quota: 38% weekly, 0.34%/h. Light slots 57% used. Load 14-17. Disk: 33 GiB free.
