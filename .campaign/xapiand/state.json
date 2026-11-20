@@ -31901,12 +31901,24 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:57",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness"
-      ],
+      "lenses": [],
       "milestone": "Xapian-only release",
       "needs": [],
       "provides": [],
@@ -31914,7 +31926,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-19T06:17:19"
+      "updated": "2026-11-20T05:25:57"
     },
     "xapiand-on-strata": {
       "accepted": {},
