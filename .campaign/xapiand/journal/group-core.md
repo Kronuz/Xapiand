@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261120-105301-a74923 261120-105301-679f4f 261120-105335-a6926e
+State: ready for review at strata:ffab229e; waiting on jobs 261120-121525-807eb8 261120-121525-6eba6d 261120-121535-6b10fe 261120-121536-1b02bc 261120-121538-1d9cc7 261120-121539-279b80 261120-121540-67ed09 261120-121542-01253e 261120-121544-aeb1f7 261120-121545-005bf5 261120-121547-534c19 261120-121549-49be3a 261120-121551-0fb5d1 261120-121553-724c76
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,49 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Step 11 (lead: correctness review CHANGES at 6a230264, `reviews/group-core-correctness.md`;
+rulings 1-7), strata:274fc243 e7b9acd2 429b4976 ffab229e. Jobs: Evidence, all at ffab229e
+unless named.
+
+- C1 (274fc243, e7b9acd2): `hand_off()` re-arms while stalled whatever the role and transfers
+  only when leading (chosen over re-arming on `RoleChanged`: no new Sink path, and it covers a
+  stall that starts as follower and every later election; cost one loop timer per election
+  timeout while stalled). voters_test `stalled_follower_elected` (3, 5). Mutant
+  handoff-leader-only (the old arming). The reviewer's probe at 274fc243 (before the test
+  existed, since the probe adds a case of that name): 261120-114759-d6b42f, exit 0.
+- C2 (ffab229e): the teardown sets `closed_` under `mu_`; `push()` and `drain()` refuse later
+  items, a call with `cs::closed`. `close()` holds the checkpoint serializer from its first
+  checkpoint through the teardown (new: a checkpoint racing the close used to run between the
+  close's checkpoint and its `Driver::close`), so a late checkpoint waits and is refused at its
+  capture. lifetime `points` adds `late`: close at every event, a checkpoint and a read at each
+  event after it until one past the close's end (1,849 + 1,318 runs, 4.8 s locally): each a value
+  or `closed`, `closed` once the close finished. Local: late checkpoint closed 3,167 of 3,167,
+  late read closed 261 (the rest values, replay-checked). Mutant no-closed-mark (local: killed,
+  the late checkpoint answers a value in Release). close_race_probe rerun 261120-121553-724c76.
+- N1 (ffab229e): blob_app `before_write` (in `transaction()`); lifetime `held` holds A's apply
+  at the strata write and checks from the host thread `applied() < ` the held entry. Mutant
+  applied-before-write (store before the strata phase; local: killed, "2 at entry 2").
+- N3 (ffab229e): the pool check moves before `sync_and_commit` (bundle encoded from the capture,
+  which the sync does not change).
+- N4 (429b4976): `file_set::recover` reads each sealed file through its length (64 KiB chunks,
+  incremental CRC32C) and fails closed on a mismatch; file_set_test flips each of six bytes.
+  Mutant sealed-unchecked.
+- A7 (ffab229e): consensus pin 1c08c9f -> b8de3b8 (journal 9e11713, completion d8b538c, task
+  95798a0 are b8de3b8's own pins already, unchanged). `close()` keeps `Driver::closed_state()` as
+  `closed_record()`; `config.closed` hands it to `Driver::recover`. `open()` hops to the loop
+  only when started off it: with the hop, a write started after it reached the Driver before
+  `Driver::open` ("consensus group closed"), and one issued after the recover's turn was
+  submitted cost 3 (consensus's "a request issued after the recover"). `reopen` now checks the
+  reopened voter leads in its closed term (in-process and after a restart); `reopen-turn` issues
+  the reopen and the write together: 2 barriers, an open group's 2 (local). New ctest
+  `group_lifetime_reopen_turn`. The pin returns to consensus main when quiescence lands there.
+- Mutant anchors moved: no-hand-off (indent), checkpoints-overlap (now in `checkpoint()`);
+  rerun as jobs. Local: all six new or moved mutants killed.
+- N2, N5: recorded only (Rulings), per ruling 6.
+- The reviewer's failed probe jobs 261120-112100-73067d, 261120-112430-782b7a,
+  261120-113145-69776e, 261120-113516-c15d90 are C1's and C2's findings at 6a230264 (expected
+  red), superseded by the reruns above.
 
 Step 10 (lead: build-test 261120-092528-6f13a3 red on `standalone_turn_log`), strata:6a230264.
 
@@ -210,6 +253,7 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Next
 
+0000. Read step 11's jobs (State); fold any red in; then the lead's re-review.
 000. Read step 10's jobs (Doing): suite and crash at strata:6a230264, the seal-repeats kill
     check; then step 9's below.
 00. Read step 9's jobs, all queued at its end: build-test 261120-092528-6f13a3, crash
@@ -309,7 +353,8 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
   PosixIO's sync seam, and are 53% of an open's time with the seam's syncs skipped.
 - A2's settle failures: ruled (a), PLAN.md D109 (lead, msg-2); group-install takes the seven
   seeds as its A8. Root cause and proof under Messages, msg-2.
-- detent:consensus-quiescence (still `planned` in Detent's state, 2026-11-20): A7 only. The
+- detent:consensus-quiescence: A7 built against its Driver part at consensus:b8de3b8 (step 11);
+  the pin returns to consensus main when quiescence lands. Before: The
   in-process reopen after close now works at consensus 1c08c9f (closed row erased, journal group
   closed into the host's table) and `reopen` tests it; a reopen still elects before its first
   write (5 barriers against 2), which is quiescence's A5.
@@ -324,16 +369,16 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183. At strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837 queued, crash 261120-090009-2638c9 green; `--fails-without` B10 append-on-retry 261120-090021-8a66ab killed, B10 sync-retry 261120-090036-a032b9. Before: queued at strata:c99372d4 (one directory per group, deferred create): crash 261117-151220-79527f, TSan 261117-151216-02b5d8, `--fails-without` unlink-at-apply 261117-151147-f41da5, append-on-retry 261117-151150-e05468, sync-retry 261117-151154-9b1fbc, first-commit-unsynced 261117-151125-7ccde6. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
+| A1 | at strata:ffab229e: build-test 261120-121525-807eb8, crash 261120-121525-6eba6d; file_set_test (N4) 261120-121539-279b80; `--fails-without` sealed-unchecked 261120-121551-0fb5d1. Before: green at strata:6a230264: build-test 261120-105301-a74923, crash 261120-105301-679f4f. Before: queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183. At strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837 queued, crash 261120-090009-2638c9 green; `--fails-without` B10 append-on-retry 261120-090021-8a66ab killed, B10 sync-retry 261120-090036-a032b9. Before: queued at strata:c99372d4 (one directory per group, deferred create): crash 261117-151220-79527f, TSan 261117-151216-02b5d8, `--fails-without` unlink-at-apply 261117-151147-f41da5, append-on-retry 261117-151150-e05468, sync-retry 261117-151154-9b1fbc, first-commit-unsynced 261117-151125-7ccde6. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
 | A2 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` B10 append-on-retry (voters, file-set ENOSPC once) 261120-090029-d472af. Before: queued at strata:c99372d4: append-on-retry (voters) 261117-151158-264d61, admission-waits 261117-151202-2b5482. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
-| A3 | queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183, named cases (`group_voters_test 0`: superseded_entry, forward_once, stalled_leader) 261120-092530-8e1d75, failed-open 261120-092537-7db5a0; `--fails-without` no-hand-off 261120-092539-50196a, superseded-ignored 261120-092541-cd604b, resubmit-superseded 261120-092544-0e1fd2, forward-twice 261120-092546-475273, failed-open-keeps-row 261120-092548-bda1ed. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. |
-| A4 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` read-skips-probe (anchor repointed) 261120-090043-0b4a03. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
-| A5 (part) | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9 (ctest `group_lifetime` runs `reopen`: closed in the host's table, no live turn-log record, in-process reopen, restart). Before: queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
+| A3 | at strata:ffab229e: build-test 261120-121525-807eb8, named cases with `stalled_follower_elected` (C1) 261120-121535-6b10fe; `--fails-without` handoff-leader-only 261120-121542-01253e, no-hand-off (anchor moved) 261120-121544-aeb1f7; reviewer's probe rerun at 274fc243 261120-114759-d6b42f (exit 0). Before: green at strata:6a230264: build-test 261120-105301-a74923, crash 261120-105301-679f4f. Before: queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183, named cases (`group_voters_test 0`: superseded_entry, forward_once, stalled_leader) 261120-092530-8e1d75, failed-open 261120-092537-7db5a0; `--fails-without` no-hand-off 261120-092539-50196a, superseded-ignored 261120-092541-cd604b, resubmit-superseded 261120-092544-0e1fd2, forward-twice 261120-092546-475273, failed-open-keeps-row 261120-092548-bda1ed. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. |
+| A4 | at strata:ffab229e: build-test 261120-121525-807eb8, `held` (host sees applied below the held strata write, N1) 261120-121538-1d9cc7; `--fails-without` applied-before-write 261120-121549-49be3a. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` read-skips-probe (anchor repointed) 261120-090043-0b4a03. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
+| A5 | at strata:ffab229e: build-test 261120-121525-807eb8 (ctest `group_lifetime`: points with late calls after a close, C2; reopen in its closed term), points 261120-121536-1b02bc; `--fails-without` no-closed-mark 261120-121545-005bf5, checkpoints-overlap (anchor moved) 261120-121547-534c19; close_race_probe rerun 261120-121553-724c76. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9 (ctest `group_lifetime` runs `reopen`: closed in the host's table, no live turn-log record, in-process reopen, restart). Before: queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
 | A6 (part) | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9 (footprint ok locally: closed 2,945 B, destroyed 194 B). Before: Queued at strata:88d72629 (schedulers warmed; open groups fenced before destroy): build-test 261117-220121-0d17ad, crash 261117-220122-3683cd, `--fails-without` cold-schedulers 261117-220123-40de8b, size breakdown 261117-220126-1624db. At 47e7f140: build-test red 261117-174709-007299 (64 B, the chore queue: Doing, step 7); 10^4 counts 261117-174721-76cffc green. Before that, queued at strata:47e7f140 (closed and destroyed per closed group, consensus's closed row): build-test 261117-174709-007299, crash 261117-174709-c75fb1, counts at 10^4 with 1,000 closed (light, 60 min) 261117-174721-76cffc, strict 500 261117-174725-f04c3b and 1,000 261117-174730-8a0b8c (10 closes each), `--fails-without` destroy-keeps-member 261117-174734-de0aa7; TSan 261117-174738-0c9f4a (A1-A3, A5, A10). Before: green at c99372d4 (step 5 mutants, 151206 counts, 3cedb9 timing at 500; 6093d5 at 1,500 stopped at its cap, invalid). Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
-| A7 | blocked on detent:consensus-quiescence (planned): `group_lifetime_test reopen-turn` at strata:33230b18, gap job 261120-090052-9c8c69 (expected to fail: 5 barriers for a reopen's first write, 2 for an open group's) |
+| A7 | at strata:ffab229e (consensus b8de3b8, quiescence's Driver part): `group_lifetime_test reopen-turn` 261120-121540-67ed09 (local: 2 barriers, an open group's 2), ctest `group_lifetime_reopen_turn` in build-test 261120-121525-807eb8. Before: gap job at 33230b18 261120-090052-9c8c69 (failed as expected: 5 against 2) |
 | A8 | [decision] D113 (owner, 2026-11-17): cluster-release Q2 (a), document mode with `quorum` and `none` |
 | A9 | strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof |
-| A10 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: queued at strata:b98362b7: build-test 261117-134414-aaeddb (ctest `group_lifetime`), TSan 261117-134416-c8e692; `--fails-without` apply-on-loop 261117-134435-94dd84, capture-on-loop (TSan) 261117-134456-196914, read-on-loop (TSan) 261117-134505-949822 |
+| A10 | at strata:ffab229e: build-test 261120-121525-807eb8, points 261120-121536-1b02bc, held 261120-121538-1d9cc7. Before: TSan at strata:6a230264 261120-111836-ce9ade (reviewer's). Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: queued at strata:b98362b7: build-test 261117-134414-aaeddb (ctest `group_lifetime`), TSan 261117-134416-c8e692; `--fails-without` apply-on-loop 261117-134435-94dd84, capture-on-loop (TSan) 261117-134456-196914, read-on-loop (TSan) 261117-134505-949822 |
 | Models, rounds 1-3 | `bundle_model.py` jobs 261117-024523-dd3b4d, 261117-025944-a43484, 261117-030454-a1f4da; `verdict_model.py` 261117-024526-a92827, 261117-025949-8a87ce |
 
 ## Result
@@ -344,6 +389,21 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- Step 11, C1: re-arm whatever the role, not on `RoleChanged` (reasons in Doing).
+- C2: `close()` holds the checkpoint serializer through `Driver::close` and the teardown, so no
+  checkpoint runs between the close's covering checkpoint and its teardown.
+- A7: the closed record lives in the closed group (`closed_record()`, about 200 B, inside A6's
+  own budget for a closed group) and reaches the reopen through `config.closed`; keeping it
+  across a restart is the host's (catalog's) choice, and without it a reopen elects. A durable
+  home beside the bundle is a format question for the catalog (A6's catalog part), not built.
+- `open()` skips its loop hop when already on the loop; its contract ("on the loop") is unchanged.
+- N2 (review, recorded only): a `quorum` wait cannot be cancelled; `propose`'s token covers only
+  the placement. Xapiand's write path needs its own deadline, or propose takes the token through
+  the wait: the owner's call.
+- N5 (review, recorded only): turn_seal.hh:107's "durable when it returns" holds at journal
+  9e11713 only; recheck when the journal pin passes 7b64376 (turn-log-parity's file).
+- N4's mutant and test are cited under A1 (recovery); N1's under A4.
 
 - Step 10: test/standalone_turn_log_test.cc (outside the file set, standalone-turn-log's) changes
   t6's reopen sequences, the pin move's consequence, and nothing else; index.hh's seal() keeps
