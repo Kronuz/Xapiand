@@ -5856,8 +5856,36 @@
         "src/datetime_msgpack.cc",
         "tests/test_coverage_core_datetime.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T14:19:34",
+          "commit": "36d9890ab7432541fed614277ade06fdf5a456c1",
+          "criteria": {
+            "A1": "261120-120511-be5e6e (passed at 224c3a3b9278; only 10 merges from main since, none touching its files)",
+            "A2": "261120-081415-54bf5f (passed at f66325fbff48; only 20 merges from main since, none touching its files)",
+            "A3": "suite job 261120-081411-4fd569"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "5ac8fa724a829180721c1a26d475adc69868a27f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-081411-4fd569",
+              "level": "light",
+              "seconds": 1283.3,
+              "state": "done",
+              "what": "coverage-database check suite at 5ac8fa724a82"
+            }
+          ],
+          "final": true,
+          "from": "864da5e313fd13620614e584ed42138e5837b1f5",
+          "reason": "",
+          "tested": "36d9890ab7432541fed614277ade06fdf5a456c1"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -5865,9 +5893,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "database (schema.cc) reaches T13 coverage",
-      "updated": "2026-11-20T07:37:14",
+      "updated": "2026-11-20T14:19:52",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
     "coverage-database-t13": {
