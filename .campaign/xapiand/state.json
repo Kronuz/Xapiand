@@ -18305,7 +18305,42 @@
         "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/multicast-seeds",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T14:31:16",
+          "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "criteria": {
+            "A1": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-100345-e85866, 261120-100348-7f49a7, 261120-100354-550a87",
+            "A2": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092026-224cdc, 261120-092029-329d7f, 261120-092033-db89f5, 261120-100326-b38b03, 261120-100328-759c29, 261120-100331-e86063",
+            "A3": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092022-771814, 261120-100323-1a8e61, 261120-100339-a47bd4, 261120-100342-f417d9, 261120-100351-c74582",
+            "A4": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092039-8aa185, 261120-092042-ddf978, 261120-100334-2f2af7, 261120-100336-6d4973",
+            "A5": "`docs/mechanisms/seeds.md` in consensus, consensus:8a36958"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-111958-eba46c",
+              "level": "light",
+              "seconds": 144.7,
+              "state": "done",
+              "what": "multicast-seeds check build-test at 8801b99025ba"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "reason": "",
+          "tested": "8801b99025ba4f094e2566e7284d76b5b119a8b0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -18318,9 +18353,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T14:30:47",
+      "updated": "2026-11-20T14:31:16",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
@@ -29590,7 +29625,206 @@
       "updated": "2026-11-20T05:28:59"
     },
     "turn-log-parity": {
-      "accepted": {},
+      "accepted": {
+        "design": {
+          "at": "2026-11-20T14:32:43",
+          "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "blobs": {
+            "CMakeLists.txt": "100644:b5877040359fbe468d0e9cb52a03ec4e6c4bdb27",
+            "bench/kv/kvdriver.hh": "100644:48170df8cb9b606475e8be1d4311c111a53834cf",
+            "bench/kv/probes/rocksdb-parity/cohort.py": "100644:5c3163d604c528533a9bedf4fe411ea4a05e9597",
+            "bench/kv/probes/rocksdb-parity/d1_ladder_model.py": "100755:3972c2f5eafb68bb11a065c385b8742125c254dd",
+            "bench/kv/probes/rocksdb-parity/d4_covers_model.py": "100755:4a3d3df8a86cc5dbb8b8e0d2f4359dce36719556",
+            "bench/kv/probes/rocksdb-parity/d4_install_order_model.py": "100755:0ad6ee18c80cdd8cc431fe39d3010ddad41904be",
+            "bench/kv/probes/rocksdb-parity/d6_wake_model.py": "100755:3b9064972c0b0b473f9bee183bc6548807f8b198",
+            "bench/kv/probes/rocksdb-parity/d7_model.py": "100644:a6cb9cb3a64ed8e9b93a44f7deec0bc736c773b1",
+            "bench/kv/probes/rocksdb-parity/devbarrier.c": "100644:b53c58f4c8d4d1ab137cb4d36ee5334eda2867b0",
+            "bench/kv/probes/rocksdb-parity/handoff.cc": "100644:59490bf5f98229422f63bd63af6e0fe8e9d7b80b",
+            "bench/kv/probes/rocksdb-parity/nosync.c": "100644:606f0b90a4ca93f9cffcab6653d5daf10260b03e",
+            "bench/kv/probes/rocksdb-parity/probe-a.sh": "100755:09b509107738898d8e144ac26a13f482c998392a",
+            "bench/kv/probes/rocksdb-parity/probe-b.sh": "100755:f1d837e646cfed7e2c12e78d9d82340c115ac27c",
+            "bench/kv/probes/rocksdb-parity/probe-c.sh": "100755:93f069c6f14b0d4d42455cb45c32b1743f79d595",
+            "bench/kv/probes/rocksdb-parity/probe-d.sh": "100755:42d0becc47ee1e61606f67bf98c3ac7cb245c3d6",
+            "bench/kv/probes/rocksdb-parity/probe-e.sh": "100755:10b12a3d2d94791aa3b6e3600643b5d97c4ef1d3",
+            "bench/kv/probes/rocksdb-parity/probe-f.sh": "100755:eb4fc10e772555c68b58b4adbb48a20a5c8a8d87",
+            "bench/kv/probes/rocksdb-parity/rehome.cc": "100644:74ee2bc0719ce750dfe6e9a9f3d1b5e5c8d34fb1",
+            "bench/kv/probes/rocksdb-parity/wbytes.c": "100644:f2808b8c51961dd2b4774577d8df664418fc3bb1",
+            "docs/design/rocksdb-parity.md": "100644:f053a07f13fe4744b894382e7d53686917058e22",
+            "include/strata/core/turn_seal.hh": "100644:6621be987a850b3855615676843964eb98809d5a",
+            "test/test_barrier_cohort.cc": "100644:39bbaef76d32405eeddc994db6a0ca276bdd91f1"
+          },
+          "by": "review",
+          "commit": "68e1c6a893ebf45357d847722b08213740bf908c",
+          "criteria": "8f631ec112931fb7",
+          "diffs": {
+            "CMakeLists.txt": "5f4c15076e32dc97",
+            "bench/kv/kvdriver.hh": "42c34ec1c8ef8dba",
+            "bench/kv/probes/rocksdb-parity/cohort.py": "938b5965cf8437e0",
+            "bench/kv/probes/rocksdb-parity/d1_ladder_model.py": "f5eed463cf025464",
+            "bench/kv/probes/rocksdb-parity/d4_covers_model.py": "fbb88264adcaae93",
+            "bench/kv/probes/rocksdb-parity/d4_install_order_model.py": "24dc414965af2ff8",
+            "bench/kv/probes/rocksdb-parity/d6_wake_model.py": "2e7bc87826a114b6",
+            "bench/kv/probes/rocksdb-parity/d7_model.py": "fa1390973bb6b806",
+            "bench/kv/probes/rocksdb-parity/devbarrier.c": "a9b79adbebb4ee36",
+            "bench/kv/probes/rocksdb-parity/handoff.cc": "bdff2ba27125cdb7",
+            "bench/kv/probes/rocksdb-parity/nosync.c": "26520312ba9feb6b",
+            "bench/kv/probes/rocksdb-parity/probe-a.sh": "ef344c14859a1862",
+            "bench/kv/probes/rocksdb-parity/probe-b.sh": "186b45382f7eb492",
+            "bench/kv/probes/rocksdb-parity/probe-c.sh": "80dcce608875816b",
+            "bench/kv/probes/rocksdb-parity/probe-d.sh": "a129b38ffb020fb8",
+            "bench/kv/probes/rocksdb-parity/probe-e.sh": "ac93121196631773",
+            "bench/kv/probes/rocksdb-parity/probe-f.sh": "b9e2a0303d39a709",
+            "bench/kv/probes/rocksdb-parity/rehome.cc": "c7912bc983b49d56",
+            "bench/kv/probes/rocksdb-parity/wbytes.c": "535e3ccc90ea207e",
+            "docs/design/rocksdb-parity.md": "a2a3325f29124c45",
+            "include/strata/core/turn_seal.hh": "824a0ac253d19424",
+            "test/test_barrier_cohort.cc": "a5032d71ab0c58b1"
+          },
+          "findings": {
+            "F10": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d4_covers_model.py 11",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133243-d4f975",
+                  "level": "light",
+                  "seconds": 207.4,
+                  "state": "done",
+                  "what": "rocksdb-parity F8-F10: D4 covers/close/leave model, depth 11"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F11": {
+              "jobs": [
+                {
+                  "cmd": "bash -c '! grep -n -E \"GroupState[^.]{0,20}4|second park\" docs/design/rocksdb-parity.md && grep -n \"Parked is closed (idle-park\" docs/design/rocksdb-parity.md'",
+                  "commit": "68e1c6a893ebf45357d847722b08213740bf908c",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-143233-5fff73",
+                  "level": "none",
+                  "seconds": 0.7,
+                  "state": "done",
+                  "what": "F11: the design defines no second park (no GroupState 4, no table format change); parked is closed through idle-park"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F12": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d6_wake_model.py 14",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133245-22acfd",
+                  "level": "light",
+                  "seconds": 1.4,
+                  "state": "done",
+                  "what": "rocksdb-parity F12: D6 wake model, depth 14"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F13": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d1_ladder_model.py",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133247-a1f4a0",
+                  "level": "light",
+                  "seconds": 0.3,
+                  "state": "done",
+                  "what": "rocksdb-parity F13: D1 ladder model"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F14": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d7_model.py",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133248-df88a3",
+                  "level": "light",
+                  "seconds": 1.2,
+                  "state": "done",
+                  "what": "rocksdb-parity D7 model with the A3 large-transaction rows"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F8": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d4_covers_model.py 11",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133243-d4f975",
+                  "level": "light",
+                  "seconds": 207.4,
+                  "state": "done",
+                  "what": "rocksdb-parity F8-F10: D4 covers/close/leave model, depth 11"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F9": {
+              "jobs": [
+                {
+                  "cmd": "python3 -I bench/kv/probes/rocksdb-parity/d4_install_order_model.py 12",
+                  "commit": "e287a47b927aeb7f0c3b56faae83857e9bc4c9e7",
+                  "docs": [
+                    "docs/design/rocksdb-parity.md"
+                  ],
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-133244-e59453",
+                  "level": "light",
+                  "seconds": 5.5,
+                  "state": "done",
+                  "what": "rocksdb-parity F9: D4 install order and log wait model, depth 12"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "14ef80da59d6559afe676978a951defa30640cf4",
+          "reviewed": "",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "document-gate"
       ],
@@ -29638,7 +29872,8 @@
       "journal": "../Xapiand-wt/xapiand/turn-log-parity",
       "landed": [],
       "lenses": [
-        "durability"
+        "durability",
+        "design"
       ],
       "milestone": "",
       "needs": [],
@@ -29670,7 +29905,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T12:24:53",
+      "updated": "2026-11-20T14:32:43",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
