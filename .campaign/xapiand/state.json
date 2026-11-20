@@ -1533,6 +1533,20 @@
         "quest": "detent:consensus-quiescence"
       },
       "text": "detent:consensus-quiescence started and may change files your multicast-seeds changes (order them with --after detent:consensus-quiescence, or narrow the files); changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T09:02:53",
+      "by": "campaign detent",
+      "closed": "Glob overlap: consensus-transport works in host_transport and groups_test, multicast-seeds adds seeds* files. Both may add a test target to CMakeLists.txt and a CHANGELOG line, and the second to land merges main. The driver contract change is consumed by group-core by design.",
+      "id": "msg-170",
+      "settles": {
+        "ours": [
+          "group-core",
+          "multicast-seeds"
+        ],
+        "quest": "detent:consensus-transport"
+      },
+      "text": "detent:consensus-transport started and may change files your multicast-seeds changes (order them with --after detent:consensus-transport, or narrow the files); changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
