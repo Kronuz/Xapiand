@@ -516,6 +516,21 @@ struct Detached {
 	};
 };
 
+// Creates an index's directory; a name the filesystem refuses as illegal bytes (APFS on an unassigned code point)
+// is the request's own: errc::invalid, a 400 naming the index.
+void
+create_index_directory(const std::string& dir, const std::string& path)
+{
+	try {
+		std::filesystem::create_directories(dir);
+	} catch (const std::filesystem::filesystem_error& exc) {
+		if (exc.code() != std::errc::illegal_byte_sequence) {
+			throw;
+		}
+		throw engine::Error(engine::errc::invalid, "Invalid index name: " + path);
+	}
+}
+
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
 // strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
 [[noreturn]] void
@@ -580,7 +595,7 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 			if (!op.create) {
 				throw strata::index_not_created("No such database: " + path);
 			}
-			fs::create_directories(dir);
+			create_index_directory(dir, path);
 			io = open();
 		}
 		names_.opened(path);   // the walk lists the index from here on, so the names do (name-index D3)
