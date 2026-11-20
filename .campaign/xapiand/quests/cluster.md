@@ -105,6 +105,9 @@ Runs once, when the feature is complete and before it lands.
   clusters with different ids, CAs and tokens, on the same multicast group; neither seeds from the
   other; a token for one is refused by the other; a joiner refuses a server whose CA fingerprint
   differs from its token's.
+- A9 A node given `--token` whose cluster is not reachable never creates one (D150): it retries with
+  backoff, logs the cluster id it waits for, answers not-ready, and joins once a member appears; a
+  malformed token exits nonzero with a named error.
 
 ## May land early
 
