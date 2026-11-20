@@ -9939,7 +9939,7 @@
     "group-core": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-20T12:51:55",
+          "at": "2026-11-20T13:14:41",
           "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
           "blobs": {
             "CMakeLists.txt": "100644:bdb333ef206f9ae3fbbbea307ee54260ffd510b9",
@@ -10167,7 +10167,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T13:14:25",
+      "updated": "2026-11-20T13:14:41",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
