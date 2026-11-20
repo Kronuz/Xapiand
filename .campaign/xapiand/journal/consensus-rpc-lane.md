@@ -1,6 +1,6 @@
 # consensus-rpc-lane: journal
 
-State: review fixes built at consensus 22b979e; waiting on jobs 261120-074701-268a9a (build-test), 261120-074650-d657bc, 261120-074652-9c5498, 261120-074654-e15f02, 261120-074656-03dba7, 261120-074657-36a217, 261120-074659-a5a3bd (controls)
+State: CI fixes at consensus e1f249d (CI run 44766862421 failed calls on FreeBSD, group-full on macOS); waiting on jobs 261120-082541-e38907 (build-test), 261120-082602-299054 (rpc-shared-credit control at mutant 0a00754); pushed for CI
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
 
 ## Doing
@@ -28,6 +28,13 @@ Correctness review (`.campaign/xapiand/reviews/consensus-rpc-lane-correctness.md
   8, 8: 261120-073255-4083da, 073259-715956, 073303-5d2242, 073306-214cf2, 073309-5b931e);
   all six rerun at 22b979e.
 - Local `quiet light` runs at e7d615c: rpc, rpc_host 6/6, hello 3/3, both fuzz replays, idle pass.
+
+- CI fixes e1f249d (test only): `calls` on FreeBSD: the caller's 300 ms timer fired 14 ms late,
+  T7 extended it once, and the server's Error arrived first (caller outcome error, not cancel);
+  both are correct, so the check compares the lane's counters with each call's seen outcome.
+  `group-full` on macOS: 11 and 14 calls in a 1.5 s window, set by the runners' sleep_for
+  granularity; now 15 calls, with the stalled group's frames still undelivered at the last.
+  Local light runs 5/5 each (caller cancel, ended ok 1 cancel 2, served 3; 15 of 15, delivered 0).
 
 ## Next
 
@@ -96,6 +103,9 @@ a sender pool, separate serving and calling pools, T1-T8. This quest changes no 
   first admitted frame; the transport cannot enumerate a node's incarnations.
 - R16 A1's control is `rpc-shared-credit` (lane frames wait for the groups' credit, design T2's
   rejected shape); A3's is `rpc-one-frame`; A4's is `hello-limits-ignored`.
+
+- R17 Which end of a deadlined call ends first is a race T7 allows; tests count outcomes as seen,
+  never assume the caller's timer wins. Call-count floors are fixed counts, not time windows.
 
 - R1 Lane on Bulk, not Control or a third connection (design D1).
 - R2 "End" is a flag on Call/Body, not a sixth kind: one way to end a stream, one-frame calls.
