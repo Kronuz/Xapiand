@@ -1,13 +1,16 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-143710-c96916 261120-143711-cc6bda 261120-143713-e3c9fd 261120-143716-9444ba
+State: waiting on jobs 261120-144146-5b3dfb 261120-144148-bb326b 261120-144150-16ef0b
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
 
-Sweep at consensus:85f1968: selftest 261120-143710-c96916; smoke (3 nodes, loopback, 1ms,
-partition, quick, light) 261120-143711-cc6bda; then exclusive rows `vm.sh run --nodes 3`
-261120-143713-e3c9fd and `--nodes 5` 261120-143716-9444ba (`--for A1,A2`, after the smoke).
+Sweep at consensus:2dd22b3: selftest 261120-144146-5b3dfb; exclusive rows `vm.sh run --nodes 3`
+261120-144148-bb326b and `--nodes 5` 261120-144150-16ef0b (`--for A1,A2`). Smoke at 85f1968
+(261120-143711-cc6bda, light, 3 nodes, loopback, 1ms, partition, quick): 20 of 20 checks; held
+floor 0.71 ms against 0.07 unshaped; the cut leader reached term 3 isolated and named the term-2
+leader 1.4 s after heal, no election after it. 2dd22b3 only adds the role trace to the result
+(and the doc draft), so the smoke stands for it. Rows at 85f1968 (e3c9fd, 9444ba) cancelled.
 
 Quick dry runs of every shape at consensus:113572a (3 nodes 261120-141708-9ccd3e, 5 nodes
 261120-141710-78f9a8, light, a busy host): every check passed but the 1 ms round trip (ping
@@ -30,7 +33,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-143710-c96916; rows 261120-143713-e3c9fd (3), 261120-143716-9444ba (5) pending |
+| A1 | selftest 261120-144146-5b3dfb; rows 261120-144148-bb326b (3), 261120-144150-16ef0b (5) pending |
 | A2 | the same rows' partition-1ms history check, pending |
 | A3 | `docs/perf/netlab-consensus.md` pending |
 
