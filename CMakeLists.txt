@@ -730,7 +730,7 @@ include_directories(
 # library. Pinned on the commits analysis itself pins. The library owns the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG 297413c889fd99a182f1e9b8c1bc97bb2f2ded29)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 3efcd0faa97997acf361cf8edff97cb083e14bc8)
-FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 158c81b56a7976682672bfe1e491ffa6f219ad10)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG d72eb656163572c0c3bb0f1deb7c745b81d00a26)
 FetchContent_MakeAvailable(unicode snowball analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the

@@ -112,6 +112,7 @@ The following parameters are accepted by _Text_ fields:
 | `_spelling`                           | Feed the spelling dictionary. (The default is `false`).                                 |
 | `_ngram`                              | Index character n-grams of the words. (The default is `false`).                         |
 | `_cjk_ngram`                          | Index CJK text as unigrams and bigrams. (The default is `false`).                       |
+| `_cjk_words`                          | Index CJK text as words, split as ICU's word break iterator splits them, with no ICU. Not with `_cjk_ngram`. (The default is `false`). |
 | `_position`                           | The position number the first word of the value starts at.                              |
 
 [Snowball]: http://snowballstem.org
