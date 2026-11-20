@@ -481,3 +481,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tooling: Opus adapting v2 (evidence across merges by inputs, land --merge-main, [ci] tag, task merge).
 - Detent: started journal-idle-groups at our ask; folded 15 step quests into 4 features.
 - Light slots 22%. Quota weekly 27% (0.25%/h). Load 10. Disk 35 GiB.
+
+## 2026-11-20 09h
+- Landed: consensus-rpc-lane (consensus:e1f249d8d), APFS-name 400 (Xapiand:cadd35e17), sort cast words (Xapiand:1c8091720). The cohort-wait task merged into turn-log-parity (strata:722e481b), the first task-model merge.
+- Agents: cohort-wait 164k (Opus); RocksDB note revision 299k (Opus); quick fixes 95k and 84k (Sonnet); group-core resume 227k (Opus, handed off fresh); phrase-expansion stopped at 234k (Sonnet).
+- Started: multicast-seeds (Opus) and cluster (Opus).
+- Quota: 29% weekly, 0.27%/h. Load 21-33 on 16 CPUs; 34 GiB free (97% used).
+- Friction: stale lead watchers (pgrep self-match, a stale CI watch); an untagged A3/A4 with no passing job blocked rpc-lane's landing for about 1 h.
