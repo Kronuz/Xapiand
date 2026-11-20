@@ -10,13 +10,16 @@ branch quest/xapiand/v2-replay, `tools/replay/` (plain Python 3, ruff-clean). Ou
 
 ## Doing
 
-A1, A2, A5, A6 committed. Running `quiet light v2-replay-account` again (quests.json now keeps
-idle intervals for the simulator's driver policy).
+Lead's addition (owner direction, campaign-v3:29a5557 handoff, last section): `tools/replay/need.py`
+classifies runs no question needed beyond identical reruns; the simulator gains a "need" policy
+(unanswered questions only, evidence by declared inputs, resubmission replaces) and quest-hours
+saved against the calibrated v2 run. Running `quiet light v2-replay-need`.
 
 ## Next
 
 1. `quiet light v2-replay-simulate 30 ... replay.py simulate`; check landings and hourly queue
-   against the records (target within 10%); write docs/v3/policy-simulation.md (A3).
+   against the records; write docs/v3/policy-simulation.md (A3) with the need policy.
+2. Add the need categories to docs/v3/where-time-went.md (A2).
 
 ## Blocked on
 
@@ -59,3 +62,15 @@ pending
 - leftovers: zombies resolve `state.json` worktree paths against the home (the first pass read
   them against the cwd and flagged all 33 in-flight quests); starved exclusive jobs are reported
   apart from zombies, since nothing marks them stuck.
+- need categories (one per job, first that applies): identical rerun; quest landed or dropped
+  before it began; superseded by a newer submission of the same row at another commit before it
+  began; trial past the first two of a passing row at one commit (an upper bound: no threshold is
+  recorded, so whether the interval had cleared is unknowable); landing-time rerun (after the
+  first accept or refusal) whose changed paths miss the declared-input proxy (named paths, quest
+  file set, top-level build files and build files under those). "Criterion already evidenced" is
+  not determinable: a criterion is many rows and v2 records no verdict per criterion over time.
+
+## Messages answered
+
+- Lead, 2026-11-20 ~05:05Z (need, size and reuse): done in `tools/replay/need.py` and the
+  simulator's need policy; the "criterion already evidenced" case is not determinable (rulings).
