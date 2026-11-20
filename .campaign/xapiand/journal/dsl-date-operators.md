@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: waiting on jobs 261119-230242-705e99 (probe), 261119-230250-39622d (mutant), 261119-230243-24022b (suite) at 4ec7371e5; then ready for review
+State: waiting on jobs 261119-231648-0e48bf (probe), superseded 261119-230250-39622d: running at 4ec7371e5d69, stopped for 261119-231656-ccf359 (mutant), suite: 261119-231654-7a5c99 at e0a24ce2f890; review C1 folded: comment, docs and a pinned time/timedelta pair (C2 cases not added)
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
