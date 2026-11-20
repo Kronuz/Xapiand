@@ -8,6 +8,10 @@ spans the cluster. All of it runs on strata's replication groups, before the for
   review at Xapiand:5dc60256a (`.campaign/xapiand/reviews/cluster-release-design.md`, CHANGES);
   section 12 maps each finding to its fix. Request: owner ruling D91 (2026-11-16,
   `.campaign/xapiand/PLAN.md`), which supersedes D9's single-node release.
+- Revision 2, 2026-11-17: answers group-core's design review at strata:491a1bdc
+  (`.campaign/xapiand/reviews/group-core-design.md`, CHANGES) in D3, D4, D11, D12, D16, D18 and
+  Q10, with the review's two models extended in `cluster-release/` (section 12); and its re-check
+  (Xapiand:edb610078, B7, B8, N10-N15) in D3, D18, Q10 and quest 5's criteria.
 - Read at: Xapiand `master` `a9cfa2cba`; the Xapian-era cluster at `5a517b052^`, the parent of
   "Delete the Xapian engine and the cluster layer" (v1.0.0-alpha.9 runs the same cluster code);
   strata `main` `9bcb142e`; consensus `main` `a95847e`; journal `main` `8f3e410`; Detent `main`
@@ -51,7 +55,7 @@ built on Detent's driver quests `detent:journal-driver`, `detent:consensus-drive
 `detent:consensus-transport` and `detent:consensus-quiescence`, which start once task-wheel and
 completion-seam land. The critical path runs through those drivers, then `group-core`,
 `group-install`, `shard-groups`, `distributed-search`, `cluster-api`, `cluster-gate`, and finally
-`format-freeze`. Nine questions need the owner (section 9).
+`format-freeze`. Ten questions need the owner (section 9).
 
 ## 1. What the Xapian-era cluster did
 
@@ -149,18 +153,80 @@ the schema version, then proposes one command:
 op, id, expected version, schema version, engine::Document::serialize() bytes (wal.cc:972), blobs
 ```
 
-Every voter applies it in log order: the strata write, then the blobs pushed into its own
-`DataStorage`. The push moves from prepare (`shard.cc:754`) to apply, so blob locators are a pure
-function of the log and replicas stay digest-equal. Followers skip schema resolution and term
-generation, as the old WAL replay did. Rejected for the release: segment mode (durability-modes
-D8, D17, D18). It costs a three-voter group an estimated 0.38× to 0.43× of document mode's CPU, but
-it ships segments at every refresh and needs the sampled rebuild. The release builds only the part
-of D17's file-set mover that install needs (D16), and segment mode can arrive later per index
-without changing the command.
+Every voter applies it in log order: first the blobs pushed into its own `DataStorage`, whatever
+strata will answer, then the strata write carrying their locators. The push moves from prepare
+(`shard.cc:754`) to apply, so blob locators are a pure function of the log and replicas stay
+digest-equal. File effects and the application state's update never depend on strata's verdict:
+replay skips strata at or below its head (D16), where the verdict is no longer known, and a
+refused write whose bytes replay would add shifts every later locator in that volume
+(`verdict-gated` and `appstate-gated` in D16's model). Followers skip schema
+resolution and term generation, as the old WAL replay did. Rejected for the release: segment
+mode (durability-modes D8, D17, D18). It costs a three-voter group an estimated 0.38× to 0.43× of
+document mode's CPU, but it ships segments at every refresh and needs the sampled rebuild. The
+release builds only the part of D17's file-set mover that install needs (D16), and segment mode
+can arrive later per index without changing the command.
+
+Apply's answers (strata's ten verdicts, `index.hh:88`, and a throw) split by whether a retry can
+change them:
+
+- Retryable, per replica, position unmoved: `flush_owed`, `drain_owed` and `map_owed` run their
+  chore and apply again (document-gate D6); `no_space` stalls that replica's apply, reports it,
+  and retries when space frees; a stage-1 throw is rolled back with the position unmoved
+  (`index.hh:790-793`) and retried after the chore yields, and a third throw at one entry fences
+  the replica (`application_failed`), which repairs by install (quest 6 A3). strata 491a1bdc moves
+  the position on the allowance-path `no_space` (`index.hh:860`, `:878-880`), so its retry would
+  answer `skipped`; `strata-nospace-position` fixes that, and quest 5 lands after it
+  (`nospace-moves` in D16's model). Every file effect writes at the volume and offset the entry's
+  starting application state names (it holds the current volume's length), a blob push included,
+  so no effect appends: a failed one (ENOSPC before strata answers) stalls and retries like
+  `no_space` and rewrites the same bytes, and a retry from the entry's start is idempotent
+  (`retry-whole` passes, `append-on-retry` fails). The application state updates once, after the
+  definite answer. The capture's mark
+  (D16 step 1) is an entry like any other, so a capture, and a close, waits out `no_space` too.
+- Definite, the same on every replica, position moved: `accepted`, `version_conflict`,
+  `schema_conflict`, `fields_conflict` and `invalid`. Each is a function of the log, `invalid`'s
+  size caps included because a group's replicas share strata's `buffered_docs_cap` and
+  `lane_chunks_cap` (`index.hh:534-540`; the group sets them, never a replica). A refusal is a
+  committed no-op, and the proposer's `quorum` waiter receives it (D4). The cap `invalid` returns
+  before the move at 491a1bdc (`index.hh:822-824`); `strata-nospace-position` A4 makes it move,
+  and until then the mark covers it. `skipped` occurs only in replay.
+
+A replica stalled on `no_space` applies nothing past that entry. When it is the leader, every
+`quorum` answer of its group waits with it, since each completes at its proposer's apply (D4),
+while the followers apply on. After one election timeout of stall, with a follower applied past
+the entry, the leader transfers leadership to it (`transfer_leadership`); its own waiting answers
+end at their deadline as unknown outcomes (D8), and health reports the stall. A lone voter has no
+one to hand to: its writes wait for space and time out the same way.
+
+The leader prepares from its applied state plus its own unapplied proposals, and prepares nothing
+before it has applied through its term's first entry (Core's NoOp, `core.h:1146`): the ready
+point. Then a merge's expectations match apply in every schedule of `verdict_model.py`, so no log
+entry is wasted. A client's own condition (`if_version`) is checked at prepare, answering 409
+there as master does, and answers 409 from apply if it still fails there; `invalid` answers 400.
+Neither is submitted again.
+
+When a merge's expectations miss anyway (a check the predictor does not model, or a leader change
+before its entry applied), apply answers `version_conflict`, `fields_conflict` or
+`schema_conflict` against expectations the leader chose, and the request is submitted again
+through the write path (D8) from the original request, not the prepared command: the leader
+prepares it from the state it now has, and a proposer deposed meanwhile forwards it once to the
+leader, which then owns the answer. The forward carries the request's placement count, so the
+bound is the request's, not each leader's. A request gets at most three placements; after the third
+refusal it answers a retryable 503 with `Retry-After` (Q10), so a merge is never answered 409.
+`verdict_model.py` (two voters with their own applied state) reaches the deposed proposer's
+forward, and under every prepare rule answers every request within the bound with no false
+acknowledgement; with the ready point and pending versions it submits nothing twice.
 
 **D4. Levels.**
 
-- `ack`: `quorum` (the default, Q1) or `none` (acknowledged at `ProposalPlaced`).
+- `ack`: `quorum` (the default, Q1) or `none` (acknowledged at `ProposalPlaced`). A `quorum`
+  write completes when the proposer applies its placement (index, term) from its own `Committed`
+  stream, and its answer carries apply's verdict: success means applied, and a refusal is a 409
+  with strata's current version (Q10). Another term's entry at that index answers `superseded`,
+  a definite failure the client may retry. The stream sees every entry the proposer applies, so a
+  fast checkpoint never turns the answer into `committed()`'s `compacted` (`DRIVER.md`, "What
+  completes when"); only an install past the placement leaves it unknown (D8). A `none` write's
+  answer predates apply, so a refusal after it is silent, as its loss on a leader crash is.
 - `read`: `prefix` (any replica's last refreshed snapshot, the default) or `linearizable`, both
   as durability-modes D10 defines them (`durability-modes.md:2047-2056`). A `linearizable` read
   goes to the leader (one forward, as D8), which confirms its leadership with Core's quorum-probe
@@ -298,14 +364,29 @@ two identities, two sets of ports and two flow controls.
 - Fan-out trees, cached statistics, threshold sharing and hedging follow the release.
 
 **D11. Idle groups close.** Groups follow Xapiand's catalog: closed when idle, reopened by a frame
-or a request, quiescent in between (D97 Q4). Three rules:
+or a request, quiescent in between (D97 Q4). strata's catalog owns the lifetime of a group and its
+index together (X-POOL D1, D2: the catalog owns the index and its IO): a slot's open opens the
+index and the group, its sweep closes both, and its commit chore for a group's index
+(`catalog.hh:365-368`, `index.commit()` by default) is the group's checkpoint, so no strata commit
+of a group's index happens outside one. One idle mechanism, not a second timer per group. Four
+rules:
 
-- A group closes only after a checkpoint covers its applied position, so a closed group pins no
-  turn-log segment and write-once indexes do not grow the per-host retained log (a closed group
-  runs no timer that would checkpoint it later).
+- A group closes only after a checkpoint covers its applied position, so a closed group leaves no
+  live turn-log record and write-once indexes do not grow the per-host retained log (a closed group
+  runs no timer that would checkpoint it later). Close refuses new proposals, drains the apply
+  chore, checkpoints, and calls `Driver::close` only if the published bundle still covers applied;
+  a `Committed` range that arrived meanwhile is applied and checkpointed again first.
 - A reopened lone voter campaigns at `Start` (async-drivers D5, X5). Its term record and its first
   write share one turn, so the reopen adds no barrier beyond the write's own; R10 measures
-  first-write latency after a reopen against master.
+  first-write latency after a reopen against master. This needs `detent:consensus-quiescence`
+  (its A5), since Core persists its vote before appending its NoOp (`core.h:510`, `:1146`); the
+  group links its first `propose` before it awaits `recover`.
+- An idle open group holds no thread, timer, frame or descriptor of its own. It costs consensus's
+  per-group row (consensus-driver's idle criterion: zero threads, frames, armed timers and
+  descriptors, consensus state within 8 KiB at three voters) plus its open strata index (2
+  descriptors, the directory and owner lock, and 5,410 B of heap, strata
+  `docs/perf/small-indexes.md:276-284`) plus the group's own state, which quest 5 A6 states. A
+  closed group holds zero descriptors.
 - A node's loss costs elections only in groups that are in use. The first request to a closed
   group whose leader died pays one election, which is lazy failover.
 
@@ -327,10 +408,14 @@ A command whose encoding exceeds 1 MiB, whatever it carries, is a **chunked comm
 chunk's apply writes its bytes at its offset (`pwrite`, so replay is idempotent): a blob's bytes go
 straight into a volume of the upload's own, as master's streamed upload writes one
 (`shard.cc:1259`), and other bytes into a staging file in the shard's directory, which the final
-entry reads and deletes. Chunks carry their proposer's term; a voter that applies an entry of a
-higher term deletes the staging and the volume of every open chunked command of a lower term, and
+entry reads and retires. Chunks carry their proposer's term; a voter that applies an entry of a
+higher term retires the staging and the volume of every open chunked command of a lower term, and
 the client's upload fails, as a connection lost mid-upload fails it on master. A 16 MiB body and a
 4 GiB upload then cost 16 and 4,096 entries, each under the frame cap.
+
+Apply never unlinks: it retires a file, and the group unlinks it only after a bundle that omits it
+publishes (D16). Volume rotation and a volume's CRC32C happen only at an entry, never at a
+checkpoint or on a timer, so every replica allocates the same volumes.
 
 **D13. Migration.** No release has written strata data (D91 supersedes D9). Pre-release data
 directories that hold a WAL are not converted; users reindex or restore, as D87 ruled for
@@ -367,23 +452,69 @@ fixed at create, as before. Resharding by split follows the release (track-d D4)
 
 **D16. `DataStorage` moves with install** (the review's F1). A volume is Xapiand's file, located by
 a node-local counter and offset (`shard.cc:1100-1130`), and strata's checkpoint names only its own
-segments (`REPLICATION.md:88-92`). So:
+segments (`REPLICATION.md:88-92`). Volume numbers are a function of the log: apply allocates them
+in log order, and recovery and install set the counter from the bundle, never from the directory.
 
-- Volume numbers are a function of the log: apply allocates them in log order, and recovery and
-  install set the counter from the checkpoint, not from the directory.
-- The checkpoint bundle names an application file set beside the manifest: each volume with its
-  length at the applied position (and its CRC32C once rotated, when it becomes immutable), the
-  open chunked commands' volumes and staging files included, each synced before the manifest.
-- Recovery truncates each volume to its checkpointed length, deletes volumes the checkpoint does
-  not name, and replays the log from the applied position; the replay rewrites the bytes past it.
-- Install moves the file set on the same transfer as the segment pack: durability-modes D17's file
-  sets (`durability-modes.md:2289`), built here for install only. Rotated volumes are immutable,
-  so a retried install sends only the files the learner lacks or holds short.
+Recovery has two positions. The bundle's position P_b is where the group captured the file set.
+strata's durable head P_H is at or past it: strata committed before the bundle published, and it
+may commit again before the next one (a crash between the two, a capture Core rejects or a
+cancelled checkpoint, `driver.h:851`). strata keeps no older generation to reopen at P_b
+(`retained_predecessors = 0`, `index.hh:525`), and its open fails closed on a missing file
+(`index.hh:677-689`). So the file set replays from P_b and strata from P_H.
+
+The bundle (contract `strata:checkpoint-bundle`, consensus's application image, at most
+`application_cap`):
+
+| Field | Bytes |
+|---|---|
+| Magic and version | 8 |
+| P_b and its term, equal to the capture's `through` and `term` | 16 |
+| File count, then per file: name (relative to the group's file-set directory, no `/`), length at P_b, and CRC32C once immutable (rotated) | 4 + per file 2 + name + 8 + 1 + 4 |
+| Application state: length, then the application's opaque bytes (Xapiand: the volume counter, the current volume, the open chunked commands with their terms) | 4 + its own |
+| CRC32C of the above | 4 |
+
+It names no manifest CRC32C: under P_H ≥ P_b no recovery compares one, and install's pin carries
+the pinned manifest's (quest 6).
+
+A checkpoint, in order:
+
+1. Capture, on the apply chore between two entries: P_b is the applied position, each live file's
+   length and the application state are read there, and apply continues after it. If strata's
+   position is below P_b (the last entries had no strata operation: chunks, NoOps, membership), the
+   capture applies an empty transaction at P_b, which moves it (`index.hh:877-880`).
+2. Sync each file the bundle names and the file-set directory. A failed sync fences the replica,
+   which reopens through recovery: the kernel may have marked the pages clean, so a retried sync
+   can succeed with the bytes lost (`sync-retry` fails).
+3. Commit strata, so P_H ≥ P_b. Steps 2 and 3 may run in either order; both precede step 4.
+4. Publish through `Driver::checkpoint`; consensus may then compact the log at or below P_b.
+5. Unlink each retired file the published bundle omits (D12), then sync the directory.
+
+Recovery, on the group's chore after `Restore` only decoded the bundle on the loop:
+
+1. Open strata at P_H; fail closed if P_b > P_H (document-gate D6's cross-check).
+2. Truncate each named file to its length, failing closed when one is missing or short; delete
+   every other file in the file-set directory; sync it.
+3. Load the application state, then replay every committed entry above P_b: file effects always
+   run, and strata skips at or below P_H (`index.hh:803-806`).
+4. Serve no read until applied reaches P_H: strata's documents in (P_b, P_H] name bytes the replay
+   has not rewritten yet.
+
+A crash inside recovery repeats it; truncation and deletion converge. `bundle_model.py` checks
+these rules at every crash point of seven scripts under power loss and process crash, a second
+crash before and halfway through replay included: the rules fail at none, and each of nine
+variants that breaks one rule fails at some (section 12).
+
+Install moves the file set on the same transfer as the segment pack: durability-modes D17's file
+sets (`durability-modes.md:2289`), built here for install only. The leader sends its latest
+bundle, each named file's prefix to the bundle's length, and a segment pack pinned at its current
+manifest, at or past P_b; the learner then recovers as above. Rotated volumes are immutable, so a
+retried install sends only the files the learner lacks or holds short.
 
 Without this, a learner from D7's replace, `rf` growth or migration holds locators naming volumes
 it lacks, and two repairs in a row leave the blobs on no replica. Rejected: blobs inside strata
 (track-d D7, a non-goal for the release and the owner's call); it removes the file set but moves
-4 GiB blobs into segments.
+4 GiB blobs into segments. Rejected: replaying everything from P_H (`a1-literal` loses blob bytes
+in (P_b, P_H]), and reopening strata at P_b (no generation is retained there).
 
 **D17. RESTORE goes through the group, at every `rf`.** Master's RESTORE writes no WAL
 (`DB_DISABLE_WAL`, `search_views.cc:1687`, `handler.cc:1159`). Here the RESTORE view prepares its
@@ -399,6 +530,21 @@ write. T12 is measured on this path and stated even if it loses (quest 10 A6). R
 - Leader-built segments with an install per follower (REPLICATION.md's bulk-import command): the
   acknowledgement needs a quorum to hold the files before it commits, which is segment mode's
   machinery (durability-modes D8). It becomes RESTORE's path if segment mode lands and T12 asks.
+
+**D18. Apply leaves the loop** (async-drivers X10). The Sink applies nothing inline: it posts each
+`Committed` range to the index's chore, under the index's turn, and returns. Core holds that one
+range until the chore calls `applied` (a `post_call` back to the loop), so a slow apply delays
+only its own group. On the chore, in order per entry: file effects, the strata write (a
+retryable answer repeats only this, D3), the application state, then the group's applied
+position (published after strata's write is visible), then the `quorum` waiter of that placement
+(D4). Everything that must see a boundary
+between two entries runs on the same chore and needs no lock: the capture (D16 step 1), close's
+drain (D11), and recovery's replay. `read_applied` runs on the reader's thread against strata's
+visible state once the published position reaches the read index, so it never sees an entry's
+strata write without its file bytes. Core rejects a read before its term's first commit
+(`NotReady`, `core.h:785`) and on a step-down (`NotLeader`, `core.h:453`); the group answers both
+with a redirect (D8). Rejected: applying in the Sink (it runs inside a driver step that D7's
+budget does not bound, so one group's apply would stall every group on the loop).
 
 ## 4. What stays after the release
 
@@ -457,10 +603,13 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   (hard-state bytes).
 - 4 provides the lane's frames: method, call id, deadline, credit, and a body streamed in chunks
   under that credit (wire).
-- 5 provides the `strata::group` C++ API: the checkpoint bundle that names a manifest (applied
-  position, term, CRC32C; REPLICATION.md G6) and an application file set (name, length, CRC32C
-  when immutable; D16), `read_applied` after `Driver::read` (D4), and close after a checkpoint
-  (D11). It consumes the drivers' `Driver<Sink>` (D97 Q2).
+- 5 provides the `strata::group` C++ API: the checkpoint bundle (D16's table: P_b and its term,
+  the application file set with name, length and CRC32C when immutable, and an opaque
+  application-state section; REPLICATION.md G6), the file-set rules (retire, never unlink at
+  apply; rotation only at an entry), `quorum` completion with apply's verdict and the leader's
+  ready point (D3, D4), `read_applied` after `Driver::read` (D4), apply off the loop (D18), and
+  close after a checkpoint, with strata's catalog owning the lifetime (D11). It consumes the
+  drivers' `Driver<Sink>` (D97 Q2).
 - 6 provides install of the segment pack and the file set on one transfer (durability-modes D17's
   file sets, install only).
 - 8 provides the authority's records (one per index, bytes), their prefix scan, and its checkpoint.
@@ -494,17 +643,57 @@ cost); 15 after 14 because both edit `search_views.cc`. The changelog is also
   history fetch expressible as one method. A4: a 4 GiB streamed body crosses under the lane's
   credit while a heartbeat on the same connection keeps its gaps under the 1 s minimum election
   timeout (a job). A5: a call between two nodes that share no group (a test).
-- **5.** A1: a lone voter's create, propose, apply, checkpoint and recover through
-  `HeldCompletion` at every crash point, with an application file set in the bundle; recovery
-  replays from the manifest's applied position and the logical-content digest, file set included,
-  equals the uncrashed run (a job). A2: three voters in process: every `quorum`-acknowledged entry
-  survives any one crash, and digests are equal after every schedule (a job). A3: `ack=none`
-  completes at `ProposalPlaced` and `quorum` at commit (a test). A4: an idle open group costs
-  nothing beyond the driver's row, and a closed one zero descriptors (a measured job). A5: a
-  `read_applied` after `Driver::read` on a partitioned old leader never returns a state older than
-  a committed write; a mutant that skips the probe fails (simulation). A6: a closed group pins no
-  turn-log segment; a mutant that closes without a checkpoint fails (a test). A7: ASan, UBSan and
-  TSan.
+- **5.** Numbered as the quest file. A1: a lone voter over strata's faultfs (unsynced sectors and
+  directory entries lost) for strata, the file set and the journal host, with `HeldCompletion`
+  choosing the cut: create, propose, apply, checkpoint and recover at every crash point, the
+  windows between strata's commit and publication and between publication and the retired files'
+  unlink included, and a second crash at every point of recovery. The run covers a staging file
+  consumed above the bundle, an aborted upload, an upload open across a checkpoint, a cancelled
+  checkpoint, a strata commit outside the group, a refused write, a checkpoint right after chunks
+  or NoOps, a write whose first strata attempt answers `no_space`, a blob push that fails partway
+  with ENOSPC, and a checkpoint whose file sync fails, with the application's
+  counter, current volume and open uploads in the bundle's application state. Oracle: every
+  acknowledged command is in the recovered log, and the digest (documents with versions resolved
+  through their locators, the file set, the application state) equals a replay from empty of the
+  recovered log's committed commands; reads open only at P_H and match that replay through it.
+  Mutants, each `--fails-without`: replay the file set from P_H; unlink at apply; publish before
+  the files sync; capture inside an entry's apply; file effects gated on strata's verdict; the
+  application state gated on it; skip the capture's mark (`no-mark`); commit strata after
+  publication; append on retry; retry a failed checkpoint sync and publish (the `crash` gate
+  check, jobs). A2: three and
+  five voters in process: every `quorum`-acknowledged entry survives any one crash (two at five),
+  and digests, file sets included, are equal after every schedule; seeds and crash points stated;
+  one replica's storage budget refuses at allowance growth and its file-set write fails once with
+  ENOSPC, then both free, and digests stay equal, a mutant that appends on retry failing it (a
+  job). A3: `ack=none` completes at
+  `ProposalPlaced` and `quorum` when the proposer applies its placement, with apply's verdict;
+  with the followers' appends held, `none` completes and `quorum` does not; two merges to one id,
+  a conditional write and an invalid document with an election between, every schedule: no
+  acknowledged success refused, no merge answered 409, the conditional write's answer matches its
+  effect, the invalid one answered 400 and never submitted again, and no second submission; with a
+  predictor that misses the fields mark, every request answered within three placements (503
+  after the third), a deposed proposer's refused merge forwarded once and answered by the leader;
+  a leader stalled on `no_space` hands leadership to a follower applied past it; an election that
+  replaces an uncommitted entry answers its request `superseded`, never submitted again by the
+  group; mutants that
+  acknowledge at commit, that prepare before the ready point and that lift the bound fail
+  (tests). A4: `read_applied` after `Driver::read` on a leader partitioned away and deposed never
+  returns a state older than a committed write; mutants that skip the probe and that publish the
+  applied position before strata's write is visible fail (simulation). A5: once a group closes,
+  `TurnLog::read` finds none of its records, and a reopen recovers every acknowledged entry from
+  the bundle; a close racing a `Committed` range ends with a bundle covering applied; a mutant
+  that closes without a covering checkpoint fails (a test). A6: an idle open group holds no
+  thread, timer, frame or descriptor of its own beyond consensus's row and its open strata index;
+  memory, descriptors and idle CPU per group stated at 10^4 groups for open idle, quiescent and
+  closed groups, with a close's cost (its checkpoint's syncs); a closed group holds zero
+  descriptors; a catalog close of an idle group publishes a bundle covering applied (an
+  `exclusive` job and a test). A7: `detent:consensus-quiescence` A5's consumer check: a reopened
+  lone voter's term record and its first write share one turn, the barrier count of that write
+  equal to a write to an open group (a test counting barriers, after that quest lands). A8, A9:
+  as the quest file. A10: apply leaves the loop: with one group's apply chore held, another group
+  on the same loop proposes, commits and applies; capture against apply, close against a
+  `Committed` range and `read_applied` against apply, each with its scheduling points enumerated,
+  under TSan (tests). ASan, UBSan and TSan over the suite.
 - **6.** A1: a learner installs a 64 KiB-chunked segment pack and a file set from a pinned
   manifest, catches up and is promoted; replacement and removal pass across leader changes
   (jobs). A2: a mutant install that skips the file set fails A1's digest (`--fails-without`); a
@@ -777,6 +966,43 @@ and the root five shard entries per index (D5).
 *Recommendation: (b)*, for the many-indexes workload; it changes no format. Deferring blocks
 quest 15's defaults and R10's statement.
 
+**Q10. What a `quorum` write's answer means when apply refuses it** (D3, D4; group-core's design
+review B4, B8). A committed command can be refused at apply: a version, schema or fields
+conflict, or an invalid document. `verdict_model.py` runs two voters, each with its own applied
+state, through every schedule of two merges, a conditional write (and under (b) an invalid
+document) to one id, a commit, each voter's apply and an election: 2,520 schedules under (a),
+20,160 under (b), for each prepare rule.
+
+- (a) Total apply plus the leader's ready point: `quorum` completes at commit, and a refusal of a
+  committed command fences the replica (`application_failed`). Safe only while prepare predicts
+  every check apply makes: with the ready point and pending versions it acknowledges no refused
+  write (0 of 2,520), but a predictor that misses the fields mark acknowledges a refused write in
+  1,813 schedules and fences every replica in them, a shard outage from a prediction gap.
+- (b) The answer carries apply's verdict: `quorum` completes when the proposer applies its
+  placement, a refusal is a committed no-op on every replica, a refused merge is submitted again
+  (at most three placements, D3), a client's own failed condition answers 409 and an invalid
+  document 400. Under every prepare rule: 0 false acknowledgements, 0 fences, 0 merges answered
+  409, every request answered within the bound, the deposed proposer's forward reached (9,296
+  forwards under the fields-mark gap). The ready point and pending versions remove the extra
+  submissions (35,296 under the applied rule, 0 with both) and the answers after the bound (2,152
+  schedules under the applied rule, 1,680 under the gap, 0 with both).
+
+What a client sees, under (b): a 2xx at `quorum` means applied, never only committed, so a
+get-by-id on the leader right after it reads the write; a 409 carries strata's current version,
+answered at prepare as on master, or after commit when prepare's prediction missed; a
+merge (no `if_version`) is never answered 409, and after its third refused placement answers a
+retryable 503 with `Retry-After` (the alternative, a 409 there, breaks that rule for a conflict the
+client did not ask about); `ack=none` is answered at placement, and a refusal
+after that is silent, as its loss on a leader crash is. Each `quorum` answer also waits for the
+leader's apply of its entry, which master's PUT already does before it answers (the strata write
+is in the request). Under (a), the same, except that a missed prediction answers 2xx for a write
+that never took effect and then fences the shard.
+
+*Recommendation: (b)*, with the ready point and pending versions kept for zero re-submissions,
+and the retryable 503 after the bound. It
+is the lead's default for quest 5; it changes the reply only against this design's revision 1, not
+against master. Deferring blocks quest 5's A3 and quest 10's HTTP semantics.
+
 ## 10. Limits
 
 - **Two nodes cannot fail over writes** under any Raft design. With Q3 (a), reads continue from the
@@ -796,6 +1022,11 @@ quest 15's defaults and R10's statement.
 - **Blob locators:** replicas stay equal only while `DataStorage`'s volume allocation is a pure
   function of the log (D16). A violation would be silent, so R3's digest covers stored blobs.
 - **An upload cut by a leader change fails** and the client retries it whole (D12).
+- **A refused write's blob bytes stay in its volume** (D3): file effects run before strata's verdict,
+  so a refused stored blob leaves unreferenced bytes, the same on every replica; nothing in the
+  release reclaims them.
+- **Recovery replays from the last bundle**, not from strata's head: blob bytes in (P_b, P_H] are
+  rewritten, and reads wait for it (D16).
 - **Power loss** is tested by replay to sampled marks on Linux, prefix states only (D14); macOS
   `F_FULLFSYNC` is not covered by the VMs.
 - **One more round trip per search** for exact statistics.
@@ -812,6 +1043,7 @@ Designed, not built. Every quest's evidence is still to be produced. Review, in 
 4. D9's request lane, and the requirements to put to Detent's lead in section 8.
 5. The quest boundaries and the critical path in sections 5 and 6.
 6. The gate rows R2, R3 and R5, which decide what "works in a cluster" means.
+7. Revision 2: D3, D4, D11, D12, D16 and D18, with Q10, against group-core's design review.
 
 ## 12. Review answers
 
@@ -843,3 +1075,45 @@ The design review at Xapiand:5dc60256a, finding by finding.
 | F22 | Keepalives ride the request lane, one connection per node to the root leader | D6; quest 12 A4 |
 | F23 | The receiving node follows at most one redirect; counted | D8; quest 13 A2, A3 |
 | F24 | The scrubber is deferred: reads and installs fail closed already | Section 4; quest 6 |
+
+The group-core design review at strata:491a1bdc, finding by finding. The models are
+`cluster-release/bundle_model.py` and `cluster-release/verdict_model.py`, the review's two
+extended to these rules; each exits 0 only when the rules pass and every broken variant fails.
+
+| ID | Fix | Where |
+|---|---|---|
+| B1 | Two positions: the file set replays from P_b and strata skips at or below P_H; recovery fails closed if P_b > P_H; the capture runs on the apply chore between entries and moves strata's position to P_b; files sync and strata commits before publication; reads wait for P_H. New: file effects run whatever strata answers (`verdict-gated` fails), and an entry strata never saw cannot leave its position behind P_b (`no-mark` fails) | D3, D16, D18; quest 5 A1 |
+| B2 | Apply retires; the group unlinks after a bundle without the file publishes, then syncs the directory | D12, D16 step 5; quest 5 A1 |
+| B3 | An opaque, length-prefixed application-state section in the bundle | D16's table; contract 5 |
+| B4 | Total apply for per-replica verdicts; semantic refusals are committed no-ops whose verdict the `quorum` answer carries; the leader's ready point and pending versions; the owner's call on the reply | D3, D4, Q10; quest 5 A3 |
+| B5 | strata's catalog owns the group and index lifetime, and its commit chore is the group's checkpoint; the idle cost stated per part | D11; quest 5 A6 |
+| B6 | faultfs under strata, the file set and the journal host; a second crash inside recovery; the oracle replays the recovered log from empty | Quest 5 A1 |
+| N1 | A5 observes `TurnLog::read` and a reopen; the `close_group` guard is the lead's to route | Quest 5 A5 |
+| N2 | A7 is `detent:consensus-quiescence` A5's consumer check; the first `propose` links before `recover` is awaited | D11; quest 5 A7 |
+| N3 | A3 holds the followers' appends | Quest 5 A3 |
+| N4 | `NotReady` and `NotLeader` answer a redirect; the applied position publishes after strata's write is visible | D18; quest 5 A4 |
+| N5 | `Restore` only decodes; truncation, deletion and the strata open run on the chore | D16, recovery |
+| N6 | Rotation and CRC32C only at an entry; names relative to the file-set directory, deletion inside it | D12, D16's table |
+| N7 | Apply leaves the loop, with its interleavings | D18; quest 5 A10 |
+| N8 | A2 runs five voters with seeds and crash points stated; the journal pin is the lead's | Quest 5 A2 |
+| N9 | The bundle drops the manifest CRC32C; install's pin carries it | D16 |
+
+The re-check at Xapiand:edb610078:
+
+| ID | Fix | Where |
+|---|---|---|
+| B7 | `strata-nospace-position` keeps the position on every retryable answer, and quest 5 lands after it; a retry repeats only the strata write; a stage-1 throw retries, the third fences; D3 lists the position-moving answers | D3, D18; quest 5 A1, A2 |
+| B8 | Re-submission from the original request for leader-chosen expectations only, at most three placements, a deposed proposer forwards once, a retryable 503 after the bound (owner, Q10); the model has per-voter state | D3, Q10; quest 5 A3 |
+| N10 | `no-mark` and commit-after-publication join A1's mutants, with a checkpoint after chunks | Quest 5 A1 |
+| N11 | The mark is an entry: its retryable answers retry, so a capture and a close wait out `no_space` | D3 |
+| N12 | `invalid` is definite; replicas share strata's caps; the cap path's position is `strata-nospace-position` A4's | D3 |
+| N13 | The application state's update is verdict-independent (`appstate-gated` fails) | D3 |
+| N15 | A stalled leader holds its group's `quorum` answers; it hands leadership to a follower applied past the entry after one election timeout | D3; quest 5 A3 |
+
+The round 2 re-check at Xapiand:4f0c74bdb:
+
+| ID | Fix | Where |
+|---|---|---|
+| B10 | File effects are positional from the entry's starting application state; a failed one stalls and retries like `no_space`; a failed checkpoint sync fences | D3, D16 step 2; quest 5 A1, A2 |
+| N16 | A forwarded re-submission carries its placement count | D3 |
+| N17 | A3 answers an entry replaced by an election `superseded` | Quest 5 A3 |
