@@ -4850,6 +4850,8 @@
     "control-plane-wallclock": {
       "accepted": {},
       "after": [],
+      "base": "0ffcf731721bca4018c1eb510a7295e760dd9ef8",
+      "branch": "quest/xapiand/control-plane-wallclock",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -4871,9 +4873,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-19T17:51:18"
+      "updated": "2026-11-20T01:13:17",
+      "worktree": "../Xapiand-wt/xapiand/control-plane-wallclock"
     },
     "core-lifecycle-tests": {
       "accepted": {},
