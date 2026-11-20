@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: waiting on jobs 261120-114034-9bd410
+State: waiting on jobs RERUN_ID
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,6 +12,21 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Driver harness/coverage_e2e_server.py (groups per node flag set) + tests/test_coverage_server.cc written blind against an old binary; coverage.sh has a `server` workload and NOBUILD=1. Job 444b1a is the first coverage build (slot xapiand-coverage-server keeps build-cov: run the driver against its bin/xapiand to fix expectations, then NOBUILD=1 jobs). Baseline (coverage-areas job 8642ea): server 76.8/49.4, search_views.cc 76.3/48.9, mime_types.cc 88.2/66.0.
 
 ## Next
+
+0000. 9bd410: server 89.4% lines (2063/2308), 61.8% branches (1028/1663). Added: mime_odd, mime_short, mime_missing (node env XAPIAND_DATA_PATH with a stray/short/absent mime.types: ~11 lines) and four more multi-index refusals in edges (~6 lines): expect ~2080 lines >= 2078 (90%). Rerun id in State. Classification below.
+
+## Uncovered branch classification (from 9bd410's lcov: 307 uncovered branch points in search_views.cc 287, mime_types.cc 20; llvm's summary counts 635 of 1663, about twice as many because macro and template regions are counted separately, so use the shares, not the counts)
+
+- Reachable by an E2E scenario, about 230 of 307 (75%):
+  - per-verb macro cases (METHODS_OPTIONS in the method-override switch 27, the :verb command map 22, is_node_command 30, 3): a request per verb, each as override header, as `/t/:verb` and as `/:verb`; about 85.
+  - serialization and negotiation (ct_types per type 16, html/x-msgpack serializer, resolve_ct_type): about 25, mostly via Accept on each answer kind; the html path itself is dead (see below).
+  - request flags and parse errors (2229-2279: --pretty/--human/--echo defaults combined with the query, invalid path and query init): about 12.
+  - document paths (blob/stored GET locators 1895-1951, search hits without _id/_version, UPSERT/UPDATE of stored bodies 1073-1078, selectors 989-1023, metadata 1156-1216): about 55; need documents whose stored data lacks _id/_version and PUT/UPSERT/UPDATE of blobs of each type.
+  - streamed bodies (NDJSON bad line at the end of a chunk and mid-stream 2929-2983, STREAM mode 2911, 3006-3028 feed_whole_body, 3173-3212 admission): about 20, with raw sockets.
+  - mime.types (52-110, 20 branches): done above.
+- Needs fault injection, about 35 (11%): the restore's closing commit failing (1784-1788), an engine error other than not-found from get_mset (2171), cancelled requests (2353-2356, 3050, 3267), early end of a request body (3039-3050, 3075), a destructor/log exceptions (2772-2795), a scheduler of another host (3253), the demoted-admission cap (3141), view cancellation 503 (3260-3265), an exception after the response was emitted (3298).
+- Dead or defensive, about 40 (13%): can_preview (239-270, no caller), QUERY_FIELD_TIME/PERIOD (2512-2528, no view passes them), the html serializer (2679-2682: Accept html is answered 200 empty or 406 before it), `mime_type(selector)` for a body with no Content-Type (a body without one is read as JSON, so 972/1073/1077 never type by extension), method_token default and `method_from_string` default (536, 692, 3113), Retry-After/Content-Encoding headers (344, 353: nothing sets them), NOT_ACCEPTABLE rewrites (2712-2722).
+- Reachable without fault injection: about 75% of the uncovered branches, so 1028 + 0.75 x 635 = about 1500 of 1663 = about 90% upper bound; 80% needs about 300 more of those, mostly the per-verb macro cases and the document-path variants above.
 
 000. 8d4a2b: server 87.0 lines / 57.1 branches (2008/2308, 949/1663). Added groups edges (multi-index refusals, every Accept type, odd URLs, split/chunked RESTORE bodies) and logged_bodies (--verbosity 5, access-log body renderers); rerun 9bd410. Then: read coverage-uncovered.txt again; remaining clusters seen: select/handlers at 1073-1131 (UPSERT/UPDATE of stored blobs, selectors), 1395-1411 (index settings), 1895-1950 (document/blob GET locators), 2347-2356, 2763-2786, 3246-3271 (413 for other views), 3296-3340. If 80% branches needs fault injection (cancelled tasks, 'request body ended early', reactor-binding THROW), list them in the journal as unreachable.
 

@@ -399,6 +399,10 @@ def edges(n):
         error("%s %s" % (method, path), n.call(method, path, body), 400, "Bad Request: Method can only be used with single indexes")
     error("GET metadata over two indexes", n.call("GET", "/t,u/:mykey"), 400, "Bad Request: Method can only be used with single indexes")
     error("PUT metadata over two indexes", n.call("PUT", "/t,u/:mykey", {"a": 1}), 400, "Bad Request: Method can only be used with single indexes")
+    for method, path, body in (("GET", "/t,u/", None), ("GET", "/t,u/:", None), ("UPDATE", "/t,u/", {"a": 1}),
+                               ("RESTORE", "/t,u/", [{"_id": "x", "a": 1}])):
+        error("%s %s" % (method, path), n.call(method, path, body), 400, "Bad Request: Method can only be used with single indexes")
+    eq("HEAD over two indexes", n.call("HEAD", "/t,u/").status, 400)
     eq("COMMIT over two indexes", (n.call("COMMIT", "/t,u/").status, n.call("COMMIT", "/t,u/").body), (200, b""))
     eq("COMMIT of a document id", n.call("COMMIT", "/t,u/d1").status, 405)
     r = n.call("RESTORE", "/t,u/", [])
@@ -793,6 +797,39 @@ def tooling(n):
     status("RESTORE ?commit&echo&comments", r, 200)
 
 
+MIME_ODD = "bogus\ntypes bogus\n{\n# a comment\ntext/x-foo foo;\nimage/x-bar bar }\n baz;\n}\ntrailing\n"
+MIME_SHORT = "types {\ntext/x-foo foo;\n"
+
+
+def mime_log(n, *words):
+    """The node starts, serves, and names what it found wrong in its mime.types."""
+    r = n.call("PUT", "/m/d?commit&echo", b"payload", headers={"Content-Type": "text/x-foo"})
+    status("PUT of a stored body", r, 200)
+    r = n.call("GET", "/m/d")
+    eq("it reads back", (r.status, r.body, r.header("Content-Type")), (200, b"payload", "text/x-foo"))
+    log = open(os.path.join(n.dir, "node.log"), errors="replace").read()
+    for word in words:
+        check("the log says %r" % word, word in log, log[:400])
+
+
+@group
+def mime_odd(n):
+    """A mime.types with stray words: the known entries still type a body."""
+    mime_log(n, "Unexpected 'bogus' in mime types file", "Unexpected '}' in mime types file", "Unexpected 'trailing'" if False else "mime types file")
+
+
+@group
+def mime_short(n):
+    """A mime.types that ends before its closing brace still serves what it read."""
+    mime_log(n, "Unexpected EOF in mime types file")
+
+
+@group
+def mime_missing(n):
+    """A node whose data path has no mime.types types nothing by extension."""
+    mime_log(n, "Cannot open mime types file")
+
+
 @group
 def pretty_flags(n):
     """A node started with --pretty --human --echo --comments answers with each on."""
@@ -902,6 +939,9 @@ def flush_clients(n):
 
 
 NODES = {
+    "mime_odd": dict(mime=MIME_ODD),
+    "mime_short": dict(mime=MIME_SHORT),
+    "mime_missing": dict(mime=None),
     "pretty_flags": dict(flags=["--pretty", "--human", "--echo", "--comments"]),
     "plain_flags": dict(flags=["--no-pretty", "--no-human", "--no-echo", "--no-comments"]),
     "verbose": dict(flags=["--verbosity", "3"]),
@@ -916,8 +956,15 @@ def main():
     for fn in GROUPS:
         if ONLY and fn.__name__ not in ONLY:
             continue
-        spec = NODES.get(fn.__name__, {})
+        spec = dict(NODES.get(fn.__name__, {}))
+        mime = spec.pop("mime", False)
         node = Node(fn.__name__, **spec)
+        if mime is not False:
+            datadir = os.path.join(node.dir, "datapath")
+            os.makedirs(datadir)
+            if mime is not None:
+                open(os.path.join(datadir, "mime.types"), "w").write(mime)
+            node.env["XAPIAND_DATA_PATH"] = datadir
         t = time.time()
         before = len(failures)
         try:
