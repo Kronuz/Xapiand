@@ -18632,6 +18632,35 @@
       "updated": "2026-11-17T22:34:05",
       "worktree": ""
     },
+    "netlab-consensus": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 -I bench/netlab/selftest.py",
+          "level": "light",
+          "minutes": 30,
+          "name": "selftest"
+        }
+      ],
+      "consumes": [
+        "faultlab:netlab"
+      ],
+      "files": [
+        "bench/netlab/**",
+        "docs/perf/netlab*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "low",
+      "status": "planned",
+      "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
+      "updated": "2026-11-20T13:29:50"
+    },
     "nightly-retry": {
       "accepted": {},
       "after": [],
