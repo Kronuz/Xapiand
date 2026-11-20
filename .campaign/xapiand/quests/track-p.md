@@ -20,18 +20,9 @@ is its before/after table in `docs/perf/` and the architect's review. No entry w
 by name on strata or prospect main for these items (2026-11-08).
 
 - A1 P2: SIMD intersection of decoded blocks and galloping across blocks; SIMD rank and select in bitset blocks: a `docs/perf/` entry, kept or removed, from jobs
-- A2 P3: variable-size blocks for block-max pruning, and impact-ordered evaluation for top-k on long lists: a `docs/perf/` entry from jobs
-- A3 P4: partitioned Elias-Fano and Roaring containers as alternative block encodings, chosen per block: a `docs/perf/` entry from jobs
-- A4 P5: next-word (common-grams) positional entries for frequent word pairs, with the index-size cost: a `docs/perf/` entry from jobs
 - A5 P7: membership probes on dense terms (prospect `docs/perf/p7-membership-probes.md` exists: its verdict and review recorded): jobs
-- A6 P8: phrase prefilters, per-block summaries of frequent adjacent pairs (format 13 reserves its section kind): a `docs/perf/` entry from jobs
 - A7 P9: a cost-based planner choosing leapfrog, windows, probes or bitmap AND per clause: a `docs/perf/` entry from jobs
-- A8 P10: distributed threshold sharing across shards (after Track D's D5): a `docs/perf/` entry from jobs
-- A9 P11: count and aggregation answers from per-segment statistics and sketches where exact, extended to cross-shard plans: a `docs/perf/` entry from jobs
 - A10 P13: positions with a per-block choice among FOR, PFOR and Elias-Fano, and deltas coded against the document's length: a `docs/perf/` entry from jobs
-- A11 P14: stored fields with dictionary-trained zstd per segment and block sizes tuned for fetch latency (format 13 reserves its section kind): a `docs/perf/` entry from jobs
-- A12 P20: frozen indexes, single-node half after Phase 3's gate (strata `docs/design/frozen-index.md`), measured against the same index unfrozen and against PISA: a `docs/perf/` entry from jobs
-- A13 P21: threshold seeding, each term's k-th best score for k = 10, 100 and 1,000 stored at merge, measured against PISA (format 13's seeds, prospect `docs/perf/format13-seeds-cost.md`: its verdict recorded): jobs
 - A14 The Phase 3 committed items' gap rows: intersection and negated classes (P2, P7, P9), phrases (P8, P5), `intersection_union` (block-max WAND for nested disjunctions, review C7), frequent terms (the frontier cost, review C15, and P3), each measured against the gap it closes: jobs
 
 ## Contracts
@@ -41,6 +32,8 @@ under strata's "Formats stay open until the first release" (D30), each with fixt
 decoder fuzzing and a revert check; only the decoder's safety gets a review.
 
 ## Decisions
+
+- 2026-11-19 (lead): split. A2-A4, A6, A8, A9 and A11-A13 were never started; they move, unchanged, to quest track-p-research (one quest per item when each starts), so this quest lands A1, A5, A7, A10 and A14 and frees its files for automata and phase5.
 
 - Each item lands only with a before/after measurement and stays only if it wins (Goal 2); one that
   does not win is recorded with its numbers and removed.
