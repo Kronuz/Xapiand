@@ -33,6 +33,7 @@ ap.add_argument("--bin", default=os.path.join(os.getcwd(), "build/bin/xapiand"))
 ap.add_argument("--out", default=None)
 ap.add_argument("--chunk", type=int, default=5000)
 ap.add_argument("--port", type=int, default=0)
+ap.add_argument("--fetch-only", action="store_true", help="download, verify and extract the pinned tarball, then stop")
 a = ap.parse_args()
 ES = a.arm.startswith("es")
 procs = []
@@ -180,6 +181,8 @@ def trial(name, path, bodies, n):
 
 def med(rows, k): return statistics.median(r[k] for r in rows)
 
+if a.fetch_only:
+    print(es_home()); sys.exit(0)
 ds = datasets(); res = {"arm": a.arm, "host": platform.platform(), "trials": a.trials, "bin": None if ES else a.bin,
                         "es_version": ENV["ES_VERSION"] if ES else None, "datasets": {}}
 if not ES: print(sh(a.bin, "--version", capture_output=True, text=True).stdout.splitlines()[0], flush=True)
