@@ -5226,9 +5226,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T16:21:58",
+      "updated": "2026-11-19T17:37:59",
       "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
