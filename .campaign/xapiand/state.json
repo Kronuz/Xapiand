@@ -1502,6 +1502,23 @@
         "quest": "detent:journal-idle-groups"
       },
       "text": "detent:journal-idle-groups started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T08:08:04",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-166",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "turn-log-parity": "frees include/strata/core/turn_seal.hh, include/strata/core/merge_policy.hh, test/test_turn*, test/test_merge*, test/test_reopen*, test/test_barrier*, bench/kv/**, docs/design/rocksdb-parity.md, docs/perf/** for turn-log-parity"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "turn-log-parity"
+        ]
+      },
+      "text": "set turn-log-parity: unlocks frees include/strata/core/turn_seal.hh, include/strata/core/merge_policy.hh, test/test_turn*, test/test_merge*, test/test_reopen*, test/test_barrier*, bench/kv/**, docs/design/rocksdb-parity.md, docs/perf/** for turn-log-parity; frees include/**, test/**, bench/**, docs/perf/** for phase5"
     }
   ],
   "quests": {
@@ -5309,10 +5326,55 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T08:55:05",
+          "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "criteria": {
+            "A1": "261120-082541-e38907; fails without: 261120-073255-4083da, 261120-073303-5d2242, 261120-073309-5b931e, 261120-074650-d657bc, 261120-074656-03dba7, 261120-074659-a5a3bd, 261120-082602-299054",
+            "A2": "`rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-074701-268a9a (pending)",
+            "A3": "261120-085347-8daf82; fails without: 261120-074652-9c5498",
+            "A4": "261120-085349-81eac6; fails without: 261120-073259-715956, 261120-073306-214cf2, 261120-074654-e15f02, 261120-074657-36a217",
+            "A5": "[artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at 22b979e"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-082541-e38907",
+              "level": "light",
+              "seconds": 353.9,
+              "state": "done",
+              "what": "consensus-rpc-lane check build-test at e1f249d8d9ff"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "1c08c9fc40620c0be445069bb3b1e319aa4a28f1",
+          "later": [
+            "261120-085507-4feb50"
+          ],
+          "reason": "",
+          "tested": "e1f249d8d9ff64410f87042ba90f4c218d9ec336"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
@@ -5321,9 +5383,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T08:51:35",
+      "updated": "2026-11-20T08:55:08",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
