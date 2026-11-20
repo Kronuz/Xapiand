@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261120-065738-302256 (build-test at strata:d956c0f4); the gate report and audit are written on the existing numbers (D143)
+State: ready for review: build-test 261120-065738-302256 green at strata:d956c0f4; the lead pushes (CI sanitizers, A7) and lands
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -64,7 +64,7 @@ and 10 trials to resolve a 2% gap, so they stay ties under the A/A rule.
 
 ## Next
 
-1. Wait for build-test 261120-065738-302256 (A1, A7); the lead pushes, so CI's sanitizers
+1. build-test 261120-065738-302256 is green (A1, A7); the lead pushes, so CI's sanitizers
    (A7) run at the landing commit.
 2. For the lead: `.campaign/xapiand/reviews/document-gate-design.md` is on this branch only
    (absent on master): land it or drop it. `document-gate-durability.md` was removed here.
