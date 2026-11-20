@@ -1,6 +1,6 @@
 # http-limits: journal
 
-State: waiting on jobs 261119-184745-a5a1df 261119-184746-20a021 261119-184747-1b9b37 261119-184748-656546 261119-184750-a8f188 261119-184751-1fa0db 261119-184752-835caa 261119-184753-9d9c94 261119-184755-008ad4 261119-184756-338b54 261119-184758-5044f6 261119-184759-1a783f 261119-184800-0839ad
+State: waiting on jobs 261119-203148-8341d8 261119-203151-17d728 261119-203153-91d9b9 261119-203155-b30a44 261119-203158-bcb5b3 261119-203200-6ba93b 261119-203203-ae3b18 261119-203206-89095c 261119-203209-67492c 261119-203212-da78c0 261119-203215-9f9062 261119-203217-dbf80d 261119-203219-60fed5; Linux/FreeBSD proof is CI after the lead pushes http:aed0314
 Quest: .campaign/xapiand/quests/http-limits.md (the lead's; never edit it)
 
 ## Doing
@@ -9,13 +9,27 @@ Review http-limits-correctness (CHANGES, F1 blocking) folded in at http:e62a7e3:
 main (http:52451be), F1 fixed (http:6aff813), its tests (http:e62a7e3). Then msg from the lead:
 merged http main again for detent:http-drop-user-data (http:67ff5fe: timeouts_test's deadline
 section takes `Limits`, deferred_asio_test removed, TRANSPORT.md deferred wording dropped and F2's
-bound stated); full local build clean. All nine mutants regenerated on http:67ff5fe by
+bound stated); full local build clean. All nine mutants regenerated (now on http:aed0314) by
 `.scratch/f1-mutant/remut.py` (plumbing, no checkout), F1's as `mutant/xapiand/http-limits-f1-recheck`.
 Every job resubmitted at http:67ff5fe; fill Evidence when they finish, then ready for review.
 
+## CI at http:67ff5fe (lead's message)
+
+All 13 macOS jobs at http:67ff5fe passed; CI failed `limits` on every Linux job and FreeBSD.
+Test timing, not a defect (0 unanswered closes everywhere; [S]'s deterministic 503 case passed):
+1. [R] 0 503s: exactly 640 200s = 2 per client per round. The client's Nagle held each split
+   request's tail until the server's delayed ACK (40 ms), so every request's first byte preceded
+   the stop and its reply said close; no served connection was idle at the stop.
+2. [S] framed, TSan only: the 100 ms sleep assumed the 32 MiB reply was framed; the
+   wait_requests() check cannot tell a running handler from a pending write, and a reply framed
+   after the stop rightly said close.
+Fix http:aed0314: test client sets TCP_NODELAY (macOS plain race 3806 -> 7206 replies, 46 503s);
+[S] reads the reply's keep-alive head before stop_accepting(). Mutants regenerated on it. No Linux
+VM job route for http exists, so the Linux proof is CI on the lead's push.
+
 ## Next
 
-1. When the jobs finish: fill the Criterion rows with the http:67ff5fe jobs, set "ready for review".
+1. When the jobs finish: fill the Criterion rows with the http:aed0314 jobs, set "ready for review".
 2. Push for CI (the lead's call); A4 names CI.
 
 ## Blocked on
@@ -41,12 +55,13 @@ regenerated on http:67ff5fe); each must fail `limits_test`:
 | 261119-155953-7e73c2 | a4-header (header timeout bounds the handler): the held poll gets no reply |
 | 261119-173928-7c7cb6 | limits_test at http:e62a7e3: ok; [R] plain 40 rounds, 3806 200s, 99 503s, 0 closed unanswered |
 | 261119-173931-41b5d2 | f1-recheck at http:e62a7e3 (re-check restored): fails; [tls] [S] next request reset, [R] 29 closed unanswered |
-| 261119-184745-a5a1df | limits_test at http:67ff5fe (merged head) |
-| 261119-184746-20a021 .. 261119-184755-008ad4 | the eight A1-A4 mutants regenerated on http:67ff5fe, fails-without |
-| 261119-184756-338b54 | f1-recheck on http:67ff5fe, fails-without |
-| 261119-184758-5044f6 | TSan suite at http:67ff5fe |
-| 261119-184759-1a783f | reviewer's stop_race probe (run.sh) at http:67ff5fe: must show 0 drops |
-| 261119-184800-0839ad | campaign verify suite at http:67ff5fe |
+| 261119-184745-a5a1df .. 261119-184800-0839ad | all 13 at http:67ff5fe: passed on macOS; CI failed on Linux/FreeBSD (test timing, above) |
+| 261119-203148-8341d8 | limits_test at http:aed0314 |
+| 261119-203151-17d728 .. 261119-203209-67492c | the eight A1-A4 mutants on http:aed0314, fails-without |
+| 261119-203212-da78c0 | f1-recheck on http:aed0314, fails-without |
+| 261119-203215-9f9062 | TSan suite at http:aed0314 |
+| 261119-203217-dbf80d | reviewer's probe at http:aed0314 |
+| 261119-203219-60fed5 | campaign verify suite at http:aed0314 |
 
 | Criterion | Evidence |
 |---|---|
