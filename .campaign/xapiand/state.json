@@ -22569,7 +22569,8 @@
         "src/aggregations/aggregations.cc",
         "docs/mechanisms/geo-exact-term.md",
         "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md",
-        "tests/test_coverage_serialize.cc"
+        "tests/test_coverage_serialize.cc",
+        "tests/test_coverage_core_cast.cc"
       ],
       "history": [
         {
@@ -22600,7 +22601,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T18:04:16",
+      "updated": "2026-11-19T21:21:26",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
