@@ -62,6 +62,11 @@ suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperat
 its completion ordering stay; a turn is durable before an artifact citing it publishes; a
 single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
 
+Copy flag (Detent ruling R3, journal-double-damage at journal:cca2427): damage that no manifest names
+loses every group, loudly. A copy flag in the record format lets recovery keep the groups that write
+again after the damage; tasks 3 and 5 (record format) add it, with a test that a group rewritten after
+double damage recovers and one that is not still reports the loss.
+
 Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
 F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
 and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,
