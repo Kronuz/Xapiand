@@ -1320,6 +1320,76 @@
       "closed": "http-limits merges http main (35116b0) before its evidence; Xapiand's http pin moves with the lifecycle quests",
       "id": "msg-154",
       "text": "Detent lead: http-drop-user-data landed on http main at http:35116b0 (D127, your msg-124). Request::user_data and DeferredReply are gone; Request::deadline() is added. Xapiand's http-limits can start against it; bump your http pin when you take it. Detent takes it in pin-wave."
+    },
+    {
+      "at": "2026-11-19T21:18:40",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-peers-attempts-bound",
+      "id": "msg-155",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-peers-attempts-bound"
+      },
+      "text": "detent:consensus-peers-attempts-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-peers-attempts-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T21:23:30",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-156",
+      "items": {
+        "dsl-date-operators": "frees src/query_dsl.cc, src/query_dsl.h for dsl-date-operators"
+      },
+      "settles": {
+        "start": [
+          "dsl-date-operators"
+        ]
+      },
+      "text": "dsl-not-wrap landed: unlocks frees src/query_dsl.cc, src/query_dsl.h for dsl-date-operators"
+    },
+    {
+      "at": "2026-11-19T22:58:47",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-blocking-hold-loop",
+      "id": "msg-157",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-blocking-hold-loop"
+      },
+      "text": "detent:consensus-blocking-hold-loop started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T22:58:49",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-heal-snapshot-stall",
+      "id": "msg-158",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-heal-snapshot-stall"
+      },
+      "text": "detent:consensus-heal-snapshot-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T23:04:56",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:journal-hold-loop-required",
+      "id": "msg-159",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-hold-loop-required"
+      },
+      "text": "detent:journal-hold-loop-required started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -2199,6 +2269,93 @@
       "status": "landed",
       "title": "Remote branch cleanup triage",
       "updated": "2026-11-08T15:39:46"
+    },
+    "catalog-post-lifetime": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T22:59:19",
+          "base": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+          "blobs": {
+            "CMakeLists.txt": "100644:fb8cbe66d0602f7f4dfd8be65d83ccff99e73f8e",
+            "docs/mechanisms/catalog-delivery.md": "100644:f3a573c6aa81bbc78dbe31548904c13c9d5fb2f3",
+            "docs/mechanisms/catalog.md": "100644:931d212a56b3df7c92416b153af60b69f0d95dbd",
+            "include/strata/core/catalog.hh": "100644:21504f6c204bfa24e8704f0e9c5b0a1bc58bb0a9",
+            "test/catalog_post_lifetime_test.cc": "100644:b282049e10eed04efe25a42300afb0795fccfd1a"
+          },
+          "by": "review",
+          "commit": "765fbd3eefff51ec681eae67a7a0fc2b30d840e8",
+          "criteria": "48d9de48d32aa6d0",
+          "diffs": {
+            "CMakeLists.txt": "034db66929e27c79",
+            "docs/mechanisms/catalog-delivery.md": "5c36a27349b7f5ba",
+            "docs/mechanisms/catalog.md": "f0b435d347f19714",
+            "include/strata/core/catalog.hh": "ee74303278a0d3ee",
+            "test/catalog_post_lifetime_test.cc": "42d9f406333d493b"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" > cmake.log 2>&1 && cmake --build build-asan -j4 --target catalog_post_lifetime_test > build.log 2>&1 || { tail -30 cmake.log build.log; exit 126; }; pass=0; uaf=0; for i in 1 2 3 4 5; do ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 timeout 120 build-asan/catalog_post_lifetime_test > run$i.log 2>&1; rc=$?; [ $rc = 0 ] && pass=$((pass+1)); grep -q heap-use-after-free run$i.log && uaf=$((uaf+1)); echo \"run $i rc=$rc\"; tail -2 run$i.log; done; sed -n \"/ERROR: AddressSanitizer/,/SUMMARY/p\" run1.log | cut -c1-200 | head -40; echo \"passed $pass/5, use-after-free $uaf/5\"; [ $pass = 5 ] && exit 0; [ $uaf = 5 ] && exit 1; exit 126'",
+                  "commit": "765fbd3eefff51ec681eae67a7a0fc2b30d840e8",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-225202-ee1e10",
+                  "level": "light",
+                  "seconds": 84.5,
+                  "state": "done",
+                  "what": "A1/A2 + F2: catalog_post_lifetime (pin and failed open) x5 under ASan+UBSan"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "2a79ff60b7a8a8d7e76b616e7445c73faa5752ed",
+          "reviewed": "246bb67dedccf5fd5abb2c47f8b0f0990e4c021d",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [],
+      "base": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+      "branch": "quest/xapiand/catalog-post-lifetime",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R catalog",
+          "level": "light",
+          "minutes": 120,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/catalog.hh",
+        "test/catalog_post_lifetime_test.cc",
+        "CMakeLists.txt",
+        "docs/mechanisms/catalog-delivery.md",
+        "docs/mechanisms/catalog.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/catalog-post-lifetime",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "review",
+      "title": "Catalog delivery never posts to a torn-down scheduler",
+      "updated": "2026-11-19T22:59:19",
+      "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
     },
     "census": {
       "accepted": {},
@@ -4382,7 +4539,10 @@
         "detent:driver-witness-removal-sink",
         "detent:consensus-worker-release",
         "detent:consensus-dns-notes",
-        "detent:peers-busy-roundtrip-bound"
+        "detent:peers-busy-roundtrip-bound",
+        "detent:consensus-peers-attempts-bound",
+        "detent:consensus-blocking-hold-loop",
+        "detent:consensus-heal-snapshot-stall"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4571,7 +4731,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T17:19:40",
+      "updated": "2026-11-19T22:59:00",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -4915,6 +5075,38 @@
       "title": "database (schema.cc) reaches T13 coverage",
       "updated": "2026-11-19T00:35:37",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
+    },
+    "coverage-database-t13": {
+      "accepted": {},
+      "after": [
+        "coverage-database"
+      ],
+      "checks": [
+        {
+          "cmd": "harness/coverage.sh database",
+          "level": "light",
+          "minutes": 120,
+          "name": "coverage"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_database_*",
+        "tests/test_coverage_handler*",
+        "tests/test_coverage_wal*",
+        "tests/test_coverage_shard*",
+        "tests/test_coverage_name_index*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Database coverage reaches T13's target",
+      "updated": "2026-11-19T23:26:14"
     },
     "coverage-multivalue": {
       "accepted": {},
@@ -6405,6 +6597,8 @@
         "dsl-not-wrap",
         "serialize-validation"
       ],
+      "base": "af774aae9526b4ec0038905592e08b8fc14fe9b3",
+      "branch": "quest/xapiand/dsl-date-operators",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6417,7 +6611,8 @@
       "files": [
         "src/query_dsl.cc",
         "src/query_dsl.h",
-        "tests/test_query_dsl_date*"
+        "tests/test_query_dsl_date*",
+        "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6426,9 +6621,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-19T15:21:47"
+      "updated": "2026-11-19T23:16:31",
+      "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
     },
     "dsl-not-wrap": {
       "accepted": {
@@ -6475,19 +6671,47 @@
         "tests/test_query_dsl_not*",
         "tests/test_coverage_core_query_dsl.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T21:23:22",
+          "commit": "45d38fc401fcb67d39c139987442c95bb2556a8d",
+          "criteria": {
+            "A1": "261119-154841-203822 (passed at b3d36bcd5b20; only merges from main since); fails without: 261119-154751-976aa9",
+            "A2": "261119-154841-203822 (passed at b3d36bcd5b20; only merges from main since)",
+            "A3": "suite 261119-155154-32bbee passed; CI on the pushed branch is the lead's"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "3959a8c85c781075db276b6b4748289a1894a574",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-155154-32bbee",
+              "level": "light",
+              "seconds": 345.5,
+              "state": "done",
+              "what": "dsl-not-wrap check suite at 3959a8c85c78"
+            }
+          ],
+          "final": true,
+          "from": "66c2c0824703fdde7b7e242d7a7a15079de95430",
+          "reason": "",
+          "tested": "7fe9aee0b2b70c2925129085b4588c614e2a561a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T19:37:52",
-      "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
+      "updated": "2026-11-19T21:23:30",
+      "worktree": ""
     },
     "e2e-harness": {
       "accepted": {},
@@ -6656,19 +6880,48 @@
         "docs/src/content/docs/options.md",
         "docs/src/content/docs/changelog.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T22:23:07",
+          "commit": "621c59fc466453a0d512c6d296ea8bd16a13c075",
+          "criteria": {
+            "A1": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since)",
+            "A2": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since); fails without: 261119-164341-1d09a8, 261119-180304-eeab13",
+            "A3": "261119-180245-ed73df (passed at 3b821c009f6c; only merges from main since); fails without: 261119-164343-ac082d, 261119-180306-f79912",
+            "A4": "261119-180250-f48c78 (passed at 3b821c009f6c; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ede2230eaf21dc85162de26df123f762582d88aa",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-180250-f48c78",
+              "level": "light",
+              "seconds": 518.2,
+              "state": "done",
+              "what": "endpoint-uuid check suite at ede2230eaf21"
+            }
+          ],
+          "final": true,
+          "from": "c4afa991c60992b487e3f2a21eede787f03dd773",
+          "reason": "",
+          "tested": "fcafe7bcaaf0c7bcb06f8e5e09c54a13436e84b8"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T20:35:51",
-      "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
+      "updated": "2026-11-19T22:23:14",
+      "worktree": ""
     },
     "engine-core": {
       "accepted": {},
@@ -8040,15 +8293,15 @@
     "freebsd-exe-path": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T15:49:15",
-          "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+          "at": "2026-11-19T22:11:55",
+          "base": "9e6a0100f2b6a56c5141e5bb0f907bbcabe3003e",
           "blobs": {
             "src/main.cc": "100644:5dfe4100ed844983283468356be22837e3d2bc5b",
             "tests/test_executable_path.cc": "100644:989450e7c76c3785daee293149b8d47a88602c45"
           },
           "by": "review",
-          "commit": "72cc2d0babf1149411265a19fd5b5803bb56b8cc",
-          "criteria": "7bf6ef1d8f457b21",
+          "commit": "69cba3385a28ee663c38e93b173336efd4677a8d",
+          "criteria": "2ae539f01e8c9072",
           "diffs": {
             "src/main.cc": "79d55ee96727549d",
             "tests/test_executable_path.cc": "b09c649d1fc7b931"
@@ -8089,7 +8342,7 @@
       "risk": "normal",
       "status": "review",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T15:49:15",
+      "updated": "2026-11-19T22:11:55",
       "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
     },
     "fuzz-cpu-hour": {
@@ -8781,7 +9034,11 @@
         "strata-nospace-position",
         "document-gate",
         "detent:driver-witness-removal-sink",
-        "detent:consensus-worker-release"
+        "detent:consensus-worker-release",
+        "detent:consensus-peers-attempts-bound",
+        "detent:consensus-blocking-hold-loop",
+        "detent:consensus-heal-snapshot-stall",
+        "detent:journal-hold-loop-required"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8846,7 +9103,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T12:57:07",
+      "updated": "2026-11-19T23:05:05",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -9534,9 +9791,38 @@
         "README.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-limits",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T22:07:41",
+          "commit": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+          "criteria": {
+            "A1": "261119-203215-9f9062; fails without: 261119-155941-ca6165, 261119-155943-6f93d3, 261119-155944-5fd2a2, 261119-184746-20a021, 261119-184747-1b9b37, 261119-184748-656546, 261119-203151-17d728, 261119-203153-91d9b9, 261119-203155-b30a44",
+            "A2": "261119-203215-9f9062; fails without: 261119-155946-be3af9, 261119-155948-717b8b, 261119-184750-a8f188, 261119-184751-1fa0db, 261119-203158-bcb5b3, 261119-203200-6ba93b",
+            "A3": "261119-203215-9f9062, 261119-203148-8341d8; fails without: 261119-155949-3bb6e3, 261119-155951-43f37e, 261119-173931-41b5d2, 261119-184752-835caa, 261119-184753-9d9c94, 261119-184756-338b54, 261119-203203-ae3b18, 261119-203206-89095c, 261119-203212-da78c0",
+            "A4": "261119-203215-9f9062; fails without: 261119-155953-7e73c2, 261119-184755-008ad4, 261119-203209-67492c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-203219-60fed5",
+              "level": "light",
+              "seconds": 29.8,
+              "state": "done",
+              "what": "http-limits check suite at aed0314dbbf0"
+            }
+          ],
+          "final": true,
+          "from": "35116b04deca7c35072e8b87922e496870fc280f",
+          "reason": "",
+          "tested": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "reactor-server-composition"
@@ -9544,10 +9830,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "http: Limits, timeouts and stop_accepting",
-      "updated": "2026-11-19T16:20:02",
-      "worktree": "../http-wt/xapiand/http-limits"
+      "updated": "2026-11-19T22:07:44",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
@@ -10142,7 +10428,48 @@
       "updated": "2026-11-08T15:39:40"
     },
     "keymaker-keys": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T21:21:55",
+          "base": "6789419a97105b89f3de3a1fd108af837fa371d1",
+          "blobs": {
+            "src/metric_serialize.h": "100644:392960469fe0e369c5d2c435df01b132e906bc43",
+            "src/multivalue/keymaker.h": "100644:be4bc23b052918be36fb6688d0e21103e0b785fc",
+            "tests/test_coverage_multivalue.cc": "100644:11deccc90bb3bd1e8fe4d369b855a150ba90a8c8"
+          },
+          "by": "review",
+          "commit": "baad6cb02d9e2341d141f9db5bf963afb3aee52d",
+          "criteria": "9398c997e787f3a8",
+          "diffs": {
+            "src/metric_serialize.h": "67339b51bdb6b8b3",
+            "src/multivalue/keymaker.h": "6af9a74e6771b631",
+            "tests/test_coverage_multivalue.cc": "842c1eb86a2abff0"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 --target xapiand_test_coverage_multivalue && ./build/bin/xapiand_test_coverage_multivalue'",
+                  "commit": "fb0704f1860ed0373d4133cdea0352d13ae9d7cb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-200941-018efe",
+                  "level": "light",
+                  "seconds": 764.6,
+                  "state": "done",
+                  "what": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/. at fb0704f1860e"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "6f1cf44c83d481900514e8e52beaeb92461fa783",
+          "reviewed": "d9df2bbdaa214dbd3a732150430b4751983ad44e",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "a9012db2338a04daaa2ba85770ff6bad9434cd38",
       "branch": "quest/xapiand/keymaker-keys",
@@ -10163,15 +10490,17 @@
         "tests/test_coverage_multivalue.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T20:08:48",
+      "updated": "2026-11-19T21:21:55",
       "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
@@ -22553,7 +22882,8 @@
         "src/aggregations/aggregations.cc",
         "docs/mechanisms/geo-exact-term.md",
         "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md",
-        "tests/test_coverage_serialize.cc"
+        "tests/test_coverage_serialize.cc",
+        "tests/test_coverage_core_cast.cc"
       ],
       "history": [
         {
@@ -22584,7 +22914,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T18:04:16",
+      "updated": "2026-11-19T21:21:26",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
@@ -27567,11 +27897,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "moved to campaign-v3 (evidence complete at agent-campaign:e821a15; v3's lead re-creates it on the same branch)",
       "repo": "../agent-campaign",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Replay v2's records: where every hour went, and what policies would have done",
-      "updated": "2026-11-19T18:39:05",
+      "updated": "2026-11-19T22:05:53",
       "worktree": "../agent-campaign-wt/xapiand/v2-replay"
     },
     "wbuf-inline": {
