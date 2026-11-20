@@ -367,6 +367,7 @@ static void test_a_partitioned_uuid_index_is_pinned_by_its_key() {
 	const auto root = std::filesystem::current_path() / "uuid_pool_data";
 	std::filesystem::remove_all(root);
 	std::filesystem::create_directories(root);
+	std::filesystem::current_path(root);   // the registry opens a key relative to the process's directory
 	Endpoint::cwd = root.string() + "/";
 	opts.uuid_repr = static_cast<std::uint32_t>(UUIDRepr::vanilla);
 	opts.uuid_partition = true;
