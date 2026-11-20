@@ -5,32 +5,39 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+In April 2018 German bulk-loaded Kibana's three tutorial samples into Elasticsearch (`_bulk`) and
+Xapiand on Xapian (`:restore`) on one Mac: Elasticsearch took 7.90 s, 11.29 s and 0.08 s for
+shakespeare (111,396 docs), logs (14,005) and accounts (1,000); Xapiand took 15.09 s, 22.61 s and
+0.21 s, about 2x slower. The same files are in `~/Development/Kronuz/datasets/kibana-2018/`
+(zstd; README.md there). This quest reruns those loads on this machine today: Xapiand master on
+strata (`:restore` of `es-*.msgpack`) against a current Elasticsearch release run from its
+tarball with its bundled JDK (no Docker), one shard, no replicas, defaults otherwise, each load
+timed to its durable acknowledgment (Xapiand's commit; Elasticsearch `refresh=wait_for` or a
+following `_refresh`, stated). `docs/perf/bulk-load-rerun.md` reports docs/s per engine and dataset
+beside the 2018 column, and peak RSS and on-disk size after load.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A script `harness/bench/bulk_load.sh` downloads nothing it does not pin (the Elasticsearch
+  version and its SHA-512), starts each engine fresh, loads each dataset 5 times and prints the
+  median and spread: a dry run job at 1 trial
+- A2 [artifact] `docs/perf/bulk-load-rerun.md`: the table (2018 seconds, today's Xapiand and
+  Elasticsearch medians with spread, docs/s, peak RSS, size on disk) from `exclusive` jobs, each
+  row naming its job id, and what moved since 2018 in one paragraph with numbers
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-20: Elasticsearch runs from its official tarball on this host (no Docker, no AWS);
+  the tarball is removed after the run. Timings are `exclusive` jobs.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Everything: a benchmark and a note.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (exploration, economical, medium).
