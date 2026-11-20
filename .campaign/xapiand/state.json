@@ -3528,7 +3528,8 @@
         "docs/src/content/docs/tutorials/**",
         "CMakeLists.txt",
         "cmake/**",
-        "docs/design/cluster-membership.md"
+        "docs/design/cluster-membership.md",
+        "docs/design/cluster-membership/**"
       ],
       "history": [
         {
@@ -3629,7 +3630,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T11:50:27",
+      "updated": "2026-11-20T12:43:02",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
