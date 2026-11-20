@@ -1,6 +1,6 @@
 # document-gate: journal
 
-State: waiting on jobs 261119-165623-eec44f 261119-165631-dc03a4 261119-165631-564919 261119-165631-add0a0 261119-165631-63c793 261119-165632-abff7f 261119-165632-5fe923 261119-165632-dc968f 261119-165632-8f14ec 261119-165633-50f1f8 261119-165633-c6bdbf 261119-165633-528b91 261119-165633-0f74fd 261119-165634-78c0da 261119-165634-438cd8 261119-165634-abafdb 261119-165634-90ce4e 261119-165635-a1dd1c 261119-165657-597c2b 261119-165659-de5c70 261119-165700-a330b1 261119-165701-4be574 261119-165702-c1bb81 261119-165704-63dd29 261119-165705-96e179 261119-165706-d9da0c 261119-165707-20d6c9 261119-165709-5e305c 261119-165710-9f6292 261119-165711-9c2bc2 261119-165712-a6c262 261119-165714-acce73 261119-165715-e05e4d 261119-165716-6bc7ac 261119-165718-9eddad 261119-165719-85a4ae 261119-165720-85290b 261119-165722-afc856 261119-165723-3435c8
+State: blocked on lead: `campaign job rerun` of the A1/A7 jobs at strata:1bf96fbd was denied by the permission classifier; nothing queued at the merged head
 Quest: .campaign/xapiand/quests/document-gate.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,57 +9,77 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-2026-11-19 16:57, fresh session. strata head dd02c63d (tenx1 in run.py); main has nothing new
-(HEAD..main empty), so no merge. Every evidence job at 723a5e97 counts as other code (run.py),
-so all of it is queued again at dd02c63d; no engine code changed.
+2026-11-20 04:30, fresh session. Every dd02c63d job ended (29 done, 12 cancelled by the lead,
+msg-2). Merged main into the branch: strata:1bf96fbd (main's 6 files: catalog.hh, its test and
+mechanism notes, CMakeLists.txt, ci.yml). No header under include/ or bench/kv includes
+catalog.hh, so kv_strata's source is the one dd02c63d and 723a5e97 timed; the job identity is the
+tree, so every evidence job must run again at 1bf96fbd. First submission (the A1/A7 reruns) was
+denied by permissions; I stopped there. Ready to submit, in order, once allowed:
 
-- Read at 723a5e97 (replaced, numbers for the report): none tier passes A4 throughput on every
-  row. fits1 (5ab1f3) 1.17-2.83x faster, twox1 (bffba3) 1.80-6.27x, big1 x3 fillrandom
-  3.68-4.32x, readrandom 3.91-4.47x, seekrandom 1.03-1.34x (two of three a tie), ycsb_a
-  3.63-3.81x. Memory is the weak axis: big1 2.0-2.7x RocksDB's peak RSS; fits1 overwrite "to
-  durable" 1.12x slower. FreeBSD A6 chain passed (95f546, 2d1731, c499bc); Linux build 2db986
-  failed (exit 255, "Connection closed by remote host" after kv_strata linked, during the RocksDB
-  build); its dry and timed jobs skipped. Rerun as is; the console log was overwritten by a later
-  boot (11:07, not this quest's job), so the cause is unknown.
-- Profile 8c6f59 (1 KiB fillrandom, none, 100k records, 5 interleaved trials): at 256 MiB strata
-  260-282k ops/s vs RocksDB 331-353k (0.78x; strata writes 48 MiB, 3 segments, inside the run);
-  at 2 GiB (no flush in the run) strata 657-704k vs 331-464k (1.6x faster). Hypothesis confirmed:
-  the inline flush on the writer costs it. The sample's writer stacks are keys::encode, fuse
-  filter build and docids::encode under the flush. Not a gate row; the fix (background flush of the
-  frozen buffer on options::background) is an engine change, see Next 3.
-- Queued at dd02c63d (pins lvl-16k-lz4 / lvl-4k-none, ~/code/Kronuz/Xapiand/.scratch/xapiand/
-  document-gate/rows-dd02.sh):
-  - A1: build-test 261119-165623-eec44f; T1 200-seed sweep 165631-dc03a4; T6 sweep and t6w
-    165631-564919; kv batch test 165631-add0a0; TSan lag+served+T4+T12+T3+T8+t6w 165631-63c793;
-    batch TSan 165632-abff7f.
-  - A5: calibrate 100 B 165657-597c2b, 1 KiB 165659-de5c70.
-  - A3/A4 durable: sync1 a/b/c 165700-a330b1, 165701-4be574, 165702-c1bb81; wal1 t3
-    165704-63dd29; N-log 165705-96e179; A/A x/y 165706-d9da0c, 165707-20d6c9 (1 KiB now on
-    lvl-4k-none).
-  - A3/A4 none: fits1 a/b/c 165709-5e305c, 165710-9f6292, 165711-9c2bc2; twox1 a/b/c
-    165712-a6c262, 165714-acce73, 165715-e05e4d; big1 a/b/c 165716-6bc7ac, 165718-9eddad,
-    165719-85a4ae; tenx1 a/b/c 165720-85290b, 165722-afc856, 165723-3435c8.
-  - A6: Linux build/dry/short 165632-5fe923, -dc968f, -8f14ec; FreeBSD 165633-50f1f8,
-    -c6bdbf, -528b91.
-  - A7: fuzz manifest_log_file 165633-0f74fd, stored 165634-78c0da, manifest_log
-    165634-438cd8, command 165634-abafdb; coverage 165634-90ce4e; versions and fixtures
-    165635-a1dd1c.
+1. `campaign job rerun` of A1 (eec44f, dc03a4, 564919, add0a0, 63c793, abff7f) and A7 (0f74fd,
+   78c0da, 438cd8, abafdb, 90ce4e, a1dd1c).
+2. Strict pass, one trial per set: `.scratch/xapiand/document-gate/rows-1bf9.sh` (home checkout):
+   calibrate 100 and 1024 (5 trials, A5 rule unchanged), sync1, wal1, N-log (1 trial), fits1,
+   twox1, big1, tenx1.
+3. A6 per VM: build (light) -> dry (light, --after) -> short.sh (exclusive, --after), as the dd02
+   specs; 2 exclusive jobs, the only exclusive ones.
+
+Read at dd02c63d (trial a, exclusive; ratios strata/RocksDB, pooled with the 723a5e97 trials of
+the same engine source as the variance record; `pertrial.py` in the same scratch dir):
+
+- none tier throughput: faster in every trial of every row. fits1 1.09-2.95x (trial a), twox1
+  1.91-6.97x, big1 1.60-4.03x, tenx1 1.49-3.96x. Lowest single trial over 4: big1 seekrandom 1.03,
+  fits1 readrandom 1.06, fits1 fillseq 1.09.
+- none tier "to durable": fits1 overwrite 0.79-0.96 over 4 trials (1.13x slower, a miss);
+  fits1 ycsb_a 0.92-1.07 (tie); fits1 ycsb_f 1.00-1.34; every other row faster.
+- sync1 (A/A record 261117-055320-5ca39d: sync/1 spread 0.2-0.4%, sync/100 strata 2.3%):
+  sync/1 fillrandom 0.98-1.00 and YCSB F 0.98-0.99 over 4 trials (cv 0.4-0.6%), so strata
+  trails by 1-2% outside the A/A band; YCSB A 0.98-1.05 and sync/100 0.98-1.11 tie.
+- wal1 1.33-1.69x faster (6 trials over two commits 1.30-2.08x); to durable 0.99-1.55.
+- N-log: K=4 on 1 log 103 vs 143 ops/s (1.39x slower, 2 trials, a miss); K=1 and K=8 tie (0.96-1.00).
+- Other axes, misses: tenx1 p99 1.19-2.08x higher on fillseq, fillrandom, overwrite; tenx1 CPU
+  1.97x (fillseq) and 1.42x (overwrite) more; peak memory up to 2.3x (10x rows) and 3.4x (sync
+  1 KiB); disk 39.5x on sync/1 fillrandom, 3.7x on wal1; bytes written 36-92% more (sync).
+- A5: both pins are the fastest at dd02c63d: 100 B lvl-16k-lz4 (next lvl-4k-none 0.972),
+  1 KiB lvl-4k-none (next lvl-16k-lz4 0.980).
+- A6 rows at dd02c63d, Linux build passed this time: Linux sync1 1.36-2.02x faster, wal1
+  1.15-1.35x slower; FreeBSD sync1 1.21x faster to 1.12x slower, wal1 1.31-1.38x slower. Both
+  VMs stopped (`vm.sh status`).
+
+No row is close enough for exclusive trials to change its verdict: every throughput row clears
+1.0 in every trial; the misses (overwrite to durable, K=4, sync/1's 1-2%) hold in every trial;
+the two straddling rows (fits1 ycsb_a to durable, cv 6%; sync YCSB A, cv 3%) would need about 35
+and 10 trials to resolve a 2% gap, so they stay ties under the A/A rule.
 
 ## Next
 
-1. When the jobs end: read every row log, replace the gate report's and perf note's rows with the
-   dd02c63d ones (tenx1 is new: the 10x row on every workload), confirm both VMs stopped
-   (`vm.sh linux|freebsd status`), fill Evidence, then ready for review (durability re-accept:
-   bench/kv/run.py changed since cbf08ebf).
-2. For the lead: the branch in the home adds `.campaign/xapiand/reviews/document-gate-design.md`
+1. When submission is allowed: the three steps under Doing, at strata:1bf96fbd; record ids; wait.
+2. When they end: replace the gate report's and perf note's rows with the 1bf96fbd ones (tenx1
+   is new), fill Evidence, confirm both VMs stopped, then ready for review.
+3. For the lead: the branch in the home adds `.campaign/xapiand/reviews/document-gate-design.md`
    (absent on master) and changes `document-gate-durability.md` against master; those are the
    lead's files, left untouched.
-3. For the lead: 1 KiB fillrandom (none) runs 0.78x RocksDB because strata flushes inline on the
-   writer (profile 8c6f59). Not an A3 row, so not built here: a background flush would change the
-   engine and void every row again. Recommendation: a follow-up quest after this gate lands.
-4. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
+4. For the lead: 1 KiB fillrandom (none) runs 0.78x RocksDB at 256 MiB because strata flushes
+   inline on the writer (profile 8c6f59); a background flush is an engine change, so a follow-up
+   quest after this gate lands.
+5. Packing follow-up once Detent's journal change lands: drop `turn_records` = 1, measure wal1.
 
 ## Blocked on
+
+- 2026-11-20, permissions: `campaign job rerun <the 12 A1/A7 job ids>` was denied by the Claude
+  Code auto-mode classifier ("Destructive or Unwanted Actions"). Per the assignment I stopped and
+  submitted nothing else. Needed: permission for `campaign job rerun` and `campaign job submit`
+  on this quest, or the lead submits the three steps under Doing.
+- 2026-11-20, for the lead: A3 and A4 say "exclusive jobs"; the assignment says a strict pass
+  first and exclusive only where close. With no close row (Doing), the rows at 1bf96fbd would be
+  strict evidence. Options: (a) accept strict rows for A3/A4 (the dd02c63d exclusive rows and
+  723a5e97 trials carry the variance); (b) one exclusive trial per set after the strict pass
+  (8 jobs, 3 queued at a time). Recommendation: (a), the verdicts do not depend on the level.
+- 2026-11-20, for the lead: A4's bar (at most 1.0x time, at least 1.0x throughput) is missed by
+  clear margins, decided without more trials: fits1 overwrite to durable 1.13x slower (4 of 4
+  trials), group commit K=4 1.39x slower, sync/1 fillrandom and YCSB F 1-2% slower (outside the
+  0.2-0.4% A/A), and on the other axes tenx1 p99 and CPU, memory, disk and bytes written (Doing).
+  Whether the gate lands as a report with stated misses or waits for engine work is yours.
 
 - (ruled by the lead: option (c); backpressure built, packing waits for Detent's journal change) D107 step 1 (F1), 2026-11-17: journal cc95ba6 (= journal main) cannot carry several records
   per sealer call. `Sealer` is `optional<TurnRecord>(room, first)`, one record at the group's
@@ -110,6 +130,19 @@ so all of it is queued again at dd02c63d; no engine code changed.
 
 ## Messages
 
+- msg-2 (lead, 2026-11-19 23h, trial policy): followed. One trial per row at dd02c63d decided
+  every row; none had a trial-a margin inside its noise that more trials could resolve (Doing:
+  the misses hold in all 4 trials, the two straddling ties need 10-35 trials for a 2% gap). So
+  no trials b/c and no A/A resubmitted; the A/A record 261117-055320-5ca39d/-074989 stands. At
+  the merged head: one strict trial per set; exclusive only for the two A6 VM jobs.
+- Durability re-accept (bench/kv/run.py since cbf08ebf, commits a93f2b59 and dd02c63d): run.py
+  gained multi-trial calibration (`calibrate OUT SIZES TRIALS`, geomean of per-workload medians,
+  exit nonzero when a pinned `KV_VARIANT_<size>` trails the fastest by over 3%) and the `tenx1`
+  set (fits1's rows at big1's 10x scale). No durability tier, row definition of sync1/wal1/N-log,
+  kv_strata host, or turn-log code changed; the durability claims do not depend on it. Re-review
+  is the lead's call.
+- Merge (2026-11-20): main merged into the branch at strata:1bf96fbd, not pushed (the lead pushes).
+
 - msg (lead, F1 option (c)): built the backpressure, the lag test and mutants M-s, M-t, N1-N4;
   probe and rows queued (ids under Next 0). Packing waits for Detent's journal change.
 
@@ -133,16 +166,21 @@ so all of it is queued again at dd02c63d; no engine code changed.
 
 ## Evidence
 
+At strata:dd02c63d (done; the merged head 1bf96fbd needs them again, Doing). Cancelled by the
+lead (msg-2), not evidence: 165701-4be574, 165702-c1bb81, 165706-d9da0c, 165707-20d6c9,
+165710-9f6292, 165711-9c2bc2, 165714-acce73, 165715-e05e4d, 165718-9eddad, 165719-85a4ae,
+165722-afc856, 165723-3435c8.
+
 | Criterion | Evidence |
 |---|---|
-| A1 | At strata:dd02c63d (queued): build-test 261119-165623-eec44f; T1 200-seed sweep 261119-165631-dc03a4; T6 sweep and t6w 261119-165631-564919; kv batch test 261119-165631-add0a0; TSan lag+served+T4+T12+T3+T8+t6w 261119-165631-63c793; batch TSan 261119-165632-abff7f. Fails without (at their mutant commits): M-s 261117-122123-3b0f9a, M-t 261117-122132-b7e7f7, M-v 261117-180849-82b11b, M-r 261117-055220-ecd5d0, M-d 261117-052940-986f82, M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3, M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2, M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc, and 261116-211626-0daa5f, 261116-211632-9ff248, 261117-025010-4c8220, 261117-025013-a6cec4, 261117-025017-0b218d, 261117-025020-93f7da, 261117-025032-8fc28b, 261117-025046-ec1d6e, 261117-025050-ee8915 |
+| A1 | At strata:dd02c63d: build-test 261119-165623-eec44f; T1 200-seed sweep 261119-165631-dc03a4; T6 sweep and t6w 261119-165631-564919; kv batch test 261119-165631-add0a0; TSan lag+served+T4+T12+T3+T8+t6w 261119-165631-63c793; batch TSan 261119-165632-abff7f. Fails without (at their mutant commits): M-s 261117-122123-3b0f9a, M-t 261117-122132-b7e7f7, M-v 261117-180849-82b11b, M-r 261117-055220-ecd5d0, M-d 261117-052940-986f82, M-p 261117-033229-e6ebfc, M-q 261117-033233-7e4d9b, M-o 261117-033236-b7fbb6, M-n 261117-033244-6cd288, M-b 261117-033248-e735a3, M-j 261117-030347-7f586d, M-k 261117-030357-c294a1, M-a 261117-030405-14df88, M-c 261117-030412-4cd813, M-h 261117-030420-64cdd2, M-e 261117-025024-24bfef, M-f 261117-025028-47bf98, M-i 261117-025035-d9bfa2, M-l 261117-025039-d9b68d, M-m 261117-025043-a4a6fc, and 261116-211626-0daa5f, 261116-211632-9ff248, 261117-025010-4c8220, 261117-025013-a6cec4, 261117-025017-0b218d, 261117-025020-93f7da, 261117-025032-8fc28b, 261117-025046-ec1d6e, 261117-025050-ee8915 |
 | A2 | [artifact] strata `docs/gates/document-profile.md` (eb8437bc), "Prerequisites": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30, all ancestors of cc8ba3aa |
-| A3 | At strata:dd02c63d (queued), exclusive, pins lvl-16k-lz4 / lvl-4k-none: none tier fits1 261119-165709-5e305c, 261119-165710-9f6292, 261119-165711-9c2bc2; 2x twox1 261119-165712-a6c262, 261119-165714-acce73, 261119-165715-e05e4d; 10x big1 261119-165716-6bc7ac, 261119-165718-9eddad, 261119-165719-85a4ae and tenx1 (every fits1 workload) 261119-165720-85290b, 261119-165722-afc856, 261119-165723-3435c8; durable sync1 261119-165700-a330b1, 261119-165701-4be574, 261119-165702-c1bb81; wal1 261119-165704-63dd29; N-log 261119-165705-96e179; A/A 261119-165706-d9da0c, 261119-165707-20d6c9. tenx1 dry run 261119-054339-e1a2d2. Review probe 261117-134801-f716c7 |
-| A4 | The A3 jobs; four axes per row in strata `docs/perf/standalone-turn-log.md` and the gate report, to be replaced with the dd02c63d rows. At 723a5e97 (replaced): none tier faster on every row (fits1 1.17-2.83x, twox1 1.80-6.27x, big1 1.03-4.47x); sync ties (0.98-1.11x, a93f2b59) |
-| A5 | Calibration at strata:dd02c63d (queued), exclusive, 5 interleaved trials, a pin passing within 3% of the fastest: 100 B lvl-16k-lz4 261119-165657-597c2b; 1 KiB lvl-4k-none 261119-165659-de5c70 (re-pinned after 261118-175419-c46cd4 failed lvl-16k-lz4 at 0.970); every A3 row job runs RocksDB 11.11 pinned on it; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
-| A6 | D105, D114, at strata:dd02c63d (queued): Linux build 261119-165632-5fe923, dry 261119-165632-dc968f, sync1+wal1 261119-165632-8f14ec; FreeBSD build 261119-165633-50f1f8, dry 261119-165633-c6bdbf, sync1+wal1 261119-165633-528b91. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
-| A7 | At strata:dd02c63d (queued): fuzz stored 261119-165634-78c0da, manifest_log 261119-165634-438cd8, manifest_log_file 261119-165633-0f74fd, command 261119-165634-abafdb (3 workers x 25 min, ASan+UBSan); version rejection and fixtures 261119-165635-a1dd1c; coverage 261119-165634-90ce4e. ASan/UBSan/TSan on CI. Scale: [artifact] gate report "Scale" (strata:3cce248a) |
-| A8 | [artifact] strata `docs/gates/document-profile.md` (3cce248a): every measured row with commit, platform and jobs, the pins, the A7 checks, and the owed list |
+| A3 | At strata:dd02c63d, exclusive, one trial, pins lvl-16k-lz4 / lvl-4k-none: none tier fits1 261119-165709-5e305c, twox1 261119-165712-a6c262, big1 261119-165716-6bc7ac, tenx1 261119-165720-85290b; durable sync1 261119-165700-a330b1; wal1 261119-165704-63dd29; N-log 261119-165705-96e179. tenx1 dry run 261119-054339-e1a2d2. Variance: 723a5e97 trials 261119-054043-5ab1f3, 261119-054047-bffba3, 261119-054051-012889, 261119-054055-fde881, 261119-054058-2c1749; A/A 261117-055320-5ca39d, 261117-055327-074989. Review probe 261117-134801-f716c7 |
+| A4 | The A3 jobs; per-axis verdicts under Doing (misses: fits1 overwrite to durable 1.13x slower, K=4 1.39x slower, sync/1 1-2% slower, memory, disk, bytes written, tenx1 p99 and CPU) |
+| A5 | At strata:dd02c63d, exclusive, 5 interleaved trials, the pin fastest at both sizes: 100 B lvl-16k-lz4 261119-165657-597c2b (next 0.972); 1 KiB lvl-4k-none 261119-165659-de5c70 (next 0.980); every A3 row job runs RocksDB 11.11 on the pin; harness per strata `docs/perf/rocksdb-fairness-audit.md` |
+| A6 | D105, D114, at strata:dd02c63d: Linux build 261119-165632-5fe923, dry 261119-165632-dc968f, sync1+wal1 261119-165632-8f14ec; FreeBSD build 261119-165633-50f1f8, dry 261119-165633-c6bdbf, sync1+wal1 261119-165633-528b91. arm64: CI linux-arm64 smoke; rows owed before Phase 3R's next gate (D105) |
+| A7 | At strata:dd02c63d: fuzz stored 261119-165634-78c0da, manifest_log 261119-165634-438cd8, manifest_log_file 261119-165633-0f74fd, command 261119-165634-abafdb (3 workers x 25 min, ASan+UBSan); version rejection and fixtures 261119-165635-a1dd1c; coverage 261119-165634-90ce4e. ASan/UBSan/TSan on CI. Scale: [artifact] gate report "Scale" (strata:3cce248a) |
+| A8 | [artifact] strata `docs/gates/document-profile.md` (3cce248a): every measured row with commit, platform and jobs, the pins, the A7 checks, and the owed list; rows to be replaced with the 1bf96fbd ones |
 
 ## Result
 
@@ -154,6 +192,14 @@ T12, served; now T1, t1r, T3, T5, T7, T7b, T8, T10 too), `fuzz/fuzz_command.cc`,
 `.scratch/mutate.py` in the strata worktree).
 
 ## Rulings I made
+
+- 2026-11-20: a row needs more trials only when its pooled trials straddle 1.0 and a feasible count
+  (n = (1.96 sd / gap)^2, at most 3 jobs) resolves it; none does, so no exclusive trials. The
+  723a5e97 trials count as variance for dd02c63d: the engine source is the same (run.py only).
+- 2026-11-20: the strict pass uses 1 trial for wal1 and N-log (were 3 and 2): their margins are
+  30-100% against a cv of 7-11%. Calibration keeps 5 trials, A5's fixed rule.
+- 2026-11-20: sync/1's 1-2% deficit is a miss, not a tie: the harness's 10% tie band is wider
+  than this row's A/A (0.2-0.4%), and measurement.md counts differences against the A/A.
 
 - 2026-11-19 (fresh session): measured rows resubmitted rather than `rerun`, so their output
   directories carry dd02c63d, not the old commit; fits1 and twox1 run as three one-trial jobs
