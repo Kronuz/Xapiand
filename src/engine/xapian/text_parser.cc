@@ -246,7 +246,7 @@ text_parser_enabled()
 {
 	static const bool enabled = [] {
 		const char* value = std::getenv("XAPIAND_QUERYPARSER");
-		return value != nullptr && std::strcmp(value, "1") == 0;
+		return value == nullptr || std::strcmp(value, "0") != 0;
 	}();
 	return enabled;
 }

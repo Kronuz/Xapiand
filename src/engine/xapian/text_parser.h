@@ -32,7 +32,7 @@
 
 namespace engine::xapian {
 
-// True when XAPIAND_QUERYPARSER=1: text nodes are read by queryparser instead of Xapian.
+// True unless XAPIAND_QUERYPARSER=0: text nodes are read by queryparser instead of Xapian.
 bool text_parser_enabled();
 
 // A text node read by queryparser.

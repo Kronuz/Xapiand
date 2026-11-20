@@ -45,7 +45,7 @@ using engine::xapian::to_xapian;
 namespace text = engine::text;
 
 // Xapian's parser is the reference, whatever the environment says.
-const int unset_switch = (::unsetenv("XAPIAND_QUERYPARSER"), 0);
+const int reference_switch = (::setenv("XAPIAND_QUERYPARSER", "0", 1), 0);
 
 constexpr unsigned base = text::PHRASE | text::LOVEHATE | text::FUZZY;
 
@@ -180,6 +180,21 @@ test_nesting_is_not_recursive()
 }
 
 void
+test_nested_near_does_not_overflow()
+{
+	// Nested NEAR: Xapian's parser overflows the heap on it; the adapter parses and translates it.
+	std::string nested = "z";
+	for (int i = 0; i < 2000; ++i) {
+		nested = "(a NEAR " + nested + ")";
+	}
+	auto c = config(base | text::BOOLEAN, Op::AND);
+	auto parsed = parse_text_queryparser(nested, c);
+	REQUIRE(parsed.has_value());
+	CHECK_FALSE(parsed->failed);
+	(void)to_xapian(parsed->query);
+}
+
+void
 test_known_differences()
 {
 	// Xapian 2.0 stems a capitalized word under Stem::some; queryparser follows 2.1 and does not.
@@ -188,4 +203,4 @@ test_known_differences()
 	CHECK_EQ(adapter_reading("barack", c), xapian_reading("barack", c));
 }
 
-TEST_MAIN(test_agrees_with_xapian, test_errors_keep_their_class, test_unreadable_settings_fall_back, test_long_words_are_kept, test_nesting_is_not_recursive, test_known_differences)
+TEST_MAIN(test_agrees_with_xapian, test_errors_keep_their_class, test_unreadable_settings_fall_back, test_long_words_are_kept, test_nesting_is_not_recursive, test_nested_near_does_not_overflow, test_known_differences)

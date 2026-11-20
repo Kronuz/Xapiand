@@ -752,7 +752,7 @@ FetchContent_MakeAvailable(unicode snowball analysis)
 
 # queryparser: the query-string parser the engine seam's text node will use. It pins analysis
 # itself; the pin above is declared first and wins. The A/B build (XAPIAND_QP_AB) compares its
-# tree with Xapian's parser on every text query; XAPIAND_QUERYPARSER=1 runs on its tree.
+# tree with Xapian's parser on every text query; XAPIAND_QUERYPARSER=0 falls back to Xapian's parser.
 FetchContent_Declare(queryparser GIT_REPOSITORY https://github.com/Kronuz/queryparser.git GIT_TAG 4e14ccdf41c4554e224da4f514affaccb766fff9)
 FetchContent_MakeAvailable(queryparser)
 
