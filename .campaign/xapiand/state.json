@@ -23821,11 +23821,12 @@
       "provides": [
         "xapiand:shard-map"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Shards across nodes: routing, members, replicas, linearizable reads",
-      "updated": "2026-11-18T02:55:59"
+      "updated": "2026-11-20T05:26:44"
     },
     "shard-rpc": {
       "accepted": {},
