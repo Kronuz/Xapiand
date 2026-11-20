@@ -8,8 +8,8 @@ expiring certificates and a lost quorum, with no key ever handled by an operator
   (D154) and the token on the run command (D157, replacing D153's `join`), and closes D150 to D152.
   Read at Xapiand `6e7ae7926`, consensus `e1f249d` and `64dbb06`, and pki `70a3b76`, under the
   trusted-cluster threat model.
-- Models, extended from the review's: `docs/design/cluster-membership/m7_admission.py` and
-  `m9_survivor.py` (jobs below).
+- Models, extended from the review's: `docs/design/cluster-membership/m7_admission.py` (job
+  `261120-125807-e2b893`) and `m9_survivor.py` (job `261120-125810-f56d46`).
 
 ## Abstract
 
