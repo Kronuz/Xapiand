@@ -21430,20 +21430,49 @@
         "tests/**",
         "references/host.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/queue-drain-throughput",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T01:23:59",
+          "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "criteria": {
+            "A1": "261120-004854-a85314; fails without: 261119-181752-2d57bb, 261119-201532-834039",
+            "A2": "261120-004854-a85314",
+            "A3": "261120-004854-a85314; fails without: 261119-181755-3c70de, 261119-201535-340225",
+            "A4": "261120-004855-db9849"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 tests/run.py -j 4",
+              "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-004854-a85314",
+              "level": "light",
+              "seconds": 462.8,
+              "state": "done",
+              "what": "queue-drain-throughput check tests at ad0308431e2b"
+            }
+          ],
+          "final": true,
+          "from": "63cc071130b5a4acf44647945f3d4fdaefd67abc",
+          "reason": "",
+          "tested": "ad0308431e2b5a8a7c176f36317aa0a625386a4c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../agent-campaign",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Keep light slots busy around exclusive drains",
-      "updated": "2026-11-20T01:16:41",
-      "worktree": "../agent-campaign-wt/xapiand/queue-drain-throughput"
+      "updated": "2026-11-20T01:24:04",
+      "worktree": ""
     },
     "reactor-server-composition": {
       "accepted": {
