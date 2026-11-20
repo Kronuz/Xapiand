@@ -192,9 +192,13 @@ int http_call(const std::string& method, const std::string& path, const std::str
 
 // A JSON reply as a MsgPack.
 MsgPack json_of(const std::string& reply) {
-	rapidjson::Document rdoc;
-	json_load(rdoc, reply);
-	return MsgPack(rdoc);
+	try {
+		rapidjson::Document rdoc;
+		json_load(rdoc, reply);
+		return MsgPack(rdoc);
+	} catch (const std::exception&) {
+		return MsgPack();
+	}
 }
 
 // The value of a reply's field, as named or with the prefix the response may give it ("#items", "_schema");
@@ -274,9 +278,69 @@ int main() {
 	for (const auto& prop : props) {
 		for (const auto& val : vals) {
 			const auto r = call("PUT", "/pr/" + std::to_string(++n), "{\"f\":{\"_type\":\"text\",\"" + prop + "\":" + val + "}}");
-			std::printf("R %s %s -> %d %s\n", prop.c_str(), val.c_str(), r.status, r.status == 200 || r.status == 201 ? "" : message_of(r).c_str());
+			std::printf("R %s %s -> %d %s\n", prop.c_str(), val.c_str(), r.status, r.status / 100 == 2 ? "" : message_of(r).c_str());
 		}
 	}
+	const std::vector<std::pair<std::string, std::string>> docs = {
+		{"PUT /ty/1", R"({"v":"2020-01-02"})"}, {"PUT /ty/2", R"({"v":"10:30"})"}, {"PUT /ty/3", R"({"v":"+01:30"})"}, {"PUT /ty/4", R"({"v":"1.5e3"})"},
+		{"PUT /ty/5", R"({"v":[1,"a"]})"}, {"PUT /ty/6", R"({"v":{"_type":"geo","_point":{"_latitude":1,"_longitude":2}}})"},
+		{"PUT /ty/7", R"({"v":{"_point":{"_latitude":1,"_longitude":2}}})"}, {"PUT /ty/8", R"({"v":{"_value":5,"_type":"positive"}})"},
+		{"PUT /ty/9", R"({"v":{"_value":"abc","_type":"keyword"}})"}, {"PUT /ty/10", R"({"v":{"_value":"abc","_type":"string"}})"},
+		{"PUT /ty/11", R"({"v":{"_value":"2020-01-01","_type":"date"}})"}, {"PUT /ty/12", R"({"v":{"_value":"x","_type":"nope"}})"},
+		{"PUT /ty/13", R"({"v":{"_type":"object","w":{"_type":"integer","_value":3}}})"}, {"PUT /ty/14", R"({"v":{"_type":"array","_value":[1,2]}})"},
+		{"PUT /ty/15", R"({"v":{"_type":"foreign/object","_value":"x"}})"}, {"PUT /ty/16", R"({"v":{"_type":"uuid","_value":"550e8400-e29b-41d4-a716-446655440000"}})"},
+		{"PUT /ty/17", R"({"v":{"_type":"timedelta","_value":"+01:00"}})"}, {"PUT /ty/18", R"({"v":{"_type":"time","_value":"01:00"}})"},
+		{"PUT /ty/19", R"({"v":{"_type":"datetime","_value":"2020-01-01T00:00:00"}})"}, {"PUT /ty/20", R"({"v":{"_type":"boolean","_value":"true"}})"},
+		{"PUT /ty/21", R"({"v":{"_type":"floating","_value":"1.5"}})"}, {"PUT /ty/22", R"({"v":{"_type":"integer","_value":"7"}})"},
+		{"PUT /ty/23", R"({"v":{"_type":"text","_value":5}})"}, {"PUT /ty/24", R"({"v":{"_type":"term","_value":"Abc Def"}})"},
+		{"PUT /ty/25", R"({"v":{"_type":"geo","_value":"POINT(1 2)"}})"}, {"PUT /ty/26", R"({"v":{"_type":"geo","_value":{"_type":"circle","_latitude":1,"_longitude":2,"_radius":10}}})"},
+		{"PUT /ty/27", R"({"v":{"_type":"geo","_value":{"_type":"polygon","_points":[[1,1],[1,2],[2,2]]}}})"}, {"PUT /ty/28", R"({"v":{"_type":"geo","_value":"x"}})"},
+		{"PUT /ty/29", R"({"v":{"_type":"geo","_value":{"_type":"nope"}}})"}, {"PUT /ty/30", R"({"v":{"_type":"integer","_value":"x"}})"},
+		{"PUT /ty/31", R"({"v":{"_type":"integer","_value":1.5}})"}, {"PUT /ty/32", R"({"v":{"_type":"integer","_value":18446744073709551615}})"},
+		{"PUT /ty/33", R"({"v":{"_type":"positive","_value":-1}})"}, {"PUT /ty/34", R"({"v":{"_type":"date","_value":"bad"}})"},
+		{"PUT /ty/35", R"({"v":{"_type":"time","_value":"bad"}})"}, {"PUT /ty/36", R"({"v":{"_type":"uuid","_value":"bad"}})"},
+		{"PUT /ty/37", R"({"v":{"_type":"boolean","_value":"maybe"}})"}, {"PUT /ty/38", R"({"v":{"_type":"floating","_value":"x"}})"},
+		{"PUT /ty/39", R"({"_id":"abc","a":1})"}, {"PUT /ty/40", R"({"_id":5,"a":1})"}, {"PUT /ty/41", R"({"_id":1.5})"}, {"PUT /ty/42", R"({"_id":[1]})"},
+		{"PUT /ty/43", R"({"_version":5})"}, {"PUT /ty/44", R"({"_data":1})"}, {"PUT /ty/45", R"({"_meta":{"a":1}})"}, {"PUT /ty/46", R"({"_endpoint":"x"})"},
+		{"PUT /ty/47", R"({"a":{"_script":"_doc.b = 1"}})"}, {"PUT /ty/48", R"({"_script":"_doc.c = 2"})"}, {"PUT /ty/49", R"({"_script":"bad("})"},
+		{"PUT /ty/50", R"({"_script":{"_name":"s1","_body":"_doc.c = 2"}})"}, {"PUT /ty/51", R"({"_script":{"_body":"return 1"}})"},
+		{"PUT /ty/52", R"({"x":{"_type":"object","_dynamic":false,"y":1}})"}, {"PUT /ty/53", R"({"x":{"y":1}})"}, {"PUT /ty/54", R"({"x.y":1})"}, {"PUT /ty/55", R"({"x.y.z":{"q":1}})"},
+		{"PUT /ty/56", R"({"":1})"}, {"PUT /ty/57", R"({"a b":1})"}, {"PUT /ty/58", R"({"_a":1})"}, {"PUT /ty/59", R"({"a.":1})"}, {"PUT /ty/60", R"({"é":1})"},
+	};
+	for (const auto& d : docs) {
+		const auto sp = d.first.find(' ');
+		probe(d.first.substr(0, sp), d.first.substr(sp + 1), d.second);
+	}
+	probe("GET", "/ty/");
+	probe("GET", "/ty/?pretty");
+	probe("GET", "/ty/_search?q=v:abc");
+	probe("GET", "/ty/_search", R"({"_query":{"v":{"_in":[1,2]}}})");
+	probe("GET", "/ty/_count");
+	probe("GET", "/ty/1?volatile");
+	probe("PATCH", "/ty/1", R"([{"op":"add","path":"/z","value":1}])");
+	probe("PATCH", "/ty/1", R"([{"op":"replace","path":"/nope","value":1}])");
+	probe("PATCH", "/ty/1", R"([{"op":"bogus"}])");
+	probe("UPDATE", "/ty/1", R"({"z":2})");
+	probe("UPDATE", "/ty/1", R"({"_script":"_doc.z = _doc.z + 1"})");
+	probe("UPSERT", "/ty/99", R"({"z":2})");
+	probe("UPDATE", "/ty/1", R"({"v":{"_op":"add","_value":1}})");
+	probe("UPDATE", "/ty/4", R"({"v":{"_op":"incr","_value":1}})");
+	probe("DELETE", "/ty/1");
+	probe("DELETE", "/ty/1");
+	probe("GET", "/ty/1");
+	probe("HEAD", "/ty/2");
+	probe("DELETE", "/ty/");
+	probe("GET", "/ty/");
+	probe("PUT", "/sc/", R"({"_schema":{"a":{"_type":"integer"},"b":{"_type":"text","_language":"en"}}})");
+	probe("GET", "/sc/");
+	probe("PUT", "/sc/1", R"({"a":"x"})");
+	probe("PUT", "/sc/2", R"({"a":1,"b":"The running dogs","c":{"d":[1,2,3]}})");
+	probe("GET", "/sc/");
+	probe("PUT", "/sc/", R"({"_schema":{"a":{"_type":"text"}}})");
+	probe("PUT", "/sc/", R"({"_schema":"x"})");
+	probe("PUT", "/sc/", R"({"_schema":{"_type":"foreign/object"}})");
+	probe("PUT", "/sc/", R"({"_schema":{"_strict":true,"_dynamic":false}})");
+	probe("PUT", "/sc/3", R"({"zz":1})");
 	if (testh::failures != 0) {
 		return 1;
 	}
