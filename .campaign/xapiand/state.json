@@ -10408,11 +10408,12 @@
         "http-halfclose"
       ],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "Xapiand takes http's half-close fix",
-      "updated": "2026-11-18T20:32:34"
+      "updated": "2026-11-20T05:27:22"
     },
     "hunt-lua-fetch": {
       "accepted": {},
