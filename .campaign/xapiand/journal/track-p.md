@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261119-165425-f30bdd 261119-165432-b1efdc 261119-165438-2cf08a 261119-165439-7fcba3 261119-165445-56d539 261119-165452-b53291 261119-165454-58af8f 261119-165506-ec3eaa 261119-165513-aa1969 261119-165517-69db0e 261119-165524-86e55d
+State: ready for review
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,32 +18,29 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. Session 2026-11-19 (resumed, fresh context): main unchanged (prospect:0aad777; origin/main has
-   only a CI commit), no merge. P7 landing jobs all passed; 9088e8 recorded in
-   `docs/perf/p7-exclusion.md` (prospect:162b5d0, docs only): five negated rows 0.39-0.79, short
-   `TOP_10` 0.80, intersection 2 `TOP_100` 0.989 (cleared), no class row lost; one short case
-   still loses (`+xylophone -music -film` `TOP_1000` 1.31, 28.2 -> 34.7 us: k above its 28
-   matches, nothing to prune). Untested fix idea: keep the generic loop when hits collected plus
-   the term's df cannot reach k.
-   Stale evidence resubmitted at prospect:2ce63ac with `--for` tags (same scripts and levels):
-   A5 mutant 3 f30bdd (--fails-without); A7 ctest b1efdc, A/B 2cf08a, engines 7fcba3 (exclusive);
-   A10 ctest 56d539, micro b53291, index 58af8f, idx-p13 rebuild ec3eaa (light, untagged) then
-   A/B aa1969 and engines 69db0e (exclusive, after ec3eaa); A14 gap rows at head 86e55d
-   (exclusive; builds `.scratch/bin/head-2ce63ac`, serve vs Lucene/Tantivy, every class).
-   `campaign verify track-p`: build-test reused (ecb275, docs-only since).
-   Next: read each job; for A10/A7 confirm the verdicts still hold (numbers in the docs' tables
-   need no change unless they move); write A14's gap table (negated rows vs Tantivy at head)
-   into `p7-exclusion.md`'s Against-Tantivy paragraph; paste the brief's Evidence table.
-1. Disk: host at 96% (43 GB free); idx-p13 (1.1 GB) is rebuilt for the reruns: remove it after.
+0. Session 2026-11-20: every rerun read and recorded at prospect:0792dae (docs only): P13 rerun
+   section in `p13-positions.md` (verdict holds), P9 rerun section in `p9-planner.md` (removal
+   holds by the replication rule, see Rulings), A14 gap table in `p7-exclusion.md`. idx-p13 removed
+   (disk 96%); `.scratch/p13/index-variant.sh` rebuilds it (light, about 4 min).
+1. Waiting on the lead's correctness reviewer; branch not pushed (lead's instruction this session).
+
+## Review notes (for the correctness reviewer)
+
+The only code on the branch is P7 bit 1 (`exclusion_scorer::collect_top_k` in
+`include/prospect/search.hh`, prospect:bd60f39) and its tests; P2, P9 and P13 are removed and live
+as patches in `docs/perf/`. Probe: (1) the restart path in a reordered segment's group walk, where
+excluded clauses restart from fresh copies when groups step back, across multiple segments and
+deletions (review job ccadf8 covered one multi-segment probe); (2) the probe-only-if-it-could-enter
+condition at ties on the threshold and at k above the match count (`+xylophone -music -film`
+`TOP_1000`); (3) that the measured P13 and P9 reruns ran the Nov 17 binaries named by SHA-1 in each
+doc, not rebuilds at the head (the head's only code change is off their paths); (4) the P9 verdict:
+the head rerun alone passes the keep rule on two intersection 3 rows, and the removal rests on the
+replication rule.
 
 ## Blocked on
 
-Lead: A2-A4, A6, A8, A9, A11-A13 (P3, P4, P5, P8, P10, P11, P14, P20, P21) are unstarted research
-items, not stale evidence: no rerun can give them a row, so "ready for review" cannot be set for
-the whole quest. Options: (a) land track-p for A1, A5, A7, A10, A14 now and split each remaining
-item into its own quest (the quest's Outcome: "the lead splits it into one quest per item");
-(b) keep track-p open as the umbrella and its file hold on automata and phase5. Recommend (a):
-it frees the held files and matches the quest's own rule.
+Nothing. The lead's split (quest Decisions, 2026-11-19) moved A2-A4, A6, A8, A9, A11-A13 to
+track-p-research; this quest lands A1, A5, A7, A10, A14.
 
 ## Evidence
 
@@ -53,10 +50,11 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A5 | P7 kept (bit 1), `docs/perf/p7-exclusion.md` (prospect:162b5d0): deciding A/B 261117-140026-dba8cc; at landing prospect:bd60f39: suite 261117-155032-ecb275, parity 261117-155033-63b78b, A/B 261117-155036-9088e8 (passed); mutants 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843 (caught), mutant 3 261119-165425-f30bdd (pending); prototype mutants 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027 |
-| A7 | P9 removed, `docs/perf/p9-planner.md`: reruns at head pending 261119-165432-b1efdc, 261119-165438-2cf08a, 261119-165439-7fcba3 |
-| A10 | P13 removed, `docs/perf/p13-positions.md`: reruns at head pending 261119-165445-56d539, 261119-165452-b53291, 261119-165454-58af8f, 261119-165513-aa1969, 261119-165517-69db0e |
-| A14 | gap rows at head pending 261119-165524-86e55d |
+| A1 | P2 kept in part then selector removed, `docs/perf/p2-intersection.md`: 261117-155032-ecb275 (passed at bd60f39769e0; docs-only since); fails without: 261117-121859-d28384, 261117-121924-2b4aee, 261117-121932-c981c4, 261117-121941-230f53, 261117-121958-98b81c, 261117-122016-ef86f3, 261117-122028-16a1f0, 261117-122035-212d65, 261117-123155-1419b0 |
+| A5 | P7 bit 1 kept, `docs/perf/p7-exclusion.md`: 261117-155032-ecb275, 261117-155033-63b78b, 261117-155036-9088e8 (passed at bd60f39769e0; docs-only since); fails without: 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027, 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843, 261119-165425-f30bdd |
+| A7 | P9 removed, `docs/perf/p9-planner.md`: 261119-165438-2cf08a, 261119-165439-7fcba3, 261119-165432-b1efdc (passed at 2ce63ac08bac; docs-only since) |
+| A10 | P13 removed, `docs/perf/p13-positions.md`: 261119-165452-b53291, 261119-165445-56d539 (passed at 2ce63ac08bac), 261119-225047-cd30ff, 261119-225048-424d5f, 261119-225047-032deb (passed at 162b5d0c6a7d); docs-only since |
+| A14 | gap rows at head, `docs/perf/p7-exclusion.md` "Gap rows at the quest's head": 261119-165524-86e55d (passed at 2ce63ac08bac; docs-only since) |
 
 ## Result
 
@@ -80,6 +78,15 @@ P9's rows as the losers vs Tantivy (P3's all win). Windowed top-k 1.12-1.34 (los
 0.93-0.95 at TOP_100/1000, 1.04-1.11 at TOP_10; adaptive (bit 4) 0.88-1.03 run level, per-query
 best 0.95-0.99, inside the A/A (383ae4; serve ad33ee agrees); ctest passed (2768e6). Parity clean
 for every variant. Patch `docs/perf/p9-planner.patch` is the record.
+
+Reruns at the head (prospect:0792dae records them). A10: EF per block 0.96-1.08 of main on phrase
+rows, two lose (`phrase_2` `COUNT` 1.063, `phrase_3` `TOP_10` 1.044, the latter in both runs), none
+wins; serve 0.96-1.13; indexing +3.2%; decode 2.0-2.7x PFOR's; ctest 53/53. A7: bit 4 at ALPHA 0
+clears the A/A on intersection 3 `TOP_100` (0.940) and `TOP_1000` (0.962), not replicated from the
+first run; removed. A14: head vs Tantivy, negated 3 `TOP_10` 0.969 -> 0.466, `TOP_100` 1.157 ->
+0.747; still losing: phrases 1.15-1.28, intersection 2 `TOP_1000`/`TOP_100_COUNT` 1.15/1.26,
+intersection_union 2 `TOP_1000` 1.19, negated `TOP_1000` 1.10-1.15 and negated 3 counted rows;
+head beats Lucene on every row but one crossing 1.0.
 
 ## Rulings I made
 
@@ -119,3 +126,9 @@ for every variant. Patch `docs/perf/p9-planner.patch` is the record.
   commit; it held on three rows there, but none of the screen's three, so no row replicated.
 - A7: P9 stops after three experiments (two losers and one non-winner); the remaining gap to Tantivy
   is `advance` and scoring every lead document, not evaluation order.
+- A7: the head rerun (2cf08a) alone passes the keep rule for bit 4 at ALPHA 0 on two intersection 3
+  rows; neither won in the first deciding run (383ae4), so by the replication rule applied to P2's
+  selector (a row must clear the A/A in both deciding runs) P9 stays removed. Not a third run:
+  picking a verdict by more draws of a 4-6% effect on 83 queries is not a decision rule.
+- A7, A10: the reruns re-measure the Nov 17 builds (SHA-1 in each doc); the head's only code
+  change (P7, `exclusion_scorer`) is off both paths, so no rebuild.
