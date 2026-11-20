@@ -27854,7 +27854,57 @@
       "updated": "2026-11-18T02:29:37"
     },
     "track-p": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T03:46:38",
+          "base": "0aad777095c43d29c26a7124358583f4039e3e81",
+          "blobs": {
+            ".github/workflows/ci.yml": "100644:01a06037f651f2bd50ca26fce250b1f7f99f44ef",
+            "bench/quick/classes_ab.py": "100755:7361e6e4032136891c3842bac73e85a7d73dbec0",
+            "bench/quick/p13_positions.cc": "100644:99b5bde362cdd785f169c5c48cd2a55dac792184",
+            "docs/perf/README.md": "100644:1310872341ddcc467fd2491770c49b8b2d0a80f9",
+            "docs/perf/p13-positions.md": "100644:e587fb363c688562795b98c132af950dc4063a21",
+            "docs/perf/p13-positions.patch": "100644:79d922b68dc4751bc4e400d6fd0449f5e61e9fdb",
+            "docs/perf/p2-find-in-block.patch": "100644:56f074814ab4a0286c144a587c628209a16e267c",
+            "docs/perf/p2-intersection.md": "100644:47076106889bbe76d17b190783730bd1a03edf26",
+            "docs/perf/p2-intersection.patch": "100644:4f912b7d9253ae3a707fd9538655cfa378e3aecb",
+            "docs/perf/p7-exclusion.md": "100644:0628a75e4dfb1c30f1a8a0d7a96de711added5b2",
+            "docs/perf/p7-exclusion.patch": "100644:35ea91e1037b65cf6d5c6cd82f10ab309406ccd8",
+            "docs/perf/p9-planner.md": "100644:ea4be1b4d670c9d6221b8ead62a86732fc67d4f7",
+            "docs/perf/p9-planner.patch": "100644:6629c95c76b453aa52293b763b55b36217280a80",
+            "include/prospect/search.hh": "100644:157e72cbde13062b3bc41e8ffa7004ba003004b9",
+            "test/negation_mutants.py": "100644:c7422c545ebd12d36abc02ac05308695bed7facc",
+            "test/search_test.cc": "100644:678a30ccbee84eb7b95180175a9ecd88ba2afde2"
+          },
+          "by": "review",
+          "commit": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "criteria": "15aa9730a1fbec77",
+          "diffs": {
+            "": "f33ff889023cbb26",
+            ".github/workflows/ci.yml": "96d9187fa36a8049",
+            "bench/quick/classes_ab.py": "c7c2fd2c8f0eefcc",
+            "bench/quick/p13_positions.cc": "66feb97fdd332f2e",
+            "docs/perf/README.md": "c403711fd517000d",
+            "docs/perf/p13-positions.md": "fb86b330dba033a9",
+            "docs/perf/p13-positions.patch": "b3b7867dc96efd0a",
+            "docs/perf/p2-find-in-block.patch": "a575e54a1c763f8d",
+            "docs/perf/p2-intersection.md": "e03fbd5274450236",
+            "docs/perf/p2-intersection.patch": "f4442d069a8c79f5",
+            "docs/perf/p7-exclusion.md": "e968ca143be76e99",
+            "docs/perf/p7-exclusion.patch": "8c582fd702fa816b",
+            "docs/perf/p9-planner.md": "2672b1c05721aa4c",
+            "docs/perf/p9-planner.patch": "9e6e37b8d17367da",
+            "include/prospect/search.hh": "f10146e38dd69675",
+            "test/negation_mutants.py": "3ae4265e15f19538",
+            "test/search_test.cc": "779d6f68ae7a15ca"
+          },
+          "findings": {},
+          "note": "",
+          "review": "891718f834b60ada881be0cad7df0b284b6e5316",
+          "reviewed": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "eef601dce70260cc5a58e2089168d1cf1c7a8982",
       "branch": "quest/xapiand/track-p",
@@ -27914,7 +27964,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-20T03:26:09",
+      "updated": "2026-11-20T03:46:38",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "track-p-research": {
