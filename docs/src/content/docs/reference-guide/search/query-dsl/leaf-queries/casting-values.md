@@ -110,7 +110,9 @@ The query DSL accepts these cast words: `_float`, `_positive`, `_integer`, `_boo
 `_geospatial`, answers `400` ("Invalid operator").
 
 `_date`, `_time` and `_timedelta` find the documents whose field holds that date, time or time
-delta, on a field of that type or with no field at all (the values indexed globally). A `_date`
+delta, on a field of that type or with no field at all (the values indexed globally). Globally a
+time and a time delta share one term space, so `_time` `10:30:00` also finds a `+10:30:00` time
+delta, and the reverse. A `_date`
 is cast as a `_datetime`. A `_datetime` can also be spelled as a map of `_date` and `_time`, where
 the `_date` is a map of `_year`, `_month` and `_day`; a `_date` that is text there answers `400`
 ("'_date' must be a map value"), and a value that is not a date answers `400` ("Error format in

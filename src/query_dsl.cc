@@ -661,7 +661,7 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 			break;
 	}
 
-	// `_time` and `_timedelta` name their type; guessing from the map would read them as datetimes.
+	// `_time` and `_timedelta` serialize as their own type (guessing would read a datetime); globally they share one term space.
 	std::pair<FieldType, std::string> type_ser;
 	if (obj.is_map() && obj.size() == 1 && obj.begin()->str_view() == RESERVED_TIME) {
 		type_ser = { FieldType::time, Serialize::time(Cast::time(obj.begin().value())) };

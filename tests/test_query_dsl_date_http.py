@@ -87,6 +87,9 @@ try:
     for i, doc in {
         "1": {"g": {"_type": "date", "_index": "global", "_value": "2020-01-02"}, "h": {"_type": "time", "_index": "global", "_value": "10:30:00"}, "k": {"_type": "timedelta", "_index": "global", "_value": "+10:12:12"}},
         "2": {"g": {"_type": "date", "_index": "global", "_value": "2021-05-06"}, "h": {"_type": "time", "_index": "global", "_value": "11:45:00"}, "k": {"_type": "timedelta", "_index": "global", "_value": "+01:02:03"}},
+        # Global time and timedelta share the term prefix, so equal seconds match each other (hunt.md, dsl-date-operators C1).
+        "3": {"h": {"_type": "time", "_index": "global", "_value": "12:00:00"}},
+        "4": {"k": {"_type": "timedelta", "_index": "global", "_value": "+12:00:00"}},
     }.items():
         status, _ = call("PUT", "/gl/%s?commit" % i, json.dumps(doc))
         assert status < 300, status
@@ -94,6 +97,8 @@ try:
     check("global _date", {"_date": "2020-01-02"}, 200, ["1"], index="gl")
     check("global _time", {"_time": "10:30:00"}, 200, ["1"], index="gl")
     check("global _timedelta", {"_timedelta": "+01:02:03"}, 200, ["2"], index="gl")
+    check("global _time finds a timedelta of equal seconds", {"_time": "12:00:00"}, 200, ["3", "4"], index="gl")
+    check("global _timedelta finds a time of equal seconds", {"_timedelta": "+12:00:00"}, 200, ["3", "4"], index="gl")
 
     # A2: a datetime of a new field, and of a date and a time.
     check("new field _datetime", {"nf": {"_datetime": "2020-01-02"}}, 200, [])
