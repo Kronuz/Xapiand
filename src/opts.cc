@@ -34,6 +34,7 @@
 #include <CLI/CLI.hpp>                            // for CLI::App (command-line parser)
 
 #include "hashes.hh"                              // for fnv1ah32
+#include "memory_stats.h"                        // for get_total_ram
 #include "package.h"                              // for Package::VERSION
 #include "xapiand_strings.hh"                             // for strings::lower
 
@@ -371,7 +372,7 @@ parseOptions(int argc, char** argv)
 		o.logfile = logfile;
 		o.uid = uid;
 		o.gid = gid;
-		o.database_pool_size = database_pool_size;
+		o.database_pool_size = static_cast<ssize_t>(database_pool_size_for(database_pool_size, get_total_ram()));   // the descriptor budget caps it later
 		o.full_flush_ordering = full_flush_ordering;
 		o.max_search_indexes = max_search_indexes;
 		o.concurrent_search_indexes = concurrent_search_indexes;

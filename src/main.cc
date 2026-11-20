@@ -70,7 +70,6 @@
 #include "logger.h"                               // for Logging
 #include "manager.h"                              // for XapiandManager
 #include "nanosleep.h"                            // for nanosleep
-#include "memory_stats.h"                        // for get_total_ram
 #include "opts.h"                                 // for opts_t
 #include "package.h"                              // for Package::
 #include "xapiand_strings.hh"                             // for strings::format, strings::center
@@ -338,9 +337,6 @@ void setup_signal_handlers() {
  */
 void adjustOpenFilesLimit()
 {
-	// No --database-pool-size: 1% of RAM; the descriptor budget below still caps it.
-	opts.database_pool_size = static_cast<ssize_t>(database_pool_size_for(static_cast<std::size_t>(opts.database_pool_size), get_total_ram()));
-
 	// Try getting the currently available number of files (-10%):
 	ssize_t available_files_system_wide = get_max_files_system_wide() - get_open_files_system_wide();
 	ssize_t aprox_available_files_system_wide = (available_files_system_wide * 8) / 10;
