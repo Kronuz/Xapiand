@@ -1430,6 +1430,27 @@
       "closed": "noted: heal-snapshot-stall at consensus:39d9f1d; seeds 4270/6197/8247 catch up in 7/40/40 rounds",
       "id": "msg-163",
       "text": "consensus-heal-snapshot-stall landed at consensus:39d9f1d (your msg-136 stall): an install starts only after the peer refuses an append at or below the base; a peer that already holds the entries is appended at the base. Catch-up rounds 7/40/40 on seeds 4270/6197/8247 (were 10,498-14,881). test/worker_test.cc's binary_transfer loop exit is >= 2 now (one refusal round trip shifts timing)."
+    },
+    {
+      "at": "2026-11-20T03:49:08",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-162",
+      "items": {
+        "automata": "frees  for automata",
+        "http-pin-halfclose": "frees CMakeLists.txt for http-pin-halfclose",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "track-p-research": "frees docs/perf/** for track-p-research"
+      },
+      "settles": {
+        "start": [
+          "automata",
+          "http-pin-halfclose",
+          "phase5",
+          "track-p-research"
+        ]
+      },
+      "text": "track-p landed: unlocks frees  for automata; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
     }
   ],
   "quests": {
@@ -23208,19 +23229,51 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T05:04:18",
+          "commit": "cbb14d6b84bac65b95d0f1c9b6eb74dbec14600e",
+          "criteria": {
+            "A1": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232539-76dfe9",
+            "A2": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232543-159564",
+            "A3": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232554-222d40",
+            "A4": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232546-7f59ed, 261118-232550-b9fd21",
+            "A5": "D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script",
+            "A6": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261119-152314-eb6c56",
+            "A7": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-235902-e9f90f, 261118-235904-367e06, 261118-235913-859ec0"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7f03ae08d3b59f8133f13a6f41d7d1828641e557",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-012601-a2aa5d",
+              "level": "light",
+              "seconds": 594.9,
+              "state": "done",
+              "what": "serialize-validation check suite at 7f03ae08d3b5"
+            }
+          ],
+          "final": true,
+          "from": "b15603dcd73f343cb53ddbfb262ebb7c91a501c4",
+          "reason": "",
+          "tested": "9c0fe81896768e1240b6849a996135d6268e14ed"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-20T04:18:46",
-      "worktree": "../Xapiand-wt/xapiand/serialize-validation"
+      "updated": "2026-11-20T05:04:32",
+      "worktree": ""
     },
     "server-composition-note": {
       "accepted": {},

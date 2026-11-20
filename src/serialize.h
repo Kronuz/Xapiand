@@ -66,6 +66,7 @@ constexpr char SERIALIZED_TRUE       = 't';
 
 constexpr std::uint8_t SERIALIZED_LENGTH_CARTESIAN = 12;
 constexpr std::uint8_t SERIALIZED_LENGTH_RANGE     = 2 * HTM_BYTES_ID;
+constexpr std::uint8_t SERIALIZED_LENGTH_RANGES_HASH = 16;
 
 
 constexpr std::uint32_t DOUBLE2INT = 1000000000;
@@ -218,7 +219,7 @@ namespace Serialize {
 	// Serialize a vector of centroids generates by GeoSpatial.
 	std::string centroids(const std::vector<Cartesian>& centroids);
 
-	// Serialize a vector of ranges hash.
+	// A geometry's exact-match term: a 128-bit hash of its ranges.
 	std::string ranges_hash(const std::vector<range_t>& ranges);
 
 	// Serialize field_value like geospatial.
