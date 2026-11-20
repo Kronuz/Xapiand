@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review (step 9's jobs at strata:c2b656db queued: Next 00)
+State: waiting on jobs 261120-105301-a74923 261120-105301-679f4f 261120-105335-a6926e
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,24 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Step 10 (lead: build-test 261120-092528-6f13a3 red on `standalone_turn_log`), strata:6a230264.
+
+- Introduced by group-core's journal pin move (cc95ba6 -> 9e11713), not pre-existing: the test
+  x3 at strata main d956c0f4 (main's pins) passes, 261120-104308-ba5900 (126 records, 126 turns,
+  worst lag 2); x3 at c2b656db fails all three, 261120-104206-ce0c3a (t6 at 1199/1200, `lag`
+  worst 3, 130 records over 126 turns). turn_seal.hh:103 is not the cause.
+- Two journal changes in the range: (a) journal:6187a32 calls a sealer again while it returns
+  records in a turn, so the index's seal() handed the checkpoint and the open batch in one turn
+  (`lag`); (b) retired() is answered from the host's table, so a new host retires a closed group
+  through its close's sequence + 1 and t6's reopen restages at base + 2 (as t6w already says).
+- Fix (6a230264): index.hh seal() hands nothing while its last handed record is not durable (one
+  record per turn, turn_records); t6 asserts retired == base + 1, sequence base + 2, apply base + 3.
+  Mutant seal-repeats (test/group/mutants.py) kills `lag` (local: worst 3). Local full
+  standalone_turn_log_test ok.
+- Jobs: build-test 261120-105301-a74923, crash 261120-105301-679f4f, seal-repeats kill check
+  261120-105335-a6926e (plain job: passes when the test fails; `--fails-without` needs a
+  criterion and this is the suite's, not A1-A10's).
 
 Step 9 (lead: A3's unbuilt cases and the failed-open row close), strata:c2b656db. Jobs: Evidence.
 
@@ -192,6 +210,8 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Next
 
+000. Read step 10's jobs (Doing): suite and crash at strata:6a230264, the seal-repeats kill
+    check; then step 9's below.
 00. Read step 9's jobs, all queued at its end: build-test 261120-092528-6f13a3, crash
     261120-092528-a14183, named cases 261120-092530-8e1d75, failed-open 261120-092537-7db5a0,
     mutants 261120-092539-50196a 261120-092541-cd604b 261120-092544-0e1fd2 261120-092546-475273
@@ -325,6 +345,10 @@ proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, com
 
 ## Rulings I made
 
+- Step 10: test/standalone_turn_log_test.cc (outside the file set, standalone-turn-log's) changes
+  t6's reopen sequences, the pin move's consequence, and nothing else; index.hh's seal() keeps
+  D4's one record per turn rather than taking journal's repeat calls (that would move D4's
+  window and `lag`'s bound, a design change for the turn-log owner). turn_seal.hh unchanged.
 - Step 9: the stalled leader's target comes from a host hook on `loop` (`applied_past`, beside
   `send`): consensus's leader knows followers' matched index, not their applied position, so the
   group cannot pick "a follower applied past it" alone. Unset, no hand-off (a lone voter, or a
