@@ -23878,11 +23878,12 @@
       "provides": [
         "xapiand:shard-rpc"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "The node-to-node shard service",
-      "updated": "2026-11-16T15:42:58"
+      "updated": "2026-11-20T05:26:37"
     },
     "shared-reader-core": {
       "accepted": {},
