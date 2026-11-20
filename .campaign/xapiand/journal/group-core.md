@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review at strata:ffab229e; waiting on jobs 261120-121525-807eb8 261120-121542-01253e 261120-121544-aeb1f7 261120-121545-005bf5 261120-121547-534c19 261120-121549-49be3a 261120-121551-0fb5d1 261120-121553-724c76
+State: CI fix for group_footprint at strata:25960848 (sanitizer skip, portable backtrace); waiting on jobs 261120-125416-c932be (ASan+UBSan build, expects SKIP), 261120-125410-81ae4f 261120-125410-98dc7d (verify)
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -392,6 +392,8 @@ Step 1 (strata): `include/strata/group/{group,bundle,file_set,answer}.hh`, targe
 proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, completion 7731315.
 
 ## Rulings I made
+
+- footprint_test CI failure (run 44797677012): TSan duplicates operator new/delete at link (runtime defines them); ASan's aligned/nothrow forms bypass the replacement, so plain delete read a header off foreign memory. backtrace link errors are FreeBSD (libexecinfo). Ruling: under __SANITIZE_*/__has_feature the test exits 77 (SKIP_RETURN_CODE 77) with a message, every other build measures; backtrace links via find_package(Backtrace). strata:25960848.
 
 - Step 11, C1: re-arm whatever the role, not on `RoleChanged` (reasons in Doing).
 - C2: `close()` holds the checkpoint serializer through `Driver::close` and the teardown, so no
