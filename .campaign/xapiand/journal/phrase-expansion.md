@@ -1,16 +1,18 @@
 # phrase-expansion: journal
 
-State: working
+State: waiting on jobs 261120-085333-ef26eb 261120-085334-deefb6
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
 
-Feature built at prospect:8e4df48 (prospect repo, worktree prospect-wt/xapiand/phrase-expansion,
-branch quest/xapiand/phrase-expansion, nothing pushed). Evidence jobs queued; local mutant smoke running.
+Feature built at prospect:a69a08d (prospect repo, worktree prospect-wt/xapiand/phrase-expansion,
+branch quest/xapiand/phrase-expansion, nothing pushed). Evidence jobs queued at it. Local mutant smoke (6 of 19) found one survivor (an empty query budget
+read as none, only its early stop differs); a69a08d adds the test that catches it (checked locally).
 
 ## Next
 
-1. Record job ids and the Evidence table; State "ready for review".
+1. When both jobs pass: paste the Evidence table, State "ready for review". If a mutant survives,
+   add the test that kills it.
 
 ## Where the code is
 
@@ -45,3 +47,26 @@ Nothing.
   first entries can be dead terms), not as "stops at the fourth entry".
 - No timing and no `docs/perf` entry: the quest's criteria are functional; the expansion class's
   speed rows are Phase 5's (parked), as the quest's "When done" says.
+
+## Evidence
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261120-085333-ef26eb (build-test: phrase_expansion, expansion_bounds, fuzz_phrase_replay and the suite) and 261120-085334-deefb6 (19 mutants each fail a test), at prospect:a69a08d. Locally: phrase_expansion_test 2,080 phrases, 0 failures |
+| A2 | the same two jobs. Locally: expansion_bounds_test 7,046 answered, 1,027 refused past a bound, 0 failures |
+| A3 | `docs/mechanisms/phrase-expansion.md` |
+
+Superseded by the new head: 261120-083059-d7f012 and 261120-083120-3e94b6 (at prospect:8e4df48).
+
+## Result
+
+- `include/prospect/phrase_expand.hh`: `phrase_word` (literal, prefix, wildcard, fuzzy, own limit),
+  `expanded_phrase` (expands once over the snapshot through `expand`, one weight per slot, a
+  `multi_phrase_scorer` per segment, `builder()` for `search`), `phrase_options` (`max_expansions`,
+  walk options, slot scoring, weights), `phrase_expansion_error`.
+- Tests: `test/phrase_expansion_fixture.hh` (world, oracle), `phrase_expansion_test.cc`,
+  `expansion_bounds_test.cc`, `phrase_expansion_mutants.py` (19), `fuzz/fuzz_phrase.cc` and its corpus;
+  CMakeLists.txt wires them. Note: `docs/mechanisms/phrase-expansion.md`.
+- For the Xapiand quest: phrase wildcards and `_synonym` over expanded words map onto `phrase_word`
+  and `expanded_phrase`; the one-CPU-hour fuzz of `fuzz_phrase` and the ASan/UBSan builds are the
+  quest's "When done" (lead).
