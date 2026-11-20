@@ -17966,9 +17966,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T08:56:00",
+      "updated": "2026-11-20T09:32:55",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
