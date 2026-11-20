@@ -19580,12 +19580,12 @@
         "track-d"
       ],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 7b, shards become groups",
-      "updated": "2026-11-18T02:29:45"
+      "updated": "2026-11-20T05:27:00"
     },
     "phase7c-design": {
       "accepted": {},
