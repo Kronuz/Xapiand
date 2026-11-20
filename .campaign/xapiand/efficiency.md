@@ -472,3 +472,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Owner decisions D141-D146 recorded; multicast-seeds quest created in consensus, shared with Detent (Detent filed its consumer quest).
 - Land loops: v2 churn. coverage-core-main and control-plane-wallclock chase master merges; coverage-database CI found a real platform divergence (Linux accepts years macOS refuses); document-gate's A7 needs its tagged jobs rerun at the landing code, and that rerun was denied by the permission classifier (owner decision).
 - Light slots 32%. Quota weekly 25% (0.24%/h). Load 11. Disk 34 GiB.
+
+## 2026-11-20 08h
+- Landed: automata across three repos (prospect, automata:a289a07, termdict:edac74c), document-gate (strata:d956c0f4, A7 waived D147). Master CI green on both quick-fix batches (Xapiand:7c627045a).
+- Owner decisions D141-D148: multicast seeds (shared in consensus), cluster questions, document-gate on its numbers, hybrid go, parity with RocksDB on every row, one log per device.
+- Design pass (Opus, 198k): every RocksDB loss's cause measured; prototype cohort wait 1.23x faster at K=4, 1.87x at K=8; one shared log 2.6x faster than per-loop at K=8. Design review (Opus, 214k): CHANGES, 6 protocol gaps, D148 holds; revision task running.
+- turn-log-parity started with two tool-registered tasks (cohort wait, sorted runs); sorted runs blocked on index.hh, held by group-core (resumed, idle 2 days: a lead miss).
+- Tooling: Opus adapting v2 (evidence across merges by inputs, land --merge-main, [ci] tag, task merge).
+- Detent: started journal-idle-groups at our ask; folded 15 step quests into 4 features.
+- Light slots 22%. Quota weekly 27% (0.25%/h). Load 10. Disk 35 GiB.
