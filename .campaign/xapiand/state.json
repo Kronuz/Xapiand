@@ -1089,6 +1089,162 @@
       "closed": "server-composition note re-pin to Detent:03eac9c5 in progress (paths to src/detent_authority/)",
       "id": "msg-134",
       "text": "Detent lead: rename-detentd landed on Detent main at Detent:03eac9c5 (merge Detent:aa813e12). detentd is now detent-authority everywhere: binary, target, src/detent_authority/, docs, diagrams, packaging, website. Please refresh your server-composition note's Detent citations against that commit."
+    },
+    {
+      "at": "2026-11-19T12:56:51",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-worker-release",
+      "id": "msg-135",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-worker-release"
+      },
+      "text": "detent:consensus-worker-release started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-worker-release, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T13:22:06",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-136",
+      "items": {
+        "task-asio-layout": "frees test/**, CMakeLists.txt for task-asio-layout"
+      },
+      "settles": {
+        "start": [
+          "task-asio-layout"
+        ]
+      },
+      "text": "task-driver-layout landed: unlocks frees test/**, CMakeLists.txt for task-asio-layout"
+    },
+    {
+      "at": "2026-11-19T13:48:41",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-137",
+      "items": {
+        "task-lifecycle-followups": "frees test/{lifecycle for task-lifecycle-followups",
+        "task-process-step": "frees test/process_test.cc, CMakeLists.txt for task-process-step"
+      },
+      "settles": {
+        "start": [
+          "task-lifecycle-followups",
+          "task-process-step"
+        ]
+      },
+      "text": "task-asio-layout landed: unlocks frees test/{lifecycle for task-lifecycle-followups; frees test/process_test.cc, CMakeLists.txt for task-process-step"
+    },
+    {
+      "at": "2026-11-19T14:40:07",
+      "by": "campaign detent",
+      "closed": "reactor-server-composition is accepted and lands on CI within the hour; detent:reactor-tls-cache should go after it (it consumes server_context)",
+      "id": "msg-139",
+      "settles": {
+        "ours": [
+          "reactor-server-composition"
+        ],
+        "quest": "detent:reactor-tls-cache"
+      },
+      "text": "detent:reactor-tls-cache started and may change files your reactor-server-composition changes (order them with --after detent:reactor-tls-cache, or narrow the files)"
+    },
+    {
+      "at": "2026-11-19T14:40:23",
+      "by": "campaign detent",
+      "closed": "noted; group-core and consensus-rpc-lane are planned, not started, and will build on whatever lands",
+      "id": "msg-140",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:groups-upload-loop-stall"
+      },
+      "text": "detent:groups-upload-loop-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:40:25",
+      "by": "campaign detent",
+      "closed": "noted; consensus-rpc-lane is planned, not started",
+      "id": "msg-141",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:peers-busy-roundtrip-bound"
+      },
+      "text": "detent:peers-busy-roundtrip-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:peers-busy-roundtrip-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:40:35",
+      "by": "campaign detent",
+      "closed": "logger-fork-reset touches logger.cc/h, test/exit.cc, docs/fork.md; it lands after CI today. Merge it before detent:logger-slack-mutant lands",
+      "id": "msg-142",
+      "settles": {
+        "ours": [
+          "logger-fork-reset"
+        ],
+        "quest": "detent:logger-slack-mutant"
+      },
+      "text": "detent:logger-slack-mutant started and may change files your logger-fork-reset changes (order them with --after detent:logger-slack-mutant, or narrow the files)"
+    },
+    {
+      "at": "2026-11-19T14:40:02",
+      "by": "campaign detent",
+      "closed": "noted; group-core is planned, not started",
+      "id": "msg-138",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-close-in-doubt"
+      },
+      "text": "detent:journal-close-in-doubt started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T14:47:17",
+      "by": "detent-lead",
+      "closed": "Agreed: Xapiand uses neither Request::user_data nor DeferredReply (pin http:eb08b59); we take a pin bump after http-drop-user-data lands. Library API, every caller ours.",
+      "id": "msg-143",
+      "text": "Detent lead: A3 for http-drop-user-data. The quest removes Request::user_data and DeferredReply from http and adds Request::deadline() (the transport's per-request bound, time_point::max() when none). The caller survey finds Xapiand (pin http:eb08b59) uses neither surface, so you'd need only a pin bump after it lands. Do you agree to the removal? A yes becomes a PLAN.md decision."
+    },
+    {
+      "at": "2026-11-19T15:00:23",
+      "by": "detent-lead",
+      "closed": "Noted for group-core (planned, not started): after a failed Store::close, recover/create of that id throws EIO until the Host reopens; group-core's brief will carry it.",
+      "id": "msg-144",
+      "text": "Detent lead: contract change coming in journal (quest journal-close-in-doubt, journal:6ab0fd2, in review). After a failed Store::close, recovering or creating that id in the same Host throws std::system_error(EIO) until the Host reopens; the group is held closed-in-doubt in memory, never restored open. It closes a loss of acknowledged records (a failed close_group commit used to restore the group open while disk said closed). Relevant to xapiand:group-core. I'll message the landing commit."
+    },
+    {
+      "at": "2026-11-19T15:06:45",
+      "by": "detent-lead",
+      "closed": "prism:4eb7074 is on quest/detent/prism-server-composition, not prism main yet; the note cites landed code, so its Prism cells and the 'No daemon mode' row are updated when it lands (hunt row filed).",
+      "id": "msg-145",
+      "text": "Detent lead: Prism adopted the server composition note at prism:4eb7074 (quest prism-server-composition; task pinned at 0316bef). It now runs as a daemon via task::run_daemon and ProcessLock, so the note's 'No daemon mode (Prism) Stays' row and Prism's cells are out of date; please update them in the note. Three steps wait on your libraries and go in follow-up prism-server-composition-limits: http::Limits (http-limits), raise_open_files plus tls::server_context (reactor-server-composition), and Http::stop_accepting."
+    },
+    {
+      "at": "2026-11-19T15:32:28",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-146",
+      "items": {
+        "http-limits": "http-limits"
+      },
+      "settles": {
+        "start": [
+          "http-limits"
+        ]
+      },
+      "text": "reactor-server-composition landed: unlocks http-limits"
+    },
+    {
+      "at": "2026-11-19T15:35:18",
+      "by": "http-limits",
+      "closed": "widened: CMakeLists.txt, bench/**, README.md, AGENTS.md",
+      "id": "msg-147",
+      "text": "http-limits: the file set lacks files the quest must touch: CMakeLists.txt (the reactor:6fdd45f pin you asked for), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed setters and tls_connection_factory; CI builds server_compare with HTTP_BUILD_BENCH=ON), README.md, AGENTS.md, ARCHITECTURE.md (they name the removed API). Recommend: campaign set http-limits files=http_asio.h,http_asio_tls.h,test/**,docs/**,examples/**,bench/**,CHANGELOG.md,CMakeLists.txt,README.md,AGENTS.md,ARCHITECTURE.md. I make only those mechanical edits there, in their own commit, recorded under Rulings."
     }
   ],
   "quests": {
@@ -1207,6 +1363,35 @@
       "title": "Xapiand's aggregations equal over one shard and many for every kind it serves",
       "updated": "2026-11-12T01:59:05",
       "worktree": ""
+    },
+    "agg-validate-tree": {
+      "accepted": {},
+      "after": [
+        "serialize-validation"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/aggregations/**",
+        "tests/test_aggregation*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "aggregations: validate the whole tree before the search",
+      "updated": "2026-11-19T14:20:35"
     },
     "alpha10-builds": {
       "accepted": {},
@@ -1970,7 +2155,38 @@
       "updated": "2026-11-08T13:25:15"
     },
     "cheap-reopen": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:08:10",
+          "base": "7372be3157b3058d499b37fdf29acd8725714fd8",
+          "blobs": {
+            "docs/design/cheap-reopen.md": "100644:f05b75c832b107ecc7291befa1050c6ca73daffe",
+            "src/database/handler.cc": "100644:59226349b75ffa2714c15d0fdd2c52e9123b7e9c",
+            "src/database/pool.cc": "100644:432688d9c8d582c8e664fe2545d5d9be430fdc7e",
+            "src/database/pool.h": "100644:d7babbd16edc6564dc1fd2f844ce9f7207cafb28",
+            "tests/test_cheap_reopen.cc": "100644:cfc90bf8af27ec9b2d8da323a87105283dda0fce",
+            "tests/test_node.cc": "100644:d1366a4a7d6481214073b351ea0f8772cdf69287",
+            "tests/test_pool.cc": "100644:72ba032af6d3ee35190f8a7f553f960e39c67b70"
+          },
+          "by": "review",
+          "commit": "e7584201c4070d2ed7615309c09e6af6ea5034b1",
+          "criteria": "83149462cb405fa5",
+          "diffs": {
+            "docs/design/cheap-reopen.md": "50378438c0f7236f",
+            "src/database/handler.cc": "45154ba07d480028",
+            "src/database/pool.cc": "6ccde1de673a8195",
+            "src/database/pool.h": "0583aeb2e410e21f",
+            "tests/test_cheap_reopen.cc": "a63c619cd689c95e",
+            "tests/test_node.cc": "5f400a7ee88cd93b",
+            "tests/test_pool.cc": "7b04e341fa2b0a2b"
+          },
+          "findings": {},
+          "note": "",
+          "review": "a51a6fb5f2235018fe19c251535cb0c9778bb043",
+          "reviewed": "e7584201c4070d2ed7615309c09e6af6ea5034b1",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "wide-search-loop"
       ],
@@ -2003,9 +2219,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T08:43:29",
+      "updated": "2026-11-19T15:08:10",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
@@ -4060,7 +4276,8 @@
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
         "detent:driver-apply-gap",
-        "detent:driver-witness-removal-sink"
+        "detent:driver-witness-removal-sink",
+        "detent:consensus-worker-release"
       ],
       "base": "d1065e03df0f91a9161f6b2322246f5906c406c0",
       "branch": "quest/xapiand/consensus-rpc-lane",
@@ -4249,7 +4466,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T09:03:03",
+      "updated": "2026-11-19T12:57:03",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -4492,8 +4709,36 @@
       "files": [
         "tests/test_coverage_core*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T15:09:07",
+          "commit": "27b4691660ec930cdbe7bebdb55fb8a7578f6ea4",
+          "criteria": {
+            "A1": "261119-081849-d12123 (passed at a7e09fcd80de; only merges from main since)",
+            "A2": "261119-081849-d12123 (passed at a7e09fcd80de; only merges from main since); fails without: 261119-055700-02118e",
+            "A3": "261119-081851-090187 (suite; only merges from master since); CI on the branch"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "a7e09fcd80de2ee24f47062eb4770b2dcb2d31b3",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-081851-090187",
+              "level": "light",
+              "seconds": 407.4,
+              "state": "done",
+              "what": "coverage-core-small check suite at a7e09fcd80de"
+            }
+          ],
+          "final": true,
+          "from": "dab64235ff41ad06387ec41e13f503a25a2c5908",
+          "reason": "",
+          "tested": "7180a88209e753cdebdbb207e801c89988842623"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -4501,10 +4746,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "cast, datetime_msgpack, endpoint and query_dsl reach T13 coverage",
-      "updated": "2026-11-19T00:35:34",
-      "worktree": "../Xapiand-wt/xapiand/coverage-core-small"
+      "updated": "2026-11-19T15:09:20",
+      "worktree": ""
     },
     "coverage-database": {
       "accepted": {},
@@ -4680,17 +4925,45 @@
       "files": [
         "harness/engine_crash_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T16:31:05",
+          "commit": "854a62f298c1a4de29aa0a3c76eef96e1017e7dd",
+          "criteria": {
+            "A1": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since)",
+            "A2": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since), 261119-131239-b80edb (passed at d4801e6d339b; only merges from main since); fails without: 261119-122444-f74d98",
+            "A3": "suite 261119-122452-83d60f passed; CI on the branch (FreeBSD, arm64) was running at 9f510b4e8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "e580b06268fc7494946021e292307d1d962320a4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-122452-83d60f",
+              "level": "light",
+              "seconds": 471.6,
+              "state": "done",
+              "what": "crash-d-rows check suite at e580b06268fc"
+            }
+          ],
+          "final": true,
+          "from": "058d7077fcbc6ca49b1abf70381bcb196602af57",
+          "reason": "",
+          "tested": "73d050d004b0aab82eeca97cf1e519f9631b3dff"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "harness: crash check prints every wrong row (land explore/crash-d-wrong)",
-      "updated": "2026-11-19T12:23:23",
-      "worktree": "../Xapiand-wt/xapiand/crash-d-rows"
+      "updated": "2026-11-19T16:31:14",
+      "worktree": ""
     },
     "cross-shard-followups": {
       "accepted": {},
@@ -4866,6 +5139,40 @@
       "title": "A concurrent PUT never leaves an id on two shards",
       "updated": "2026-11-11T12:09:39",
       "worktree": ""
+    },
+    "datetime-range-zone": {
+      "accepted": {},
+      "after": [],
+      "base": "15287bf561a39de569923c3d7719013cc8b39308",
+      "branch": "quest/xapiand/datetime-range-zone",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/datetime_msgpack.cc",
+        "src/datetime_msgpack.h",
+        "tests/test_coverage_core_datetime.cc",
+        "src/datetime.cc",
+        "src/datetime.h",
+        "tests/test_datetime*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "datetime: map ranges and zone offsets compute the right instant",
+      "updated": "2026-11-19T16:21:58",
+      "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
       "accepted": {
@@ -5936,6 +6243,71 @@
       "title": "Retire ThreadPool dependency",
       "updated": "2026-11-08T15:39:54"
     },
+    "dsl-date-operators": {
+      "accepted": {},
+      "after": [
+        "dsl-not-wrap",
+        "serialize-validation"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "tests/test_query_dsl_date*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Query DSL serves _date, _time and _timedelta operators",
+      "updated": "2026-11-19T15:21:47"
+    },
+    "dsl-not-wrap": {
+      "accepted": {},
+      "after": [
+        "coverage-core-small"
+      ],
+      "base": "7372be3157b3058d499b37fdf29acd8725714fd8",
+      "branch": "quest/xapiand/dsl-not-wrap",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/query_dsl.cc",
+        "src/query_dsl.h",
+        "tests/test_query_dsl_not*",
+        "tests/test_coverage_core_query_dsl.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "QueryDSL: _not builds the same tree on every toolchain",
+      "updated": "2026-11-19T15:48:23",
+      "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
+    },
     "e2e-harness": {
       "accepted": {},
       "after": [],
@@ -6046,6 +6418,42 @@
       "title": "The docs E2E's newman report stays parseable",
       "updated": "2026-11-11T02:37:44",
       "worktree": ""
+    },
+    "endpoint-uuid": {
+      "accepted": {},
+      "after": [],
+      "base": "6b3c53bb489f9cebe799f22039c666c35e89b01a",
+      "branch": "quest/xapiand/endpoint-uuid",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/endpoint.cc",
+        "src/endpoint.h",
+        "src/database/utils.cc",
+        "src/database/utils.h",
+        "src/uuid*",
+        "src/database/shard.cc",
+        "tests/test_endpoint*",
+        "tests/test_uuid_partition*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
+      "updated": "2026-11-19T16:20:28",
+      "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
       "accepted": {},
@@ -7382,6 +7790,61 @@
       "title": "Format 13 landing and pre-freeze work",
       "updated": "2026-11-08T15:39:16"
     },
+    "freebsd-exe-path": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:49:15",
+          "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+          "blobs": {
+            "src/main.cc": "100644:5dfe4100ed844983283468356be22837e3d2bc5b",
+            "tests/test_executable_path.cc": "100644:989450e7c76c3785daee293149b8d47a88602c45"
+          },
+          "by": "review",
+          "commit": "72cc2d0babf1149411265a19fd5b5803bb56b8cc",
+          "criteria": "7bf6ef1d8f457b21",
+          "diffs": {
+            "src/main.cc": "79d55ee96727549d",
+            "tests/test_executable_path.cc": "b09c649d1fc7b931"
+          },
+          "findings": {},
+          "note": "",
+          "review": "43cf334311402dc978aa5b95e09e7ec783df0ce6",
+          "reviewed": "53b31611627d2775afbcbb3a7bed9eaa82de8dc6",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "coverage-core-main"
+      ],
+      "base": "a9fbe8a156fe17ce96573c37969f542956c00723",
+      "branch": "quest/xapiand/freebsd-exe-path",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/main.cc",
+        "tests/test_executable_path*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "review",
+      "title": "FreeBSD: get_executable_path finds the executable",
+      "updated": "2026-11-19T15:49:15",
+      "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
+    },
     "fuzz-cpu-hour": {
       "accepted": {},
       "after": [
@@ -8070,7 +8533,8 @@
         "detent:journal-host-guards",
         "strata-nospace-position",
         "document-gate",
-        "detent:driver-witness-removal-sink"
+        "detent:driver-witness-removal-sink",
+        "detent:consensus-worker-release"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8135,7 +8599,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T09:03:07",
+      "updated": "2026-11-19T12:57:07",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
@@ -8794,6 +9258,50 @@
       "updated": "2026-11-12T22:31:47",
       "worktree": ""
     },
+    "http-limits": {
+      "accepted": {},
+      "after": [
+        "detent:http-drop-user-data",
+        "detent:http-affinity-death-tsan"
+      ],
+      "base": "ec273dd4d37e46a4c206c8307200eab35ab5e448",
+      "branch": "quest/xapiand/http-limits",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "http_asio_tls.h",
+        "test/**",
+        "docs/**",
+        "examples/**",
+        "CHANGELOG.md",
+        "CMakeLists.txt",
+        "bench/**",
+        "README.md",
+        "AGENTS.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/http-limits",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "reactor-server-composition"
+      ],
+      "provides": [],
+      "repo": "../http",
+      "risk": "normal",
+      "status": "active",
+      "title": "http: Limits, timeouts and stop_accepting",
+      "updated": "2026-11-19T16:20:02",
+      "worktree": "../http-wt/xapiand/http-limits"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
@@ -9404,7 +9912,8 @@
         "src/multivalue/keymaker.*",
         "src/metric_serialize.h",
         "tests/test_keymaker*",
-        "tests/test_coverage_multivalue*"
+        "tests/test_coverage_multivalue*",
+        "tests/test_coverage_multivalue.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -9415,7 +9924,7 @@
       "risk": "normal",
       "status": "active",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T12:41:20",
+      "updated": "2026-11-19T14:26:30",
       "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
@@ -10115,6 +10624,116 @@
       "title": "logger's worker never touches destroyed statics at exit",
       "updated": "2026-11-18T22:35:16",
       "worktree": "../logger-wt/xapiand/logger-exit-lifetime"
+    },
+    "logger-fork-reset": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:42:41",
+          "base": "529ae7694a33a183725b9f453cf63539d9690890",
+          "blobs": {
+            "CHANGELOG.md": "100644:90b67b0e6031e4614e8c97c988bd4c461fed8cf9",
+            "docs/fork.md": "100644:564a7a75aa71e347ebc9f722a3debfd1e7088850",
+            "logger.cc": "100644:ba7b9b2908830ee31e186dca021cebecb2b8d42f",
+            "logger.h": "100644:a678404a49ada2c6dab998eaf9d6ad10eaf2f6fb",
+            "test/exit.cc": "100644:8e56bc332661d6f9c640138e6aabfd513b1a86c8",
+            "test/fork_mutant.sh": "100755:5c958e3fed12930528552c765617e6f4e54952ec"
+          },
+          "by": "review",
+          "commit": "1d52e89644205cc18a852587717fd2a267c63de8",
+          "criteria": "43e6935f631264d0",
+          "diffs": {
+            "CHANGELOG.md": "24730ac472bff3aa",
+            "docs/fork.md": "8204f63e5f714dd1",
+            "logger.cc": "66493f6331f546bb",
+            "logger.h": "5391022d200c182a",
+            "test/exit.cc": "e32f3e7e8489df3e",
+            "test/fork_mutant.sh": "392a34ce86549276"
+          },
+          "findings": {},
+          "note": "",
+          "review": "dd2d0ae01b475b38669b741b901481fb62326818",
+          "reviewed": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "455cad0a185b2c9037bb3bb65c99a4e3736b0cc3",
+      "branch": "quest/xapiand/logger-fork-reset",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "logger.*",
+        "src/**",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:42:47",
+          "commit": "1d52e89644205cc18a852587717fd2a267c63de8",
+          "criteria": {
+            "A1": "261119-142946-f38e36 (passed at dc571a0c75ee; only merges from main since); fails without: 261119-142948-f94cd1",
+            "A2": "261119-142946-f38e36 (passed at dc571a0c75ee; only merges from main since), 261119-142949-6501eb (passed at dc571a0c75ee; only merges from main since), 261119-142950-24d36d (passed at dc571a0c75ee; only merges from main since)",
+            "A3": "261119-142949-6501eb (passed at dc571a0c75ee; only merges from main since), 261119-142950-24d36d (passed at dc571a0c75ee; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-142949-6501eb",
+              "level": "light",
+              "seconds": 97.2,
+              "state": "done",
+              "what": "logger-fork-reset check suite at dc571a0c75ee"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "dc571a0c75ee845d04085b3066d6554070c7c65c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-142950-24d36d",
+              "level": "light",
+              "seconds": 146.4,
+              "state": "done",
+              "what": "logger-fork-reset check tsan at dc571a0c75ee"
+            }
+          ],
+          "final": true,
+          "from": "529ae7694a33a183725b9f453cf63539d9690890",
+          "reason": "",
+          "tested": "1d52e89644205cc18a852587717fd2a267c63de8"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../logger",
+      "risk": "high",
+      "status": "landed",
+      "title": "logger: a fork child that logs never blocks on the LOG thread's mutex",
+      "updated": "2026-11-19T15:42:49",
+      "worktree": ""
     },
     "logger-producer-path": {
       "accepted": {},
@@ -16029,6 +16648,92 @@
       "updated": "2026-11-17T22:34:05",
       "worktree": ""
     },
+    "nightly-retry": {
+      "accepted": {},
+      "after": [],
+      "base": "04a75c0e5b0476431a0c90fe8a043c97a932bf1f",
+      "branch": "quest/xapiand/nightly-retry",
+      "checks": [
+        {
+          "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
+          "level": "none",
+          "minutes": 5,
+          "name": "test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/nightly_dispatch.py",
+        "tools/test_nightly_dispatch*"
+      ],
+      "history": [
+        {
+          "at": "2026-11-19T14:44:19",
+          "checks": [
+            [
+              {
+                "cmd": "python3 -m pytest -q tools",
+                "level": "none",
+                "minutes": 5,
+                "name": "test"
+              }
+            ],
+            [
+              {
+                "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
+                "level": "none",
+                "minutes": 5,
+                "name": "test"
+              }
+            ]
+          ],
+          "reason": "pytest is not installed; the same tests under unittest, stdlib only",
+          "voided": [],
+          "weakened": [
+            "gate check test changed"
+          ]
+        }
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:32:55",
+          "commit": "7f144b6dd5c0b4a33ddd3abbaeb232e85ab93efd",
+          "criteria": {
+            "A1": "261119-144336-a6a4a1 (passed at d3823519f4f3; only merges from main since); fails without: 261119-144343-378e22",
+            "A2": "261119-144336-a6a4a1 (passed at d3823519f4f3; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "python3 -m unittest discover -s tools -p \"test_*.py\"",
+              "commit": "d3823519f4f3ce30bbdea10ec14c76443f6f4f6f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-144427-decc96",
+              "level": "none",
+              "seconds": 3.2,
+              "state": "done",
+              "what": "nightly-retry check test at d3823519f4f3"
+            }
+          ],
+          "final": true,
+          "from": "072db68211fdee0922f3c85e59474253ff91ed93",
+          "reason": "",
+          "tested": "7f144b6dd5c0b4a33ddd3abbaeb232e85ab93efd"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "landed",
+      "title": "nightly dispatcher retries transient GitHub errors",
+      "updated": "2026-11-19T15:32:58",
+      "worktree": ""
+    },
     "no-stalls": {
       "accepted": {},
       "after": [],
@@ -19821,6 +20526,137 @@
       "updated": "2026-11-10T03:20:14",
       "worktree": ""
     },
+    "reactor-server-composition": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:31:15",
+          "base": "01ea267f155338a35f491f46bee56e4af21a3804",
+          "blobs": {
+            "AGENTS.md": "100644:53df32c569e1956884a18c40139a1caf133cadf3",
+            "ARCHITECTURE.md": "100644:f3eb86e55328227f7963f30b04c4fc7720c939eb",
+            "CHANGELOG.md": "100644:6ac17d870c97b318c2515ccf9925c3dd6106ed2b",
+            "README.md": "100644:300e39819b3009ebdafcc400a0e532f2291bcf39",
+            "docs/API.md": "100644:e0c77479ee533342559b056e5554a1f2622762a0",
+            "docs/mechanisms/stop-and-accept.md": "100644:dba81eb9b176853e21e59ec31610e6e7695628d0",
+            "docs/perf/gate-leave.md": "100644:6fb678324b0be150a70435bd099b0b74b8f9f5bc",
+            "reactor.h": "100644:eaae1d7b9a3cfc5010efd9dfada54b018ea0fbac",
+            "reactor_tls.h": "100644:75b9a233aefa6d330452b1cf981ca8e7fe739674",
+            "test/gate_ab.sh": "100755:bc7ebb7edd40f6c0c3acfbaad8c02be72671924a",
+            "test/gate_bench.cc": "100644:c7ce8c55539202ce171834048523fc74fd7ea533",
+            "test/session_test.cc": "100644:416c06395134830e8c5787db128ca9205ecb9863",
+            "test/test.cc": "100644:ce301e9d7ae21d24cf82110500d24dac7c06d718",
+            "test/tls_test.cc": "100644:933ebb20f2742f5f9f50e907b037988bb4fd7252"
+          },
+          "by": "review",
+          "commit": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a",
+          "criteria": "055a024be7be1e7e",
+          "diffs": {
+            "AGENTS.md": "998e50ce63a37c23",
+            "ARCHITECTURE.md": "b38c13a980ea2c89",
+            "CHANGELOG.md": "b8833cb6a61b875d",
+            "README.md": "75da3c45183308ce",
+            "docs/API.md": "327f95732b0371e7",
+            "docs/mechanisms/stop-and-accept.md": "7c7fdbfbff31b0b9",
+            "docs/perf/gate-leave.md": "0cf4421b790a2c1f",
+            "reactor.h": "7ea5aaf51faa9d68",
+            "reactor_tls.h": "b9610a6b414eb4ed",
+            "test/gate_ab.sh": "f13b04e2a29bd193",
+            "test/gate_bench.cc": "9237a48804ef3788",
+            "test/session_test.cc": "f5a71a5b71f33fa8",
+            "test/test.cc": "e9611a1071d22126",
+            "test/tls_test.cc": "046ad174c4502aca"
+          },
+          "findings": {},
+          "note": "",
+          "review": "0af74ed709d459a4b95d4d329f11e8e7f57a64bd",
+          "reviewed": "9349464efec8203a86377c3d2590eb918c131e07",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "bf874dcfb5e6acb0eb0c36990fee9c1fee95e57e",
+      "branch": "quest/xapiand/reactor-server-composition",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "reactor.h",
+        "reactor_tls.h",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md",
+        "README.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:31:28",
+          "commit": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a",
+          "criteria": {
+            "A1": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135837-88bc47",
+            "A2": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135840-1dad3b",
+            "A3": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135842-6ffa4b, 261119-135845-fa3dd3, 261119-135847-85e4ab",
+            "A4": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since); fails without: 261119-135850-7391bb",
+            "A5": "261119-135828-bf6eab (passed at 3626f708055f; only merges from main since), 261119-135829-521317 (passed at 3626f708055f; only merges from main since), 261119-135903-7920d2 (passed at 3626f708055f; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3626f708055f434c7fe5d045cd53deeda87ccb4b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-135828-bf6eab",
+              "level": "light",
+              "seconds": 39.4,
+              "state": "done",
+              "what": "reactor-server-composition check suite at 3626f708055f"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "3626f708055f434c7fe5d045cd53deeda87ccb4b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-135829-521317",
+              "level": "light",
+              "seconds": 63.6,
+              "state": "done",
+              "what": "reactor-server-composition check tsan at 3626f708055f"
+            }
+          ],
+          "final": true,
+          "from": "01ea267f155338a35f491f46bee56e4af21a3804",
+          "reason": "",
+          "tested": "6fdd45fb783ff4de035b2b8c3cd06ec8f3c1a90a"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../reactor",
+      "risk": "high",
+      "status": "landed",
+      "title": "reactor: server composition, stop phases, tls server_context",
+      "updated": "2026-11-19T15:32:28",
+      "worktree": ""
+    },
     "read-only-open": {
       "accepted": {},
       "after": [
@@ -21238,7 +22074,56 @@
       "worktree": ""
     },
     "serialize-validation": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T16:02:52",
+          "base": "290336d0406fb12a355977de46e27b431ee5cb4f",
+          "blobs": {
+            "docs/mechanisms/geo-exact-term.md": "100644:0755deb7adde0009d94083745ce1fa711ebe6ce6",
+            "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "100644:437f0b8bfd57c376a060abd10ae4c66813ab88b3",
+            "src/aggregations/aggregations.cc": "100644:a1105fa9e301696a89263cc86ccbfda209127b4b",
+            "src/cast.cc": "100644:16449264c9b2e59903a2e1a67333cb54289b85b1",
+            "src/database/schema.cc": "100644:9d91ff7d0c9877bcc1e59866107a84f0b0d92171",
+            "src/serialize.cc": "100644:290f3faa66579c6aa5b3b623e30bbb31baff28c3",
+            "src/serialize.h": "100644:400dc8fc05a1916a173d55518ac85c51bf72e0c0",
+            "tests/test_coverage_serialize.cc": "100644:a8904fc3f810bc3d679f64d9ff49b46a9976329e",
+            "tests/test_serialize_validation_aggregation_types.cc": "100644:049f7683d31d356652020db3d62c3f086ffeb48c",
+            "tests/test_serialize_validation_cast_negative.cc": "100644:859128bd3a8ed719c827c5aa51a6185f063ed84a",
+            "tests/test_serialize_validation_date_http.py": "100755:ac51d2fe334612831bfc62fde0850f90c87c93f3",
+            "tests/test_serialize_validation_date_lua.cc": "100644:961bd0ecbf94332da9134397f5718d6a3e5927eb",
+            "tests/test_serialize_validation_geo.cc": "100644:4e1a3e6f5705ae18e0914cc983dfa192be701550",
+            "tests/test_serialize_validation_negative.cc": "100644:b0e68fcf86cd4296bf638da90df4adcd1f729686",
+            "tests/test_serialize_validation_time_casts.cc": "100644:4c202ae2440f62f2f99d3f91aa59cd01e2fde5a6",
+            "tests/test_serialize_validation_type_names.cc": "100644:7124b422c7934fbca8ffc14b9278b59c7d852ee2"
+          },
+          "by": "review",
+          "commit": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "criteria": "295da38e81e13d07",
+          "diffs": {
+            "docs/mechanisms/geo-exact-term.md": "58f60c0b455ae514",
+            "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "26ad39aea0826da7",
+            "src/aggregations/aggregations.cc": "35d72b0500ba8661",
+            "src/cast.cc": "d43a781025b45ca1",
+            "src/database/schema.cc": "689caca0e115046c",
+            "src/serialize.cc": "87f6cd5fe86c48c4",
+            "src/serialize.h": "4f23f4f6452b9508",
+            "tests/test_coverage_serialize.cc": "409e3fd5fafc2552",
+            "tests/test_serialize_validation_aggregation_types.cc": "fc6ec78681b5ea89",
+            "tests/test_serialize_validation_cast_negative.cc": "3102c31ba5f3f5c8",
+            "tests/test_serialize_validation_date_http.py": "fd783d2879921e63",
+            "tests/test_serialize_validation_date_lua.cc": "56e145179643bad7",
+            "tests/test_serialize_validation_geo.cc": "2e79714cc01ce4f1",
+            "tests/test_serialize_validation_negative.cc": "f0d552fb272823fd",
+            "tests/test_serialize_validation_time_casts.cc": "a202079fa1165597",
+            "tests/test_serialize_validation_type_names.cc": "574dd14fd48828c0"
+          },
+          "findings": {},
+          "note": "",
+          "review": "cb9f79c0f884678cecca27ffb0c8f511c17ef119",
+          "reviewed": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "coverage-areas"
       ],
@@ -21295,7 +22180,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T00:35:48",
+      "updated": "2026-11-19T16:02:52",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
@@ -22843,7 +23728,7 @@
     "stopword-lists": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T12:54:29",
+          "at": "2026-11-19T12:54:55",
           "base": "f1cc6dcfdf7f0930bee2e92251fd6a596927deb3",
           "blobs": {
             "CMakeLists.txt": "100644:a21ef66ee7805f1d65935fb787f1f46dee6803eb",
@@ -22933,7 +23818,9 @@
         "docs/perf/stopword-lists.md",
         "docs/src/content/docs/**options*",
         "src/server/http_utils.h",
-        "tests/test_stopword_search.cc"
+        "tests/test_stopword_search.cc",
+        "src/database/handler.h",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -22960,7 +23847,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T12:54:29",
+      "updated": "2026-11-19T14:05:39",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
@@ -24330,8 +25217,126 @@
       "title": "Commit barrier ordering experiments",
       "updated": "2026-11-08T13:25:30"
     },
+    "task-asio-layout": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:34:17",
+          "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "blobs": {
+            "CMakeLists.txt": "100644:bae4f8c00a4f5c0db3cf474b2a8807fcc82553a2",
+            "task_asio.hh": "100644:ecf54ca2fe7dc1e099a29d86549ce0259bddf327",
+            "test/layout_debug.cc": "100644:db35facfab4571049b71007f2f630d80086c45f1",
+            "test/layout_release.cc": "100644:d55661e1253536c4c4495b14b56618de050d9229",
+            "test/layout_test.cc": "100644:0fbe215cca287b5345b51601314d4e38b7ef0e7e"
+          },
+          "by": "review",
+          "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "criteria": "64d90c8015ea1d1f",
+          "diffs": {
+            "CMakeLists.txt": "bcba4cee02b995d0",
+            "task_asio.hh": "fd5a3ffe691b5dfb",
+            "test/layout_debug.cc": "dab5c0ed698be715",
+            "test/layout_release.cc": "40b73077b08457d4",
+            "test/layout_test.cc": "19209d21e3e1fa7c"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3549479dc5597a7e1cba635c9da683b9121ddf41",
+          "reviewed": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+      "branch": "quest/xapiand/task-asio-layout",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task_asio.hh",
+        "test/**",
+        "CMakeLists.txt"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T13:48:35",
+          "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "criteria": {
+            "A1": "261119-133221-a93d2b; fails without: 261119-132647-2e1fa2, 261119-133219-595e34",
+            "A2": "[artifact] task_asio.hh: the only NDEBUG left (line 451) guards an assert, no data member",
+            "A3": "261119-133227-71f49f"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-133227-71f49f",
+              "level": "light",
+              "seconds": 28.7,
+              "state": "done",
+              "what": "task-asio-layout check suite at fb32493ad359"
+            }
+          ],
+          "final": true,
+          "from": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "reason": "",
+          "tested": "fb32493ad359462a7de74ad968149e09b3e06f8a"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "landed",
+      "title": "task_asio: cancellable_asio_awaiter layout identical in Debug and release",
+      "updated": "2026-11-19T13:48:41",
+      "worktree": ""
+    },
     "task-driver-layout": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T13:19:27",
+          "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "blobs": {
+            "CMakeLists.txt": "100644:0b5a7210faa6c6784889a875f0c4ac92839fc21a",
+            "task.hh": "100644:1b08b76669d390a719c8355fa7be13e128d0357a",
+            "test/layout_debug.cc": "100644:4aad8e866d4bbf2ad76a6679f4eb01b251d94536",
+            "test/layout_release.cc": "100644:6b8db450d60eedf472d9faa2e538e63889badb5e",
+            "test/layout_test.cc": "100644:6c710e05c70dcbbc1692aadceff8e819db09db30"
+          },
+          "by": "review",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": "07f28c4f2e860afd",
+          "diffs": {
+            "CMakeLists.txt": "f24701f0e9b7e52f",
+            "task.hh": "0bea1c6b91d3322d",
+            "test/layout_debug.cc": "357541a782323975",
+            "test/layout_release.cc": "83e6442e8f1b8d0e",
+            "test/layout_test.cc": "0d32935293e37559"
+          },
+          "findings": {},
+          "note": "",
+          "review": "8db659d95ef06c22901b35f858dc418bb408e2f2",
+          "reviewed": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
       "branch": "quest/xapiand/task-driver-layout",
@@ -24346,20 +25351,149 @@
       "consumes": [],
       "files": [
         "task.hh",
-        "test/**"
+        "test/**",
+        "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-driver-layout",
-      "landed": [],
-      "lenses": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T13:22:00",
+          "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+          "criteria": {
+            "A1": "261119-131530-b00b7b; fails without: 261119-125658-e4aa1e, 261119-131528-361954",
+            "A2": "261119-131533-48d7b2",
+            "A3": "261119-125708-077ad8 (suite); CI on the branch"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "63b43bd06881acf56a4fe82303469cdf54dd05b2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-125708-077ad8",
+              "level": "light",
+              "seconds": 85.0,
+              "state": "done",
+              "what": "task-driver-layout check suite at 63b43bd06881"
+            }
+          ],
+          "final": true,
+          "from": "b7e24490310f40f1933b693f3777fc4ea8ee1429",
+          "reason": "",
+          "tested": "63b43bd06881acf56a4fe82303469cdf54dd05b2"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "task: inline_scheduler layout identical in Debug and release (F7)",
-      "updated": "2026-11-19T12:53:55",
-      "worktree": "../task-wt/xapiand/task-driver-layout"
+      "updated": "2026-11-19T13:22:06",
+      "worktree": ""
+    },
+    "task-fire-pending-guard": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T15:09:35",
+          "base": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "blobs": {
+            "docs/API.md": "100644:32741c47ff48f57fe0991238d8dec0315ca53ecf",
+            "docs/mechanisms/lifecycle.md": "100644:c73af5dc80ba18f46d61110bb094c6b5f1eeee67",
+            "task_timers.hh": "100644:8a148fce42afe7aa1c9729fd8b70607bcc0873e4",
+            "test/timers_test.cc": "100644:15a46836728a6960f9bc949a9a69a98a722f8dea"
+          },
+          "by": "review",
+          "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+          "criteria": "a377025b6ec8bfbc",
+          "diffs": {
+            "docs/API.md": "baae7e58b162129e",
+            "docs/mechanisms/lifecycle.md": "d550f577ad1e3475",
+            "task_timers.hh": "8fe8be4e43803b7a",
+            "test/timers_test.cc": "747459e8562fa764"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9cb691cd4ee1c03a733a98dacd9e3ec405b05cfb",
+          "reviewed": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "0316befffa225849f04a8064ea6c46a334e52b94",
+      "branch": "quest/xapiand/task-fire-pending-guard",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "later": true,
+          "level": "light",
+          "minutes": 40,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task_timers.hh",
+        "test/timers_test.cc",
+        "docs/mechanisms/lifecycle.md",
+        "docs/API.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T15:33:55",
+          "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+          "criteria": {
+            "A1": "261119-145232-a31610; fails without: 261119-145237-42104f",
+            "A2": "261119-145232-a31610, 261119-145234-48e3e7; fails without: 261119-145239-811bb9",
+            "A3": "261119-145232-a31610, 261119-145234-48e3e7, 261119-145249-853290"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-145232-a31610",
+              "level": "light",
+              "seconds": 35.6,
+              "state": "done",
+              "what": "task-fire-pending-guard check suite at f937bc2f513f"
+            }
+          ],
+          "final": true,
+          "from": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "later": [
+            "261119-153355-704ef3"
+          ],
+          "reason": "",
+          "tested": "f937bc2f513ff83e1cd810d528c79f0b55434c04"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "landed",
+      "title": "debounce: fire_pending() from inside a fire is caught, not a hang",
+      "updated": "2026-11-19T15:33:56",
+      "worktree": ""
     },
     "task-inbox-first": {
       "accepted": {
@@ -24717,6 +25851,127 @@
       "updated": "2026-11-19T11:19:20",
       "worktree": "../task-wt/xapiand/task-lifecycle"
     },
+    "task-lifecycle-followups": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T14:29:03",
+          "base": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "blobs": {
+            "docs/API.md": "100644:7ed06dd205b39498472371be11b8211f8ac76e0f",
+            "docs/design/service-shape.md": "100644:faa7a00ec93537669ae408dd763a555a5fd1bcb6",
+            "docs/mechanisms/lifecycle.md": "100644:62502ee10f399bc6ad29c40f9b12d7e574f1155d",
+            "lifecycle.hh": "100644:f8e0725b42ef3f61869e7ffb22ef46a1c778d058",
+            "task.hh": "100644:05e940f8f290df7502d05a45da6250bc1e6dfe6b",
+            "task_timers.hh": "100644:78486e1e78c8757b7a94453ac7f55a08046d8123",
+            "test/lifecycle_test.cc": "100644:aa6107b204393e90088bb4e9f513ff7dd30b8f58",
+            "test/timers_test.cc": "100644:5df1c716d760f93d1cfbe157cf676dc5b31b26ee"
+          },
+          "by": "review",
+          "commit": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "criteria": "406e626f9125da71",
+          "diffs": {
+            "docs/API.md": "3799f1e0db73168f",
+            "docs/design/service-shape.md": "ccdaf310c0c1742e",
+            "docs/mechanisms/lifecycle.md": "0d90f46d1449eb25",
+            "lifecycle.hh": "720fc90a16b93069",
+            "task.hh": "7aefdad000664a11",
+            "task_timers.hh": "772d6c02cfc9b895",
+            "test/lifecycle_test.cc": "ee59468f38d755f5",
+            "test/timers_test.cc": "5e5fc29ae33a7fdf"
+          },
+          "findings": {},
+          "note": "",
+          "review": "e1ffd0dc706a591b7f8f6573117f5c66441b9f85",
+          "reviewed": "8cf679386a8fc9edb2a8ef1ec352cc06416cc01a",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-lifecycle-followups",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "lifecycle.hh",
+        "task_timers.hh",
+        "test/lifecycle_test.cc",
+        "test/timers_test.cc",
+        "docs/mechanisms/lifecycle.md",
+        "docs/API.md",
+        "docs/design/service-shape.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T14:29:14",
+          "commit": "0316befffa225849f04a8064ea6c46a334e52b94",
+          "criteria": {
+            "A1": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140140-9aee97",
+            "A2": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140143-816688",
+            "A3": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140145-8db73c",
+            "A4": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140148-04f388",
+            "A5": "261119-140132-6f55be (passed at 4c73dbb7a5c2; only merges from main since), 261119-140132-d04ab6 (passed at 4c73dbb7a5c2; only merges from main since), 261119-140207-206045 (passed at 4c73dbb7a5c2; only merges from main since), 261119-140209-c56112 (passed at 4c73dbb7a5c2; only merges from main since); fails without: 261119-140151-bc8368, 261119-140153-e85702, 261119-140154-3b9118, 261119-140156-7d67fb, 261119-140158-d2568f, 261119-140159-a8816d, 261119-140201-b19aab"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4c73dbb7a5c290ccbd942302a49f7c3712fb7649",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140132-6f55be",
+              "level": "light",
+              "seconds": 55.9,
+              "state": "done",
+              "what": "task-lifecycle-followups check suite at 4c73dbb7a5c2"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "4c73dbb7a5c290ccbd942302a49f7c3712fb7649",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140132-d04ab6",
+              "level": "light",
+              "seconds": 42.4,
+              "state": "done",
+              "what": "task-lifecycle-followups check tsan at 4c73dbb7a5c2"
+            }
+          ],
+          "final": true,
+          "from": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "reason": "",
+          "tested": "0316befffa225849f04a8064ea6c46a334e52b94"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "high",
+      "status": "landed",
+      "title": "task: lifecycle follow-ups and debounce touch/throttle/fire_pending",
+      "updated": "2026-11-19T14:29:39",
+      "worktree": ""
+    },
     "task-lifecycle-rename": {
       "accepted": {},
       "after": [],
@@ -24779,6 +26034,119 @@
       "status": "landed",
       "title": "Task primitives for Phase 7c (L1)",
       "updated": "2026-11-08T15:40:16"
+    },
+    "task-process-step": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T14:07:17",
+          "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "blobs": {
+            "AGENTS.md": "100644:719e75631c2c244fbf78400fee12728fb499c86d",
+            "CMakeLists.txt": "100644:4fd0b9103edf3a27db8187f1a3636a73f40f5869",
+            "docs/API.md": "100644:d03fac8fbdacb49900d6f21ea8c23d04893048b1",
+            "docs/mechanisms/process.md": "100644:29b8ea8047002eaf573407427f2e7b797222417d",
+            "process.hh": "100644:f63b67497ddedb6badad5b5b79b78e9ccc39c379",
+            "test/process_test.cc": "100644:7ea3bccfb3b2db7f9a70df8a614e68aa4a6af06a"
+          },
+          "by": "review",
+          "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "criteria": "7e83c0884cde2eda",
+          "diffs": {
+            "AGENTS.md": "f0f31fa24b76394d",
+            "CMakeLists.txt": "6950a908e64de3c3",
+            "docs/API.md": "473f73dad57753e3",
+            "docs/mechanisms/process.md": "bee51f2fda49fc9b",
+            "process.hh": "d986cbe5663818c1",
+            "test/process_test.cc": "5093e9d324861f6a"
+          },
+          "findings": {
+            "R1": {
+              "jobs": [
+                {
+                  "cmd": "build-pt/task_process_test",
+                  "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-140516-0c982a",
+                  "level": "light",
+                  "seconds": 5.7,
+                  "state": "done",
+                  "what": "build-pt/task_process_test at 3ce0f0c0fdcd"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "e3b4b37d98126c62f689960d2c82aa70100a2105",
+          "reviewed": "ef353dde84fc996f51d28907aeb059061ea233ff",
+          "verdict": "CHANGES"
+        }
+      },
+      "after": [
+        "task-driver-layout"
+      ],
+      "base": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+      "branch": "quest/xapiand/task-process-step",
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "process.hh",
+        "test/process_test.cc",
+        "docs/mechanisms/process.md",
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "docs/API.md"
+      ],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T14:15:44",
+          "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+          "criteria": {
+            "A1": "261119-140521-dfbfec, 261119-140516-0c982a; fails without: 261119-135244-853d1c, 261119-135246-098fe2, 261119-135249-e2e328, 261119-140043-e5c800, 261119-140046-b42af2, 261119-140519-1f4501",
+            "A2": "261119-140521-dfbfec, 261119-140516-0c982a; fails without: 261119-135252-fe16f4, 261119-135254-cd52b7, 261119-140049-af456c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-140521-dfbfec",
+              "level": "light",
+              "seconds": 38.9,
+              "state": "done",
+              "what": "task-process-step check suite at 3ce0f0c0fdcd"
+            }
+          ],
+          "final": true,
+          "from": "fb32493ad359462a7de74ad968149e09b3e06f8a",
+          "reason": "",
+          "tested": "3ce0f0c0fdcd2c64f21f34d820d02dc73b5edde6"
+        }
+      ],
+      "lenses": [
+        "correctness"
+      ],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "normal",
+      "status": "landed",
+      "title": "task: process step (run_daemon, ProcessLock, locked_pid)",
+      "updated": "2026-11-19T14:16:09",
+      "worktree": ""
     },
     "termdict-forward-seek": {
       "accepted": {},
