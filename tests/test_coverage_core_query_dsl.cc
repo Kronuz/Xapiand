@@ -442,17 +442,8 @@ static void test_make_dsl_query_from_text() {
 	SEE(dsl("a OR b"), want(obj({ { "_or", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
 	SEE(dsl("a XOR b"), want(obj({ { "_xor", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
 	SEE(dsl("a MAYBE b"), want(obj({ { "_and_maybe", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }) }) } })));
-	// Pinned (dsl-not-wrap): create_exp_op_dsl's `{{ x }}` builds a list of one on some toolchains and a list of a list of
-	// one on others (macOS and Linux, FreeBSD), so the check unwraps lists of one: the operand is the same either way.
-	{
-		MsgPack not_a = fx.dsl.make_dsl_query("NOT a");
-		const MsgPack* operand = &not_a.at("_not");
-		while (operand->is_array() && operand->size() == 1) {
-			operand = &operand->at(0);
-		}
-		SEE(operand->to_string(), want(obj({ { "_value", "a" } })));
-		SEE(not_a.size(), std::size_t(1));
-	}
+	// `_not` holds a list of one expression, never a list nested in a list, on every toolchain.
+	SEE(dsl("NOT a"), want(obj({ { "_not", list({ obj({ { "_value", "a" } }) }) } })));
 	// A run of one operator is one clause.
 	SEE(dsl("a AND b AND c"), want(obj({ { "_and", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }), obj({ { "_value", "c" } }) }) } })));
 	SEE(dsl("a OR b OR c"), want(obj({ { "_or", list({ obj({ { "_value", "a" } }), obj({ { "_value", "b" } }), obj({ { "_value", "c" } }) }) } })));
