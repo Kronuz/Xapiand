@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-165221-1484b6 (probe 4: widened scenarios, output .scratch/probe4.out in the job's checkout)
+State: waiting on jobs 261119-220859-27b00e 261119-220854-d2b115 261119-220855-4b8309 (head 6c22eac2ea3d, master merged cleanly, no pins changed)
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,7 +30,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | job 261119-220859-27b00e (coverage ctest+corpora, light); expected below target: test is still an exploration main |
+| A2 | job 261119-220854-d2b115 (coverage_one database schema.cc); value checks not yet written |
+| A3 | suite job 261119-220855-4b8309 |
 
 ## Result
 
