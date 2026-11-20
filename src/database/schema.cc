@@ -712,6 +712,7 @@ _get_type(std::string_view str_type)
 		hhl("float"),
 		hhl("floating"),
 		hhl("geo"),
+		hhl("geospatial"),
 		hhl("integer"),
 		hhl("positive"),
 		hhl("script"),
@@ -737,6 +738,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/array"),
 		hhl("array/geo"),
 		hhl("geo/array"),
+		hhl("array/geospatial"),
+		hhl("geospatial/array"),
 		hhl("array/integer"),
 		hhl("integer/array"),
 		hhl("array/positive"),
@@ -772,6 +775,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/foreign"),
 		hhl("foreign/geo"),
 		hhl("geo/foreign"),
+		hhl("foreign/geospatial"),
+		hhl("geospatial/foreign"),
 		hhl("foreign/integer"),
 		hhl("integer/foreign"),
 		hhl("foreign/positive"),
@@ -836,6 +841,12 @@ _get_type(std::string_view str_type)
 		hhl("array/geo/foreign"),
 		hhl("geo/foreign/array"),
 		hhl("geo/array/foreign"),
+		hhl("foreign/array/geospatial"),
+		hhl("foreign/geospatial/array"),
+		hhl("array/foreign/geospatial"),
+		hhl("array/geospatial/foreign"),
+		hhl("geospatial/foreign/array"),
+		hhl("geospatial/array/foreign"),
 		hhl("foreign/array/integer"),
 		hhl("foreign/integer/array"),
 		hhl("array/foreign/integer"),
@@ -995,6 +1006,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array"):
+		case _.fhhl("array/geospatial"):
 		case _.fhhl("geo/array"):
 		case _.fhhl("array/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::geo }};
@@ -1075,6 +1088,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/foreign"):
+		case _.fhhl("foreign/geospatial"):
 		case _.fhhl("geo/foreign"):
 		case _.fhhl("foreign/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::geo }};
@@ -1180,6 +1195,12 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array/foreign"):
+		case _.fhhl("geospatial/foreign/array"):
+		case _.fhhl("array/geospatial/foreign"):
+		case _.fhhl("array/foreign/geospatial"):
+		case _.fhhl("foreign/geospatial/array"):
+		case _.fhhl("foreign/array/geospatial"):
 		case _.fhhl("geo/array/foreign"):
 		case _.fhhl("geo/foreign/array"):
 		case _.fhhl("array/geo/foreign"):
@@ -2019,7 +2040,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -5790,19 +5811,22 @@ Schema::store_item(const MsgPack& value, MsgPack& data)
 			break;
 
 		case FieldType::date:
-		case FieldType::datetime:
+		case FieldType::datetime: {
+			// A cast object (`{"_date": ...}`) is read through its cast, as index_item reads it.
+			const auto iso = Datetime::iso8601(Datetime::DatetimeParser(value.is_map() ? Cast::cast(value) : value));
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
+					data_value = iso;
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					data_value.push_back(iso);
 					break;
 				default:
-					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
+					data_value = MsgPack({ data_value, iso });
 					break;
 			}
 			break;
+		}
 
 		default:
 			switch (data_value.get_type()) {
@@ -6459,6 +6483,7 @@ has_dispatch_process_concrete_properties(uint64_t key)
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6535,6 +6560,7 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6649,6 +6675,9 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_STRING):
+			Schema::process_cast_object(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_DATE):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_DATETIME):

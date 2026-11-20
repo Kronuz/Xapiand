@@ -1430,6 +1430,27 @@
       "closed": "noted: heal-snapshot-stall at consensus:39d9f1d; seeds 4270/6197/8247 catch up in 7/40/40 rounds",
       "id": "msg-163",
       "text": "consensus-heal-snapshot-stall landed at consensus:39d9f1d (your msg-136 stall): an install starts only after the peer refuses an append at or below the base; a peer that already holds the entries is appended at the base. Catch-up rounds 7/40/40 on seeds 4270/6197/8247 (were 10,498-14,881). test/worker_test.cc's binary_transfer loop exit is >= 2 now (one refusal round trip shifts timing)."
+    },
+    {
+      "at": "2026-11-20T03:49:08",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-162",
+      "items": {
+        "automata": "frees  for automata",
+        "http-pin-halfclose": "frees CMakeLists.txt for http-pin-halfclose",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "track-p-research": "frees docs/perf/** for track-p-research"
+      },
+      "settles": {
+        "start": [
+          "automata",
+          "http-pin-halfclose",
+          "phase5",
+          "track-p-research"
+        ]
+      },
+      "text": "track-p landed: unlocks frees  for automata; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
     }
   ],
   "quests": {
@@ -1572,11 +1593,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "aggregations: validate the whole tree before the search",
-      "updated": "2026-11-19T14:20:35"
+      "updated": "2026-11-20T05:27:19"
     },
     "alpha10-builds": {
       "accepted": {},
@@ -1621,7 +1643,7 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "owner 2026-10-27: later",
+      "reason": "owner 2026-10-27: later (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "low",
       "status": "blocked",
@@ -1629,7 +1651,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-08T15:40:14"
+      "updated": "2026-11-20T05:28:38"
     },
     "automata": {
       "accepted": {},
@@ -1841,11 +1863,12 @@
         "barrier-warning-strata"
       ],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "Xapiand logs the barrier warning and has a full-flush switch",
-      "updated": "2026-11-19T06:17:05",
+      "updated": "2026-11-20T05:27:25",
       "worktree": "../Xapiand-wt/xapiand/barrier-warning"
     },
     "barrier-warning-completion": {
@@ -3030,12 +3053,24 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:54",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness"
-      ],
+      "lenses": [],
       "milestone": "Phase 5",
       "needs": [
         "cjk-segmenter"
@@ -3045,7 +3080,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-18T05:36:16",
+      "updated": "2026-11-20T05:25:54",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
@@ -3165,7 +3200,7 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "owner: the design publishes from AWS metal (Q7); the 2026-11-04 host rule is no AWS and campaign rents no machines (PLAN open question 4)",
+      "reason": "owner names the published run host (PLAN open question 4; no AWS, campaign rents no machines); also needs xapiand-final-release tag (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "low",
       "status": "blocked",
@@ -3173,7 +3208,192 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-08T15:40:13"
+      "updated": "2026-11-20T05:28:23"
+    },
+    "cluster": {
+      "accepted": {},
+      "after": [
+        "journal-replaces-wal",
+        "group-heal",
+        "placement"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "level": "light",
+          "minutes": 90,
+          "name": "cluster"
+        },
+        {
+          "cmd": "ci:AddressSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:ThreadSanitizer",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        },
+        {
+          "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+          "level": "none",
+          "minutes": 5,
+          "name": "no-walk"
+        }
+      ],
+      "consumes": [
+        "consensus:rpc-lane",
+        "strata:group-install",
+        "strata:placement-records",
+        "strata:placement-repair",
+        "prospect:supplied-stats",
+        "xapiand:command"
+      ],
+      "files": [
+        "src/cluster/**",
+        "tests/cluster/**",
+        "harness/cluster/**",
+        "src/index_resolver_lru.*",
+        "src/database/pool.*",
+        "src/database/shard.*",
+        "src/database/handler.*",
+        "src/opts.*",
+        "src/manager.*",
+        "src/engine/search.*",
+        "src/engine/strata/search.*",
+        "src/server/search_views.cc",
+        "src/index_pattern.*",
+        "src/walk_gate.h",
+        "tests/test_index_pattern.cc",
+        "tests/fuzz_index_pattern.cc",
+        "tests/fuzz_index_expand.cc",
+        "docs/mechanisms/shard-rpc.md",
+        "docs/mechanisms/cluster-membership.md",
+        "docs/mechanisms/shard-groups.md",
+        "docs/mechanisms/distributed-search.md",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/installation.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/faq.md",
+        "docs/src/content/docs/changelog.md",
+        "docs/src/content/docs/upgrade.md",
+        "docs/src/content/docs/reference-guide/**",
+        "docs/src/content/docs/tutorials/**"
+      ],
+      "history": [
+        {
+          "at": "2026-11-20T05:23:35",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "xapiand:shard-rpc",
+        "xapiand:node-directory",
+        "xapiand:shard-map",
+        "xapiand:search-fanout",
+        "xapiand:cluster-routes"
+      ],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
+      "updated": "2026-11-20T05:23:35"
     },
     "cluster-api": {
       "accepted": {},
@@ -3227,11 +3447,12 @@
       "provides": [
         "xapiand:cluster-routes"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Settings, health, :info, docs, changelog",
-      "updated": "2026-11-15T23:05:44"
+      "updated": "2026-11-20T05:26:55"
     },
     "cluster-gate": {
       "accepted": {},
@@ -3281,17 +3502,17 @@
       "milestone": "Phase 7b",
       "needs": [
         "cluster-harness",
-        "group-sim",
-        "distributed-search",
-        "cluster-api",
-        "cluster-migration"
+        "group-heal",
+        "placement",
+        "journal-replaces-wal",
+        "cluster"
       ],
       "provides": [],
       "repo": ".",
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T11:17:28"
+      "updated": "2026-11-20T05:30:10"
     },
     "cluster-harness": {
       "accepted": {
@@ -3496,11 +3717,12 @@
       "provides": [
         "xapiand:node-directory"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Node identity, --join, certificates, keepalives, /:nodes",
-      "updated": "2026-11-18T02:55:56"
+      "updated": "2026-11-20T05:26:40"
     },
     "cluster-migration": {
       "accepted": {},
@@ -3537,11 +3759,12 @@
         "shard-groups"
       ],
       "provides": [],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "One node to a cluster and back, without loss",
-      "updated": "2026-11-18T02:55:57"
+      "updated": "2026-11-20T05:26:57"
     },
     "cluster-net-setup": {
       "accepted": {},
@@ -4596,16 +4819,16 @@
       "provides": [
         "consensus:hello"
       ],
+      "reason": "folded into F3 consensus-rpc-lane (replan-2026-11-20)",
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
-      "updated": "2026-11-18T22:28:34"
+      "updated": "2026-11-20T05:27:03"
     },
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
         "detent:consensus-driver",
         "detent:transport-connection",
         "detent:transport-groups",
@@ -4616,7 +4839,6 @@
         "detent:transport-groups-ci",
         "detent:transport-feed-scan",
         "detent:consensus-wave-open",
-        "detent:reader-yield-stall",
         "detent:peers-tsan-timeout",
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
@@ -4671,7 +4893,14 @@
         "fuzz/fuzz_decoders.cc",
         "test/transport/peers_test.cc",
         "docs/design/rpc-lane*",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "include/consensus/host*",
+        "src/host*",
+        "src/transport*",
+        "test/host*",
+        "test/transport/hello*",
+        "docs/mechanisms/hello*",
+        "docs/design/hello*"
       ],
       "history": [
         {
@@ -4801,23 +5030,40 @@
           "weakened": [
             "deferred check fuzz changed"
           ]
+        },
+        {
+          "at": "2026-11-20T05:24:37",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "security"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; consensus-hello-limits folded in",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
-        "correctness"
+        "security"
       ],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
-        "consensus:rpc-lane"
+        "consensus:rpc-lane",
+        "consensus:hello"
       ],
       "repo": "../consensus",
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T23:28:02",
+      "updated": "2026-11-20T05:24:37",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -5244,11 +5490,15 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "journal-replaces-wal deletes wal.cc and rewrites handler.cc, shard.cc and pool.cc, so coverage written now is thrown away; D127 parked the coverage follow-ups; resumes after cluster lands (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "blocked",
       "title": "Database coverage reaches T13's target",
-      "updated": "2026-11-19T23:26:14"
+      "until": [
+        "cluster"
+      ],
+      "updated": "2026-11-20T05:28:07"
     },
     "coverage-multivalue": {
       "accepted": {},
@@ -6073,11 +6323,12 @@
       "provides": [
         "xapiand:search-fanout"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Fan-out, exact statistics, merged aggregations, patterns from the root",
-      "updated": "2026-11-15T23:05:33"
+      "updated": "2026-11-20T05:26:47"
     },
     "docs-site-audit": {
       "accepted": {},
@@ -8738,15 +8989,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "until test-glob lands: no work started; test registration stops serializing quests",
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "blocked",
+      "status": "dropped",
       "title": "Carried follow-ups: root routes, the WAL view, fuzz_lua",
-      "until": [
-        "owner"
-      ],
-      "updated": "2026-11-18T02:01:45",
+      "updated": "2026-11-20T05:27:31",
       "worktree": "../Xapiand-wt/xapiand/gate-prep-followups"
     },
     "gate0-5": {
@@ -9320,6 +9568,60 @@
       "updated": "2026-11-19T23:28:04",
       "worktree": "../strata-wt/xapiand/group-core"
     },
+    "group-heal": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "consensus:snapshot-channel"
+      ],
+      "files": [
+        "include/strata/group/**",
+        "src/group/**",
+        "test/group/**",
+        "sim/**",
+        "docs/mechanisms/replication-group.md",
+        "docs/mechanisms/group-install.md",
+        "docs/mechanisms/simulator.md",
+        "docs/gates/phase-3r.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:group-install"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Replication groups grow, heal and run in the simulator",
+      "updated": "2026-11-20T05:21:51"
+    },
     "group-install": {
       "accepted": {},
       "after": [
@@ -9380,11 +9682,12 @@
       "provides": [
         "strata:group-install"
       ],
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-18T02:56:00"
+      "updated": "2026-11-20T05:26:11"
     },
     "group-sim": {
       "accepted": {},
@@ -9440,11 +9743,12 @@
       "milestone": "Phase 3R",
       "needs": [],
       "provides": [],
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 3R gate rows in the simulator",
-      "updated": "2026-11-19T06:17:22"
+      "updated": "2026-11-20T05:26:19"
     },
     "hashes-cl-1": {
       "accepted": {},
@@ -10106,11 +10410,12 @@
         "http-halfclose"
       ],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "Xapiand takes http's half-close fix",
-      "updated": "2026-11-18T20:32:34"
+      "updated": "2026-11-20T05:27:22"
     },
     "hunt-lua-fetch": {
       "accepted": {},
@@ -10490,10 +10795,34 @@
         "harness/test_gate_tools.py",
         "docs/mechanisms/journal-durability.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:24:06",
+          "lenses": [
+            [
+              "correctness",
+              "design"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done",
+          "risk": [
+            "critical",
+            "high"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk critical -> high",
+            "lens correctness removed",
+            "lens design removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
-        "correctness",
-        "design"
+        "durability"
       ],
       "milestone": "Phase 7b",
       "needs": [
@@ -10508,10 +10837,10 @@
         "xapiand:ack-read-levels"
       ],
       "repo": ".",
-      "risk": "critical",
+      "risk": "high",
       "status": "planned",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-15T23:05:08"
+      "updated": "2026-11-20T05:24:06"
     },
     "journal-seal-repeat": {
       "accepted": {
@@ -10909,15 +11238,15 @@
       "milestone": "Library family",
       "needs": [],
       "provides": [],
-      "reason": "owner 2026-11-02: after the release",
+      "reason": "owner 2026-11-02: after the release; then as hunt rows and quick fixes in each library, not a quest (replan-2026-11-20 section 4)",
       "repo": "../cpp-libraries",
       "risk": "normal",
       "status": "blocked",
       "title": "The library performance issues the cpp-libraries gate filed",
       "until": [
-        "owner"
+        "release"
       ],
-      "updated": "2026-11-08T15:41:43"
+      "updated": "2026-11-20T05:28:30"
     },
     "license-audit": {
       "accepted": {},
@@ -17079,13 +17408,26 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:19",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed",
+            "lens security removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness",
-        "security"
-      ],
+      "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
@@ -17093,7 +17435,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-19T06:17:08"
+      "updated": "2026-11-20T05:25:19"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
@@ -18709,12 +19051,12 @@
         "track-c"
       ],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-18T02:29:42"
+      "updated": "2026-11-20T05:26:25"
     },
     "phase4-gate": {
       "accepted": {},
@@ -18852,15 +19194,15 @@
       "milestone": "Phase 4",
       "needs": [],
       "provides": [],
-      "reason": "Phase 4 follows the release (D39); release-rows goes first. Branch kept at prospect:bd21e9f (estimate triples, real-time get from a kept frozen buffer, typed-values note); resumes after release-rows lands",
+      "reason": "follows the release (D39); branch kept at prospect:bd21e9f; resumes as one feature (the unbuilt structured-data items), its gate rows measured when done (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "high",
       "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
       "until": [
-        "owner"
+        "release"
       ],
-      "updated": "2026-11-11T18:45:07",
+      "updated": "2026-11-20T05:28:18",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
@@ -19006,11 +19348,15 @@
       "milestone": "Phase 5",
       "needs": [],
       "provides": [],
+      "reason": "follows the release (D39); stemmer rows proved by release-rows; A1 ICU plugin superseded by D43, A2 is automata, A4 cites more-like-this; resumes as one feature, queryparser step 3b (Kronuz/queryparser), gate rows after phrase-expansion lands (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "blocked",
       "title": "Phase 5, analysis and the query language's long tail",
-      "updated": "2026-11-19T06:17:17"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:27:53"
     },
     "phase6": {
       "accepted": {},
@@ -19121,11 +19467,15 @@
       "milestone": "Phase 6",
       "needs": [],
       "provides": [],
+      "reason": "follows the release (D39); D121 fixed its first build; resumes as one feature, the pool chore backend with strict verified reads, latency rows on the Mac under exclusive, one QEMU probe (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "Phase 6, async backends and tuning",
-      "updated": "2026-11-18T05:36:22"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:27:59"
     },
     "phase7b": {
       "accepted": {},
@@ -19243,12 +19593,12 @@
         "track-d"
       ],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 7b, shards become groups",
-      "updated": "2026-11-18T02:29:45"
+      "updated": "2026-11-20T05:27:00"
     },
     "phase7c-design": {
       "accepted": {},
@@ -19905,13 +20255,26 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:52",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed",
+            "lens security removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness",
-        "security"
-      ],
+      "lenses": [],
       "milestone": "Phase 5",
       "needs": [
         "automata"
@@ -19921,7 +20284,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-19T06:17:11"
+      "updated": "2026-11-20T05:25:52"
     },
     "pins-2026-11": {
       "accepted": {},
@@ -19953,6 +20316,61 @@
       "status": "landed",
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
+    },
+    "placement": {
+      "accepted": {},
+      "after": [
+        "group-heal"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "strata:group-install"
+      ],
+      "files": [
+        "include/strata/placement/**",
+        "src/placement/**",
+        "test/placement/**",
+        "bench/placement/**",
+        "docs/mechanisms/placement-root.md",
+        "docs/mechanisms/placement-repair.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:placement-records",
+        "strata:placement-repair"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "The root authority places and repairs groups",
+      "updated": "2026-11-20T05:21:55"
     },
     "placement-repair": {
       "accepted": {},
@@ -19999,11 +20417,12 @@
       "provides": [
         "strata:placement-repair"
       ],
+      "reason": "folded into F2 placement (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Re-replication, drain, leader balance, rf change, root install",
-      "updated": "2026-11-18T02:55:58"
+      "updated": "2026-11-20T05:26:33"
     },
     "placement-root": {
       "accepted": {},
@@ -20048,11 +20467,12 @@
       "provides": [
         "strata:placement-records"
       ],
+      "reason": "folded into F2 placement (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "The root authority as a strata group: nodes and namespace records",
-      "updated": "2026-11-15T23:05:03"
+      "updated": "2026-11-20T05:26:30"
     },
     "placement-without-flush": {
       "accepted": {
@@ -20322,11 +20742,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "The open-index pool is sized from memory, not a fixed 200",
-      "updated": "2026-11-18T05:36:19"
+      "updated": "2026-11-20T05:27:28"
     },
     "pool-sweep-wait": {
       "accepted": {},
@@ -21927,7 +22348,7 @@
       "milestone": "Recovery tooling",
       "needs": [],
       "provides": [],
-      "reason": "the owner: after the engine is complete (2026-10-18, D28; strata docs/PLAN.md, Recovery tooling)",
+      "reason": "owner: after the engine is complete (D28) (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "high",
       "status": "blocked",
@@ -21935,7 +22356,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-09T04:14:32"
+      "updated": "2026-11-20T05:28:34"
     },
     "release": {
       "accepted": {},
@@ -21945,10 +22366,8 @@
         "license-closure",
         "closing-benchmark",
         "docs-upgrade-page",
-        "gate-prep-followups",
         "direct-pins",
         "postings-fuzz-memory",
-        "barrier-warning",
         "release-rows",
         "format-freeze",
         "more-like-this",
@@ -22067,7 +22486,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-18T02:29:15"
+      "updated": "2026-11-20T05:30:14"
     },
     "release-rows": {
       "accepted": {
@@ -22395,11 +22814,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "xapiand --restore exits nonzero when the restore fails",
-      "updated": "2026-11-19T12:22:53"
+      "updated": "2026-11-20T05:27:09"
     },
     "restore-free-off-loop": {
       "accepted": {
@@ -23208,19 +23628,51 @@
           "weakened": []
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T05:04:18",
+          "commit": "cbb14d6b84bac65b95d0f1c9b6eb74dbec14600e",
+          "criteria": {
+            "A1": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232539-76dfe9",
+            "A2": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232543-159564",
+            "A3": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232554-222d40",
+            "A4": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-232546-7f59ed, 261118-232550-b9fd21",
+            "A5": "D130 (PLAN.md Decisions): `_date` served through Cast, `_multiconvex` served (map form in geo-correctness), `_lua` refused as a script",
+            "A6": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261119-152314-eb6c56",
+            "A7": "261120-012601-a2aa5d (passed at b069dd6945a7; only merges from main since); fails without: 261118-235902-e9f90f, 261118-235904-367e06, 261118-235913-859ec0"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "7f03ae08d3b59f8133f13a6f41d7d1828641e557",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-012601-a2aa5d",
+              "level": "light",
+              "seconds": 594.9,
+              "state": "done",
+              "what": "serialize-validation check suite at 7f03ae08d3b5"
+            }
+          ],
+          "final": true,
+          "from": "b15603dcd73f343cb53ddbfb262ebb7c91a501c4",
+          "reason": "",
+          "tested": "9c0fe81896768e1240b6849a996135d6268e14ed"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-20T04:18:46",
-      "worktree": "../Xapiand-wt/xapiand/serialize-validation"
+      "updated": "2026-11-20T05:04:32",
+      "worktree": ""
     },
     "server-composition-note": {
       "accepted": {},
@@ -23385,11 +23837,12 @@
       "provides": [
         "xapiand:shard-map"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Shards across nodes: routing, members, replicas, linearizable reads",
-      "updated": "2026-11-18T02:55:59"
+      "updated": "2026-11-20T05:26:44"
     },
     "shard-rpc": {
       "accepted": {},
@@ -23443,11 +23896,12 @@
       "provides": [
         "xapiand:shard-rpc"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "The node-to-node shard service",
-      "updated": "2026-11-16T15:42:58"
+      "updated": "2026-11-20T05:26:37"
     },
     "shared-reader-core": {
       "accepted": {},
@@ -23536,11 +23990,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "query DSL: cast words in sorts; _not wraps the same on every toolchain",
-      "updated": "2026-11-19T12:23:18"
+      "updated": "2026-11-20T05:27:14"
     },
     "sortable-encoding": {
       "accepted": {
@@ -25393,11 +25848,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "folded into group-core (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "A refused apply never moves strata's position",
-      "updated": "2026-11-17T02:54:34"
+      "updated": "2026-11-20T05:27:06"
     },
     "strata-pin-catalog": {
       "accepted": {},
@@ -27774,9 +28230,7 @@
       ],
       "consumes": [],
       "files": [
-        "sim/**",
         "CMakeLists.txt",
-        "docs/design/simulator.md",
         "docs/reviews/simulator-design.md",
         "docs/status/simulator.md",
         "docs/DISTRIBUTION.md",
@@ -27876,12 +28330,15 @@
       "milestone": "Track D",
       "needs": [],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "D2 to D8 follow the release (cluster-release.md section 4); no 30-node cluster (D35); gives sim/** and docs/design/simulator.md to group-heal now; resumes after the release, per item (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "Track D, distribution",
-      "updated": "2026-11-18T02:29:37"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:28:42"
     },
     "track-p": {
       "accepted": {
@@ -28049,11 +28506,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "moved to hunt.md, one row per item P3, P4, P5, P8, P10, P11, P14, P20, P21; each becomes a quest only if its experiment wins (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Track P research items not yet started (split per item at start)",
-      "updated": "2026-11-19T17:01:53"
+      "updated": "2026-11-20T05:28:59"
     },
     "turn-log-parity": {
       "accepted": {},
@@ -28079,9 +28537,27 @@
         "docs/mechanisms/**",
         "fuzz/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:25:16",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "",
       "needs": [],
@@ -28090,7 +28566,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-17T02:22:54"
+      "updated": "2026-11-20T05:25:16"
     },
     "turn-seal": {
       "accepted": {
@@ -31452,12 +31928,24 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:57",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness"
-      ],
+      "lenses": [],
       "milestone": "Xapian-only release",
       "needs": [],
       "provides": [],
@@ -31465,7 +31953,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-19T06:17:19"
+      "updated": "2026-11-20T05:25:57"
     },
     "xapiand-on-strata": {
       "accepted": {},

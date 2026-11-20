@@ -37,6 +37,7 @@
 #include "length.h"                         // for serialize_length
 #include "phf.hh"                           // for phf
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
+#include "reserved/reserved.h"              // for is_comment
 
 
 Aggregation::Aggregation() :
@@ -93,6 +94,8 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 		hh(RESERVED_AGGS_RANGE),
 		hh(RESERVED_AGGS_IP_RANGE),
 		hh(RESERVED_AGGS_GEO_IP),
+		hh(RESERVED_AGGS_AGGREGATIONS),
+		hh(RESERVED_AGGS_AGGS),
 	});
 
 	auto aggs_it = context.find(RESERVED_AGGS_AGGREGATIONS);
@@ -214,7 +217,8 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 						// case _.fhh(RESERVED_AGGS_GEO_IP):
 						// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						// 	break;
-						case _.fhh(RESERVED_AGGS_AGGS):
+						case _.fhh(RESERVED_AGGS_AGGREGATIONS):
+						case _.fhh(RESERVED_AGGS_AGGS):  // the sub-aggregations, read by the bucket; the type follows
 							++it_sub_agg_type;
 							keep_looking_agg_type = true;
 							break;
@@ -237,6 +241,11 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 						case _.fhh(RESERVED_AGGS_GEO_IP):
 							THROW(AggregationError, "Aggregation {} is reserved but not implemented yet", repr(sub_agg_type));
 						default:
+							if (is_comment(sub_agg_type)) {
+								++it_sub_agg_type;
+								keep_looking_agg_type = true;
+								break;
+							}
 							THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
 					}
 				} while (keep_looking_agg_type and it_sub_agg_type != it_sub_agg_type_end);
