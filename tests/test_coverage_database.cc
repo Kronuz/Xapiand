@@ -293,7 +293,7 @@ int main() {
 		{"PUT /ty/19", R"({"v":{"_type":"datetime","_value":"2020-01-01T00:00:00"}})"}, {"PUT /ty/20", R"({"v":{"_type":"boolean","_value":"true"}})"},
 		{"PUT /ty/21", R"({"v":{"_type":"floating","_value":"1.5"}})"}, {"PUT /ty/22", R"({"v":{"_type":"integer","_value":"7"}})"},
 		{"PUT /ty/23", R"({"v":{"_type":"text","_value":5}})"}, {"PUT /ty/24", R"({"v":{"_type":"term","_value":"Abc Def"}})"},
-		{"PUT /ty/25", R"({"v":{"_type":"geo","_value":"POINT(1 2)"}})"}, {"PUT /ty/26", R"({"v":{"_type":"geo","_value":{"_type":"circle","_latitude":1,"_longitude":2,"_radius":10}}})"},
+		{"PUT /ty/25", R"j({"v":{"_type":"geo","_value":"POINT(1 2)"}})j"}, {"PUT /ty/26", R"({"v":{"_type":"geo","_value":{"_type":"circle","_latitude":1,"_longitude":2,"_radius":10}}})"},
 		{"PUT /ty/27", R"({"v":{"_type":"geo","_value":{"_type":"polygon","_points":[[1,1],[1,2],[2,2]]}}})"}, {"PUT /ty/28", R"({"v":{"_type":"geo","_value":"x"}})"},
 		{"PUT /ty/29", R"({"v":{"_type":"geo","_value":{"_type":"nope"}}})"}, {"PUT /ty/30", R"({"v":{"_type":"integer","_value":"x"}})"},
 		{"PUT /ty/31", R"({"v":{"_type":"integer","_value":1.5}})"}, {"PUT /ty/32", R"({"v":{"_type":"integer","_value":18446744073709551615}})"},
