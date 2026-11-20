@@ -1377,6 +1377,19 @@
         "quest": "detent:consensus-heal-snapshot-stall"
       },
       "text": "detent:consensus-heal-snapshot-stall started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T23:04:56",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:journal-hold-loop-required",
+      "id": "msg-159",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-hold-loop-required"
+      },
+      "text": "detent:journal-hold-loop-required started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -5063,6 +5076,38 @@
       "updated": "2026-11-19T00:35:37",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
+    "coverage-database-t13": {
+      "accepted": {},
+      "after": [
+        "coverage-database"
+      ],
+      "checks": [
+        {
+          "cmd": "harness/coverage.sh database",
+          "level": "light",
+          "minutes": 120,
+          "name": "coverage"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_coverage_database_*",
+        "tests/test_coverage_handler*",
+        "tests/test_coverage_wal*",
+        "tests/test_coverage_shard*",
+        "tests/test_coverage_name_index*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Database coverage reaches T13's target",
+      "updated": "2026-11-19T23:26:14"
+    },
     "coverage-multivalue": {
       "accepted": {},
       "after": [],
@@ -6578,7 +6623,7 @@
       "risk": "normal",
       "status": "active",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-19T22:28:40",
+      "updated": "2026-11-19T23:16:31",
       "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
     },
     "dsl-not-wrap": {
@@ -8992,7 +9037,8 @@
         "detent:consensus-worker-release",
         "detent:consensus-peers-attempts-bound",
         "detent:consensus-blocking-hold-loop",
-        "detent:consensus-heal-snapshot-stall"
+        "detent:consensus-heal-snapshot-stall",
+        "detent:journal-hold-loop-required"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -9057,7 +9103,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T22:59:02",
+      "updated": "2026-11-19T23:05:05",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
