@@ -1,40 +1,62 @@
 # netlab-consensus: journal
 
-State: working
+State: waiting on jobs 261120-141201-2d02d1 261120-141202-44cee0 261120-141208-19c21e
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Dry run: selftest (261120-141201-2d02d1), the node build in a VM-tier guest
+(261120-141202-44cee0, light), then 3 nodes at loopback with `--quick` (261120-141208-19c21e).
 
 ## Next
 
-1. <step>
+1. Read the dry run's log; fix what it shows (guest tools, clock check, timings).
+2. Full sweep: one exclusive job per node count, `bench/netlab/vm.sh run --nodes 3|5`, `--for A1,A2`.
+3. Write `docs/perf/netlab-consensus.md` from `bench.py table` with the job ids (A3).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | selftest 261120-141201-2d02d1; VM jobs pending |
+| A2 | VM jobs pending |
+| A3 | `docs/perf/netlab-consensus.md` pending |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+consensus:40670e3 adds `bench/netlab/`: `node.cc` (one node per process: Driver, journal, host
+transport; stdin commands, JSON events stamped with CLOCK_MONOTONIC), `bench.py` (the shapes, the
+checks, the history workload, the table), `selftest.py` (fake runner and cluster, four mutants),
+`vm.sh` (build and run in one guest of Xapiand's VM tier).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- One namespace per node in one guest (`cluster.sh up --nodes 1 --cpus 8`), not one guest per node:
+  netlab's veths and netem act in one kernel with no relay on the path (the guests' L2 goes through
+  the guardian's Python hub, which loses 2-26% of bursts and adds its own latency), every node reads
+  one CLOCK_MONOTONIC so a kill and the next leader's event compare, and the quest's contract is
+  netlab's own API (Netlab, delay, partition, its event log). Cost: the nodes share 8 vCPUs.
+- The VM-tier `up`/`ssh`/`down` commands, not `run`: `run` takes no `--cpus`, and 2 vCPUs for 5
+  nodes would color the numbers. vm.sh parks the guest by its EXIT trap, and `up --owner $$` makes
+  the guardian park it when the job's shell dies.
+- The node is consensus's production path (Driver over journal over PosixIO, the host transport),
+  not flow_bench's in-process Core loop, so a killed leader restarts on its journal and reads are
+  Driver::read (read index). Defaults kept: Timing (election 1-2 s, heartbeat 100 ms), Flow
+  (pipeline 1), Limits except log_bytes 768 MiB (no checkpoints in a run).
+- Journal on the guest's disk (/var/tmp, overlay with cache=unsafe), so barriers are real fdatasync
+  but cheap; the table measures the network, not a disk.
+- A1 round trip: ping's median from node 1 to each peer within 10% of the set round trip, past the
+  unshaped path's own round trip (the floor, measured first), which is also the jitter allowed (at
+  least 0.1 ms).
+- A1 majority only: per shape, the leader and as many followers as keep it a minority are cut off;
+  a write there must stay unacknowledged through heal while the majority's new leader commits one.
+- A2 election bound: election_max + heartbeat + 2 RTT + 200 ms (one timeout and a vote round); the
+  hunt threshold is 3 election timeouts. The partition shape runs on 1 ms one-way delay.
+- History: 3 clients per node, 60% writes, 4 keys, 25 ms think time, 1 s op timeout (then unknown,
+  and the client takes a new name); final linearizable reads of every key on the healed leader.
+- faultlab pinned at faultlab:b64102f (bench/netlab/FAULTLAB_REV): its Python equals Xapiand's
+  pin a3b71d1; only README and CI changed since.
