@@ -1,6 +1,6 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs 261118-112804-365541 (build-test at strata:ff10ac80); A1 rows read, verdict written (A3); A2 and A4 open (Blocked on). Strata:ff10ac80.
+State: waiting on jobs 261119-165343-b6aa97 (build-test at strata:7b02184a), 261119-165256-d9b97c (i8 arm builds), then A2 VM chain 261119-165320-4c7aab, 261119-165322-5de80e, 261119-165323-bbf0d1, 261119-165324-ab5d83, 261119-165325-5b4a2b, 261119-165327-df94fb, 261119-165328-679013, 261119-165329-cc2e38. A4 (owner) and Qdrant/ES at 1,000 (lead's rerun) open. Strata:7b02184a.
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
@@ -29,10 +29,23 @@ Timeout 261118-002908-5c7ce8 (Qdrant 100 load, 12 min, no log): rerun 9eed59 loa
 
 ## Next
 
-1. Lead: rerun 19572d, c7b37f, 2593f7, 13047d (`campaign job rerun --commit 3e8dcb934251 ...`);
+1. When the A2 chain ends: read strata-i8 against strata at 100 and 1,000 (same commit, same VM),
+   write them into `docs/design/hybrid-search/c1-rerun.md` and the verdict, fill A2's Evidence row.
+2. If build-test fails on manifest_log again: show it with a job at main's commit (below).
+3. Lead: rerun 19572d, c7b37f, 2593f7, 13047d (`campaign job rerun --commit 3e8dcb934251 ...`);
    my rerun was refused by the permission classifier. Then fold their rows into c1-rerun.md.
-2. A2: before/after of an `i8` code column read cold against today's `f32` stored values.
-3. Push the branch for CI (contributors do not push).
+4. Push the branch for CI (contributors do not push).
+
+## Resumed 2026-11-19
+
+build-test 261118-112804-365541 at strata:ff10ac80 failed on one test, manifest_log (`replay cost`,
+`../test/manifest_log_test.cc:1050: CHECK(fields_ratio < 40)`, measured 63.6x): a timing ratio
+under a light job's load, in code this quest never touches (its file set is docs and bench/hybrid);
+74 of 75 passed. Main merged (strata:80be34f0, no rebase). Resubmitted via `campaign verify` at the
+new head. A2 (option a of Blocked on 2): `bench/hybrid` gained a `strata-i8` arm (strata:7b02184a,
+vectors stored as a float32 scale and 768 int8 codes, 772 bytes against 3,072, scored against the
+float32 query); a before and after at that one commit, f32 and i8 at 100 and 1,000 tenants, one VM
+chain. Recall@10 is recorded per pass (bar 0.95; the exact column is unchanged f32 in numpy).
 
 ## Setup (stated before installing)
 
@@ -56,8 +69,7 @@ builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 
 1. A4: the owner's go or no-go and Q1 to Q6 (recommendation: go on steps 1 to 4, cold p99 the
    condition; Q2 to Q6 stand as ruled 2026-10-27, Q1 is this decision).
-2. A2: not run. Options: (a) an `i8` code-column prototype in bench/hybrid, cold and warm
-   before/after at named commits (recommended, a few hours); (b) defer A2 to step 4's gate rows.
+2. A2: running, option (a) (an `i8` code-column prototype in bench/hybrid); see Resumed.
 3. Qdrant and ES at 1,000 tenants: rerun needs the lead (Next 1).
 
 ## Evidence
