@@ -20954,6 +20954,8 @@
     "placement-locality-sim": {
       "accepted": {},
       "after": [],
+      "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+      "branch": "quest/xapiand/placement-locality-sim",
       "checks": [
         {
           "cmd": "python3 sim/placement/run.py --smoke",
@@ -20967,16 +20969,19 @@
         "sim/placement/**",
         "docs/perf/placement-strategies-sim.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/placement-locality-sim",
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: new files only (sim/placement/** and one new docs/perf note); turn-log-parity's docs/perf glob never touches them",
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
-      "updated": "2026-11-20T11:05:04"
+      "updated": "2026-11-20T11:05:25",
+      "worktree": "../strata-wt/xapiand/placement-locality-sim"
     },
     "placement-repair": {
       "accepted": {},
