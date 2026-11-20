@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-144146-5b3dfb 261120-144148-bb326b 261120-144150-16ef0b
+State: waiting on jobs 261120-144148-bb326b 261120-144150-16ef0b
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -21,9 +21,12 @@ round trips (Bulk dial, TLS, hellos).
 
 ## Next
 
-1. Read the exclusive rows; rerun a row only if it straddles a check.
-2. Write `docs/perf/netlab-consensus.md` from `bench.py table` with the job ids (A3), findings and
-   hunt rows; commit, push.
+1. When the exclusive rows finish (queued behind light holds at 14:55): read them; rerun a row only
+   if it straddles a check; the partition's `roles` trace explains the cut leader's term 3 and its
+   1.4 s rejoin.
+2. Fill `docs/perf/netlab-consensus.md` (method drafted at consensus:2dd22b3; TABLE_* placeholders):
+   `python3 bench/netlab/bench.py table $JOBS/<id>/a1/out/result-N.json --job N=<id>`, the
+   machine section, findings and hunt rows (A3); commit, push.
 
 ## Blocked on
 
@@ -33,7 +36,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-144146-5b3dfb; rows 261120-144148-bb326b (3), 261120-144150-16ef0b (5) pending |
+| A1 | selftest 261120-144146-5b3dfb (green); rows 261120-144148-bb326b (3), 261120-144150-16ef0b (5) pending |
 | A2 | the same rows' partition-1ms history check, pending |
 | A3 | `docs/perf/netlab-consensus.md` pending |
 
