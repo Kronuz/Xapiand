@@ -20,11 +20,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stored are not touched, and nothing decodes them.
 
 ### Fixed
+- **Text queries are read by the Kronuz `queryparser` library instead of Xapian's query
+  parser,** so a deeply nested `NEAR` query no longer overflows the heap. The terms and
+  operators are the same; a capitalized word under the default stemming is no longer stemmed
+  (Xapian 2.1's behavior). `XAPIAND_QUERYPARSER=0` in the environment selects Xapian's parser.
+- **A numeric document id of `0` is refused with 400** instead of being renumbered, which
+  lost the document and, in a restore, the document that took its number.
+- **A `uint64` at or above 2^63 in an `integer` field is rejected** instead of wrapping to a
+  negative number. The `positive` type still holds it.
+- **Float bounds of an integer range round inward:** a lower bound up and an upper bound
+  down (`_from: 1.5` starts at 2; `_to: -1.5` ends at -2), where the bounds truncated toward
+  zero before. A bound beyond the type's limits saturates, or empties the range.
 - **Nested bucket aggregations over a multi-valued field no longer exhaust the host.** A
   document is still counted once in each bucket it belongs to, as in Elasticsearch, so seven
   values nested six levels made 117,649 buckets (8 s, 200 MB). A search now holds at most
   65,535 buckets below the outermost level (Elasticsearch's `search.max_buckets`) and
   aggregations nest at most 16 levels deep; past either it answers 400 naming the limit.
+
+### Known limits
+- **Some numbers are stored in a lossy sortable form.** Xapian's `sortable_serialise` codec
+  encodes values with a long run of zero bits below the leading bit (for example `2^31 + 1`,
+  or `2^42` plus a few units) wrongly, and negative values near `-2^30` sort out of order.
+  The fix changes the stored bytes, so it needs the new codec and a reindex. It is not part
+  of this release, which is the last on Xapian; the strata release carries the new codec.
 
 ## [1.0.0-alpha.10] - 2026-10-28
 
