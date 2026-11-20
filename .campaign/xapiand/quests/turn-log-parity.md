@@ -50,6 +50,18 @@ touches at `campaign start`, and tasks whose globs are not disjoint run in order
 | 2 | `group-commit` | the barrier scheduler, `test/*barrier*` | implementation, strong, high | Joining the next barrier, per-writer count (A4); one log and one log per core |
 | 3 | `design-note` | `docs/design/standalone-turn-log.md`, `docs/mechanisms/**` | documentation, economical, medium | Records Q3 to Q5 closed with the mechanisms (A5) |
 
+Parity tasks (D148; strata `docs/design/rocksdb-parity.md`, "Tasks for turn-log-parity", rows 1-12,
+each with its files and rows): cohort wait (1), zero-copy turn (2), segment ladder and spare pool
+(3), checkpoint inside the window (4), packed turn (5), background flush (6), sorted runs in the merge
+policy (7), reopen at a changed loop count (8), refuse a log past the loop count (9), one log per
+device after its design review (10), unversioned upsert (11), VM profile (12). Tasks 3, 5, 9 and 10
+change journal: Detent's lead gets each diff before it lands and checks it against its authority
+suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperation`, `PosixIO`,
+`NativeCompletionQueue`, `AsioCompletionDriver`, `LinuxCompletionPolicy`, `File`, `DirectoryCursor`,
+`drive_synchronously`, `MutationRequest`/`MutationCompletion`, `AdmissionLimits`, `PrimitiveKind`) and
+its completion ordering stay; a turn is durable before an artifact citing it publishes; a
+single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
+
 Needs `document-gate` and `group-core` (both hold `include/strata/core/**` or `index.hh`).
 
 ## Contracts
