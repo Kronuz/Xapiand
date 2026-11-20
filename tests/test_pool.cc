@@ -1987,6 +1987,102 @@ void test_a_root_destroyed_while_it_waits_for_a_pin_releases_it() {
 	}
 }
 
+// A scheduler the test drives on its own thread. A post from another thread first runs `foreign`, which can hold the
+// poster there; `posted_dead` records a post that reached a destroyed scheduler.
+struct GateScheduler {
+	static inline std::thread::id owner;
+	static inline std::function<void()> foreign;
+	static inline std::atomic<bool> alive{false};
+	static inline std::atomic<bool> posted_dead{false};
+	task::root_list roots_;
+	std::mutex mutex_;
+	std::deque<std::coroutine_handle<>> queue_;
+
+	GateScheduler() { alive = true; }
+	~GateScheduler() { alive = false; }
+	void post(std::coroutine_handle<> h) {
+		if (std::this_thread::get_id() != owner && foreign) {
+			foreign();
+		}
+		if (!alive.load()) {
+			posted_dead = true;
+		}
+		if (roots_.closed()) {  // reads *this: freed when posted_dead
+			return;
+		}
+		std::lock_guard<std::mutex> lk(mutex_);
+		queue_.push_back(h);
+	}
+	std::uint64_t now() const noexcept {
+		return std::uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+	}
+	task::root_list* roots() noexcept { return &roots_; }
+	void drain() {
+		for (;;) {
+			std::coroutine_handle<> h;
+			{
+				std::lock_guard<std::mutex> lk(mutex_);
+				if (queue_.empty()) {
+					return;
+				}
+				h = queue_.front();
+				queue_.pop_front();
+			}
+			task::running_on scope(task::scheduler_ref::of(*this));
+			h.resume();
+		}
+	}
+};
+
+// A delivery never posts to a scheduler its owner tore down after the waiter's frame was destroyed: the catalog's
+// open hands the suspended waiter its pin and is held inside the waiter's post while the owner closes the scheduler,
+// destroys its roots (the waiter is abandoned) and destroys the scheduler (task_asio.hh's teardown phases 2-4).
+void test_a_delivery_never_posts_to_a_torn_down_scheduler() {
+	Watchdog watchdog("a delivery posts to no torn-down scheduler");
+	strata::faultfs::filesystem fs;
+	std::promise<void> gate;
+	std::shared_future<void> opens = gate.get_future().share();
+	DatabasePool pool(control_loop(), 4);
+	pool.set_index_io([&](const std::string& at) -> std::unique_ptr<kronuz::journal::IO> {
+		opens.wait();
+		std::filesystem::create_directories(at);
+		return std::make_unique<strata::faultfs::io>(fs);
+	});
+	std::mutex m;
+	std::condition_variable cv;
+	bool posting = false, torn_down = false;
+	GateScheduler::owner = std::this_thread::get_id();
+	GateScheduler::posted_dead = false;
+	GateScheduler::foreign = [&] {
+		std::unique_lock<std::mutex> lk(m);
+		posting = true;
+		cv.notify_all();
+		cv.wait_for(lk, 5s, [&] { return torn_down; });  // the bound only frees a catalog that waits for the post
+	};
+	auto sched = std::make_unique<GateScheduler>();
+	task::spawn(task::scheduler_ref::of(*sched), [](DatabasePool& pool, std::string path) -> task::task<void> {
+		auto pinned = co_await pool.pin(Endpoint(path), WRITE);
+	}(pool, fresh("torn_down_scheduler")));
+	sched->drain();  // the task suspends on the cold open, which waits for the gate
+	gate.set_value();
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk, [&] { return posting; });  // the open has delivered and is inside the waiter's post
+	}
+	sched->roots_.close();
+	sched->roots_.destroy_all();
+	sched.reset();
+	{
+		std::lock_guard<std::mutex> lk(m);
+		torn_down = true;
+	}
+	cv.notify_all();
+	pool.finish();
+	CHECK_TRUE(pool.join(60s));
+	CHECK_FALSE(GateScheduler::posted_dead.load());
+	GateScheduler::foreign = nullptr;
+}
+
 // A destroyed root that held a pin lets the pool join (CR3, the property C24's order exists for): the manager destroys
 // its control roots before it awaits the catalog's shutdown, and a destroyed root's pin is released with its frame.
 void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
@@ -2468,6 +2564,7 @@ int main(int argc, char** argv) {
 		{"test_the_commit_chore_logs_nothing_when_nothing_was_applied", test_the_commit_chore_logs_nothing_when_nothing_was_applied},
 		{"test_the_pool_waits_for_a_pin_released_during_its_end", test_the_pool_waits_for_a_pin_released_during_its_end},
 		{"test_a_root_destroyed_while_it_waits_for_a_pin_releases_it", test_a_root_destroyed_while_it_waits_for_a_pin_releases_it},
+		{"test_a_delivery_never_posts_to_a_torn_down_scheduler", test_a_delivery_never_posts_to_a_torn_down_scheduler},
 		{"test_a_destroyed_root_that_held_a_pin_lets_the_pool_join", test_a_destroyed_root_that_held_a_pin_lets_the_pool_join},
 		{"test_a_cancelled_pin_stops_waiting", test_a_cancelled_pin_stops_waiting},
 		{"test_a_cancelled_flush_stops_waiting_for_a_held_turn", test_a_cancelled_flush_stops_waiting_for_a_held_turn},
