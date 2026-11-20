@@ -28166,7 +28166,6 @@
     "track-c-gates": {
       "accepted": {},
       "after": [
-        "consensus-hello-limits",
         "consensus-sim-loops",
         "consensus-flow-bench",
         "detent:journal-faultfs",
@@ -28199,7 +28198,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T12:58:47",
+      "updated": "2026-11-20T05:31:24",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
