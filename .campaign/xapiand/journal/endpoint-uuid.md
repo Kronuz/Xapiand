@@ -21,7 +21,11 @@ Fix committed (src/endpoint.cc); tests in tests/test_endpoint.cc (unit) and test
 
 ## Blocked on
 
-Nothing yet.
+Lead (file set): tests/test_coverage_core_endpoint.cc:129-130 pins the old host:port drop
+(`SEE(Endpoint("xapiand://beta:8881/idx").node_name, "")`); with A3 it throws ClientError, so that test aborts and
+A4's suite cannot pass. Recommended: widen the set to that file and turn the line into a CHECK_THROW of ClientError.
+Also out of set, optional: a line in docs/src/content/docs/options.md (Identifiers) that a normalized UUID path
+names the same index and that `xapiand://host:port/...` is refused.
 
 ## Evidence
 
