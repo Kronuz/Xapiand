@@ -10042,9 +10042,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T10:57:42",
+      "updated": "2026-11-20T11:12:44",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
