@@ -268,6 +268,9 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 						hh(RESERVED_STRING),  // FIXME: remove legacy string
 						hh(RESERVED_TEXT),
 						hh(RESERVED_DATETIME),
+						hh(RESERVED_DATE),
+						hh(RESERVED_TIME),
+						hh(RESERVED_TIMEDELTA),
 						hh(RESERVED_UUID),
 						hh(RESERVED_EWKT),
 						hh(RESERVED_POINT),
@@ -378,6 +381,9 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
 							case _.fhh(RESERVED_TEXT):
 							case _.fhh(RESERVED_DATETIME):
+							case _.fhh(RESERVED_DATE):
+							case _.fhh(RESERVED_TIME):
+							case _.fhh(RESERVED_TIMEDELTA):
 							case _.fhh(RESERVED_UUID):
 							case _.fhh(RESERVED_EWKT):
 							case _.fhh(RESERVED_POINT):
@@ -393,7 +399,8 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_GEO_INTERSECTION):
 								{
 									MsgPack cast = MsgPack::MAP();
-									cast[name] = o;  // the cast word and its value.
+									// A date is a datetime at midnight: `_date` is cast as `_datetime`.
+									cast[name == RESERVED_DATE ? std::string_view(RESERVED_DATETIME) : name] = o;  // the cast word and its value.
 									query = get_value_query(path, cast, default_op, wqf, flags);
 								}
 								break;
@@ -654,7 +661,15 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 			break;
 	}
 
-	auto type_ser = Serialize::guess_serialize(obj);
+	// `_time` and `_timedelta` serialize as their own type (guessing would read a datetime); globally they share one term space.
+	std::pair<FieldType, std::string> type_ser;
+	if (obj.is_map() && obj.size() == 1 && obj.begin()->str_view() == RESERVED_TIME) {
+		type_ser = { FieldType::time, Serialize::time(Cast::time(obj.begin().value())) };
+	} else if (obj.is_map() && obj.size() == 1 && obj.begin()->str_view() == RESERVED_TIMEDELTA) {
+		type_ser = { FieldType::timedelta, Serialize::timedelta(Cast::timedelta(obj.begin().value())) };
+	} else {
+		type_ser = Serialize::guess_serialize(obj);
+	}
 
 	auto& type = std::get<0>(type_ser);
 	if (type == FieldType::keyword) {
