@@ -1,6 +1,6 @@
 # keymaker-keys: journal
 
-State: waiting on jobs 261119-165353-c9efd0 261119-165358-64761d 261119-165403-4deb85
+State: ready for review
 Quest: .campaign/xapiand/quests/keymaker-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Merged origin/master. Cause of the lines 481/504 failures found: slot 12 is Jaccard, which derives a character set from its string in the constructor; unserialize set only the string, so a rebuilt Jaccard key had an empty set (a real bug, fixed in src/metric_serialize.h by rebuilding the metric in SerializableMetric::unserialize). Line 248 was dropped earlier. Resubmitted at 78653b157: test (c9efd0), mutant (64761d, commit eb6441038134 = head with the src fixes reverted, ref refs/mutants/keymaker-keys; builds first, exits 127 on build failure, fails only on a FAIL line) and suite (4deb85).
+Done; all jobs passed at 78653b157 (journal-only commits since).
 
 ## Next
 
-1. When jobs pass: fill the Evidence table from `campaign brief`; State ready for review.
+1. Lead reviews; push the branch for CI (A4 also needs CI green).
 
 ## Blocked on
 
@@ -27,13 +27,14 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261119-165353-c9efd0; fails without: 261119-123354-0d438a, 261119-165358-64761d |
+| A2 | 261119-165353-c9efd0; fails without: 261119-123354-0d438a, 261119-165358-64761d |
+| A3 | 261119-165353-c9efd0; fails without: 261119-165358-64761d |
+| A4 | 261119-165403-4deb85 (suite passed); CI not run, branch not pushed |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Sort keys keep what they encode: MIN_STR_CMPVALUE is one NUL byte (M1), StringKey serializes its slot and direction (M5), a phonetic key restores its encoder code so soundex english round-trips at 13 bytes (M4), and a Jaccard key restores its character set (found by the round-trip test; slot 12 rebuilt to a different key). Pins in tests/test_coverage_multivalue.cc flipped; the mutant (fixes reverted) fails on the new CHECKs. No docs change beyond the changelog line below.
 
 ## Rulings I made
 
