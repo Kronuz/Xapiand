@@ -82,7 +82,7 @@ listener. `format-freeze` reviews these bytes.
 
 - `docs/design/cluster-release.md` open questions on which this builds with the lead's defaults:
   Q6 as written (no node-local accepted level, `?commit` = `ack=quorum&refresh=true`), Q7 (b)
-  multicast kept as a seed source only (owner, D141), Q8 (a) the `:` routes with `COMMIT /idx/` as the checkpoint, Q9 (b)
+  multicast kept as a seed source only (owner, D141), from consensus's `multicast-seeds`, Q8 (a) the `:` routes with `COMMIT /idx/` as the checkpoint, Q9 (b)
   one shard by default, Q-F27 (a) read-your-writes kept on the leader's replica. The owner
   accepted them (D142).
 - `needs consensus-rpc-lane` (F3, with its hello limits and version range); `after
