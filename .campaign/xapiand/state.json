@@ -19194,15 +19194,15 @@
       "milestone": "Phase 4",
       "needs": [],
       "provides": [],
-      "reason": "Phase 4 follows the release (D39); release-rows goes first. Branch kept at prospect:bd21e9f (estimate triples, real-time get from a kept frozen buffer, typed-values note); resumes after release-rows lands",
+      "reason": "follows the release (D39); branch kept at prospect:bd21e9f; resumes as one feature (the unbuilt structured-data items), its gate rows measured when done (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "high",
       "status": "blocked",
       "title": "Phase 4's remaining items and its gate",
       "until": [
-        "owner"
+        "release"
       ],
-      "updated": "2026-11-11T18:45:07",
+      "updated": "2026-11-20T05:28:18",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
