@@ -4778,9 +4778,9 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Driver simulation on hosts of 2-4 loops, groups sharing and not sharing turn logs (T2)",
-      "updated": "2026-11-18T17:24:50",
+      "updated": "2026-11-19T23:52:13",
       "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
     },
     "control-plane-wallclock": {
