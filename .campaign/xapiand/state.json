@@ -5115,6 +5115,8 @@
     "datetime-range-zone": {
       "accepted": {},
       "after": [],
+      "base": "15287bf561a39de569923c3d7719013cc8b39308",
+      "branch": "quest/xapiand/datetime-range-zone",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -5136,9 +5138,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T16:20:04"
+      "updated": "2026-11-19T16:20:26",
+      "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
       "accepted": {
