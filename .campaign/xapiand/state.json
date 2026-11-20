@@ -10158,7 +10158,48 @@
       "updated": "2026-11-08T15:39:40"
     },
     "keymaker-keys": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T21:21:55",
+          "base": "6789419a97105b89f3de3a1fd108af837fa371d1",
+          "blobs": {
+            "src/metric_serialize.h": "100644:392960469fe0e369c5d2c435df01b132e906bc43",
+            "src/multivalue/keymaker.h": "100644:be4bc23b052918be36fb6688d0e21103e0b785fc",
+            "tests/test_coverage_multivalue.cc": "100644:11deccc90bb3bd1e8fe4d369b855a150ba90a8c8"
+          },
+          "by": "review",
+          "commit": "baad6cb02d9e2341d141f9db5bf963afb3aee52d",
+          "criteria": "9398c997e787f3a8",
+          "diffs": {
+            "src/metric_serialize.h": "67339b51bdb6b8b3",
+            "src/multivalue/keymaker.h": "6af9a74e6771b631",
+            "tests/test_coverage_multivalue.cc": "842c1eb86a2abff0"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 --target xapiand_test_coverage_multivalue && ./build/bin/xapiand_test_coverage_multivalue'",
+                  "commit": "fb0704f1860ed0373d4133cdea0352d13ae9d7cb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-200941-018efe",
+                  "level": "light",
+                  "seconds": 764.6,
+                  "state": "done",
+                  "what": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/. at fb0704f1860e"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "6f1cf44c83d481900514e8e52beaeb92461fa783",
+          "reviewed": "d9df2bbdaa214dbd3a732150430b4751983ad44e",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "a9012db2338a04daaa2ba85770ff6bad9434cd38",
       "branch": "quest/xapiand/keymaker-keys",
@@ -10179,7 +10220,9 @@
         "tests/test_coverage_multivalue.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -10187,7 +10230,7 @@
       "risk": "normal",
       "status": "review",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T21:21:51",
+      "updated": "2026-11-19T21:21:55",
       "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
