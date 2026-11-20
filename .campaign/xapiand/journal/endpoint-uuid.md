@@ -1,6 +1,6 @@
 # endpoint-uuid: journal
 
-State: waiting on jobs 261119-164338-ad2484 261119-164341-1d09a8 261119-164343-ac082d 261119-164344-cd862d
+State: waiting on jobs 261119-180245-ed73df 261119-180250-f48c78 261119-180304-eeab13 261119-180306-f79912
 Quest: .campaign/xapiand/quests/endpoint-uuid.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fix, tests, coverage pin, options.md and changelog lines committed; master merged (96975b389). Jobs queued.
+The first run at 96975b389 (job 261119-164338-ad2484, suite 261119-164344-cd862d, CI FreeBSD and arm64) failed one
+check: the registry test's layout check at test_endpoint_uuid.cc:383. The registry opens a key relative to the
+process's directory, so its indexes were written beside the binary (found in the slot's build/4526/10c3/...).
+Fixed in ede2230ea: the test enters its data directory. Every node check passed on that run. Both mutants failed as
+required at 96975b389 (1d09a8: PUTs fail under partition, the path doesn't normalize to itself; ac082d).
 
 ## Next
 
-1. Read 261119-164338-ad2484 (A1-A3 tests at the head), 261119-164341-1d09a8 (A2 fails-without at
-   refs/mutants/endpoint-uuid/m1: replace_segment without the dedupe), 261119-164343-ac082d (A3 fails-without at
-   m2: no port refusal), suite 261119-164344-cd862d (A4). Fill Evidence, then ready for review.
+1. Read 261119-180245-ed73df (A1-A3 at ede2230ea), suite 261119-180250-f48c78 (A4), mutants 261119-180304-eeab13
+   (A2) and 261119-180306-f79912 (A3) at the head. Fill Evidence, set ready for review. CI needs ede2230ea pushed.
 
 ## Blocked on
 
