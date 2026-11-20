@@ -24767,8 +24767,8 @@
       "risk": "normal",
       "status": "landed",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-20T01:11:53",
-      "worktree": "../Xapiand-wt/xapiand/stopword-lists"
+      "updated": "2026-11-20T01:12:51",
+      "worktree": ""
     },
     "storage-phase7c-l6": {
       "accepted": {},
