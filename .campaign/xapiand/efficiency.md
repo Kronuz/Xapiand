@@ -422,3 +422,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - queue-drain-throughput: the 3 suite failures predate it (main baseline fails the same 3); fresh contributor fixing them.
 - Explorer: nested MAYBE tree (dsl-not-wrap N1).
 - Quota weekly 14%, 0.14%/h. Load 3-6. Disk 36 GiB free.
+
+## 2026-11-20 01h
+- Landed: stopword-lists (Xapiand:4be13e4b2), queue-drain-throughput (agent-campaign:ad03084; dotfiles:1a40fe6 makes it live).
+- Reviews: consensus-sim-loops APPROVE (3 gaps to hunt), queue-drain-throughput APPROVE (tool findings F1/F4/F5 to campaign-v3).
+- Explorer nested-MAYBE: fix proven (job ab6ff7 pass, mutant dd82b5 fail), ~87k tokens; queued as a quest after dsl-date-operators.
+- Started: strata-pin-catalog, control-plane-wallclock (Sonnet). serialize-validation re-check of the lead's test-pin flip.
+- Light slots 32%, drains 13 min, 28 jobs ended (8 failed). Quota weekly 15%. Load 4-6. Disk 31 GiB free.
