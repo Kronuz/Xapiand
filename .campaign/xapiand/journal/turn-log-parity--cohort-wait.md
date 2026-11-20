@@ -1,6 +1,6 @@
 # turn-log-parity--cohort-wait: journal
 
-State: working
+State: waiting on jobs 261120-082443-cbb227 261120-082445-11a61b 261120-082448-f562c7
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Building the cohort wait (`include/strata/core/turn_seal.hh`: `wake()` counts arrivals, `turn()`
-records the released groups and the barrier's length, `serve()` waits up to 1/16 of it) and its
-test `test/test_barrier_cohort.cc` (K=4 writers, 64 ms barriers, turns per acknowledgement).
+Committed strata:2f5f1033 (mechanism, test, CMake registration). Mutant strata:0ceb74fb (the
+`wait_for` in `serve()` dropped), kept at `refs/mutants/turn-log-parity--cohort-wait`, not pushed.
 
 ## Next
 
-1. Local build and run; commit; mutant commit (wait dropped) on a side ref.
-2. Jobs: the suite (light), the test --for A4, the test at the mutant --for A4 --fails-without.
-3. Optional light smoke of probe B (K=4, K=8 against RocksDB).
+1. Read the jobs: suite 261120-082443-cbb227, test --for A4 261120-082445-11a61b, mutant --for A4
+   --fails-without 261120-082448-f562c7.
 
 ## Blocked on
 
@@ -31,13 +29,18 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A4 (task 1 part) | test 261120-082445-11a61b; mutant 261120-082448-f562c7 (`--fails-without`); suite 261120-082443-cbb227 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`turn_sealer::serve()` holds each turn until the groups whose writers the last turn released have
+opened as many records, or 1/16 of the last barrier passes (D5). `test/test_barrier_cohort.cc`:
+K writers over 64 ms barriers; locally every commit after 3 settling rounds rode exactly the next
+barrier (K=4: 84 of 84; K=8: 168 of 168; 25 turns for 24 rounds).
+
+Smoke (not a gate; light, one 4 s trial each, macOS host, fillrandom sync/1 100 B, one log):
+K=4 strata 181 ops/s p50 21 ms against RocksDB 131 ops/s p50 30 ms; K=8 324 p50 22 ms against
+194 p50 42 ms. Same direction as the note's cohort prototype (180 and 327).
 
 ## Rulings I made
 
