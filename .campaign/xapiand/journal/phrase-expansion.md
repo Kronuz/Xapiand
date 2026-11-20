@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-085333-ef26eb 261120-085334-deefb6
+State: waiting on jobs 261120-095314-390e6c (mutants); build-test 261120-095312-0f3c21 passed at prospect:1f7ddaf
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
@@ -9,9 +9,17 @@ Feature built at prospect:a69a08d (prospect repo, worktree prospect-wt/xapiand/p
 branch quest/xapiand/phrase-expansion, nothing pushed). Evidence jobs queued at it. Local mutant smoke (6 of 19) found one survivor (an empty query budget
 read as none, only its early stop differs); a69a08d adds the test that catches it (checked locally).
 
+## Mutant survivor (a69a08d, job 261120-085334-deefb6)
+
+Survivor: "the walk's charge is not offered the glob's matcher" (glob built without walk.charge).
+Real gap: tests refused only a prefix word with a throwing charge, and a glob's matcher charge
+(automata.hh glob ctor) fires at construction, so a wildcard or fuzzy word matching no term is
+charged only through it. prospect:1f7ddaf makes expansion_bounds_test refuse a prefix, a
+wildcard("zz*yy") and a similar("zzzz", 1) word under a throwing charge. Resubmitted at 1f7ddaf.
+
 ## Next
 
-1. When both jobs pass: paste the Evidence table, State "ready for review". If a mutant survives,
+1. When 261120-095314-390e6c passes (build-test 261120-095312-0f3c21 already passed), replace the Evidence job ids with both at prospect:1f7ddaf and: paste the Evidence table, State "ready for review". If a mutant survives,
    add the test that kills it.
 
 ## Where the code is
