@@ -4811,7 +4811,6 @@
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
         "detent:consensus-driver",
         "detent:transport-connection",
         "detent:transport-groups",
@@ -4822,7 +4821,6 @@
         "detent:transport-groups-ci",
         "detent:transport-feed-scan",
         "detent:consensus-wave-open",
-        "detent:reader-yield-stall",
         "detent:peers-tsan-timeout",
         "detent:consensus-close-fenced",
         "detent:consensus-dns-threads",
@@ -4877,7 +4875,14 @@
         "fuzz/fuzz_decoders.cc",
         "test/transport/peers_test.cc",
         "docs/design/rpc-lane*",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "include/consensus/host*",
+        "src/host*",
+        "src/transport*",
+        "test/host*",
+        "test/transport/hello*",
+        "docs/mechanisms/hello*",
+        "docs/design/hello*"
       ],
       "history": [
         {
@@ -5007,23 +5012,40 @@
           "weakened": [
             "deferred check fuzz changed"
           ]
+        },
+        {
+          "at": "2026-11-20T05:24:37",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "security"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; consensus-hello-limits folded in",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
-        "correctness"
+        "security"
       ],
       "milestone": "Phase 7b",
       "needs": [],
       "provides": [
-        "consensus:rpc-lane"
+        "consensus:rpc-lane",
+        "consensus:hello"
       ],
       "repo": "../consensus",
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-19T23:28:02",
+      "updated": "2026-11-20T05:24:37",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
