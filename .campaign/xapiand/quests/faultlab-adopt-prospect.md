@@ -5,32 +5,34 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Migration step 2 of cpp-libraries `docs/design/faultlab.md`: prospect's crash and fault tests use
+faultlab's faultfs (`faultlab/faultfs.h`, `kronuz::faultlab`), fetched at a pinned commit, instead
+of including strata's `core/faultfs.hh`. The 17 tests and `tools/parity_terms.cc` change include and
+namespace only, and every seed keeps the state it rebuilt (faultlab F3), so no test's coverage moves.
+After it lands, strata's step 3 can delete `core/faultfs.hh`.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes with faultlab's faultfs, and every crash test runs the same seeds and cut
+  points as on main with the same pass counts: the suite job, plus a job that prints each crash
+  test's seed and check counts at main and at the branch, identical
+- A2 Nothing in prospect includes strata's faultfs: a job running
+  `! git grep -n -E 'core/faultfs\.hh|strata::faultfs' -- ':!docs/reviews' ':!docs/status'`
+- A3 [ci] CI is green on every platform at the landed commit
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes faultlab (faultfs.h, scenario.h) at a pinned commit; changes no prospect API.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 2026-11-20: adopt faultlab; the two in-process crash models become one.
+- Lead: a seed whose state moves is a finding (faultlab F3), never silently re-baselined.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None needed: one landing.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (maintenance, economical, medium).
