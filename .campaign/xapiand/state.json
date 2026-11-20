@@ -6391,6 +6391,8 @@
     "endpoint-uuid": {
       "accepted": {},
       "after": [],
+      "base": "6b3c53bb489f9cebe799f22039c666c35e89b01a",
+      "branch": "quest/xapiand/endpoint-uuid",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6417,9 +6419,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T16:20:05"
+      "updated": "2026-11-19T16:20:28",
+      "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
       "accepted": {},
