@@ -5246,7 +5246,28 @@
       "worktree": ""
     },
     "datetime-range-zone": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T19:29:27",
+          "base": "d776672424d90a96bb45005122f533b625e7bc70",
+          "blobs": {
+            "src/datetime_msgpack.cc": "100644:7cb4363e4a646e9c39de80f8e9b4d880df67467e",
+            "tests/test_coverage_core_datetime.cc": "100644:da708c2566f5378fcdbf6733c9810d83df5f9219"
+          },
+          "by": "review",
+          "commit": "1c97fba6fe04da5f0e9e36b29d204c0d6fcea2d1",
+          "criteria": "fb2761900479d642",
+          "diffs": {
+            "src/datetime_msgpack.cc": "2eb72f8e12bcc5de",
+            "tests/test_coverage_core_datetime.cc": "690e8a682ae4f297"
+          },
+          "findings": {},
+          "note": "",
+          "review": "81bf20f114af50764b780b0b9e5f8781ced4b00d",
+          "reviewed": "1c97fba6fe04da5f0e9e36b29d204c0d6fcea2d1",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "15287bf561a39de569923c3d7719013cc8b39308",
       "branch": "quest/xapiand/datetime-range-zone",
@@ -5268,7 +5289,9 @@
         "tests/test_datetime*"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -5276,7 +5299,7 @@
       "risk": "normal",
       "status": "review",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T17:37:59",
+      "updated": "2026-11-19T19:29:27",
       "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
