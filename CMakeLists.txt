@@ -929,7 +929,7 @@ include_directories(
 # Geometry/Collection-coupled debug viz writers the library dropped were already
 # dead in Xapiand (only a commented-out call). Depends on cartesian (already on the
 # path); compiled (htm.cc + constraint.cc into XAPIAND_OBJ).
-FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG bb5e01d219721c11b85eee64f56ea40d8456fa2e)
+FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG 0c09a0283a507b2cf08975a7c8572d95ece60b68)
 FetchContent_MakeAvailable(htm)
 include_directories("${htm_SOURCE_DIR}")
 
@@ -1297,14 +1297,10 @@ target_link_libraries(xapiand_bench_shard_view PRIVATE
 
 
 ########################################################################
-# Copy data files (stopwords, mime types) from source to build directory
-# so an uninstalled build (build/bin/xapiand) can resolve them relative to
-# the executable (see setup_data_path() in main.cc).
+# Copy the mime types from source to build directory so an uninstalled
+# build (build/bin/xapiand) can resolve them relative to the executable (see
+# setup_data_path() in main.cc). The stop-word lists are compiled in.
 ########################################################################
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
@@ -1315,8 +1311,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Install target
 ########################################################################
 
-# Copy stopwords during the installation
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${XAPIAND_DATA_PATH}/stopwords)
+# The stop-word lists are compiled in. The files are installed as examples, in a directory nothing reads:
+# copy one into <data path>/stopwords/ to replace that language's list.
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/xapiand/stopwords)
 
 # Copy mime types file
 install(FILES ${CMAKE_SOURCE_DIR}/mime.types DESTINATION ${XAPIAND_DATA_PATH})

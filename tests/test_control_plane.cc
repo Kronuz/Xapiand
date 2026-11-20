@@ -520,7 +520,7 @@ static void test_a_destroyed_leader_does_not_strand_the_waiters() {
 // ---- inventory J: files read at startup ----
 
 // The stop words and the mime types are read by the preload, before any listener opens, and a lookup after it reads
-// the table it built: the files can go and the answers stay. Every lookup of a language without a list is null.
+// the table it built: the files can go and the answers stay. Every lookup of a language without a list throws.
 static void test_stop_words_and_mime_types_are_read_once_at_startup() {
 	namespace fs = std::filesystem;
 	const auto root = fs::current_path() / "startup_files";
@@ -541,7 +541,7 @@ static void test_stop_words_and_mime_types_are_read_once_at_startup() {
 	CHECK((*stop)("alpha"));
 	CHECK((*stop)("gamma"));
 	CHECK_FALSE((*stop)("delta"));
-	CHECK(getStopWords("yy") == nullptr);   // no list for the language, and nothing to read for it
+	CHECK_THROW(getStopWords("yy"), UnknownStopWordsError);   // no list for the language, and nothing to read for it
 	CHECK_EQ(mime_type("file.startup").to_string(), "text/x-startup");
 	CHECK(mime_type("file.unknown").empty());
 }

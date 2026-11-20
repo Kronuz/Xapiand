@@ -24,6 +24,7 @@
 #include "serialize.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <cerrno>                                     // for EINVAL, ERANGE
 #include <cmath>                                      // for std::isnan
 #include <cstdint>                                    // for int64_t, uint64_t
 #include <limits>                                     // for std::numeric_limits
@@ -48,6 +49,7 @@
 #include "repr.hh"                                    // for repr
 #include "reserved/fields.h"                           // for ID_FIELD_NAME
 #include "serialize_list.h"                           // for StringList, CartesianList and RangeList
+#include "sha256.h"                                   // for kronuz::sha256::hasher
 #include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
 #include "utype.hh"                                   // for toUType
@@ -201,6 +203,18 @@ json_number_text(std::string_view text) noexcept
 }
 
 
+// The uint64 a text spells. strtoull reads a sign and wraps a negative, so text with a '-' is EINVAL.
+uint64_t
+positive_of(int* errno_save, std::string_view text) noexcept
+{
+	if (text.find('-') != std::string_view::npos) {
+		*errno_save = EINVAL;
+		return 0;
+	}
+	return strict_stoull(errno_save, text);
+}
+
+
 // The number a text spells, read as JSON reads one (int64, else uint64, else double); undefined when it spells none.
 MsgPack
 number_of(std::string_view text)
@@ -213,11 +227,9 @@ number_of(std::string_view text)
 	if (errno_save == 0) {
 		return MsgPack(static_cast<int64_t>(i));
 	}
-	if (text.front() != '-') {  // strtoull wraps a negative
-		const auto u = strict_stoull(&errno_save, text);
-		if (errno_save == 0) {
-			return MsgPack(static_cast<uint64_t>(u));
-		}
+	const auto u = positive_of(&errno_save, text);
+	if (errno_save == 0) {
+		return MsgPack(static_cast<uint64_t>(u));
 	}
 	const auto d = strict_stod(&errno_save, text);
 	if (errno_save == 0) {
@@ -365,6 +377,7 @@ Serialize::object(const required_spc_t& field_spc, const class MsgPack& o)
 				return string(field_spc, Cast::string(o.at(str_key)));
 			case Cast::HashType::UUID:
 				return string(field_spc, Cast::uuid(o.at(str_key)));
+			case Cast::HashType::DATE:
 			case Cast::HashType::DATETIME:
 				return datetime(field_spc, Cast::datetime(o.at(str_key)));
 			case Cast::HashType::TIME:
@@ -380,11 +393,14 @@ Serialize::object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::HashType::CHULL:
 			case Cast::HashType::MULTIPOINT:
 			case Cast::HashType::MULTICIRCLE:
+			case Cast::HashType::MULTICONVEX:
 			case Cast::HashType::MULTIPOLYGON:
 			case Cast::HashType::MULTICHULL:
 			case Cast::HashType::GEO_COLLECTION:
 			case Cast::HashType::GEO_INTERSECTION:
 				return geospatial(field_spc.get_type(), o);
+			case Cast::HashType::LUA:
+				THROW(SerializationError, "{} is a script, not a value", repr(str_key));
 			default:
 				THROW(SerializationError, "Unknown cast type {}", repr(str_key));
 		}
@@ -802,12 +818,15 @@ Serialize::integer(std::string_view field_value)
 std::string
 Serialize::positive(std::string_view field_value)
 {
-	try {
-		return positive(strict_stoull(field_value));
-	} catch (const std::invalid_argument& exc) {
-		RETHROW(SerializationError, "Invalid positive integer format: {}", repr(field_value));
-	} catch (const std::out_of_range& exc) {
-		RETHROW(SerializationError, "Out of range positive integer format: {}", repr(field_value));
+	int errno_save;
+	const auto value = positive_of(&errno_save, field_value);
+	switch (errno_save) {
+		case 0:
+			return positive(value);
+		case ERANGE:
+			THROW(SerializationError, "Out of range positive integer format: {}", repr(field_value));
+		default:
+			THROW(SerializationError, "Invalid positive integer format: {}", repr(field_value));
 	}
 }
 
@@ -923,10 +942,17 @@ Serialize::centroids(const std::vector<Cartesian>& centroids)
 }
 
 
+// The first 16 bytes of SHA-256 over the ranges' fixed-width encodings: n distinct range lists collide with
+// probability at most n(n-1)/2^129, and the term's 16 bytes never equal an older 1 to 10 byte length-prefixed hash.
 std::string
 Serialize::ranges_hash(const std::vector<range_t>& ranges)
 {
-	return serialize_length(std::hash<std::vector<range_t>>{}(ranges));
+	kronuz::sha256::hasher hasher;
+	for (const auto& r : ranges) {
+		hasher.update(range(r));
+	}
+	const auto digest = hasher.final();
+	return std::string(reinterpret_cast<const char*>(digest.data()), SERIALIZED_LENGTH_RANGES_HASH);
 }
 
 
@@ -1038,7 +1064,7 @@ Serialize::guess_type(const class MsgPack& field_value)
 			// Try like POSITIVE.
 			{
 				int errno_save;
-				strict_stoull(&errno_save, str_value);
+				positive_of(&errno_save, str_value);
 				if (errno_save == 0) {
 					return FieldType::positive;
 				}
@@ -1082,6 +1108,8 @@ Serialize::guess_type(const class MsgPack& field_value)
 						return FieldType::text;
 					case Cast::HashType::UUID:
 						return FieldType::uuid;
+					case Cast::HashType::DATE:
+						return FieldType::date;
 					case Cast::HashType::DATETIME:
 						return FieldType::datetime;
 					case Cast::HashType::TIME:
@@ -1096,11 +1124,14 @@ Serialize::guess_type(const class MsgPack& field_value)
 					case Cast::HashType::CHULL:
 					case Cast::HashType::MULTIPOINT:
 					case Cast::HashType::MULTICIRCLE:
+					case Cast::HashType::MULTICONVEX:
 					case Cast::HashType::MULTIPOLYGON:
 					case Cast::HashType::MULTICHULL:
 					case Cast::HashType::GEO_COLLECTION:
 					case Cast::HashType::GEO_INTERSECTION:
 						return FieldType::geo;
+					case Cast::HashType::LUA:
+						THROW(SerializationError, "{} is a script, not a value", repr(str_key));
 					default:
 						THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
 				}
@@ -1290,52 +1321,10 @@ Serialize::guess_serialize(const class MsgPack& field_value)
 		}
 
 		case MsgPack::Type::MAP: {
-			if (field_value.size() == 1) {
-				const auto it = field_value.begin();
-				const auto str_key = it->str_view();
-				if (str_key.empty() || str_key[0] != reserved__) {
-					THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
-				}
-				switch (Cast::get_hash_type(str_key)) {
-					case Cast::HashType::INTEGER:
-						return std::make_pair(FieldType::integer, integer(Cast::integer(it.value())));
-					case Cast::HashType::POSITIVE:
-						return std::make_pair(FieldType::positive, positive(Cast::positive(it.value())));
-					case Cast::HashType::FLOAT:
-						return std::make_pair(FieldType::floating, floating(FieldType::floating, Cast::floating(it.value())));
-					case Cast::HashType::BOOLEAN:
-						return std::make_pair(FieldType::boolean, boolean(Cast::boolean(it.value())));
-					case Cast::HashType::KEYWORD:
-						return std::make_pair(FieldType::keyword, Cast::string(it.value()));
-					case Cast::HashType::TEXT:
-						return std::make_pair(FieldType::text, Cast::string(it.value()));
-					case Cast::HashType::UUID:
-						return std::make_pair(FieldType::uuid, uuid(Cast::uuid(it.value())));
-					case Cast::HashType::DATETIME:
-						return std::make_pair(FieldType::datetime, datetime(Cast::datetime(it.value())));
-					case Cast::HashType::TIME:
-						return std::make_pair(FieldType::time, datetime(Cast::time(it.value())));
-					case Cast::HashType::TIMEDELTA:
-						return std::make_pair(FieldType::timedelta, datetime(Cast::timedelta(it.value())));
-					case Cast::HashType::EWKT:
-					case Cast::HashType::POINT:
-					case Cast::HashType::CIRCLE:
-					case Cast::HashType::CONVEX:
-					case Cast::HashType::POLYGON:
-					case Cast::HashType::CHULL:
-					case Cast::HashType::MULTIPOINT:
-					case Cast::HashType::MULTICIRCLE:
-					case Cast::HashType::MULTIPOLYGON:
-					case Cast::HashType::MULTICHULL:
-					case Cast::HashType::GEO_COLLECTION:
-					case Cast::HashType::GEO_INTERSECTION:
-						return std::make_pair(FieldType::geo, geospatial(field_value));
-					default:
-						THROW(SerializationError, "Unknown cast type: {}", repr(str_key));
-				}
-			} else {
-				THROW(SerializationError, "Expected map with one element");
-			}
+			// A cast object serializes as a field of the type it names would.
+			required_spc_t field_spc;
+			field_spc.set_type(guess_type(field_value));
+			return std::make_pair(field_spc.get_type(), object(field_spc, field_value));
 		}
 
 		default:
@@ -1630,6 +1619,7 @@ Unserialize::get_field_type(std::string_view str_type)
 		hhl("k"),
 		hhl("u"),
 		hhl("x"),
+		hhl("t"),
 		hhl("datetime"),
 		hhl("term"),  // FIXME: remove legacy term
 		hhl("text"),
@@ -1659,8 +1649,8 @@ Unserialize::get_field_type(std::string_view str_type)
 		case _.fhhl("array"):
 			return FieldType::array;
 		case _.fhhl("b"):
-			return FieldType::boolean;
 		case _.fhhl("boolean"):
+			return FieldType::boolean;
 		case _.fhhl("d"):
 		case _.fhhl("datetime"):
 			return FieldType::datetime;

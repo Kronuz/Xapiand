@@ -123,6 +123,12 @@ namespace {
 
 using A = PoolTestAccess;
 
+// The catalog of a pool of one partition: every pool here keeps under 32 indexes open (docs/design/cheap-reopen.md D1).
+IndexCatalog& one_catalog(DatabasePool& pool) {
+	CHECK_EQ(pool.partitions(), 1u);
+	return pool.partition(0);
+}
+
 std::string fresh(const char* name) {
 	std::string path = std::string("pool_test_") + name + ".db";
 	std::filesystem::remove_all(path);
@@ -166,7 +172,7 @@ std::uint32_t slot_of(const IndexPin& pin) {
 }
 
 strata::slot_state state_of(DatabasePool& pool, const std::string& path) {
-	for (const auto& slot : pool.catalog().snapshot()) {
+	for (const auto& slot : one_catalog(pool).snapshot()) {
 		if (slot.key == path) {
 			return slot.state;
 		}
@@ -531,7 +537,7 @@ void test_smoke() {
 	auto view = engine::sync_wait(shard.get_view(1));  // the read refreshes first: the write is seen
 	CHECK_EQ(view->data(), "a");
 	CHECK_TRUE(engine::sync_wait(shard.commit()));
-	CHECK_EQ(pool.catalog().stats().opens, 1u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 1u);
 }
 
 // Opening never waits on a thread: two uses of one index on one thread open it once and finish, though
@@ -547,7 +553,7 @@ void test_opening_never_waits_on_a_thread() {
 	both.push_back(a.ready());
 	both.push_back(b.ready());
 	engine::sync_wait(task::when_all(std::move(both)));
-	CHECK_EQ(pool.catalog().stats().opens, 1u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 1u);
 }
 
 // Many users of a new index at once: one open (the single flight), and every user gets the engine.
@@ -570,7 +576,7 @@ void test_concurrent_opens_are_one_flight() {
 		thread.join();
 	}
 	CHECK_EQ(opened.load(), 8);
-	CHECK_EQ(pool.catalog().stats().opens, 1u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 1u);
 }
 
 // Every operation on an index takes its turn: it does not end while another task holds the turn, and it
@@ -1078,10 +1084,10 @@ void test_a_finishing_pool_serves_an_open_index() {
 		auto closed = pin(pool, closed_path);
 		const auto slot = slot_of(closed);
 		closed.release();
-		CHECK_TRUE(pool.catalog().begin_demote(slot));
-		pool.catalog().wait_chores();
-		CHECK_TRUE(pool.catalog().begin_close(slot));
-		pool.catalog().wait_chores();
+		CHECK_TRUE(one_catalog(pool).begin_demote(slot));
+		one_catalog(pool).wait_chores();
+		CHECK_TRUE(one_catalog(pool).begin_close(slot));
+		one_catalog(pool).wait_chores();
 		CHECK_TRUE(state_of(pool, closed_path) == strata::slot_state::free);
 	}
 	pool.finish();
@@ -1091,7 +1097,7 @@ void test_a_finishing_pool_serves_an_open_index() {
 	Shard again(pin(pool, open_path), WRITE);   // a new use of an open index is served
 	CHECK_EQ(engine::sync_wait(again.get_view(1))->data(), "a");
 	CHECK_TRUE(error_kind([&] { (void)pin(pool, closed_path); }) == engine::errc::not_available);
-	CHECK_EQ(pool.catalog().stats().opens, 2u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 2u);
 }
 
 // The engine's integrity check changes nothing but runs against the engine the node has open, so it takes the turn
@@ -1500,7 +1506,7 @@ void test_a_create_pin_passes_a_missing_index() {
 	}
 	Shard read(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(read.get_view(1))->data(), "a");
-	CHECK_EQ(pool.catalog().stats().opens, 1u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 1u);
 }
 
 // A pin keeps its index open (XP3): with a pin held the sweep's demotion and close are refused; once it goes, the
@@ -1516,18 +1522,18 @@ void test_a_pin_keeps_its_index_open() {
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		engine::sync_wait(shard.commit());   // an idle close takes a committed index only (the autocommit's job)
 	}
-	CHECK_FALSE(pool.catalog().begin_demote(slot));
-	CHECK_FALSE(pool.catalog().begin_close(slot));
+	CHECK_FALSE(one_catalog(pool).begin_demote(slot));
+	CHECK_FALSE(one_catalog(pool).begin_close(slot));
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::open);
 	held.release();
-	CHECK_TRUE(pool.catalog().begin_demote(slot));
-	pool.catalog().wait_chores();
-	CHECK_TRUE(pool.catalog().begin_close(slot));
-	pool.catalog().wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_demote(slot));
+	one_catalog(pool).wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_close(slot));
+	one_catalog(pool).wait_chores();
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::free);
 	Shard again(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(again.get_view(1))->data(), "a");
-	CHECK_EQ(pool.catalog().stats().opens, 2u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 2u);
 }
 
 // A chore's pin is resident (D3): it never opens. A key the catalog does not have gives an empty pin and makes no
@@ -1537,7 +1543,7 @@ void test_a_chore_pin_is_resident() {
 	DatabasePool pool(control_loop(), 8);
 	const auto path = fresh("chorepin");
 	CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(Endpoint(path)))));
-	CHECK_EQ(pool.catalog().table_size(), 0u);
+	CHECK_EQ(one_catalog(pool).table_size(), 0u);
 	std::uint32_t slot;
 	{
 		auto held = pin(pool, path);
@@ -1549,13 +1555,13 @@ void test_a_chore_pin_is_resident() {
 		CHECK_TRUE(static_cast<bool>(chore));
 		CHECK_TRUE(&chore.entry() == &held.entry());
 	}
-	CHECK_TRUE(pool.catalog().begin_demote(slot));
-	pool.catalog().wait_chores();
-	CHECK_TRUE(pool.catalog().begin_close(slot));
-	pool.catalog().wait_chores();
-	const auto opens = pool.catalog().stats().opens;
+	CHECK_TRUE(one_catalog(pool).begin_demote(slot));
+	one_catalog(pool).wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_close(slot));
+	one_catalog(pool).wait_chores();
+	const auto opens = one_catalog(pool).stats().opens;
 	CHECK_FALSE(static_cast<bool>(engine::sync_wait(pool.pin_chore(Endpoint(path)))));
-	CHECK_EQ(pool.catalog().stats().opens, opens);
+	CHECK_EQ(one_catalog(pool).stats().opens, opens);
 	CHECK_EQ(pool.count().second, 0u);
 }
 
@@ -1579,7 +1585,7 @@ void test_flush_commits_every_index() {
 	CHECK_EQ(b.engine().revision(), b_before + 1);
 	CHECK_FALSE(a.endpoint().is_modified());
 	CHECK_EQ(pool.count().second, 2u);
-	CHECK_EQ(pool.catalog().stats().opens, 2u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 2u);
 }
 
 // The shutdown commits what is applied with the entry's commit chore (D7, D10), and a pool made later opens the
@@ -1618,13 +1624,13 @@ void test_a_resident_commit_on_an_owed_index_lets_it_close() {
 		A::commit_blocking(held.entry());   // nothing applied since: no revision of its own
 		CHECK_EQ(shard.engine().revision(), revision);
 	}
-	CHECK_TRUE(pool.catalog().begin_demote(slot));
-	pool.catalog().wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_demote(slot));
+	one_catalog(pool).wait_chores();
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::owed);
 	engine::sync_wait(autocommit(pool, Endpoint(path)));   // a resident pin on `owed`, granted without a wake
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::owed);
-	CHECK_TRUE(pool.catalog().begin_close(slot));
-	pool.catalog().wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_close(slot));
+	one_catalog(pool).wait_chores();
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::free);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), revision);
@@ -1673,12 +1679,12 @@ void test_a_failed_use_hands_its_pin_back() {
 		} catch (const engine::Error&) { }
 	}
 	CHECK_TRUE(engine::sync_wait(shard.reopen()));
-	CHECK_EQ(pool.catalog().stats().replaces, 1u);
-	CHECK_EQ(pool.catalog().stats().opens, 2u);
+	CHECK_EQ(one_catalog(pool).stats().replaces, 1u);
+	CHECK_EQ(one_catalog(pool).stats().opens, 2u);
 	CHECK_TRUE(&shard.endpoint() == before);   // reopened in place: the same slot, a new entry in it
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 	CHECK_FALSE(engine::sync_wait(shard.reopen()));   // nothing marked it again: no replacement
-	CHECK_EQ(pool.catalog().stats().replaces, 1u);
+	CHECK_EQ(one_catalog(pool).stats().replaces, 1u);
 }
 
 // A pin handed back by a reopen is taken again within the request, and the re-pin is not a use for the closing
@@ -1690,7 +1696,7 @@ void test_a_repin_after_a_reopen_is_not_a_use() {
 	Shard shard(pin(pool, path), WRITE);
 	engine::sync_wait(shard.add_document(make("Ka", "a")));
 	engine::sync_wait(shard.commit());
-	const auto freq = [&] { return IndexCatalog::freq_of(pool.catalog().word_of(0)); };
+	const auto freq = [&] { return IndexCatalog::freq_of(one_catalog(pool).word_of(0)); };
 	const unsigned used = freq();
 	try {
 		throw engine::Error(engine::errc::database, "an injected failure of the index");
@@ -1748,7 +1754,7 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "a");
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_EQ(indexes.pool.catalog().stats().opens, 1u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().opens, 1u);
 }
 
 // A fenced index is replaced by the catalog (XP2, D2, C23): the use whose commit met the fence hands its pin back,
@@ -1771,8 +1777,8 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	}
 	Shard shard(pin(indexes.pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
-	CHECK_EQ(indexes.pool.catalog().stats().replaces, 1u);
-	CHECK_EQ(indexes.pool.catalog().stats().opens, 2u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().replaces, 1u);
+	CHECK_EQ(one_catalog(indexes.pool).stats().opens, 2u);
 }
 
 // A document with an `_id` and an `n` in its stored data, as a request's prepare leaves it: `id` 0 for a new numeric
@@ -2195,10 +2201,10 @@ void test_the_sweep_closes_only_an_unpinned_index() {
 		CHECK_EQ(engine::sync_wait(shard.get_view(1))->data(), "b");
 	}
 	CHECK_TRUE(until([&] { return state_of(pool, idle_path) == strata::slot_state::free; }));
-	const auto stats = pool.catalog().stats();
+	const auto stats = one_catalog(pool).stats();
 	CHECK_GE(stats.pass_closes, 1u);
 	std::this_thread::sleep_for(300ms);
-	CHECK_GE(pool.catalog().stats().passes, stats.passes + 10);   // the sweep went on passing over it
+	CHECK_GE(one_catalog(pool).stats().passes, stats.passes + 10);   // the sweep went on passing over it
 	CHECK_TRUE(state_of(pool, held_path) == strata::slot_state::open);
 	held.reset();   // the use ends: its pin goes
 	CHECK_TRUE(until([&] { return state_of(pool, held_path) == strata::slot_state::free; }));
@@ -2223,7 +2229,7 @@ void test_the_shutdown_commits_and_logs_an_uncommitted_write() {
 		}
 		pool.finish();
 		CHECK_TRUE(pool.join());
-		CHECK_EQ(pool.catalog().stats().shutdown_commits, 1u);
+		CHECK_EQ(one_catalog(pool).stats().shutdown_commits, 1u);
 		writer.end();
 		writer.join(std::chrono::milliseconds(20000));
 	}
@@ -2277,7 +2283,7 @@ void test_the_sweeps_close_syncs_a_merges_output() {
 		}
 	}
 	CHECK_TRUE(until([&] { return state_of(pool, path) == strata::slot_state::free; }, 10s));
-	CHECK_GE(pool.catalog().stats().merge_commits, 1u);
+	CHECK_GE(one_catalog(pool).stats().merge_commits, 1u);
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(shard.engine().revision(), revision);
 	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), written);
@@ -2298,10 +2304,10 @@ void test_a_write_to_a_demoted_index_applies_after_one_promote() {
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		engine::sync_wait(shard.commit());
 	}
-	CHECK_TRUE(pool.catalog().begin_demote(slot));
-	pool.catalog().wait_chores();
+	CHECK_TRUE(one_catalog(pool).begin_demote(slot));
+	one_catalog(pool).wait_chores();
 	CHECK_TRUE(state_of(pool, path) == strata::slot_state::owed);
-	const auto wakes = pool.catalog().stats().wakes_posted;
+	const auto wakes = one_catalog(pool).stats().wakes_posted;
 	{
 		auto resident = engine::sync_wait(pool.pin_chore(Endpoint(path)));
 		CHECK_TRUE(static_cast<bool>(resident));
@@ -2314,7 +2320,7 @@ void test_a_write_to_a_demoted_index_applies_after_one_promote() {
 		engine::sync_wait(shard.commit());
 		CHECK_EQ(engine::sync_wait(shard.get_view(2))->data(), "b");
 	}
-	CHECK_EQ(pool.catalog().stats().wakes_posted, wakes);   // the write's own promote, not a wake
+	CHECK_EQ(one_catalog(pool).stats().wakes_posted, wakes);   // the write's own promote, not a wake
 	Shard shard(pin(pool, path, DB_OPEN), DB_OPEN);
 	CHECK_EQ(static_cast<std::size_t>(engine::sync_wait(shard.engine_for_read())->doc_count()), 2u);
 }
@@ -2357,7 +2363,7 @@ void test_the_sweep_erases_a_missing_index_negative_entries() {
 	constexpr int names = 100;
 	const auto failed = [&] {
 		int n = 0;
-		for (const auto& slot : pool.catalog().snapshot()) {
+		for (const auto& slot : one_catalog(pool).snapshot()) {
 			n += slot.state == strata::slot_state::failed;
 		}
 		return n;
@@ -2371,7 +2377,7 @@ void test_the_sweep_erases_a_missing_index_negative_entries() {
 	std::this_thread::sleep_for(1500ms);   // half the TTL: an erase that ignores it has already run
 	CHECK_EQ(failed(), before);
 	CHECK_TRUE(until([&] { return failed() == 0; }, 7s));   // under strata's 10 s default, which a TTL not applied would give
-	CHECK_GE(pool.catalog().stats().erased, static_cast<std::uint64_t>(names));
+	CHECK_GE(one_catalog(pool).stats().erased, static_cast<std::uint64_t>(names));
 }
 
 // The hostless path (engine::open_local, the adapter's owned Core) is not the catalog's (D2 as built, CR6): an index is

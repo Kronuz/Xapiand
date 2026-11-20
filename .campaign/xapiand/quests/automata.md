@@ -1,6 +1,6 @@
 # automata: Prefix, wildcard and fuzzy term matching where search lives
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status automata`.
 
 ## Outcome
@@ -17,11 +17,8 @@ From strata `docs/design/automata.md` revision 1 and `docs/PLAN.md`, Phase 5.
 
 - A1 Prefix, wildcard and fuzzy expansion equal a brute-force scan of the term dictionary on every
   segment shape the design's T1 to T3 name: tests in jobs
-- A2 One CPU-hour of `fuzz_automata` with zero findings; ASan, UBSan and TSan builds pass the tests:
-  jobs
-- A3 The prefix, wildcard and fuzzy classes measured against Xapian and against the faster of Lucene
-  and Tantivy (Phase 5's gate rows), on the gate's machine: jobs
-- A4 [artifact] How it works, in the repository the port lands in: `docs/mechanisms/automata.md`
+- A2 The tests pass in the suite job and CI (sanitizers and platforms are CI's): the suite job
+- A3 [artifact] How it works, in the repository the port lands in: `docs/mechanisms/automata.md`
 
 ## Contracts
 
@@ -35,3 +32,9 @@ Provides `prospect:term-expansion`.
 ## May land early
 
 None.
+
+## After landing (owner, 2026-11-20: whole features, checked at the end)
+
+Not landing gates: one CPU-hour of `fuzz_automata` and the prefix, wildcard and fuzzy rows against
+Xapian and the faster of Lucene and Tantivy run once on the landed code, with Phase 5's gate rows;
+findings are fixed forward.

@@ -39,6 +39,7 @@ class Convex : public Geometry {
 	Sign sign;
 	bool simplified;
 
+	const Constraint& smallest() const noexcept;
 	int insideVertex(const Cartesian& v) const noexcept;
 	bool intersectCircles(const Constraint& bounding_circle) const;
 	TypeTrixel verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) const;
@@ -100,6 +101,7 @@ public:
 	void add(const Convex& convex) {
 		circles.reserve(circles.size() + convex.circles.size());
 		for (const auto& circle : convex.circles) {
+			sign = static_cast<Convex::Sign>(static_cast<uint8_t>(sign) & static_cast<uint8_t>(circle.constraint.sign));
 			circles.push_back(circle);
 		}
 		simplified = false;
@@ -108,6 +110,7 @@ public:
 	void add(Convex&& convex) {
 		circles.reserve(circles.size() + convex.circles.size());
 		for (auto& circle : convex.circles) {
+			sign = static_cast<Convex::Sign>(static_cast<uint8_t>(sign) & static_cast<uint8_t>(circle.constraint.sign));
 			circles.push_back(std::move(circle));
 		}
 		simplified = false;

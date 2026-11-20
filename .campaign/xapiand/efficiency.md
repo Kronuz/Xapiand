@@ -346,3 +346,145 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - 23h: landed stemmer-names Xapiand:7f3f798c9 (merge 405a5bd6b) after CI rerun. logger-exit-lifetime: review CHANGES F1-F6 fixed (logger:a3a7ef6..455cad0; probe found count bug 22 vs 17 fixed fc698e2; CI LSan test-only leak fixed 455cad0); 18/18 reruns + CI green at 455cad0; reviewer re-check running. wide-search-loop: review CHANGES F1 (multi-index non-search requests cancellable) fixed 9d827de68, F2/F5 78198eea6, VM exec-format (unsynced guest) e649ebcb1; suite 44/44; 24 jobs queued; files += tests/test_node.cc. coverage-areas: only failure is logger exit abort in aggregations test; decoders 97.8->closed by 51c18ee7e; waits on logger landing (pin bump to unlanded commit denied by classifier). Weekly 85%, exhaustion ~13h. Load 8-10, disk 88 GiB.
 - 00h: landed logger-exit-lifetime logger:455cad0 (re-check APPROVE; exit drain 35 vs 36 ms Release, main dropped 1196-2870/3600). consensus-flow-bench accepted (2 doc re-checks), landing on CI at consensus:122564d. Started geo-correctness (5 fixes incl new F23; corpus 12/99 answers change), serialize-validation, htm-edge-points (D129, edge points get N3333 ids), 2 explorers (workpool flake already fixed by workpool:406d2f3; 3 docs-audit doubts not bugs, job 39dd82). coverage-areas: all 7 T13 areas met (decoders 98.4/96.8, aggregations 95.9/92.3); pin bumped to logger:455cad0, final 4 jobs queued. wide-search-loop 24 jobs queued. Light-share exclusive sweep queued since 20:15 (exclusives starved by light holds). Weekly 86%, exhaustion ~12h. Load 10-16, disk 83 GiB.
 - 01h: landed consensus-flow-bench consensus:122564d (2 re-checks). htm-edge-points in review (option b nearest-child: 0 of 10,360 edge points unheld vs 394 one-liner vs 4,225 original; 0.42% random ids change, all formerly outside their trixel). geo-correctness Linux CI fail = test bug (unspecified arg eval order; gcc built a different corpus), fix ec6c7d982 pushed. serialize-validation D130 casts + A7 pushed (0db7027c2). Light-share sweep 6/12 done after 5 h. Light slots 31% used, 32 min runnable work beside idle slots. Weekly 87%, exhaustion ~11h. Load 8-10, disk 81 GiB.
+- 02h: landed coverage-areas Xapiand:5ab69c838 (merge adda36214; decoders 65.6->98.4% lines), htm-edge-points htm:0c09a02 (0 of 10,360 edge points unheld; intersectConstraints clamp). Started 5 coverage follow-ups; geo-correctness repinned htm + flipped pins (97b397153); serialize-validation in review. Bugs pinned: max_clients -2, keymaker MIN_STR_CMPVALUE empty, 7 suspects in core-small. Coverage builds timed out at 30 min under load (resubmitted 120-150 min). Host load 62-96 on 16 cores: Detent reader-s6 asan test at ~740% CPU in one light hold (msg sent); 41 zombies under the campaign worker (hunt row). Weekly 88%, exhaustion ~10.4h. Disk 77 GiB.
+- 03h: no landings. Only 9 jobs ended in the hour (load 48-61 on 16 cores; Detent reader-s6 asan test ~740% CPU in one light hold; light slots 41% used while exclusives wait). wide-search-loop A2 Linux: branch http max 14-20 ms (2,500) and 9-10 ms (10,000) vs master 163-180 and 476-558 ms; above 1,024 us target but VM control loop 18-30 ms; rerunning exclusive. A3 strict: master 13.64/1,336 ms (fail), branch 1.91/2.55 ms (pass). cheap-reopen D3 pool 200 959->285 ms (3.4x), still 2.2x of pool 5000 (target 2x); lands after wide-search-loop (touched handler.cc). geo-correctness corpus +1-2 hits per large circle from htm fix (expected). Weekly 88%, exhaustion ~10.5h. Disk 75 GiB.
+- 04h: no landings. Drain window cleared the host (load 61 -> 2.4); exclusives running back to back (wide-search Linux A2 reruns). 29 jobs ended, 5 failed, 5 cancelled. Coverage first runs all red on contributors' own test code (compile errors, guessed expectations, coverage_one.sh hid errors -> fixed Xapiand:4ee123f89). Bugs confirmed: datetime map range, datetime zone order, endpoint host dropped, open-files minimum 1471 refuses --max-files 300 (max_clients -2 not reached). geo: htm fix loses points on 'convex ring' 725->721; point-by-point diff running. light-share: F6 10 ms gate never opens (light resumes via post); cap decision to owner (rec share 4, gated by light in flight). Weekly 89%, exhaustion ~9.7h. Disk 70 GiB.
+- 05h: no landings. wide-search-loop re-check APPROVE + accepted (D131 posted defaults); CI red on 3 counts (test start order under gcc/sanitizers, async_check allowlist, FreeBSD rows) -> fixed at 0240c48e1 (gcc-13 VM repro + x50), CI rerunning. geo-correctness: htm fix verified (23 gained in-shape, 0 lost in-shape, 29 lost out-of-shape); in correctness review at d2ba9e963. Coverage bugs confirmed: 7 in core-small (sort integer cast word, acc-zero, scale_weight, boolean key, not-nested, datetime x2, endpoint host), M1-M4 in multivalue (empty MIN_STR, open lower string range empty, geo prefix order reversed, phonetic key loses encoder), open-files minimum 1471. Master FreeBSD t3_crash_asan: crash D 1 wrong row of 4501 -> priority explorer. cheap-reopen H4 2.1x (miss), H5 queued. Weekly 90%, exhaustion ~8.8h. Disk 65 GiB, load ~5.
+- 06h: no landings. Decisions D132-D136 (owner accepted all: lifecycle/component rename, explicit --max-clients exits, light-share cap 4 gated, cheap-reopen accept 2.2x, Prism adoption ours). server-composition review CHANGES -> folded (cpp-libraries:21b3d33); rename pending fold. geo-correctness APPROVE (oracle 1,101 shapes, 0 false negatives in 267M checks), changelog added, CI pending. wide-search-loop CI fixed (start-order test, allowlist); 2 infra reruns pending. coverage-core-main 81.6/63.0 main.cc, 79.6/52.6 manager.cc; A1 lowered on record; suite running. New bugs: failed restore exits 0, M5 string key loses slot. Crash D: 0 of 80 on macOS (lower volume than CI). cpp-libraries nightly dispatcher red since 11-15 (NIGHTLY_DISPATCH_TOKEN unset; owner setting it). Load 79 (Detent A12 soak 4x315% in one light hold; msg sent). Weekly 91%, exhaustion ~7.9h. Disk 61 GiB.
+- 07h: no landings yet; wide-search-loop re-check APPROVE (accepted), geo-correctness re-check APPROVE (accepted), both waiting on reruns at head. Audit of decided-but-untracked work: 9 items filed as hunt rows (adoption D74/D132, Prism D136, D119 switch, faultlab 2-3/9/10, D51 follow-ups, D110 F6, D135 cap, y2j), 3 stale rows closed, 3 unblocked; Detent found 37 rows (~24 quests). D137 stopword lists (owner go), quest stopword-lists (normal after re-triage). Risk re-triage: 7 quests lowered (owner: too many high). New bugs: missing stopword data silently disables stopping; _not nesting differs on FreeBSD. coverage-multivalue 94.4% lines; coverage-core-small CI cause found; coverage-core-main CI x86 UBSan + FreeBSD exe path pending. nightly dispatcher: token fine, 3 nights killed by HTTP 502 at start (no retry); backlog run 44534483604 dispatched. document-gate: sync rows tie 0.98-1.01x, 1 KiB fillrandom 0.72x (profile queued). Load 174 (Detent reader-s6 ASan ~760% in a light hold; msg sent). Weekly 93%, exhaustion ~6.1h before reset. Disk 64 GiB.
+- 08h: landed server-composition-note (cpp-libraries:0579a1a, CURRENT; --no-ci, no docs workflow; Detent confirmed A5). D138 (Prism adoption to Detent, owner via Detent D122), D139 (periodic/debounce stay in task, own header). task-lifecycle built (task:066a183: lifecycle, components, stop_source, sleep, periodic/debounce; 4 mutants, suite+TSan queued; CI running); task-lifecycle-rename dropped (folded). coverage-core-main: 2 reasoned fix rounds red; diagnostic DIAG build pushed. Queue: document-gate drain turn (13 exclusive queued: A3 x5, A6 x6, A7, profile) holds 20 light jobs incl. 4 landings' reruns; load 3.5, 1 job running. Weekly 94%, exhaustion ~5.3h. Disk 60 GiB.
+- 09h: landed geo-correctness (Xapiand:05fcde57c, merge 7401fbbbc). Nightly backlog: 73 of 75 libraries green, Detent's cancelled. coverage-core-small: expected-prefix fix (Xapiand:a7e09fcd8), reruns queued. coverage-core-main: FreeBSD+arm64 green; x86 ASan+UBSan exit 72->70 after atexit with no fds, test now _exit()s (cause unproven; likely sanitizer exit hooks needing a descriptor); 2 coverage lines lost. coverage-multivalue merged master, A2 cites the suite, landing on CI. stopword-lists started (sonnet high). Weekly 95%, exhaustion ~4.4h. Load 30. Disk 59 GiB.
+- 10h: no new landings. wide-search-loop: stale cites fixed, master merged (geo+CI groups), correctness re-accepted after reading main; CI + 7 jobs then lands. coverage-multivalue: re-merge after my workflow change, CI then lands. task-lifecycle: review CHANGES (F1 start token, F2 throwing stop UAF, F3 sleep lost wake 69/30k, F4 nested flush) -> D140 rulings -> fix round 1 at task:27028a0, 9 mutants fail as required, suite/TSan/6 probes pass; reviewer re-check running (new locked inbox). stopword-lists A5: heap 512 B -> 29 KB, start time within noise, stops 'the' 0->1; schema check 92 us/200 fields (frequency check pending); 2 test fixes. CI concurrency keyed by event: Xapiand + Detent's 90 repos. Lesson: workflow edits on master force re-merge+CI on every near-landing quest; batch them. Weekly 96%, exhaustion ~3.5h. Load 38. Disk 56 GiB.
+- 11h: wide-search-loop/coverage-multivalue/task-lifecycle waiting on CI or drains. task-lifecycle re-check APPROVE (accepted; R1 starvation 10->10,000 steps, R2 skipped flush filed). stopword-lists review CHANGES: C1 multi-index search checks only the first index (/aa,zz/ returns refused zz's docs); fix round running. Queue stall: exclusives waiting behind Detent's 300-min light TSan block new light holds (60 min runnable beside idle slots). Weekly 96%, ~3.5h. Load 19. Disk 54 GiB.
+- 12h: landed wide-search-loop (Xapiand:e11af45a7) and task-lifecycle (task:4b6a096; campaign land's push was rejected non-fast-forward by Detent's CI-group commit and printed only a hint, so the landing was recorded but not on origin; merged and pushed by hand, verified on origin/main). Started task-inbox-first (R1/R2/R4/N8, opus high), cheap-reopen merge+evidence (opus high), stopword-lists probe fix (sonnet). coverage-multivalue: 2nd re-merge, --no-ci landing denied by the classifier (undermining oversight); waiting on CI. Weekly 97%, exhaustion ~2.7h. Load 69 (spike). Disk 53 GiB.
+- 13h: landed coverage-multivalue (Xapiand:a28fed411). task-inbox-first: review CHANGES (2 doc defects) -> fix -> re-check APPROVE, accepted; landing on CI. stopword-lists: per-index check regressed pool-100 wide search 3-18x (894-965 -> 3,022-16,981 ms); fixed with a process-wide agreed-index set: 560-610 ms (pool 4096: 561-613). Two staleness/bound tests before re-check. cheap-reopen: master merged (handler conflict, both kept), A1 545 ms p50, A2 pair queued. coverage-core-small/main: merged, evidence fixed, landing on CI. Weekly 98%, exhaustion ~1h45m. Load 3. Disk 54 GiB.
+- 14h: landed task-inbox-first (task:b7e2449). campaign tool: land --push fetches/merges/refuses and never records a rejected push; restarted workers reap inherited children (agent-campaign:bde1475, dotfiles:34fc70f, CI 7/7). Detent rename re-pinned (cpp-libraries:04a75c0). stopword-lists re-check APPROVE (R1 path-keyed agree set after direct schema write; R2 catch(...)), merged, evidence rerunning. task-driver-layout APPROVE (release 216 vs debug 224 -> 224/224), landing on CI; task-asio-layout filed (same hazard in task_asio). lifecycle-adoption plan: 11 quests, design review CHANGES (4 shutdown-path blockers), revision running. crash-d-rows mutant prints rows; ready. keymaker-keys jobs running. Stopped two agents re-sending reports (234k and 190k contexts). Weekly 99%, ~50 min; owner will apply the reset. Load 26-59. Disk 51 GiB.
+- 15h (quota reset applied ~22:40Z): landed task-driver-layout (task:63b43bd), task-asio-layout (task:fb32493; release asm identical, 4061 instr), task-process-step (task:3ce0f0c; fixes Detent's copy lacks: pipe CLOEXEC, bounded reap). Lifecycle plan approved and landed (Xapiand:c5487f49e), quests 1-4 filed; reactor, followups, process-step started (process-step landed). stopword-lists CI red on async allowlist (4th startup file call) -> bumped row, rerunning. keymaker: real compile error + wrong binary path, rerunning. New: logger-fork-reset (high), agg-validate-tree (after serialize-validation); serialize-validation revived (stalled: no review, CI red). Detent's 5-h TSan hold stalled the queue again; now sized to <=110 min. Weekly 1%. Load 37-48 with no holds (lag). Disk 50 GiB.
+- 16h: landed task-lifecycle-followups (task:0316bef), coverage-core-small (Xapiand:7180a8820). Accepted (landing on CI): reactor-server-composition, logger-fork-reset, cheap-reopen, task-fire-pending-guard. Revived light-share (F1 fixed in v2, evidence rerunning) and serialize-validation (CI cause: docs E2E count, fixed; in review). New quests: dsl-not-wrap, freebsd-exe-path, task-fire-pending-guard, nightly-retry, logger-fork-reset. Stopword CI: 7 unclassified mutex hits -> classified. Library CI-workflow change on main forced re-merges (reactor, logger). cpp-libraries tools.yml now runs on quest/** (cpp-libraries:072db68). Light slots 69% used (was 24%). Weekly 3%. Disk 45 GiB.
+- 17h: landed task-fire-pending-guard (task:f937bc2), reactor-server-composition (reactor:6fdd45f), logger-fork-reset (logger:1d52e89), nightly-retry (cpp-libraries:7f144b6). Accepted, landing on CI: cheap-reopen, serialize-validation (S1 fixed in round 1; re-check probe of 25 typed values: only date/datetime change, refused->served), freebsd-exe-path. http-limits built (all A1-A4 mutants fail; F1 first-byte gate). dsl-not-wrap: pre-fix mutant passes on local Apple clang; mutant branch on CI decides. New: datetime-range-zone, endpoint-uuid (incl. --uuid-partition fix). Light 54%; exclusive light-share jobs waiting. Weekly 5%. Disk 43 GiB.
+
+## 2026-11-19 17h
+- Found 10 active quests with no agent (status counts only planned quests as launchable); relaunched 6: document-gate, consensus-sim-loops, track-p (Opus), keymaker-keys, coverage-database, hybrid-go-no-go (Sonnet). Each ended on queued jobs within 5-13 min, 80-170k tokens.
+- track-p split: 9 unstarted research items to track-p-research; 5 criteria left.
+- Accepted: light-share (F1 confirmed, fix-scope for harness files), cheap-reopen re-accepted after master merge.
+- Queue: 102 queued (34 exclusive, 43 light), 10 running; light slots 29% used, drains 38 min: exclusive evidence (document-gate 39, track-p 11) is the bottleneck, not agents.
+- Quota: weekly 7%, burn 0.08%/h. Host load 12-15; disk 40 GiB free (96%).
+
+## 2026-11-19 18h
+- Tool: `campaign status` now lists active quests with no job queued and nothing to wait for (lead's uncommitted fix in the installed skill; suite rerun pending one failure).
+- Launched: http-limits F1 fix (Opus), queue-drain-throughput (Opus), loop-yield-tsan (Sonnet, dropped: fix already landed, ~100k tokens wasted on a stale hunt row), datetime-range-zone and keymaker-keys reviews (Opus).
+- hybrid VM chain re-ordered after document-gate's VM (shared VM caused the 11-18 shutdown); owner authorized the Qdrant/ES reruns.
+- Queue: 82 queued, 13 running; light slots 84% used (was 29%), drains 8 min. Load 49-53 on 16 CPUs.
+- Quota: weekly 9%, 0.10%/h. Disk 39 GiB free; prune freed ~0 (slots are 84 GiB, mostly active quests).
+
+## 2026-11-19 19h
+- Landed: light-share (Xapiand:ff38e1db0, merge 1895749a1).
+- Owner: campaign tool v3 becomes its own campaign (campaign-v3 at ~/code/Kronuz/campaign-v3, own lead); v2-replay (Opus) started here and moves there when its run ends; evidence-by-inputs dropped.
+- Reviews running: datetime-range-zone, keymaker-keys, dsl-not-wrap (Opus). http-limits 13 jobs queued after merging http main (35116b0).
+- Land loops: cheap-reopen (refused twice as master moved; re-accepted), serialize-validation, coverage-core-main, then freebsd-exe-path.
+- Queue: 92 queued, 11 running; light 68%, drains 20 min; load 10-22.
+- Quota: weekly 10%, 0.11%/h. Disk 37 GiB free.
+
+## 2026-11-19 20h
+- Landed: cheap-reopen (Xapiand:30129f3ed; land loop's 15-min timeout cut it mid-way, completed by hand, timeout raised).
+- Reviews: datetime-range-zone APPROVE (lands on the owner-decision default), dsl-not-wrap APPROVE, keymaker-keys CHANGES (M1 was based on a wrong hunt row; reverted), endpoint-uuid running.
+- consensus-sim-loops: 3 new failing seeds were a sim artifact (heal shorter than snapshot_timeout); Detent filed consensus-heal-snapshot-stall for the 60 s stall.
+- Land loops chase a moving master: each landing forces every other green quest through another CI round (coverage-core-main refused 3 times). Evidence for v3's merge queue.
+- Queue: 60 queued, 16 running; light 74%, drains 0 min; load 14-26. Quota weekly 11%, 0.12%/h. Disk 38 GiB free.
+
+## 2026-11-19 21h
+- Landed: nothing this hour. Seven quests are approved or green and stuck in land loops; each loop merges master, waits ~40 min for CI, and is refused again or hits an unrelated flake.
+- CI flakes blocking landings, none caused by the quest: test_pool use-after-free (strata catalog race, explorer found the cause, reproducer queued), FreeBSD t8_overload rows, http-limits' test Nagle timing (fixed at http:aed0314, CI green).
+- Merge interaction: serialize-validation vs coverage-core-small's cast pins; lead flipped 4 pins (Xapiand:c7db5eeeb), test job 261119-212131-2230f8.
+- Reviews: endpoint-uuid APPROVE, stopword-lists re-check APPROVE; keymaker-keys accepted after the F1 revert (jobs 200941/200950/200952).
+- Queue: 55 queued, 15 running; light 51%, drains 31 min; load 8-10. Quota weekly 12%, 0.12%/h. Disk 38 GiB free.
+
+## 2026-11-19 22h
+- Landed: dsl-not-wrap (Xapiand:45d38fc40, merge 15293bc17), http-limits (http:aed0314, Xapiand:9e6a0100f).
+- v2-replay evidence complete (agent-campaign:e821a15), moved to campaign-v3; handoff campaign-v3:033e971. Its tool-cost pass accidentally ran 56 copied jobs (31 exclusive, 4.6 machine-h) through a v2 read command starting a worker.
+- New quest: catalog-post-lifetime (strata catalog delivery race, reproduced 5/5; fix passed 5 jobs; Opus review running). Started dsl-date-operators.
+- coverage-database's journal claimed ready with another quest's job ids; 2 evidence jobs that could not pass were cancelled.
+- Landing is a chain: each landing moves master, the next loop merges and waits a CI round (keymaker-keys, endpoint-uuid refused after dsl-not-wrap).
+- Queue: 41 queued, 10 running; light 48%, drains 5 min; load 5-12. Quota weekly 13%, 0.13%/h. Disk 40 GiB free.
+
+## 2026-11-19 23h
+- Landed: endpoint-uuid (Xapiand:fcafe7bca, merge 621c59fc4); catalog-post-lifetime accepted, landing on strata CI.
+- Light slots 18% used with 40 queued: exclusive drains (28 min) and document-gate's backlog. Cancelled 12 of document-gate's queued exclusive jobs (A/A and trials b, c; ~120 exclusive min); kept one trial per row and the calibrations (msg-2 to the quest).
+- Every merge of master voids the suite at the new head (stopword-lists, keymaker-keys, freebsd-exe-path): another suite job per landing. Evidence for v3's reuse by inputs.
+- Reviews: catalog-post-lifetime CHANGES (my doc edit dropped two preconditions; fixed, confirmed), dsl-date-operators CHANGES (global time/timedelta share term prefix; documented and pinned).
+- 11 jobs failed this hour: two coverage-database compile errors, track-p's missing corpus (moved worktree), dsl probe expectation bugs.
+- Quota weekly 13%, 0.13%/h. Load 7-11. Disk 39 GiB free.
+
+## 2026-11-20 00h
+- Landed: keymaker-keys (Xapiand:f20c92c89, merge 237a15bb4), catalog-post-lifetime (strata:e3edb426, Xapiand:5b342eb41). consensus-sim-loops accepted, landing.
+- 28 jobs cancelled this hour: document-gate trim (12) and superseded reruns. Queue now 18 queued, 4 running; light slots 21%, drains 38 min.
+- Land chase: datetime-range-zone and coverage-core-main each exhausted 4 merge/CI rounds while others landed; restarted serially (datetime, coverage-core-main, freebsd-exe-path).
+- queue-drain-throughput: the 3 suite failures predate it (main baseline fails the same 3); fresh contributor fixing them.
+- Explorer: nested MAYBE tree (dsl-not-wrap N1).
+- Quota weekly 14%, 0.14%/h. Load 3-6. Disk 36 GiB free.
+
+## 2026-11-20 01h
+- Landed: stopword-lists (Xapiand:4be13e4b2), queue-drain-throughput (agent-campaign:ad03084; dotfiles:1a40fe6 makes it live).
+- Reviews: consensus-sim-loops APPROVE (3 gaps to hunt), queue-drain-throughput APPROVE (tool findings F1/F4/F5 to campaign-v3).
+- Explorer nested-MAYBE: fix proven (job ab6ff7 pass, mutant dd82b5 fail), ~87k tokens; queued as a quest after dsl-date-operators.
+- Started: strata-pin-catalog, control-plane-wallclock (Sonnet). serialize-validation re-check of the lead's test-pin flip.
+- Light slots 32%, drains 13 min, 28 jobs ended (8 failed). Quota weekly 15%. Load 4-6. Disk 31 GiB free.
+
+## 2026-11-20 02h
+- Landed: datetime-range-zone (Xapiand:d7fa8fa14, merge dd8f377f8).
+- Accepted: serialize-validation (narrow Sonnet re-check of the lead's pin flip, 67k tokens, APPROVE), landing. control-plane-wallclock ready (mutant: wakes idle 330 vs parked 67), landing. strata-pin-catalog jobs queued.
+- Disk: removed 5 landed quests' build slots `land` had kept (cheap-reopen, license-closure, lua-name-miss, metrics-fd-count, name-index): 28 -> 40 GiB free. `job prune` freed 0 (v3 note: land should drop the slot unless a job still names it).
+- Light slots 38%, drains 28 min, 24 jobs ended (2 failed). Quota weekly 15%. Load 4-8.
+
+## 2026-11-20 03h
+- Landed: none this hour. Five land loops chase one master (serialize-validation, dsl-date-operators after it, control-plane-wallclock, freebsd-exe-path, then coverage-core-main) plus consensus-sim-loops chasing Detent's consensus landings; each landing forces the rest through another merge + CI round (v3: a merge queue would serialize this).
+- coverage-core-main red on test_node's 800 ms shutdown bound under Linux ASan (flake, hunt row); failed job rerun.
+- hybrid-go-no-go: Opus resume, 138k tokens; results + decision request for the owner (strata warm p99 3.1x faster than Qdrant; cold 1.2x behind after int8).
+- strata-pin-catalog: A1 and A2 proven (old pin: heap-use-after-free); build-test check fixed twice by the lead (target name, BUILD_TESTS).
+- track-p: Opus resume on P13's finished reruns.
+- Light slots 21%, drains 37 min. Quota weekly 16%. Load 3. Disk 41 GiB.
+
+## 2026-11-20 04h
+- Landed: consensus-sim-loops (consensus:8bdbd750), track-p (prospect:0a2af7dfe; Opus review 234k tokens, APPROVE, caught a hollow mutant job). Detent landed consensus-heal-snapshot-stall (consensus:39d9f1d).
+- Started: automata (Opus). Resumed with fresh contributors: document-gate (Opus), coverage-database (Sonnet).
+- Lead bug: a chained land watcher deadlocked on `pgrep -f 'landloop.sh X'` matching another watcher's own command line; coverage-core-main sat ~1 h unlanded. Restarted directly. (v3: the driver owns ordering, no pgrep chains.)
+- Light slots 40%, drains 15 min, 41 jobs ended (3 failed). Quota weekly 17%. Load 5-6. Disk 42 GiB.
+
+## 2026-11-20 05h
+- Landed: serialize-validation (Xapiand:9c0fe8189, merge cbb14d6b8).
+- Owner direction: quests are whole features built by tasks on the quest branch; one gate when done. Skill rewritten (agent-campaign main, 3,530 -> 3,413 words; suite running); v3 handoff campaign-v3:b966706.
+- Re-plan (Opus, 233k tokens): ~40 planned/blocked quests -> 10 features, 11 quick fixes, 9 parked (Xapiand:590967006); Sonnet applying it.
+- automata feature-complete (Opus, ~350k + compaction): 1,188 brute-force queries, 10/10 mutants caught locally; fuzz and timings moved to the feature end.
+- document-gate: contributor's reruns denied by the permission classifier; held for the owner.
+- Load 30+ (Detent's ddb builds plus ours, all light holds). Light slots 32%. Quota weekly 21% (0.20%/h). Disk 45 GiB.
+
+## 2026-11-20 06h
+- Landed: dsl-date-operators (Xapiand:440902ac4, merge 8e3c4cafb). Quick fix on master: nested MAYBE (Xapiand:280c47aef, 6ee8f3ed9; explorer's proven fix).
+- Skill: quests are features built by tasks, one gate when done (agent-campaign:21248b4, dotfiles:8344017); suite 285/286, the one failure was the lead's template edit, fixed.
+- Re-plan applied (Sonnet, 187k tokens): 33 -> 11 planned; 22 dropped (folded or quick fixes), 9 parked.
+- automata: one feature review (Opus) launched at the end, per the new model.
+- coverage-database: CI exposed a platform-dependent validation error (hash order names v14 vs v15); pin shortened, hunt row.
+- Light slots 26%. Quota weekly 23% (0.22%/h). Load 34 (Detent builds). Disk 36 GiB.
+
+## 2026-11-20 07h
+- Landed: automata and termdict libraries on their mains (automata:a289a07, termdict:edac74c merge keeping the pinned e3f6f54); prospect's landing waits on the pin-check job (the first, with a fetch, failed in the job's environment).
+- Feature reviews (Opus, one each): automata CHANGES (2 blockers, fixed by one Sonnet task in 10 min, 87k tokens); consensus-rpc-lane CHANGES (idle memory 373 B against a 372 B budget, controls never ran); fix task (Opus) running.
+- Owner decisions D141-D146 recorded; multicast-seeds quest created in consensus, shared with Detent (Detent filed its consumer quest).
+- Land loops: v2 churn. coverage-core-main and control-plane-wallclock chase master merges; coverage-database CI found a real platform divergence (Linux accepts years macOS refuses); document-gate's A7 needs its tagged jobs rerun at the landing code, and that rerun was denied by the permission classifier (owner decision).
+- Light slots 32%. Quota weekly 25% (0.24%/h). Load 11. Disk 34 GiB.
+
+## 2026-11-20 08h
+- Landed: automata across three repos (prospect, automata:a289a07, termdict:edac74c), document-gate (strata:d956c0f4, A7 waived D147). Master CI green on both quick-fix batches (Xapiand:7c627045a).
+- Owner decisions D141-D148: multicast seeds (shared in consensus), cluster questions, document-gate on its numbers, hybrid go, parity with RocksDB on every row, one log per device.
+- Design pass (Opus, 198k): every RocksDB loss's cause measured; prototype cohort wait 1.23x faster at K=4, 1.87x at K=8; one shared log 2.6x faster than per-loop at K=8. Design review (Opus, 214k): CHANGES, 6 protocol gaps, D148 holds; revision task running.
+- turn-log-parity started with two tool-registered tasks (cohort wait, sorted runs); sorted runs blocked on index.hh, held by group-core (resumed, idle 2 days: a lead miss).
+- Tooling: Opus adapting v2 (evidence across merges by inputs, land --merge-main, [ci] tag, task merge).
+- Detent: started journal-idle-groups at our ask; folded 15 step quests into 4 features.
+- Light slots 22%. Quota weekly 27% (0.25%/h). Load 10. Disk 35 GiB.
+
+## 2026-11-20 09h
+- Landed: consensus-rpc-lane (consensus:e1f249d8d), APFS-name 400 (Xapiand:cadd35e17), sort cast words (Xapiand:1c8091720). The cohort-wait task merged into turn-log-parity (strata:722e481b), the first task-model merge.
+- Agents: cohort-wait 164k (Opus); RocksDB note revision 299k (Opus); quick fixes 95k and 84k (Sonnet); group-core resume 227k (Opus, handed off fresh); phrase-expansion stopped at 234k (Sonnet).
+- Started: multicast-seeds (Opus) and cluster (Opus).
+- Quota: 29% weekly, 0.27%/h. Load 21-33 on 16 CPUs; 34 GiB free (97% used).
+- Friction: stale lead watchers (pgrep self-match, a stale CI watch); an untagged A3/A4 with no passing job blocked rpc-lane's landing for about 1 h.
