@@ -1,6 +1,6 @@
 # multicast-seeds: journal
 
-State: ready for review at consensus:8213720; waiting on jobs (ids under Doing): 12 mutants, probe 261120-100407-204477, suite 261120-100256-fc6a26
+State: ready for review at consensus:8801b99; waiting on jobs 261120-111956-ba7a28 (seeds cases) 261120-111958-eba46c (suite); Linux CI after the lead's push
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
 Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
@@ -31,6 +31,19 @@ Jobs at consensus:8213720:
   no-setup-retry 261120-100345-e85866, receive-spins 261120-100348-7f49a7,
   throw-keeps-entry 261120-100351-c74582, ci-skips 261120-100354-550a87
 
+SIGPIPE on Linux CI (run 44790460279; lead's msg), fixed at consensus:8801b99:
+- Cause: the write is in the library, in `Connection` (connection.h), which the test's dial and
+  impostor harness both use. OpenSSL drives the socket via `SSL_set_fd` and writes with plain
+  `write()`. The transport sets `SO_NOSIGPIPE` where it exists; elsewhere (Linux) connection.h and
+  host-connection.md make ignoring SIGPIPE the host's duty. Every other transport test does
+  `signal(SIGPIPE, SIG_IGN)` (links, tls, peers, connection, rpc, groups, transport_idle); seeds_test
+  did not. Seeds itself only sends UDP, which never raises SIGPIPE.
+- Fix in the file set: seeds_test main ignores SIGPIPE `#ifndef SO_NOSIGPIPE`. Check: forged
+  raises SIGPIPE first there, so the process dies on Linux unless the host ignores it (mutant
+  `sigpipe-default`; only Linux, i.e. CI, can run it). macOS has SO_NOSIGPIPE, so local jobs
+  cannot show it.
+- Earlier jobs at consensus:8213720 were all green per the lead (suite, 12 mutants, probe fixed/rotate/starve PASS).
+
 ## Next
 
 1. When the jobs pass: read the probe's output (rotate <= 5, starve PASS), paste `campaign brief`'s
@@ -47,6 +60,11 @@ Jobs at consensus:8213720:
   the genuine target's backoff is untouched. Inside the trusted-cluster model.
 
 ## Blocked on
+
+Not blocking: whether `Connection` should stop leaving SIGPIPE to the host on Linux (a socket
+BIO that sends with MSG_NOSIGNAL). That is outside this file set and changes the documented host
+contract. Recommendation: keep the contract for now, and have the cluster wiring (Xapiand, Detent)
+ignore SIGPIPE as these tests do.
 
 Nothing.
 
