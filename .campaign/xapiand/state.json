@@ -4817,11 +4817,12 @@
       "provides": [
         "consensus:hello"
       ],
+      "reason": "folded into F3 consensus-rpc-lane (replan-2026-11-20)",
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
-      "updated": "2026-11-18T22:28:34"
+      "updated": "2026-11-20T05:27:03"
     },
     "consensus-rpc-lane": {
       "accepted": {},
