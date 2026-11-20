@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-095314-390e6c (mutants); build-test 261120-095312-0f3c21 passed at prospect:1f7ddaf
+State: waiting on jobs 261120-112928-913880 (build-test) 261120-112930-ced038 (mutants) at prospect:facbd3e
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
@@ -17,9 +17,18 @@ Real gap: tests refused only a prefix word with a throwing charge, and a glob's 
 charged only through it. prospect:1f7ddaf makes expansion_bounds_test refuse a prefix, a
 wildcard("zz*yy") and a similar("zzzz", 1) word under a throwing charge. Resubmitted at 1f7ddaf.
 
+Why 1f7ddaf did not kill it (job 261120-095314-390e6c survived, and msg from the coordinator): a
+throwing charge fires on the walk's own matcher (walk_of passes o.charge to the matcher), so
+dropping the charge from the glob constructor changes only the bytes counted, never a refusal. A
+self-calibrated budget (total measured on the same build) does not see it either. Verified locally
+under quiet light in a scratch clone (mutant applied to the copy, deleted after): the old test gave
+0 failures on the mutant. prospect:facbd3e adds an absolute check: a glob's or fuzzy word's total
+charge must exceed what its automaton constructor charges alone (and the budget one below the
+total refuses). Mutant build: expansion_bounds_test 1 failure (that check); unmutated: 0 failures.
+
 ## Next
 
-1. When 261120-095314-390e6c passes (build-test 261120-095312-0f3c21 already passed), replace the Evidence job ids with both at prospect:1f7ddaf and: paste the Evidence table, State "ready for review". If a mutant survives,
+1. When 261120-112930-ced038 and 261120-112928-913880 pass, replace the Evidence job ids with both at prospect:1f7ddaf and: paste the Evidence table, State "ready for review". If a mutant survives,
    add the test that kills it.
 
 ## Where the code is
