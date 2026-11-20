@@ -5452,7 +5452,9 @@
       "consumes": [],
       "files": [
         "tests/test_coverage_database*",
-        "tests/test_coverage_schema*"
+        "tests/test_coverage_schema*",
+        "src/datetime_msgpack.cc",
+        "tests/test_coverage_core_datetime.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -5465,7 +5467,7 @@
       "risk": "low",
       "status": "active",
       "title": "database (schema.cc) reaches T13 coverage",
-      "updated": "2026-11-19T00:35:37",
+      "updated": "2026-11-20T07:37:14",
       "worktree": "../Xapiand-wt/xapiand/coverage-database"
     },
     "coverage-database-t13": {
