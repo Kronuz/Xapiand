@@ -1,6 +1,6 @@
 # catalog-post-lifetime: journal
 
-State: waiting on jobs 261119-225202-ee1e10 261119-225210-db3d1f 261119-225210-192fe6
+State: waiting on jobs 261119-232450-2b6335 261119-232452-29e301 261119-232453-634c30 261119-232453-e232e1
 Quest: .campaign/xapiand/quests/catalog-post-lifetime.md (the lead's; never edit it)
 
 ## Doing
@@ -15,6 +15,13 @@ Review CHANGES (reviews/catalog-post-lifetime-correctness.md, Xapiand:30fff2d9d)
 - F4: the note names the load, the diagram has the exchange after a waited post, the contract says "touches only
   the reference-counted waiter".
 Checks rerun at strata:765fbd3e (the test changed): build-test 261119-225210-db3d1f, tsan 261119-225210-192fe6.
+
+CI linux-tsan failure at strata:b864fe08 (line 126, both variants): the test's, not the catalog's. The open
+was held at `open.unlocked`, after `take()` emptied the list, so `waiters_of(0) == 1` raced it. Fixed at
+strata:e3edb426: the open waits in the host's resolve (world tweak + remake) until the frame suspended. A taken
+waiter is delivered by `st`, so no catalog ordering gap. Proof: TSan x50 261119-232450-2b6335; ASan x5
+261119-232452-29e301; build-test 261119-232453-634c30, tsan 261119-232453-e232e1. origin/main (1ac6d65c) was
+already merged at strata:b864fe08.
 
 ## Next
 
