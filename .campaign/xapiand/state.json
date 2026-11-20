@@ -19042,12 +19042,12 @@
         "track-c"
       ],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 3R, replication groups",
-      "updated": "2026-11-18T02:29:42"
+      "updated": "2026-11-20T05:26:25"
     },
     "phase4-gate": {
       "accepted": {},
