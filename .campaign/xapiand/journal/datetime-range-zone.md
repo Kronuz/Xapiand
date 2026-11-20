@@ -1,6 +1,6 @@
 # datetime-range-zone: journal
 
-State: waiting on jobs 261119-162314-46474e (test passes), 261119-162315-1f461d (mutant: old source must fail), plus verify jobs
+State: waiting on jobs 261119-163517-332cfd (test passes), 261119-163518-7d7ef0 (mutant, old source must fail), 261119-163519-1b1b09 (suite)
 Quest: .campaign/xapiand/quests/datetime-range-zone.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,6 +10,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Doing
 
 Fix at 68e222ce4 in src/datetime_msgpack.cc (the library's computeTimeZone is fine; datetime pin b5d46a8 matches /Users/kronuz/code/Kronuz/datetime HEAD): object _hour/_min/_sec range-checked (0-23/0-59/0-59, negatives out of range, error "'_hour' is out of range"); a `_time` string's zone is deferred in a Zone struct and applied after the whole map is parsed. Pins flipped in tests/test_coverage_core_datetime.cc: test_object_time_is_not_range_checked -> test_object_time_is_range_checked; test_time_strings' datetime-zone-order pin (`_time` before `_date`: 2020-3-1 23:30 -> 2020-2-29 23:30). New test_zone_is_the_same_instant (string and map, +02:00, -05:00, +05:30, -03:30).
+
+Suite at 68e222ce4 failed (test_coverage_core_datetime, test_coverage_serialize aborted): a signed MsgPack integer (JSON numbers) is not necessarily negative, and my check threw on every NEGATIVE_INTEGER type. Fixed at 18395fff1 (value checked, not type); jobs resubmitted.
 
 ## Next
 
