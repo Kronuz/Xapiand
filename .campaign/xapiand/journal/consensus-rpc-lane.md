@@ -1,37 +1,59 @@
 # consensus-rpc-lane: journal
 
-State: ready for review; waiting on jobs 261120-063245-5d4c86 (build-test), 261120-063253-b0630d, 261120-063256-4ba928, 261120-063300-e7f9cb (pending after 600 s: host busy)
+State: review fixes built at consensus f748f79; waiting on jobs 261120-073315-436234 (build-test), 261120-073255-4083da, 261120-073257-1c9ed0, 261120-073259-715956, 261120-073303-5d2242, 261120-073306-214cf2, 261120-073309-5b931e (controls)
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
 
 ## Doing
 
-Feature built at consensus 1cd353f (lane on Bulk 1d5f1eb, hello 790e2c9, test fixes 1cd353f).
-Local runs under `quiet light` pass: rpc_host_test 5/5, hello_test 3/3, node_hello, rpc,
-fuzz replays, groups_test 15/15. Suite and mutant jobs queued (Evidence).
+Correctness review (`.campaign/xapiand/reviews/consensus-rpc-lane-correctness.md`, CHANGES at
+1cd353f) folded in at consensus e7d615c (code) and f748f79 (rpc-lane.md):
+
+- F1: the reported source is the value of `Opened::groups` (`GroupTable<NodeId>`); the second
+  table and `Empty` are gone. Idle, hosts 5 loops 1, 3 local runs: 316.2 B per idle group
+  (budget 372; main 283.6, 1cd353f 373.3). The +32.6 B over main is the 8 B value in each of
+  4 connections' entries; no FAIL in `consensus_transport_idle`.
+- F3 (lead's ruling): the constructor refuses `maximum_frame` < `rpc::frame_bytes` (65,584) when
+  the lane is on; `hello_test version` refuses 32 KiB with 16 KiB rpc_bytes.
+- F7: a throw from accept, `body`, `credit` or `done` fails that call alone (server `Error
+  handler_failed`, caller `Cancel cancelled`, text = what()), counted in `Lane::failed()`;
+  `accept_rpc` erases its handle first. `rpc_host_test local-throw`: both calls end code 6, links
+  2 then 2, malformed 0, group frames 2 of 2, next 1 MiB echo exact, pools 0.
+- F4/T7: `late_extension()` in deadline.h is the rule; `late_deadline` and the call deadlines
+  (Lane via `LaneOptions::late`, and calls waiting to dial) use it. `rpc_test late-deadline`.
+- F10 pools declared before `loops_`; F12 A3's control is `rpc-past-credit`; F13 encode first.
+- Local `quiet light` runs at e7d615c: rpc, rpc_host 6/6, hello 3/3, both fuzz replays, idle pass.
 
 ## Next
 
-1. Read jobs 261120-063245-5d4c86 (build-test), 063253-b0630d, 063256-4ba928, 063300-e7f9cb.
-2. When done (the lead's): push for CI (asan, tsan), the security review, the `--later` jobs:
-   fuzz hours for the lane decoder and the hello decoder (regenerate fuzz/corpus/decoders with
-   fuzz/seed.cc first: its hello seeds are the old 64 bytes), 1,000 streamed calls on macOS,
-   the 4 GiB strict job.
+1. Read the seven jobs in State; fold any failure.
+2. When done (the lead's): push for CI (asan, tsan), the security review, the `--later` jobs
+   (fuzz hours, 1,000 streamed calls on macOS, the 4 GiB strict job).
 
 ## Blocked on
 
-The lead, file set: `test/transport/node_hello_test.cc` (DTHL0002's byte-for-byte test; the
-hello's growth must change its expected bytes) is outside the quest's set; edited (3 lines) and
-flagged here. Recommendation: add it to the `hello` task's files.
+1. The lead, file set: `docs/mechanisms/host-transport.md` (Tables, lines 155 and 160) still says
+   "A set is `GroupTable<Empty>`, 8 B an entry" and `Opened::groups` "the group (8 B)"; after F1
+   it is 16 B (the group and the last reported source). Outside the set; not edited.
+   Recommendation: add it to the set, or fix the two lines on landing.
+2. The lead: `docs/design/rpc-lane.md:290` (the 4 GiB job) names control `rpc-one-frame`, which
+   is now `rpc-past-credit` (F12). The design is a spec of bytes; recommendation: update the name.
+3. F5 (`lane_idle`/`Drain` with `hold(node)`): not small, not built. It needs a per-peer idle
+   timer and a hold count, `drain()` then a graceful close only of lane-only Bulk links (Bulk
+   also carries group frames), Links' peer set gaining lane demand, the peer's close on `Drain`,
+   and A3's "second call in flight at `lane_idle`" test. Recommendation: `cluster`, per the review.
+4. Nits left: F6 (DTHL0003 rename: magic, corpus seeds, node_hello bytes; R13 keeps it), F8
+   (`protocol_not_supported` on `WireVersionRefused` needs the dial's failure reason), F9
+   (alternate inline Calls), F11 (`cluster` wires `on_peer_limits`). None is a one-liner.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | `rpc_host_test calls` (300 ms deadline: caller ends at 301 ms, both ends `deadline_exceeded`; cancel mid-stream once each; pools back to 0), `group-full` (credit 4,130,343 B uncredited, 23 calls, largest latency 3 ms), `call-full` (server holds 4,194,304 B; heartbeats' longest gap 107 ms) in build-test 261120-063245-5d4c86; control rpc-shared-credit (mutant 3848da8) `--fails-without` 261120-063253-b0630d |
-| A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0, lane frames 5/5) in 261120-063245-5d4c86 |
-| A3 | `rpc_host_test stream` (32 MiB in 410 ms, 81.8 MB/s locally; heartbeats' longest gap 109 ms; serving high water 4,194,304 = one window) in 261120-063245-5d4c86; control rpc-one-frame (mutant 5602a81) `--fails-without` 261120-063256-4ba928 |
-| A4 | `hello_test leader` (incarnation 3 reported at 65,536 B; 512 KiB entry applied on 1 and 2, not 3; 0 appends to 3 carrying it), `codec` (zero/inverted limits refused, `WireVersionRefused`), `version` (refused, 0 links, 0 frames; 1 MiB frame for 2 MiB rpc_bytes refused) in 261120-063245-5d4c86; control hello-limits-ignored (mutant d5a00aa) `--fails-without` 261120-063300-e7f9cb |
-| A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk, Evidence), `docs/mechanisms/hello.md` at 1cd353f |
+| A1 | `rpc_host_test calls`, `group-full`, `call-full`, `local-throw` (F7) and `rpc_test` (incl. `late-deadline`, T7) in build-test 261120-073315-436234 at f748f79 (pending); controls `--fails-without`: rpc-shared-credit (mutant 9c64665) 261120-073255-4083da, late-deadline (413826c) 261120-073303-5d2242, local-throw-closes (5f0443c) 261120-073309-5b931e. Superseded: 261120-063245-5d4c86 (failed: idle, F1) and 063253-b0630d (build failed, F2) |
+| A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0) in build-test 261120-073315-436234 (pending) |
+| A3 | `rpc_host_test stream` (32 MiB under credit; heartbeat gaps < 1,000 ms) in build-test 261120-073315-436234 (pending); control rpc-past-credit (mutant 45d9e0c, F12) `--fails-without` 261120-073257-1c9ed0 |
+| A4 | `hello_test leader`, `codec`, `version` (now also refuses a 32 KiB frame below the lane's 65,584, F3) in build-test 261120-073315-436234 (pending); controls `--fails-without`: hello-limits-ignored (mutant 0c8ffc9) 261120-073259-715956, lane-frame-unchecked (543d870) 261120-073306-214cf2 |
+| A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk: Deadlines, Frame bound; Evidence: local-throw, controls), `docs/mechanisms/hello.md` at f748f79 |
 
 ## Result
 
@@ -41,10 +63,22 @@ a sender pool, separate serving and calling pools, T1-T8. This quest changes no 
 
 ## Rulings I made
 
+- R17 (review F1) One per-connection table: the last reported source is the `Opened::groups`
+  value; an open again on the same connection keeps it, a mismatched open erases it.
+- R18 (review F7) Local throws fail their call alone, including `done`'s (counted; the call has
+  ended). A Serve handler that acts outside its events still fails (documented contract); now as
+  `handler_failed`, not a closed connection.
+- R19 (review F4, T7) The late rule applies once per waiting place: a call that waited for its
+  dial and then for its deadline on the lane can be extended in each (each capped at its timeout).
+- R20 (review F12) A3's control renamed `rpc-past-credit`: `sendable` returns a full chunk past
+  credit, so the receiver's rule 7.6 aborts and `stream` fails on its outcome.
+- R21 Review-fix controls carry the nearest criterion: late-deadline and local-throw-closes A1,
+  lane-frame-unchecked A4. Each mutant builds in its own `build-ctl-<name>` with Ninja (F2).
+
 - R10 (F3) The transport's lane wiring (design T2, T3, T5, D7) had no builder after D123 dropped
   consensus-transport; built here, since A1-A3 need it. Not built: `lane_idle`/`Drain` on idle
-  or shutdown (the transport keeps connections until `stop()`), `hold(node)`, T7's late-deadline
-  rule for call deadlines; docs/mechanisms/rpc-lane.md says so.
+  or shutdown (the transport keeps connections until `stop()`), `hold(node)`; T7 built later
+  (R19); docs/mechanisms/rpc-lane.md says so.
 - R11 A call with no Bulk link waits and dials; a failed dial retries every `redial` until the
   call's deadline (`timed_out`), never `not_connected` (a lost tie-break is a failed dial).
 - R12 A chunk's `rpc_outgoing_bytes` charge returns when the connection takes it; the connection
@@ -69,3 +103,19 @@ a sender pool, separate serving and calling pools, T1-T8. This quest changes no 
 - R8 (rev 2) Call.window must be nonzero; Drain's call field may be 0 (none accepted).
 - R9 (rev 2) The model's rules run as three jobs; all three together outgrow a Python run.
 - Decoder corpus: 2 stale 64-byte hello seeds replaced by seed.cc's 152-byte ones (382 seeds before and after); replay clean, hello round-trips (rpc-lane:83792cf).
+
+## Review findings (consensus-rpc-lane-correctness)
+
+| ID | Done |
+|---|---|
+| F1 | fixed e7d615c; idle 316.2 B (budget 372); build-test 261120-073315-436234 |
+| F2 | resubmitted with own build dirs: 261120-073255-4083da, 073257-1c9ed0, 073259-715956 |
+| F3 | fixed e7d615c (lead's ruling a); `hello_test version`; control 261120-073306-214cf2 |
+| F4 | T7 built e7d615c; `rpc_test late-deadline`; control 261120-073303-5d2242 |
+| F5 | not built: not small (Blocked on 3) |
+| F6 | kept (R13); listed |
+| F7 | fixed e7d615c; `rpc_host_test local-throw`; control 261120-073309-5b931e |
+| F8, F9, F11 | listed (Blocked on 4) |
+| F10 | fixed e7d615c |
+| F12 | control replaced: rpc-past-credit 261120-073257-1c9ed0 |
+| F13 | fixed e7d615c |
