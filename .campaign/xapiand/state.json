@@ -22291,8 +22291,8 @@
     "serialize-validation": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T16:02:52",
-          "base": "290336d0406fb12a355977de46e27b431ee5cb4f",
+          "at": "2026-11-19T18:04:16",
+          "base": "6789419a97105b89f3de3a1fd108af837fa371d1",
           "blobs": {
             "docs/mechanisms/geo-exact-term.md": "100644:0755deb7adde0009d94083745ce1fa711ebe6ce6",
             "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "100644:437f0b8bfd57c376a060abd10ae4c66813ab88b3",
@@ -22312,7 +22312,7 @@
             "tests/test_serialize_validation_type_names.cc": "100644:7124b422c7934fbca8ffc14b9278b59c7d852ee2"
           },
           "by": "review",
-          "commit": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "commit": "af7f582999aeb9a0fa8afdd7eabb6ffa27780aa4",
           "criteria": "295da38e81e13d07",
           "diffs": {
             "docs/mechanisms/geo-exact-term.md": "58f60c0b455ae514",
@@ -22395,7 +22395,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T16:02:52",
+      "updated": "2026-11-19T18:04:16",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
