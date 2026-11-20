@@ -516,3 +516,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: `accept` crashed on a binary file in a quest diff (UnicodeDecodeError in sh()); fixed in agent-campaign with a regression test, suite running.
 - Disk: 28 to 264 GiB free. Job store pruned (769 jobs deleted, 53 slimmed, 66 idle slots, 97 GiB before); 159 clean worktrees removed (42 GiB; small .scratch files archived in ~/.scratch/xapiand/worktree-archive, 198 MiB); Docker.raw (34 GiB) and strata's unused VM pair (134 GiB, last job Nov 15, Detent agreed) deleted.
 - Quota: 43% weekly, 0.38%/h. Load 11-14.
+
+## 2026-11-20 15h
+- Landed: placement-locality-sim (strata:e4561f68). Accepted: phrase-expansion again at prospect:dea0ffb (sanitizer-safe allocator test). Tool: agent-campaign:4af664d (non-UTF-8 output) pushed; sidebar fix (draw only from the home) committed, suite queued.
+- Lead error: an uncommitted hunt.md edit on master blocked every land loop for about an hour ("has uncommitted changes"); found and committed at 15:0x. Land scripts now surface refusals other than CI.
+- Agents: group-core CI fix 144k (Opus; cause: a test closing on a second thread under journal's new debug assert, plus an unordered draw on gcc); netlab-consensus 338k (Opus; harness, selftest, light rows; exclusive rows queued); bulk-load-rerun 115k so far (Sonnet); track-c-gates resumed (Opus) after 15 of 19 gate jobs passed.
+- Disk: 299 GiB free (old Xapian folder removed by the owner; 484 MiB of datasets kept in ~/Development/Kronuz/datasets).
+- Quota: 44% weekly, 0.38%/h. Load 24-43 (two Detent suites over their light share). 51 jobs queued.
