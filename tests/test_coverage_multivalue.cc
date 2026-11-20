@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <string>
 #include <string_view>
@@ -227,11 +228,34 @@ void test_serialize_key() {
 	CHECK_EQ(smallest(one, add), "solo");
 	CHECK_EQ(biggest(one, add), "solo");
 
-	// A missing slot sorts after every value ascending. Descending it gives the empty string: the constant's
-	// "\x00" literal builds an empty std::string, so it does not hold the NUL the name says (finding M1).
+	// A missing slot sorts after every value ascending and, descending, keys as the minimum: the empty string.
 	Doc none;
 	CHECK_EQ(smallest(none, add), "\xff"s);
 	CHECK_EQ(biggest(none, add), ""s);
+	CHECK_EQ(MIN_STR_CMPVALUE, ""s);
+
+	// Descending order: a value comes first and the missing slot last.
+	Multi_MultiValueKeyMaker down;
+	down.add_serialize(SLOT, true);
+	down.add_serialize(SLOT + 1, true);
+	Doc low, high;
+	low.set(SLOT, "a"s).set(SLOT + 1, "x"s);
+	high.set(SLOT, "b"s).set(SLOT + 1, "x"s);
+	Doc gap;
+	gap.set(SLOT + 1, "x"s);
+	CHECK_LT(down.key(high), down.key(low));
+	CHECK_LT(down.key(low), down.key(gap));
+
+	// The empty string is the least byte string: a slot whose largest value is a NUL byte sorts ahead of a
+	// missing slot, and a slot of only empty values ties with it.
+	Multi_MultiValueKeyMaker down_one;
+	down_one.add_serialize(SLOT, true);
+	Doc nul_doc, empty_doc;
+	nul_doc.set(SLOT, multi({ ""s, "\0"s }));
+	empty_doc.set(SLOT, multi({ ""s, ""s }));
+	const Doc missing;
+	CHECK_LT(down_one.key(nul_doc), down_one.key(missing));
+	CHECK_EQ(down_one.key(empty_doc), down_one.key(missing));
 }
 
 void test_bool_key() {
@@ -463,8 +487,17 @@ void test_round_trip_every_kind() {
 	const auto plain = every_kind(false);
 	auto rebuilt = Multi_MultiValueKeyMaker().unserialize(plain.serialize());
 	CHECK_EQ(rebuilt->serialize(), plain.serialize());
-	// M5: a string key serializes only its metric, not its slot or direction, so a rebuilt one reads slot 0 and keys differently.
-	CHECK_NE(rebuilt->key(doc), plain.key(doc));
+	// A string key serializes its slot and direction, so a rebuilt one keys the same.
+	CHECK_EQ(rebuilt->key(doc), plain.key(doc));
+	for (const bool reverse : { false, true }) {
+		Multi_MultiValueKeyMaker one;
+		one.add_string_jaro(9, reverse, "beta", false);
+		Doc d;
+		d.set(9, multi({ "alpha", "gamma", "omega" }));
+		const auto again = Multi_MultiValueKeyMaker().unserialize(one.serialize());
+		CHECK_EQ(again->serialize(), one.serialize());
+		CHECK_EQ(again->key(d), one.key(d));
+	}
 	Multi_MultiValueKeyMaker scalar;
 	scalar.add_serialize(1, false);
 	scalar.add_float(2, true, 1.5);
@@ -475,10 +508,24 @@ void test_round_trip_every_kind() {
 	scalar.add_geo(7, false, std::vector<Cartesian>{ at(0, 0), at(90, 0) });
 	CHECK_EQ(Multi_MultiValueKeyMaker().unserialize(scalar.serialize())->key(doc), scalar.key(doc));
 
-	// M4: a phonetic key writes its encoder's code but does not restore it, so a rebuilt one serializes shorter.
+	// A phonetic key restores its encoder's code, so a rebuilt one serializes the same bytes and keys the same.
+	auto whole = Multi_MultiValueKeyMaker().unserialize(serialized);
+	CHECK_EQ(whole->serialize(), serialized);
+	CHECK_EQ(whole->key(doc), key);
+	// Each slot alone rebuilds to the same key (Jaccard restores its character set).
+	for (engine::valueno slot = 1; slot <= 19; ++slot) {
+		Doc one_slot;
+		one_slot.set(slot, doc.value(slot));
+		CHECK_EQ(whole->key(one_slot), maker.key(one_slot));
+	}
 	Multi_MultiValueKeyMaker phonetic;
 	phonetic.add_string_soundex("english", 15, true, "theta", false);
-	CHECK_LT(Multi_MultiValueKeyMaker().unserialize(phonetic.serialize())->serialize().size(), phonetic.serialize().size());
+	phonetic.add_string_double_metaphone(19, false, "mu", false);
+	const auto bytes = phonetic.serialize();
+	const auto back = Multi_MultiValueKeyMaker().unserialize(bytes);
+	CHECK_EQ(back->serialize().size(), bytes.size());
+	CHECK_EQ(back->serialize(), bytes);
+	CHECK_EQ(back->key(doc), phonetic.key(doc));
 	CHECK_EQ(rebuilt->name(), "Multi_MultiValueKeyMaker");
 
 	auto copy = maker.clone();
