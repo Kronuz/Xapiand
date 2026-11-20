@@ -1,28 +1,25 @@
 # consensus-rpc-lane: journal
 
-State: design fixed
+State: building (re-plan 2026-11-20: whole feature F3)
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
 
 ## Doing
 
-Design fixed: revision 2 at consensus:0fd8a7f (pushed), answering the design review at
-Xapiand:e9efa08f3 (CHANGES): F1-F5, F8 blocking, F6, F7, F9-F11 folded; the map is the doc's last
-table. No consensus sources touched.
+Both tasks written and committed at consensus 790e2c9 (lane on Bulk 1d5f1eb, hello 790e2c9),
+on origin/main merged at 8894776. Local builds and tests under `quiet light` next.
 
 ## Next
 
-1. Read the model jobs (Evidence); the lead re-reviews revision 2 (lens `design`).
-2. The lead forwards to Detent's lead: Drain (kind 6) is new; T2 changed (three thread-safe pools
-   with `ByteBudget::renew`, lane frames outside Bulk's connection window, FIFO small frames);
-   T4 is the transport's own A5; T6 reworded; T8 (graceful close through Drain) is new.
-3. After the transport's A7 lands: steps 5-6 of the doc.
+1. Build and run rpc_host_test (5 cases), hello_test (3), node_hello_test, rpc_test, groups_test.
+2. Mutant controls as jobs: rpc-shared-credit (group-full), rpc-one-frame (stream),
+   hello-limits-ignored (leader), via test/transport/rpc_mutants.py.
+3. `campaign verify consensus-rpc-lane`, Evidence table, State "ready for review".
 
 ## Blocked on
 
-The lead: Q1 (file set: CMakeLists.txt, CHANGELOG.md, docs/design/rpc-lane*), Q2 (the `fuzz`
-check needs CONSENSUS_FUZZ, LLVM clang and --no-tests=error; pattern rpc_stream_fuzz), Q3 (A4's
-real remote search belongs to shard-rpc; here the three method shapes). Building waits on
-detent:consensus-transport A7.
+The lead, file set: `test/transport/node_hello_test.cc` (DTHL0002's byte-for-byte test; the
+hello's growth must change its expected bytes) is outside the quest's set; edited (3 lines) and
+flagged here. Recommendation: add it to the `hello` task's files.
 
 ## Evidence
 
@@ -40,6 +37,22 @@ A7) or [rpc-lane]. Six kinds (Drain added), the full validity list (D3), atomic 
 a sender pool, separate serving and calling pools, T1-T8. This quest changes no byte.
 
 ## Rulings I made
+
+- R10 (F3) The transport's lane wiring (design T2, T3, T5, D7) had no builder after D123 dropped
+  consensus-transport; built here, since A1-A3 need it. Not built: `lane_idle`/`Drain` on idle
+  or shutdown (the transport keeps connections until `stop()`), `hold(node)`, T7's late-deadline
+  rule for call deadlines; docs/mechanisms/rpc-lane.md says so.
+- R11 A call with no Bulk link waits and dials; a failed dial retries every `redial` until the
+  call's deadline (`timed_out`), never `not_connected` (a lost tie-break is a failed dial).
+- R12 A chunk's `rpc_outgoing_bytes` charge returns when the connection takes it; the connection
+  takes a feed only once its queue is out, so the bound holds within one feed.
+- R13 DTHL0002 keeps its magic and grows to 152 bytes (formats open until release).
+- R14 The host refuses a `maximum_frame` below its own rpc_bytes' frame; not a group window
+  below it: a frame always goes when nothing is outstanding, and existing tests use small windows.
+- R15 PeerLimits are reported per (connection, group, source incarnation) before the source's
+  first admitted frame; the transport cannot enumerate a node's incarnations.
+- R16 A1's control is `rpc-shared-credit` (lane frames wait for the groups' credit, design T2's
+  rejected shape); A3's is `rpc-one-frame`; A4's is `hello-limits-ignored`.
 
 - R1 Lane on Bulk, not Control or a third connection (design D1).
 - R2 "End" is a flag on Call/Body, not a sixth kind: one way to end a stream, one-frame calls.
