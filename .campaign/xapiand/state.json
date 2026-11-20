@@ -6581,9 +6581,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T16:42:44",
+      "updated": "2026-11-19T19:33:26",
       "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
