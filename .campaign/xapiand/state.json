@@ -25346,7 +25346,7 @@
       "branch": "quest/xapiand/strata-pin-catalog",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -25383,6 +25383,32 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-20T02:45:59",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the lead's check omitted -DBUILD_TESTS=ON, so the test target was never configured; same test",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "landed": [],
@@ -25396,7 +25422,7 @@
       "risk": "low",
       "status": "active",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T02:30:39",
+      "updated": "2026-11-20T02:45:59",
       "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
