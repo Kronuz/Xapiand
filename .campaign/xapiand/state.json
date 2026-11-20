@@ -6681,11 +6681,12 @@
         "queue-drain-throughput"
       ],
       "provides": [],
+      "reason": "superseded: v3 is designed from the v2-replay evidence; another identity patch on v2 would be the fifth (owner, 2026-11-19)",
       "repo": "../agent-campaign",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Reuse evidence while a job's declared inputs are unchanged; land merges main itself when disjoint",
-      "updated": "2026-11-19T18:34:56"
+      "updated": "2026-11-19T18:39:26"
     },
     "exact-id-keys": {
       "accepted": {
