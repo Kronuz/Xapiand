@@ -6601,7 +6601,36 @@
       "worktree": ""
     },
     "endpoint-uuid": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T20:35:51",
+          "base": "3b73f5131a2bf5a01b334a5676326e30fba09a76",
+          "blobs": {
+            "docs/src/content/docs/changelog.md": "100644:a97f26610e7dcfe20d9b3b7fddc05cf7bc7b8562",
+            "docs/src/content/docs/options.md": "100644:30c768eeca4ee926bff616b1d4cc0fcb8707b839",
+            "src/endpoint.cc": "100644:c175759e79d96cbbbce47ee9de5a843a6418ed34",
+            "tests/test_coverage_core_endpoint.cc": "100644:fda01ce7258469b085bf508f1edf779f8e28328e",
+            "tests/test_endpoint.cc": "100644:2b859082070b7bc57229186596f79834965bebb2",
+            "tests/test_endpoint_uuid.cc": "100644:3b240ffec740896fb99143aa75df8e6bee232683"
+          },
+          "by": "review",
+          "commit": "b1667d00f810d7227c80e72e3a7ecfe3cb7ecf69",
+          "criteria": "6c6bb4753273ed47",
+          "diffs": {
+            "docs/src/content/docs/changelog.md": "fb7331c4451bf046",
+            "docs/src/content/docs/options.md": "9a70d5a7b0b2eb5f",
+            "src/endpoint.cc": "5680c130f254cd94",
+            "tests/test_coverage_core_endpoint.cc": "aa316b1b68e3f29a",
+            "tests/test_endpoint.cc": "5f322f3c38438850",
+            "tests/test_endpoint_uuid.cc": "d59ccbd8ddc19387"
+          },
+          "findings": {},
+          "note": "",
+          "review": "1578587f0f90f8d2d3737fcf752d9adcf5a1466b",
+          "reviewed": "b1667d00f810d7227c80e72e3a7ecfe3cb7ecf69",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "6b3c53bb489f9cebe799f22039c666c35e89b01a",
       "branch": "quest/xapiand/endpoint-uuid",
@@ -6628,7 +6657,9 @@
         "docs/src/content/docs/changelog.md"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -6636,7 +6667,7 @@
       "risk": "normal",
       "status": "review",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T19:33:26",
+      "updated": "2026-11-19T20:35:51",
       "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
