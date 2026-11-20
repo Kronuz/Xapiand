@@ -20875,9 +20875,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T08:02:26",
+      "updated": "2026-11-20T12:03:27",
       "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
