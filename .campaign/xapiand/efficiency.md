@@ -406,3 +406,19 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - coverage-database's journal claimed ready with another quest's job ids; 2 evidence jobs that could not pass were cancelled.
 - Landing is a chain: each landing moves master, the next loop merges and waits a CI round (keymaker-keys, endpoint-uuid refused after dsl-not-wrap).
 - Queue: 41 queued, 10 running; light 48%, drains 5 min; load 5-12. Quota weekly 13%, 0.13%/h. Disk 40 GiB free.
+
+## 2026-11-19 23h
+- Landed: endpoint-uuid (Xapiand:fcafe7bca, merge 621c59fc4); catalog-post-lifetime accepted, landing on strata CI.
+- Light slots 18% used with 40 queued: exclusive drains (28 min) and document-gate's backlog. Cancelled 12 of document-gate's queued exclusive jobs (A/A and trials b, c; ~120 exclusive min); kept one trial per row and the calibrations (msg-2 to the quest).
+- Every merge of master voids the suite at the new head (stopword-lists, keymaker-keys, freebsd-exe-path): another suite job per landing. Evidence for v3's reuse by inputs.
+- Reviews: catalog-post-lifetime CHANGES (my doc edit dropped two preconditions; fixed, confirmed), dsl-date-operators CHANGES (global time/timedelta share term prefix; documented and pinned).
+- 11 jobs failed this hour: two coverage-database compile errors, track-p's missing corpus (moved worktree), dsl probe expectation bugs.
+- Quota weekly 13%, 0.13%/h. Load 7-11. Disk 39 GiB free.
+
+## 2026-11-20 00h
+- Landed: keymaker-keys (Xapiand:f20c92c89, merge 237a15bb4), catalog-post-lifetime (strata:e3edb426, Xapiand:5b342eb41). consensus-sim-loops accepted, landing.
+- 28 jobs cancelled this hour: document-gate trim (12) and superseded reruns. Queue now 18 queued, 4 running; light slots 21%, drains 38 min.
+- Land chase: datetime-range-zone and coverage-core-main each exhausted 4 merge/CI rounds while others landed; restarted serially (datetime, coverage-core-main, freebsd-exe-path).
+- queue-drain-throughput: the 3 suite failures predate it (main baseline fails the same 3); fresh contributor fixing them.
+- Explorer: nested MAYBE tree (dsl-not-wrap N1).
+- Quota weekly 14%, 0.14%/h. Load 3-6. Disk 36 GiB free.
