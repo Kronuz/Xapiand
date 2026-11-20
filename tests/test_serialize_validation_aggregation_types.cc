@@ -1,0 +1,100 @@
+/*
+ * Copyright © 2026 Germán Méndez Bravo (Kronuz)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+
+// An aggregation type the dispatch does not know is refused with a 400 naming it, not taken as `_aggs`.
+
+#include "test_harness.h"
+
+#include <memory>
+#include <string>
+
+#include "aggregations/aggregations.h"
+#include "aggregations/exception.h"
+#include "database/schema.h"
+#include "database/utils.h"
+#include "msgpack.h"
+#include "rapidjson/document.h"
+
+namespace {
+
+MsgPack js(const std::string& json) {
+	rapidjson::Document doc;
+	json_load(doc, json);
+	return MsgPack(doc);
+}
+
+std::shared_ptr<Schema> make_schema() {
+	MsgPack props = MsgPack::MAP();
+	props["age"] = MsgPack({ { "_type", "integer" }, { "_slot", 1001 } });
+	return std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(props)), nullptr, "");
+}
+
+void refused(const std::string& json, const std::string& word) {
+	const auto schema = make_schema();
+	bool threw = false;
+	try {
+		Aggregation aggregation(js(json), schema);
+	} catch (const AggregationError& e) {
+		threw = true;
+		const std::string message = e.get_message();
+		CHECK(message.find(word) != std::string::npos);
+	} catch (const std::exception& e) {
+		std::fprintf(stderr, "  FAIL: %s threw a non-400: %s\n", json.c_str(), e.what());
+	}
+	if (!threw) {
+		std::fprintf(stderr, "  FAIL: %s was accepted\n", json.c_str());
+	}
+	CHECK(threw);
+}
+
+void accepted(const std::string& json) {
+	const auto schema = make_schema();
+	try {
+		Aggregation aggregation(js(json), schema);
+		CHECK(true);
+	} catch (const std::exception& e) {
+		std::fprintf(stderr, "  FAIL: %s threw: %s\n", json.c_str(), e.what());
+		CHECK(false);
+	}
+}
+
+void test_unknown_types_are_refused() {
+	refused(R"({"_aggs":{"x":{"_bogus":{"_field":"age"}}}})", "_bogus");
+	refused(R"({"_aggs":{"x":{"bogus":{"_field":"age"}}}})", "bogus");
+	refused(R"({"_aggs":{"x":{"_counts":{"_field":"age"}}}})", "_counts");
+	refused(R"({"_aggs":{"x":{"_aggs":{},"_bogus":{"_field":"age"}}}})", "_bogus");
+	refused(R"({"_aggregations":{"x":{"#note":"n","_nope":{"_field":"age"}}}})", "_nope");
+}
+
+// The type may follow the sub-aggregations or a comment, as before.
+void test_known_types_still_dispatch() {
+	accepted(R"({"_aggs":{"x":{"_count":{"_field":"age"}}}})");
+	accepted(R"({"_aggs":{"x":{"_aggs":{},"_count":{"_field":"age"}}}})");
+	accepted(R"({"_aggs":{"x":{"_aggregations":{},"_count":{"_field":"age"}}}})");
+	accepted(R"({"_aggs":{"x":{"#note":"n","_count":{"_field":"age"}}}})");
+	accepted(R"({"_aggs":{"x":{"_terms":{"_field":"age"},"_aggs":{"y":{"_max":{"_field":"age"}}}}}})");
+}
+
+}  // namespace
+
+TEST_MAIN(test_unknown_types_are_refused, test_known_types_still_dispatch)

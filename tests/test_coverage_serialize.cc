@@ -364,8 +364,8 @@ void test_numbers_from_text() {
 	CHECK_THROW(Serialize::integer(std::string_view("4x")), SerializationError);
 	CHECK_THROW(Serialize::integer(std::string_view("")), SerializationError);
 	CHECK_THROW(Serialize::integer(std::string_view("99999999999999999999")), SerializationError);
-	// Finding: a negative text is accepted as a positive; strtoull wraps it.
-	CHECK_EQ(Unserialize::positive(Serialize::positive(std::string_view("-1"))), U64_MAX);
+	// A negative text is no positive: it is refused, not wrapped by strtoull.
+	CHECK_THROW(Serialize::positive(std::string_view("-1")), SerializationError);
 	CHECK_THROW(Serialize::positive(std::string_view("4x")), SerializationError);
 	CHECK_THROW(Serialize::positive(std::string_view("99999999999999999999")), SerializationError);
 	CHECK_THROW(Serialize::floating(std::string_view("abc")), SerializationError);
@@ -441,10 +441,9 @@ void test_serialize_by_type() {
 	const auto point = js(R"({"_point":{"_latitude":19.70,"_longitude":-101.19}})");
 	const auto geo = Serialize::geospatial(point);
 	CHECK_EQ(Serialize::geospatial(std::string_view("POINT(-101.19 19.70)")), geo);
-	// Finding: the range hash XORs start with end, so any one-trixel range hashes to 0 and every point
-	// serializes to the same bytes, however far apart.
-	CHECK_EQ(Serialize::geospatial(std::string_view("POINT(2.35 48.85)")), geo);
-	CHECK_EQ(geo, Serialize::ranges_hash({ range_t(7, 7) }));
+	// Distinct points serialize to distinct bytes.
+	CHECK_NE(Serialize::geospatial(std::string_view("POINT(2.35 48.85)")), geo);
+	CHECK_NE(geo, Serialize::ranges_hash({ range_t(7, 7) }));
 	CHECK_NE(Serialize::ranges_hash({ range_t(1, 2) }), Serialize::ranges_hash({ range_t(1, 3) }));
 	CHECK_EQ(Serialize::geospatial(FieldType::geo, point), geo);
 
@@ -555,10 +554,10 @@ void test_cast_objects() {
 	CHECK_THROW(obj(FieldType::integer, R"({"":1})"), SerializationError);
 	CHECK_THROW(obj(FieldType::integer, R"({"_integer":1,"_float":2})"), SerializationError);
 	CHECK_THROW(obj(FieldType::integer, R"({})"), SerializationError);
-	// Finding: `_date` and `_multiconvex` are cast words the Cast namespace knows, and `_lua` is one too, but
-	// Serialize::object, guess_type and guess_serialize accept none of them.
-	CHECK_THROW(obj(FieldType::date, R"({"_date":"1970-01-02"})"), SerializationError);
-	CHECK_THROW(obj(FieldType::geo, R"({"_multiconvex":1})"), SerializationError);
+	// `_date` is served as a date; `_multiconvex` goes to the geospatial serializer, which refuses a value it cannot
+	// read; `_lua` is a script, refused as a value.
+	CHECK_EQ(obj(FieldType::date, R"({"_date":"1970-01-02"})"), day);
+	CHECK_THROW(obj(FieldType::geo, R"({"_multiconvex":1})"), std::exception);
 	CHECK_THROW(obj(FieldType::geo, R"({"_lua":1})"), SerializationError);
 	// ... and through Serialize::MsgPack the map takes the same road.
 	CHECK_EQ(Serialize::MsgPack(spc(FieldType::integer), js(R"({"_integer":"5"})")), Serialize::integer(int64_t(5)));
@@ -639,8 +638,8 @@ void test_guess_type() {
 	CHECK_THROW(Serialize::guess_type(js(R"({"x":1})")), SerializationError);
 	CHECK_THROW(Serialize::guess_type(js(R"({"":1})")), SerializationError);
 	CHECK_THROW(Serialize::guess_type(js(R"({"_integer":1,"_float":2})")), SerializationError);
-	CHECK_THROW(Serialize::guess_type(js(R"({"_date":"1970-01-02"})")), SerializationError);
-	CHECK_THROW(Serialize::guess_type(js(R"({"_multiconvex":1})")), SerializationError);
+	CHECK(Serialize::guess_type(js(R"({"_date":"1970-01-02"})")) == FieldType::date);
+	CHECK(Serialize::guess_type(js(R"({"_multiconvex":1})")) == FieldType::geo);
 	CHECK_THROW(Serialize::guess_type(MsgPack::NIL()), SerializationError);
 	CHECK_THROW(Serialize::guess_type(MsgPack::ARRAY()), SerializationError);
 }
@@ -691,18 +690,17 @@ void test_guess_serialize() {
 			"_geometrycollection", "_geometryintersection" }) {
 		CHECK_THROW(Serialize::guess_serialize(js(std::string("{\"") + kind + "\":1}")), std::exception);
 	}
-	// Finding: a `_time` or `_timedelta` cast goes through the datetime parser, so a clock text is refused here while
-	// Serialize::object takes it, and a number gets the same bytes whichever type it is cast to.
-	CHECK_THROW(Serialize::guess_serialize(js(R"({"_time":"10:30:00"})")), std::exception);
-	CHECK_THROW(Serialize::guess_serialize(js(R"({"_timedelta":"+01:30:00"})")), std::exception);
+	// A `_time` or `_timedelta` cast serializes as the time or timedelta, the same as Serialize::object.
+	is(js(R"({"_time":"10:30:00"})"), FieldType::time, Serialize::timestamp(37800.0));
+	is(js(R"({"_timedelta":"+01:30:00"})"), FieldType::timedelta, Serialize::timestamp(5400.0));
 	is(js(R"({"_time":3600})"), FieldType::time, Serialize::timestamp(3600.0));
 	is(js(R"({"_timedelta":3600})"), FieldType::timedelta, Serialize::timestamp(3600.0));
 
 	CHECK_THROW(Serialize::guess_serialize(js(R"({"x":1})")), SerializationError);
 	CHECK_THROW(Serialize::guess_serialize(js(R"({"":1})")), SerializationError);
 	CHECK_THROW(Serialize::guess_serialize(js(R"({"_integer":1,"_float":2})")), SerializationError);
-	CHECK_THROW(Serialize::guess_serialize(js(R"({"_date":"1970-01-02"})")), SerializationError);
-	CHECK_THROW(Serialize::guess_serialize(js(R"({"_multiconvex":1})")), SerializationError);
+	is(js(R"({"_date":"1970-01-02"})"), FieldType::date, Serialize::timestamp(86400.0));
+	CHECK_THROW(Serialize::guess_serialize(js(R"({"_multiconvex":1})")), std::exception);
 	CHECK_THROW(Serialize::guess_serialize(MsgPack::NIL()), SerializationError);
 	CHECK_THROW(Serialize::guess_serialize(MsgPack::ARRAY()), SerializationError);
 }
@@ -906,11 +904,8 @@ void test_field_type_names() {
 		}
 		CHECK(got == c.type);
 	}
-	// Finding: "boolean" shares a case label with "datetime", so the full name of the boolean type reads as datetime
-	// (the one-letter "b" is right).
-	CHECK(Unserialize::get_field_type("boolean") == FieldType::datetime);
-	// Finding: the perfect hash is not a membership test, so a word that is no type reads as some type; none of these
-	// reaches the "unsupported type" error.
+	CHECK(Unserialize::get_field_type("boolean") == FieldType::boolean);
+	// A word that is no type name is refused: the perfect hash's slot is checked against the name.
 	int refused = 0;
 	for (const char* word : { "zzz", "nonsense", "bogus", "unknown", "uuid", "date", "q", "xyz", "booleans", "Text" }) {
 		try {
@@ -919,7 +914,7 @@ void test_field_type_names() {
 			++refused;
 		}
 	}
-	CHECK_EQ(refused, 0);
+	CHECK_EQ(refused, 9);  // "Text" is the text type: names are case-insensitive.
 }
 
 }  // namespace
