@@ -6403,7 +6403,30 @@
       "updated": "2026-11-19T15:21:47"
     },
     "dsl-not-wrap": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T19:37:52",
+          "base": "2a119c4cc28094e0f91848f955bc20ce69aa1ecd",
+          "blobs": {
+            "src/query_dsl.cc": "100644:7cc5269b58e058aff08de637f067e411fd74b099",
+            "tests/test_coverage_core_query_dsl.cc": "100644:3cbf1ae34765c118cfe3f461fcc1bd42e7122b43",
+            "tests/test_query_dsl_not.cc": "100644:4c9115a50b28056432830310d0069091d066830c"
+          },
+          "by": "review",
+          "commit": "4977e85aa483511f1917572d3dc2903d66e7e5d8",
+          "criteria": "c3fd91b27885f875",
+          "diffs": {
+            "src/query_dsl.cc": "257fc0d315014245",
+            "tests/test_coverage_core_query_dsl.cc": "54b469b1a8ea8a29",
+            "tests/test_query_dsl_not.cc": "feb52379ca1f6bd4"
+          },
+          "findings": {},
+          "note": "",
+          "review": "29ab2494610e8ef57a8ad0bb44a9c5c26d9e6fcf",
+          "reviewed": "4977e85aa483511f1917572d3dc2903d66e7e5d8",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "coverage-core-small"
       ],
@@ -6425,7 +6448,9 @@
         "tests/test_coverage_core_query_dsl.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -6433,7 +6458,7 @@
       "risk": "normal",
       "status": "review",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T18:20:33",
+      "updated": "2026-11-19T19:37:52",
       "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
     },
     "e2e-harness": {
