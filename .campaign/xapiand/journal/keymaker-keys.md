@@ -1,6 +1,6 @@
 # keymaker-keys: journal
 
-State: waiting on jobs 261119-200941-018efe 261119-200950-c8b5f6 261119-200952-0d34b1
+State: ready to land (lead filled Evidence from the finished jobs, 2026-11-19 21h).
 Quest: .campaign/xapiand/quests/keymaker-keys.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,10 +23,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending: test 261119-200941-018efe; fails without (one-NUL constant): 261119-200950-c8b5f6. The descending check is in the A1 test; the earlier A1 claim (order test failing without M1) was wrong and is withdrawn |
+| A1 | 261119-200941-018efe; fails without (one-NUL constant): 261119-200950-c8b5f6 |
 | A2 | 261119-165353-c9efd0 (at 78653b157); fails without: 261119-165358-64761d; rerun: 261119-200941-018efe |
 | A3 | 261119-165353-c9efd0; fails without: 261119-165358-64761d; rerun: 261119-200941-018efe |
-| A4 | pending: suite 261119-200952-0d34b1; CI not run, branch not pushed |
+| A4 | 261119-200952-0d34b1 |
 
 ## Result
 
