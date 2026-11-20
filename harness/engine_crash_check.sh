@@ -85,9 +85,11 @@ while True:
     r = c.getresponse(); d = json.loads(r.read() or b'{}')
     hits = d.get('hits', [])
     if not hits: break
-    rows += [(h['_id'], h.get('n')) for h in hits]
+    rows += [(h['_id'], h.get('n'), json.dumps(h, sort_keys=True)) for h in hits]
     off += len(hits)
-open(out, 'w').write(''.join(f'{i} {n}\n' for i, n in sorted(rows, key=lambda x: str(x[0]))))
+rows.sort(key=lambda x: str(x[0]))
+open(out, 'w').write(''.join(f'{i} {n}\n' for i, n, _ in rows))
+open(out + '.raw', 'w').write(''.join(f'{h}\n' for _, _, h in rows))   # each hit as returned, line for line
 PY
 }
 check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every file's digest) passes on each shard; node stopped
@@ -149,8 +151,13 @@ PY
 	na=$(wc -l < "$RUNDIR/acked_$ENG" | tr -d ' ')
 	read -r bad dup lost late <<<"$(python3 -I - "$RUNDIR/B_$ENG" "$RUNDIR/acked_$ENG" "$killed" "${GRACE:-2}" <<'PY'
 import sys
-rec = [l.split() for l in open(sys.argv[1])]
-ids = [int(r[0]) for r in rec]; bad = sum(1 for r in rec if r[0] != r[1])
+lines = open(sys.argv[1]).read().splitlines()
+raw = open(sys.argv[1] + '.raw').read().splitlines()
+rec = [l.split() for l in lines]
+wrong = [k for k, r in enumerate(rec) if len(r) != 2 or r[0] != r[1]]
+for k in wrong:
+    print(f'  B wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None}', file=sys.stderr)
+ids = [int(r[0]) for r in rec if r[0].isdigit()]; bad = len(wrong)
 acked = [(int(a), float(t)) for a, t in (l.split() for l in open(sys.argv[2]))]
 killed, grace = float(sys.argv[3]), float(sys.argv[4])
 have = set(ids)
@@ -197,13 +204,16 @@ PY
 	list_set multi "$RUNDIR/D_$ENG"
 	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-2}" "$REACTORS" <<'PY'
 import sys, re
-rows = [l.split() for l in open(sys.argv[1])]
+lines = open(sys.argv[1]).read().splitlines()
+raw = open(sys.argv[1] + '.raw').read().splitlines()
+rows = [l.split() for l in lines]
 rundir, killed, grace, n = sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5])
 got = {}
 dup = bad = 0
-for _id, num in rows:
-    m = re.fullmatch(r'w(\d+)-(\d+)', _id)
-    if not m or str(num) != m.group(2):
+for k, r in enumerate(rows):
+    m = re.fullmatch(r'w(\d+)-(\d+)', r[0]) if len(r) == 2 else None
+    if not m or r[1] != m.group(2):
+        print(f'  D wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None}', file=sys.stderr)
         bad += 1; continue
     s = got.setdefault(int(m.group(1)), set())
     if int(m.group(2)) in s: dup += 1
