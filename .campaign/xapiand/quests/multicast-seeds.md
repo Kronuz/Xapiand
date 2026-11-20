@@ -13,8 +13,9 @@ Kubernetes and clouds. One mechanism in the shared library, never one per produc
 - A1 Three processes on one host find each other through the multicast source alone and report the
   same seed set; with multicast unavailable (no route, sandbox) the source reports that once and the
   node continues on its explicit seeds: tests
-- A2 An announcement is bounded and versioned, carries a cluster id and the sender's listening
-  address, and a malformed, oversized, wrong-version or other-cluster datagram is dropped with a
+- A2 An announcement is bounded and versioned, carries a cluster id and the sender's services, each
+  a name and its listening port (one host may advertise several: Detent's voters and relays, Xapiand's
+  node), and a listener asks for the services it seeds; and a malformed, oversized, wrong-version or other-cluster datagram is dropped with a
   counter, never a seed; the decoder is fuzzed (a fuzz target and a replay corpus in CI): tests
 - A3 A forged announcement for an address that then fails the TLS hello adds no member and is
   backed off, not retried in a loop: tests
