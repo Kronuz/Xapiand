@@ -4873,9 +4873,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "review",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-20T01:13:17",
+      "updated": "2026-11-20T02:09:17",
       "worktree": "../Xapiand-wt/xapiand/control-plane-wallclock"
     },
     "core-lifecycle-tests": {
@@ -5590,19 +5590,47 @@
         "src/datetime.h",
         "tests/test_datetime*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T02:17:07",
+          "commit": "dd8f377f8748c684334f6839ba2eb511bca0c7d8",
+          "criteria": {
+            "A1": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since); fails without: 261119-163518-7d7ef0",
+            "A2": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since); fails without: 261119-163518-7d7ef0",
+            "A3": "261119-163517-332cfd (passed at 275cb2d99a97; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "18395fff1e47ab8d46e4f9a1e68f51303c7c4c75",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-163519-1b1b09",
+              "level": "light",
+              "seconds": 477.2,
+              "state": "done",
+              "what": "datetime-range-zone check suite at 18395fff1e47"
+            }
+          ],
+          "final": true,
+          "from": "2d48f38fc2d0bacd364fb0c6a55bf5df30d6280e",
+          "reason": "",
+          "tested": "d7fa8fa14265e96c6db26b842dea1c7a5d1b9d18"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T19:29:27",
-      "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
+      "updated": "2026-11-20T02:17:14",
+      "worktree": ""
     },
     "dir-shared-lock": {
       "accepted": {
@@ -23024,16 +23052,17 @@
     "serialize-validation": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T18:04:16",
-          "base": "6789419a97105b89f3de3a1fd108af837fa371d1",
+          "at": "2026-11-20T01:26:53",
+          "base": "2c232b4807c0fb764f2d0e2eaba334af105cfa39",
           "blobs": {
             "docs/mechanisms/geo-exact-term.md": "100644:0755deb7adde0009d94083745ce1fa711ebe6ce6",
             "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "100644:437f0b8bfd57c376a060abd10ae4c66813ab88b3",
             "src/aggregations/aggregations.cc": "100644:a1105fa9e301696a89263cc86ccbfda209127b4b",
             "src/cast.cc": "100644:16449264c9b2e59903a2e1a67333cb54289b85b1",
-            "src/database/schema.cc": "100644:9d91ff7d0c9877bcc1e59866107a84f0b0d92171",
+            "src/database/schema.cc": "100644:eed0b437004d10a880e55cc2e85d44baeeb48705",
             "src/serialize.cc": "100644:290f3faa66579c6aa5b3b623e30bbb31baff28c3",
             "src/serialize.h": "100644:400dc8fc05a1916a173d55518ac85c51bf72e0c0",
+            "tests/test_coverage_core_cast.cc": "100644:af3d6139e53df2d8fc1d5b0836235dc0d6837bd8",
             "tests/test_coverage_serialize.cc": "100644:a8904fc3f810bc3d679f64d9ff49b46a9976329e",
             "tests/test_serialize_validation_aggregation_types.cc": "100644:049f7683d31d356652020db3d62c3f086ffeb48c",
             "tests/test_serialize_validation_cast_negative.cc": "100644:859128bd3a8ed719c827c5aa51a6185f063ed84a",
@@ -23045,7 +23074,7 @@
             "tests/test_serialize_validation_type_names.cc": "100644:7124b422c7934fbca8ffc14b9278b59c7d852ee2"
           },
           "by": "review",
-          "commit": "af7f582999aeb9a0fa8afdd7eabb6ffa27780aa4",
+          "commit": "7f03ae08d3b59f8133f13a6f41d7d1828641e557",
           "criteria": "295da38e81e13d07",
           "diffs": {
             "docs/mechanisms/geo-exact-term.md": "58f60c0b455ae514",
@@ -23055,6 +23084,7 @@
             "src/database/schema.cc": "689caca0e115046c",
             "src/serialize.cc": "87f6cd5fe86c48c4",
             "src/serialize.h": "4f23f4f6452b9508",
+            "tests/test_coverage_core_cast.cc": "5aae293bcaa52cbd",
             "tests/test_coverage_serialize.cc": "409e3fd5fafc2552",
             "tests/test_serialize_validation_aggregation_types.cc": "fc6ec78681b5ea89",
             "tests/test_serialize_validation_cast_negative.cc": "3102c31ba5f3f5c8",
@@ -23067,8 +23097,8 @@
           },
           "findings": {},
           "note": "",
-          "review": "cb9f79c0f884678cecca27ffb0c8f511c17ef119",
-          "reviewed": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "review": "ed56e4de300467ba55708e0aeac81db673d946bc",
+          "reviewed": "7f03ae08d3b59f8133f13a6f41d7d1828641e557",
           "verdict": "APPROVE"
         }
       },
@@ -23129,7 +23159,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T21:21:26",
+      "updated": "2026-11-20T01:26:53",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
