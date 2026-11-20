@@ -1643,7 +1643,7 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "owner 2026-10-27: later",
+      "reason": "owner 2026-10-27: later (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "low",
       "status": "blocked",
@@ -1651,7 +1651,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-08T15:40:14"
+      "updated": "2026-11-20T05:28:38"
     },
     "automata": {
       "accepted": {},
