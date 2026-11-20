@@ -1,6 +1,6 @@
 # queue-drain-throughput: journal
 
-State: waiting on jobs 261119-201528-0aac13 261119-201532-834039 261119-201535-340225 261119-201537-dced95 261119-201541-c6641b
+State: waiting on jobs 261120-002137-593d3f 261120-002133-c8b85c 261120-002134-541c02 261120-002136-61a114
 Quest: .campaign/xapiand/quests/queue-drain-throughput.md (the lead's; never edit it)
 
 Code: agent-campaign worktree /Users/kronuz/code/Kronuz/agent-campaign-wt/xapiand/queue-drain-throughput,
@@ -23,6 +23,14 @@ msg (lead, 11-19 20h): suite 261119-181741-d96412 at agent-campaign:a3c1939 fail
 Waiting on: suite 0aac13 (A1-A3), fails-without at main 834039 (A1) and 340225 (A3), replay dced95 (A4),
 baseline at main c6641b.
 
+## Resumed 11-20
+
+The three failures were test isolation: the suite job's environment (CMAKE_BUILD_PARALLEL_LEVEL, CTEST_*,
+GIT_CONFIG_* mirror rewrites, CAMPAIGN_GIT) leaked into each test. tests/harness.py now drops them
+(agent-campaign:05f6a2a, no assertion changed); the three pass locally with the variables set.
+Resubmitted at 05f6a2a: suite 261120-002137-593d3f (A1-A3), fails-without 261120-002133-c8b85c (A1),
+261120-002134-541c02 (A3), replay 261120-002136-61a114 (A4).
+
 ## Next
 
 1. When the jobs finish: Evidence table from `campaign brief`, the replay table from dced95's log into
@@ -36,10 +44,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending: suite 261119-181741-d96412; fails-without at main bde14754b037: 261119-181752-2d57bb |
-| A2 | pending: suite 261119-181741-d96412 (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
-| A3 | pending: suite 261119-181741-d96412; fails-without at main: 261119-181755-3c70de |
-| A4 | pending: replay 261119-181809-a1b066 |
+| A1 | suite 261120-002137-593d3f; fails-without at main 261120-002133-c8b85c |
+| A2 | suite 261120-002137-593d3f (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
+| A3 | suite 261120-002137-593d3f; fails-without at main 261120-002134-541c02 |
+| A4 | replay 261120-002136-61a114 |
 
 ## Result
 
