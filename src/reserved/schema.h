@@ -31,6 +31,7 @@ constexpr const char RESERVED_POSITION[]                    = RESERVED__ "positi
 constexpr const char RESERVED_SPELLING[]                    = RESERVED__ "spelling";
 constexpr const char RESERVED_POSITIONS[]                   = RESERVED__ "positions";
 constexpr const char RESERVED_LANGUAGE[]                    = RESERVED__ "language";
+constexpr const char RESERVED_STOP_FINGERPRINT[]             = RESERVED__ "stop_fingerprint";
 constexpr const char RESERVED_NGRAM[]                       = RESERVED__ "ngram";
 constexpr const char RESERVED_CJK_NGRAM[]                   = RESERVED__ "cjk_ngram";
 constexpr const char RESERVED_ACCURACY[]                    = RESERVED__ "accuracy";

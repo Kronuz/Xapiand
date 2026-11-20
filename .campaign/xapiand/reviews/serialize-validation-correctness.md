@@ -1,6 +1,6 @@
 # serialize-validation review: correctness
 
-Commit: Xapiand:28bfd2e27
+Commit: Xapiand:7f03ae08d3b5
 Verdict: CHANGES
 Date: 2026-11-19
 
@@ -114,3 +114,19 @@ What I checked:
 | R2 | no | nit | S8 is fixed as a side effect of this commit. No test asserts it: the HTTP test covers `_date` only. | b92bea | Add `{"_datetime": "2020-01-02"}` and the 500 case `{"_float": ...}` into a datetime field to tests/test_serialize_validation_date_http.py. |
 
 The scripts are `http_probe4.py` and `run_probe4.sh` in `.scratch/xapiand/review-serialize-validation-correctness/`.
+
+## Re-check (7f03ae08d3b5)
+
+Commit: Xapiand:7f03ae08d3b5
+Verdict: APPROVE
+Date: 2026-11-20
+
+Only tests/test_coverage_core_cast.cc changed since the approval (Xapiand:c7db5eeeb); the rest are master merges. Each flipped pin matches src/cast.cc at the merge head:
+
+- `get_field_type("_date")` is `FieldType::date` (cast.cc:438, the `HashType::DATE` row).
+- `_multiconvex` is `FieldType::geo` (cast.cc:445), and `Cast::cast` returns the map whole (the geo group returns `obj`, cast.cc:77-87). The new pin compares the whole map's text, so it asserts more than the old throw.
+- `_lua` throws "is a script, not a value" (cast.cc:83-84); `get_field_type("_lua")` stays `script`.
+
+No pin asserts less. Each old line asserted a refusal; each new line asserts the exact type or value. Suite 261120-001940-4ad3ed passed at c7db5eeeb; suite 261120-012601-a2aa5d at the merge head was queued when this was written.
+
+No findings.

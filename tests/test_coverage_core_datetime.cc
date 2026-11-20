@@ -32,6 +32,8 @@
 #include <exception>
 #include <initializer_list>
 #include <string>
+#include <string_view>
+#include <tuple>
 #include <utility>
 
 #include "datetime_msgpack.h"
@@ -136,11 +138,20 @@ static void test_object_part_errors() {
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_zone", 1 } })), std::exception, "Unsupported Datetime: '_zone'");
 }
 
-// Product bug (datetime-map-range): an object's hour, minute, second and fraction are not range-checked (a time
-// string's are), so a datetime of hour 99 or of a negative minute parses.
-static void test_object_time_is_not_range_checked() {
-	SEE(parsed(map_of({ { "_hour", 99 }, { "_min", 99 }, { "_sec", 99 }, { "_fsec", 5.0 } })), std::string("1970-1-1 99:99:99+5.000000"));
-	SEE(parsed(map_of({ { "_hour", Obj(-1) }, { "_min", Obj(-2) }, { "_sec", Obj(-3) } })), std::string("1970-1-1 -1:-2:-3+0.000000"));
+// An object's hour, minute and second are range-checked like a time string's: 0-23, 0-59, 0-59.
+static void test_object_time_is_range_checked() {
+	SEE(parsed(map_of({ { "_hour", 23 }, { "_min", 59 }, { "_sec", 59 }, { "_fsec", 0.5 } })), std::string("1970-1-1 23:59:59+0.500000"));
+	SEE(parsed(map_of({ { "_hour", 0 }, { "_min", 0 }, { "_sec", 0 } })), std::string(EPOCH));
+	for (const auto& [key, bad] : std::initializer_list<std::pair<const char*, int>>{ { "_hour", 24 }, { "_hour", 99 }, { "_min", 60 }, { "_min", 99 },
+	                                                                                  { "_minute", 60 }, { "_sec", 60 }, { "_second", 99 } }) {
+		const std::string want = std::string("'") + (std::string(key) == "_minute" ? "_min" : std::string(key) == "_second" ? "_sec" : key) + "' is out of range";
+		CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { key, bad } })), DatetimeError, want);
+		CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_time", map_of({ { key, bad } }) } })), DatetimeError, want);
+		CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { "_datetime", map_of({ { key, bad } }) } })), DatetimeError, want);
+	}
+	for (const char* key : { "_hour", "_min", "_sec" }) {
+		CHECK_THROWS_WITH(Datetime::DatetimeParser(map_of({ { key, Obj(-1) } })), DatetimeError, std::string("'") + key + "' is out of range");
+	}
 }
 
 static void test_time_strings() {
@@ -156,12 +167,36 @@ static void test_time_strings() {
 	SEE(time_of("10:30:45.5+01:15"), std::string("1970-1-1 9:15:45+0.500000"));
 	SEE(time_of("10:30:45.25-00:30"), std::string("1970-1-1 11:0:45+0.250000"));
 	SEE(time_of("00:30:00+01:00"), std::string("1969-12-31 23:30:0+0.000000"));  // across midnight, onto the day before
-	// Product bug (datetime-zone-order): a zone moves the date of the datetime parsed so far, so a time before the
-	// date moves the default date, which the date then replaces: the hour moves, the day does not.
+	// The zone applies to the whole datetime, whatever the order of its parts.
 	SEE(parsed(map_of({ { "_date", map_of({ { "_year", 2020 }, { "_month", 3 }, { "_day", 1 } }) }, { "_time", "00:30:00+01:00" } })),
 	    std::string("2020-2-29 23:30:0+0.000000"));
 	SEE(parsed(map_of({ { "_time", "00:30:00+01:00" }, { "_date", map_of({ { "_year", 2020 }, { "_month", 3 }, { "_day", 1 } }) } })),
-	    std::string("2020-3-1 23:30:0+0.000000"));
+	    std::string("2020-2-29 23:30:0+0.000000"));
+	SEE(parsed(map_of({ { "_datetime", map_of({ { "_time", "00:30:00+01:00" }, { "_date", map_of({ { "_year", 2020 }, { "_month", 3 }, { "_day", 1 } }) } }) } })),
+	    std::string("2020-2-29 23:30:0+0.000000"));
+	SEE(parsed(map_of({ { "_time", "23:30:00.5-02:30" }, { "_year", 2020 }, { "_month", 12 }, { "_day", 31 } })),
+	    std::string("2021-1-1 2:0:0+0.500000"));
+}
+
+// A datetime with an offset is the instant of its UTC form: positive, negative and half-hour offsets, in a string
+// and in a map.
+static void test_zone_is_the_same_instant() {
+	for (const auto& [local, utc] : std::initializer_list<std::pair<const char*, const char*>>{
+	         { "2020-01-02T10:00:00+02:00", "2020-01-02T08:00:00Z" },
+	         { "2020-01-02T01:00:00+02:00", "2020-01-01T23:00:00Z" },
+	         { "2020-01-02T10:00:00-05:00", "2020-01-02T15:00:00Z" },
+	         { "2020-12-31T22:00:00-05:00", "2021-01-01T03:00:00Z" },
+	         { "2020-01-02T10:00:00+05:30", "2020-01-02T04:30:00Z" },
+	         { "2020-03-01T00:15:00+05:30", "2020-02-29T18:45:00Z" },
+	         { "2020-01-02T10:00:00-03:30", "2020-01-02T13:30:00Z" } }) {
+		SEE(tm_str(Datetime::DatetimeParser(std::string_view(local))), tm_str(Datetime::DatetimeParser(std::string_view(utc))));
+	}
+	for (const auto& [time, hour, min] : std::initializer_list<std::tuple<const char*, int, int>>{
+	         { "10:00:00+02:00", 8, 0 }, { "10:00:00-05:00", 15, 0 }, { "10:00:00+05:30", 4, 30 }, { "10:00:00-03:30", 13, 30 } }) {
+		const auto want = Datetime::DatetimeParser(map_of({ { "_year", 2020 }, { "_month", 1 }, { "_day", 2 }, { "_hour", hour }, { "_min", min } }));
+		SEE(tm_str(Datetime::DatetimeParser(map_of({ { "_time", time }, { "_year", 2020 }, { "_month", 1 }, { "_day", 2 } }))), tm_str(want));
+		SEE(tm_str(Datetime::DatetimeParser(map_of({ { "_year", 2020 }, { "_month", 1 }, { "_day", 2 }, { "_time", time } }))), tm_str(want));
+	}
 }
 
 static void test_time_string_errors() {
@@ -211,5 +246,5 @@ static void test_timedelta_to_double() {
 	CHECK_THROWS_WITH(Datetime::timedelta_to_double(Obj::MAP()), TimedeltaError, "Timedelta must be numeric or string");
 }
 
-TEST_MAIN(test_numbers_and_strings, test_object_parts, test_object_part_errors, test_object_time_is_not_range_checked,
-          test_time_strings, test_time_string_errors, test_time_to_double, test_timedelta_to_double)
+TEST_MAIN(test_numbers_and_strings, test_object_parts, test_object_part_errors, test_object_time_is_range_checked,
+          test_time_strings, test_zone_is_the_same_instant, test_time_string_errors, test_time_to_double, test_timedelta_to_double)

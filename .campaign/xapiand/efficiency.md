@@ -398,3 +398,54 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Merge interaction: serialize-validation vs coverage-core-small's cast pins; lead flipped 4 pins (Xapiand:c7db5eeeb), test job 261119-212131-2230f8.
 - Reviews: endpoint-uuid APPROVE, stopword-lists re-check APPROVE; keymaker-keys accepted after the F1 revert (jobs 200941/200950/200952).
 - Queue: 55 queued, 15 running; light 51%, drains 31 min; load 8-10. Quota weekly 12%, 0.12%/h. Disk 38 GiB free.
+
+## 2026-11-19 22h
+- Landed: dsl-not-wrap (Xapiand:45d38fc40, merge 15293bc17), http-limits (http:aed0314, Xapiand:9e6a0100f).
+- v2-replay evidence complete (agent-campaign:e821a15), moved to campaign-v3; handoff campaign-v3:033e971. Its tool-cost pass accidentally ran 56 copied jobs (31 exclusive, 4.6 machine-h) through a v2 read command starting a worker.
+- New quest: catalog-post-lifetime (strata catalog delivery race, reproduced 5/5; fix passed 5 jobs; Opus review running). Started dsl-date-operators.
+- coverage-database's journal claimed ready with another quest's job ids; 2 evidence jobs that could not pass were cancelled.
+- Landing is a chain: each landing moves master, the next loop merges and waits a CI round (keymaker-keys, endpoint-uuid refused after dsl-not-wrap).
+- Queue: 41 queued, 10 running; light 48%, drains 5 min; load 5-12. Quota weekly 13%, 0.13%/h. Disk 40 GiB free.
+
+## 2026-11-19 23h
+- Landed: endpoint-uuid (Xapiand:fcafe7bca, merge 621c59fc4); catalog-post-lifetime accepted, landing on strata CI.
+- Light slots 18% used with 40 queued: exclusive drains (28 min) and document-gate's backlog. Cancelled 12 of document-gate's queued exclusive jobs (A/A and trials b, c; ~120 exclusive min); kept one trial per row and the calibrations (msg-2 to the quest).
+- Every merge of master voids the suite at the new head (stopword-lists, keymaker-keys, freebsd-exe-path): another suite job per landing. Evidence for v3's reuse by inputs.
+- Reviews: catalog-post-lifetime CHANGES (my doc edit dropped two preconditions; fixed, confirmed), dsl-date-operators CHANGES (global time/timedelta share term prefix; documented and pinned).
+- 11 jobs failed this hour: two coverage-database compile errors, track-p's missing corpus (moved worktree), dsl probe expectation bugs.
+- Quota weekly 13%, 0.13%/h. Load 7-11. Disk 39 GiB free.
+
+## 2026-11-20 00h
+- Landed: keymaker-keys (Xapiand:f20c92c89, merge 237a15bb4), catalog-post-lifetime (strata:e3edb426, Xapiand:5b342eb41). consensus-sim-loops accepted, landing.
+- 28 jobs cancelled this hour: document-gate trim (12) and superseded reruns. Queue now 18 queued, 4 running; light slots 21%, drains 38 min.
+- Land chase: datetime-range-zone and coverage-core-main each exhausted 4 merge/CI rounds while others landed; restarted serially (datetime, coverage-core-main, freebsd-exe-path).
+- queue-drain-throughput: the 3 suite failures predate it (main baseline fails the same 3); fresh contributor fixing them.
+- Explorer: nested MAYBE tree (dsl-not-wrap N1).
+- Quota weekly 14%, 0.14%/h. Load 3-6. Disk 36 GiB free.
+
+## 2026-11-20 01h
+- Landed: stopword-lists (Xapiand:4be13e4b2), queue-drain-throughput (agent-campaign:ad03084; dotfiles:1a40fe6 makes it live).
+- Reviews: consensus-sim-loops APPROVE (3 gaps to hunt), queue-drain-throughput APPROVE (tool findings F1/F4/F5 to campaign-v3).
+- Explorer nested-MAYBE: fix proven (job ab6ff7 pass, mutant dd82b5 fail), ~87k tokens; queued as a quest after dsl-date-operators.
+- Started: strata-pin-catalog, control-plane-wallclock (Sonnet). serialize-validation re-check of the lead's test-pin flip.
+- Light slots 32%, drains 13 min, 28 jobs ended (8 failed). Quota weekly 15%. Load 4-6. Disk 31 GiB free.
+
+## 2026-11-20 02h
+- Landed: datetime-range-zone (Xapiand:d7fa8fa14, merge dd8f377f8).
+- Accepted: serialize-validation (narrow Sonnet re-check of the lead's pin flip, 67k tokens, APPROVE), landing. control-plane-wallclock ready (mutant: wakes idle 330 vs parked 67), landing. strata-pin-catalog jobs queued.
+- Disk: removed 5 landed quests' build slots `land` had kept (cheap-reopen, license-closure, lua-name-miss, metrics-fd-count, name-index): 28 -> 40 GiB free. `job prune` freed 0 (v3 note: land should drop the slot unless a job still names it).
+- Light slots 38%, drains 28 min, 24 jobs ended (2 failed). Quota weekly 15%. Load 4-8.
+
+## 2026-11-20 03h
+- Landed: none this hour. Five land loops chase one master (serialize-validation, dsl-date-operators after it, control-plane-wallclock, freebsd-exe-path, then coverage-core-main) plus consensus-sim-loops chasing Detent's consensus landings; each landing forces the rest through another merge + CI round (v3: a merge queue would serialize this).
+- coverage-core-main red on test_node's 800 ms shutdown bound under Linux ASan (flake, hunt row); failed job rerun.
+- hybrid-go-no-go: Opus resume, 138k tokens; results + decision request for the owner (strata warm p99 3.1x faster than Qdrant; cold 1.2x behind after int8).
+- strata-pin-catalog: A1 and A2 proven (old pin: heap-use-after-free); build-test check fixed twice by the lead (target name, BUILD_TESTS).
+- track-p: Opus resume on P13's finished reruns.
+- Light slots 21%, drains 37 min. Quota weekly 16%. Load 3. Disk 41 GiB.
+
+## 2026-11-20 04h
+- Landed: consensus-sim-loops (consensus:8bdbd750), track-p (prospect:0a2af7dfe; Opus review 234k tokens, APPROVE, caught a hollow mutant job). Detent landed consensus-heal-snapshot-stall (consensus:39d9f1d).
+- Started: automata (Opus). Resumed with fresh contributors: document-gate (Opus), coverage-database (Sonnet).
+- Lead bug: a chained land watcher deadlocked on `pgrep -f 'landloop.sh X'` matching another watcher's own command line; coverage-core-main sat ~1 h unlanded. Restarted directly. (v3: the driver owns ordering, no pgrep chains.)
+- Light slots 40%, drains 15 min, 41 jobs ended (3 failed). Quota weekly 17%. Load 5-6. Disk 42 GiB.
