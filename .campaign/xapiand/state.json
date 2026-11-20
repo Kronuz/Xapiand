@@ -6792,7 +6792,7 @@
     "document-gate": {
       "accepted": {
         "durability": {
-          "at": "2026-11-20T07:20:13",
+          "at": "2026-11-20T07:58:08",
           "base": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
           "blobs": {
             "CMakeLists.txt": "100644:054640458755f225fecf90b86ead31dcf27c8b1d",
@@ -6829,7 +6829,7 @@
           },
           "by": "review",
           "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
-          "criteria": "ed2cee0e50f12cde",
+          "criteria": "37a7edbb1350d60b",
           "diffs": {
             "": "98762c87cd0c34d0",
             "CMakeLists.txt": "e6af7f9e01a18e1f",
@@ -6956,7 +6956,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-20T07:20:13",
+      "updated": "2026-11-20T07:58:08",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
