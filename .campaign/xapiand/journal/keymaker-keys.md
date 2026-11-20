@@ -37,7 +37,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-- The M1 and M5 fixes are in src/multivalue/keymaker.h (the constant and StringKey live there). The M4 fix is in src/metric_serialize.h (SerializablePhoneticMetric), outside the file set src/multivalue/keymaker.*; it is 7 lines, the only home of that type. Lead: widen the file set or accept.
+- The M1 and M5 fixes are in src/multivalue/keymaker.h (the constant and StringKey live there). The M4 fix is in src/metric_serialize.h (SerializablePhoneticMetric), outside the file set src/multivalue/keymaker.*; it is 7 lines, the only home of that type. Lead ruled: it is already in the file set; no widening needed.
 - Jaccard (found while flipping the pins): SerializableMetric::unserialize rebuilds the metric from the string and icase so derived state is restored; changelog line gains "and a stored Jaccard key keeps its character set".
 - M4: the encoder's _code_str is restored through a local Restored subclass (the soundex and dmetaphone constructors re-encode, so building from the code would change it).
 - Changelog line for the lead: "Multivalue sort keys: a descending string sort on a missing slot keys as the minimum (one NUL byte, not empty); a stored string sort key keeps its slot and direction and a stored soundex or dmetaphone key keeps its encoder code across serialize and unserialize. Stored sorters written before this hold no slot or direction for string keys and no longer unserialize."
