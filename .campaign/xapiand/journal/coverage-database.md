@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-220859-27b00e 261119-220854-d2b115 261119-220855-4b8309 (head 6c22eac2ea3d, master merged cleanly, no pins changed)
+State: waiting on jobs 261119-221047-27d0fa (run1: exploration replies and per-file coverage in ~/.scratch/xapiand/coverage-database/run1.out), 261119-220855-4b8309 (suite); next: turn replies into value checks
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
