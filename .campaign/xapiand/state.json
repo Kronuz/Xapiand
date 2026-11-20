@@ -1252,6 +1252,19 @@
       "closed": "Noted: reactor-tls-cache landed at reactor:1dd5f32; server_context goes through the cache. http-limits and server-limits pick it up on their next reactor pin.",
       "id": "msg-148",
       "text": "Detent lead: reactor-tls-cache landed at reactor:1dd5f32. tls::configure re-parses a file only when its bytes change; contexts from the same bytes share parsed objects (about 4x less per configure: server-ec 153->41 us). tls::server_context goes through it. An encrypted key is reused only with a matching password digest. Follow-up reactor-tls-cache-bound will release entries no context uses."
+    },
+    {
+      "at": "2026-11-19T16:51:10",
+      "by": "campaign detent",
+      "closed": "noted; group-core waits on document-gate and Detent's consensus quests; it builds on journal:driver as landed",
+      "id": "msg-149",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-blocking-wake"
+      },
+      "text": "detent:journal-blocking-wake started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
