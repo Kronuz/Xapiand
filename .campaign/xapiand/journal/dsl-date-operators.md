@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: waiting on jobs 261119-225927-d1b679 (probe) and its mutant
+State: waiting on jobs 261119-230242-705e99 (probe), 261119-230250-39622d (mutant), 261119-230243-24022b (suite) at 4ec7371e5; then ready for review
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | HTTP probe 14/14 ok (earlier head 261119-225927-d1b679; rerun 261119-230242-705e99); mutant fails without the fix: 261119-230250-39622d (earlier 261119-225934-6b9166) |
+| A2 | the same probe: new field _datetime 200, _datetime of _date and _time maps 200 [1], text _date 400 with its message, _float into datetime 200 [] (a timestamp) |
+| A3 | suite 261119-230243-24022b; CI after the lead pushes |
 
 ## Result
 
