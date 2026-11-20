@@ -30,7 +30,7 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261120-081414-17aa17 (coverage ctest corpora e2e, baseline 55.3% / 45.4%) |
+| A1 | job 261120-120511-be5e6e (coverage ctest corpora e2e: database 69.5% lines / 58.8% branches, from 55.3% / 45.4%) |
 | A2 | job 261120-081415-54bf5f (coverage_one database schema.cc); value pins in tests/test_coverage_database_pins.inc |
 | A3 | suite job 261120-081411-4fd569 |
 
