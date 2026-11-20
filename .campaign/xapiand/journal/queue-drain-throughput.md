@@ -1,40 +1,87 @@
 # queue-drain-throughput: journal
 
-State: working
+State: waiting on jobs 261119-181741-d96412 261119-181752-2d57bb 261119-181755-3c70de 261119-181809-a1b066
 Quest: .campaign/xapiand/quests/queue-drain-throughput.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
+Code: agent-campaign worktree /Users/kronuz/code/Kronuz/agent-campaign-wt/xapiand/queue-drain-throughput,
+branch quest/xapiand/queue-drain-throughput, agent-campaign:a3c1939 (not pushed: the lead said don't push).
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Waiting on the suite (A1-A3), the two fails-without jobs at main's commit (A1, A3) and the replay (A4).
 
 ## Next
 
-1. <step>
+1. When the jobs finish: paste `campaign brief`'s Evidence table, copy the replay table from
+   261119-181809-a1b066's log into Result, set "ready for review".
+2. Merge main once the lead's `unattended()` status-line change lands; rerun the suite.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pending: suite 261119-181741-d96412; fails-without at main bde14754b037: 261119-181752-2d57bb |
+| A2 | pending: suite 261119-181741-d96412 (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
+| A3 | pending: suite 261119-181741-d96412; fails-without at main: 261119-181755-3c70de |
+| A4 | pending: replay 261119-181809-a1b066 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+What changed (agent-campaign:a3c1939; scripts/campaign_tool.py `plan`, `queue_health`, the worker):
+
+1. A drain admits no light job or build while its exclusive hold waits or runs. On main, light work
+   claimed beside a waiting drain sat in quiet, went starving after 10 min and cut ahead of it, or
+   took the machine when it ended and split the batch.
+2. Once an exclusive job ends with nothing of ours running, the next queued exclusive job joins its
+   batch at once. On main it waited for a lull or its 20-minute wait, so light work went first and,
+   once the turn ended, each exclusive job was its own drain.
+3. A full batch lets light work go first once, inside a drain turn too (on main a turn ran batch
+   after batch with no light work between).
+4. Fair share rounds up: three campaigns on 8 slots each got 2, leaving 2 idle.
+5. Queue health counts charged slots, `--cpus` or the slot-seconds the worker records beyond one slot
+   in the job's `charge` file, in used slot-minutes and in idle slots beside runnable work.
+
+tests/queue_sim.py runs a queue through plan under a model of quiet's grants (light slots,
+exclusive admission, starvation); the two existing replay tests in tests/test_jobs.py now use it.
+How it works: references/host.md (Scheduling, Queue health, the charge).
+
+Local replay before the job (main bde14754b037 against a3c1939; the job's table replaces it):
+
+| queue | code | light slot use | idle slot-min beside runnable light | drain min | drains | hours to empty | light wait p50 |
+|---|---|---|---|---|---|---|---|
+| today, queued at once (5 seeds) | before | 25.6% | 594 | 281 | 6.2 | 7.97 | 88 min |
+| today, queued at once (5 seeds) | after | 28.4% | 229 | 275 | 4.8 | 7.19 | 85 min |
+| today, arriving over 2 h (5 seeds) | before | 25.3% | 532 | 282 | 6.0 | 8.08 | 61 min |
+| today, arriving over 2 h (5 seeds) | after | 27.6% | 272 | 276 | 5.0 | 7.40 | 36 min |
+| recorded 12 h of 11-18 | before | 42.0% | 2950 | 384 | 13.0 | 16.88 | 111 min |
+| recorded 12 h of 11-18 | after | 48.5% | 1883 | 242 | 11.0 | 14.63 | 85 min |
+
+Attribution, by variants: on today's shape nearly all the gain is the fair-share rounding (main with
+only that: idle 212 slot-min, 7.23 h); on the recorded 12 h queue fair share alone changes nothing
+and the drain rules give all of it.
+
+What it leaves open: on today's shape light slot use is bounded near 33% by the 238 minutes of
+exclusive work that no light work may share; the rest of the gap is the ramp-down before each drain,
+which waits for the longest running light job (no preemption).
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Today's shape (A4): 34 exclusive jobs declaring 10 minutes (as every queued one did), two in three
+  with a 2-10 minute build, and 43 light ones declaring 10-45 minutes at priority 1, in three
+  campaigns; each runs 40-100% of what it declares. quiet caps exclusive holds at 30 minutes, so
+  "10-45 min" is the light jobs'. Replayed queued at once and arriving over two hours, five seeds
+  each, plus the recorded 12 h fixture.
+- The replay tests' claims follow the new model: under quiet's grants the recorded queue's batches
+  cut drains 14 to 11 (asserted under 0.85x; it was 5.33 to 2.83 an hour with every claim starting
+  at once). Staged builds still shrink heavy holds by their 94 minutes, use light slots more and
+  empty the queue sooner, but no longer cut drains (11, not 10), since a drain admits no build beside
+  it; the light-wait p50 claim (under 0.7x) does not hold under quiet's model and was dropped.
+- Fair-share rounding is in scope: it is light slots idle while light work is queued.
+- A manual `campaign window` also lets light work in once after each full batch (help text
+  updated): one batch rule, no special case for windows.
+- quiet.py is unchanged: holds and levels keep their meaning (the contract).
+- references/host.md ends shorter (3320 to 3318 words); the slot-reuse anecdote was cut.
