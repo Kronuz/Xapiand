@@ -1238,6 +1238,13 @@
         ]
       },
       "text": "reactor-server-composition landed: unlocks http-limits"
+    },
+    {
+      "at": "2026-11-19T15:35:18",
+      "by": "http-limits",
+      "closed": "widened: CMakeLists.txt, bench/**, README.md, AGENTS.md",
+      "id": "msg-147",
+      "text": "http-limits: the file set lacks files the quest must touch: CMakeLists.txt (the reactor:6fdd45f pin you asked for), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed setters and tls_connection_factory; CI builds server_compare with HTTP_BUILD_BENCH=ON), README.md, AGENTS.md, ARCHITECTURE.md (they name the removed API). Recommend: campaign set http-limits files=http_asio.h,http_asio_tls.h,test/**,docs/**,examples/**,bench/**,CHANGELOG.md,CMakeLists.txt,README.md,AGENTS.md,ARCHITECTURE.md. I make only those mechanical edits there, in their own commit, recorded under Rulings."
     }
   ],
   "quests": {
