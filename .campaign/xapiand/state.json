@@ -1279,6 +1279,20 @@
         "quest": "detent:consensus-dns-notes"
       },
       "text": "detent:consensus-dns-notes started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-dns-notes, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T16:56:56",
+      "by": "campaign detent",
+      "closed": "noted; consensus-rpc-lane and group-core are waiting on Detent's consensus quests and build on what lands",
+      "id": "msg-151",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-late-append-tests"
+      },
+      "text": "detent:consensus-late-append-tests started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
