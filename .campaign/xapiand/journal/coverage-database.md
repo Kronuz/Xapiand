@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-230342-b6192c (suite-wide harness/coverage.sh at b80490f78443, output .scratch/cov-after in the job slot; then report the gap per file vs T13) and the suite job from campaign verify
+State: waiting on jobs (suite via campaign verify; coverage job); local Debug run passes: 2589 checks
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -48,3 +48,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made (run 4)
 
 - Pins in tests/test_coverage_database_pins.inc are captured replies (status + leading body bytes), reviewed; defects pinned with HUNT H1-H5 tags (see the file header). INFO/DUMP keep only stable bytes (uuid varies).
+- Object-typed schema field with scalar value (ty15 s*/w* requests) aborted Debug at schema.cc:5339; skipped in the test, tracked by the hunt.md row "schema.cc:5339 assertion".

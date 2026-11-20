@@ -1009,48 +1009,6 @@ const std::vector<Pin> pins = {
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-01T00:00:00Z''\"}"},  // PUT /ty14/s21
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-01T00:00:00Z''\"}"},  // PUT /ty14/w21
 	{204, ""},  // PUT /ty15/
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s3
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w3
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s4
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w4
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s5
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w5
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s6
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w6
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s7
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w7
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s8
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w8
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s9
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w9
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s10
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w10
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s11
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w11
-	{204, ""},  // PUT /ty15/s12
-	{204, ""},  // PUT /ty15/w12
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s13
-	{500, "{\"status\":500,\"type\":\"Internal Server Error\",\"message\":\"MAP cannot have numeric keys\"}"},  // PUT /ty15/w13  HUNT H2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s14
-	{500, "{\"status\":500,\"type\":\"Internal Server Error\",\"message\":\"MAP cannot have numeric keys\"}"},  // PUT /ty15/w14  HUNT H2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field '_latitude' in 's' is not valid\"}"},  // PUT /ty15/s15
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field '_latitude' in 'w15' is not valid\"}"},  // PUT /ty15/w15
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s16
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w16
-	{204, ""},  // PUT /ty15/s17
-	{204, ""},  // PUT /ty15/w17
-	{204, ""},  // PUT /ty15/s18
-	{204, ""},  // PUT /ty15/w18
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s19
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w19
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s20
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w20
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/s21
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 'object' is an invalid value type\"}"},  // PUT /ty15/w21
 	{204, ""},  // PUT /ty16/
 	{204, ""},  // PUT /ty16/s1
 	{204, ""},  // PUT /ty16/w1

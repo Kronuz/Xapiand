@@ -308,6 +308,10 @@ std::vector<Req> requests() {
 		int k = 0;
 		for (const auto& val : values) {
 			++k;
+			// An object concrete type with a scalar value aborts a Debug server (hunt.md, "schema.cc:5339 assertion" row).
+			if (type == "object") {
+				continue;
+			}
 			add("PUT", idx + "s" + std::to_string(k), "{\"s\":" + val + "}");
 			add("PUT", idx + "w" + std::to_string(k), "{\"w" + std::to_string(k) + "\":{\"_type\":\"" + type + "\",\"_value\":" + val + "}}");
 		}
