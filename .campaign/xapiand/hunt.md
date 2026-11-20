@@ -304,3 +304,7 @@ quest starts (name it) or is dropped with a reason.
 - drain window starves itself (11-18, tool): a window opened 18:04 still admitted builds for heavy jobs and priority-1 suites (18:06, 18:15), so the first exclusive could not start before ~18:46 and drains held 1 min in the hour. A window should stop admitting new light holds outright except builds for already-queued drains, and say when the first drain can start.
 - agent ran find over / (11-18): `bfs / -name mutant_commit.py` at 468% CPU for 4+ min during the drain window. Prompts should say: search the worktree or ~/code/Kronuz, never /.
 - http TLS half-close (11-18, http-halfclose review F4): no test covers close_notify with a request in flight; the D126 rule is tested on plain TCP only.
+
+## document-gate resume findings (2026-11-19)
+- strata inline flush (11-19, document-gate profile 8c6f59): 1 KiB fillrandom flushes on the writer thread; 0.78x RocksDB's throughput at 256 MiB, 1.6x faster at 2 GiB. Not a gate row. Candidate quest after document-gate lands: background flush.
+- strata big1 peak memory (11-19, document-gate at 723a5e97): 2.0-2.7x RocksDB's peak memory on the big1 rows, while throughput leads 1.03-6.27x on every none-tier row.
