@@ -24724,18 +24724,50 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T01:11:45",
+          "commit": "4be13e4b2d987689f3eb45135901527292a9169a",
+          "criteria": {
+            "A1": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A2": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A3": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-a6cba7 (passed at c8fca1f2c2c6; only merges from main since); fails without: 261119-084158-c63615, 261119-093843-4ea7ac, 261119-102559-196ab6",
+            "A4": "261119-235812-4ae555 (passed at c8fca1f2c2c6; only merges from main since), 261119-235813-9ae20c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A5": "261119-235812-d1318c (passed at c8fca1f2c2c6; only merges from main since)",
+            "A6": "`docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed)",
+            "A7": "261119-231940-9592de (passed at c8fca1f2c2c6; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c8fca1f2c2c62ec3f83230071524ed5b1ba25a28",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-231940-9592de",
+              "level": "light",
+              "seconds": 484.7,
+              "state": "done",
+              "what": "stopword-lists check suite at c8fca1f2c2c6"
+            }
+          ],
+          "final": true,
+          "from": "252ab991958f7d508b9d713d898d9fbec668be4b",
+          "reason": "",
+          "tested": "f786e2fed32d7d70f1736eb71707e52073a253ba"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T20:25:53",
+      "updated": "2026-11-20T01:11:53",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
