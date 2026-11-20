@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-130855-0a1e98 (build-test) 261120-130856-f2bab7 (20 mutants) 261120-130859-359099 (scorer budget) at prospect:33dce8a; earlier at 692e42e: build-test e989f4 and probe ec2e86 (charge 0.965-0.968x of the heap) passed, mutant job 0a987b failed only on two stale anchors (re-anchored at 33dce8a)
+State: waiting on jobs 261120-134019-bd8050 (build-test) 261120-134020-aaa9c5 (20 mutants) at prospect:15d2830. At 33dce8a the mutant 'a slot with no term in the segment does not stop it' survived: with F1 an empty slot builds an empty scorer and matches nothing, so only the work differs (the other slots' scorers built and their bytes charged); 15d2830 tests that such a segment builds no scorer and charges nothing
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
