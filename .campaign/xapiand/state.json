@@ -18572,6 +18572,8 @@
       "after": [
         "detent:consensus-transport"
       ],
+      "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+      "branch": "quest/xapiand/node-admission",
       "checks": [
         {
           "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
@@ -18594,6 +18596,7 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/node-admission",
       "landed": [],
       "lenses": [
         "correctness"
@@ -18603,11 +18606,13 @@
       "provides": [
         "consensus:node-admission"
       ],
+      "reason": "started by force: overlap is CMakeLists.txt and CHANGELOG.md only (a test target and a line each); whichever lands second merges main",
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T10:14:03"
+      "updated": "2026-11-20T10:14:32",
+      "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
       "accepted": {},
