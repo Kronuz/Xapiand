@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: ready for review
+State: waiting on jobs 261120-121305-9dbdb6 (then ready for review)
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
