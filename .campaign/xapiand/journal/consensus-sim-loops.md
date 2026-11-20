@@ -1,6 +1,6 @@
 # consensus-sim-loops: journal
 
-State: waiting on jobs 261119-195629-82eb70 261119-195631-e40a04 261119-195633-cd71f4 261119-195636-1b8937 261119-195638-0e5689 261119-195639-9537ee 261119-195641-9da6b4 261119-195703-b690ba 261119-195708-8e4000
+State: ready for review (all seven jobs passed at consensus:98298fb; merged main at 61e2f3ad, only merges since; lead, 2026-11-19 23h).
 Quest: .campaign/xapiand/quests/consensus-sim-loops.md (the lead's; never edit it)
 
 ## Doing
