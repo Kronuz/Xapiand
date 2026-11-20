@@ -20710,6 +20710,8 @@
     "queue-drain-throughput": {
       "accepted": {},
       "after": [],
+      "base": "bde14754b0372b50928ac6d697522e03b2a57c95",
+      "branch": "quest/xapiand/queue-drain-throughput",
       "checks": [
         {
           "cmd": "python3 tests/run.py -j 4",
@@ -20725,6 +20727,7 @@
         "tests/**",
         "references/host.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/queue-drain-throughput",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -20732,9 +20735,10 @@
       "provides": [],
       "repo": "../agent-campaign",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Keep light slots busy around exclusive drains",
-      "updated": "2026-11-19T17:51:42"
+      "updated": "2026-11-19T17:51:47",
+      "worktree": "../agent-campaign-wt/xapiand/queue-drain-throughput"
     },
     "reactor-server-composition": {
       "accepted": {
