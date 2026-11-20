@@ -1654,7 +1654,77 @@
       "updated": "2026-11-20T05:28:38"
     },
     "automata": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T07:44:17",
+          "base": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "blobs": {
+            "CMakeLists.txt": "100644:33a6a3b32dfae7e5df386ab11ded24a83faba870",
+            "docs/mechanisms/automata.md": "100644:67be251284605ebdd526cfdfd04d71cace3ccd56",
+            "include/prospect/expand.hh": "100644:5b564370339a350125405e5ec995699767ff226d",
+            "include/prospect/fielddict.hh": "100644:3bc51587ed89ed2fce8f7ab1f48f13151d350093",
+            "include/prospect/reader.hh": "100644:88f2201b78900708caf3e64e407a91279c75ff70",
+            "include/prospect/searcher.hh": "100644:c030a86db7c64d36b5e5b4698a837b4a51abc394",
+            "test/expand_mutants.py": "100755:ebcedad79956be81d14b204eaec1cbc4aaaf36d6",
+            "test/expand_test.cc": "100644:4701dee46f26b9b8db2a4cdd61f7a0355aa3245e",
+            "test/stats_mutants.py": "100755:05bbe36dc7a483efd615e4688085ec44be5d5b92"
+          },
+          "by": "review",
+          "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "criteria": "48b573952496068c",
+          "diffs": {
+            "CMakeLists.txt": "c5cebc8399efe447",
+            "docs/mechanisms/automata.md": "54720369595df288",
+            "include/prospect/expand.hh": "1c6707fbc2ca7428",
+            "include/prospect/fielddict.hh": "72e66ac755770251",
+            "include/prospect/reader.hh": "6947eeabd7d769be",
+            "include/prospect/searcher.hh": "b94b0e27cedd4b94",
+            "test/expand_mutants.py": "2df0b35d3f0c7036",
+            "test/expand_test.cc": "05297d08bfe3b753",
+            "test/stats_mutants.py": "262fa8ce508b0435"
+          },
+          "findings": {
+            "A1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'ctest --test-dir build-suite --output-on-failure -j4'",
+                  "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-065925-7b6ca5",
+                  "level": "light",
+                  "seconds": 114.1,
+                  "state": "done",
+                  "what": "A2: prospect suite (all ctest) with automata and termdict at their unpushed refs at 5d746f878d4d"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "A2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'git -C /Users/kronuz/code/Kronuz/termdict merge-base --is-ancestor e3f6f548465feed9cebfee2964bc29f38a79be02 main && git -C /Users/kronuz/code/Kronuz/automata merge-base --is-ancestor a289a073d7dfae10ca6226abaa53e4ce459fedc5 main && echo pins-on-main'",
+                  "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-071943-6a0765",
+                  "level": "none",
+                  "seconds": 0.2,
+                  "state": "done",
+                  "what": "sh -c 'git -C /Users/kronuz/code/Kronuz/termdict merge-base  at 5d746f878d4d"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "3b2b49179ae44f311325dcc060759d46c2d06fcc",
+          "reviewed": "cbe3fe7118db863fd819339c71335561add80724",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
       "branch": "quest/xapiand/automata",
@@ -1691,7 +1761,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-20T06:29:22",
+      "updated": "2026-11-20T07:44:17",
       "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
