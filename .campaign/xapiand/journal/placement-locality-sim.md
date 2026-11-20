@@ -1,6 +1,6 @@
 # placement-locality-sim: journal
 
-State: working
+State: waiting on jobs 261120-113016-34489c 261120-113018-d8cecc 261120-113022-e0eb42 261120-113025-27329d 261120-113028-7a1b5f 261120-113031-f76ac7 261120-113034-79ca70 261120-113036-5cc371 261120-113039-a24e16 261120-113041-eb2b90 261120-113043-241386 261120-113045-1109aa 261120-113047-03a766 261120-113049-c6cae1
 Quest: .campaign/xapiand/quests/placement-locality-sim.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,8 @@ Sweeps queued as jobs at strata:7d31634b (SPAR balanced strictly, scoring seam a
 
 ## Next
 
-1. Collect the sweep jobs, write docs/perf/placement-strategies-sim.md (tables, SPAR vs corrected design, recommendation, root-index section for msg from the coordinator).
+1. Collect the sweep jobs (`campaign job log <id> | grep -v RESULT` prints each table) and fill the Results, "What SPAR gets right" and Recommendation sections of docs/perf/placement-strategies-sim.md (draft at strata:238ecff9: method, workloads, root-index and scoring-seam sections done; synthetic unit counts pending from the job header).
+2. Write "ready for review".
 
 ## Blocked on
 
