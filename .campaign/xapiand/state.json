@@ -28508,11 +28508,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "moved to hunt.md, one row per item P3, P4, P5, P8, P10, P11, P14, P20, P21; each becomes a quest only if its experiment wins (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Track P research items not yet started (split per item at start)",
-      "updated": "2026-11-19T17:01:53"
+      "updated": "2026-11-20T05:28:59"
     },
     "turn-log-parity": {
       "accepted": {},
