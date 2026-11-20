@@ -17385,13 +17385,26 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T05:25:19",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            []
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done; normal risk, the lead reads the diff",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed",
+            "lens security removed"
+          ]
         }
       ],
       "landed": [],
-      "lenses": [
-        "correctness",
-        "security"
-      ],
+      "lenses": [],
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
@@ -17399,7 +17412,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-19T06:17:08"
+      "updated": "2026-11-20T05:25:19"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
