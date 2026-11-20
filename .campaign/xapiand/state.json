@@ -25249,6 +25249,8 @@
     "strata-pin-catalog": {
       "accepted": {},
       "after": [],
+      "base": "a09a9b650d7a4dbf5759365b09f8adb28b085731",
+      "branch": "quest/xapiand/strata-pin-catalog",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target test_pool && build/bin/test_pool",
@@ -25271,9 +25273,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T00:13:15"
+      "updated": "2026-11-20T01:12:25",
+      "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
       "accepted": {},
