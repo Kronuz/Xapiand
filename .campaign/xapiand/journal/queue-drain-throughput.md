@@ -1,6 +1,6 @@
 # queue-drain-throughput: journal
 
-State: waiting on jobs 261120-004854-a85314 261120-004855-db9849
+State: ready for review (suite and replay green at agent-campaign:ad03084; lead, 2026-11-20 01h).
 Quest: .campaign/xapiand/quests/queue-drain-throughput.md (the lead's; never edit it)
 
 Code: agent-campaign worktree /Users/kronuz/code/Kronuz/agent-campaign-wt/xapiand/queue-drain-throughput,
@@ -50,10 +50,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261120-004854-a85314; fails-without at main 261119-201532-834039 |
-| A2 | suite 261120-004854-a85314 (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
-| A3 | suite 261120-004854-a85314; fails-without at main 261119-201535-340225 |
-| A4 | replay 261120-004855-db9849 |
+| A1 | 261120-004854-a85314; fails without: 261119-181752-2d57bb, 261119-201532-834039 |
+| A2 | 261120-004854-a85314 |
+| A3 | 261120-004854-a85314; fails without: 261119-181755-3c70de, 261119-201535-340225 |
+| A4 | 261120-004855-db9849 |
 
 ## Result
 
