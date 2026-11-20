@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: CI fix for group_footprint at strata:25960848 (sanitizer skip, portable backtrace); waiting on jobs 261120-125416-c932be (ASan+UBSan build, expects SKIP), 261120-125410-81ae4f 261120-125410-98dc7d (verify)
+State: waiting on jobs 261120-143826-fc1ff1 261120-143827-809109 261120-143835-d4f803 261120-143838-68581e 261120-143842-94692c 261120-143852-9d288c (step 12, CI fix at strata:6421d4b3)
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,30 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Step 12 (lead: CI run 44816782044 red at d1793ae0), strata:6421d4b3.
+
+- All five named jobs fail only `standalone_turn_log`, aborting at journal host.h:534
+  (`owned_ranges`: one thread per loop's range table, debug builds); linux-x86_64-gcc also fails
+  `group_voters`. Local gate jobs build Release (NDEBUG), so they never saw the assert.
+- Assertions-on repro at d1793ae0 (RelWithDebInfo -O2 -g, each case alone) 261120-143205-ce4513:
+  only `t6w` aborts (exit 134); every other case and `group_voters` pass. Cause: the test, under
+  journal 9e11713's check (journal:0fc8c14, arrived with the quest's pin move cc95ba6 -> 9e11713):
+  t6w creates the index on the main thread and closes it on a second, so `turn_sealer::close` ->
+  `Host::close_group` -> `publish` -> `owned_ranges` runs off the table's first thread. No
+  strata::group code is on the path; the group tests pass with assertions in CI.
+- Fix (6421d4b3): t6w closes on the main thread, a second thread writes the turns. Fails without:
+  t6w at d1793ae0, assertions on, 261120-143842-94692c.
+- group_voters on gcc x86_64 (seeds 8, 12, 16, 23 named nobody behind, both runs 44797677012 and
+  44816782044; arm64 gcc and clang pass): the C command's `"C|" + ... + text(gen, ...) + "|" +
+  to_string(gen() % 3)` draws in unspecified order, and gcc x86_64 draws the right one first, so
+  its schedules differ from the ones D109's seeds were picked on. Fix: draw the body first (the
+  order clang uses). Fails without: the reversed order on clang, 261120-143852-9d288c (expect
+  seeds 8, 12, 16, 23 FAIL, as on CI).
+- Jobs at 6421d4b3: gate build-test 261120-143826-fc1ff1, crash 261120-143827-809109; full suite
+  assertions on 261120-143835-d4f803; ASan+UBSan on standalone_turn_log and group_* 261120-143838-68581e.
+- Correctness review (accepted at ffab229e) saw neither changed hunk's subject: t6w is core's
+  test (unchanged since before the review), and voters_test.cc's draw is test harness only.
 
 Step 11 (lead: correctness review CHANGES at 6a230264, `reviews/group-core-correctness.md`;
 rulings 1-7), strata:274fc243 e7b9acd2 429b4976 ffab229e. Jobs: Evidence, all at ffab229e
@@ -337,6 +361,14 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Blocked on
 
+- Lead (finding, not blocking): strata core's `turn_sealer` (turn_seal.hh) makes its turn mutex
+  the loop and lets any thread call the table (create, close, reopen, attach) under it, while
+  journal 9e11713 debug-asserts one thread per loop's range table. No race (strata never calls
+  `group_io`; every `publish` is under `turn_mu_`), but any standalone user closing an index on
+  a thread other than the first to touch the table aborts in debug builds. Options: (a) journal's
+  check accepts an externally serialized loop (an owner handoff or a lock-held check; Detent's
+  library); (b) turn_sealer funnels table calls to one thread; (c) document it in turn_seal.hh.
+  Recommend (a).
 - Lead (not blocking step 7): consensus keeps a row open until `Driver::close(id)`, so two
   in-process paths leave an open row behind and make a reopen throw ("the group is open on this
   Driver"): (1) a fenced group destroyed in a live process (a fence never closes the row);
@@ -393,6 +425,8 @@ proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, com
 
 ## Rulings I made
 
+- Step 12: t6w's fix is the test's thread layout, not turn_sealer (the contract question is
+  under Blocked on); voters' draw order follows clang, so D109's seeds keep their schedules.
 - footprint_test CI failure (run 44797677012): TSan duplicates operator new/delete at link (runtime defines them); ASan's aligned/nothrow forms bypass the replacement, so plain delete read a header off foreign memory. backtrace link errors are FreeBSD (libexecinfo). Ruling: under __SANITIZE_*/__has_feature the test exits 77 (SKIP_RETURN_CODE 77) with a message, every other build measures; backtrace links via find_package(Backtrace). strata:25960848.
 
 - Step 11, C1: re-arm whatever the role, not on `RoleChanged` (reasons in Doing).
