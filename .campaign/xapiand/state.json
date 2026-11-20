@@ -6944,20 +6944,68 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/document-gate",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T07:59:34",
+          "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "criteria": {
+            "A1": "261120-065738-302256; fails without: 261116-211626-0daa5f, 261116-211632-9ff248, 261117-025010-4c8220, 261117-025013-a6cec4, 261117-025017-0b218d, 261117-025020-93f7da, 261117-025024-24bfef, 261117-025028-47bf98, 261117-025032-8fc28b, 261117-025035-d9bfa2, 261117-025039-d9b68d, 261117-025043-a4a6fc, 261117-025046-ec1d6e, 261117-025050-ee8915, 261117-030347-7f586d, 261117-030357-c294a1, 261117-030405-14df88, 261117-030412-4cd813, 261117-030420-64cdd2, 261117-033229-e6ebfc, 261117-033233-7e4d9b, 261117-033236-b7fbb6, 261117-033244-6cd288, 261117-033248-e735a3, 261117-052940-986f82, 261117-055220-ecd5d0, 261117-122123-3b0f9a, 261117-122132-b7e7f7, 261117-122140-f6bc36, 261117-180849-82b11b",
+            "A2": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Prerequisites\": format13 76fa3313, shared-reader-views 23e78bb6, write-buffer-reads 2f56d64c, manifest-log 15d39c30",
+            "A3": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Rows measured\": fits1, twox1, big1, tenx1, sync1, wal1 and group-commit rows at dd02c63d, each with its job ids in the report",
+            "A4": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"Losses against RocksDB\": every loss with its magnitude (K=4 1.39x slower, fits1 overwrite to durable 1.14x slower, p99.99 wal 130-193x, peak memory up to 3.4x, disk up to 39.5x, bytes written up to 3.2x, CPU up to 1.97x); the report names turn-log-parity A6 as where they close",
+            "A5": "[artifact] strata `docs/perf/rocksdb-fairness-audit.md` (d956c0f4), \"RocksDB's pin per value-size class\": 100 B lvl-16k-lz4, 1 KiB lvl-4k-none, each the fastest over five interleaved trials at dd02c63d; jobs in the audit",
+            "A6": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4), \"VM rows\": Linux and FreeBSD dry run and VM-virtio sync1+wal1 as measured at dd02c63d (D114); arm64 owed before Phase 3R's next gate (D105); jobs in the report",
+            "A7": "D147",
+            "A8": "[artifact] strata `docs/gates/document-profile.md` (d956c0f4): every row with its commit, platform and jobs, the pins, the A7 checks, the scale"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-065738-302256",
+              "level": "light",
+              "seconds": 544.5,
+              "state": "done",
+              "what": "document-gate check build-test at d956c0f413f0"
+            }
+          ],
+          "final": true,
+          "from": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
+          "reason": "",
+          "tested": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1"
+        }
+      ],
       "lenses": [
         "durability"
+      ],
+      "messages": [
+        {
+          "answered": "d956c0f413f0",
+          "at": "2026-11-17T04:39:56",
+          "by": "lead",
+          "id": "msg-1",
+          "text": "journal-host-guards (journal:cc95ba6, not landed) changes TurnDriver::forget: linked durable() waiters fail with group_closed, and a reopened group skips its retired sequences. Before landing: repin to its landing commit, map group_closed in await_durable (or the group's wait), and test a waiter across close/reopen plus recovery over a sequence gap."
+        },
+        {
+          "answered": "d956c0f413f0",
+          "at": "2026-11-19T23:20:11",
+          "by": "lead",
+          "id": "msg-2",
+          "text": "Lead 2026-11-19 23h: cancelled 12 queued exclusive jobs to unblock the shared queue (A/A x,y: 165706-d9da0c, 165707-20d6c9; trials b,c of sync1/fits1/twox1/big1/tenx1). Kept trial a of each row, wal1, N-log, both calibrations and the two A6 VM jobs. Policy: one trial per row first; add trials and A/A only for a row whose trial-a margin is within its noise; record those rows in the journal and resubmit just them."
+        }
       ],
       "milestone": "The document profile gate",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-20T07:58:08",
-      "worktree": "../strata-wt/xapiand/document-gate"
+      "updated": "2026-11-20T07:59:41",
+      "worktree": ""
     },
     "drop-dir-reader": {
       "accepted": {},
