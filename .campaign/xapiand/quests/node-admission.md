@@ -21,6 +21,9 @@ cluster CA as trust anchor, pin recorded at first join (D149). Reviewed by Deten
 - A3 The trust policy is the caller's: a policy that accepts a CA-signed certificate and records
   its pin at first join, and one that accepts only pre-approved pins, both pass the same tests.
 - A4 [artifact] `docs/mechanisms/admission.md`: how admission, removal and the trust policy work.
+- A5 The CA policy issues a joining node's certificate in the handshake in exchange for the join token
+  (D150): a wrong or missing token is refused with a named failure, and a node never needs a key or
+  certificate configured by hand (test plus a `--fails-without` mutant that accepts any token).
 
 ## May land early
 

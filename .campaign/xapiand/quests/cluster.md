@@ -98,6 +98,9 @@ Runs once, when the feature is complete and before it lands.
 - The cluster gate (`cluster-gate`) is this feature's measurement and the milestone's review: it runs
   its rows R1 to R10 over `group-heal`, `placement`, `journal-replaces-wal` and this feature, once all
   have landed; its rows are not gates of this landing.
+- A7 A node starts with zero key configuration (D150): the first node creates the cluster CA and prints
+  its join token; a second node joins with `--join host:port --token T`, or `--token T` alone where
+  multicast finds the address; every link is TLS; no flag disables authentication.
 
 ## May land early
 
