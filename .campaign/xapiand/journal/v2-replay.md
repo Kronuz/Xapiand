@@ -10,16 +10,16 @@ branch quest/xapiand/v2-replay, `tools/replay/` (plain Python 3, ruff-clean). Ou
 
 ## Doing
 
-Lead's addition (owner direction, campaign-v3:29a5557 handoff, last section): `tools/replay/need.py`
-classifies runs no question needed beyond identical reruns; the simulator gains a "need" policy
-(unanswered questions only, evidence by declared inputs, resubmission replaces) and quest-hours
-saved against the calibrated v2 run. Running `quiet light v2-replay-need`.
+Calibrating the simulator (A3). First fit (light slots only): landings 233 vs 237 recorded (1.7%
+off), median wait 8.4 vs 9.4 min, hourly queue 19.0 vs 11.5 mean (133% abs error). The excess
+sits on single-slot quests (logger-exit-lifetime, reader-s6). Fixed an exclusive-batching
+deadlock (agent-campaign:823c33a); now fitting drain turn and slot serialization too
+(agent-campaign:10c3089). Running `quiet light v2-replay-need`, then simulate.
 
 ## Next
 
-1. `quiet light v2-replay-simulate 30 ... replay.py simulate`; check landings and hourly queue
-   against the records; write docs/v3/policy-simulation.md (A3) with the need policy.
-2. Add the need categories to docs/v3/where-time-went.md (A2).
+1. Write docs/v3/policy-simulation.md (A3) with the calibration error stated, the need policy's
+   machine-hours and quest-hours, and the A2 need section's placeholders filled.
 
 ## Blocked on
 
