@@ -521,15 +521,20 @@ static void test_sorters() {
 	auto desc = fx.dsl.get_sorter(obj({ { "n", obj({ { "_value", 100 }, { "_order", "desc" } }) } }));
 	CHECK_TRUE(sorted_key(desc, SLOT_N, Serialize::integer(90)) > sorted_key(desc, SLOT_N, Serialize::integer(120)));
 	CHECK_TRUE(asc->serialize() != desc->serialize());
-	// Product bug (sort-cast-word): a cast word hands the whole map to the cast, so an integer field throws (a datetime throws DatetimeError).
-	CHECK_THROWS_WITH(fx.dsl.get_sorter(obj({ { "n", obj({ { "_integer", "100" } }) } })), CastError, "cannot be cast to integer");
+	// A cast word gives the reference value cast to the field's type: nearest first.
+	auto cast_int = fx.dsl.get_sorter(obj({ { "n", obj({ { "_integer", "100" } }) } }));
+	CHECK_TRUE(sorted_key(cast_int, SLOT_N, Serialize::integer(90)) < sorted_key(cast_int, SLOT_N, Serialize::integer(120)));
+	auto cast_flt = fx.dsl.get_sorter(obj({ { "f", obj({ { "_float", "1.5" } }) } }));
+	CHECK_TRUE(sorted_key(cast_flt, SLOT_F, Serialize::floating(1.0)) < sorted_key(cast_flt, SLOT_F, Serialize::floating(3.0)));
+	auto cast_dt = fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } }));
+	CHECK_TRUE(sorted_key(cast_dt, SLOT_D + 6, Serialize::datetime(std::string("2021-03-05T00:00:00"))) < sorted_key(cast_dt, SLOT_D + 6, Serialize::datetime(std::string("2021-04-01T00:00:00"))));
+	auto cast_kw = fx.dsl.get_sorter(obj({ { "k", obj({ { "_keyword", "smith" } }) } }));
+	CHECK_TRUE(sorted_key(cast_kw, SLOT_K, "smith") < sorted_key(cast_kw, SLOT_K, "zzzzz"));
 	auto flt = fx.dsl.get_sorter(obj({ { "f", obj({ { "_value", 1.5 } }) } }));
 	CHECK_TRUE(has_key(flt, "FloatKey"));
 	CHECK_TRUE(sorted_key(flt, SLOT_F, Serialize::floating(1.0)) < sorted_key(flt, SLOT_F, Serialize::floating(3.0)));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "p", obj({ { "_value", 7 } }) } })), "PositiveKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "d", obj({ { "_value", "2021-03-04" } }) } })), "DateKey"));
-	// The map is parsed as a datetime whole, so its `_datetime` string is read as a `_time` (sort-cast-word).
-	CHECK_THROWS_WITH(fx.dsl.get_sorter(obj({ { "dt", obj({ { "_datetime", "2021-03-04T05:06:07" } }) } })), DatetimeError, "Error format in _time");
 	// Product bug (sort-boolean-key): a boolean reference value is a DateKey; BoolKey exists and is unused.
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "DateKey"));
 	CHECK_FALSE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "BoolKey"));
