@@ -9735,11 +9735,12 @@
       "milestone": "Phase 3R",
       "needs": [],
       "provides": [],
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Phase 3R gate rows in the simulator",
-      "updated": "2026-11-19T06:17:22"
+      "updated": "2026-11-20T05:26:19"
     },
     "hashes-cl-1": {
       "accepted": {},
