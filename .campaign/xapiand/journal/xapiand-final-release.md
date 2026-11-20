@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: working
+State: waiting on jobs build-test:261120-155714-a3ba72
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Backports on the quest branch (based on the `xapiand` tip e692a64b1, so the tool's worktree base fits). Done: parser cherry-picks (4b9ee717e, 8ab6b2b26) with the adapter on by default and a nested NEAR test; id 0 (971f90559, d0c9a5733) with the harness check added to the smoke layer; A3 (fdb32df96); changelog (72ebbfa83). Waiting on the build-test job at fdb32df96.
 
 ## Next
 
-1. <step>
+1. On a green build-test: push the quest branch, then fast-forward `xapiand` to it and push (CI there: build-test, asan, e2e, Release/FreeBSD/Bottles dispatch).
+2. A5: read CI and the three workflows at the final commit; report to the lead. No tag.
 
 ## Blocked on
 
@@ -37,4 +38,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Tool flow: the quest branch already sits on `xapiand` (worktree base fits); `campaign land` lands on main, so landing is `--record` after the tag, as the quest says. `campaign brief` flags "master changed 1485 files" and out-of-file-set changes: expected, this branch is not master's.
+- A1: the adapter was opt-in (XAPIAND_QUERYPARSER=1); made default, =0 selects Xapian. test_text_parser pins =0 as its reference.
+- A2: the id-0 check was a harness script only; run_all.sh smoke now runs it (build-test runs smoke).
+- A3 float bounds: lower bound ceil, upper bound floor, saturating, in range.cc integer_bound.
