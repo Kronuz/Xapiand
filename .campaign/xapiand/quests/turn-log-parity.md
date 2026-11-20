@@ -67,6 +67,11 @@ loses every group, loudly. A copy flag in the record format lets recovery keep t
 again after the damage; tasks 3 and 5 (record format) add it, with a test that a group rewritten after
 double damage recovers and one that is not still reports the loss.
 
+Journal follow-ups (Detent's journal-double-damage review, journal:178030b): task 9 refuses at
+construction a block_bytes that is neither a multiple nor a divisor of 512 (F3); tasks 3 or 5 add a
+per-fragment checksum so a damaged fragment crossing a sector, and the damaged headers still silent
+at some block sizes, are reported (a format change), beside the copy flag above.
+
 Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
 F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
 and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,
