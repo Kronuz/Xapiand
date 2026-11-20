@@ -28472,9 +28472,27 @@
         "docs/mechanisms/**",
         "fuzz/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:25:16",
+          "lenses": [
+            [
+              "correctness"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done",
+          "voided": [],
+          "weakened": [
+            "lens correctness removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
-        "correctness"
+        "durability"
       ],
       "milestone": "",
       "needs": [],
@@ -28483,7 +28501,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-17T02:22:54"
+      "updated": "2026-11-20T05:25:16"
     },
     "turn-seal": {
       "accepted": {
