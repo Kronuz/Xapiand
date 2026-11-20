@@ -20,7 +20,12 @@ Liveness:
              a new root leader counts the window from its election
 
 Exits 0 when every check holds; prints one line per check. The first block reproduces the review's
-lines (job 261120-121643-c02f08) with the same seed; revision 1's checks follow.
+lines (job 261120-121643-c02f08) with the same seed; revision 1's checks follow. Revision 2 (D157)
+runs admission inside the run command, `xapiand [--token TOKEN]`: the process that joins and saves
+the number is the one that runs the node, and a supervisor restarts it at once. Its checks use time:
+the admitted boot is live for W seconds after it was last heard, and a starting process retries a
+`duplicate` hello every TICK for W + TICK before it exits, since the live boot may be its own dead
+predecessor.
 """
 
 from __future__ import annotations
@@ -271,6 +276,110 @@ def s4_many_changes(trials: int = 2000, changes: int = 20) -> tuple[int, set[str
     return admitted, seen
 
 
+W, TICK = 2.0, 0.5
+CRASH_POINTS = ("after-key", "after-join-commit", "after-id-save", "after-offer", "after-save", "after-confirm")
+
+
+class TimedRoot:
+    """Rule "confirmed", liveness "record", with time; also the token join keyed by the saved key."""
+
+    def __init__(self) -> None:
+        self.boot, self.heard = 0, float("-inf")
+        self.record, self.offered, self.next = 0, 0, 1
+        self.ids: dict[int, int] = {}  # key pin -> node id, committed by the join
+        self.uses = 1  # a one-use token
+
+    def join(self, pin: int) -> int | None:
+        if pin in self.ids:
+            return self.ids[pin]  # a retry with the saved key: the same node, no use burned
+        if self.uses == 0:
+            return None
+        self.uses -= 1
+        self.ids[pin] = len(self.ids) + 1
+        return self.ids[pin]
+
+    def hello(self, boot: int, now: float) -> bool:
+        return not (self.boot and boot != self.boot and now - self.heard < W)
+
+
+class Disk:
+    def __init__(self) -> None:
+        self.pin, self.node, self.number = 0, 0, 0
+
+
+def run(root: TimedRoot, disk: Disk, start: float, crash: str = "", patience: float = W + TICK) -> tuple[str, float]:
+    """One process of the run command with a token: join if needed, then admission. Returns its
+    outcome ("admitted", "duplicate", "used" or "crashed") and the time."""
+    boot = random.getrandbits(62) + 1
+    if not disk.pin:
+        disk.pin = random.getrandbits(62) + 1  # the key is saved before the first request
+        if crash == "after-key":
+            return "crashed", start
+    if not disk.node:
+        node = root.join(disk.pin)
+        if node is None:
+            return "used", start
+        if crash == "after-join-commit":
+            return "crashed", start
+        disk.node = node
+        if crash == "after-id-save":
+            return "crashed", start
+    t = start
+    while not root.hello(boot, t):
+        if t - start >= patience:
+            return "duplicate", t
+        t += TICK
+    if disk.number == root.offered and root.offered:
+        pass  # its predecessor crashed after the save: presenting the offer completes it
+    elif disk.number == root.record:
+        root.offered, root.next = root.next, root.next + 1
+        if crash == "after-offer":
+            return "crashed", t
+        disk.number = root.offered
+        if crash == "after-save":
+            return "crashed", t
+    else:
+        return "stale", t
+    root.record, root.offered, root.boot, root.heard = disk.number, 0, boot, t
+    if crash == "after-confirm":
+        return "crashed", t
+    return "admitted", t
+
+
+def s6_restart(delay: float, crash: str, patience: float = W + TICK) -> tuple[str, float, int, int]:
+    """A node admitted at 0 and heard until 10 dies; the supervisor restarts it after `delay`, that
+    process dies at `crash`, and the next one starts after `delay` again. Returns the final outcome,
+    the time past the first death, the ids allocated and the uses left."""
+    root, disk = TimedRoot(), Disk()
+    assert run(root, disk, 0.0)[0] == "admitted"
+    root.heard = 10.0
+    outcome, t = run(root, disk, 10.0 + delay, crash, patience)
+    if outcome == "crashed":
+        outcome, t = run(root, disk, t + delay)
+    return outcome, t - 10.0, len(root.ids), root.uses
+
+
+def s7_first_start(crash: str) -> tuple[str, int, int]:
+    """An empty directory with a one-use token, killed at `crash`, restarted at once."""
+    root, disk = TimedRoot(), Disk()
+    outcome, t = run(root, disk, 0.0, crash)
+    if outcome == "crashed":
+        outcome, t = run(root, disk, t)
+    return outcome, len(root.ids), root.uses
+
+
+def s8_hot_copy(start: float) -> tuple[str, float]:
+    """A copy of a running node's directory (identity and number) started at `start`, while the
+    original keeps its keepalives. Its outcome and how long it took."""
+    root, disk = TimedRoot(), Disk()
+    assert run(root, disk, 0.0)[0] == "admitted"
+    copy = Disk()
+    copy.pin, copy.node, copy.number = disk.pin, disk.node, disk.number
+    root.heard = start + W + TICK  # the original is heard throughout the copy's retries
+    outcome, t = run(root, copy, start)
+    return outcome, t - start
+
+
 def main() -> int:
     random.seed(20261120)
     ok = True
@@ -308,6 +417,26 @@ def main() -> int:
     admitted, seen = s4_many_changes()
     check("S4 confirmed/record: trials of 20 leader changes the copy was admitted in", admitted, 0)
     check("S4 confirmed/record: what the copy reads", seen, {"duplicate"})
+
+    print("     revision 2: admission inside the run command (D157), with time")
+    worst, results = 0.0, set()
+    for step in range(25):
+        delay = step * 0.25
+        for crash in ("",) + CRASH_POINTS[3:]:
+            outcome, took, ids, uses = s6_restart(delay, crash)
+            results.add((outcome, ids, uses))
+            if not crash:
+                worst = max(worst, took - max(delay, W))
+    check("S6: restarts after 0 to 6 s, killed at each admission step, end (outcome, ids, uses left)",
+          results, {("admitted", 1, 0)})
+    check("S6: uncrashed, admitted within one TICK of the later of the restart and the window", worst <= TICK, True)
+    check("S6 without the retry: an immediate restart", s6_restart(0.0, "", patience=0.0)[0], "duplicate")
+    for crash in CRASH_POINTS:
+        check(f"S7: an empty directory with a one-use token killed {crash}, then restarted",
+              s7_first_start(crash), ("admitted", 1, 0))
+    outcome, took = s8_hot_copy(5.0)
+    check("S8: a hot copy beside its running original", outcome, "duplicate")
+    check("S8: the copy exits within 3 s", took <= 3.0, True)
     return 0 if ok else 1
 
 
