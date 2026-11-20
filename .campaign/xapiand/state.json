@@ -4578,13 +4578,15 @@
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [],
+      "needs": [
+        "stopword-lists"
+      ],
       "provides": [],
       "repo": ".",
       "risk": "low",
       "status": "planned",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-19T17:50:29"
+      "updated": "2026-11-19T17:51:18"
     },
     "core-lifecycle-tests": {
       "accepted": {},
