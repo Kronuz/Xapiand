@@ -7076,19 +7076,47 @@
         "tests/test_query_dsl_date*",
         "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/casting-values.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T06:04:10",
+          "commit": "8e3c4cafb4dbbb90f0771ec937fd47c42491b821",
+          "criteria": {
+            "A1": "261119-231648-0e48bf (passed at 8fe1bba5e9f7; only merges from main since); fails without: 261119-222852-48ecc0, 261119-225934-6b9166, 261119-231656-ccf359",
+            "A2": "261119-231648-0e48bf (passed at 8fe1bba5e9f7; only merges from main since)",
+            "A3": "261119-231654-7a5c99 (passed at 8fe1bba5e9f7; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "e0a24ce2f890406c21eed6d33a8c5477b296f68e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-231654-7a5c99",
+              "level": "light",
+              "seconds": 263.9,
+              "state": "done",
+              "what": "dsl-date-operators check suite at e0a24ce2f890"
+            }
+          ],
+          "final": true,
+          "from": "c0151afd1bcefc1385c2b57204d0ed4a17277701",
+          "reason": "",
+          "tested": "440902ac469bfbd5401d187f3e96ecd3cedbd7ed"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-20T00:00:02",
-      "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
+      "updated": "2026-11-20T06:04:30",
+      "worktree": ""
     },
     "dsl-not-wrap": {
       "accepted": {
@@ -9453,46 +9481,11 @@
       "worktree": ""
     },
     "group-core": {
-      "accepted": {
-        "design": {
-          "at": "2026-11-17T03:06:14",
-          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-          "blobs": {},
-          "by": "review",
-          "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-          "criteria": "8382fed6c73acdd9",
-          "diffs": {},
-          "findings": {
-            "B10": {
-              "jobs": [
-                {
-                  "cmd": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-core/docs/design/cluster-release/bundle_model.py",
-                  "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261117-030555-450eb8",
-                  "level": "none",
-                  "seconds": 4.2,
-                  "state": "done",
-                  "what": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-c at 491a1bdc2aa1"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            }
-          },
-          "note": "",
-          "review": "7a8ed667b8dc903725be55b09e5fccbaf7f1d2e2",
-          "reviewed": "",
-          "verdict": "CHANGES"
-        }
-      },
+      "accepted": {},
       "after": [
         "detent:journal-driver",
         "detent:consensus-driver",
-        "detent:consensus-quiescence",
         "detent:journal-host-guards",
-        "strata-nospace-position",
         "document-gate",
         "detent:driver-witness-removal-sink",
         "detent:consensus-worker-release",
@@ -9549,6 +9542,22 @@
         "docs/REPLICATION.md",
         "include/strata/core/index.hh"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:33:25",
+          "reason": "owner 2026-11-20: whole features, reviewed once when done; pre-release bytes (D30, D87) are reversible until format-freeze, which keeps the consensus-quiescence wait (replan-2026-11-20 sections 5, 7)",
+          "risk": [
+            "critical",
+            "high"
+          ],
+          "voided": [
+            "design"
+          ],
+          "weakened": [
+            "risk critical -> high"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
       "lenses": [
@@ -9562,10 +9571,10 @@
         "strata:checkpoint-bundle"
       ],
       "repo": "../strata",
-      "risk": "critical",
+      "risk": "high",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T23:28:04",
+      "updated": "2026-11-20T05:33:25",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
@@ -27976,7 +27985,6 @@
     "track-c": {
       "accepted": {},
       "after": [
-        "consensus-hello-limits",
         "consensus-sim-loops",
         "track-c-c3-gate",
         "goal5-audit",
@@ -28041,7 +28049,7 @@
       "risk": "high",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-18T02:56:40",
+      "updated": "2026-11-20T05:31:21",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
@@ -28168,7 +28176,6 @@
     "track-c-gates": {
       "accepted": {},
       "after": [
-        "consensus-hello-limits",
         "consensus-sim-loops",
         "consensus-flow-bench",
         "detent:journal-faultfs",
@@ -28201,7 +28208,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-18T12:58:47",
+      "updated": "2026-11-20T05:31:24",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
