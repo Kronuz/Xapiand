@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: waiting on jobs 261120-121254-2ad180
+State: ready for review
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -49,13 +49,13 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261120-121254-2ad180: server 2080/2308 lines (90.1%), 1423/1663 branches (85.6%) against 80%, was 62.7% at 261120-115902-3a4acd |
+| A2 | harness/coverage_e2e_server.py group `verbs`: every request asserts status and body or header values (verb_answer); no bug was fixed, so no fails-without row; the two odd answers are PIN checks with hunt rows |
+| A3 | check suite 261120-121305-9dbdb6; CI not run (branch not pushed, per the lead's instruction) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Group `verbs` in harness/coverage_e2e_server.py (1f1407604) adds 422 branches: server branches 62.7% -> 85.6% (job 261120-121254-2ad180), lines stay 90.1%. Open: negotiation, flag, locator and stream clusters (about 190 branches left) are not needed for the target; fault-injection and dead branches stay as classified above. Master needs merging into the branch (lead). No docs change: the driver's docstrings carry the how.
 
 ## Hunt-list rows (product behavior the driver pins as PIN checks; not fixed here)
 
