@@ -2251,9 +2251,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Catalog delivery never posts to a torn-down scheduler",
-      "updated": "2026-11-19T21:45:42",
+      "updated": "2026-11-19T22:16:50",
       "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
     },
     "census": {
