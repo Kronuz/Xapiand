@@ -21382,7 +21382,36 @@
       "worktree": ""
     },
     "queue-drain-throughput": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T01:16:41",
+          "base": "63cc071130b5a4acf44647945f3d4fdaefd67abc",
+          "blobs": {
+            "references/host.md": "100644:2338284d72d5f96f0f8ed18700d55fa60a3478aa",
+            "scripts/campaign_tool.py": "100644:d546d3947e7270dd9d95b949b21f35b57e404154",
+            "tests/harness.py": "100644:e966ea9ffd1f2429a08b9d333ea325d6820d730b",
+            "tests/queue_sim.py": "100644:f9ee40efdea188ab0d46da491382a47ceed81824",
+            "tests/test_jobs.py": "100644:289e9d2b558a32901e7f06529bd3d7adfa2259c0",
+            "tests/test_quiet.py": "100644:4f9d8824862276603c6ea4df0e707900ccb36e86"
+          },
+          "by": "review",
+          "commit": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "criteria": "c5fe8700cb7ed91d",
+          "diffs": {
+            "references/host.md": "52963735513024fd",
+            "scripts/campaign_tool.py": "37b9bca2c389745a",
+            "tests/harness.py": "df75e4997161a979",
+            "tests/queue_sim.py": "fb715a211e2dffd8",
+            "tests/test_jobs.py": "4f2295eea3249d23",
+            "tests/test_quiet.py": "3913eaea352e87b7"
+          },
+          "findings": {},
+          "note": "",
+          "review": "21a7347fb0bf479983994037abcfbfc98017cd74",
+          "reviewed": "ad0308431e2b5a8a7c176f36317aa0a625386a4c",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "bde14754b0372b50928ac6d697522e03b2a57c95",
       "branch": "quest/xapiand/queue-drain-throughput",
@@ -21403,7 +21432,9 @@
       ],
       "journal": "../Xapiand-wt/xapiand/queue-drain-throughput",
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -21411,7 +21442,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Keep light slots busy around exclusive drains",
-      "updated": "2026-11-20T01:09:12",
+      "updated": "2026-11-20T01:16:41",
       "worktree": "../agent-campaign-wt/xapiand/queue-drain-throughput"
     },
     "reactor-server-composition": {
