@@ -1547,6 +1547,19 @@
         "quest": "detent:consensus-transport"
       },
       "text": "detent:consensus-transport started and may change files your multicast-seeds changes (order them with --after detent:consensus-transport, or narrow the files); changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T09:10:35",
+      "by": "campaign detent",
+      "closed": "Recovery fix in journal: it reports a damaged block followed by a damaged header instead of dropping acknowledged records. group-core picks it up at its next pin move. turn-log-parity's journal tasks (3, 5, 9, 10) are not started, and their diffs go to Detent before landing.",
+      "id": "msg-171",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-double-damage"
+      },
+      "text": "detent:journal-double-damage started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
