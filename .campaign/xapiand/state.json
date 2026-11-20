@@ -27433,6 +27433,33 @@
       "updated": "2026-11-12T10:15:11",
       "worktree": "../strata-wt/xapiand/unpin-after-kick"
     },
+    "v2-replay": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 -m py_compile tools/replay/*.py",
+          "level": "none",
+          "minutes": 5,
+          "name": "compile"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/v3/**",
+        "tools/replay/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../agent-campaign",
+      "risk": "low",
+      "status": "planned",
+      "title": "Replay v2's records: where every hour went, and what policies would have done",
+      "updated": "2026-11-19T18:39:01"
+    },
     "wbuf-inline": {
       "accepted": {
         "correctness": {
