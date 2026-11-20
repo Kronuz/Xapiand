@@ -1593,11 +1593,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "aggregations: validate the whole tree before the search",
-      "updated": "2026-11-19T14:20:35"
+      "updated": "2026-11-20T05:27:19"
     },
     "alpha10-builds": {
       "accepted": {},
