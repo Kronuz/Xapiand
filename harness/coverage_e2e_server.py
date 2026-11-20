@@ -217,6 +217,83 @@ VERBS = ["GET", "POST", "PUT", "PATCH", "UPDATE", "UPSERT", "DELETE", "HEAD", "O
          "COMMIT", "DUMP", "RESTORE", "CHECK", "FLUSH", "QUIT"]
 
 
+# Every verb of the node's table, each as the method override header, as a command in the path and as the method itself.
+# VERB: (index to ask, body, status, what the answer holds).
+VERB_BODY = {"a": 1}
+VERB_ROWS = {
+    "delete": ("sink", None, 501), "get": ("t", None, 200), "head": ("t", None, 200), "post": ("sink", VERB_BODY, 201),
+    "put": ("sink", VERB_BODY, 204), "connect": ("t", None, 405), "options": ("t", None, 200), "trace": ("t", None, 405),
+    "patch": ("sink", VERB_BODY, 204), "purge": ("t", None, 405), "link": ("t", None, 405), "unlink": ("t", None, 405),
+    "check": ("t", None, 200), "close": ("t", None, 501), "commit": ("t", None, 200), "copy": ("t", None, 405),
+    "count": ("t", None, 200), "dump": ("t", None, 200), "flush": ("t", None, 405), "info": ("t", None, 200),
+    "lock": ("t", None, 405), "move": ("t", None, 405), "open": ("t", None, 501), "quit": ("t", None, 405),
+    "restore": ("sink", VERB_BODY, 400), "search": ("t", None, 200), "unlock": ("t", None, 405),
+    "update": ("sink", VERB_BODY, 204), "upsert": ("sink", VERB_BODY, 204), "wal": ("t", None, 400),
+}
+NOT_ALLOWED = {"status": 405, "type": "Method Not Allowed"}
+NOT_IMPLEMENTED = {"status": 501, "type": "Not Implemented"}
+
+
+def verb_answer(label, verb, r, status_want):
+    """The answer of VERB on its index: the status and what the body holds."""
+    eq(label + " status", r.status, status_want)
+    if status_want == 405:
+        eq(label + " body", r.json, NOT_ALLOWED)
+    elif status_want == 501:
+        eq(label + " body", r.json, NOT_IMPLEMENTED)
+    elif verb == "get":
+        check(label + " body", "_settings" in r.json and "_schema" in r.json, repr(r.body[:100]))
+    elif verb in ("head", "commit", "options", "put", "patch", "update", "upsert"):
+        eq(label + " body", r.body, b"")
+    elif verb == "post":
+        eq(label + " body", (r.body, (r.header("Location") or "").startswith("/sink/")), (b"", True))
+    elif verb == "check":
+        eq(label + " body", r.json, {"errors": {"t/.__%d" % i: 0 for i in range(1, 6)}})
+    elif verb == "count":
+        eq(label + " body", r.json, {"total": 4})
+    elif verb == "dump":
+        eq(label + " body", sorted(d["_id"] for d in r.json), ["d1", "d2", "d3", "d4"])
+    elif verb == "info":
+        eq(label + " body", (r.json["endpoint"], r.json["doc_count"]), ("t", 4))
+    elif verb == "search":
+        eq(label + " body", (r.json["count"], r.json["total"]), (4, 4))
+    elif verb == "restore":
+        error(label + " body", r, 400, "Bad Request: Invalid request body")
+    elif verb == "wal":
+        check(label + " body", r.json["message"].startswith("Bad Request: This operation can only be executed on a single shard"), repr(r.body[:120]))
+
+
+@group
+def verbs(n):
+    """Each verb of the table: as the override header, as a path command and as itself; the mismatches refuse."""
+    seed(n)
+    n.call("PUT", "/sink/s1?commit", VERB_BODY)
+    for verb, (index, body, want) in VERB_ROWS.items():
+        upper = verb.upper()
+        base = "/%s/" % index
+        override = {"X-HTTP-Method-Override": upper}
+        # A mismatched method: the one a verb is not (PUT, or DELETE for PUT and DELETE themselves).
+        other = "DELETE" if verb in ("put", "patch") else "PUT"
+        for method in ("POST", "GET", upper):
+            verb_answer("%s override %s" % (method, verb), verb, n.call(method, base, body, override), want)
+            verb_answer("%s %s:%s" % (method, base, verb), verb, n.call(method, base + ":" + verb, body), want)
+        r = n.call(other, base, body, override)
+        eq("%s override %s is refused" % (other, verb), (r.status, r.body), (400, b""))
+        error("%s %s:%s is refused" % (other, base, verb), n.call(other, base + ":" + verb, body), 400,
+              "Bad Request: HTTP Mappings must use GET or POST method")
+    # A root command that is a verb word names the node; the others are metadata of an index the root lacks.
+    for command, status_want in ((":info", 200), (":head", 200), (":get", 200), (":metrics", 200), (":stats", 400)):
+        eq("GET /%s" % command, n.call("GET", "/" + command).status, status_want)
+    eq("GET /:get names the node", n.call("GET", "/:get").json["name"], "covnode")
+
+    # An index with empty shards reports its ids and lengths as unsigned wrap-arounds.
+    n.call("PUT", "/one/a?commit", {"a": 1})
+    info = n.call("INFO", "/one/").json
+    eq("INFO of a one-document index", (info["doc_count"], len(info["shards"])), (1, 5))
+    eq("PIN: INFO last_id and doc_del wrap at 2^32 when a shard is empty", (info["last_id"], info["doc_del"]), (2**32 - 1, 2**32 - 2))
+    check("PIN: INFO doc_len_lower wraps at 2^32 when a shard is empty", info["doc_len_lower"] > 2**31, repr(info))
+
+
 @group
 def routing(n):
     """The route table, the verbs answered inline, the method overrides and the content negotiation."""
@@ -582,6 +659,12 @@ def metadata(n):
     status("INFO ?selector", r, 200)
     r = n.call("INFO", "/t/d1")
     eq("INFO of a document", (r.status, r.json["version"], r.json["docid"] > 0), (200, 1, True))
+    try:
+        r.body.decode("utf-8")
+        valid = True
+    except UnicodeDecodeError:
+        valid = False
+    eq("PIN: INFO of a document puts raw value bytes into the JSON text", valid, False)
     r = n.call("INFO", "/t/d1?raw")
     check("INFO ?raw adds the raw data", "raw_data" in r.json, repr(sorted(r.json)))
     r = n.call("INFO", "/t/d1?volatile&human")
