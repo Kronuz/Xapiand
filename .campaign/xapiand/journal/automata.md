@@ -41,7 +41,7 @@ repositories, outside this quest.
 |---|---|
 | A1 | 261120-045742-f84874 (expand_test), 261120-045743-bf9ae6 (automata_test, fuzz replay, termdict seek test), 261120-045743-1ae13f (ten mutants caught); all at prospect:cbe3fe7. Locally: expand_test 1,188 queries, 6,574 dead terms skipped, 0 failures; 10/10 mutants caught |
 | A2 | 261120-045745-65164b (prospect suite, all ctest, at refs); CI after the library pushes |
-| A3 | `docs/mechanisms/automata.md` (prospect:cbe3fe7); library note `docs/design.md` (automata:a289a07) |
+| A3 | `docs/mechanisms/automata.md` |
 
 Cancelled after the owner's 2026-11-20 change (old A2/A3 only): 261120-045652-723c68 (fuzz),
 261120-045653-90093c (ASan+UBSan), 261120-045655-2fb958 (TSan).
