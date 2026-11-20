@@ -5,27 +5,28 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The Track P items moved out of track-p on 2026-11-19, unchanged. Each becomes its own quest (implementation or performance assignment, its file set narrowed) when it starts; this file holds the list and the criteria text.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
-job can show it.
-
-- A1 <criterion>: <evidence>
+- A2 P3: variable-size blocks for block-max pruning, and impact-ordered evaluation for top-k on long lists: a `docs/perf/` entry from jobs
+- A3 P4: partitioned Elias-Fano and Roaring containers as alternative block encodings, chosen per block: a `docs/perf/` entry from jobs
+- A4 P5: next-word (common-grams) positional entries for frequent word pairs, with the index-size cost: a `docs/perf/` entry from jobs
+- A6 P8: phrase prefilters, per-block summaries of frequent adjacent pairs (format 13 reserves its section kind): a `docs/perf/` entry from jobs
+- A8 P10: distributed threshold sharing across shards (after Track D's D5): a `docs/perf/` entry from jobs
+- A9 P11: count and aggregation answers from per-segment statistics and sketches where exact, extended to cross-shard plans: a `docs/perf/` entry from jobs
+- A11 P14: stored fields with dictionary-trained zstd per segment and block sizes tuned for fetch latency (format 13 reserves its section kind): a `docs/perf/` entry from jobs
+- A12 P20: frozen indexes, single-node half after Phase 3's gate (strata `docs/design/frozen-index.md`), measured against the same index unfrozen and against PISA: a `docs/perf/` entry from jobs
+- A13 P21: threshold seeding, each term's k-th best score for k = 10, 100 and 1,000 stored at merge, measured against PISA (format 13's seeds, prospect `docs/perf/format13-seeds-cost.md`: its verdict recorded): jobs
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Per item.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Split from track-p (lead, 2026-11-19).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Each item lands as its own quest.
