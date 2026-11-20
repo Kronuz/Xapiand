@@ -1,6 +1,6 @@
 # queue-drain-throughput: journal
 
-State: waiting on jobs 261120-002137-593d3f 261120-002133-c8b85c 261120-002134-541c02 261120-002136-61a114
+State: waiting on jobs 261120-004854-a85314 261120-004855-db9849
 Quest: .campaign/xapiand/quests/queue-drain-throughput.md (the lead's; never edit it)
 
 Code: agent-campaign worktree /Users/kronuz/code/Kronuz/agent-campaign-wt/xapiand/queue-drain-throughput,
@@ -28,8 +28,14 @@ baseline at main c6641b.
 The three failures were test isolation: the suite job's environment (CMAKE_BUILD_PARALLEL_LEVEL, CTEST_*,
 GIT_CONFIG_* mirror rewrites, CAMPAIGN_GIT) leaked into each test. tests/harness.py now drops them
 (agent-campaign:05f6a2a, no assertion changed); the three pass locally with the variables set.
-Resubmitted at 05f6a2a: suite 261120-002137-593d3f (A1-A3), fails-without 261120-002133-c8b85c (A1),
-261120-002134-541c02 (A3), replay 261120-002136-61a114 (A4).
+Resubmitted at 05f6a2a: suite 261120-004854-a85314 (A1-A3), fails-without 261119-201532-834039 (A1),
+261119-201535-340225 (A3), replay 261120-004855-db9849 (A4).
+
+Mirror test (593d3f): inside a job the git mirror shim led PATH, so the test's own job took the shim
+for the real git and hung (reproduced with the shim on PATH; passes with it dropped). harness.py drops
+`git-mirrors/bin` from PATH (agent-campaign:ad03084). The fails-without rows cite the runs at main
+63cc071 (834039, 340225); the reruns at the fixed code proved nothing. Suite a85314 and replay db9849
+are at ad03084.
 
 ## Next
 
@@ -44,10 +50,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261120-002137-593d3f; fails-without at main 261120-002133-c8b85c |
-| A2 | suite 261120-002137-593d3f (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
-| A3 | suite 261120-002137-593d3f; fails-without at main 261120-002134-541c02 |
-| A4 | replay 261120-002136-61a114 |
+| A1 | suite 261120-004854-a85314; fails-without at main 261119-201532-834039 |
+| A2 | suite 261120-004854-a85314 (test_quiet.ExclusiveIsolation, existing quiet tests, replay asserts) |
+| A3 | suite 261120-004854-a85314; fails-without at main 261119-201535-340225 |
+| A4 | replay 261120-004855-db9849 |
 
 ## Result
 
