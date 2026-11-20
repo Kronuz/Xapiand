@@ -5112,6 +5112,34 @@
       "updated": "2026-11-11T12:09:39",
       "worktree": ""
     },
+    "datetime-range-zone": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/datetime.cc",
+        "src/datetime.h",
+        "tests/test_datetime*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "datetime: map ranges and zone offsets compute the right instant",
+      "updated": "2026-11-19T16:20:04"
+    },
     "dir-shared-lock": {
       "accepted": {
         "correctness": {
