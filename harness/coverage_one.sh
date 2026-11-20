@@ -15,7 +15,7 @@ cmake -S . -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=
 	-DCMAKE_C_COMPILER=$LLVM/bin/clang -DCMAKE_CXX_COMPILER=$LLVM/bin/clang++ "-DCMAKE_C_FLAGS=$F" "-DCMAKE_CXX_FLAGS=$F" \
 	"-DCMAKE_EXE_LINKER_FLAGS=$F -L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++" -DLIBCPP_LIBRARIES=$LLVM/lib/c++/libc++.dylib \
 	-DLIBCPPABI_LIBRARIES=$LLVM/lib/c++/libc++abi.dylib -DZLIB_INCLUDE_DIR="$ROOT/sdkinc" -DUUID_INCLUDE_DIR="$ROOT/sdkinc" >"$BUILD.log" 2>&1 || { tail -20 "$BUILD.log"; exit 1; }
-cmake --build "$BUILD" -j"$JOBS" --target "xapiand_test_coverage_$TEST" >>"$BUILD.log" 2>&1 || { grep -E "error|Error" "$BUILD.log" | head -30; exit 1; }
+cmake --build "$BUILD" -j"$JOBS" --target "xapiand_test_coverage_$TEST" >>"$BUILD.log" 2>&1 || { grep -E "(error|FAILED|undefined symbol|ld: )" "$BUILD.log" | grep -vE "error_code|error_category" | head -30; echo "--- tail of $BUILD.log:"; tail -25 "$BUILD.log"; exit 1; }
 rm -f "$BUILD"/prof-*.profraw
 rc=0; bad=0
 for _ in $(seq "${REPEAT:-1}"); do
