@@ -44,16 +44,16 @@ def call(method, path, body=None):
     return resp.status, data
 
 
-def search(query):
-    status, data = call("SEARCH", "/dsl/", json.dumps({"_query": query}))
+def search(query, index="dsl"):
+    status, data = call("SEARCH", "/%s/" % index, json.dumps({"_query": query}))
     if status == 200:
-        return status, sorted(h["_id"] for h in json.loads(data).get("hits", []))
+        return status, sorted(str(h["_id"]) for h in json.loads(data).get("hits", []))
     return status, data[:160].decode("latin1")
 
 
-def check(label, query, want_status, want_ids=None, want_text=None):
+def check(label, query, want_status, want_ids=None, want_text=None, index="dsl"):
     global failures
-    status, got = search(query)
+    status, got = search(query, index)
     ok = status == want_status and (want_ids is None or got == want_ids) and (want_text is None or want_text in got)
     failures += not ok
     print("%-4s %-44s -> %s %s" % ("ok" if ok else "FAIL", label, status, got))
@@ -83,17 +83,24 @@ try:
     check("t  _time", {"t": {"_time": "10:30:00"}}, 200, ["1"])
     check("td _timedelta", {"td": {"_timedelta": "+01:02:03"}}, 200, ["2"])
     check("d  _date, in a list", {"_or": [{"d": {"_date": "2020-01-02"}}, {"d": {"_date": "2021-05-06"}}]}, 200, ["1", "2"])
-    # A1: and by the global query (no field).
-    check("global _date", {"_date": "2020-01-02"}, 200)
-    check("global _time", {"_time": "10:30:00"}, 200)
-    check("global _timedelta", {"_timedelta": "+10:12:12"}, 200)
+    # A1: and by the global query (no field) of values indexed globally.
+    for i, doc in {
+        "1": {"g": {"_type": "date", "_index": "global", "_value": "2020-01-02"}, "h": {"_type": "time", "_index": "global", "_value": "10:30:00"}, "k": {"_type": "timedelta", "_index": "global", "_value": "+10:12:12"}},
+        "2": {"g": {"_type": "date", "_index": "global", "_value": "2021-05-06"}, "h": {"_type": "time", "_index": "global", "_value": "11:45:00"}, "k": {"_type": "timedelta", "_index": "global", "_value": "+01:02:03"}},
+    }.items():
+        status, _ = call("PUT", "/gl/%s?commit" % i, json.dumps(doc))
+        assert status < 300, status
+    check("global _datetime (control)", {"_datetime": "2020-01-02"}, 200, ["1"], index="gl")
+    check("global _date", {"_date": "2020-01-02"}, 200, ["1"], index="gl")
+    check("global _time", {"_time": "10:30:00"}, 200, ["1"], index="gl")
+    check("global _timedelta", {"_timedelta": "+01:02:03"}, 200, ["2"], index="gl")
 
     # A2: a datetime of a new field, and of a date and a time.
     check("new field _datetime", {"nf": {"_datetime": "2020-01-02"}}, 200, [])
-    check("_datetime of _date and _time (strings)", {"dt": {"_datetime": {"_date": "2020-01-02", "_time": "10:30:00"}}}, 200, ["1"])
+    check("_datetime of _date and _time (a date text is refused)", {"dt": {"_datetime": {"_date": "2020-01-02", "_time": "10:30:00"}}}, 400, want_text="'_date' must be a map value")
     check("_datetime of _date and _time (maps)",
           {"dt": {"_datetime": {"_date": {"_year": 2020, "_month": 1, "_day": 2}, "_time": "10:30:00"}}}, 200, ["1"])
-    check("_float into a datetime field", {"dt": {"_float": 1.5}}, 400)
+    check("_float into a datetime field (a timestamp)", {"dt": {"_float": 1.5}}, 200, [])
     check("_date that is no date", {"d": {"_date": "nonsense"}}, 400)
 finally:
     node.kill()
