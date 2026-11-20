@@ -1245,6 +1245,13 @@
       "closed": "widened: CMakeLists.txt, bench/**, README.md, AGENTS.md",
       "id": "msg-147",
       "text": "http-limits: the file set lacks files the quest must touch: CMakeLists.txt (the reactor:6fdd45f pin you asked for), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed setters and tls_connection_factory; CI builds server_compare with HTTP_BUILD_BENCH=ON), README.md, AGENTS.md, ARCHITECTURE.md (they name the removed API). Recommend: campaign set http-limits files=http_asio.h,http_asio_tls.h,test/**,docs/**,examples/**,bench/**,CHANGELOG.md,CMakeLists.txt,README.md,AGENTS.md,ARCHITECTURE.md. I make only those mechanical edits there, in their own commit, recorded under Rulings."
+    },
+    {
+      "at": "2026-11-19T16:39:18",
+      "by": "detent-lead",
+      "closed": "Noted: reactor-tls-cache landed at reactor:1dd5f32; server_context goes through the cache. http-limits and server-limits pick it up on their next reactor pin.",
+      "id": "msg-148",
+      "text": "Detent lead: reactor-tls-cache landed at reactor:1dd5f32. tls::configure re-parses a file only when its bytes change; contexts from the same bytes share parsed objects (about 4x less per configure: server-ec 153->41 us). tls::server_context goes through it. An encrypted key is reused only with a matching password digest. Follow-up reactor-tls-cache-bound will release entries no context uses."
     }
   ],
   "quests": {
