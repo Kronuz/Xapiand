@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-112928-913880 (build-test) 261120-112930-ced038 (mutants) at prospect:facbd3e
+State: ready for review (prospect:facbd3e)
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
@@ -28,8 +28,7 @@ total refuses). Mutant build: expansion_bounds_test 1 failure (that check); unmu
 
 ## Next
 
-1. When 261120-112930-ced038 and 261120-112928-913880 pass, replace the Evidence job ids with both at prospect:1f7ddaf and: paste the Evidence table, State "ready for review". If a mutant survives,
-   add the test that kills it.
+None: ready for review. The lead reviews and lands.
 
 ## Where the code is
 
@@ -69,11 +68,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261120-085333-ef26eb (build-test: phrase_expansion, expansion_bounds, fuzz_phrase_replay and the suite) and 261120-085334-deefb6 (19 mutants each fail a test), at prospect:a69a08d. Locally: phrase_expansion_test 2,080 phrases, 0 failures |
+| A1 | 261120-112928-913880 (build-test: phrase_expansion, expansion_bounds, fuzz_phrase_replay and the suite) and 261120-112930-ced038 (all 19 mutants killed, 0 survivors), at prospect:facbd3e. Locally: phrase_expansion_test 2,080 phrases, 0 failures |
 | A2 | the same two jobs. Locally: expansion_bounds_test 7,046 answered, 1,027 refused past a bound, 0 failures |
 | A3 | `docs/mechanisms/phrase-expansion.md` |
 
-Superseded by the new head: 261120-083059-d7f012 and 261120-083120-3e94b6 (at prospect:8e4df48).
+Superseded: 261120-083059-d7f012, 261120-083120-3e94b6 (8e4df48); 261120-085333-ef26eb, 261120-085334-deefb6 (a69a08d); 261120-095312-0f3c21, 261120-095314-390e6c (1f7ddaf).
 
 ## Result
 
