@@ -98,6 +98,21 @@ Runs once, when the feature is complete and before it lands.
 - The cluster gate (`cluster-gate`) is this feature's measurement and the milestone's review: it runs
   its rows R1 to R10 over `group-heal`, `placement`, `journal-replaces-wal` and this feature, once all
   have landed; its rows are not gates of this landing.
+- A7 Zero key configuration, membership by command (D150, D152): `xapiand init NAME` creates the cluster
+  CA and prints its token; `xapiand join TOKEN` (multicast finds the cluster; `--seed HOST:PORT`
+  otherwise) saves the node's identity; plain `xapiand` runs from the data directory and refuses an
+  empty one with a hint; every link is TLS; no flag disables authentication.
+- A8 Each `init` creates a new cluster (D150, D152): two nodes initialized separately form two
+  clusters with different ids, CAs and tokens, on the same multicast group; neither seeds from the
+  other; a token for one is refused by the other; a joiner refuses a server whose CA fingerprint
+  differs from its token's.
+- A9 `xapiand join TOKEN` whose cluster is not reachable never creates one (D150, D152): it retries with
+  backoff, logs the cluster id it waits for, and completes once a member appears; a malformed token
+  exits nonzero with a named error; repeating a completed join is a no-op.
+- A10 The founder is not special (D151): a 5-node cluster restarts with its founder's data directory
+  deleted and the other four started as plain `xapiand`; they rejoin from their persisted
+  state, elect, serve, and admit a new node with the original token through any surviving voter; `join`
+  with another cluster's token on an existing data directory is refused.
 
 ## May land early
 

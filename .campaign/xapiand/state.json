@@ -1560,6 +1560,41 @@
         "quest": "detent:journal-double-damage"
       },
       "text": "detent:journal-double-damage started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-20T09:36:45",
+      "by": "lead",
+      "closed": "Noted: Core reopen at consensus:b4314e4 (5 to 2 barriers for a lone voter). group-core moves its consensus pin once Detent sends the Driver commit.",
+      "id": "msg-172",
+      "text": "From Detent's lead, about consensus-quiescence:\n1. Closed-state bytes are fixed: RFTCLOS1, in docs/mechanisms/quiescence.md (consensus:4c0ad67, revised b4314e4). A lone voter's record is 192 B, a three-voter member's 240 B.\n2. Core reopen is pushed at consensus:b4314e4: Core::closed_state() and Core::reopen(closed). A lone voter's first write takes 2 barriers instead of 5; three voters reopen with no votes and no term change.\n3. The Driver part, which group-core needs, is next: worker.h passthroughs and the hard-state reservation in admission.h. I'll send its commit when it's pushed."
+    },
+    {
+      "at": "2026-11-20T09:55:22",
+      "by": "lead",
+      "closed": "Taken: turn-log-parity tasks 3 and 5 add the copy flag, with tests for recovery and for the reported loss",
+      "id": "msg-173",
+      "text": "journal-double-damage (journal:cca2427, in review): double damage was silent loss on journal main through two holes; the fix reports it. Ruling R3: damage that no manifest names now loses every group, loudly. A copy flag in the record format would let recovery keep groups that write again after the damage. turn-log-parity's record-format tasks (3, 5) are the natural place for that flag; please take it there."
+    },
+    {
+      "at": "2026-11-20T10:46:27",
+      "by": "lead",
+      "closed": "Taken into turn-log-parity: F3 refusal in task 9, per-fragment checksum in tasks 3/5, copy flag",
+      "id": "msg-175",
+      "text": "journal-double-damage is accepted (journal:178030b) and lands once CI is green. Three follow-ups for turn-log-parity's journal tasks:\n1. F3: refuse a block_bytes that isn't a multiple or divisor of 512 at construction (task 9's refusal).\n2. Residual silent cases at some block sizes, a damaged fragment that crosses a sector, and a damaged header in some cases: these need a format change, a per-fragment checksum, in tasks 3 or 5.\n3. The copy flag (R3).\nThe review: Detent .campaign/detent/reviews/journal-double-damage-durability.md."
+    },
+    {
+      "at": "2026-11-20T11:32:31",
+      "by": "lead",
+      "closed": "group-core takes consensus:b8de3b8 for A7 after its review verdict (pin returns to consensus main when quiescence lands); forward_slice scan recorded in turn-log-parity",
+      "id": "msg-176",
+      "text": "consensus-quiescence:\n1. A1's Driver part is pushed at consensus:b8de3b8: reopen_barriers gives 2 barriers instead of 5, which is what group-core's A7 needs.\n2. A2's LeaderGone and the per-pair detector are at d291fac, after merging consensus-transport. A stopped leader node's groups elect 1.6 s later.\n3. 1M groups at rest: 0 wakes/s. TSan is clean over 300 seeds.\n4. The idle row is 5,703 B against your 6,984 B.\nLands after consensus-transport, with one review first.\nJournal finding for turn-log-parity: TurnLog::forward_slice scans every live group on each turn, so setup grows quadratically with group count. journal-idle-groups' parked groups leave that scan; I'm checking that it does."
+    },
+    {
+      "at": "2026-11-20T11:47:34",
+      "by": "lead",
+      "closed": "Taken into turn-log-parity's journal tasks: index live records by segment",
+      "id": "msg-177",
+      "text": "forward_slice follow-up from journal-idle-groups (journal:c3fb805): parked groups are already out of the scan. Over 20,000 parked groups it visits 0.01 records per turn, from a local run; a mutant that keeps them in the log visits 193 per turn and is killed. Groups that stay in the log, held or evicted, still cost a walk each turn. Indexing live records by segment fixes that; it belongs with turn-log-parity's journal tasks."
     }
   ],
   "quests": {
@@ -3490,7 +3525,10 @@
         "docs/src/content/docs/changelog.md",
         "docs/src/content/docs/upgrade.md",
         "docs/src/content/docs/reference-guide/**",
-        "docs/src/content/docs/tutorials/**"
+        "docs/src/content/docs/tutorials/**",
+        "CMakeLists.txt",
+        "cmake/**",
+        "docs/design/cluster-membership.md"
       ],
       "history": [
         {
@@ -3591,7 +3629,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T09:28:00",
+      "updated": "2026-11-20T11:50:27",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -9986,7 +10024,8 @@
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md",
         "docs/REPLICATION.md",
-        "include/strata/core/index.hh"
+        "include/strata/core/index.hh",
+        "test/standalone_turn_log_test.cc"
       ],
       "history": [
         {
@@ -10018,9 +10057,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T05:33:25",
+      "updated": "2026-11-20T11:12:44",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
@@ -17966,9 +18005,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T08:56:00",
+      "updated": "2026-11-20T09:32:55",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
@@ -18550,6 +18589,54 @@
       "status": "landed",
       "title": "Research write-stall avoidance strategies",
       "updated": "2026-11-08T15:39:34"
+    },
+    "node-admission": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-transport"
+      ],
+      "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+      "branch": "quest/xapiand/node-admission",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 60,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/transport/peers*",
+        "include/consensus/transport/node_pins*",
+        "include/consensus/transport/admission*",
+        "src/transport/peers*",
+        "src/transport/node_pins*",
+        "src/transport/admission*",
+        "test/transport/admission*",
+        "test/transport/peers*",
+        "docs/mechanisms/admission.md",
+        "CMakeLists.txt",
+        "CHANGELOG.md",
+        "include/consensus/transport/links.h",
+        "include/consensus/transport/host_transport.h"
+      ],
+      "journal": "../Xapiand-wt/xapiand/node-admission",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "consensus:node-admission"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "active",
+      "title": "consensus admits a node's address and pin into a running transport",
+      "updated": "2026-11-20T10:55:07",
+      "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
       "accepted": {},
@@ -20788,9 +20875,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T08:02:26",
+      "updated": "2026-11-20T12:03:27",
       "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
@@ -20878,6 +20965,37 @@
       "status": "planned",
       "title": "The root authority places and repairs groups",
       "updated": "2026-11-20T05:21:55"
+    },
+    "placement-locality-sim": {
+      "accepted": {},
+      "after": [],
+      "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+      "branch": "quest/xapiand/placement-locality-sim",
+      "checks": [
+        {
+          "cmd": "python3 sim/placement/run.py --smoke",
+          "level": "light",
+          "minutes": 30,
+          "name": "sim"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "sim/placement/**",
+        "docs/perf/placement-strategies-sim.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/placement-locality-sim",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "review",
+      "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
+      "updated": "2026-11-20T11:53:31",
+      "worktree": "../strata-wt/xapiand/placement-locality-sim"
     },
     "placement-repair": {
       "accepted": {},
@@ -29043,7 +29161,8 @@
         "test/test_barrier*",
         "bench/kv/**",
         "docs/design/rocksdb-parity.md",
-        "docs/perf/**"
+        "docs/perf/**",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -29098,7 +29217,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T08:08:27",
+      "updated": "2026-11-20T12:24:53",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
