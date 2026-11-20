@@ -9453,44 +9453,10 @@
       "worktree": ""
     },
     "group-core": {
-      "accepted": {
-        "design": {
-          "at": "2026-11-17T03:06:14",
-          "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-          "blobs": {},
-          "by": "review",
-          "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-          "criteria": "8382fed6c73acdd9",
-          "diffs": {},
-          "findings": {
-            "B10": {
-              "jobs": [
-                {
-                  "cmd": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-core/docs/design/cluster-release/bundle_model.py",
-                  "commit": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261117-030555-450eb8",
-                  "level": "none",
-                  "seconds": 4.2,
-                  "state": "done",
-                  "what": "python3 /Users/kronuz/code/Kronuz/Xapiand-wt/xapiand/group-c at 491a1bdc2aa1"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            }
-          },
-          "note": "",
-          "review": "7a8ed667b8dc903725be55b09e5fccbaf7f1d2e2",
-          "reviewed": "",
-          "verdict": "CHANGES"
-        }
-      },
+      "accepted": {},
       "after": [
         "detent:journal-driver",
         "detent:consensus-driver",
-        "detent:consensus-quiescence",
         "detent:journal-host-guards",
         "document-gate",
         "detent:driver-witness-removal-sink",
@@ -9548,6 +9514,22 @@
         "docs/REPLICATION.md",
         "include/strata/core/index.hh"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:33:25",
+          "reason": "owner 2026-11-20: whole features, reviewed once when done; pre-release bytes (D30, D87) are reversible until format-freeze, which keeps the consensus-quiescence wait (replan-2026-11-20 sections 5, 7)",
+          "risk": [
+            "critical",
+            "high"
+          ],
+          "voided": [
+            "design"
+          ],
+          "weakened": [
+            "risk critical -> high"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/group-core",
       "landed": [],
       "lenses": [
@@ -9561,10 +9543,10 @@
         "strata:checkpoint-bundle"
       ],
       "repo": "../strata",
-      "risk": "critical",
+      "risk": "high",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T05:31:17",
+      "updated": "2026-11-20T05:33:25",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
