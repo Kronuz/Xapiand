@@ -3502,17 +3502,17 @@
       "milestone": "Phase 7b",
       "needs": [
         "cluster-harness",
-        "group-sim",
-        "distributed-search",
-        "cluster-api",
-        "cluster-migration"
+        "group-heal",
+        "placement",
+        "journal-replaces-wal",
+        "cluster"
       ],
       "provides": [],
       "repo": ".",
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-18T11:17:28"
+      "updated": "2026-11-20T05:30:10"
     },
     "cluster-harness": {
       "accepted": {
