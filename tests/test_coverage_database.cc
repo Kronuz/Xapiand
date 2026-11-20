@@ -92,7 +92,7 @@ public:
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sa.sa_sigaction = traceback::collect_callstack_sig_handler;
 		::sigaction(SIGUSR2, &sa, nullptr);
-		const auto root = std::filesystem::current_path() / "loop_yield_data";
+		const auto root = std::filesystem::current_path() / "coverage_database_data";
 		std::filesystem::remove_all(root);
 		std::filesystem::create_directories(root / ".xapiand");
 		std::filesystem::current_path(root);

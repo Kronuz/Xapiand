@@ -28,6 +28,7 @@
 
 #include "test_coverage_core.h"
 
+#include <cmath>
 #include <cstdint>
 #include <exception>
 #include <initializer_list>
@@ -77,6 +78,16 @@ static void test_numbers_and_strings() {
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(Obj(true)), DatetimeError, "Datetime value must be numeric or string");
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(Obj(nullptr)), DatetimeError, "Datetime value must be numeric or string");
 	CHECK_THROWS_WITH(Datetime::DatetimeParser(Obj::ARRAY()), DatetimeError, "Datetime value must be numeric or string");
+}
+
+// A timestamp names a year from 1 to INT_MAX on every platform: the conversion of an out-of-range double to whole
+// seconds is undefined and x86 and arm64 disagree about it, so the range is checked before it.
+static void test_timestamp_range() {
+	SEE(parsed(Obj(-62135596800LL)), std::string("1-1-1 0:0:0+0.000000"));
+	SEE(parsed(Obj(60000000000000000ULL)).substr(0, 5), std::string("19013"));
+	for (const auto& bad : { Obj(-62135596801LL), Obj(-62135596800.5), Obj(INT64_MIN), Obj(18446744073709551615ULL), Obj(9223372036854775808ULL), Obj(1e30), Obj(-1e30), Obj(1.0 / 0.0), Obj(-1.0 / 0.0), Obj(std::nan("")) }) {
+		CHECK_THROWS_WITH(Datetime::DatetimeParser(bad), DatetimeError, "Year is out of range");
+	}
 }
 
 static void test_object_parts() {
@@ -246,5 +257,5 @@ static void test_timedelta_to_double() {
 	CHECK_THROWS_WITH(Datetime::timedelta_to_double(Obj::MAP()), TimedeltaError, "Timedelta must be numeric or string");
 }
 
-TEST_MAIN(test_numbers_and_strings, test_object_parts, test_object_part_errors, test_object_time_is_range_checked,
+TEST_MAIN(test_numbers_and_strings, test_timestamp_range, test_object_parts, test_object_part_errors, test_object_time_is_range_checked,
           test_time_strings, test_zone_is_the_same_instant, test_time_string_errors, test_time_to_double, test_timedelta_to_double)
