@@ -27436,6 +27436,8 @@
     "v2-replay": {
       "accepted": {},
       "after": [],
+      "base": "63cc071130b5a4acf44647945f3d4fdaefd67abc",
+      "branch": "quest/xapiand/v2-replay",
       "checks": [
         {
           "cmd": "python3 -m py_compile tools/replay/*.py",
@@ -27449,6 +27451,7 @@
         "docs/v3/**",
         "tools/replay/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/v2-replay",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -27456,9 +27459,10 @@
       "provides": [],
       "repo": "../agent-campaign",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Replay v2's records: where every hour went, and what policies would have done",
-      "updated": "2026-11-19T18:39:01"
+      "updated": "2026-11-19T18:39:05",
+      "worktree": "../agent-campaign-wt/xapiand/v2-replay"
     },
     "wbuf-inline": {
       "accepted": {
