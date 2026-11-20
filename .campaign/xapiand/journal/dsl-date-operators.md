@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: waiting on jobs 261119-231648-0e48bf (probe), superseded 261119-230250-39622d: running at 4ec7371e5d69, stopped for 261119-231656-ccf359 (mutant), suite: 261119-231654-7a5c99 at e0a24ce2f890; review C1 folded: comment, docs and a pinned time/timedelta pair (C2 cases not added)
+State: ready to land (lead filled Evidence from the finished jobs at e0a24ce2f890, 2026-11-19 23h).
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,9 +27,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | HTTP probe 14/14 ok (earlier head 261119-225927-d1b679; rerun 261119-230242-705e99); mutant fails without the fix: 261119-230250-39622d (earlier 261119-225934-6b9166) |
-| A2 | the same probe: new field _datetime 200, _datetime of _date and _time maps 200 [1], text _date 400 with its message, _float into datetime 200 [] (a timestamp) |
-| A3 | suite 261119-230243-24022b; CI after the lead pushes |
+| A1 | 261119-231648-0e48bf; fails without: 261119-222852-48ecc0, 261119-225934-6b9166, 261119-231656-ccf359 |
+| A2 | 261119-231648-0e48bf |
+| A3 | 261119-231654-7a5c99 |
 
 ## Result
 
