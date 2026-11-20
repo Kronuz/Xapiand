@@ -9341,6 +9341,60 @@
       "updated": "2026-11-19T23:28:04",
       "worktree": "../strata-wt/xapiand/group-core"
     },
+    "group-heal": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "consensus:snapshot-channel"
+      ],
+      "files": [
+        "include/strata/group/**",
+        "src/group/**",
+        "test/group/**",
+        "sim/**",
+        "docs/mechanisms/replication-group.md",
+        "docs/mechanisms/group-install.md",
+        "docs/mechanisms/simulator.md",
+        "docs/gates/phase-3r.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "Phase 3R",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:group-install"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "Replication groups grow, heal and run in the simulator",
+      "updated": "2026-11-20T05:21:51"
+    },
     "group-install": {
       "accepted": {},
       "after": [
