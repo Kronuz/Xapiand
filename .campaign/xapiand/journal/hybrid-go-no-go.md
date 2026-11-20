@@ -32,8 +32,9 @@ Timeout 261118-002908-5c7ce8 (Qdrant 100 load, 12 min, no log): rerun 9eed59 loa
 1. When the A2 chain ends: read strata-i8 against strata at 100 and 1,000 (same commit, same VM),
    write them into `docs/design/hybrid-search/c1-rerun.md` and the verdict, fill A2's Evidence row.
 2. If build-test fails on manifest_log again: show it with a job at main's commit (below).
-3. Lead: rerun 19572d, c7b37f, 2593f7, 13047d (`campaign job rerun --commit 3e8dcb934251 ...`);
-   my rerun was refused by the permission classifier. Then fold their rows into c1-rerun.md.
+3. Qdrant and ES at 1,000 tenants: not measured (denied). The rerun of 19572d, c7b37f, 2593f7,
+   13047d was refused by the permission classifier; the lead will not run it either (msg, 2026-11-19):
+   it stays undone until the owner authorizes it. Reported as not measured in c1-rerun.md.
 4. Push the branch for CI (contributors do not push).
 
 ## Resumed 2026-11-19
@@ -70,13 +71,14 @@ builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 1. A4: the owner's go or no-go and Q1 to Q6 (recommendation: go on steps 1 to 4, cold p99 the
    condition; Q2 to Q6 stand as ruled 2026-10-27, Q1 is this decision).
 2. A2: running, option (a) (an `i8` code-column prototype in bench/hybrid); see Resumed.
-3. Qdrant and ES at 1,000 tenants: rerun needs the lead (Next 1).
+3. Qdrant and ES at 1,000 tenants: not measured (denied): jobs 19572d (load, failed), c7b37f, 2593f7,
+   13047d (skipped); awaits the owner's authorization.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-002831-fab1cd, 261118-002847-822bcf, 261118-002859-39b455, 261118-044446-7f14e4, 261118-044448-81dd25, 261118-044452-9ca15f, 261118-044455-07f613, 261118-044458-428db2 (Qdrant and ES at 1,000 missing) |
+| A1 | 261118-002831-fab1cd, 261118-002847-822bcf, 261118-002859-39b455, 261118-044446-7f14e4, 261118-044448-81dd25, 261118-044452-9ca15f, 261118-044455-07f613, 261118-044458-428db2 (Qdrant and ES at 1,000: not measured (denied), jobs 19572d, c7b37f, 2593f7, 13047d) |
 | A2 | <no evidence yet> |
 | A3 | strata:ff10ac80 `docs/design/hybrid-search.md` (C1 rerun) and `docs/design/hybrid-search/c1-rerun.md` |
 | A4 | <no evidence yet> |
