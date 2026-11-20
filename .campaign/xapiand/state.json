@@ -1334,6 +1334,21 @@
         "quest": "detent:consensus-peers-attempts-bound"
       },
       "text": "detent:consensus-peers-attempts-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-peers-attempts-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T21:23:30",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-156",
+      "items": {
+        "dsl-date-operators": "frees src/query_dsl.cc, src/query_dsl.h for dsl-date-operators"
+      },
+      "settles": {
+        "start": [
+          "dsl-date-operators"
+        ]
+      },
+      "text": "dsl-not-wrap landed: unlocks frees src/query_dsl.cc, src/query_dsl.h for dsl-date-operators"
     }
   ],
   "quests": {
@@ -6462,6 +6477,8 @@
         "dsl-not-wrap",
         "serialize-validation"
       ],
+      "base": "af774aae9526b4ec0038905592e08b8fc14fe9b3",
+      "branch": "quest/xapiand/dsl-date-operators",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6483,9 +6500,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-19T15:21:47"
+      "updated": "2026-11-19T22:19:27",
+      "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
     },
     "dsl-not-wrap": {
       "accepted": {
