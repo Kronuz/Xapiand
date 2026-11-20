@@ -24101,8 +24101,8 @@
     "stopword-lists": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-19T12:54:55",
-          "base": "f1cc6dcfdf7f0930bee2e92251fd6a596927deb3",
+          "at": "2026-11-19T20:25:53",
+          "base": "261cf0b888390718d7753ae9ebf3e9bab1192eea",
           "blobs": {
             "CMakeLists.txt": "100644:a21ef66ee7805f1d65935fb787f1f46dee6803eb",
             "docs/mechanisms/stopword-lists.md": "100644:b4cb9e3cb866a2243261540e8f02b2b5df9aba75",
@@ -24110,7 +24110,8 @@
             "docs/src/content/docs/changelog.md": "100644:fab2d4883d67bb7ad0b38864374a389daea78de7",
             "docs/src/content/docs/options.md": "100644:58a4379cd4f1a99851bad2563da6a80be349789d",
             "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "100644:208a079180491beee0d3db639bdda5dff5c74bf7",
-            "src/database/handler.cc": "100644:701c0e6af252999ee8f3df73d16e4e55a70f68a0",
+            "harness/async_allowlist.tsv": "100644:c180adbea985a4b6b8c36c3c8c25e8ef5fb26358",
+            "src/database/handler.cc": "100644:2d98dd200c14d22042bbd72003ae1ee9ed76cede",
             "src/database/handler.h": "100644:796e350384c4b5108a8390780d4ea8f3639bc52b",
             "src/database/schema.cc": "100644:0117a99960c7dc831a8771313ffb4468ec45b4ed",
             "src/database/schema.h": "100644:4a58904feb3ed6410d41b77d9b55060974277465",
@@ -24128,7 +24129,7 @@
             "tests/test_stopword_search.cc": "100644:726580235bbd8a8cb9522983949d9dc399f8e2a8"
           },
           "by": "review",
-          "commit": "769913970fb2b665bdf20e2e26360fa7e2439aec",
+          "commit": "a64477e436468ad80ba814925f01399a42f1ebf2",
           "criteria": "9ee611bda5f41e2a",
           "diffs": {
             "CMakeLists.txt": "93bc9f5eea31e8de",
@@ -24137,6 +24138,7 @@
             "docs/src/content/docs/changelog.md": "5da9ea7765619589",
             "docs/src/content/docs/options.md": "b8ded43867689b76",
             "docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md": "7cf1bc17f5694c60",
+            "harness/async_allowlist.tsv": "2e0879947785d0cc",
             "src/database/handler.cc": "ccbe6b1e6ec4f8aa",
             "src/database/handler.h": "39aa325c2355df69",
             "src/database/schema.cc": "6c55e4ecab8e89ef",
@@ -24156,8 +24158,8 @@
           },
           "findings": {},
           "note": "",
-          "review": "10128f4623563ee4c0200ac9c581ba6584e49dd1",
-          "reviewed": "b34001019735a91cce2eb826b57f4f3ed17cf2a2",
+          "review": "70f94558d6b88b5070a7fd0803c218b67ea4862c",
+          "reviewed": "a64477e436468ad80ba814925f01399a42f1ebf2",
           "verdict": "APPROVE"
         }
       },
@@ -24220,7 +24222,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Stopword lists built in, overridable, fingerprinted per index",
-      "updated": "2026-11-19T14:05:39",
+      "updated": "2026-11-19T20:25:53",
       "worktree": "../Xapiand-wt/xapiand/stopword-lists"
     },
     "storage-phase7c-l6": {
