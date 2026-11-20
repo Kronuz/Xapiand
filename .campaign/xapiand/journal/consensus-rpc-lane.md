@@ -1,6 +1,6 @@
 # consensus-rpc-lane: journal
 
-State: building (re-plan 2026-11-20: whole feature F3)
+State: ready for review; waiting on jobs 261120-063245-5d4c86 (build-test), 261120-063253-b0630d, 261120-063256-4ba928, 261120-063300-e7f9cb (pending after 600 s: host busy)
 Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it)
 
 ## Doing
