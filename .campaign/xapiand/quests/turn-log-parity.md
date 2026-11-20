@@ -73,7 +73,7 @@ per-fragment checksum so a damaged fragment crossing a sector, and the damaged h
 at some block sizes, are reported (a format change), beside the copy flag above.
 
 TurnLog::forward_slice scans every live group each turn (Detent, msg-176), so setup grows with the square
-of the group count; parked groups (journal:idle-park) leave that scan, and the D5/D7 tasks measure the
+of the group count; parked groups leave that scan (journal:c3fb805: 0.01 records visited a turn over 20,000 parked, 193 for a mutant that keeps them); groups held or evicted still cost a walk, so a journal task indexes live records by segment, and and the D5/D7 tasks measure the
 turn cost at 1k, 100k and 1M groups with most parked.
 
 Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
