@@ -9,15 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Fix committed (src/endpoint.cc); tests in tests/test_endpoint.cc (unit) and tests/test_endpoint_uuid.cc (node, 4
+`--uuid` modes, each with two restarts; registry test under partition). First build+test job next.
 
 ## Next
 
-1. <step>
+1. Build and run test_endpoint, test_endpoint_uuid as jobs (--for A1,A2,A3); then --fails-without at a mutant
+   commit that reverts src/endpoint.cc.
+2. `campaign verify endpoint-uuid` (A4).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing yet.
 
 ## Evidence
 
@@ -37,4 +40,16 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- A1 finding: the rewrite is the documented v6 decode, not a bug. An index path's UUID is normalized by
+  Serialize::uuid then Unserialize::uuid in the configured repr; a condensable v1 UUID's wire carries no codec
+  tag, so the default v6 codec renders it as a different text (docs upgrade.md "Identifiers move to the v6
+  format"; cuuid docs/CUUID_V6.md). Both texts serialize to the same bytes, so both name the one index; under
+  `--legacy-ids` the v1 text stays.
+- The F2 fix is in Endpoint, not in ShardEndpoint/flush: a normalized path must normalize to itself, because
+  every layer rebuilds endpoints from paths (shard.cc:306/1368/1397/1898, pool.cc:895 flush,
+  index_resolver_lru.cc:789, pool_support, the names a restart lists). `replace_segment` drops a partitioned
+  form's directories when the path already has them just before the UUID. With Endpoint(key).path == key, F1's
+  misrouting (reopen by payload path) is unreachable as well; pool.cc is not touched.
+- Found while testing: a ':' in the first segment of a file path was cut as a port ("a:b" named "a",
+  "urn:uuid:<u>" named "urn", so an HTTP index "a:b" aliased "a"). The port is now sliced only for a node URI,
+  where it is refused (A3).
