@@ -1,10 +1,11 @@
 # multicast-seeds: journal
 
-State: waiting on jobs 261120-091403-d07446 261120-091405-447a5f 261120-091408-7fea6d 261120-091412-a2522f 261120-091415-fd5e8a 261120-091418-b91909 261120-091421-bfbc97 261120-091425-f90854 261120-091428-c734bd
+State: waiting on jobs 261120-092016-dd0882 261120-092018-d9b51c 261120-092022-771814 261120-092026-224cdc 261120-092029-329d7f 261120-092033-db89f5 261120-092039-8aa185 261120-092042-ddf978 261120-092045-08a731
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
 Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
-consensus:32d9c9b (feature), consensus:db6d7f9 (failed() after joined). Not pushed (the lead pushes).
+consensus:32d9c9b (feature), consensus:db6d7f9 (failed() after joined), consensus:8a36958
+(receiver only when seeding; burst 1..16). Not pushed (the lead pushes).
 
 ## Doing
 
@@ -23,11 +24,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261120-091403-d07446; seeds cases (CONSENSUS_SEEDS_REQUIRE=1) 261120-091405-447a5f: `processes`, `unavailable` |
-| A2 | 261120-091405-447a5f (`codec`, `drops`); mutants any-cluster 261120-091412-a2522f, unwanted-seeded 261120-091415-fd5e8a, trailing-accepted 261120-091418-b91909 (--fails-without); libFuzzer 300 s 261120-091428-c734bd; corpus replay `consensus_fuzz_seeds_replay` in ctest |
-| A3 | 261120-091405-447a5f (`forged`); mutant no-backoff 261120-091408-7fea6d (--fails-without) |
-| A4 | 261120-091405-447a5f (`rate`); mutants no-burst 261120-091421-bfbc97, no-interval 261120-091425-f90854 (--fails-without) |
-| A5 | `docs/mechanisms/seeds.md` in consensus, consensus:db6d7f9 |
+| A1 | build-test 261120-092016-dd0882; seeds cases (CONSENSUS_SEEDS_REQUIRE=1) 261120-092018-d9b51c: `processes`, `unavailable` |
+| A2 | 261120-092018-d9b51c (`codec`, `drops`); mutants any-cluster 261120-092026-224cdc, unwanted-seeded 261120-092029-329d7f, trailing-accepted 261120-092033-db89f5 (--fails-without); libFuzzer 300 s 261120-092045-08a731; corpus replay `consensus_fuzz_seeds_replay` in ctest |
+| A3 | 261120-092018-d9b51c (`forged`); mutant no-backoff 261120-092022-771814 (--fails-without) |
+| A4 | 261120-092018-d9b51c (`rate`); mutants no-burst 261120-092039-8aa185, no-interval 261120-092042-ddf978 (--fails-without) |
+| A5 | `docs/mechanisms/seeds.md` in consensus, consensus:8a36958 |
 
 ## Result
 
