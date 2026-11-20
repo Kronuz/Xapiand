@@ -10,18 +10,18 @@ branch quest/xapiand/v2-replay, `tools/replay/` (plain Python 3, ruff-clean). Ou
 
 ## Doing
 
-Per the lead (msg after the first handback): queued jobs cancelled; each pass runs under
-`quiet light v2-replay-NAME 30 ...` in order (toolcost under `quiet strict`). Done: inventory
-(A1 doc agent-campaign:57ad2a0), account (A2 doc agent-campaign:32c56ed). Now: calls, then toolcost,
-leftovers, simulate.
+Per the lead: each pass runs under a host hold, one at a time, in order. Done: inventory, account
+(A1 agent-campaign:57ad2a0, A2 agent-campaign:32c56ed), calls, toolcost under `quiet strict`
+(A5 agent-campaign:0de0bbe). Running: `quiet light v2-replay-leftovers` (three `du` walks of
+~/.scratch, slow under load).
 
 ## Next
 
-1. `quiet light v2-replay-calls 30 ... replay.py --refresh calls`; then
-   `quiet strict v2-replay-toolcost 30 ... replay.py toolcost`; write docs/v3/tool-cost.md (A5).
-2. `quiet light v2-replay-leftovers ...`; write docs/v3/leftovers.md (A6).
-3. `quiet light v2-replay-simulate ...`; calibrate; write docs/v3/policy-simulation.md (A3).
-4. Fill numbers into docs/v3/recording-gaps.md (A4).
+1. docs/v3/leftovers.md (A6) from leftovers.json.
+2. Rerun `quiet light v2-replay-account ...` (quests.json now carries idle intervals, needed by the
+   simulator's driver), then `quiet light v2-replay-simulate 30 ... replay.py simulate`; check the
+   fit (hourly queue and landings within 10%) and write docs/v3/policy-simulation.md (A3).
+3. Fill numbers into docs/v3/recording-gaps.md (A4).
 
 ## Blocked on
 
@@ -35,7 +35,7 @@ Nothing.
 | A2 | `docs/v3/where-time-went.md` (agent-campaign:32c56ed) |
 | A3 | pending |
 | A4 | draft: docs/v3/recording-gaps.md (agent-campaign:cb845fb) |
-| A5 | pending |
+| A5 | `docs/v3/tool-cost.md` (agent-campaign:0de0bbe) |
 | A6 | pending |
 
 ## Result
