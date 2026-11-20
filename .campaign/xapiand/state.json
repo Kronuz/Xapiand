@@ -3215,7 +3215,8 @@
       "after": [
         "journal-replaces-wal",
         "group-heal",
-        "placement"
+        "placement",
+        "multicast-seeds"
       ],
       "checks": [
         {
@@ -3393,7 +3394,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T05:23:35"
+      "updated": "2026-11-20T06:56:55"
     },
     "cluster-api": {
       "accepted": {},
