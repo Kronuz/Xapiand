@@ -3,38 +3,25 @@
 State: working
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
-
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Committed eef8d64b2: strata pin 397c02d5 -> e3edb426, reproducer from Xapiand:7b89dc9f3. No API
+changes affect Xapiand (strata diff touched catalog.hh, index.hh, section_io.hh's unused
+chunked_spill, work_pool_executor.hh; no Xapiand use of section_io). Local ASan build of test_pool
+under quiet light running; job scripts in ~/.scratch/xapiand/strata-pin-catalog/.
 
 ## Next
 
-1. <step>
+1. Local test_pool run, then submit A1 (5 runs), A2 (--fails-without, pin reverted), A3 (verify).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
-
-## Result
-
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
-
-## Rulings I made
-
-<Decisions inside the quest's scope, so the reviewer can check them.>
+| A1 | pending |
+| A2 | pending |
+| A3 | pending |
