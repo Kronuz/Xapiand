@@ -1451,6 +1451,27 @@
         ]
       },
       "text": "track-p landed: unlocks frees  for automata; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
+    },
+    {
+      "at": "2026-11-20T05:04:32",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-164",
+      "items": {
+        "agg-validate-tree": "frees src/aggregations/** for agg-validate-tree",
+        "http-pin-halfclose": "frees CMakeLists.txt for http-pin-halfclose",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "track-p-research": "frees docs/perf/** for track-p-research"
+      },
+      "settles": {
+        "start": [
+          "agg-validate-tree",
+          "http-pin-halfclose",
+          "phase5",
+          "track-p-research"
+        ]
+      },
+      "text": "serialize-validation landed: unlocks frees src/aggregations/** for agg-validate-tree; frees include/**, test/**, bench/**, docs/perf/** for phase5; frees docs/perf/** for track-p-research; frees CMakeLists.txt for http-pin-halfclose"
     }
   ],
   "quests": {
@@ -1746,10 +1767,26 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/automata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T08:01:48",
+          "commit": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "criteria": {
+            "A1": "261120-074420-877551, 261120-074420-14f799, 261120-074420-31f674",
+            "A2": "261120-065925-7b6ca5",
+            "A3": "`docs/mechanisms/automata.md`"
+          },
+          "evidence": [],
+          "final": true,
+          "from": "0a2af7dfe874e576fe679ac7d5b3c5a1b493f071",
+          "reason": "",
+          "tested": "5d746f878d4d91184153f3f80158debca1b2ba42"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "automata-evaluation"
@@ -1759,9 +1796,9 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-20T07:44:17",
+      "updated": "2026-11-20T08:01:52",
       "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
