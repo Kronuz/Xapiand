@@ -1,6 +1,6 @@
 # consensus-sim-loops: journal
 
-State: waiting on jobs 261119-171401-ade910 261119-171404-5defa7 261119-171407-41deb0 261119-171410-efdd96 261119-171422-30e20c 261119-171425-e6bd03 261119-171427-772c66
+State: waiting on jobs 261119-171401-ade910 261119-171404-5defa7 261119-171407-41deb0 261119-171410-efdd96 261119-171427-772c66 (A2, A3 mutant jobs done: both killed at seed 1)
 Quest: .campaign/xapiand/quests/consensus-sim-loops.md (the lead's; never edit it)
 
 ## Doing
