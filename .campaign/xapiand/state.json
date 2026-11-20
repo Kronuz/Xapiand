@@ -3413,6 +3413,8 @@
         "placement",
         "multicast-seeds"
       ],
+      "base": "b9de2ed4233a6be0a121a05c915a0a57e6d973b7",
+      "branch": "quest/xapiand/cluster",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -3587,9 +3589,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T06:56:55"
+      "updated": "2026-11-20T09:28:00",
+      "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
       "accepted": {},
