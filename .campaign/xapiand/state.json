@@ -20951,6 +20951,33 @@
       "title": "The root authority places and repairs groups",
       "updated": "2026-11-20T05:21:55"
     },
+    "placement-locality-sim": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 sim/placement/run.py --smoke",
+          "level": "light",
+          "minutes": 30,
+          "name": "sim"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "sim/placement/**",
+        "docs/perf/placement-strategies-sim.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "Placement strategies compared in simulation: locality (SPAR-style) against hash, count, affinity and offline partitioning",
+      "updated": "2026-11-20T11:05:04"
+    },
     "placement-repair": {
       "accepted": {},
       "after": [],
