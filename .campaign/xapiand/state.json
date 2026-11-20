@@ -17882,6 +17882,8 @@
     "multicast-seeds": {
       "accepted": {},
       "after": [],
+      "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+      "branch": "quest/xapiand/multicast-seeds",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -17906,6 +17908,7 @@
         "CMakeLists.txt",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/multicast-seeds",
       "landed": [],
       "lenses": [
         "correctness"
@@ -17919,9 +17922,10 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T06:56:41"
+      "updated": "2026-11-20T08:56:00",
+      "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
       "accepted": {
