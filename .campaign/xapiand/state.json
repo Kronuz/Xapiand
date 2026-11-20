@@ -6576,9 +6576,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Query DSL serves _date, _time and _timedelta operators",
-      "updated": "2026-11-19T22:28:40",
+      "updated": "2026-11-19T23:03:07",
       "worktree": "../Xapiand-wt/xapiand/dsl-date-operators"
     },
     "dsl-not-wrap": {
