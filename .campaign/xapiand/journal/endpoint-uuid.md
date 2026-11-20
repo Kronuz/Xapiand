@@ -1,6 +1,6 @@
 # endpoint-uuid: journal
 
-State: waiting on jobs 261119-180245-ed73df 261119-180250-f48c78 261119-180304-eeab13 261119-180306-f79912
+State: ready for review (lead filled Evidence from the finished jobs, 2026-11-19).
 Quest: .campaign/xapiand/quests/endpoint-uuid.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,10 +29,10 @@ coverage pin now expects the refusal (CHECK_THROW ClientError).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
-| A4 | pending; CI needs a push, which the lead holds |
+| A1 | 261119-180245-ed73df |
+| A2 | 261119-180245-ed73df; fails without: 261119-164341-1d09a8, 261119-180304-eeab13 |
+| A3 | 261119-180245-ed73df; fails without: 261119-164343-ac082d, 261119-180306-f79912 |
+| A4 | 261119-180250-f48c78 |
 
 Lead's message (file set widened): done in 257a2417a, coverage line flipped, options.md and changelog lines added.
 
