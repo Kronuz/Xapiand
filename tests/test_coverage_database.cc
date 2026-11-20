@@ -422,6 +422,9 @@ int main() {
 	}
 	for (std::size_t i = 0; i < reqs.size(); ++i) {
 		const auto& req = reqs[i];
+		if (std::getenv("COVERAGE_DATABASE_TRACE") != nullptr) {
+			std::fprintf(stderr, "%zu %s %s %s\n", i, req.method.c_str(), req.path.c_str(), req.body.c_str());
+		}
 		const auto r = call(req.method, req.path, req.body);
 		if (capture != nullptr) {
 			out += "\t{" + std::to_string(r.status) + ", " + quoted(r.raw.substr(0, 200)) + "},  // " + req.method + " " + req.path + "\n";
