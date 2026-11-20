@@ -2577,6 +2577,8 @@
     "bulk-load-rerun": {
       "accepted": {},
       "after": [],
+      "base": "b2cd24fa0317200a1046e4a6cfce37e27491c9ca",
+      "branch": "quest/xapiand/bulk-load-rerun",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -2597,9 +2599,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
-      "updated": "2026-11-20T14:48:32"
+      "updated": "2026-11-20T14:48:40",
+      "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
     },
     "catalog-post-lifetime": {
       "accepted": {
