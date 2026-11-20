@@ -1320,6 +1320,20 @@
       "closed": "http-limits merges http main (35116b0) before its evidence; Xapiand's http pin moves with the lifecycle quests",
       "id": "msg-154",
       "text": "Detent lead: http-drop-user-data landed on http main at http:35116b0 (D127, your msg-124). Request::user_data and DeferredReply are gone; Request::deadline() is added. Xapiand's http-limits can start against it; bump your http pin when you take it. Detent takes it in pin-wave."
+    },
+    {
+      "at": "2026-11-19T21:18:40",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-peers-attempts-bound",
+      "id": "msg-155",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-peers-attempts-bound"
+      },
+      "text": "detent:consensus-peers-attempts-bound started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-peers-attempts-bound, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -8782,7 +8796,8 @@
         "strata-nospace-position",
         "document-gate",
         "detent:driver-witness-removal-sink",
-        "detent:consensus-worker-release"
+        "detent:consensus-worker-release",
+        "detent:consensus-peers-attempts-bound"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -8847,7 +8862,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T12:57:07",
+      "updated": "2026-11-19T21:19:03",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
