@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261120-092528-6f13a3 261120-092528-a14183 261120-092530-8e1d75 261120-092537-7db5a0 261120-092539-50196a 261120-092541-cd604b 261120-092544-0e1fd2 261120-092546-475273 261120-092548-bda1ed
+State: ready for review (step 9's jobs at strata:c2b656db queued: Next 00)
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -192,11 +192,14 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Next
 
-00. Read step 9's jobs (State); fold any red in. Step 8's at 33230b18: crash 261120-090009-2638c9
-    green; build-test 261120-090009-f2e837 (expected red: default_limits, fixed at c2b656db),
-    append-on-retry 261120-090021-8a66ab, 261120-090029-d472af, sync-retry 261120-090036-a032b9,
-    read-skips-probe 261120-090043-0b4a03 and the A7 gap 261120-090052-9c8c69 still queued or
-    running at step 9's end. Then the lead's correctness review and CI push.
+00. Read step 9's jobs, all queued at its end: build-test 261120-092528-6f13a3, crash
+    261120-092528-a14183, named cases 261120-092530-8e1d75, failed-open 261120-092537-7db5a0,
+    mutants 261120-092539-50196a 261120-092541-cd604b 261120-092544-0e1fd2 261120-092546-475273
+    261120-092548-bda1ed; fold any red in. Step 8's at 33230b18: crash 261120-090009-2638c9 green;
+    B10 append-on-retry (lone voter) 261120-090021-8a66ab killed (exit 1, green); build-test
+    261120-090009-f2e837 (expected red: default_limits, fixed at c2b656db), append-on-retry
+    (voters) 261120-090029-d472af, sync-retry 261120-090036-a032b9, read-skips-probe
+    261120-090043-0b4a03 and the A7 gap 261120-090052-9c8c69 still queued or running. Then the lead's correctness review and CI push.
 0. Read step 8's jobs (Evidence); then the lead's correctness review and CI push.
 1. (done) Read step 7's jobs: build-test green at 88d72629, cold-schedulers killed, the size
    breakdown's 4096 B row gone; then lead's push for CI. Step 6's reading, for reference: closed (0 descriptors, 0 frames, heap by owner), destroyed split
@@ -301,7 +304,7 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` B10 append-on-retry 261120-090021-8a66ab, B10 sync-retry 261120-090036-a032b9. Before: queued at strata:c99372d4 (one directory per group, deferred create): crash 261117-151220-79527f, TSan 261117-151216-02b5d8, `--fails-without` unlink-at-apply 261117-151147-f41da5, append-on-retry 261117-151150-e05468, sync-retry 261117-151154-9b1fbc, first-commit-unsynced 261117-151125-7ccde6. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
+| A1 | queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183. At strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837 queued, crash 261120-090009-2638c9 green; `--fails-without` B10 append-on-retry 261120-090021-8a66ab killed, B10 sync-retry 261120-090036-a032b9. Before: queued at strata:c99372d4 (one directory per group, deferred create): crash 261117-151220-79527f, TSan 261117-151216-02b5d8, `--fails-without` unlink-at-apply 261117-151147-f41da5, append-on-retry 261117-151150-e05468, sync-retry 261117-151154-9b1fbc, first-commit-unsynced 261117-151125-7ccde6. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
 | A2 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` B10 append-on-retry (voters, file-set ENOSPC once) 261120-090029-d472af. Before: queued at strata:c99372d4: append-on-retry (voters) 261117-151158-264d61, admission-waits 261117-151202-2b5482. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
 | A3 | queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183, named cases (`group_voters_test 0`: superseded_entry, forward_once, stalled_leader) 261120-092530-8e1d75, failed-open 261120-092537-7db5a0; `--fails-without` no-hand-off 261120-092539-50196a, superseded-ignored 261120-092541-cd604b, resubmit-superseded 261120-092544-0e1fd2, forward-twice 261120-092546-475273, failed-open-keeps-row 261120-092548-bda1ed. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. |
 | A4 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` read-skips-probe (anchor repointed) 261120-090043-0b4a03. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
