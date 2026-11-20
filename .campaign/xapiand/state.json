@@ -3445,11 +3445,12 @@
       "provides": [
         "xapiand:cluster-routes"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "dropped",
       "title": "Settings, health, :info, docs, changelog",
-      "updated": "2026-11-15T23:05:44"
+      "updated": "2026-11-20T05:26:55"
     },
     "cluster-gate": {
       "accepted": {},
