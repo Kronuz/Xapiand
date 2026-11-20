@@ -9620,9 +9620,38 @@
         "README.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-limits",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-19T22:07:41",
+          "commit": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+          "criteria": {
+            "A1": "261119-203215-9f9062; fails without: 261119-155941-ca6165, 261119-155943-6f93d3, 261119-155944-5fd2a2, 261119-184746-20a021, 261119-184747-1b9b37, 261119-184748-656546, 261119-203151-17d728, 261119-203153-91d9b9, 261119-203155-b30a44",
+            "A2": "261119-203215-9f9062; fails without: 261119-155946-be3af9, 261119-155948-717b8b, 261119-184750-a8f188, 261119-184751-1fa0db, 261119-203158-bcb5b3, 261119-203200-6ba93b",
+            "A3": "261119-203215-9f9062, 261119-203148-8341d8; fails without: 261119-155949-3bb6e3, 261119-155951-43f37e, 261119-173931-41b5d2, 261119-184752-835caa, 261119-184753-9d9c94, 261119-184756-338b54, 261119-203203-ae3b18, 261119-203206-89095c, 261119-203212-da78c0",
+            "A4": "261119-203215-9f9062; fails without: 261119-155953-7e73c2, 261119-184755-008ad4, 261119-203209-67492c"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-203219-60fed5",
+              "level": "light",
+              "seconds": 29.8,
+              "state": "done",
+              "what": "http-limits check suite at aed0314dbbf0"
+            }
+          ],
+          "final": true,
+          "from": "35116b04deca7c35072e8b87922e496870fc280f",
+          "reason": "",
+          "tested": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "reactor-server-composition"
@@ -9630,10 +9659,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "http: Limits, timeouts and stop_accepting",
-      "updated": "2026-11-19T16:20:02",
-      "worktree": "../http-wt/xapiand/http-limits"
+      "updated": "2026-11-19T22:07:44",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
