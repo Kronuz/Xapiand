@@ -47,6 +47,14 @@ void test_the_root_and_its_commands_and_selectors_are_node_routes() {
 	}
 }
 
+// The root has no index, so a command that reads index metadata is not a node route: it falls to the index
+// path, which refuses it with a 400 like GET does, instead of HEAD answering 200.
+void test_a_metadata_or_unknown_root_command_is_not() {
+	for (const char* path : {"/:stats", "/:schema", "/:bogus", "/:settings"}) {
+		CHECK_FALSE(node_route(path));
+	}
+}
+
 void test_a_path_with_an_index_part_is_not() {
 	for (const char* path : {"/idx", "/idx/", "/idx/1", "/idx/doc", "/idx/.name", "/idx/:info", "/idx/1:info", "/a/b/c",
 	                         "/%2e%2e", "/%2Ftmp%2Fx"}) {
@@ -71,6 +79,7 @@ void test_the_node_answers_with_its_server_versions_and_options() {
 
 TEST_MAIN(
 	test_the_root_and_its_commands_and_selectors_are_node_routes,
+	test_a_metadata_or_unknown_root_command_is_not,
 	test_a_path_with_an_index_part_is_not,
 	test_the_node_answers_with_its_server_versions_and_options
 )
