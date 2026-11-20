@@ -2356,20 +2356,61 @@
         "docs/mechanisms/catalog-delivery.md",
         "docs/mechanisms/catalog.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/catalog-post-lifetime",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T00:09:28",
+          "commit": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
+          "criteria": {
+            "A1": "261119-232452-29e301; fails without: 261119-214124-9cbf69",
+            "A2": "261119-232452-29e301; fails without: 261119-214113-02be57",
+            "A3": "261119-232450-2b6335",
+            "A4": "check build-test 261119-225210-db3d1f (strata:765fbd3e); 261119-214114-d7e56a passed 76/76 at strata:87ac2001; CI after the lead pushes",
+            "A5": "[artifact] `docs/mechanisms/catalog-delivery.md` (strata:87ac2001)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-232453-634c30",
+              "level": "light",
+              "seconds": 221.8,
+              "state": "done",
+              "what": "catalog-post-lifetime check build-test at e3edb4266f6c"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=thread\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread\" && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4 -R catalog",
+              "commit": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-232453-e232e1",
+              "level": "light",
+              "seconds": 87.3,
+              "state": "done",
+              "what": "catalog-post-lifetime check tsan at e3edb4266f6c"
+            }
+          ],
+          "final": true,
+          "from": "1ac6d65c01de8fb90ab70a96557b389a950211af",
+          "reason": "",
+          "tested": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Catalog delivery never posts to a torn-down scheduler",
-      "updated": "2026-11-20T00:09:20",
-      "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
+      "updated": "2026-11-20T00:09:47",
+      "worktree": ""
     },
     "census": {
       "accepted": {},
