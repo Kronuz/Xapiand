@@ -3504,7 +3504,9 @@
         "docs/src/content/docs/changelog.md",
         "docs/src/content/docs/upgrade.md",
         "docs/src/content/docs/reference-guide/**",
-        "docs/src/content/docs/tutorials/**"
+        "docs/src/content/docs/tutorials/**",
+        "CMakeLists.txt",
+        "cmake/**"
       ],
       "history": [
         {
@@ -3605,7 +3607,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T09:28:00",
+      "updated": "2026-11-20T10:11:33",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
