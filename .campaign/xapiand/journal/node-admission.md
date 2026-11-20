@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: working
+State: waiting on jobs 261120-105027-66afcc 261120-105029-49a29d 261120-105031-bebe74 261120-105033-4b9fdb 261120-105035-bb5634 261120-105037-0d1c5a 261120-105039-f1c116 261120-105056-d0fc2d 261120-105058-5f6fec 261120-105100-ee6113
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,23 +9,28 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Implementation committed through consensus:7d767c6 plus an OpenSSL 4 build fix. Probe 1
-(261120-103152-5417e9) and 2 (261120-103946-5f8689) failed to compile (a member `admit` hid the
-per-frame `admit()`; OpenSSL 4 const i2d); fixed, syntax-checked locally. Probe 3
-261120-104351-59318b runs the admission, links, connection, rpc_host, groups and hello tests.
+Evidence jobs at consensus:64dbb06 (probe 4, 261120-104658-5f4562, passed every admission case:
+remove 132,010 calls between nodes 1 and 2 with 0 lost; each removal ended node 3's calls in 5-6 ms).
+- suite (verify, A1,A2,A3,A5): 261120-105027-66afcc
+- mutants (`--fails-without`, commits from `admission_mutants.py 64dbb06 <name>`):
+  no-pin-check consensus:8b21cf6 -> refused_pins 261120-105029-49a29d (A1);
+  no-repin-check consensus:e58d892 -> refused_ca 261120-105031-bebe74 (A1);
+  remove-keeps-links consensus:9f7686f -> remove_ca 261120-105033-4b9fdb (A2);
+  any-token consensus:b8c3bba -> issue 261120-105035-bb5634 (A5)
+- plain at head: refused_pins 261120-105037-0d1c5a, refused_ca 261120-105039-f1c116 (A1),
+  remove_ca 261120-105056-d0fc2d (A2), issue 261120-105058-5f6fec (A5)
+- TSan, every admission case: 261120-105100-ee6113 (A2,A3,A5)
 
 ## Next
 
-1. Read the probe; fix compile or test failures.
-2. Evidence: `campaign verify node-admission --for A1,A2,A3`; mutants via
-   `test/transport/admission_mutants.py <head> no-pin-check|no-repin-check|remove-keeps-links|any-token`
-   as `--fails-without` jobs (A1, A1, A2, A5); TSan job of `remove_ca`/`remove_pins` (A2).
+1. Read the jobs; fold in any red; then State: ready for review.
+2. Branch not pushed (the lead's instruction): CI has not run on it.
 
 ## Blocked on
 
 - File set (lead): the mechanism needs `include/consensus/transport/links.h` (routes, removal,
   the epoch check) and a minimal `host_transport.h` change (`admit`, `remove`, `call`'s route
-  check, `nodes_` gone: +18/-4 lines). Neither is in the quest's files; the lead's brief allowed
+  check, `nodes_` gone: +18/-4 lines; members `admit_node`/`remove_node`). Neither is in the quest's files; the lead's brief allowed
   host_transport.h minimally. Recommendation: add both to the file set. Detent's
   consensus-transport touches host_transport.h in other hunks (constructor checks, `store`); the
   merge is textual only near the constructor.
@@ -77,6 +82,8 @@ Not yet.
   listener, since the transport's handshake requires a client certificate a joiner lacks; serving
   it on the same port would change `connection.h`/`links.h` accept (outside scope). The issuer is a
   node holding the CA key; node ids come from the caller's `assign` hook.
+- R10: the three deadline.h mutants of `mutant_commit.py` (no-extension, uncapped, twice) no
+  longer apply at the quest's base e1f249d: pre-existing, outside this quest, left alone.
 - R9: HostTransport's members are `admit_node`/`remove_node`: a member `admit` hides the
   namespace's per-frame `admit()` inside the class.
 - Open, not in A1-A5: a seed dial by address that returns the authenticated node (`Seeds::on_dial`
