@@ -5,32 +5,44 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+consensus's numbers stop being loopback-only. A benchmark in `bench/netlab/` runs 3 and 5 consensus
+nodes, one per Linux network namespace (faultlab netlab, pinned by commit) or one per guest of
+Xapiand's VM tier (`tools/vm/cluster.sh run`, whose L2 carries netlab's shapes), and measures, at
+each network shape: election time after the leader is killed, commit latency (p50, p99) and
+throughput for small and 64 KiB entries, and RPC-lane call latency. Shapes: loopback (the baseline),
+1 ms, 20 ms and 80 ms one-way delay, 1% loss at 20 ms, reorder 5% at 20 ms, and a partition of the
+leader then heal. `docs/perf/netlab-consensus.md` holds the table against loopback and names what
+degrades past what the delay explains (for example commit p99 above 2x the round trip, or elections
+past 3 election timeouts).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The benchmark runs every shape at 3 and 5 nodes and checks its own sanity: each shape's
+  measured round trip is within 10% of what netlab set, and a commit is acknowledged by a majority
+  only: `bench/netlab/selftest.py` (no root; a fake runner) and one VM job per node count
+- A2 After a partition of the leader and heal, the cluster elects within its election-timeout bound
+  and every acknowledged write is present: the run's event log passes faultlab's history checker
+  (`linearizable`) in the same jobs
+- A3 [artifact] `docs/perf/netlab-consensus.md`: the table per shape and node count with job ids,
+  each row against loopback, and findings with numbers; anything that degrades past the delay is a
+  hunt row for the lead
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes faultlab netlab (`Netlab`, `delay`, `loss`, `reorder`, `partition`, `heal`, the event log)
+and the VM tier's `run` command; changes no consensus API.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-20: measured only on Linux (netlab needs network namespaces); macOS's proxy tier
+  colors timings and is not used for numbers. Timing runs are `strict` or `exclusive` jobs in the VM
+  (QUIET_VM), never on the host loopback.
+- Owner, 2026-11-20: use faultlab and netlab for realistic-network numbers.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+The benchmark and its selftest before the VM numbers.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (performance, strong, high).
