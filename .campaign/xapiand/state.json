@@ -27697,11 +27697,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "moved to campaign-v3 (evidence complete at agent-campaign:e821a15; v3's lead re-creates it on the same branch)",
       "repo": "../agent-campaign",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Replay v2's records: where every hour went, and what policies would have done",
-      "updated": "2026-11-19T18:39:05",
+      "updated": "2026-11-19T22:05:53",
       "worktree": "../agent-campaign-wt/xapiand/v2-replay"
     },
     "wbuf-inline": {
