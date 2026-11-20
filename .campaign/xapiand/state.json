@@ -19344,11 +19344,15 @@
       "milestone": "Phase 5",
       "needs": [],
       "provides": [],
+      "reason": "follows the release (D39); stemmer rows proved by release-rows; A1 ICU plugin superseded by D43, A2 is automata, A4 cites more-like-this; resumes as one feature, queryparser step 3b (Kronuz/queryparser), gate rows after phrase-expansion lands (replan-2026-11-20 section 4)",
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "blocked",
       "title": "Phase 5, analysis and the query language's long tail",
-      "updated": "2026-11-19T06:17:17"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:27:53"
     },
     "phase6": {
       "accepted": {},
