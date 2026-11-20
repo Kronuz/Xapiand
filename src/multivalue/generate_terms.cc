@@ -531,7 +531,11 @@ GenerateTerms::text(engine::Document& doc,
 	analysis::term_generator term_generator;
 	term_generator.cjk_ngram = cjk_ngram;
 	if (!language.empty()) {
-		term_generator.stop_words = getStopWords(language);
+		try {
+			term_generator.stop_words = getStopWords(language);
+		} catch (const UnknownStopWordsError& exc) {
+			throw engine::Error(engine::errc::invalid, exc.what(), std::string("InvalidArgumentError: ") + exc.what());
+		}
 		term_generator.stop = stop_strategy;
 	}
 	if (!stem_language.empty()) {

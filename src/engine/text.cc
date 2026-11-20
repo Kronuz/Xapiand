@@ -292,7 +292,11 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 	cfg.flags = parser_flags(config.flags);
 	cfg.default_op = *op;
 	if (!config.stop_language.empty()) {
-		cfg.stopper = getStopWords(config.stop_language);
+		try {
+			cfg.stopper = getStopWords(config.stop_language);
+		} catch (const UnknownStopWordsError&) {
+			throw InvalidTextConfigError(__func__, __FILE__, __LINE__, "InvalidTextConfigError", "Stop words list {} unknown", config.stop_language);
+		}
 	}
 	if (!config.stem_language.empty()) {
 		cfg.stemmer = stemmer_for(config.stem_language);

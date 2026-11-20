@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **Stop-word lists are compiled in, overridable and checked by every index.** The 18 shipped lists are part of the binary and
+  nothing reads them from the data path; `<data path>/stopwords/<language>.txt` replaces a language's list (an unreadable file or a directory of that name stops the
+  node). A language with no list used to stop nothing without a word; it is now an error (`400` for a query), and an index
+  records the fingerprint of each list it indexed with and is refused (`409`), naming the index, the list and both fingerprints, when
+  that list is missing or has other words. See [Stop Words](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words).
 - **A value must be exactly of its field's type, everywhere.** Field writes, `_id` writes and searches (terms, range bounds
   and `q=`) hold a value to one rule: it must be exactly a value of the field's type, else the request answers `400` with a
   message naming the field, the value and the type. `1.5` or `"abc"` in an integer field or an integer `_id`, `-1` in a
