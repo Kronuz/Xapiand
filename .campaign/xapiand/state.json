@@ -9674,11 +9674,12 @@
       "provides": [
         "strata:group-install"
       ],
+      "reason": "folded into F1 group-heal (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "critical",
-      "status": "planned",
+      "status": "dropped",
       "title": "Learners, install of segments and file sets, catch-up, membership, repair, witness",
-      "updated": "2026-11-18T02:56:00"
+      "updated": "2026-11-20T05:26:11"
     },
     "group-sim": {
       "accepted": {},
