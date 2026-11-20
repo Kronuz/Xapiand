@@ -1,12 +1,13 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-141201-2d02d1 261120-141202-44cee0 261120-141208-19c21e
+State: waiting on jobs 261120-141708-9ccd3e 261120-141710-78f9a8
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
 
-Dry run: selftest (261120-141201-2d02d1), the node build in a VM-tier guest
-(261120-141202-44cee0, light), then 3 nodes at loopback with `--quick` (261120-141208-19c21e).
+Dry runs: selftest green (261120-141201-2d02d1), node built in a guest in 194 s
+(261120-141202-44cee0), 3 nodes at loopback quick passed 6 of 6 checks (261120-141208-19c21e).
+Now every shape, quick, at 3 (261120-141708-9ccd3e) and 5 nodes (261120-141710-78f9a8), consensus:113572a.
 
 ## Next
 
@@ -47,8 +48,9 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
   not flow_bench's in-process Core loop, so a killed leader restarts on its journal and reads are
   Driver::read (read index). Defaults kept: Timing (election 1-2 s, heartbeat 100 ms), Flow
   (pipeline 1), Limits except log_bytes 768 MiB (no checkpoints in a run).
-- Journal on the guest's disk (/var/tmp, overlay with cache=unsafe), so barriers are real fdatasync
-  but cheap; the table measures the network, not a disk.
+- Journals on tmpfs (/dev/shm) in an 8 GiB guest: the first dry run (261120-141208-19c21e) put
+  them on the guest's disk and loopback commit p50 read 3.0 ms of fdatasync; on tmpfs a shape's
+  delta over loopback is the network's. 64 KiB runs stop at 2,048 entries (128 MiB per node).
 - A1 round trip: ping's median from node 1 to each peer within 10% of the set round trip, past the
   unshaped path's own round trip (the floor, measured first), which is also the jitter allowed (at
   least 0.1 ms).
