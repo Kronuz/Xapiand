@@ -6656,6 +6656,37 @@
       "title": "Engine reads, search, and error kinds",
       "updated": "2026-11-08T13:25:14"
     },
+    "evidence-by-inputs": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 tests/run.py -j 4",
+          "level": "light",
+          "minutes": 30,
+          "name": "tests"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "scripts/campaign_tool.py",
+        "tests/**",
+        "references/host.md",
+        "SKILL.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "queue-drain-throughput"
+      ],
+      "provides": [],
+      "repo": "../agent-campaign",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Reuse evidence while a job's declared inputs are unchanged; land merges main itself when disjoint",
+      "updated": "2026-11-19T18:34:56"
+    },
     "exact-id-keys": {
       "accepted": {
         "correctness": {
