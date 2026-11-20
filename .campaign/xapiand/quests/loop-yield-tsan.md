@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+test_loop_yield runs clean under TSan: the data race between `count_delete` (tests/test_loop_yield.cc:78) and the access at :1239, seen in CI run 44056420626 at code-identical 37eda4ed0 (hunt F6), is removed at its cause, so it no longer turns an unrelated landing's CI red.
 
 ## Acceptance criteria
 
@@ -14,18 +14,18 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 The race's cause is named in the journal with file:line, and fixed in the test's synchronization without loosening or removing any assertion: the suite job
+- A2 test_loop_yield under TSan passes 20 repeats in one job (`ctest -R loop_yield --repeat until-fail:20` in a `-fsanitize=thread` build), and a job at the pre-fix test reproduces the report or the journal says why it cannot be made to
+- A3 GitHub CI is green on Linux, FreeBSD and arm64 at the landed commit: the land gate
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: a test-only change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- If the race is in product code (src/), not the test, stop and report: the lead files a quest for it.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None: it lands whole.
