@@ -91,6 +91,7 @@ run_smoke() {
 	stop_node "$pid"
 	if [ "$ok" = 0 ]; then pass "smoke"; else fail "smoke"; dump_node_log "$dir/node.log"; fi
 	rm -rf "$dir"
+	if python3 "$HARNESS_DIR/id_zero_check.py" "$BIN"; then pass "smoke-id0"; else fail "smoke-id0"; fi
 }
 
 run_unit() {

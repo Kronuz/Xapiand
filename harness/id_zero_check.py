@@ -17,7 +17,7 @@ import time
 
 BIN = os.path.abspath(sys.argv[1])
 PORT = int(os.environ.get("PORT", "18974"))
-DATA = tempfile.mkdtemp(prefix="idzero_", dir=os.path.expanduser("~/.scratch"))
+DATA = tempfile.mkdtemp(prefix="idzero_")
 N = 1000
 
 
