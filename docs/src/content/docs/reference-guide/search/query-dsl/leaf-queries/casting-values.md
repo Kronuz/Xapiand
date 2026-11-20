@@ -103,19 +103,27 @@ e2e:end -->
 ## Cast words
 
 The query DSL accepts these cast words: `_float`, `_positive`, `_integer`, `_boolean`,
-`_keyword` (and its legacy spellings `_term` and `_string`), `_text`, `_datetime`, `_uuid`, and the
-geospatial ones, `_ewkt`, `_point`, `_circle`, `_polygon`, `_chull`, `_multipoint`,
-`_multicircle`, `_multipolygon`, `_multichull`, `_multiconvex`, `_geometrycollection` and
-`_geometryintersection`. A word that is not in the list, such as `_date`, `_time`,
-`_timedelta` or `_geospatial`, answers `400` ("Invalid operator"): a date is cast with
-`_datetime`.
+`_keyword` (and its legacy spellings `_term` and `_string`), `_text`, `_datetime`, `_date`, `_time`,
+`_timedelta`, `_uuid`, and the geospatial ones, `_ewkt`, `_point`, `_circle`, `_polygon`, `_chull`,
+`_multipoint`, `_multicircle`, `_multipolygon`, `_multichull`, `_multiconvex`,
+`_geometrycollection` and `_geometryintersection`. A word that is not in the list, such as
+`_geospatial`, answers `400` ("Invalid operator").
+
+`_date`, `_time` and `_timedelta` find the documents whose field holds that date, time or time
+delta, on a field of that type or with no field at all (the values indexed globally). Globally a
+time and a time delta share one term space, so `_time` `10:30:00` also finds a `+10:30:00` time
+delta, and the reverse. A `_date`
+is cast as a `_datetime`. A `_datetime` can also be spelled as a map of `_date` and `_time`, where
+the `_date` is a map of `_year`, `_month` and `_day`; a `_date` that is text there answers `400`
+("'_date' must be a map value"), and a value that is not a date answers `400` ("Error format in
+_datetime").
 
 ```rest
 SEARCH /bank/
 
 {
   "_query": {
-    "age": {
+    "joined": {
       "_date": "2020-01-01"
     }
   }
@@ -124,13 +132,13 @@ SEARCH /bank/
 
 <!-- e2e:begin
 ---
-description: Casting: _date is not a cast word
+description: Casting: _date is a cast word
 ---
 
 ```js
-pm.test("_date is not a cast word", function() {
-  pm.response.to.have.status(400);
-  pm.expect(pm.response.json().message).to.include("Invalid operator");
+pm.test("_date is a cast word", function() {
+  pm.response.to.have.status(200);
+  pm.expect(pm.response.json().hits).to.have.lengthOf(0);
 });
 ```
 e2e:end -->
