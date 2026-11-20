@@ -28747,11 +28747,13 @@
       ],
       "consumes": [],
       "files": [
-        "include/strata/core/**",
+        "include/strata/core/turn_seal.hh",
+        "include/strata/core/merge_policy.hh",
         "test/*.cc",
         "test/fixtures/**",
         "bench/kv/**",
         "docs/design/standalone-turn-log.md",
+        "docs/design/rocksdb-parity.md",
         "docs/perf/**",
         "docs/mechanisms/**",
         "fuzz/**"
@@ -28785,7 +28787,7 @@
       "risk": "high",
       "status": "planned",
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T05:25:16"
+      "updated": "2026-11-20T08:07:56"
     },
     "turn-seal": {
       "accepted": {
