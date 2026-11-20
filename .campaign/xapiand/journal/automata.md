@@ -35,6 +35,10 @@ Nothing for the code. For the lead: the two library pushes above; Xapiand's mapp
 `prospect::expand` (evaluation step 4), fst's deletion (step 5) and the branch's archive are other
 repositories, outside this quest.
 
+## Review fixes
+
+- A1 (review automata-correctness): prospect:5d746f8. expand_test's check_budgets: prefix("") and * charge at least their terms' bytes, a budget below refuses; S1 (no per-term charge) is row "charge: ..." of expand_mutants.py, caught at expand_test.cc:348. Restored: expand_test passes (1,188 queries, 0 failures). N6: check_cancel_bound, a cancel at entry 5 stops within check_every 16. Not yet rerun as campaign jobs at the new head.
+
 ## Evidence
 
 | Criterion | Evidence |
