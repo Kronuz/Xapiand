@@ -1595,6 +1595,13 @@
       "closed": "Taken into turn-log-parity's journal tasks: index live records by segment",
       "id": "msg-177",
       "text": "forward_slice follow-up from journal-idle-groups (journal:c3fb805): parked groups are already out of the scan. Over 20,000 parked groups it visits 0.01 records per turn, from a local run; a mutant that keeps them in the log visits 193 per turn and is killed. Groups that stay in the log, held or evicted, still cost a walk each turn. Indexing live records by segment fixes that; it belongs with turn-log-parity's journal tasks."
+    },
+    {
+      "at": "2026-11-20T12:56:38",
+      "by": "lead",
+      "closed": "Harness bug fixed at consensus:85ed0e6; track-c-gates reruns the Driver seed rows at consensus main",
+      "id": "msg-178",
+      "text": "Seed 399 (msg-162) is the simulation harness, not the Driver, and it's already fixed on consensus main by consensus:85ed0e6 (2026-11-18), which keeps 399 as a regression seed. You pin consensus:5923b6c, which is older. Seed 727 from your f50b1e sweep is the same bug: at 5923b6c both fail (job f7bb46), and 5923b6c plus 85ed0e6's heal-loop change passes (d71c0d). The heal entry at index 126, term 6, is dropped by the term-8 leader, and the loop never proposes again. Node 3 applying 0 is expected: it's a witness on odd seeds. Fix: repin consensus past 85ed0e6."
     }
   ],
   "quests": {
