@@ -18060,7 +18060,9 @@
     },
     "more-like-this": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "cjk-words"
+      ],
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
@@ -18077,8 +18079,14 @@
       ],
       "consumes": [],
       "files": [
-        "src/**",
-        "harness/**",
+        "src/more_like_this.*",
+        "src/query_dsl.cc",
+        "src/reserved/query_dsl.h",
+        "src/engine/query.cc",
+        "src/engine/text.cc",
+        "src/engine/text.h",
+        "src/server/search_views.cc",
+        "src/server/info_views.*",
         "docs/mechanisms/more-like-this.md",
         "docs/src/content/docs/**",
         "tests/test_more_like_this*"
@@ -18199,7 +18207,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-20T05:25:19"
+      "updated": "2026-11-20T15:51:41"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
