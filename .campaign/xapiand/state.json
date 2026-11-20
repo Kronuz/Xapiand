@@ -33311,6 +33311,8 @@
     "xapiand-final-release": {
       "accepted": {},
       "after": [],
+      "base": "bedae4b68e0dad03e7f47fe5e7ff27c212cc5864",
+      "branch": "quest/xapiand/xapiand-final-release",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -33385,9 +33387,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T15:51:45"
+      "updated": "2026-11-20T15:52:25",
+      "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
       "accepted": {},
