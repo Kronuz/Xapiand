@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: waiting on jobs 261120-122152-e989f4 (build-test) 261120-122153-0a987b (20 mutants) 261120-122156-ec2e86 (scorer budget probe) at prospect:692e42e
+State: waiting on jobs 261120-130855-0a1e98 (build-test) 261120-130856-f2bab7 (20 mutants) 261120-130859-359099 (scorer budget) at prospect:33dce8a; earlier at 692e42e: build-test e989f4 and probe ec2e86 (charge 0.965-0.968x of the heap) passed, mutant job 0a987b failed only on two stale anchors (re-anchored at 33dce8a)
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
