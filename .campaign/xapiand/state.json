@@ -5490,11 +5490,15 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "journal-replaces-wal deletes wal.cc and rewrites handler.cc, shard.cc and pool.cc, so coverage written now is thrown away; D127 parked the coverage follow-ups; resumes after cluster lands (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "blocked",
       "title": "Database coverage reaches T13's target",
-      "updated": "2026-11-19T23:26:14"
+      "until": [
+        "cluster"
+      ],
+      "updated": "2026-11-20T05:28:07"
     },
     "coverage-multivalue": {
       "accepted": {},
