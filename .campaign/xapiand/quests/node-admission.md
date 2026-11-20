@@ -9,8 +9,7 @@ A running consensus transport admits a new node: its address and TLS pin are add
 after construction, so Xapiand's `--join` and multicast seeds (consensus:seed-discovery) can grow a
 cluster. Today `peers` and `node_pins` are fixed when the transport is built (cluster journal B2).
 Which credential makes a joining pin trusted is a policy the caller passes; the default is the
-owner's decision (cluster B3, recommended: the cluster CA as trust anchor, pin recorded at first
-join). Reviewed by Detent's lead; lands after detent:consensus-transport.
+cluster CA as trust anchor, pin recorded at first join (D149). Reviewed by Detent's lead; lands after detent:consensus-transport.
 
 ## Acceptance criteria
 
