@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-225300-be51b7 (run3: captures the pin table into ~/.scratch/xapiand/coverage-database/pins3.inc; next: review it, commit as tests/test_coverage_database_pins.inc, resubmit A1-A3 and the suite)
+State: waiting on jobs 261119-230342-b6192c (suite-wide harness/coverage.sh at b80490f78443, output .scratch/cov-after in the job slot; then report the gap per file vs T13) and the suite job from campaign verify
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -43,3 +43,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+
+## Rulings I made (run 4)
+
+- Pins in tests/test_coverage_database_pins.inc are captured replies (status + leading body bytes), reviewed; defects pinned with HUNT H1-H5 tags (see the file header). INFO/DUMP keep only stable bytes (uuid varies).
