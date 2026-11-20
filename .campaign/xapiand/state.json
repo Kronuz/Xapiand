@@ -18305,7 +18305,42 @@
         "CHANGELOG.md"
       ],
       "journal": "../Xapiand-wt/xapiand/multicast-seeds",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T14:31:16",
+          "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "criteria": {
+            "A1": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-100345-e85866, 261120-100348-7f49a7, 261120-100354-550a87",
+            "A2": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092026-224cdc, 261120-092029-329d7f, 261120-092033-db89f5, 261120-100326-b38b03, 261120-100328-759c29, 261120-100331-e86063",
+            "A3": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092022-771814, 261120-100323-1a8e61, 261120-100339-a47bd4, 261120-100342-f417d9, 261120-100351-c74582",
+            "A4": "261120-111958-eba46c, 261120-111956-ba7a28; fails without: 261120-092039-8aa185, 261120-092042-ddf978, 261120-100334-2f2af7, 261120-100336-6d4973",
+            "A5": "`docs/mechanisms/seeds.md` in consensus, consensus:8a36958"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-111958-eba46c",
+              "level": "light",
+              "seconds": 144.7,
+              "state": "done",
+              "what": "multicast-seeds check build-test at 8801b99025ba"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "reason": "",
+          "tested": "8801b99025ba4f094e2566e7284d76b5b119a8b0"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -18318,9 +18353,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T14:30:47",
+      "updated": "2026-11-20T14:31:16",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
