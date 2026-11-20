@@ -19463,11 +19463,15 @@
       "milestone": "Phase 6",
       "needs": [],
       "provides": [],
+      "reason": "follows the release (D39); D121 fixed its first build; resumes as one feature, the pool chore backend with strict verified reads, latency rows on the Mac under exclusive, one QEMU probe (replan-2026-11-20 section 4)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "Phase 6, async backends and tuning",
-      "updated": "2026-11-18T05:36:22"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:27:59"
     },
     "phase7b": {
       "accepted": {},
