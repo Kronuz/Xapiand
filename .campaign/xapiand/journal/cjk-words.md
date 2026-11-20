@@ -1,6 +1,6 @@
 # cjk-words: journal
 
-State: blocked on lead: one CMakeLists.txt line outside my pin-only rule; code written, never built
+State: waiting on jobs 261120-155852-224613 (build-test), 261120-155853-9d2286 (e2e), 261120-155914-5a93cf (ICU oracle)
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
@@ -14,13 +14,12 @@ analysis's lib (zh/ja/ko/mixed samples give the expected splits).
 
 ## Next
 
-1. Lead: add `analysis::cjk` to `target_link_libraries(XAPIAND_OBJ PUBLIC ...)` (CMakeLists.txt ~1242,
-   beside `analysis::analysis`). Nothing links without it.
-2. Then: build-test job, e2e docs example, ICU-oracle job (When done), fill the Differences section.
+1. Read the three jobs; fix build or test failures.
+2. Fill the Differences section of docs/mechanisms/cjk-words.md from the oracle job log.
 
 ## Blocked on
 
-The link line above: my rules allow only the analysis pin line in CMakeLists.txt.
+Nothing. The link line was added with the lead's leave.
 
 ## Evidence
 
