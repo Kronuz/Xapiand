@@ -1265,6 +1265,20 @@
         "quest": "detent:journal-blocking-wake"
       },
       "text": "detent:journal-blocking-wake started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T16:51:13",
+      "by": "campaign detent",
+      "closed": "consensus-rpc-lane ordered --after detent:consensus-dns-notes; group-core builds on what lands",
+      "id": "msg-150",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-dns-notes"
+      },
+      "text": "detent:consensus-dns-notes started and may change files your consensus-rpc-lane changes (order them with --after detent:consensus-dns-notes, or narrow the files); changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
