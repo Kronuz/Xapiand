@@ -61,6 +61,7 @@ extern struct opts_t {
 	ssize_t num_async_wal_writers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
+	bool full_flush_ordering = false;          // macOS: order commits with a full flush, not the barrier (D10)
 	ssize_t max_search_indexes = 100000;       // the runaway cap: a search over more answers 400
 	ssize_t concurrent_search_indexes = 0;     // the most indexes one search holds open at once; 0: a reactor's share of the pool
 	ssize_t search_walk_queue = 8;             // the pattern walks that may wait behind the one that runs; a search over that answers 429
@@ -108,3 +109,6 @@ extern struct opts_t {
 } opts;
 
 opts_t parseOptions(int argc, char** argv);
+
+// The open-index pool size: `requested` when set (--database-pool-size), else what 1% of `ram_bytes` holds at ~40 KiB per open index.
+std::size_t database_pool_size_for(std::size_t requested, std::uint64_t ram_bytes);

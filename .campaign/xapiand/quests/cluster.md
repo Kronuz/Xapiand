@@ -38,7 +38,9 @@ Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`), `no-walk` a
   root return what master's walk returns for the glob set, and the walk is gone (the `no-walk` check: `git grep -n "expand(Endpoint::cwd" -- src` is empty)
 - A4 Three nodes form from one seed; a node of another cluster and one whose certificate is not pinned
   are refused with named errors; plaintext peers only behind the flag and only on loopback; a killed
-  node is logged `down` within 2 s: tests and the `cluster` check
+  node is logged `down` within 2 s; with no `--join`, three nodes on one L2 find each other by
+  multicast announcements and join over TLS, and a forged or other-cluster announcement adds no
+  member: tests and the `cluster` check
 - A5 Each shard-RPC method round-trips with values, its error mapping, deadlines and cancellation;
   `get` and `forward_write` stream their bodies; a peer outside the hello's range is refused: tests,
   a suite-sized body
@@ -79,10 +81,10 @@ listener. `format-freeze` reviews these bytes.
 ## Decisions
 
 - `docs/design/cluster-release.md` open questions on which this builds with the lead's defaults:
-  Q6 as written (no node-local accepted level, `?commit` = `ack=quorum&refresh=true`), Q7 (a)
-  multicast discovery removed, Q8 (a) the `:` routes with `COMMIT /idx/` as the checkpoint, Q9 (b)
-  one shard by default, Q-F27 (a) read-your-writes kept on the leader's replica. Each is
-  user-visible; the owner's answer is needed before this lands.
+  Q6 as written (no node-local accepted level, `?commit` = `ack=quorum&refresh=true`), Q7 (b)
+  multicast kept as a seed source only (owner, D141), from consensus's `multicast-seeds`, Q8 (a) the `:` routes with `COMMIT /idx/` as the checkpoint, Q9 (b)
+  one shard by default, Q-F27 (a) read-your-writes kept on the leader's replica. The owner
+  accepted them (D142).
 - `needs consensus-rpc-lane` (F3, with its hello limits and version range); `after
   journal-replaces-wal, group-heal, placement` (the strata pin), so the early tasks can start before
   they land and only the last integration waits.

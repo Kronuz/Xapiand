@@ -3215,7 +3215,8 @@
       "after": [
         "journal-replaces-wal",
         "group-heal",
-        "placement"
+        "placement",
+        "multicast-seeds"
       ],
       "checks": [
         {
@@ -3393,7 +3394,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T05:23:35"
+      "updated": "2026-11-20T06:56:55"
     },
     "cluster-api": {
       "accepted": {},
@@ -4900,7 +4901,10 @@
         "test/host*",
         "test/transport/hello*",
         "docs/mechanisms/hello*",
-        "docs/design/hello*"
+        "docs/design/hello*",
+        "test/transport/node_hello_test.cc",
+        "fuzz/corpus/decoders/**",
+        "fuzz/seed.cc"
       ],
       "history": [
         {
@@ -5063,7 +5067,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T05:24:37",
+      "updated": "2026-11-20T06:46:04",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
@@ -6715,21 +6719,22 @@
     "document-gate": {
       "accepted": {
         "durability": {
-          "at": "2026-11-18T14:43:22",
-          "base": "aca39c6c8fc8b01139cc5dd18b8916ee9c603719",
+          "at": "2026-11-20T07:20:13",
+          "base": "e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f",
           "blobs": {
-            "CMakeLists.txt": "100644:0a57c425e1da0771dd06b513fd583290e3d98b40",
+            "CMakeLists.txt": "100644:054640458755f225fecf90b86ead31dcf27c8b1d",
             "bench/engines/rocksdb-11.11/build.sh": "100755:b13e4b78b65c218c916ede7edc3cfb1fc7f7fa3e",
             "bench/kv/barriers.py": "100755:2fbf2826f676515882529a73af27c79ae8916646",
             "bench/kv/floor.c": "100644:ccff3bada96238eee92ee29b96ddc52deac20352",
             "bench/kv/kv_strata.cc": "100644:7a183f83d37444409451fc95df0b49601945baf5",
             "bench/kv/kv_strata.hh": "100644:9eab57dbea21fba378802b89f7ec0884356ccd67",
             "bench/kv/nlog.py": "100755:9bbbb0a6d162397dd9c35d88f53c221a9d5c9031",
-            "bench/kv/run.py": "100644:518999043b34066b0bbb242dcd4a785143fe74ad",
+            "bench/kv/run.py": "100644:40d0e800a65b2cdb867555f2906eda511471d7bf",
             "cmake/check_core_includes.cmake": "100644:ed4a1afd8ca9fcf55156d313345951920aee01f1",
             "docs/design/standalone-turn-log.md": "100644:71590a4d28334680a68f66ac4ddb96cdea340163",
-            "docs/gates/document-profile.md": "100644:ccbfcd71e447da8c6626363e434fac25f373dce5",
-            "docs/perf/standalone-turn-log.md": "100644:3f685e4925fc60add694d4151a8b66548ce99448",
+            "docs/gates/document-profile.md": "100644:35671d3eabe0d97957486024b1da55ebcb8137bc",
+            "docs/perf/rocksdb-fairness-audit.md": "100644:75c157f35607c2da7ec26ef5332e0862ec6c0081",
+            "docs/perf/standalone-turn-log.md": "100644:a78e60f63bfc29d946b849f55ddb47a86d1f8ef3",
             "fuzz/corpus/command/batch-all.bin": "100644:3988f30aec1d0da3b187e0955a397343044fea63",
             "fuzz/corpus/command/batch-kv.bin": "100644:96e455dee4509c1a43f3a660214b7c92987a8727",
             "fuzz/corpus/command/checkpoint.bin": "100644:4406dca00e4a8bc59f81e512f0fc6ba0510d14be",
@@ -6750,8 +6755,8 @@
             "test/standalone_turn_log_test.cc": "100644:8a22c82c4263d8b09b3c02901d36ab3c49841c20"
           },
           "by": "review",
-          "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
-          "criteria": "964dd2896d778795",
+          "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "criteria": "ed2cee0e50f12cde",
           "diffs": {
             "": "98762c87cd0c34d0",
             "CMakeLists.txt": "e6af7f9e01a18e1f",
@@ -6761,11 +6766,12 @@
             "bench/kv/kv_strata.cc": "7e5dc2588f55be8b",
             "bench/kv/kv_strata.hh": "752d161e3ace71d9",
             "bench/kv/nlog.py": "24cabcbd650f5efc",
-            "bench/kv/run.py": "1a827dcf3e7d98dc",
+            "bench/kv/run.py": "525bed6befdddcf4",
             "cmake/check_core_includes.cmake": "aaa6dfafd8396acb",
             "docs/design/standalone-turn-log.md": "82fef7d547ae20d5",
-            "docs/gates/document-profile.md": "3204eaa4a5415e21",
-            "docs/perf/standalone-turn-log.md": "28f1895335917c41",
+            "docs/gates/document-profile.md": "e271df8a77932432",
+            "docs/perf/rocksdb-fairness-audit.md": "68be29502822cc78",
+            "docs/perf/standalone-turn-log.md": "af957914f1ce33b2",
             "fuzz/fuzz_command.cc": "6a3a19a0046ab392",
             "include/strata/core/command.hh": "abfddc5a4b9c49d2",
             "include/strata/core/faultfs.hh": "424ff2df4840b876",
@@ -6781,14 +6787,14 @@
               "jobs": [
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "cbf08ebf2aa3094b6fbcfedd7929ce12337f39bb",
+                  "commit": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261118-132716-c99eab",
+                  "job": "261120-065738-302256",
                   "level": "light",
-                  "seconds": 286.3,
+                  "seconds": 544.5,
                   "state": "done",
-                  "what": "document-gate check build-test at cbf08ebf2aa3"
+                  "what": "document-gate check build-test at d956c0f413f0"
                 }
               ],
               "kind": "defect",
@@ -6799,7 +6805,7 @@
             "paths": [
               "bench/engines/rocksdb-11.11/build.sh"
             ],
-            "reason": "only bench/engines/rocksdb-11.11/build.sh changed since acceptance: RocksDB baseline built without io_uring; benchmark tooling, no strata mechanism"
+            "reason": "only bench/kv/run.py and the gate report changed since the accepted review; no engine code"
           },
           "note": "",
           "review": "c951d14bdfc6b20bd348296b8e4956bc9db0916a",
@@ -6877,7 +6883,7 @@
       "risk": "high",
       "status": "active",
       "title": "The document profile gate, strata's core against RocksDB",
-      "updated": "2026-11-18T14:43:22",
+      "updated": "2026-11-20T07:20:13",
       "worktree": "../strata-wt/xapiand/document-gate"
     },
     "drop-dir-reader": {
@@ -17476,6 +17482,50 @@
       "status": "landed",
       "title": "Unpacker reserves only what the bytes justify",
       "updated": "2026-11-08T15:40:38"
+    },
+    "multicast-seeds": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/transport/seeds*",
+        "src/transport/seeds*",
+        "test/transport/seeds*",
+        "fuzz/seeds*",
+        "docs/mechanisms/seeds.md",
+        "CMakeLists.txt",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "consensus-rpc-lane"
+      ],
+      "provides": [
+        "consensus:seed-discovery"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
+      "updated": "2026-11-20T06:56:41"
     },
     "name-index": {
       "accepted": {

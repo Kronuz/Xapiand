@@ -86,6 +86,23 @@ void test_unknown_types_are_refused() {
 	refused(R"({"_aggregations":{"x":{"#note":"n","_nope":{"_field":"age"}}}})", "_nope");
 }
 
+// A nested unknown type is refused at construction, before any bucket forms, under every bucket kind and at any depth.
+void test_nested_unknown_types_are_refused_before_any_bucket_forms() {
+	const char* kinds[] = {
+		R"("_terms":{"_field":"age"})",
+		R"("_values":{"_field":"age"})",
+		R"("_histogram":{"_field":"age","_interval":10})",
+		R"("_range":{"_field":"age","_ranges":[{"_to":10}]})",
+	};
+	for (const char* kind : kinds) {
+		const std::string head = std::string(R"({"_aggs":{"x":{)") + kind;
+		refused(head + R"(,"_aggs":{"y":{"_bogus":{"_field":"age"}}}}}})", "_bogus");
+		refused(head + R"(,"_aggs":{"y":{"_terms":{"_field":"age"},"_aggs":{"z":{"_nope":{"_field":"age"}}}}}}}})", "_nope");
+		accepted(head + R"(,"_aggs":{"y":{"_max":{"_field":"age"}}}}}})");
+	}
+}
+
+
 // The type may follow the sub-aggregations or a comment, as before.
 void test_known_types_still_dispatch() {
 	accepted(R"({"_aggs":{"x":{"_count":{"_field":"age"}}}})");
@@ -97,4 +114,4 @@ void test_known_types_still_dispatch() {
 
 }  // namespace
 
-TEST_MAIN(test_unknown_types_are_refused, test_known_types_still_dispatch)
+TEST_MAIN(test_unknown_types_are_refused, test_nested_unknown_types_are_refused_before_any_bucket_forms, test_known_types_still_dispatch)
