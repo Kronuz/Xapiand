@@ -37,7 +37,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -249,19 +251,162 @@ Reply call(const std::string& method, const std::string& path, const std::string
 	return r;
 }
 
-void probe(const std::string& method, const std::string& path, const std::string& body = "") {
-	const auto r = call(method, path, body);
-	std::printf("P %s %s %s -> %d %s\n", method.c_str(), path.c_str(), body.c_str(), r.status, r.raw.substr(0, 700).c_str());
+struct Req {
+	std::string method;
+	std::string path;
+	std::string body;
+};
+
+// The reply a request is pinned to: its status and the leading bytes of its body.
+struct Pin {
+	int status;
+	const char* prefix;
+};
+
+std::string quoted(const std::string& text) {
+	std::string out = "\"";
+	for (const unsigned char c : text) {
+		if (c == '"' || c == '\\') {
+			out += '\\';
+			out += static_cast<char>(c);
+		} else if (c >= 0x20 && c < 0x7f) {
+			out += static_cast<char>(c);
+		} else {
+			char hex[8];
+			std::snprintf(hex, sizeof(hex), "\\x%02x\"\"", c);
+			out += hex;
+		}
+	}
+	return out + "\"";
 }
+
+// Every request of the run in order; the first of a state-dependent sequence comes before the ones that read it.
+std::vector<Req> requests() {
+	std::vector<Req> reqs;
+	const auto add = [&reqs](std::string method, std::string path, std::string body = "") {
+		reqs.push_back({std::move(method), std::move(path), std::move(body)});
+	};
+
+	// Every reserved property against a text field, with every JSON kind of value; each in an index of its own.
+	const std::vector<std::string> props = {"_weight", "_position", "_spelling", "_positions", "_language", "_ngram", "_cjk_ngram", "_accuracy", "_accuracy_prefix", "_store", "_type", "_dynamic", "_strict", "_slot", "_index", "_prefix", "_recurse", "_ignore", "_namespace", "_partial_paths", "_index_uuid_field", "_stop_strategy", "_stem_strategy", "_stem_language", "_foreign", "_date_detection", "_datetime_detection", "_time_detection", "_timedelta_detection", "_numeric_detection", "_geo_detection", "_bool_detection", "_text_detection", "_term_detection", "_uuid_detection", "_bool_term", "_value", "_script", "_meta", "_bogus"};
+	const std::vector<std::string> vals = {"true", "\"s\"", "7", "-1", "1.5", "[]", "[1]", "[\"a\"]", "{}", "null"};
+	int n = 0;
+	for (const auto& prop : props) {
+		for (const auto& val : vals) {
+			add("PUT", "/pr/" + std::to_string(++n), "{\"f\":{\"_type\":\"text\",\"" + prop + "\":" + val + "}}");
+		}
+	}
+
+	// Each type with each kind of value: as the schema's type (`s`), as an explicit `_type` with `_value` (`w`), and
+	// as the type inferred from the value alone.
+	const std::vector<std::string> types = {"integer", "positive", "floating", "boolean", "keyword", "text", "string", "term", "date", "datetime", "time", "timedelta", "uuid", "geo", "object", "array", "foreign/object", "script", "nope"};
+	const std::vector<std::string> values = {"5", "-1", "1.5", "\"7\"", "\"abc\"", "\"2020-01-02\"", "\"10:30:00\"", "\"+01:00:00\"", "\"550e8400-e29b-41d4-a716-446655440000\"", "\"true\"", "true", "null", "[1,2]", "[\"a\",\"b\"]", "{\"_latitude\":1,\"_longitude\":2}", "\"POINT(1 2)\"", "{}", "[]", "18446744073709551615", "\"Abc Def\"", "\"2020-01-01T00:00:00Z\""};
+	int t = 0;
+	for (const auto& type : types) {
+		const auto idx = "/ty" + std::to_string(++t) + "/";
+		add("PUT", idx, R"({"_schema":{"s":{"_type":")" + type + R"("}}})");
+		int k = 0;
+		for (const auto& val : values) {
+			++k;
+			add("PUT", idx + "s" + std::to_string(k), "{\"s\":" + val + "}");
+			add("PUT", idx + "w" + std::to_string(k), "{\"w" + std::to_string(k) + "\":{\"_type\":\"" + type + "\",\"_value\":" + val + "}}");
+		}
+	}
+	int k = 0;
+	for (const auto& val : values) {
+		add("PUT", "/inf/" + std::to_string(++k), "{\"v" + std::to_string(k) + "\":" + val + "}");
+	}
+
+	// Documents: ids, versions, bodies, updates, scripts, deletes.
+	add("PUT", "/t1/1", R"({"s":"hello world","i":5,"f":1.5,"b":true,"d":"2020-01-02","dt":"2020-01-02T03:04:05Z","tm":"10:30:00","td":"+01:30:00","u":"550e8400-e29b-41d4-a716-446655440000","n":null,"o":{"x":1,"y":[1,2,3]},"a":["x","y"]})");
+	add("GET", "/t1/");
+	add("GET", "/t1/1");
+	add("GET", "/t1/1?volatile");
+	add("GET", "/t1/?pretty");
+	add("HEAD", "/t1/1");
+	add("INFO", "/t1/1");
+	add("INFO", "/t1/");
+	add("COMMIT", "/t1/");
+	add("CHECK", "/t1/");
+	add("FLUSH", "/t1/");
+	add("DUMP", "/t1/1");
+	const std::vector<std::pair<std::string, std::string>> docs = {
+		{"/id/1", R"({"_id":"abc","a":1})"}, {"/id/2", R"({"_id":5,"a":1})"}, {"/id/3", R"({"_id":1.5})"}, {"/id/4", R"({"_id":[1]})"},
+		{"/id/5", R"({"_version":5})"}, {"/id/6", R"({"_data":1})"}, {"/id/7", R"({"_meta":{"a":1}})"}, {"/id/8", R"({"_endpoint":"x"})"},
+		{"/id/9", R"({"a":{"_script":"_doc.b = 1"}})"}, {"/id/10", R"({"_script":"_doc.c = 2"})"}, {"/id/11", R"({"_script":"bad("})"},
+		{"/id/12", R"({"_script":{"_name":"s1","_body":"_doc.c = 2"}})"}, {"/id/13", R"({"_script":{"_body":"return 1"}})"},
+		{"/id/14", R"({"x":{"_type":"object","_dynamic":false,"y":1}})"}, {"/id/15", R"({"x":{"y":1}})"}, {"/id/16", R"({"x.y":1})"}, {"/id/17", R"({"x.y.z":{"q":1}})"},
+		{"/id/18", R"({"":1})"}, {"/id/19", R"({"a b":1})"}, {"/id/20", R"({"_a":1})"}, {"/id/21", R"({"a.":1})"}, {"/id/22", R"({"é":1})"},
+		{"/id/23", R"({"_point":{"_latitude":1,"_longitude":2}})"}, {"/id/24", R"({"v":{"_point":{"_latitude":1,"_longitude":2}}})"},
+		{"/id/25", R"({"a":[{"b":1},{"b":2}]})"}, {"/id/26", R"({"a":{"b":{"c":{"d":{"e":1}}}}})"}, {"/id/27", "[1,2]"}, {"/id/28", "5"}, {"/id/29", "null"}, {"/id/30", "{"},
+	};
+	for (const auto& d : docs) {
+		add("PUT", d.first, d.second);
+	}
+	add("PUT", "/id/1?version=1", R"({"a":2})");
+	add("PUT", "/id/1?version=7", R"({"a":2})");
+	add("PUT", "/id/1?version=0", R"({"a":2})");
+	add("POST", "/id/", R"({"p":1})");
+	add("POST", "/id/", R"({"p":2})");
+	add("GET", "/id/1");
+	add("PATCH", "/id/1", R"([{"op":"add","path":"/z","value":1}])");
+	add("PATCH", "/id/1", R"([{"op":"replace","path":"/z","value":3},{"op":"test","path":"/z","value":3}])");
+	add("PATCH", "/id/1", R"([{"op":"remove","path":"/z"}])");
+	add("PATCH", "/id/1", R"([{"op":"replace","path":"/nope","value":1}])");
+	add("PATCH", "/id/1", R"([{"op":"bogus"}])");
+	add("PATCH", "/id/1", R"([{"op":"copy","from":"/a","path":"/c"},{"op":"move","from":"/c","path":"/d"}])");
+	add("PATCH", "/id/1", R"({"a":1})");
+	add("UPDATE", "/id/1", R"({"z":2})");
+	add("UPDATE", "/id/1", R"({"_script":"_doc.z = _doc.z + 1"})");
+	add("UPDATE", "/id/1", R"({"_script":{"_body":"_doc.z = _doc.z + params.n","_params":{"n":5}}})");
+	add("UPDATE", "/id/1", R"({"v":{"_op":"add","_value":1}})");
+	add("UPDATE", "/id/1", R"({"z":{"_op":"incr","_value":1}})");
+	add("UPDATE", "/id/1", R"({"z":{"_op":"decr","_value":1}})");
+	add("UPDATE", "/id/1", R"({"z":null})");
+	add("UPDATE", "/id/99", R"({"z":2})");
+	add("UPSERT", "/id/98", R"({"z":2})");
+	add("UPSERT", "/id/98", R"({"z":3})");
+	add("GET", "/id/98");
+	add("DELETE", "/id/1");
+	add("DELETE", "/id/1");
+	add("GET", "/id/1");
+	add("HEAD", "/id/2");
+	add("DELETE", "/id/2?version=9");
+	add("DELETE", "/id/");
+
+	// Schemas: stored, replaced, strict, dynamic.
+	add("PUT", "/sc/", R"({"_schema":{"a":{"_type":"integer"},"b":{"_type":"text","_language":"en"}}})");
+	add("GET", "/sc/");
+	add("PUT", "/sc/1", R"({"a":"x"})");
+	add("PUT", "/sc/2", R"({"a":1,"b":"The running dogs","c":{"d":[1,2,3]}})");
+	add("GET", "/sc/");
+	add("PUT", "/sc/", R"({"_schema":{"a":{"_type":"text"}}})");
+	add("PUT", "/sc/", R"({"_schema":"x"})");
+	add("PUT", "/sc/", R"({"_schema":{"_type":"foreign/object"}})");
+	add("PUT", "/sc/", R"({"_schema":{"_strict":true,"_dynamic":false}})");
+	add("PUT", "/sc/3", R"({"zz":1})");
+	add("PUT", "/sc2/", R"({"_schema":{"_strict":true,"a":{"_type":"integer"}}})");
+	add("PUT", "/sc2/1", R"({"a":1,"b":2})");
+	add("PUT", "/sc2/2", R"({"a":2})");
+	add("PUT", "/sc3/", R"({"_schema":{"_dynamic":false,"a":{"_type":"integer"}}})");
+	add("PUT", "/sc3/1", R"({"a":1,"b":2})");
+	add("GET", "/sc3/1");
+	add("PUT", "/sc4/", R"({"_schema":{"_namespace":true,"_partial_paths":true}})");
+	add("PUT", "/sc4/1", R"({"a":{"b":{"c":1}}})");
+	add("PUT", "/sc5/", R"({"_schema":{"_ignore":["skip"],"_meta":{"k":"v"}}})");
+	add("PUT", "/sc5/1", R"({"skip":1,"keep":2})");
+	add("GET", "/sc5/1");
+	add("PUT", "/sc6/", R"({"_schema":{"_type":"object","_date_detection":false,"_numeric_detection":false,"_bool_detection":false,"_text_detection":false,"_uuid_detection":false,"_geo_detection":false,"_time_detection":false,"_timedelta_detection":false,"_datetime_detection":false}})");
+	add("PUT", "/sc6/1", R"({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00","f":"+01:00","g":"x"})");
+	add("PUT", "/sc7/1", R"({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00:00","f":"+01:00:00","g":"x y z","h":"POINT(1 2)","i":"2020-01-01T10:00:00"})");
+	add("GET", "/sc7/");
+	add("GET", "/sc7/1");
+	return reqs;
+}
+
+#include "test_coverage_database_pins.inc"
 
 }  // namespace
-
-// The message of a refusal, or the status when the reply is not one.
-std::string message_of(const Reply& r) {
-	const auto body = json_of(r.raw);
-	const auto msg = field_of(body, "message");
-	return msg.is_string() ? std::string(msg.str_view()) : std::to_string(r.status) + " " + r.raw.substr(0, 150);
-}
 
 int main() {
 	RunningNode node;
@@ -269,78 +414,27 @@ int main() {
 		std::fprintf(stderr, "FAIL: the node did not become ready\n");
 		return 1;
 	}
-	probe("PUT", "/t1/1", R"({"s":"hello world","i":5,"f":1.5,"b":true,"d":"2020-01-02","dt":"2020-01-02T03:04:05Z","tm":"10:30:00","td":"+01:30:00","u":"550e8400-e29b-41d4-a716-446655440000","n":null,"o":{"x":1,"y":[1,2,3]},"a":["x","y"]})");
-	probe("GET", "/t1/");
-	probe("GET", "/t1/1");
-	const std::vector<std::string> props = {"_weight", "_position", "_spelling", "_positions", "_language", "_ngram", "_cjk_ngram", "_accuracy", "_accuracy_prefix", "_store", "_type", "_dynamic", "_strict", "_slot", "_index", "_prefix", "_recurse", "_ignore", "_namespace", "_partial_paths", "_index_uuid_field", "_stop_strategy", "_stem_strategy", "_stem_language", "_foreign", "_date_detection", "_datetime_detection", "_time_detection", "_timedelta_detection", "_numeric_detection", "_geo_detection", "_bool_detection", "_text_detection", "_term_detection", "_uuid_detection", "_bool_term", "_value", "_script", "_meta", "_bogus"};
-	const std::vector<std::string> vals = {"true", "\"s\"", "7", "-1", "1.5", "[]", "[1]", "[\"a\"]", "{}", "null"};
-	int n = 0;
-	for (const auto& prop : props) {
-		for (const auto& val : vals) {
-			const auto r = call("PUT", "/pr/" + std::to_string(++n), "{\"f\":{\"_type\":\"text\",\"" + prop + "\":" + val + "}}");
-			std::printf("R %s %s -> %d %s\n", prop.c_str(), val.c_str(), r.status, r.status / 100 == 2 ? "" : message_of(r).c_str());
+	const auto reqs = requests();
+	const char* capture = std::getenv("COVERAGE_DATABASE_CAPTURE");
+	std::string out;
+	if (capture == nullptr) {
+		CHECK_EQ(reqs.size(), pins.size());
+	}
+	for (std::size_t i = 0; i < reqs.size(); ++i) {
+		const auto& req = reqs[i];
+		const auto r = call(req.method, req.path, req.body);
+		if (capture != nullptr) {
+			out += "\t{" + std::to_string(r.status) + ", " + quoted(r.raw.substr(0, 200)) + "},  // " + req.method + " " + req.path + "\n";
+		} else if (i < pins.size()) {
+			CHECK_EQ(r.status, pins[i].status);
+			CHECK_EQ(r.raw.substr(0, std::strlen(pins[i].prefix)), std::string(pins[i].prefix));
 		}
 	}
-	const std::vector<std::pair<std::string, std::string>> docs = {
-		{"PUT /ty/1", R"({"v":"2020-01-02"})"}, {"PUT /ty/2", R"({"v":"10:30"})"}, {"PUT /ty/3", R"({"v":"+01:30"})"}, {"PUT /ty/4", R"({"v":"1.5e3"})"},
-		{"PUT /ty/5", R"({"v":[1,"a"]})"}, {"PUT /ty/6", R"({"v":{"_type":"geo","_point":{"_latitude":1,"_longitude":2}}})"},
-		{"PUT /ty/7", R"({"v":{"_point":{"_latitude":1,"_longitude":2}}})"}, {"PUT /ty/8", R"({"v":{"_value":5,"_type":"positive"}})"},
-		{"PUT /ty/9", R"({"v":{"_value":"abc","_type":"keyword"}})"}, {"PUT /ty/10", R"({"v":{"_value":"abc","_type":"string"}})"},
-		{"PUT /ty/11", R"({"v":{"_value":"2020-01-01","_type":"date"}})"}, {"PUT /ty/12", R"({"v":{"_value":"x","_type":"nope"}})"},
-		{"PUT /ty/13", R"({"v":{"_type":"object","w":{"_type":"integer","_value":3}}})"}, {"PUT /ty/14", R"({"v":{"_type":"array","_value":[1,2]}})"},
-		{"PUT /ty/15", R"({"v":{"_type":"foreign/object","_value":"x"}})"}, {"PUT /ty/16", R"({"v":{"_type":"uuid","_value":"550e8400-e29b-41d4-a716-446655440000"}})"},
-		{"PUT /ty/17", R"({"v":{"_type":"timedelta","_value":"+01:00"}})"}, {"PUT /ty/18", R"({"v":{"_type":"time","_value":"01:00"}})"},
-		{"PUT /ty/19", R"({"v":{"_type":"datetime","_value":"2020-01-01T00:00:00"}})"}, {"PUT /ty/20", R"({"v":{"_type":"boolean","_value":"true"}})"},
-		{"PUT /ty/21", R"({"v":{"_type":"floating","_value":"1.5"}})"}, {"PUT /ty/22", R"({"v":{"_type":"integer","_value":"7"}})"},
-		{"PUT /ty/23", R"({"v":{"_type":"text","_value":5}})"}, {"PUT /ty/24", R"({"v":{"_type":"term","_value":"Abc Def"}})"},
-		{"PUT /ty/25", R"j({"v":{"_type":"geo","_value":"POINT(1 2)"}})j"}, {"PUT /ty/26", R"({"v":{"_type":"geo","_value":{"_type":"circle","_latitude":1,"_longitude":2,"_radius":10}}})"},
-		{"PUT /ty/27", R"({"v":{"_type":"geo","_value":{"_type":"polygon","_points":[[1,1],[1,2],[2,2]]}}})"}, {"PUT /ty/28", R"({"v":{"_type":"geo","_value":"x"}})"},
-		{"PUT /ty/29", R"({"v":{"_type":"geo","_value":{"_type":"nope"}}})"}, {"PUT /ty/30", R"({"v":{"_type":"integer","_value":"x"}})"},
-		{"PUT /ty/31", R"({"v":{"_type":"integer","_value":1.5}})"}, {"PUT /ty/32", R"({"v":{"_type":"integer","_value":18446744073709551615}})"},
-		{"PUT /ty/33", R"({"v":{"_type":"positive","_value":-1}})"}, {"PUT /ty/34", R"({"v":{"_type":"date","_value":"bad"}})"},
-		{"PUT /ty/35", R"({"v":{"_type":"time","_value":"bad"}})"}, {"PUT /ty/36", R"({"v":{"_type":"uuid","_value":"bad"}})"},
-		{"PUT /ty/37", R"({"v":{"_type":"boolean","_value":"maybe"}})"}, {"PUT /ty/38", R"({"v":{"_type":"floating","_value":"x"}})"},
-		{"PUT /ty/39", R"({"_id":"abc","a":1})"}, {"PUT /ty/40", R"({"_id":5,"a":1})"}, {"PUT /ty/41", R"({"_id":1.5})"}, {"PUT /ty/42", R"({"_id":[1]})"},
-		{"PUT /ty/43", R"({"_version":5})"}, {"PUT /ty/44", R"({"_data":1})"}, {"PUT /ty/45", R"({"_meta":{"a":1}})"}, {"PUT /ty/46", R"({"_endpoint":"x"})"},
-		{"PUT /ty/47", R"({"a":{"_script":"_doc.b = 1"}})"}, {"PUT /ty/48", R"({"_script":"_doc.c = 2"})"}, {"PUT /ty/49", R"({"_script":"bad("})"},
-		{"PUT /ty/50", R"({"_script":{"_name":"s1","_body":"_doc.c = 2"}})"}, {"PUT /ty/51", R"({"_script":{"_body":"return 1"}})"},
-		{"PUT /ty/52", R"({"x":{"_type":"object","_dynamic":false,"y":1}})"}, {"PUT /ty/53", R"({"x":{"y":1}})"}, {"PUT /ty/54", R"({"x.y":1})"}, {"PUT /ty/55", R"({"x.y.z":{"q":1}})"},
-		{"PUT /ty/56", R"({"":1})"}, {"PUT /ty/57", R"({"a b":1})"}, {"PUT /ty/58", R"({"_a":1})"}, {"PUT /ty/59", R"({"a.":1})"}, {"PUT /ty/60", R"({"é":1})"},
-	};
-	for (const auto& d : docs) {
-		const auto sp = d.first.find(' ');
-		probe(d.first.substr(0, sp), d.first.substr(sp + 1), d.second);
+	if (capture != nullptr) {
+		std::ofstream(capture) << "// The pinned replies of requests(), in order: status and leading bytes of the body.\nconst std::vector<Pin> pins = {\n" << out << "};\n";
+		std::printf("captured %zu replies\n", reqs.size());
+		return 0;
 	}
-	probe("GET", "/ty/");
-	probe("GET", "/ty/?pretty");
-	probe("GET", "/ty/_search?q=v:abc");
-	probe("GET", "/ty/_search", R"({"_query":{"v":{"_in":[1,2]}}})");
-	probe("GET", "/ty/_count");
-	probe("GET", "/ty/1?volatile");
-	probe("PATCH", "/ty/1", R"([{"op":"add","path":"/z","value":1}])");
-	probe("PATCH", "/ty/1", R"([{"op":"replace","path":"/nope","value":1}])");
-	probe("PATCH", "/ty/1", R"([{"op":"bogus"}])");
-	probe("UPDATE", "/ty/1", R"({"z":2})");
-	probe("UPDATE", "/ty/1", R"({"_script":"_doc.z = _doc.z + 1"})");
-	probe("UPSERT", "/ty/99", R"({"z":2})");
-	probe("UPDATE", "/ty/1", R"({"v":{"_op":"add","_value":1}})");
-	probe("UPDATE", "/ty/4", R"({"v":{"_op":"incr","_value":1}})");
-	probe("DELETE", "/ty/1");
-	probe("DELETE", "/ty/1");
-	probe("GET", "/ty/1");
-	probe("HEAD", "/ty/2");
-	probe("DELETE", "/ty/");
-	probe("GET", "/ty/");
-	probe("PUT", "/sc/", R"({"_schema":{"a":{"_type":"integer"},"b":{"_type":"text","_language":"en"}}})");
-	probe("GET", "/sc/");
-	probe("PUT", "/sc/1", R"({"a":"x"})");
-	probe("PUT", "/sc/2", R"({"a":1,"b":"The running dogs","c":{"d":[1,2,3]}})");
-	probe("GET", "/sc/");
-	probe("PUT", "/sc/", R"({"_schema":{"a":{"_type":"text"}}})");
-	probe("PUT", "/sc/", R"({"_schema":"x"})");
-	probe("PUT", "/sc/", R"({"_schema":{"_type":"foreign/object"}})");
-	probe("PUT", "/sc/", R"({"_schema":{"_strict":true,"_dynamic":false}})");
-	probe("PUT", "/sc/3", R"({"zz":1})");
 	if (testh::failures != 0) {
 		return 1;
 	}
