@@ -2258,7 +2258,52 @@
       "updated": "2026-11-08T15:39:46"
     },
     "catalog-post-lifetime": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T22:59:19",
+          "base": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+          "blobs": {
+            "CMakeLists.txt": "100644:fb8cbe66d0602f7f4dfd8be65d83ccff99e73f8e",
+            "docs/mechanisms/catalog-delivery.md": "100644:f3a573c6aa81bbc78dbe31548904c13c9d5fb2f3",
+            "docs/mechanisms/catalog.md": "100644:931d212a56b3df7c92416b153af60b69f0d95dbd",
+            "include/strata/core/catalog.hh": "100644:21504f6c204bfa24e8704f0e9c5b0a1bc58bb0a9",
+            "test/catalog_post_lifetime_test.cc": "100644:b282049e10eed04efe25a42300afb0795fccfd1a"
+          },
+          "by": "review",
+          "commit": "765fbd3eefff51ec681eae67a7a0fc2b30d840e8",
+          "criteria": "48d9de48d32aa6d0",
+          "diffs": {
+            "CMakeLists.txt": "034db66929e27c79",
+            "docs/mechanisms/catalog-delivery.md": "5c36a27349b7f5ba",
+            "docs/mechanisms/catalog.md": "f0b435d347f19714",
+            "include/strata/core/catalog.hh": "ee74303278a0d3ee",
+            "test/catalog_post_lifetime_test.cc": "42d9f406333d493b"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" > cmake.log 2>&1 && cmake --build build-asan -j4 --target catalog_post_lifetime_test > build.log 2>&1 || { tail -30 cmake.log build.log; exit 126; }; pass=0; uaf=0; for i in 1 2 3 4 5; do ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 timeout 120 build-asan/catalog_post_lifetime_test > run$i.log 2>&1; rc=$?; [ $rc = 0 ] && pass=$((pass+1)); grep -q heap-use-after-free run$i.log && uaf=$((uaf+1)); echo \"run $i rc=$rc\"; tail -2 run$i.log; done; sed -n \"/ERROR: AddressSanitizer/,/SUMMARY/p\" run1.log | cut -c1-200 | head -40; echo \"passed $pass/5, use-after-free $uaf/5\"; [ $pass = 5 ] && exit 0; [ $uaf = 5 ] && exit 1; exit 126'",
+                  "commit": "765fbd3eefff51ec681eae67a7a0fc2b30d840e8",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-225202-ee1e10",
+                  "level": "light",
+                  "seconds": 84.5,
+                  "state": "done",
+                  "what": "A1/A2 + F2: catalog_post_lifetime (pin and failed open) x5 under ASan+UBSan"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "2a79ff60b7a8a8d7e76b616e7445c73faa5752ed",
+          "reviewed": "246bb67dedccf5fd5abb2c47f8b0f0990e4c021d",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
       "branch": "quest/xapiand/catalog-post-lifetime",
@@ -2296,7 +2341,7 @@
       "risk": "high",
       "status": "review",
       "title": "Catalog delivery never posts to a torn-down scheduler",
-      "updated": "2026-11-19T22:16:50",
+      "updated": "2026-11-19T22:59:19",
       "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
     },
     "census": {
