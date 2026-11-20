@@ -21965,7 +21965,56 @@
       "worktree": ""
     },
     "serialize-validation": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T16:02:52",
+          "base": "290336d0406fb12a355977de46e27b431ee5cb4f",
+          "blobs": {
+            "docs/mechanisms/geo-exact-term.md": "100644:0755deb7adde0009d94083745ce1fa711ebe6ce6",
+            "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "100644:437f0b8bfd57c376a060abd10ae4c66813ab88b3",
+            "src/aggregations/aggregations.cc": "100644:a1105fa9e301696a89263cc86ccbfda209127b4b",
+            "src/cast.cc": "100644:16449264c9b2e59903a2e1a67333cb54289b85b1",
+            "src/database/schema.cc": "100644:9d91ff7d0c9877bcc1e59866107a84f0b0d92171",
+            "src/serialize.cc": "100644:290f3faa66579c6aa5b3b623e30bbb31baff28c3",
+            "src/serialize.h": "100644:400dc8fc05a1916a173d55518ac85c51bf72e0c0",
+            "tests/test_coverage_serialize.cc": "100644:a8904fc3f810bc3d679f64d9ff49b46a9976329e",
+            "tests/test_serialize_validation_aggregation_types.cc": "100644:049f7683d31d356652020db3d62c3f086ffeb48c",
+            "tests/test_serialize_validation_cast_negative.cc": "100644:859128bd3a8ed719c827c5aa51a6185f063ed84a",
+            "tests/test_serialize_validation_date_http.py": "100755:ac51d2fe334612831bfc62fde0850f90c87c93f3",
+            "tests/test_serialize_validation_date_lua.cc": "100644:961bd0ecbf94332da9134397f5718d6a3e5927eb",
+            "tests/test_serialize_validation_geo.cc": "100644:4e1a3e6f5705ae18e0914cc983dfa192be701550",
+            "tests/test_serialize_validation_negative.cc": "100644:b0e68fcf86cd4296bf638da90df4adcd1f729686",
+            "tests/test_serialize_validation_time_casts.cc": "100644:4c202ae2440f62f2f99d3f91aa59cd01e2fde5a6",
+            "tests/test_serialize_validation_type_names.cc": "100644:7124b422c7934fbca8ffc14b9278b59c7d852ee2"
+          },
+          "by": "review",
+          "commit": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "criteria": "295da38e81e13d07",
+          "diffs": {
+            "docs/mechanisms/geo-exact-term.md": "58f60c0b455ae514",
+            "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/geospatial-searches.md": "26ad39aea0826da7",
+            "src/aggregations/aggregations.cc": "35d72b0500ba8661",
+            "src/cast.cc": "d43a781025b45ca1",
+            "src/database/schema.cc": "689caca0e115046c",
+            "src/serialize.cc": "87f6cd5fe86c48c4",
+            "src/serialize.h": "4f23f4f6452b9508",
+            "tests/test_coverage_serialize.cc": "409e3fd5fafc2552",
+            "tests/test_serialize_validation_aggregation_types.cc": "fc6ec78681b5ea89",
+            "tests/test_serialize_validation_cast_negative.cc": "3102c31ba5f3f5c8",
+            "tests/test_serialize_validation_date_http.py": "fd783d2879921e63",
+            "tests/test_serialize_validation_date_lua.cc": "56e145179643bad7",
+            "tests/test_serialize_validation_geo.cc": "2e79714cc01ce4f1",
+            "tests/test_serialize_validation_negative.cc": "f0d552fb272823fd",
+            "tests/test_serialize_validation_time_casts.cc": "a202079fa1165597",
+            "tests/test_serialize_validation_type_names.cc": "574dd14fd48828c0"
+          },
+          "findings": {},
+          "note": "",
+          "review": "cb9f79c0f884678cecca27ffb0c8f511c17ef119",
+          "reviewed": "16e833a04743eb4e53ef6db0ca22d042e359dd6f",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "coverage-areas"
       ],
@@ -22022,7 +22071,7 @@
       "risk": "high",
       "status": "review",
       "title": "Negative text never becomes a positive number; unknown type names are refused",
-      "updated": "2026-11-19T00:35:48",
+      "updated": "2026-11-19T16:02:52",
       "worktree": "../Xapiand-wt/xapiand/serialize-validation"
     },
     "server-composition-note": {
