@@ -10010,9 +10010,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "multivalue: sort keys keep their minimum, slot, direction and phonetic encoder (M1, M4, M5)",
-      "updated": "2026-11-19T14:26:30",
+      "updated": "2026-11-19T18:01:02",
       "worktree": "../Xapiand-wt/xapiand/keymaker-keys"
     },
     "kv-scan": {
