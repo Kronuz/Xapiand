@@ -1196,7 +1196,7 @@ const std::vector<Pin> pins = {
 	{204, ""},  // PUT /inf/12
 	{204, ""},  // PUT /inf/13
 	{204, ""},  // PUT /inf/14
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field '_latitude' in 'v15' is not valid\"}"},  // PUT /inf/15
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field '_latitude' in 'v"},  // PUT /inf/15: which invalid field it names follows the document's key order, platform-dependent (hunt.md)
 	{204, ""},  // PUT /inf/16
 	{204, ""},  // PUT /inf/17
 	{204, ""},  // PUT /inf/18
