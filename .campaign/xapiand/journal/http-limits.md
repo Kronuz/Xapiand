@@ -1,13 +1,17 @@
 # http-limits: journal
 
-State: waiting on jobs 261119-173928-7c7cb6 261119-173931-41b5d2 261119-173934-32f89e 261119-173936-a4bb4f 261119-173943-ac3d8a
+State: waiting on jobs 261119-184745-a5a1df 261119-184746-20a021 261119-184747-1b9b37 261119-184748-656546 261119-184750-a8f188 261119-184751-1fa0db 261119-184752-835caa 261119-184753-9d9c94 261119-184755-008ad4 261119-184756-338b54 261119-184758-5044f6 261119-184759-1a783f 261119-184800-0839ad
 Quest: .campaign/xapiand/quests/http-limits.md (the lead's; never edit it)
 
 ## Doing
 
 Review http-limits-correctness (CHANGES, F1 blocking) folded in at http:e62a7e3: merged http
-main (http:52451be), F1 fixed (http:6aff813), its tests (http:e62a7e3), mutant
-`mutant/xapiand/http-limits-f1-recheck` (http:b45fd0b). Waiting on the jobs; then ready for review.
+main (http:52451be), F1 fixed (http:6aff813), its tests (http:e62a7e3). Then msg from the lead:
+merged http main again for detent:http-drop-user-data (http:67ff5fe: timeouts_test's deadline
+section takes `Limits`, deferred_asio_test removed, TRANSPORT.md deferred wording dropped and F2's
+bound stated); full local build clean. All nine mutants regenerated on http:67ff5fe by
+`.scratch/f1-mutant/remut.py` (plumbing, no checkout), F1's as `mutant/xapiand/http-limits-f1-recheck`.
+Every job resubmitted at http:67ff5fe; fill Evidence when they finish, then ready for review.
 
 ## Next
 
@@ -19,12 +23,7 @@ main (http:52451be), F1 fixed (http:6aff813), its tests (http:e62a7e3), mutant
 
 ## Blocked on
 
-Lead, decision (review F2, not changed): the gate holds a `max_in_flight` slot from a request's
-first byte, so a slow-header client occupies one for up to `header_timeout` (30 s). With the
-defaults a loop cannot fill; with `max_clients` 0, or more clients than one loop's cap (Xapiand:
-1024 clients, 1000 per loop), slow-header peers can fill it and the rest get 503. Options: (a)
-keep, bounded by `header_timeout` and `max_clients`; (b) keep and state the bound in
-TRANSPORT.md beside `max_in_flight`. Recommend (b): one sentence, no behavior change.
+Nothing.
 
 Lead (msg-147 to the lead): the file set lacks CMakeLists.txt (the reactor pin, limits_test's
 registration), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed API;
@@ -49,11 +48,14 @@ code, never landed; each must fail `limits_test`:
 | 261119-155949-3bb6e3 | a3-flag (stop_accepting leaves the flag clear): keep-alive request served, replies keep-alive |
 | 261119-155951-43f37e | a3-gate (gate at headers-complete, the old code): wait_requests misses a request mid-headers |
 | 261119-155953-7e73c2 | a4-header (header timeout bounds the handler): the held poll gets no reply |
-| 261119-173928-7c7cb6 | limits_test at http:e62a7e3 (F1's [S] framed case and [R] stop race) |
-| 261119-173931-41b5d2 | f1-recheck (post-write `!stays_open()` restored), fails-without: limits_test must fail |
-| 261119-173934-32f89e | TSan suite at http:e62a7e3 |
-| 261119-173936-a4bb4f | reviewer's stop_race probe (run.sh) at http:e62a7e3: must show 0 drops |
-| 261119-173943-ac3d8a | campaign verify suite at http:e62a7e3 |
+| 261119-173928-7c7cb6 | limits_test at http:e62a7e3: ok; [R] plain 40 rounds, 3806 200s, 99 503s, 0 closed unanswered |
+| 261119-173931-41b5d2 | f1-recheck at http:e62a7e3 (re-check restored): fails; [tls] [S] next request reset, [R] 29 closed unanswered |
+| 261119-184745-a5a1df | limits_test at http:67ff5fe (merged head) |
+| 261119-184746-20a021 .. 261119-184755-008ad4 | the eight A1-A4 mutants regenerated on http:67ff5fe, fails-without |
+| 261119-184756-338b54 | f1-recheck on http:67ff5fe, fails-without |
+| 261119-184758-5044f6 | TSan suite at http:67ff5fe |
+| 261119-184759-1a783f | reviewer's stop_race probe (run.sh) at http:67ff5fe: must show 0 drops |
+| 261119-184800-0839ad | campaign verify suite at http:67ff5fe |
 
 | Criterion | Evidence |
 |---|---|
@@ -92,6 +94,8 @@ now sets them off); Xapiand, Detent and Prism move with server-limits and their 
   close of a served connection and prints the 503 count (checks it is above 0).
 - F3: the comment now says request_timeout runs from the wait for the first byte, idle time
   included (behavior unchanged). F5: one clause in coroutine-handlers.md "Closing idle connections".
+- F2: lead ruled (b): keep the slot from the first byte; TRANSPORT.md states the slow-header
+  bound beside `max_in_flight` (http:67ff5fe).
 - F4: no change (relaxed read is harmless after F1, per the review).
 
 - F1 (reactor review): option (b), the gate at a request's first byte. `first_byte()` enters the
