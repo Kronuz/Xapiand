@@ -6490,19 +6490,47 @@
         "tests/test_query_dsl_not*",
         "tests/test_coverage_core_query_dsl.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T21:23:22",
+          "commit": "45d38fc401fcb67d39c139987442c95bb2556a8d",
+          "criteria": {
+            "A1": "261119-154841-203822 (passed at b3d36bcd5b20; only merges from main since); fails without: 261119-154751-976aa9",
+            "A2": "261119-154841-203822 (passed at b3d36bcd5b20; only merges from main since)",
+            "A3": "suite 261119-155154-32bbee passed; CI on the pushed branch is the lead's"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "3959a8c85c781075db276b6b4748289a1894a574",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-155154-32bbee",
+              "level": "light",
+              "seconds": 345.5,
+              "state": "done",
+              "what": "dsl-not-wrap check suite at 3959a8c85c78"
+            }
+          ],
+          "final": true,
+          "from": "66c2c0824703fdde7b7e242d7a7a15079de95430",
+          "reason": "",
+          "tested": "7fe9aee0b2b70c2925129085b4588c614e2a561a"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "QueryDSL: _not builds the same tree on every toolchain",
-      "updated": "2026-11-19T19:37:52",
-      "worktree": "../Xapiand-wt/xapiand/dsl-not-wrap"
+      "updated": "2026-11-19T21:23:30",
+      "worktree": ""
     },
     "e2e-harness": {
       "accepted": {},
