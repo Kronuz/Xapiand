@@ -18635,6 +18635,8 @@
     "netlab-consensus": {
       "accepted": {},
       "after": [],
+      "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+      "branch": "quest/xapiand/netlab-consensus",
       "checks": [
         {
           "cmd": "python3 -I bench/netlab/selftest.py",
@@ -18650,6 +18652,7 @@
         "bench/netlab/**",
         "docs/perf/netlab*"
       ],
+      "journal": "../Xapiand-wt/xapiand/netlab-consensus",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -18657,9 +18660,10 @@
       "provides": [],
       "repo": "../consensus",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
-      "updated": "2026-11-20T13:29:50"
+      "updated": "2026-11-20T13:44:44",
+      "worktree": "../consensus-wt/xapiand/netlab-consensus"
     },
     "nightly-retry": {
       "accepted": {},
