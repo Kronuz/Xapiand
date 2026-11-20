@@ -1245,6 +1245,13 @@
       "closed": "widened: CMakeLists.txt, bench/**, README.md, AGENTS.md",
       "id": "msg-147",
       "text": "http-limits: the file set lacks files the quest must touch: CMakeLists.txt (the reactor:6fdd45f pin you asked for), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed setters and tls_connection_factory; CI builds server_compare with HTTP_BUILD_BENCH=ON), README.md, AGENTS.md, ARCHITECTURE.md (they name the removed API). Recommend: campaign set http-limits files=http_asio.h,http_asio_tls.h,test/**,docs/**,examples/**,bench/**,CHANGELOG.md,CMakeLists.txt,README.md,AGENTS.md,ARCHITECTURE.md. I make only those mechanical edits there, in their own commit, recorded under Rulings."
+    },
+    {
+      "at": "2026-11-19T16:39:18",
+      "by": "detent-lead",
+      "closed": "Noted: reactor-tls-cache landed at reactor:1dd5f32; server_context goes through the cache. http-limits and server-limits pick it up on their next reactor pin.",
+      "id": "msg-148",
+      "text": "Detent lead: reactor-tls-cache landed at reactor:1dd5f32. tls::configure re-parses a file only when its bytes change; contexts from the same bytes share parsed objects (about 4x less per configure: server-ec 153->41 us). tls::server_context goes through it. An encrypted key is reused only with a matching password digest. Follow-up reactor-tls-cache-bound will release entries no context uses."
     }
   ],
   "quests": {
@@ -4925,17 +4932,45 @@
       "files": [
         "harness/engine_crash_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T16:31:05",
+          "commit": "854a62f298c1a4de29aa0a3c76eef96e1017e7dd",
+          "criteria": {
+            "A1": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since)",
+            "A2": "261119-122426-23b4be (passed at d4801e6d339b; only merges from main since), 261119-131239-b80edb (passed at d4801e6d339b; only merges from main since); fails without: 261119-122444-f74d98",
+            "A3": "suite 261119-122452-83d60f passed; CI on the branch (FreeBSD, arm64) was running at 9f510b4e8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "e580b06268fc7494946021e292307d1d962320a4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-122452-83d60f",
+              "level": "light",
+              "seconds": 471.6,
+              "state": "done",
+              "what": "crash-d-rows check suite at e580b06268fc"
+            }
+          ],
+          "final": true,
+          "from": "058d7077fcbc6ca49b1abf70381bcb196602af57",
+          "reason": "",
+          "tested": "73d050d004b0aab82eeca97cf1e519f9631b3dff"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "harness: crash check prints every wrong row (land explore/crash-d-wrong)",
-      "updated": "2026-11-19T12:23:23",
-      "worktree": "../Xapiand-wt/xapiand/crash-d-rows"
+      "updated": "2026-11-19T16:31:14",
+      "worktree": ""
     },
     "cross-shard-followups": {
       "accepted": {},
@@ -5127,6 +5162,9 @@
       ],
       "consumes": [],
       "files": [
+        "src/datetime_msgpack.cc",
+        "src/datetime_msgpack.h",
+        "tests/test_coverage_core_datetime.cc",
         "src/datetime.cc",
         "src/datetime.h",
         "tests/test_datetime*"
@@ -5140,7 +5178,7 @@
       "risk": "normal",
       "status": "active",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T16:20:26",
+      "updated": "2026-11-19T16:21:58",
       "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
@@ -6391,6 +6429,8 @@
     "endpoint-uuid": {
       "accepted": {},
       "after": [],
+      "base": "6b3c53bb489f9cebe799f22039c666c35e89b01a",
+      "branch": "quest/xapiand/endpoint-uuid",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -6408,7 +6448,10 @@
         "src/uuid*",
         "src/database/shard.cc",
         "tests/test_endpoint*",
-        "tests/test_uuid_partition*"
+        "tests/test_uuid_partition*",
+        "tests/test_coverage_core_endpoint.cc",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/changelog.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6417,9 +6460,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T16:20:05"
+      "updated": "2026-11-19T16:42:44",
+      "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
       "accepted": {},
