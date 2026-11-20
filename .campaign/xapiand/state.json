@@ -18634,7 +18634,10 @@
     },
     "netlab-consensus": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-transport",
+        "detent:consensus-quiescence"
+      ],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/netlab-consensus",
       "checks": [
@@ -18662,7 +18665,7 @@
       "risk": "low",
       "status": "active",
       "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
-      "updated": "2026-11-20T13:44:44",
+      "updated": "2026-11-20T13:45:17",
       "worktree": "../consensus-wt/xapiand/netlab-consensus"
     },
     "nightly-retry": {
