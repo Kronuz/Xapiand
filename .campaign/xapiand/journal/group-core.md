@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: waiting on jobs 261120-143826-fc1ff1 261120-143827-809109 261120-143835-d4f803 261120-143838-68581e 261120-143842-94692c 261120-143852-9d288c (step 12, CI fix at strata:6421d4b3)
+State: waiting on jobs 261120-143826-fc1ff1 261120-143835-d4f803 261120-143838-68581e 261120-143842-94692c 261120-143852-9d288c (step 12, CI fix at strata:6421d4b3)
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,7 @@ Step 12 (lead: CI run 44816782044 red at d1793ae0), strata:6421d4b3.
   its schedules differ from the ones D109's seeds were picked on. Fix: draw the body first (the
   order clang uses). Fails without: the reversed order on clang, 261120-143852-9d288c (expect
   seeds 8, 12, 16, 23 FAIL, as on CI).
-- Jobs at 6421d4b3: gate build-test 261120-143826-fc1ff1, crash 261120-143827-809109; full suite
+- Jobs at 6421d4b3: gate build-test 261120-143826-fc1ff1, crash 261120-143827-809109 (green); full suite
   assertions on 261120-143835-d4f803; ASan+UBSan on standalone_turn_log and group_* 261120-143838-68581e.
 - Touches two files the correctness review (accepted at ffab229e) saw, both tests:
   test/standalone_turn_log_test.cc (t6w itself is main's, unchanged by the quest) and
