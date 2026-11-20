@@ -272,6 +272,10 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	if (strings::startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());
 	}
+	// The node's id file; an index there could not be created beside it.
+	if (_path == ".xapiand/node" || strings::startswith(_path, ".xapiand/node/")) {
+		THROW(ClientError, "Index path {} names the node's id file, a reserved name", repr(original_uri));
+	}
 
 	if (opts.uuid_partition) {
 		path = normalizer<normalize_and_partition>(_path.data(), _path.size());

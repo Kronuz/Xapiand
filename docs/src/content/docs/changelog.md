@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
+  ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
+  orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
@@ -22,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **The open-index pool is sized from memory**: with no `--database-pool-size` it holds what 1% of RAM covers at
+  about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit, not a fixed 200; a size you
+  give wins.
 - **Stop-word lists are compiled in, overridable and checked by every index.** The 18 shipped lists are part of the binary and
   nothing reads them from the data path; `<data path>/stopwords/<language>.txt` replaces a language's list (an unreadable file or a directory of that name stops the
   node). A language with no list used to stop nothing without a word; it is now an error (`400` for a query), and an index

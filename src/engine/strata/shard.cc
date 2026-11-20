@@ -43,6 +43,7 @@
 #include <system_error>            // for std::system_error
 
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
+#include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "prospect/index.hh"       // for prospect::index
 
 #include "log.h"                   // for L_ERR
@@ -448,7 +449,7 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		fs::create_directories(dir);
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
-		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
 		core->host = host.host;

@@ -209,11 +209,8 @@ static void test_hash_type_and_field_type() {
 	CHECK_THROWS_WITH(Cast::get_field_type(""), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::get_field_type("integer"), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::get_field_type("_nonsense"), CastError, "Unknown cast type");
-	// Product bug (cast-words), fixed by quest serialize-validation (D130, in review; changes src/cast.cc): _date and
-	// _multiconvex are cast words but get_field_type has no row for them, so both are refused. Whichever quest lands
-	// second flips these two lines.
-	CHECK_THROWS_WITH(Cast::get_field_type("_date"), CastError, "Unknown cast type");
-	CHECK_THROWS_WITH(Cast::get_field_type("_multiconvex"), CastError, "Unknown cast type");
+	CHECK_TRUE(Cast::get_field_type("_date") == FieldType::date);
+	CHECK_TRUE(Cast::get_field_type("_multiconvex") == FieldType::geo);
 }
 
 static void test_cast_map() {
@@ -241,9 +238,10 @@ static void test_cast_map() {
 	CHECK_THROWS_WITH(Cast::cast(MsgPack({ { "plain", 1 } })), CastError, "Unknown cast type");
 	CHECK_THROWS_WITH(Cast::cast(MsgPack::MAP()), CastError, "Expected map with one valid cast");
 	CHECK_THROWS_WITH(Cast::cast(MsgPack({ { "#only", "comment" } })), CastError, "Expected map with one valid cast");
-	// The words that have a hash but no case: _multiconvex and _lua are not casts.
-	CHECK_THROWS_WITH(Cast::cast(cast_word("_multiconvex", MsgPack(1))), CastError, "Unknown cast type");
-	CHECK_THROWS_WITH(Cast::cast(cast_word("_lua", MsgPack(1))), CastError, "Unknown cast type");
+	// A multiconvex is a geometry, returned whole; a script is not a value.
+	const auto multiconvex = cast_word("_multiconvex", MsgPack({ { "_latitude", 1 } }));
+	SEE(Cast::cast(multiconvex).to_string(), multiconvex.to_string());
+	CHECK_THROWS_WITH(Cast::cast(cast_word("_lua", MsgPack(1))), CastError, "is a script, not a value");
 	CHECK_THROWS_WITH(Cast::cast(cast_word("_integer", MsgPack("x"))), CastError, "cannot be cast to integer");
 }
 
