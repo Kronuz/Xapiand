@@ -3,38 +3,90 @@
 State: working
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
-
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Task `rpc` (A5), on the quest branch while nothing else runs: `src/cluster/rpc.{h,cc}`, the shard
+RPC over consensus's request lane (consensus:e1f249d, `include/consensus/transport/host_transport.h`
+`call`/`handle`), with `tests/cluster/test_rpc.cc` and `docs/mechanisms/shard-rpc.md`. Built and
+tested through `tests/cluster/CMakeLists.txt`, a standalone project inside the file set (B1).
 
 ## Next
 
-1. <step>
+1. `rpc`: codec, client and service over `HostTransport`; tests per method with values, error
+   mapping, deadline, cancel, streamed `get` and `forward_write`, version refusal; job A5.
+2. `membership` once B2 and B3 are answered: node identity, `--join`, keepalives, `suspect`/`down`
+   over the `keepalive` method, the directory behind an interface the root fills (placement).
+3. `shard-map`, `search`, `migration`, `api`: after `group-core`, `journal-replaces-wal` and
+   `placement` publish their contracts (none is built yet; see Dependencies).
+4. Multicast wiring (`--discovery-*` onto consensus `Seeds`) last, after `multicast-seeds` lands.
+
+## Dependencies at 2026-11-20
+
+| Contract | State | What it gates here |
+|---|---|---|
+| `consensus:rpc-lane` | landed, consensus:e1f249d | `rpc` (buildable now) |
+| `consensus:seed-discovery` | `multicast-seeds` active (consensus `quest/xapiand/multicast-seeds`: `Seeds::on_dial`, `joined`, `failed`) | multicast wiring, last |
+| `strata:group`, `strata:group-install` | `group-core` active, `group-heal` planned | `shard-map`, `migration` |
+| `strata:placement-records`, `placement-repair` | `placement` planned | directory, `shard-map`, patterns (`search`), `api` drain and replicas |
+| `xapiand:command` | `journal-replaces-wal` planned | `shard-map` (forward_write's body), `migration` |
+| `prospect:supplied-stats` | landed, Xapiand:2202030d2 | `search` |
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+- B1 (lead): `CMakeLists.txt` is outside the file set, and Xapiand pins no consensus and globs
+  neither `src/cluster/` nor `tests/cluster/`. Recommendation: add `CMakeLists.txt` to the file set
+  for three edits only: `FetchContent_Declare(consensus ...)` with `CONSENSUS_TRANSPORT ON`,
+  `src/cluster/*` in `XAPIAND_SRC_LIST`, and `add_subdirectory(tests/cluster)` under `BUILD_TESTS`.
+  The pin also moves journal (Xapiand's, via strata, is journal:5bbeedc; consensus needs
+  journal:9e11713, 10 commits newer) and task (Xapiand's task:18eb516 is older than consensus's
+  task:95798a0): a pin bump the lead owns. Until then `rpc` builds standalone from
+  `tests/cluster/CMakeLists.txt` at consensus's own pins.
+- B2 (lead, consensus): `HostTransport`, `Links` and `NodePins` take every node's address and pin at
+  construction (consensus:e1f249d `host_transport.h:270`, `links.h:50`, `node_pins.h:14`); nothing
+  adds or forgets a node later, and a dial needs the peer's node id. `--join` (A4: three nodes
+  from one seed) and multicast seeds (`Seeds::on_dial` hands an address, not a node) need both.
+  Recommendation: a consensus quest `node-admission`: `HostTransport::admit(node, address, pin)`
+  and `forget_node(node)` on every loop, and a seed dial by address that returns the authenticated
+  node. Detent's `Seeds` wiring needs the same, so it belongs in consensus, not here.
+- B3 (owner via lead): how a joiner's pin reaches the cluster. Q5 (b) is the pki offline CA; A4
+  refuses "one whose certificate is not pinned". Options:
+  (a) the root's directory is the pin list: an operator issues the node's certificate with
+      `xapiand pki` and adds its pin (`POST /:nodes`) before it joins;
+  (b) the cluster CA is the trust anchor: a CA-signed certificate whose SPIFFE id names this
+      cluster is admitted at first join and its pin recorded in the directory; from then on that
+      name is pinned, so a re-keyed or second certificate for it is refused until an operator
+      removes the node;
+  (c) a static pin file every node reads (`--peer-pins`), as consensus's tests do.
+  Recommendation: (b): zero-touch joins for the demo (D141), the CA check Detent makes, and pinning
+  from first join on. Refusals named `cluster` (another cluster's SPIFFE id or hello) and
+  `unpinned` (no chain to the cluster CA, or a name pinned to another key).
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | none yet |
+| A2 | none yet |
+| A3 | none yet |
+| A4 | none yet |
+| A5 | none yet |
+| A6 | none yet |
+
+## Tasks for other agents
+
+Parallel writers pay only once the strata contracts exist. Once `group-core` and
+`journal-replaces-wal` land, `shard-map` and then `search` (after `shard-map`'s contract) are the
+two worth their own agents; `migration` and `api` follow. `membership` waits on B2 and B3.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Not yet.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- R1: the shard RPC carries its own version in every call's header (u16, the range `[1, 1]` now)
+  instead of riding the lane's hello version (`Link::rpc`), which selects the lane's frame magic
+  and is consensus's. A call outside the server's range is answered `version_refused` with the
+  server's range, which the client names `PeerVersionRefused`.
+- R2: method ids are `0x58530000 + n` ("XS"), so other users of the same host transport
+  (consensus's own methods, Detent's fetch) never collide with Xapiand's.
