@@ -1,6 +1,6 @@
 # multicast-seeds: journal
 
-State: waiting on jobs 261120-092016-dd0882 261120-092018-d9b51c 261120-092022-771814 261120-092026-224cdc 261120-092029-329d7f 261120-092033-db89f5 261120-092039-8aa185 261120-092042-ddf978 261120-092045-08a731
+State: waiting on jobs 261120-092016-dd0882 261120-092045-08a731
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
 Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
@@ -9,7 +9,10 @@ consensus:32d9c9b (feature), consensus:db6d7f9 (failed() after joined), consensu
 
 ## Doing
 
-Waiting on the jobs above (suite, seeds cases with multicast required, six mutants, fuzz).
+Waiting on the suite at consensus:8a36958 (261120-092016-dd0882, queued) and the 300 s libFuzzer run
+(261120-092045-08a731, running). Done and passing: seeds cases with multicast required
+(261120-092018-d9b51c, exit 0) and all six mutants (each test failed at its mutant, ctest exit 8).
+The suite at consensus:db6d7f9 passed (261120-091403-d07446), before the receiver/burst change.
 
 ## Next
 
