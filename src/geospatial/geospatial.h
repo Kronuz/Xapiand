@@ -61,9 +61,12 @@ class GeoSpatial {
 	data_t get_data(const MsgPack& o, bool has_radius=false);
 	std::vector<Cartesian> getPoints(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack* height=nullptr);
 
+	Convex getConvex(const data_t& data, const MsgPack& latitude, const MsgPack& longitude, const MsgPack& radius, const MsgPack* height);
+
 	Point make_point(const MsgPack& o);
 	Circle make_circle(const MsgPack& o);
 	Convex make_convex(const MsgPack& o);
+	MultiConvex make_multiconvex(const MsgPack& o);
 	Polygon make_polygon(const MsgPack& o, Geometry::Type type);
 	MultiPoint make_multipoint(const MsgPack& o);
 	MultiCircle make_multicircle(const MsgPack& o);

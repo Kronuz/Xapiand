@@ -43,6 +43,7 @@
 #include <system_error>            // for std::system_error
 
 #include "completion/posix.h"      // for kronuz::journal::PosixIO
+#include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "prospect/index.hh"       // for prospect::index
 
 #include "log.h"                   // for L_ERR
@@ -445,10 +446,17 @@ acquire(const std::string& path, bool create_missing, bool& created, const OpenO
 		if (!exists && !create_missing) {
 			throw Error(errc::not_found, "No such database: " + path);
 		}
-		fs::create_directories(dir);
+		try {
+			fs::create_directories(dir);
+		} catch (const fs::filesystem_error& exc) {
+			if (exc.code() != std::errc::illegal_byte_sequence) {
+				throw;
+			}
+			throw Error(errc::invalid, "Invalid index name: " + path);
+		}
 		auto core = std::make_unique<Core>();
 		core->dir = dir;
-		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+		core->io = std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
 		core->drain_timeout = host.drain_timeout;
 		core->options = index_options(host);
 		core->host = host.host;

@@ -481,8 +481,8 @@ FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-co
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166   SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 4b669b6c065e209f503e5f3ec839a0634dd13edf)
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG d48a28e50a915f772f254a6641cda100029bb31f)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG df0ebc885c3e72e139a35dd4e34f5c731f02b4bd)
@@ -560,7 +560,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + xapiand_colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 6e7ab9ea01578d60e459137940e9e645a6727744)  # track tip
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 455cad0a185b2c9037bb3bb65c99a4e3736b0cc3)  # track tip
 FetchContent_MakeAvailable(logger)
 include_directories("${logger_SOURCE_DIR}")
 
@@ -929,7 +929,7 @@ include_directories(
 # Geometry/Collection-coupled debug viz writers the library dropped were already
 # dead in Xapiand (only a commented-out call). Depends on cartesian (already on the
 # path); compiled (htm.cc + constraint.cc into XAPIAND_OBJ).
-FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG bb5e01d219721c11b85eee64f56ea40d8456fa2e)
+FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG 0c09a0283a507b2cf08975a7c8572d95ece60b68)
 FetchContent_MakeAvailable(htm)
 include_directories("${htm_SOURCE_DIR}")
 
@@ -987,8 +987,8 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # travels with that standalone library.
 ########################################################################
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
-FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG 302dc28f8fd5c8bf2ea8d7212aed3be884d5d166    SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG 6c7b07a878ad834957b98d0f9ce1dbe0cb204fc9 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
 # its sources populated, not its own CMake (its root has none anyway).
 FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1  SOURCE_SUBDIR do-not-configure)
@@ -1034,21 +1034,25 @@ if(LUA)
 	# src/*.c (minus the interpreter/compiler driver mains).
 	# Lua carries the limits patch (D10): contrib/lua/xapiand-limits.patch, applied to the pinned tarball.
 	include("${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake")
+	# lua/lua is flat (sources at its root); v5.4.7 pinned by commit.
 	FetchContent_Declare(lua
-		URL ${XAPIAND_LUA_URL}
-		URL_HASH "SHA256=${XAPIAND_LUA_TARBALL_SHA256}"
-		PATCH_COMMAND patch -p1 -i "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
+		GIT_REPOSITORY https://github.com/lua/lua.git
+		GIT_TAG ${XAPIAND_LUA_COMMIT}
+		GIT_SHALLOW TRUE
+		PATCH_COMMAND sh "${PROJECT_SOURCE_DIR}/contrib/lua/apply-patch.sh" "${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch"
 	)
 	FetchContent_MakeAvailable(lua)
-	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/src/*.c")
-	list(REMOVE_ITEM LUA_SRC_LIST
-		"${lua_SOURCE_DIR}/src/lua.c"
-		"${lua_SOURCE_DIR}/src/luac.c"
-		"${lua_SOURCE_DIR}/src/onelua.c")
+	# The sources of the 5.4.7 Makefile's liblua.a: no lua.c, luac.c, ltests.c or onelua.c.
+	set(LUA_SRC_LIST)
+	foreach(name lapi lcode lctype ldebug ldo ldump lfunc lgc llex lmem lobject lopcodes lparser lstate
+			lstring ltable ltm lundump lvm lzio lauxlib lbaselib lcorolib ldblib liolib lmathlib loadlib
+			loslib lstrlib ltablib lutf8lib linit)
+		list(APPEND LUA_SRC_LIST "${lua_SOURCE_DIR}/${name}.c")
+	endforeach()
 	add_library(LUA_OBJ OBJECT ${LUA_SRC_LIST})
-	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}/src")
+	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}")
 
-	include_directories(BEFORE "${lua_SOURCE_DIR}/src")
+	include_directories(BEFORE "${lua_SOURCE_DIR}")
 endif()
 
 
@@ -1293,14 +1297,10 @@ target_link_libraries(xapiand_bench_shard_view PRIVATE
 
 
 ########################################################################
-# Copy data files (stopwords, mime types) from source to build directory
-# so an uninstalled build (build/bin/xapiand) can resolve them relative to
-# the executable (see setup_data_path() in main.cc).
+# Copy the mime types from source to build directory so an uninstalled
+# build (build/bin/xapiand) can resolve them relative to the executable (see
+# setup_data_path() in main.cc). The stop-word lists are compiled in.
 ########################################################################
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
@@ -1311,8 +1311,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Install target
 ########################################################################
 
-# Copy stopwords during the installation
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${XAPIAND_DATA_PATH}/stopwords)
+# The stop-word lists are compiled in. The files are installed as examples, in a directory nothing reads:
+# copy one into <data path>/stopwords/ to replace that language's list.
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/xapiand/stopwords)
 
 # Copy mime types file
 install(FILES ${CMAKE_SOURCE_DIR}/mime.types DESTINATION ${XAPIAND_DATA_PATH})
@@ -1889,7 +1890,8 @@ endif ()
 if (BUILD_TESTS)
 		# Pure unit tests (no Xapiand code linked). They use the tiny header-only
 		# harness in tests/test_harness.h -- no GoogleTest, no FetchContent.
-		foreach (VAR_TEST string debounce_or_run range_terms xapian_data_guard)
+		set(XAPIAND_PURE_TESTS string debounce_or_run range_terms xapian_data_guard)
+		foreach (VAR_TEST ${XAPIAND_PURE_TESTS})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1898,10 +1900,18 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
-		# Unit tests that exercise Xapiand code: link the object libraries the way
-		# a real component does. Revived from oldtests/ one module at a time as they
-		# are brought current against today's API.
-		foreach (VAR_TEST fieldparser serialize_list endpoint serialize generate_terms geospatial engine_document engine_fields engine_census engine_query engine_sort engine_read engine_search_strata engine_callbacks engine_error engine_replay engine_strata engine_host wal_replay pool wide_search index_pattern blocking_guard blocking_scheduler reactor_requests control_plane node loop_yield lua metric_serialize quarantine root_routes aggregation_shards manager_fd_count strict_text)
+		# Every other tests/test_*.cc exercises Xapiand code: it links the object
+		# libraries a real component does and registers by its file name.
+		file(GLOB XAPIAND_LINKED_TESTS CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/test_*.cc")
+		set(XAPIAND_LINKED_TEST_NAMES)
+		foreach (TEST_SOURCE ${XAPIAND_LINKED_TESTS})
+			get_filename_component(TEST_NAME "${TEST_SOURCE}" NAME_WE)
+			string(REGEX REPLACE "^test_" "" TEST_NAME "${TEST_NAME}")
+			if (NOT TEST_NAME IN_LIST XAPIAND_PURE_TESTS AND NOT TEST_NAME STREQUAL "stubs" AND NOT TEST_NAME STREQUAL "text")
+				list(APPEND XAPIAND_LINKED_TEST_NAMES "${TEST_NAME}")
+			endif ()
+		endforeach ()
+		foreach (VAR_TEST ${XAPIAND_LINKED_TEST_NAMES})
 			set (PROJECT_TEST "${PROJECT_NAME}_test_${VAR_TEST}")
 			add_executable(${PROJECT_TEST}
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
@@ -1925,6 +1935,9 @@ if (BUILD_TESTS)
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
 
+		# Loop-lag bounds hold only without parallel neighbors.
+		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)
+
 		include("${PROJECT_SOURCE_DIR}/tests/bench_number_codec.cmake")
 
 		# test_serialize reads the pinned sortable's vectors and its exact comparator (design T1).
@@ -1945,7 +1958,6 @@ if (BUILD_TESTS)
 		if (LUA)
 			add_test(NAME test_lua_patch_drift COMMAND ${CMAKE_COMMAND}
 				-DLUA_SRC=${lua_SOURCE_DIR}
-				-DLUA_TARBALL=${lua_SOURCE_DIR}/../lua-subbuild/lua-populate-prefix/src/lua-5.4.7.tar.gz
 				-DPATCH=${PROJECT_SOURCE_DIR}/contrib/lua/xapiand-limits.patch
 				-DVERSION_FILE=${PROJECT_SOURCE_DIR}/contrib/lua/lua-version.cmake
 				-DWORK=${CMAKE_BINARY_DIR}/lua-drift

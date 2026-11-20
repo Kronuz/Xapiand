@@ -23,7 +23,9 @@
 
 #include "datetime_msgpack.h"
 
+#include <climits>                                // for INT_MAX
 #include <string_view>                            // for std::string_view
+#include <utility>                                // for std::pair
 
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
@@ -41,6 +43,20 @@
 // therefore `throw DatetimeError(strings::format(...))` directly for those. The
 // generic `Error` type (one site) is still a located-exception type, so it keeps
 // using THROW.
+
+
+// The zone of a `_time` string, applied once the whole datetime is parsed, so its day carry lands on the final date.
+struct Zone {
+	char op = 0;
+	std::string_view hour;
+	std::string_view min;
+
+	void apply(Datetime::tm_t& tm) const {
+		if (op) {
+			Datetime::computeTimeZone(tm, op, hour, min);
+		}
+	}
+};
 
 
 static inline void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
@@ -88,9 +104,15 @@ static inline void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
 	switch (hour.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (hour.u64() >= 24) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+			}
 			tm.hour = hour.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (hour.i64() < 0 || hour.i64() >= 24) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+			}
 			tm.hour = hour.i64();
 			return;
 		default:
@@ -102,9 +124,15 @@ static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
 static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
 	switch (min.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (min.u64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+			}
 			tm.min = min.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (min.i64() < 0 || min.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+			}
 			tm.min = min.i64();
 			return;
 		default:
@@ -116,9 +144,15 @@ static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
 static inline void process_date_sec(Datetime::tm_t& tm, const MsgPack& sec) {
 	switch (sec.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (sec.u64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+			}
 			tm.sec = sec.u64();
 			return;
-		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (sec.i64() < 0 || sec.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+			}
 			tm.sec = sec.i64();
 			return;
 		default:
@@ -149,7 +183,7 @@ static inline void process_date_fsec(Datetime::tm_t& tm, const MsgPack& fsec) {
 // with optional fraction/zone, used by the MsgPack time/datetime STR cases) is
 // only needed here, so it stays in the glue. It uses the library's
 // Datetime::computeTimeZone and Datetime::normalize_fsec.
-static inline void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
+static inline void process_date_time(Datetime::tm_t& tm, Zone& zone, std::string_view str_time) {
 	int errno_save;
 	auto size = str_time.size();
 	switch (size) {
@@ -212,7 +246,7 @@ static inline void process_date_time(Datetime::tm_t& tm, std::string_view str_ti
 											auto m = strict_stoul(&errno_save, tz_m);
 											if (errno_save != 0) { goto error; }
 											if (m < 60) {
-												Datetime::computeTimeZone(tm, str_time[8], tz_h, tz_m);
+												zone = Zone{str_time[8], tz_h, tz_m};
 												return;
 											}
 										}
@@ -237,7 +271,7 @@ static inline void process_date_time(Datetime::tm_t& tm, std::string_view str_ti
 															auto m = strict_stoul(&errno_save, tz_m);
 															if (errno_save != 0) { goto error; }
 															if (m < 60) {
-																Datetime::computeTimeZone(tm, c, tz_h, tz_m);
+																zone = Zone{c, tz_h, tz_m};
 																auto fsec = strict_stod(&errno_save, std::string_view(it, aux - it));
 																if (errno_save != 0) { goto error; }
 																tm.fsec = Datetime::normalize_fsec(fsec);
@@ -274,7 +308,7 @@ error_out_of_range:
 }
 
 
-static inline void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
+static inline void process_date_time(Datetime::tm_t& tm, Zone& zone, const MsgPack& time) {
 	switch (time.get_type()) {
 		case MsgPack::Type::MAP: {
 			const auto it_e = time.end();
@@ -312,7 +346,7 @@ static inline void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 		}
 
 		case MsgPack::Type::STR:
-			process_date_time(tm, time.str_view());
+			process_date_time(tm, zone, time.str_view());
 			return;
 
 		default:
@@ -356,7 +390,7 @@ static inline void process_date_date(Datetime::tm_t& tm, const MsgPack& date) {
 }
 
 
-static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& datetime) {
+static inline void process_date_datetime(Datetime::tm_t& tm, Zone& zone, const MsgPack& datetime) {
 	switch (datetime.get_type()) {
 		case MsgPack::Type::MAP: {
 			const auto it_e = datetime.end();
@@ -378,7 +412,7 @@ static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& date
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TIME):
-						process_date_time(tm, it_value);
+						process_date_time(tm, zone, it_value);
 						break;
 					case _.fhh(RESERVED_DATE):
 						process_date_date(tm, it_value);
@@ -414,12 +448,29 @@ static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& date
 		}
 
 		case MsgPack::Type::STR:
-			process_date_time(tm, datetime.str_view());
+			process_date_time(tm, zone, datetime.str_view());
 			return;
 
 		default:
 			throw DatetimeError(strings::format("'{}' must be a map value", RESERVED_DATETIME));
 	}
+}
+
+
+// A timestamp names a year from 1 to INT_MAX, like the library's date math. Outside it (or NaN) the conversion to
+// whole seconds is undefined and x86 and arm64 give different years, so the range is checked first.
+static Datetime::tm_t
+timestamp_to_tm(double timestamp)
+{
+	static const auto bounds = [] {
+		Datetime::tm_t first{1, 1, 1, 0, 0, 0};
+		Datetime::tm_t last{INT_MAX, 12, 31, 23, 59, 59};
+		return std::pair<double, double>(static_cast<double>(Datetime::timegm(first)), static_cast<double>(Datetime::timegm(last)) + 1);
+	}();
+	if (!(timestamp >= bounds.first && timestamp < bounds.second)) {
+		throw DatetimeError("Year is out of range");
+	}
+	return Datetime::to_tm_t(timestamp);
 }
 
 
@@ -439,17 +490,18 @@ Datetime::DatetimeParser(const MsgPack& value)
 	switch (value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			_timestamp = value.u64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			_timestamp = value.i64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::FLOAT:
 			_timestamp = value.f64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::STR:
 			return Datetime::DatetimeParser(value.str_view());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
+			Zone zone;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
@@ -471,13 +523,13 @@ Datetime::DatetimeParser(const MsgPack& value)
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TIME):
-						process_date_time(tm, it_value);
+						process_date_time(tm, zone, it_value);
 						break;
 					case _.fhh(RESERVED_DATE):
 						process_date_date(tm, it_value);
 						break;
 					case _.fhh(RESERVED_DATETIME):
-						process_date_datetime(tm, it_value);
+						process_date_datetime(tm, zone, it_value);
 						break;
 
 					case _.fhh(RESERVED_YEAR):
@@ -511,6 +563,7 @@ Datetime::DatetimeParser(const MsgPack& value)
 			if (!Datetime::isValidDate(tm.year, tm.mon, tm.day)) {
 				throw DatetimeError("Datetime is out of range");
 			}
+			zone.apply(tm);
 			return tm;
 		}
 		default:

@@ -33,9 +33,11 @@
 #include <limits>                                 // for std::numeric_limits
 #include <mutex>                                  // for std::mutex
 #include <ostream>                                // for operator<<, basic_ostream
+#include <memory>                                 // for std::weak_ptr
 #include <set>                                    // for std::set
 #include <stdexcept>                              // for std::out_of_range
 #include <type_traits>                            // for remove_reference<>::type
+#include <unordered_map>                          // for std::unordered_map
 #include <utility>
 
 #include "base_x.hh"                              // for Base64
@@ -56,6 +58,7 @@
 #include "script.h"                               // for Script
 #include "serialize_list.h"                       // for StringList
 #include "split.h"                                // for Split
+#include "stopper.h"                              // for stopWordsFingerprint, checkStopWords
 #include "static_string.hh"                       // for static_string
 #include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
 
@@ -709,6 +712,7 @@ _get_type(std::string_view str_type)
 		hhl("float"),
 		hhl("floating"),
 		hhl("geo"),
+		hhl("geospatial"),
 		hhl("integer"),
 		hhl("positive"),
 		hhl("script"),
@@ -734,6 +738,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/array"),
 		hhl("array/geo"),
 		hhl("geo/array"),
+		hhl("array/geospatial"),
+		hhl("geospatial/array"),
 		hhl("array/integer"),
 		hhl("integer/array"),
 		hhl("array/positive"),
@@ -769,6 +775,8 @@ _get_type(std::string_view str_type)
 		hhl("floating/foreign"),
 		hhl("foreign/geo"),
 		hhl("geo/foreign"),
+		hhl("foreign/geospatial"),
+		hhl("geospatial/foreign"),
 		hhl("foreign/integer"),
 		hhl("integer/foreign"),
 		hhl("foreign/positive"),
@@ -833,6 +841,12 @@ _get_type(std::string_view str_type)
 		hhl("array/geo/foreign"),
 		hhl("geo/foreign/array"),
 		hhl("geo/array/foreign"),
+		hhl("foreign/array/geospatial"),
+		hhl("foreign/geospatial/array"),
+		hhl("array/foreign/geospatial"),
+		hhl("array/geospatial/foreign"),
+		hhl("geospatial/foreign/array"),
+		hhl("geospatial/array/foreign"),
 		hhl("foreign/array/integer"),
 		hhl("foreign/integer/array"),
 		hhl("array/foreign/integer"),
@@ -992,6 +1006,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array"):
+		case _.fhhl("array/geospatial"):
 		case _.fhhl("geo/array"):
 		case _.fhhl("array/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::geo }};
@@ -1072,6 +1088,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/foreign"):
+		case _.fhhl("foreign/geospatial"):
 		case _.fhhl("geo/foreign"):
 		case _.fhhl("foreign/geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::geo }};
@@ -1177,6 +1195,12 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::array, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial/array/foreign"):
+		case _.fhhl("geospatial/foreign/array"):
+		case _.fhhl("array/geospatial/foreign"):
+		case _.fhhl("array/foreign/geospatial"):
+		case _.fhhl("foreign/geospatial/array"):
+		case _.fhhl("foreign/array/geospatial"):
 		case _.fhhl("geo/array/foreign"):
 		case _.fhhl("geo/foreign/array"):
 		case _.fhhl("array/geo/foreign"):
@@ -1625,6 +1649,14 @@ static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_a
 specification_t default_spc;
 
 
+// The stem_language names _get_stem_language accepts, as a refusal names them.
+static constexpr std::string_view stem_language_names =
+	"armenian, hy, basque, eu, catalan, ca, danish, da, dutch, nl, kraaij_pohlmann, english, en, "
+	"lovins, porter, finnish, fi, french, fr, german, de, "
+	"german2, hungarian, hu, italian, it, norwegian, nb, nn, no, portuguese, pt, romanian, ro, russian, "
+	"ru, spanish, es, swedish, sv, turkish, tr, none";
+
+
 static inline const std::pair<bool, const std::string>&
 _get_stem_language(std::string_view str_stem_language)
 {
@@ -1642,10 +1674,7 @@ _get_stem_language(std::string_view str_stem_language)
 		hhl("kraaij_pohlmann"),
 		hhl("english"),
 		hhl("en"),
-		hhl("earlyenglish"),
-		hhl("english_lovins"),
 		hhl("lovins"),
-		hhl("english_porter"),
 		hhl("porter"),
 		hhl("finnish"),
 		hhl("fi"),
@@ -1731,19 +1760,7 @@ _get_stem_language(std::string_view str_stem_language)
 			static const std::pair<bool, const std::string> en{ true,  "en" };
 			return en;
 		}
-		case _.fhhl("earlyenglish"): {
-			static const std::pair<bool, const std::string> en{ false, "en" };
-			return en;
-		}
-		case _.fhhl("english_lovins"): {
-			static const std::pair<bool, const std::string> en{ false, "en" };
-			return en;
-		}
 		case _.fhhl("lovins"): {
-			static const std::pair<bool, const std::string> en{ false, "en" };
-			return en;
-		}
-		case _.fhhl("english_porter"): {
 			static const std::pair<bool, const std::string> en{ false, "en" };
 			return en;
 		}
@@ -1869,6 +1886,22 @@ _get_stem_language(std::string_view str_stem_language)
 			return _;
 		}
 	}
+}
+
+
+// The name snowball's stemmer takes for a stem_language: nb and nn stem as norwegian, and german2
+// as german, word for word with Xapian 2.1.0 over snowball-data's vocabularies.
+static std::string
+_get_stemmer_name(std::string_view stem_language)
+{
+	auto name = strings::lower(stem_language);
+	if (name == "nb" || name == "nn") {
+		return "norwegian";
+	}
+	if (name == "german2") {
+		return "german";
+	}
+	return name;
 }
 
 
@@ -2007,7 +2040,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -4987,6 +5020,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			if (!specification.language.empty()) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
+				try {
+					mut_properties[RESERVED_STOP_FINGERPRINT] = stopWordsFingerprint(specification.language);
+				} catch (const UnknownStopWordsError& exc) {
+					THROW(ClientError, "{}: {}", repr(RESERVED_LANGUAGE), exc.what());
+				}
 				mut_properties[RESERVED_STOP_STRATEGY] = enum_name(specification.stop_strategy);
 			}
 			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
@@ -5773,19 +5811,22 @@ Schema::store_item(const MsgPack& value, MsgPack& data)
 			break;
 
 		case FieldType::date:
-		case FieldType::datetime:
+		case FieldType::datetime: {
+			// A cast object (`{"_date": ...}`) is read through its cast, as index_item reads it.
+			const auto iso = Datetime::iso8601(Datetime::DatetimeParser(value.is_map() ? Cast::cast(value) : value));
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
-					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
+					data_value = iso;
 					break;
 				case MsgPack::Type::ARRAY:
-					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					data_value.push_back(iso);
 					break;
 				default:
-					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
+					data_value = MsgPack({ data_value, iso });
 					break;
 			}
 			break;
+		}
 
 		default:
 			switch (data_value.get_type()) {
@@ -6442,6 +6483,7 @@ has_dispatch_process_concrete_properties(uint64_t key)
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6518,6 +6560,7 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
 		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
@@ -6632,6 +6675,9 @@ Schema::_dispatch_process_concrete_properties(uint64_t key, std::string_view pro
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_STRING):
+			Schema::process_cast_object(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_DATE):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_DATETIME):
@@ -7096,7 +7142,7 @@ Schema::feed_stem_language(const MsgPack& prop_obj)
 	L_CALL("Schema::feed_stem_language({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_string()) {
-		specification.stem_language = prop_obj.str();
+		specification.stem_language = _get_stemmer_name(prop_obj.str_view());
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_LANGUAGE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -8029,10 +8075,10 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& prop_ob
 		auto str_stem_language = prop_obj.str_view();
 		const auto& stem = _get_stem_language(str_stem_language);
 		if (stem.second != "unknown") {
-			specification.stem_language = stem.second.empty() ? stem.second : str_stem_language;
+			specification.stem_language = stem.second.empty() ? stem.second : _get_stemmer_name(str_stem_language);
 			specification.aux_stem_language = stem.second;
 		} else {
-			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_stem_language));
+			THROW(ClientError, "{}: {} is not supported; the accepted languages are: {}", repr(prop_name), repr(str_stem_language), stem_language_names);
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
@@ -8609,7 +8655,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& pro
 
 	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_language = strings::lower(prop_obj.str_view());
+			const auto _stem_language = _get_stemmer_name(prop_obj.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -9185,6 +9231,12 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->str_view();
 		auto& value = it.value();
+		if (str_key == RESERVED_STOP_FINGERPRINT) {
+			// Derived from the stop words list on disk, not a setting: a schema read back and sent again
+			// must not carry a value that no longer matches its list.
+			it = item_schema.erase(it);
+			continue;
+		}
 		if (is_reserved(str_key)) {
 			auto key = hh(str_key);
 			switch (key) {
@@ -9287,6 +9339,122 @@ Schema::readable_script(MsgPack& prop_obj, MsgPack& /*unused*/)
 
 	dispatch_readable(prop_obj, false);
 	return true;
+}
+
+
+namespace {
+
+struct UnrecordedStopWords {
+	std::vector<std::string> path;
+	std::string language;
+};
+
+// Checks every field below `properties` that has a language against the fingerprint it recorded; the ones that
+// recorded none (indexed before the fingerprints) are collected in `unrecorded`.
+void
+check_field_stop_words(const MsgPack& properties, std::vector<std::string>& path, std::string_view index, std::vector<UnrecordedStopWords>& unrecorded)
+{
+	const auto it_e = properties.end();
+	const auto language_it = properties.find(RESERVED_LANGUAGE);
+	if (language_it != it_e && language_it.value().is_string() && !language_it.value().str_view().empty()) {
+		const auto language = language_it.value().str_view();
+		const auto recorded_it = properties.find(RESERVED_STOP_FINGERPRINT);
+		if (recorded_it == it_e) {
+			unrecorded.push_back({path, std::string(language)});
+		} else {
+			checkStopWords(index, language, recorded_it.value().str_view());
+		}
+	}
+	for (auto it = properties.begin(); it != it_e; ++it) {
+		const auto str_key = it->str_view();
+		if (!is_reserved(str_key) && is_valid(str_key) && it.value().is_map()) {
+			path.emplace_back(str_key);
+			check_field_stop_words(it.value(), path, index, unrecorded);
+			path.pop_back();
+		}
+	}
+}
+
+// The schemas this thread verified with nothing left to adopt, by identity: a request that gets the same schema
+// again pays a lookup, not a walk. The weak pointer keeps a freed schema's address from matching a new one.
+class VerifiedSchemas {
+	static constexpr std::size_t limit = 4096;
+	std::unordered_map<const MsgPack*, std::weak_ptr<const MsgPack>> verified;
+
+public:
+	bool has(const std::shared_ptr<const MsgPack>& schema) const {
+		const auto it = verified.find(schema.get());
+		return it != verified.end() && it->second.lock() == schema;
+	}
+
+	void add(const std::shared_ptr<const MsgPack>& schema) {
+		if (verified.size() >= limit) {
+			std::erase_if(verified, [](const auto& entry) { return entry.second.expired(); });
+			if (verified.size() >= limit) {
+				verified.clear();
+			}
+		}
+		verified[schema.get()] = schema;
+	}
+};
+
+thread_local VerifiedSchemas verified_schemas;
+
+}  // namespace
+
+
+void
+Schema::check_cached_stop_words(std::string_view index, const std::shared_ptr<const MsgPack>& schema)
+{
+	L_CALL("Schema::check_cached_stop_words({})", repr(index));
+
+	if (!schema->is_map() || verified_schemas.has(schema)) {
+		return;  // a foreign schema holds no fields of its own
+	}
+	std::vector<UnrecordedStopWords> unrecorded;
+	std::vector<std::string> path;
+	check_field_stop_words(*schema, path, index, unrecorded);
+	if (unrecorded.empty()) {
+		verified_schemas.add(schema);
+	}
+}
+
+
+void
+Schema::check_stop_words(std::string_view index, bool adopt)
+{
+	L_CALL("Schema::check_stop_words({}, {})", repr(index), adopt);
+
+	const auto& root = get_newest_properties();
+	if (!root.is_map()) {
+		return;  // a foreign schema holds no fields of its own
+	}
+	if (!mut_schema && verified_schemas.has(schema)) {
+		return;
+	}
+	std::vector<UnrecordedStopWords> unrecorded;
+	std::vector<std::string> path;
+	check_field_stop_words(root, path, index, unrecorded);
+	if (unrecorded.empty() && !mut_schema) {
+		verified_schemas.add(schema);
+	}
+	if (!adopt) {
+		return;
+	}
+	static std::mutex adopted_mtx;
+	static std::set<std::string> adopted;
+	for (const auto& field : unrecorded) {
+		auto* properties = &get_mutable_properties();
+		for (const auto& name : field.path) {
+			properties = &properties->get(name);
+		}
+		const auto fingerprint = stopWordsFingerprint(field.language);
+		(*properties)[RESERVED_STOP_FINGERPRINT] = fingerprint;
+		std::lock_guard<std::mutex> lk(adopted_mtx);
+		if (adopted.insert(std::string(index) + '\0' + field.language + '\0' + fingerprint).second) {
+			L_INFO("Index {} adopts stop words list {} (fingerprint {}): it recorded none", repr(index), repr(field.language), fingerprint);
+		}
+	}
 }
 
 
@@ -9553,7 +9721,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 				if (stem_language_it != it_e) {
-					res.stem_language = stem_language_it.value().str();
+					res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 				}
 				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
@@ -9608,7 +9776,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 				if (stem_language_it != it_e) {
-					res.stem_language = stem_language_it.value().str();
+					res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 				}
 				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
@@ -9708,7 +9876,7 @@ Schema::get_slot_field(std::string_view field_name) const
 			}
 			auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
 			if (stem_language_it != it_e) {
-				res.stem_language = stem_language_it.value().str();
+				res.stem_language = _get_stemmer_name(stem_language_it.value().str_view());
 			}
 			if (!res.stem_language.empty()) {
 				auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);

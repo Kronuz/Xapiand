@@ -44,6 +44,7 @@
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
 
+#include "database/name_index.h"  // for NameIndex
 #include "endpoint.h"           // for Endpoints, Endpoint
 #include <string_view>         // for std::string_view
 
@@ -441,22 +442,28 @@ class DatabasePool {
 	std::atomic<std::size_t> readers_per_index_;        // the views of one index held at once (strata R4.1's reader_records)
 	std::atomic<DatabaseWALWriter*> wal_writer_;        // the log's writer; null: the manager's
 	std::atomic<std::size_t> detached_;                 // tasks posted to the control loop that have not ended
-	std::size_t soft_open_ = 0;                         // the catalog's soft_open (D11)
+	std::size_t soft_open_ = 0;                         // the catalogs' soft_open together (D11)
 	std::chrono::milliseconds patience_{30s};           // how long the destructor waits for the shutdown before debug builds abort
 	// The IO of an index's files, by the index's path; empty: a PosixIO on <path>/strata. Set before the first pin.
 	std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> index_io_;
 
-	// The catalog's timer (on the control loop), its budget, its shutdown, and the catalog, in the order they are
-	// made: the catalog goes first, once the timer has run what is still armed (its destructor waits for them).
+	// The catalogs' timer (on the control loop), their budget, their shutdown, and the catalogs, in the order they
+	// are made: the catalogs go first, once the timer has run what is still armed (their destructors wait for them).
 	struct Timer;
 	std::shared_ptr<Timer> timer_;
 	std::unique_ptr<strata::resource_budget> budget_;
 	struct Shutdown;
 	std::mutex shutdown_mtx_;
 	std::shared_ptr<Shutdown> shutdown_;  // under shutdown_mtx_
-	std::unique_ptr<IndexCatalog> catalog_;
+	NameIndex names_;  // kept by the catalog's resolve, so it goes after the catalog
+	// One catalog per pool partition (cheap-reopen D1, strata cold-tier D4): each runs its transitions in a lane of
+	// its own, so opens and closes of different partitions run at once. A key's partition is a hash of the key.
+	std::vector<std::unique_ptr<IndexCatalog>> catalogs_;
 
-	IndexCatalog::host make_host(std::size_t database_pool_size, const IndexSweep& sweep);
+	IndexCatalog::host make_host(std::size_t soft_open, const IndexSweep& sweep);
+
+	// Posts `t` to the control loop, counted as detached; false, leaving `t`, when there is none.
+	bool post_detached(task::task<void>& t);
 
 	// Starts the catalog's shutdown once; what it awaits ends on the thread that releases the last pin or chore.
 	Shutdown& begin_shutdown();
@@ -479,16 +486,36 @@ public:
 	strata::executor& executor() noexcept {
 		return *executor_;
 	}
-	IndexCatalog& catalog() noexcept {
-		return *catalog_;
+	// The catalog of the partition `key` falls in.
+	IndexCatalog& catalog(std::string_view key) noexcept;
+	// The partitions, each a catalog: the work pool's threads, at most 8, and at most one per 16 indexes of
+	// soft_open, so a small pool is one partition.
+	std::size_t partitions() const noexcept {
+		return catalogs_.size();
 	}
+	IndexCatalog& partition(std::size_t i) noexcept {
+		return *catalogs_[i];
+	}
+
+	// The names of the indexes under the data directory, for index patterns (docs/design/name-index.md).
+	NameIndex& names() noexcept {
+		return names_;
+	}
+
+	// Starts the names' build over `root` as a task of the control loop, unless one runs, one ended well, or there
+	// is no control loop (D5). It never waits: until the build ends, patterns walk.
+	void build_names(const std::string& root);
 
 	// The open indexes the sweep keeps (soft_open): the pool size, at most what the descriptors' soft cap holds (D11).
 	std::size_t soft_open() const noexcept {
 		return soft_open_;
 	}
 
+	// A null control also stops the names' build: it is a task of the control loop (name-index D5).
 	void set_control(engine::Host* control) noexcept {
+		if (control == nullptr) {
+			names_.request_stop();
+		}
 		control_.store(control, std::memory_order_release);
 	}
 

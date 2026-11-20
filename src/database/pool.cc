@@ -28,6 +28,8 @@
 #include <condition_variable>     // for std::condition_variable
 #include <coroutine>              // for std::suspend_never
 #include <filesystem>             // for std::filesystem
+#include <functional>             // for std::hash
+#include <iterator>               // for std::make_move_iterator
 #include <optional>               // for std::optional
 #include <system_error>           // for std::system_error
 #include <thread>                 // for std::this_thread
@@ -38,6 +40,7 @@
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "completion/posix.h"     // for kronuz::journal::PosixIO
+#include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/error.h"         // for engine::Error, engine::errc
 #include "engine/host_asio.h"     // for engine::AsioHost
 #include "engine/strata/shard.h"  // for engine::strata::index_options, engine::strata::new_uuid
@@ -493,6 +496,7 @@ struct DatabasePool::Timer : std::enable_shared_from_this<Timer> {
 struct DatabasePool::Shutdown {
 	std::mutex mtx;
 	std::condition_variable cv;
+	std::size_t pending = 0;  // the partitions whose shutdown has not ended
 	bool done = false;
 	bool reported = false;
 	std::vector<std::string> failed;  // the keys whose commit failed: their WAL replays them at the next open
@@ -511,6 +515,21 @@ struct Detached {
 		void unhandled_exception() noexcept { std::terminate(); }
 	};
 };
+
+// Creates an index's directory; a name the filesystem refuses as illegal bytes (APFS on an unassigned code point)
+// is the request's own: errc::invalid, a 400 naming the index.
+void
+create_index_directory(const std::string& dir, const std::string& path)
+{
+	try {
+		std::filesystem::create_directories(dir);
+	} catch (const std::filesystem::filesystem_error& exc) {
+		if (exc.code() != std::errc::illegal_byte_sequence) {
+			throw;
+		}
+		throw engine::Error(engine::errc::invalid, "Invalid index name: " + path);
+	}
+}
 
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
 // strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
@@ -546,7 +565,7 @@ rethrow_pin_failure(const std::string& path)
 
 
 IndexCatalog::host
-DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
+DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 {
 	IndexCatalog::host h;
 	h.exec = executor_.get();
@@ -560,16 +579,27 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
 		}
 		const auto dir = (fs::path(path) / "strata").string();
-		std::error_code ec;
-		if (!fs::exists(dir, ec)) {
+		const auto open = [&] {
+			return strata::counted_io::make(op.counts, [&] {
+				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
+			});
+		};
+		// The directory's open is its existence check: a reopen pays no separate stat (cheap-reopen D2).
+		std::unique_ptr<kronuz::journal::IO> io;
+		try {
+			io = open();
+		} catch (const std::system_error& exc) {
+			if (exc.code() != std::errc::no_such_file_or_directory && exc.code() != std::errc::not_a_directory) {
+				throw;
+			}
 			if (!op.create) {
 				throw strata::index_not_created("No such database: " + path);
 			}
-			fs::create_directories(dir);
+			create_index_directory(dir, path);
+			io = open();
 		}
-		return strata::counted_io::make(op.counts, [&] {
-			return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
-		});
+		names_.opened(path);   // the walk lists the index from here on, so the names do (name-index D3)
+		return io;
 	};
 	// The options are read at each open, so a test that resizes them affects the indexes opened from then on.
 	h.open_index = [this](kronuz::journal::IO& io, const prospect::index::options&, const IndexCatalog::opening& op) {
@@ -595,9 +625,7 @@ DatabasePool::make_host(std::size_t database_pool_size, const IndexSweep& sweep)
 	h.commit = [](ShardEndpoint& entry, prospect::index&) {
 		entry.commit_blocking();
 	};
-	// A warm index holds one descriptor, so the pool keeps no more open than the descriptors' soft cap (D11).
-	soft_open_ = std::min<std::size_t>(database_pool_size, budget_->soft(strata::resource::descriptors));
-	h.soft_open = soft_open_;
+	h.soft_open = soft_open;
 	const auto set = [](std::uint64_t& field, std::chrono::nanoseconds value) {
 		if (value.count() > 0) {
 			field = static_cast<std::uint64_t>(value.count());
@@ -627,8 +655,30 @@ DatabasePool::DatabasePool(engine::AsioHost& timers, size_t database_pool_size, 
 	executor_ = std::make_unique<strata::work_pool_executor>(*work_pool_, 1);
 	timer_ = std::make_shared<Timer>(timers);
 	budget_ = std::make_unique<strata::resource_budget>();
-	catalog_ = std::make_unique<IndexCatalog>(make_host(database_pool_size, sweep));
-	catalog_->start();
+	// A warm index holds one descriptor, so the pool keeps no more open than the descriptors' soft cap (D11).
+	soft_open_ = std::min<std::size_t>(database_pool_size, budget_->soft(strata::resource::descriptors));
+	// One lane per partition (cheap-reopen D1); each keeps its share of soft_open, the first ones the remainder.
+	const std::size_t partitions = std::max<std::size_t>(1, std::min<std::size_t>({work_pool_->threads(), 8, soft_open_ / 16}));
+	catalogs_.reserve(partitions);
+	for (std::size_t i = 0; i < partitions; ++i) {
+		catalogs_.push_back(std::make_unique<IndexCatalog>(make_host(soft_open_ / partitions + (i < soft_open_ % partitions ? 1 : 0), sweep)));
+	}
+	for (auto& catalog : catalogs_) {
+		catalog->start();
+	}
+}
+
+
+IndexCatalog&
+DatabasePool::catalog(std::string_view key) noexcept
+{
+	if (catalogs_.size() == 1) {
+		return *catalogs_.front();
+	}
+	// The high bits of a multiplied hash: the catalog shards its slots by the key's own hash, which this must not
+	// correlate with.
+	const auto h = static_cast<std::uint64_t>(std::hash<std::string_view>{}(key)) * 0x9E3779B97F4A7C15ULL;
+	return *catalogs_[static_cast<std::size_t>((h >> 32) % catalogs_.size())];
 }
 
 
@@ -652,7 +702,7 @@ DatabasePool::~DatabasePool()
 	}
 	lk.unlock();
 	timer_->close();
-	catalog_.reset();
+	catalogs_.clear();
 }
 
 
@@ -662,14 +712,17 @@ DatabasePool::begin_shutdown()
 	std::lock_guard<std::mutex> lk(shutdown_mtx_);
 	if (!shutdown_) {
 		shutdown_ = std::make_shared<Shutdown>();
-		// Resumed inline by whoever releases the last pin or ends the last chore (no scheduler is current here).
-		[](IndexCatalog& catalog, std::shared_ptr<Shutdown> state) -> Detached {
-			auto result = co_await catalog.shutdown();
-			std::lock_guard<std::mutex> lk(state->mtx);
-			state->failed = std::move(result.uncommitted);
-			state->done = true;
-			state->cv.notify_all();
-		}(*catalog_, shutdown_);
+		shutdown_->pending = catalogs_.size();
+		// Each resumed inline by whoever releases its last pin or ends its last chore (no scheduler is current here).
+		for (auto& catalog : catalogs_) {
+			[](IndexCatalog& catalog, std::shared_ptr<Shutdown> state) -> Detached {
+				auto result = co_await catalog.shutdown();
+				std::lock_guard<std::mutex> lk(state->mtx);
+				state->failed.insert(state->failed.end(), result.uncommitted.begin(), result.uncommitted.end());
+				state->done = --state->pending == 0;
+				state->cv.notify_all();
+			}(*catalog, shutdown_);
+		}
 	}
 	return *shutdown_;
 }
@@ -699,20 +752,64 @@ counted(task::task<void> t, Uncount done)
 	co_await std::move(t);
 }
 
+// The names' build (name-index D5): one walk in a merge chore of its own group, so it holds a worker of the
+// pool and never a loop. Whatever ends it, the build is unclaimed, so a later pattern may start it again.
+task::task<void>
+run_names_build(WorkPool& pool, NameIndex& names, std::string root)
+{
+	IndexChores chores(pool);
+	try {
+		co_await chores.run(engine::ChoreClass::merge, [&] {
+			if (names.build(root)) {
+				L_NOTICE("The index names are complete: {} names", names.size());
+			} else if (!names.failure().empty()) {
+				L_ERR("The index names could not be built; patterns walk the data directory: {}", names.failure());
+			}
+		});
+	} catch (const task::cancelled&) {
+	} catch (...) {
+		L_EXC("The index names could not be built; patterns walk the data directory");
+	}
+	names.unclaim();
+}
+
 }  // namespace
 
 
-void
-DatabasePool::run_detached(task::task<void> t)
+bool
+DatabasePool::post_detached(task::task<void>& t)
 {
 	// Counted before the control is read: a shutdown that clears the control and then sees no task counted
 	// is sure that this call read the empty control.
 	detached_.fetch_add(1);
 	if (auto* control = control_.load()) {
 		control->spawn(counted(std::move(t), Uncount(detached_)));
-		return;
+		return true;
 	}
 	detached_.fetch_sub(1);
+	return false;
+}
+
+
+void
+DatabasePool::build_names(const std::string& root)
+{
+	if (!names_.claim()) {
+		return;
+	}
+	auto t = run_names_build(*work_pool_, names_, root);
+	if (!post_detached(t)) {
+		names_.unclaim();   // no control loop: patterns walk
+	}
+}
+
+
+void
+DatabasePool::run_detached(task::task<void> t)
+{
+	if (post_detached(t)) {
+		return;
+	}
 	// No control left: the task runs here, to its end, on the thread that starts it, which may be the shutdown
 	// thread draining the control loop (a debounced commit fires there).
 	engine::BlockingAllowed blocking("a detached task runs on the thread that starts it once the control is gone");
@@ -737,7 +834,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 		// A finishing node serves the indexes it has open and opens no more: a resident pin finds the index open (or
 		// owed) and keeps it so while the request pin is taken; it applies nothing, so it never meets a debt.
 		try {
-			resident = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, cancel);
+			resident = co_await catalog(key).pin_chore(key, false, strata::open_intent::resident, cancel);
 		} catch (...) {
 			rethrow_pin_failure(key);
 		}
@@ -746,7 +843,7 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 		}
 	}
 	try {
-		co_return IndexPin(co_await catalog_->pin_request(key, use, intent, std::move(cancel)), *this);
+		co_return IndexPin(co_await catalog(key).pin_request(key, use, intent, std::move(cancel)), *this);
 	} catch (...) {
 		rethrow_pin_failure(key);
 	}
@@ -760,7 +857,7 @@ DatabasePool::pin_chore(const Endpoint& endpoint, task::cancel_token cancel)
 
 	const std::string key = endpoint.path;
 	try {
-		auto pinned = co_await catalog_->pin_chore(key, false, strata::open_intent::resident, std::move(cancel));
+		auto pinned = co_await catalog(key).pin_chore(key, false, strata::open_intent::resident, std::move(cancel));
 		if (!pinned) {
 			co_return IndexPin();
 		}
@@ -778,7 +875,8 @@ void
 IndexPin::reopen() noexcept
 {
 	if (pin_) {
-		pool_->catalog_->reopen(std::move(pin_));
+		auto& catalog = pool_->catalog(pin_.payload().path);
+		catalog.reopen(std::move(pin_));
 	}
 }
 
@@ -822,15 +920,17 @@ std::vector<std::string>
 DatabasePool::busy()
 {
 	std::vector<std::string> lines;
-	if (catalog_->shutting_down()) {
-		for (const auto& holder : catalog_->shutdown_report()) {
-			lines.push_back(strings::format("{} ({}, {} pin{}, {})", repr(holder.key), state_name(static_cast<strata::slot_state>(holder.state)), holder.pins, holder.pins == 1 ? "" : "s", hold_name(holder.why)));
+	for (auto& catalog : catalogs_) {
+		if (catalog->shutting_down()) {
+			for (const auto& holder : catalog->shutdown_report()) {
+				lines.push_back(strings::format("{} ({}, {} pin{}, {})", repr(holder.key), state_name(static_cast<strata::slot_state>(holder.state)), holder.pins, holder.pins == 1 ? "" : "s", hold_name(holder.why)));
+			}
+			continue;
 		}
-		return lines;
-	}
-	for (const auto& slot : catalog_->snapshot()) {
-		if (slot.pins != 0 || (slot.state != strata::slot_state::open && slot.state != strata::slot_state::owed && slot.state != strata::slot_state::failed)) {
-			lines.push_back(strings::format("{} ({}, {} pin{})", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s"));
+		for (const auto& slot : catalog->snapshot()) {
+			if (slot.pins != 0 || (slot.state != strata::slot_state::open && slot.state != strata::slot_state::owed && slot.state != strata::slot_state::failed)) {
+				lines.push_back(strings::format("{} ({}, {} pin{})", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s"));
+			}
 		}
 	}
 	return lines;
@@ -842,8 +942,13 @@ DatabasePool::flush(task::cancel_token cancel)
 {
 	L_CALL("DatabasePool::flush()");
 
-	// Every key the catalog has, pinned resident and committed, one at a time: a task holds one turn at most.
-	for (auto& slot : catalog_->snapshot()) {
+	// Every key the catalogs have, pinned resident and committed, one at a time: a task holds one turn at most.
+	std::vector<IndexCatalog::slot_view> slots;
+	for (auto& catalog : catalogs_) {
+		auto part = catalog->snapshot();
+		slots.insert(slots.end(), std::make_move_iterator(part.begin()), std::make_move_iterator(part.end()));
+	}
+	for (auto& slot : slots) {
 		if (cancel.requested()) {
 			throw task::cancelled{};   // the request left: the keys after it are not pinned
 		}
@@ -866,6 +971,7 @@ DatabasePool::finish()
 	L_CALL("DatabasePool::finish()");
 
 	finished_.store(true);
+	names_.request_stop();   // the names' build is a task of that loop (name-index D5)
 	control_.store(nullptr);  // the loop that ran the detached tasks stops: from now on they run where they are started
 }
 
@@ -898,10 +1004,12 @@ DatabasePool::count()
 
 	size_t endpoints_count = 0;
 	size_t databases_count = 0;
-	for (const auto& slot : catalog_->snapshot()) {
-		++endpoints_count;
-		if (slot.state == strata::slot_state::open || slot.state == strata::slot_state::owed) {
-			++databases_count;
+	for (auto& catalog : catalogs_) {
+		for (const auto& slot : catalog->snapshot()) {
+			++endpoints_count;
+			if (slot.state == strata::slot_state::open || slot.state == strata::slot_state::owed) {
+				++databases_count;
+			}
 		}
 	}
 	return std::make_pair(endpoints_count, databases_count);
@@ -928,10 +1036,12 @@ DatabasePool::dump_databases(int level) const
 	ret += __repr__();
 	ret.push_back('\n');
 
-	for (const auto& slot : catalog_->snapshot()) {
-		ret += indent + indent;
-		ret += strings::format(STEEL_BLUE + "<Index {} ({}, {} pin{})>", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s");
-		ret.push_back('\n');
+	for (const auto& catalog : catalogs_) {
+		for (const auto& slot : catalog->snapshot()) {
+			ret += indent + indent;
+			ret += strings::format(STEEL_BLUE + "<Index {} ({}, {} pin{})>", repr(slot.key), state_name(slot.state), slot.pins, slot.pins == 1 ? "" : "s");
+			ret.push_back('\n');
+		}
 	}
 	return ret;
 }

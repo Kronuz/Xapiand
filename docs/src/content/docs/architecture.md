@@ -112,7 +112,7 @@ Writes to an index take its **turn**, an asynchronous mutex with a 30 s deadline
 (`503` when the turn does not come). Reads take no turn: each holds a **view**,
 the index as its last refresh published it, so a read never makes a write wait.
 An index idle for 30 s gives back its memory maps, and one idle for 10 minutes
-closes; when more are open than `--database-pool-size` (200, lowered to fit the
+closes; when more are open than `--database-pool-size` (1% of RAM at ~40 KiB per index, lowered to fit the
 process's file-descriptor limit) it closes the least used first.
 
 ## The write path
@@ -206,7 +206,7 @@ exit statuses.
 | Shards one search names | 100,000 (`--max-search-indexes`) | `400` |
 | Wait for an index's turn | 30 s | `503` |
 | Views held on one index at once | 16 per HTTP loop, plus 2 per processor, plus 2 | `503` |
-| Open indexes | `--database-pool-size` (200) | the least used close |
+| Open indexes | `--database-pool-size` (1% of RAM) | the least used close |
 | Blob volume | 32 GiB | the next volume |
 | One Lua script call | 10⁸ instructions, 64 MiB of memory, a 16 MiB result | `400`, or `413` for the result |
 | The stop, after the requests in flight | 35 s | exit status 75 |

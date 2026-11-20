@@ -1,6 +1,6 @@
 # xapiand-final-release: The final Xapian-only Xapiand release
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
 (status, branch, checks, reviews) is in `state.json`: `campaign status xapiand-final-release`.
 
 ## Outcome
@@ -41,6 +41,28 @@ refusals. The closing benchmark's X arm (`closing-benchmark`) builds the tagged 
 - Open (owner): A2 and A3 change user-visible behavior on the old line (a reserved decision; the
   ruling names them as wanted). After the strata release names the product, Xapiand's README points to
   it and the repository is archived read-only: `release`'s, not this quest's.
+
+## Tasks
+
+One agent, economical, medium, on the `xapiand` branch; each backport is a step with its test, merged
+in order. The branch carries Xapian's GPL sources: the contributor never reads `src/xapian/**`
+(the parser replacement already exists on `fix/xapiand-backports`, Xapiand:823a72e6d,
+Xapiand:ffd1c3708). Its file set names master's paths while it works on another branch, so the tool
+holds every Xapiand quest against it for nothing: the lead gives it a set no master quest uses, or
+starts it once the others it holds land.
+
+| Order | Task | Files | Assignment, tier, effort | Does |
+|---|---|---|---|---|
+| 1 | `parser` | the queryparser adapter and its test on the branch | implementation, economical, medium | A1 |
+| 1 | `ids-integers` | document-id and integer handling and their tests on the branch | implementation, economical, medium | A2, A3 |
+| 2 | `release-notes` | the branch's changelog | documentation, economical, medium | A4; then CI and the workflows (A5) |
+
+## When done
+
+No review: CI and the workflows are the check (A5). Runs before the tag: CI and the Release, FreeBSD
+and Bottles workflows on the branch at the commit to be tagged; the owner approves the tag (A6).
+This is the X arm of the closing benchmark, of the cluster gate's R8 and of `more-like-this`'s A/B,
+so it starts now.
 
 ## May land early
 

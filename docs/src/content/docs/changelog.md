@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
+  ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
+  orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
@@ -22,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **The open-index pool is sized from memory**: with no `--database-pool-size` it holds what 1% of RAM covers at
+  about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit, not a fixed 200; a size you
+  give wins.
+- **Stop-word lists are compiled in, overridable and checked by every index.** The 18 shipped lists are part of the binary and
+  nothing reads them from the data path; `<data path>/stopwords/<language>.txt` replaces a language's list (an unreadable file or a directory of that name stops the
+  node). A language with no list used to stop nothing without a word; it is now an error (`400` for a query), and an index
+  records the fingerprint of each list it indexed with and is refused (`409`), naming the index, the list and both fingerprints, when
+  that list is missing or has other words. See [Stop Words](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words).
 - **A value must be exactly of its field's type, everywhere.** Field writes, `_id` writes and searches (terms, range bounds
   and `q=`) hold a value to one rule: it must be exactly a value of the field's type, else the request answers `400` with a
   message naming the field, the value and the type. `1.5` or `"abc"` in an integer field or an integer `_id`, `-1` in a
@@ -143,6 +154,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run). A search sees the index as of the moment it started.
 - **Too many searches of one index at once answer `503`.** Each index admits a fixed number of concurrent readers
   (16 per HTTP loop plus the pool's workers); a search that finds the index at its cap answers `503` instead of waiting.
+- **Index patterns resolve from the node's index names.** The node's first pattern builds a sorted list of its index
+  names (one walk of the data directory), which every index the node opens or creates joins. From then on a pattern
+  reads the names under its prefix instead of the data directory, so a node with more indexes than
+  `--max-search-indexes` answers `logs-2026*`; a pattern that reads more index names than the cap answers `400` naming
+  "index names". The list is rebuilt at each start, so nothing new is written.
 - **A search over many indexes reads them in batches.** A search holds at most `--concurrent-search-indexes` shards open
   at once (by default a loop's share of the database pool) and merges each batch's best hits as the batch ends, so a
   search over thousands of indexes is served. Hits, order, weights, totals and aggregations do not depend on the batch
@@ -196,6 +212,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct values than that. They are refused (400) over geo fields.
 
 ### Fixed
+- **A `:` in an index name is part of the name.** An index path whose first name held a `:` was cut there: `a:b`
+  opened index `a`, and `urn:uuid:…` opened `urn`. `a:b` now opens `a:b`; an index created as `a:b` before lives in `a`.
+- **A node URI with a port is refused.** `xapiand://host:port/idx` answered as if it named no node; it is now refused
+  as malformed. A node is named by its name alone.
+- **UUID-named indexes open under `--uuid partition`.** Each layer that rebuilt an index's path partitioned its UUID
+  again, so the index could not be opened and `FLUSH` skipped it.
+- **Geo searches by area find points on the mesh edges, and several wrong answers are right.** The HTM library
+  (htm `0c09a02`) gave a point on an edge of the root mesh (latitude 0, longitude 0, 90, 180 or 270, the poles) an id
+  thousands of km away, so a circle around it missed it, and a 9,000 km lens of two circles missed its own center.
+  **Stored geo ids change: reindex all stored geo points.** Points on an edge move far, points at or near a vertex of a
+  deeper trixel move too, and about 0.4% of all other points move by meters. Also fixed:
+  - A circle past a hemisphere (15,011 km) in a convex now covers its own center and leaves out the cap around its antipode.
+  - A ring (a negative circle with a positive one) covers its band whatever the order of its circles.
+  - Circles that never meet match nothing: `CONVEX((a, r), (b, r))` with disjoint circles used to match every document.
+  - `MULTIPOINT(1 2, 3 4)` parses (the form without inner parentheses), and a malformed point answers `400`, not `500`.
+  - A `GEOMETRYCOLLECTION` holding an empty intersection writes `EMPTY`, which parses back.
+  - `_multiconvex` in the map form (`{"_multiconvex": {"_latitude": [[..], [..]], "_longitude": [[..], [..]],
+    "_radius": [[..], [..]]}}`, one convex per inner list; a flat list is one convex) is served at the top level, in
+    `_geometrycollection` and in `_geometryintersection`; it answered `Unknown geometry` before.
 - **Every integer ID is its own document.** Integer IDs past 2^32 could share a key: a `PUT` of 4294967297
   and one of 4311744512 left one document. A numeric ID's key is now its exact number, for every 64-bit
   integer and every float, and new integer IDs run up to 2^63 - 1 (2^53 for float IDs) instead of 2^32 - 1.

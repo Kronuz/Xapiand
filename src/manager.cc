@@ -82,7 +82,7 @@
 #include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
 #include "reactor_lag.h"                         // Kronuz/reactor: reactor::LagProbe, LagSnapshot
 #include "task_asio.hh"                           // for task::await_asio
-#include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
+#include "reactor_events.h"                      // Kronuz/reactor: Signal (ev::async replacement)
 #include "server/search_service.h"           // for SearchService (the HttpHandler)
 #include "control_plane.h"                       // for control::Tasks, Periodic, Debounce
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
@@ -171,7 +171,7 @@ XapiandManager::http_shutdown_grace(std::chrono::milliseconds left)
 // One reactor, the control loop, and everything that runs on it as a task on its host (D13): the setup, the
 // shutdown checks, the signal reader, the housekeeping and the debounced autocommit. Nothing there waits;
 // a task that has to wait awaits a timer, an event or a chore. The ev::timer/ev::async watchers become a
-// PeriodicTimer + two Signals. The signal wake is deliberately NOT a reactor::Signal
+// two Signals. The signal wake is deliberately NOT a reactor::Signal
 // (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
 // a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
 // same async-signal-safe mechanism ev::async uses internally -- and read by a task on the loop.
@@ -181,7 +181,7 @@ struct XapiandManager::Reactors {
 	control::Tasks tasks;                        // the control tasks that have not ended
 	std::unique_ptr<control::Periodic> housekeeping;
 	std::unique_ptr<control::Debounce<Endpoint>> autocommits;
-	reactor::PeriodicTimer try_shutdown_timer;
+	std::unique_ptr<control::Periodic> shutdown_retry;   // try_shutdown every 5 s once an asap shutdown starts
 	reactor::Signal setup_node_async;
 	reactor::Signal shutdown_async;
 
@@ -192,7 +192,6 @@ struct XapiandManager::Reactors {
 	Reactors()
 		: host(reactor.scheduler()),
 		  tasks(host),
-		  try_shutdown_timer(reactor.io().get_executor()),
 		  setup_node_async(reactor.io().get_executor()),
 		  shutdown_async(reactor.io().get_executor()),
 		  sig_pipe{-1, -1},
@@ -306,7 +305,6 @@ XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_sta
 			std::chrono::milliseconds(opts.committer_debounce_max_force_timeout)},
 		[](const Endpoint& endpoint) { committer_commit(endpoint); });
 	_rx->autocommits->tasks().failed = _rx->tasks.failed;
-	_rx->try_shutdown_timer.set_callback([this] { try_shutdown_timer_cb(); });
 	_rx->setup_node_async.set_callback([this] { setup_node_async_cb(); });
 	_rx->shutdown_async.set_callback([this] { shutdown_async_cb(); });
 }
@@ -705,9 +703,11 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 	L_CALL("XapiandManager::shutdown_impl({}, {})", asap, now);
 
 	if (asap) {
-		_rx->try_shutdown_timer.set_repeat(5.0);
-		_rx->try_shutdown_timer.again();
-		L_EV("Configured try shutdown timer (5.0)");
+		if (!_rx->shutdown_retry) {
+			_rx->shutdown_retry = std::make_unique<control::Periodic>(_rx->tasks, std::chrono::seconds(5), [this] { try_shutdown_timer_cb(); });
+			_rx->shutdown_retry->start();
+			L_EV("Started the shutdown retry (5 s)");
+		}
 
 		if (now != 0) {
 			// No Worker tree to stop/destroy/detach anymore -- the manager is the sole
@@ -1044,10 +1044,13 @@ XapiandManager::join()
 	// The stop has one bound (D16): the drains, the HTTP service and the registry's close all end by this time.
 	const auto deadline = std::chrono::steady_clock::now() + shutdown_write_bound;
 
-	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, and the signal
-	// reader, whose read is cancelled.
+	// The control loop has stopped (break_loop). The tasks that wait end now: the housekeeping, the shutdown
+	// retry, and the signal reader, whose read is cancelled.
 	if (_rx->housekeeping) {
 		_rx->housekeeping->stop();
+	}
+	if (_rx->shutdown_retry) {
+		_rx->shutdown_retry->stop();
 	}
 	{
 		asio::error_code ec;

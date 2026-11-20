@@ -268,6 +268,9 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 						hh(RESERVED_STRING),  // FIXME: remove legacy string
 						hh(RESERVED_TEXT),
 						hh(RESERVED_DATETIME),
+						hh(RESERVED_DATE),
+						hh(RESERVED_TIME),
+						hh(RESERVED_TIMEDELTA),
 						hh(RESERVED_UUID),
 						hh(RESERVED_EWKT),
 						hh(RESERVED_POINT),
@@ -378,6 +381,9 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
 							case _.fhh(RESERVED_TEXT):
 							case _.fhh(RESERVED_DATETIME):
+							case _.fhh(RESERVED_DATE):
+							case _.fhh(RESERVED_TIME):
+							case _.fhh(RESERVED_TIMEDELTA):
 							case _.fhh(RESERVED_UUID):
 							case _.fhh(RESERVED_EWKT):
 							case _.fhh(RESERVED_POINT):
@@ -391,7 +397,12 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_MULTICHULL):
 							case _.fhh(RESERVED_GEO_COLLECTION):
 							case _.fhh(RESERVED_GEO_INTERSECTION):
-								query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
+								{
+									MsgPack cast = MsgPack::MAP();
+									// A date is a datetime at midnight: `_date` is cast as `_datetime`.
+									cast[name == RESERVED_DATE ? std::string_view(RESERVED_DATETIME) : name] = o;  // the cast word and its value.
+									query = get_value_query(path, cast, default_op, wqf, flags);
+								}
 								break;
 							default:
 								THROW(QueryDslError, "Invalid operator: {}", name);
@@ -650,7 +661,15 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 			break;
 	}
 
-	auto type_ser = Serialize::guess_serialize(obj);
+	// `_time` and `_timedelta` serialize as their own type (guessing would read a datetime); globally they share one term space.
+	std::pair<FieldType, std::string> type_ser;
+	if (obj.is_map() && obj.size() == 1 && obj.begin()->str_view() == RESERVED_TIME) {
+		type_ser = { FieldType::time, Serialize::time(Cast::time(obj.begin().value())) };
+	} else if (obj.is_map() && obj.size() == 1 && obj.begin()->str_view() == RESERVED_TIMEDELTA) {
+		type_ser = { FieldType::timedelta, Serialize::timedelta(Cast::timedelta(obj.begin().value())) };
+	} else {
+		type_ser = Serialize::guess_serialize(obj);
+	}
 
 	auto& type = std::get<0>(type_ser);
 	if (type == FieldType::keyword) {
@@ -1167,16 +1186,8 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_QUERYDSL_AND_MAYBE);
-						auto it_end = ob.end();
-						if (ob_it != it_end) {
-							auto last_op_object = ob_it.value();
-							last_op_object.push_back(stack_msgpack.back());
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_QUERYDSL_AND_MAYBE] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
-						} else {
+						{
+							// The right operand stays whole: a maybe (b maybe c) is not (b maybe c maybe a).
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
 							auto ob2_it = ob2.find(RESERVED_QUERYDSL_AND_MAYBE);
@@ -1191,7 +1202,6 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a maybe (b maybe c) ...
 								   parentheses force to create a new expression
 								*/
-								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND_MAYBE);
@@ -1317,8 +1327,10 @@ QueryDSL::create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::stri
 {
 	L_CALL("QueryDSL::create_exp_op_dsl({})", repr(operator_dsl));
 
-	MsgPack object;
-	object[operator_dsl] = {{ stack_msgpack.back() }}; // expression.
+	MsgPack expression = MsgPack::ARRAY();
+	expression.push_back(std::move(stack_msgpack.back()));  // a list of one expression.
+	MsgPack object = MsgPack::MAP();
+	object[operator_dsl] = std::move(expression);
 	stack_msgpack.pop_back();
 	stack_msgpack.push_back(std::move(object));
 }
@@ -1437,7 +1449,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 							}
 							value = &val;
 							break;
-						// Reserved cast words
+						// Scalar cast words: the reference value is the cast's operand
 						case _.fhh(RESERVED_FLOAT):
 						case _.fhh(RESERVED_POSITIVE):
 						case _.fhh(RESERVED_INTEGER):
@@ -1448,6 +1460,12 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						case _.fhh(RESERVED_TEXT):
 						case _.fhh(RESERVED_DATETIME):
 						case _.fhh(RESERVED_UUID):
+							if (value) {
+								THROW(QueryDslError, "Value for field {} is already defined", field);
+							}
+							value = &val;
+							break;
+						// Geo cast words: the geometry reads the word's own map
 						case _.fhh(RESERVED_EWKT):
 						case _.fhh(RESERVED_POINT):
 						case _.fhh(RESERVED_POLYGON):

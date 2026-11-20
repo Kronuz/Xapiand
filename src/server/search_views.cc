@@ -41,6 +41,7 @@
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
+#include "database/wide_search.h"           // for wide_search::resolve
 #include "engine/host_asio.h"               // for engine::AsioHost
 #include "engine/census.h"                  // for ENGINE_CENSUS_REQUEST
 #include "engine/error.h"                   // for engine::Error
@@ -794,10 +795,30 @@ node_obj()
 }
 
 
+// A root command the node answers itself: a verb word (`:info`) or `:metrics`; any other (`:stats`,
+// `:schema`, an unknown word) is index metadata, and the root has no index.
+static bool
+is_node_command(std::string_view cmd)
+{
+	if (cmd.empty() || cmd == ":metrics") {
+		return true;
+	}
+	cmd.remove_prefix(1);
+	switch (http_methods.fhhl(cmd)) {
+		#define OPTION(name, str) \
+		case http_methods.fhhl(str): \
+			return true;
+		METHODS_OPTIONS()
+		#undef OPTION
+	}
+	return false;
+}
+
+
 bool
 is_node_route(PathParser& path_parser)
 {
-	return !path_parser.has_pth() && path_parser.get_id().empty();
+	return !path_parser.has_pth() && path_parser.get_id().empty() && is_node_command(path_parser.get_cmd());
 }
 
 
@@ -2286,24 +2307,9 @@ resolve_index_endpoints(Request& request, const query_field_t& query_field, cons
 	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
 
 	auto paths = co_await expand_paths(request, query_field.patterns);
-
-	// Sorted and without repeats, as Endpoints::add keeps them, in one sort: a wide search names thousands.
-	std::vector<Endpoint> resolved;
-	for (const auto& path : paths) {
-		auto index_endpoints = co_await XapiandManager::resolve_index_endpoints(
-			Endpoint(path),
-			query_field.writable,
-			settings);
-		if (index_endpoints.empty()) {
-			throw engine::Error(engine::errc::network, "Endpoint node not available");
-		}
-		for (auto& endpoint : index_endpoints) {
-			resolved.push_back(std::move(endpoint));
-		}
-	}
-	std::sort(resolved.begin(), resolved.end());
-	resolved.erase(std::unique(resolved.begin(), resolved.end()), resolved.end());
-	static_cast<std::vector<Endpoint>&>(request.endpoints) = std::move(resolved);
+	// Only a search or a count (the views that take patterns) yields between its names and ends when its client leaves.
+	auto* const budget = query_field.patterns ? &*request.budget : nullptr;
+	static_cast<std::vector<Endpoint>&>(request.endpoints) = co_await wide_search::resolve(paths, query_field.writable, settings, budget);
 	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
 	co_return paths.size();
@@ -2341,22 +2347,34 @@ expand_paths(Request& request, bool patterns)
 
 	if (wildcards && patterns) {
 		std::vector<std::string> names;
-		IndexChores chores(XapiandManager::manager(true)->database_pool->work_pool());
+		auto& pool = *XapiandManager::manager(true)->database_pool;
+		IndexChores chores(pool.work_pool());
+		// The walk looks at the request between entries, so a client that goes away stops it.
+		const task::cancel_token token = request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{};
+		const auto cap = static_cast<size_t>(opts.max_search_indexes);
+		const auto checkpoint = [&token] {
+			if (token.requested()) {
+				throw task::cancelled{};
+			}
+		};
+		// The names of the node's indexes answer once built; the first pattern starts the build, and until it ends
+		// the patterns walk the data directory (docs/design/name-index.md, D5).
+		auto& indexes = pool.names();
+		pool.build_names(Endpoint::cwd);
+		if (indexes.complete()) {
+			co_await chores.run(engine::ChoreClass::query, [&] {
+				names = indexes.expand(paths, {cap, cap}, checkpoint);
+			});
+			co_return names;
+		}
 		// One walk at a time on the node: the rest wait their turn holding no thread, so the walks hold one worker of the
 		// work pool whatever the clients send, and the writes' chores run beside them. The queue and the wait have bounds.
 		static index_pattern::WalkGate walks(
 			static_cast<std::size_t>(opts.search_walk_queue),
 			std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(opts.search_walk_wait)));
-		// The walk looks at the request between entries, so a client that goes away stops it.
-		const task::cancel_token token = request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{};
 		const auto turn = co_await walks.enter(token);
-		const auto cap = static_cast<size_t>(opts.max_search_indexes);
 		co_await chores.run(engine::ChoreClass::query, [&] {
-			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, [&token] {
-				if (token.requested()) {
-					throw task::cancelled{};
-				}
-			});
+			names = index_pattern::expand(Endpoint::cwd, paths, {cap, cap}, checkpoint);
 		});
 		co_return names;
 	}

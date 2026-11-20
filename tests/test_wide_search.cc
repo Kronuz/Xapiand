@@ -42,6 +42,7 @@
 #include "database/handler.h"
 #include "database/pool.h"
 #include "database/shard.h"
+#include "database/wide_search.h"
 #include "pool_support.h"
 #include "engine/callbacks.h"
 #include "engine/document.h"
@@ -481,6 +482,90 @@ void test_a_batch_holds_whole_indexes() {
 	CHECK_THROW(engine::sync_wait(engine::search_batched(13, 4, std::span<const std::uint32_t>(index_of, 5), runner, request)), engine::Error);
 }
 
+// The node's bound on pinned indexes: a batch that fits takes its count at once and gives it back when it ends; a batch
+// wider than the bound takes all of it.
+void test_the_pins_bound_the_indexes_held_at_once() {
+	wide_search::Pins pins(4);
+	{
+		auto three = engine::sync_wait(pins.take(3, {}));
+		CHECK_EQ(three.size(), std::size_t{3});
+		CHECK_EQ(pins.held(), std::size_t{3});
+		auto one = engine::sync_wait(pins.take(1, {}));   // fits
+		CHECK_EQ(one.size(), std::size_t{1});
+		CHECK_EQ(pins.held(), std::size_t{4});
+	}
+	CHECK_EQ(pins.held(), std::size_t{0});
+	auto all = engine::sync_wait(pins.take(10, {}));   // wider than the bound: all of it, alone
+	CHECK_EQ(all.size(), std::size_t{4});
+	all = {};
+	CHECK_EQ(pins.held(), std::size_t{0});
+}
+
+// Takes n and records the count it got, in the order the batches got theirs.
+task::task<void> take_in_line(wide_search::Pins& pins, std::size_t n, std::vector<std::size_t>& order) {
+	auto hold = co_await pins.take(n, {});
+	order.push_back(hold.size());
+}
+
+// Each step below runs on one inline scheduler: spawn() queues a task and run() returns when nothing is ready, so a
+// step ends with every task it started parked at its first wait, whatever order the compiler's transfers start the
+// awaited tasks in.
+task::scheduler_ref on(task::inline_scheduler& scheduler) { return task::scheduler_ref::of(scheduler); }
+
+// A batch that does not fit waits for room, holding no thread, and is first in line: a narrower batch does not pass it.
+void test_a_waiting_batch_keeps_its_place() {
+	wide_search::Pins pins(4);
+	auto three = engine::sync_wait(pins.take(3, {}));
+	std::vector<std::size_t> order;
+	task::inline_scheduler scheduler;
+	task::spawn(on(scheduler), take_in_line(pins, 2, order));
+	scheduler.run();   // the batch of two waits at the head of the line
+	task::spawn(on(scheduler), take_in_line(pins, 1, order));
+	scheduler.run();   // the batch of one waits behind it
+	// One index is free, but the batch of two is first, so the batch of one does not take it.
+	CHECK_EQ(pins.held(), std::size_t{3});
+	CHECK_TRUE(order.empty());
+	three = {};   // room comes back: the head takes it, then the batch behind it
+	scheduler.run();
+	CHECK_TRUE(order == (std::vector<std::size_t>{2, 1}));
+	CHECK_EQ(pins.held(), std::size_t{0});
+}
+
+task::task<void> head_of_line(wide_search::Pins& pins, bool& done) {
+	auto one = co_await pins.take(1, {});
+	done = true;
+}
+
+task::task<void> behind_the_head(wide_search::Pins& pins, task::cancel_token token, bool& cancelled) {
+	try {
+		auto one = co_await pins.take(1, std::move(token));
+	} catch (const task::cancelled&) {
+		cancelled = true;
+	}
+}
+
+// A batch behind the head of the line leaves it when its search is cancelled.
+void test_a_cancelled_batch_leaves_the_line() {
+	wide_search::Pins pins(2);
+	auto two = engine::sync_wait(pins.take(2, {}));
+	task::cancel_source source;
+	bool head_done = false;
+	bool cancelled = false;
+	task::inline_scheduler scheduler;
+	task::spawn(on(scheduler), head_of_line(pins, head_done));
+	scheduler.run();   // the head holds the line and waits for room
+	task::spawn(on(scheduler), behind_the_head(pins, source.token(), cancelled));
+	scheduler.run();   // the batch behind it waits for the line
+	CHECK_FALSE(head_done);
+	CHECK_FALSE(cancelled);
+	source.request();  // the batch behind the head leaves the line
+	two = {};          // room for the head; the cancelled batch is not given the line after it
+	scheduler.run();
+	CHECK_TRUE(cancelled);
+	CHECK_TRUE(head_done);
+	CHECK_EQ(pins.held(), std::size_t{0});
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -493,6 +578,9 @@ int main(int argc, char** argv) {
 		{"test_an_id_past_32_bits_is_exact", test_an_id_past_32_bits_is_exact},
 		{"test_a_hit_id_decodes_past_32_bits", test_a_hit_id_decodes_past_32_bits},
 		{"test_a_batch_holds_whole_indexes", test_a_batch_holds_whole_indexes},
+		{"test_the_pins_bound_the_indexes_held_at_once", test_the_pins_bound_the_indexes_held_at_once},
+		{"test_a_waiting_batch_keeps_its_place", test_a_waiting_batch_keeps_its_place},
+		{"test_a_cancelled_batch_leaves_the_line", test_a_cancelled_batch_leaves_the_line},
 	};
 	for (const auto& c : cases) {
 		if (argc > 1 && std::string(c.name).find(argv[1]) == std::string::npos) {

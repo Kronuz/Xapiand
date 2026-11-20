@@ -861,6 +861,8 @@ Xapiand's requirements beyond the five recorded items (D21; `SHARED_LIBRARY_DECI
 
 ## 9. Questions for the owner
 
+Answered 2026-11-17 (PLAN D113): Q1 (a), Q2 (a), Q3 (a), Q4 as recommended, Q5 (b).
+
 **Q1. The default acknowledgement** (durability-modes Q11).
 
 - (a) `quorum`: survives any `f` failures. A single sequential client pays a journal barrier and a
@@ -926,6 +928,10 @@ blocks quest 17's plan only.
   seeds, then joins over TLS as in (a). About 300 lines, and it works only on one L2.
 - (c) Keep the old discovery messages. Rejected here: its Raft is gone, and its messages are
   unauthenticated.
+
+*Owner's answer (2026-11-20, D141): (b),* for the zero-flag demo of nodes finding each other on one
+network. Multicast only yields seeds; joining and membership stay TLS with node certificates, so an
+announcement is a hint, never a member. `--join` seeds remain the way on Kubernetes and clouds.
 
 *Recommendation: (a).* DNS seeds cover every deployment the docs describe, Kubernetes included
 (old `kubernetes.md:19-24`), and a removed option is cleaner than one kept for LANs. Deferring

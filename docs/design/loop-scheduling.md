@@ -268,6 +268,31 @@ the lane, macOS gives up 0.785-0.957x heavy searches, depending on the stream al
 search capacity and pays on concurrent RESTORE instead. The parked design is in "Thread placement" below, with the
 review's core-detection findings (F8, F9). No core detection is built.
 
+**D7. A script call runs in the heavy lane.** A Lua call is user code. A library call (the matcher, a plain `find`)
+is one stretch of C with no VM instruction in it, so the count hook cannot fire inside it, and `Limits::max_call_work`
+(16 x 10^6 units, about 22 ms) is the longest stretch a call may hold its reactor (`docs/mechanisms/lua-bounds.md`).
+That stretch runs in the request's first turn, which D1 counts as one slice, so charging it afterwards, as
+`ceil(turn / slice)` slices, cannot reclassify a request whose one call is the whole of its work: a flooding client
+re-sends such a request, every one starts light, and the light FIFO queues a light GET behind the stretch of every
+flooder on its reactor (p99 22, 24, 47, 87, 134 ms at 1, 2, 4, 8, 16 clients on one reactor: `docs/dev/t10-flood-limit.md`).
+
+- `Processor::operator()` hops to the heavy lane before its first turn (`co_await task::schedule_on` of the current
+  reference with the lane set), and on every exit, a throw included, marks the scope light again if it was light on
+  entry. A request that was already heavy stays heavy. The hop precedes the state lock, so the call holds nothing
+  while it waits for its turn; every slice after it posts heavy (D2 b), and the call's own collection too.
+- The class is what the request runs (user code with a 22 ms stretch), not its route, so it is not the "class per
+  route" that D1 rejects: a request without a script is classed as before. A tiny script pays one heavy pass
+  (D3: the drainer runs a heavy turn each pass, at once when the heavy lane holds nothing else).
+- Bound (D3 applied). A light request waits for the stretch in progress and then, at each of its hops through the loop
+  (its read, its database chore), for at most one heavy turn: k = 2 heavy turns, so (k + 1) stretches, whatever the
+  number of flooding clients or reactors. T10's flood row states that limit, (k + 1) x one flood call timed alone on the
+  node (`harness/lua_bounds.py`, `FLOOD_STRETCHES`), not a multiple of the flooders per reactor.
+- Cost. A script call queues behind the heavy turns already waiting on its loop, one per pass, as a heavy request
+  does. The tiny-write rows of `lua_bounds.py --cost` measure it idle and beside a light-only load.
+- Why the over-slice charge is not enough, and the hook is not either: a hop before the stretch is the only place a
+  request that spends its life in one stretch can be classed. Yielding inside the matcher (`lua_yieldk` with a
+  continuation) would split the stretch but needs a resumable matcher; D7 bounds the stretch's effect instead.
+
 ## Evidence for the lane (X2-X8)
 
 All three runs are exclusive jobs of at most 10 minutes. Each is an ABBA of today's policy (off) against the lane
@@ -415,6 +440,7 @@ configuration) are both X5-shaped ABBAs against today's code at 16 loops, run by
 - Kronuz/task: `budget`'s third parameter defaults to today's policy. `post_demoted` becomes callable from any
   thread, a widening that keeps every existing caller correct.
 - `demoted()` and Xapiand's `scheduler_demoted_peak` metric count heavy handles queued (D4).
+- A script call is a heavy turn (D7); no option.
 
 ## Checks
 
@@ -453,6 +479,9 @@ configuration) are both X5-shaped ABBAs against today's code at 16 loops, run by
   3. A streamed RESTORE: each body chunk's first slice runs light and the chunk turns heavy at the rearmed count,
      with the index child finishing after the read (the join then leaves the parent heavy). Mutants: no
      `rearm_light`; `rearm_light` moved into `Request::read_chunk`.
+- D7, `tests/test_lua.cc`, a two-lane scheduler that records each resume's lane: a call's every resume after its entry is
+  heavy and the request is light after it; a heavy request stays heavy; a script error and a bound leave the request
+  light. Mutant: no hop (the call stays light).
 
 ## Open questions
 

@@ -29,6 +29,12 @@ DatabaseHandler::match
   index (see "Indexes nest"). The names a pattern may expand to are counted as the walk goes, so a pattern over a million
   directories stops at the cap instead of listing them. The walk is blocking file-system work, so it runs as a `query` chore
   of the work pool, never on a loop. Plain names are not looked up: a missing one is skipped by the search, as before.
+- **The name index answers first.** Once built, a pattern resolves from `NameIndex`, the walk's names kept sorted
+  in memory: each wanted pattern's literal prefix is a range, and a subtree no pattern can match below is skipped with
+  one seek, so a prefix pattern reads O(log N + its names) instead of the directory. The node's first pattern starts
+  its build (one unbounded walk, a `merge` chore of the work pool that a task of the control loop awaits), the catalog's resolve adds each index it opens or creates,
+  and until the build ends patterns walk as below. Each name read counts against
+  `--max-search-indexes`. Design: `docs/design/name-index.md`.
 - **A pattern is an automaton over segments.** `index_pattern::Glob` makes a position of each segment of the pattern (a run
   of `**` is one) and a set of live positions of the path read so far: a segment moves each live position to the next if it
   matches the segment (a `**` stays and may be skipped). The set is a bitset carried down the walk with each directory, so an

@@ -35,7 +35,10 @@ gate (the 7c gate row): creates N indexes (default 10,000), then runs R searches
   (xapiand_resident_memory_bytes and xapiand_databases before and after). It prints each loop's lag over the timed
   searches (SR3: whether the per-name loop of resolve_index_endpoints stalls a reactor), its max read from the window's
   histogram. --create-only creates the indexes and stops; --reuse searches the indexes an earlier run left in OUTDIR,
-  so a light job can create them and a strict one time the searches. Run it under `quiet strict`; the servers use
+  so a light job can create them and a strict one time the searches; both together complete a creation an earlier
+  run left unfinished. --sample S writes the node's call graph over the
+  first S seconds of the timed searches to OUTDIR/sample.txt (`sample` on macOS, perf_sample.py on Linux); macOS's
+  `sample` suspends the node for seconds, so the lag of a sampled run is not SR3's. Run it under `quiet strict`; the servers use
   ports PORT and PORT + 1 and keep their data under OUTDIR; both are killed on exit.
 """
 
@@ -51,6 +54,7 @@ import statistics
 import subprocess
 import sys
 import time
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stall_load
@@ -66,6 +70,8 @@ ap.add_argument("--runs", type=int, default=30)
 ap.add_argument("--pool", type=int, default=0)
 ap.add_argument("--create-only", action="store_true")
 ap.add_argument("--reuse", action="store_true")
+ap.add_argument("--sample", type=int, default=0, help="seconds to sample the node's stacks over the timed searches")
+ap.add_argument("--node-arg", action="append", default=[], help="a flag for every node this run starts (repeatable)")
 args = ap.parse_args()
 BIN, OUT, PORT = os.path.abspath(args.bin), os.path.abspath(args.out), args.port
 DATA = os.path.join(OUT, "data")
@@ -93,7 +99,7 @@ def call(method: str, path: str, body: object = None, port: int = PORT) -> tuple
 
 def start(tag: str, *flags: str) -> subprocess.Popen[bytes]:
     node = subprocess.Popen(
-        [BIN, "--port", str(PORT), "--name", "wide", "-D", DATA, "--processors", "2", "--shards", "1", *flags],
+        [BIN, "--port", str(PORT), "--name", "wide", "-D", DATA, "--processors", "2", "--shards", "1", *args.node_arg, *flags],
         stdout=open(os.path.join(OUT, f"node-{tag}.log"), "wb"),
         stderr=subprocess.STDOUT,
     )
@@ -236,7 +242,9 @@ def check() -> None:
         if not ok:
             failures.append(f"cap {width}")
     # A pattern reads every entry of the data directory (14 indexes and the node's own), so at a cap of 7 each is over it,
-    # whatever it matches: the cap bounds the walk's work, not only the names.
+    # whatever it matches: the cap bounds the walk's work, not only the names. The first pattern starts the build of the
+    # name index and walks; once it is built a pattern reads names instead, each name and each range's seek counted
+    # against the same cap (docs/design/name-index.md, D7), so these stay over it.
     for pattern in (
         "/w000*,w001*,w002*,w003*,w004*,w005*,w006*/",
         "/_all/",
@@ -245,7 +253,7 @@ def check() -> None:
         "/*,-*/",
     ):
         status, raw = call("SEARCH", pattern, SEARCHES["sorted ascending"])
-        ok = status == 400 and b"--max-search-indexes" in raw and b"directory entries" in raw
+        ok = status == 400 and b"--max-search-indexes" in raw and (b"directory entries" in raw or b"index names" in raw)
         print(f"{'ok  ' if ok else 'FAIL'} the cap of {cap}: {pattern} -> {status}")
         if not ok:
             failures.append(f"cap pattern {pattern}")
@@ -296,8 +304,42 @@ def metric(name: str) -> float:
     return -1.0
 
 
+def sample(pid: int, secs: int, path: str) -> subprocess.Popen[bytes]:
+    """Records the node's call graph for secs seconds in the background."""
+    if sys.platform == "darwin":
+        cmd = ["sample", str(pid), str(secs), "-file", path]
+    else:
+        cmd = [
+            sys.executable,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "perf_sample.py"),
+            str(pid),
+            str(secs),
+            path,
+            "--fp",
+        ]
+    return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
+
+def resume_creation(count: int) -> None:
+    """Completes a creation an earlier run left unfinished: the missing indexes, and again the last ones it made, which
+    may have been cut short (a PUT of the same document replaces it)."""
+    made = sorted(i for i in range(count) if os.path.isdir(os.path.join(DATA, short(i))))
+    redo = set(made[-64:])
+    todo = [i for i in range(count) if i in redo or not os.path.isdir(os.path.join(DATA, short(i)))]
+    node = start("create")
+    t0 = time.time()
+    with concurrent.futures.ThreadPoolExecutor(8) as pool:
+        statuses = list(pool.map(create, todo))
+    assert all(s < 300 for s in statuses), sorted(set(statuses))
+    print(f"created {len(todo)} more indexes ({count} in all) in {round(time.time() - t0)} s", flush=True)
+    stop(node)
+
+
 def gate() -> None:
     count = args.indexes
+    if args.reuse and args.create_only:
+        resume_creation(count)
+        return
     if not args.reuse:
         shutil.rmtree(OUT, ignore_errors=True)
         os.makedirs(DATA)
@@ -312,10 +354,13 @@ def gate() -> None:
     path = "/w*/"  # a pattern: a list of 10,000 names is most of a URL, 100,000 would not fit
     times = []
     total = None
-    lag0: dict[str, object] = {}
+    lag0: dict[str, Any] = {}
+    sampler = None
     for run in range(args.runs + 1):
         if run == 1:
             lag0 = stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())
+            if args.sample:
+                sampler = sample(node.pid, args.sample, os.path.join(OUT, "sample.txt"))
         t0 = time.perf_counter()
         status, raw = call("SEARCH", path, body)
         dt = (time.perf_counter() - t0) * 1000
@@ -331,6 +376,8 @@ def gate() -> None:
                 f"{per / 1024:.1f} KiB per open index (first search {dt:.0f} ms)",
                 flush=True,
             )
+    if sampler is not None:
+        sampler.wait()
     lag = stall_load.lag_delta(lag0, stall_load.parse_metrics(call("GET", "/:metrics")[1].decode())) if lag0 else {}
     for loop, v in sorted(lag.items(), key=lambda kv: -(kv[1]["p99_us"] or 0)):
         print(
