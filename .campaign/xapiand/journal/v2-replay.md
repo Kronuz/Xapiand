@@ -69,13 +69,22 @@ with work ready 601 slot-h; machine waits 562 quest-h; failed runs 102 machine-h
   began; trial past the first two of a passing row at one commit (an upper bound: no threshold is
   recorded, so whether the interval had cleared is unknowable); landing-time rerun (after the
   first accept or refusal) whose changed paths miss the declared-input proxy (named paths, quest
-  file set, top-level build files and build files under those). "Criterion already evidenced" is
+  file set, top-level build files). "Criterion already evidenced" is
   not determinable: a criterion is many rows and v2 records no verdict per criterion over time.
+
+- simulator calibration fits light slots, drain turn and slot serialization to the hourly queue;
+  every policy runs on the fitted machine (a combined row had run on defaults, fixed at
+  agent-campaign:40d42a2).
+- Incident, mine: the toolcost pass's `status` started a worker on the store copy (CAMPAIGN_JOBS
+  inherited), pid 81798, 19:39 to 22:20 PST. It ran 56 copied jobs for real (4.6 machine hours,
+  exclusive holds included) and registered 14 git worktrees under the copy in 9 repositories.
+  Stopped it and its 3 runners, removed those worktrees (`git worktree remove --force`, paths
+  under ~/.scratch/xapiand/v2-replay/jobs-copy only), deleted the copy; run list kept in
+  ~/.scratch/xapiand/v2-replay/rogue-worker/runs.json. Guard: agent-campaign:b9609c9. The real
+  worker (58801) and store were not touched. Outputs those runs wrote outside the copy (bench
+  OUT dirs under ~/.scratch) are not tracked and were left.
 
 ## Messages answered
 
 - Lead, 2026-11-20 ~05:05Z (need, size and reuse): done in `tools/replay/need.py` and the
   simulator's need policy; the "criterion already evidenced" case is not determinable (rulings).
-- simulator calibration fits light slots, drain turn and slot serialization to the hourly queue;
-  every policy runs on the fitted machine (a combined row had run on defaults, fixed at
-  agent-campaign:40d42a2).
