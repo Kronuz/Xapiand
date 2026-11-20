@@ -8985,15 +8985,12 @@
       "milestone": "Phase 8",
       "needs": [],
       "provides": [],
-      "reason": "until test-glob lands: no work started; test registration stops serializing quests",
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "normal",
-      "status": "blocked",
+      "status": "dropped",
       "title": "Carried follow-ups: root routes, the WAL view, fuzz_lua",
-      "until": [
-        "owner"
-      ],
-      "updated": "2026-11-18T02:01:45",
+      "updated": "2026-11-20T05:27:31",
       "worktree": "../Xapiand-wt/xapiand/gate-prep-followups"
     },
     "gate0-5": {
