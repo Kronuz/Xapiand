@@ -2238,7 +2238,8 @@
         "include/strata/core/catalog.hh",
         "test/catalog_post_lifetime_test.cc",
         "CMakeLists.txt",
-        "docs/mechanisms/catalog-delivery.md"
+        "docs/mechanisms/catalog-delivery.md",
+        "docs/mechanisms/catalog.md"
       ],
       "journal": "../Xapiand-wt/xapiand/catalog-post-lifetime",
       "landed": [],
@@ -2252,7 +2253,7 @@
       "risk": "high",
       "status": "active",
       "title": "Catalog delivery never posts to a torn-down scheduler",
-      "updated": "2026-11-19T21:33:03",
+      "updated": "2026-11-19T21:45:42",
       "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
     },
     "census": {
