@@ -5,15 +5,17 @@ Quest: .campaign/xapiand/quests/consensus-rpc-lane.md (the lead's; never edit it
 
 ## Doing
 
-Both tasks written and committed at consensus 790e2c9 (lane on Bulk 1d5f1eb, hello 790e2c9),
-on origin/main merged at 8894776. Local builds and tests under `quiet light` next.
+Feature built at consensus 1cd353f (lane on Bulk 1d5f1eb, hello 790e2c9, test fixes 1cd353f).
+Local runs under `quiet light` pass: rpc_host_test 5/5, hello_test 3/3, node_hello, rpc,
+fuzz replays, groups_test 15/15. Suite and mutant jobs queued (Evidence).
 
 ## Next
 
-1. Build and run rpc_host_test (5 cases), hello_test (3), node_hello_test, rpc_test, groups_test.
-2. Mutant controls as jobs: rpc-shared-credit (group-full), rpc-one-frame (stream),
-   hello-limits-ignored (leader), via test/transport/rpc_mutants.py.
-3. `campaign verify consensus-rpc-lane`, Evidence table, State "ready for review".
+1. Read jobs 261120-063245-5d4c86 (build-test), 063253-b0630d, 063256-4ba928, 063300-e7f9cb.
+2. When done (the lead's): push for CI (asan, tsan), the security review, the `--later` jobs:
+   fuzz hours for the lane decoder and the hello decoder (regenerate fuzz/corpus/decoders with
+   fuzz/seed.cc first: its hello seeds are the old 64 bytes), 1,000 streamed calls on macOS,
+   the 4 GiB strict job.
 
 ## Blocked on
 
@@ -25,10 +27,11 @@ flagged here. Recommendation: add it to the `hello` task's files.
 
 | Criterion | Evidence |
 |---|---|
-| A1-A7 | none yet (design only); each has its check in the design's criteria table |
-| model, rev 2 | jobs 261116-210034-206f06 (drain,reorder; 1,553,861 states locally), 210037-5fa288 (early-end; 2,647,540), 210040-c06b73 (early-end,drain; 19,102,833, 5.7 GB, 638 s locally) |
-| mutants, rev 2 (must fail) | 210043-6fe73c forget-is-violation, 210046-791b71 grant-without-reserve, 210049-4d4972 no-release-on-close, 210052-071016 no-regrant, 210056-be599d grant-on-receive, 210059-06d361 split-release, 210102-e23871 drain-ignored, 210106-216657 id-at-call |
-| model, rev 1 | 261116-200021-283afb and mutants 200036-5f5bed..200051-577a89 (superseded) |
+| A1 | `rpc_host_test calls` (300 ms deadline: caller ends at 301 ms, both ends `deadline_exceeded`; cancel mid-stream once each; pools back to 0), `group-full` (credit 4,130,343 B uncredited, 23 calls, largest latency 3 ms), `call-full` (server holds 4,194,304 B; heartbeats' longest gap 107 ms) in build-test 261120-063245-5d4c86; control rpc-shared-credit (mutant 3848da8) `--fails-without` 261120-063253-b0630d |
+| A2 | `rpc_host_test lane-only` (262,144 B exact, links 2, group frames 0, lane frames 5/5) in 261120-063245-5d4c86 |
+| A3 | `rpc_host_test stream` (32 MiB in 410 ms, 81.8 MB/s locally; heartbeats' longest gap 109 ms; serving high water 4,194,304 = one window) in 261120-063245-5d4c86; control rpc-one-frame (mutant 5602a81) `--fails-without` 261120-063256-4ba928 |
+| A4 | `hello_test leader` (incarnation 3 reported at 65,536 B; 512 KiB entry applied on 1 and 2, not 3; 0 appends to 3 carrying it), `codec` (zero/inverted limits refused, `WireVersionRefused`), `version` (refused, 0 links, 0 frames; 1 MiB frame for 2 MiB rpc_bytes refused) in 261120-063245-5d4c86; control hello-limits-ignored (mutant d5a00aa) `--fails-without` 261120-063300-e7f9cb |
+| A5 | [artifact] consensus `docs/mechanisms/rpc-lane.md` (On Bulk, Evidence), `docs/mechanisms/hello.md` at 1cd353f |
 
 ## Result
 
