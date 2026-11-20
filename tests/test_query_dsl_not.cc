@@ -76,6 +76,18 @@ void test_binary_operators_are_lists_of_two() {
 	}
 }
 
+void test_maybe_keeps_a_grouped_right_operand_optional() {
+	auto dsl = make_dsl();
+	// a is required; the group (b maybe c) is one optional operand, not a flat [b, c, a].
+	CHECK_EQ(dsl.make_dsl_query("a:1 MAYBE (b:2 MAYBE c:3)").to_string(),
+		std::string(R"({"_and_maybe":[{"a":{"_value":"1"}},{"_and_maybe":[{"b":{"_value":"2"}},{"c":{"_value":"3"}}]}]})"));
+	// Left-associative chains stay flat, a first.
+	CHECK_EQ(dsl.make_dsl_query("a:1 MAYBE b:2 MAYBE c:3").to_string(),
+		std::string(R"({"_and_maybe":[{"a":{"_value":"1"}},{"b":{"_value":"2"}},{"c":{"_value":"3"}}]})"));
+	CHECK_EQ(dsl.make_dsl_query("(a:1 MAYBE b:2) MAYBE (c:3 MAYBE d:4)").to_string(),
+		std::string(R"({"_and_maybe":[{"a":{"_value":"1"}},{"b":{"_value":"2"}},{"_and_maybe":[{"c":{"_value":"3"}},{"d":{"_value":"4"}}]}]})"));
+}
+
 }  // namespace
 
-TEST_MAIN(test_not_is_a_flat_list_of_one, test_not_of_a_group, test_binary_operators_are_lists_of_two)
+TEST_MAIN(test_not_is_a_flat_list_of_one, test_not_of_a_group, test_binary_operators_are_lists_of_two, test_maybe_keeps_a_grouped_right_operand_optional)
