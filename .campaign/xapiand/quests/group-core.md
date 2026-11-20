@@ -103,3 +103,5 @@ hard-state bytes from `detent:consensus-quiescence`. `format-freeze` reviews the
 ## May land early
 
 None: it defines the checkpoint bundle's bytes and a durability mechanism.
+
+- Detent msg-144 (journal-close-in-doubt, journal:6ab0fd2): after a failed `Store::close`, recovering or creating that id in the same Host throws `std::system_error(EIO)` until the Host reopens (held closed-in-doubt); group-core handles it.
