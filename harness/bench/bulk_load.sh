@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# bulk_load.sh ARM [--trials N] [--datasets a,b] [--bin BIN] [--out JSON]
+# bulk_load.sh ARM [--trials N] [--datasets a,b] [--bin BIN] [--out JSON] [--fetch-only]
 #
 # The 2018 Kibana bulk loads (shakespeare 111,396 docs, logs 14,005, accounts 1,000) on this host, one shard, no replicas,
 # each timed to its durable acknowledgment; ARM is one of
