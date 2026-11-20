@@ -1187,7 +1187,6 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a maybe (b maybe c) ...
 								   parentheses force to create a new expression
 								*/
-								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND_MAYBE);

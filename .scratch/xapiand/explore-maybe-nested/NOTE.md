@@ -24,4 +24,4 @@ Note: `last_op` is a single global, so a merge needs the operands adjacent on th
 ## Evidence
 Test: tests/test_query_dsl_not.cc test_maybe_keeps_a_grouped_right_operand_optional (tree-shape check).
 Jobs: see commit/journal ids appended below.
-Jobs: fix 261120-002143-79a9e4 (expect pass); mutant (master query_dsl.cc, expect fail) 261120-002150-dd82b5.
+Jobs: fix 261120-002143-79a9e4 (aborted on a stray assert; superseded); mutant (master query_dsl.cc, expect fail) 261120-002150-dd82b5.
