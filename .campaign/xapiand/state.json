@@ -6448,7 +6448,9 @@
         "src/uuid*",
         "src/database/shard.cc",
         "tests/test_endpoint*",
-        "tests/test_uuid_partition*"
+        "tests/test_uuid_partition*",
+        "tests/test_coverage_core_endpoint.cc",
+        "docs/src/content/docs/options.md"
       ],
       "landed": [],
       "lenses": [],
@@ -6459,7 +6461,7 @@
       "risk": "normal",
       "status": "active",
       "title": "endpoints: UUID paths round-trip and --uuid-partition indexes open",
-      "updated": "2026-11-19T16:20:28",
+      "updated": "2026-11-19T16:42:42",
       "worktree": "../Xapiand-wt/xapiand/endpoint-uuid"
     },
     "engine-core": {
