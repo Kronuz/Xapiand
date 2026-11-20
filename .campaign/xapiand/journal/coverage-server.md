@@ -50,8 +50,8 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | 261120-121254-2ad180: server 2080/2308 lines (90.1%), 1423/1663 branches (85.6%) against 80%, was 62.7% at 261120-115902-3a4acd |
-| A2 | harness/coverage_e2e_server.py group `verbs`: every request asserts status and body or header values (verb_answer); no bug was fixed, so no fails-without row; the two odd answers are PIN checks with hunt rows |
-| A3 | check suite 261120-121305-9dbdb6; CI not run (branch not pushed, per the lead's instruction) |
+| A2 | 261120-121254-2ad180 (the driver run, every check passing): harness/coverage_e2e_server.py group `verbs`: every request asserts status and body or header values (verb_answer); no bug was fixed, so no fails-without row; the two odd answers are PIN checks with hunt rows |
+| A3 | check suite 261120-121305-9dbdb6; CI at the merged head |
 
 ## Result
 
