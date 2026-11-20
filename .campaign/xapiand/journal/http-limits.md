@@ -91,3 +91,8 @@ now sets them off); Xapiand, Detent and Prism move with server-limits and their 
 - TlsFailure::connections removed: max_clients bounds TLS at the accept, so it never fires.
 - handler_count_test and the two bench servers keep the timeouts off (their measurements are of
   the bare path); the defaults now turn them on.
+- A connection whose session starts after stop_accepting() (accepted just before it) reads its
+  request and answers 503, like an idle keep-alive one, rather than closing unread (http:121aa41);
+  only close_idle()'s count closes a connection at its idle wait.
+- CMakeLists.txt pins reactor:6fdd45f (the lead asked) and registers limits_test beside tls_asio
+  (needs reactor::tls; every CI platform has OpenSSL).
