@@ -1171,16 +1171,8 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_QUERYDSL_AND_MAYBE);
-						auto it_end = ob.end();
-						if (ob_it != it_end) {
-							auto last_op_object = ob_it.value();
-							last_op_object.push_back(stack_msgpack.back());
-							stack_msgpack.pop_back();
-							MsgPack object;
-							object[RESERVED_QUERYDSL_AND_MAYBE] = last_op_object;
-							stack_msgpack.push_back(std::move(object));
-						} else {
+						{
+							// The right operand stays whole: a maybe (b maybe c) is not (b maybe c maybe a).
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
 							auto ob2_it = ob2.find(RESERVED_QUERYDSL_AND_MAYBE);
