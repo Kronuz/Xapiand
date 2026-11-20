@@ -101,6 +101,10 @@ Runs once, when the feature is complete and before it lands.
 - A7 A node starts with zero key configuration (D150): the first node creates the cluster CA and prints
   its join token; a second node joins with `--join host:port --token T`, or `--token T` alone where
   multicast finds the address; every link is TLS; no flag disables authentication.
+- A8 Without `--token` a node creates a new cluster (D150): two nodes started without tokens form two
+  clusters with different ids, CAs and tokens, on the same multicast group; neither seeds from the
+  other; a token for one is refused by the other; a joiner refuses a server whose CA fingerprint
+  differs from its token's.
 
 ## May land early
 
