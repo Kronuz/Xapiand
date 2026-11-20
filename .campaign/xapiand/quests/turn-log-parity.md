@@ -64,7 +64,9 @@ single-voter, one-loop authority opens its log after task 9. Log format changes 
 
 Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
 F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
-and defines no second park. Follow-up tasks from the revised note (strata:e5721fd6): 13 removes forward
+and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,
+`evicted` the in-memory release. Contract: create and reopen are durable at the group's first turn, not
+when the call returns; Xapiand's idle policy calls `Host::park` (Detent docs/design/idle-groups.md). Follow-up tasks from the revised note (strata:e5721fd6): 13 removes forward
 copies once parking lands; 14 a per-segment roster narrowing damage scope (16 B a live group); N3, the
 cohort wait counting writers rather than opened records.
 
