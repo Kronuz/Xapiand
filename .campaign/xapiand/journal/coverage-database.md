@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261120-043543-b56bf0 (suite), 261120-043602-9fd792 (A1 coverage, newman e2e), 261120-043607-dbd18b (A2)
+State: waiting on jobs 261120-081411-4fd569 (suite), 261120-081414-17aa17 (A1 coverage, newman e2e), 261120-081415-54bf5f (A2)
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,9 +30,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261120-043602-9fd792 (coverage ctest corpora e2e, baseline 55.3% / 45.4%) |
-| A2 | job 261120-043607-dbd18b (coverage_one database schema.cc); value pins in tests/test_coverage_database_pins.inc |
-| A3 | suite job 261120-043543-b56bf0 |
+| A1 | job 261120-081414-17aa17 (coverage ctest corpora e2e, baseline 55.3% / 45.4%) |
+| A2 | job 261120-081415-54bf5f (coverage_one database schema.cc); value pins in tests/test_coverage_database_pins.inc |
+| A3 | suite job 261120-081411-4fd569 |
 
 ## Result
 
