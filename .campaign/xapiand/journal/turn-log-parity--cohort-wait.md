@@ -9,15 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Building the cohort wait (`include/strata/core/turn_seal.hh`: `wake()` counts arrivals, `turn()`
+records the released groups and the barrier's length, `serve()` waits up to 1/16 of it) and its
+test `test/test_barrier_cohort.cc` (K=4 writers, 64 ms barriers, turns per acknowledgement).
 
 ## Next
 
-1. <step>
+1. Local build and run; commit; mutant commit (wait dropped) on a side ref.
+2. Jobs: the suite (light), the test --for A4, the test at the mutant --for A4 --fails-without.
+3. Optional light smoke of probe B (K=4, K=8 against RocksDB).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -37,4 +41,14 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The cohort counts released *groups*, not writers: `wake()` fires once per opened record, and a
+  record is per group, so writers and arrivals are in one unit. A released writer whose group's
+  record another writer already opened costs at most the bound (1/16 of the last barrier).
+- "Barrier" is the duration of `TurnDriver::commit()` (write and flush) of the last turn that wrote.
+- `waiting_` became a list of parked waiters (`waiters_`), so the turn's end can tell which it
+  released: `await()` by its sequence, `await_sealed()` by its predicate (counted once its record
+  sealed, as D5 says).
+- Registered the new test in `CMakeLists.txt` (three lines beside `standalone_turn_log`): outside
+  the task's globs, but a test file the globs name cannot run without it.
+- Added `turn_sealer::turns_written()` (tests), beside `waiting()`: the test counts turns per
+  acknowledgement without racing the driver's stats.
