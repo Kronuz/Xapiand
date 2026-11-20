@@ -25,6 +25,7 @@
 
 #include <string>                              // for std::string
 #include <string_view>                         // for std::string_view
+#include <utility>                             // for std::move
 
 #include "length.h"                            // for serialize_bool/string/length, unserialize_*
 #include "engine/codec.h"                      // for engine::serialize_double, unserialize_double
@@ -48,8 +49,9 @@ struct SerializableMetric : Metric {
 		return s;
 	}
 	void unserialize(const char** p, const char* p_end) {
-		this->_icase = unserialize_bool(p, p_end);
-		this->_str = unserialize_string(p, p_end);
+		const bool icase = unserialize_bool(p, p_end);
+		// Rebuild the metric so state derived from the string (Jaccard's character set) is restored.
+		static_cast<Metric&>(*this) = Metric(std::string(unserialize_string(p, p_end)), icase);
 	}
 };
 
@@ -107,9 +109,13 @@ struct SerializablePhoneticMetric : PhoneticMetric<Encoder, Metric> {
 		s += serialize_string(this->_soundex.encode());
 		return s;
 	}
+	// Restores the encoder's cached code (its _code_str) without re-encoding it.
+	struct Restored : Encoder {
+		explicit Restored(std::string code) { this->_code_str = std::move(code); }
+	};
 	void unserialize(const char** p, const char* p_end) {
 		this->_icase = unserialize_bool(p, p_end);
 		this->_str = unserialize_string(p, p_end);
-		unserialize_string(p, p_end);  // consume the redundant encoder code
+		this->_soundex = Restored(std::string(unserialize_string(p, p_end)));
 	}
 };
