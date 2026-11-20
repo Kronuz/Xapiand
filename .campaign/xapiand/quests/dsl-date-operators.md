@@ -10,7 +10,7 @@ Field and global queries accept `_date`, `_time` and `_timedelta` as typed-value
 ## Acceptance criteria
 
 - A1 An HTTP test queries a field with each of `_date`, `_time`, `_timedelta` and finds the matching document; each fails without the fix (mutant job)
-- A2 `{"_datetime": "2020-01-02"}` on a new field: find why it answers 400 "Error format in _time" (review S8) and fix it or file it with the cause
+- A2 `{"_datetime": "2020-01-02"}` on a new field is served (fixed by serialize-validation, re-check probe 261119-155820-b92bea) and `{"_datetime": {"_date": ..., "_time": ...}}` (re-check R1, a 400 today) is served or refused with a clear message: HTTP tests for both, plus the old 500 case (`{"_float": ...}` into a datetime field)
 - A3 The suite passes and CI is green
 
 ## Contracts

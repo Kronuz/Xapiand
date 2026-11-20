@@ -71,3 +71,46 @@ dispatch moved into one function both call), never a copied table, and take S3 w
 - The `_multiconvex` map form (geo-correctness's) and multi-node or remote-shard aggregation (a nested refusal
   raised on a remote shard).
 - A rerun of the unit tests or the fails-without jobs.
+
+## Re-check
+
+Commit: Xapiand:16e833a04
+Verdict: APPROVE
+Date: 2026-11-19
+
+S1 is closed on the value path. The fix (Xapiand:e5114e3a3, Xapiand:645a41db7) adds `RESERVED_DATE` to the schema's two
+property tables and dispatch. It also makes `Schema::store_item` read a cast object through `Cast::cast` for
+`FieldType::date` and `FieldType::datetime` only. Every other type keeps the default branch, which stores the value as
+given. The query half (`{"_date": ...}` as an operator) stays with dsl-date-operators, which is filed.
+
+Evidence relied on: the S1 HTTP test 4fbe57, the suite ff5706 and the mutant eb6c56, as the lead reports them. Not rerun.
+
+What I checked:
+
+- 261119-155820-b92bea (at Xapiand:16e833a04) and 261119-155825-2bdf03 (at Xapiand:28bfd2e27, before the fix) ran the
+  same `http_probe4.py`. It covers 25 typed values, each on a fresh index: PUT, GET, the schema type, a term query on
+  the value and, where one applies, a range.
+- uuid, `_point`, `_ewkt`, `_positive`, `_integer`, `_float`, `_boolean` and `_keyword` casts answer byte for byte
+  alike at both commits: the same GET body (the cast object as sent), the same type and the same query hits. No stored
+  form changes outside date and datetime. `_time` and `_timedelta` still never reach `store_item` (S2), so they are
+  unchanged too.
+- The datetime casts that the fix moves only from a refusal to served:
+  - `{"_datetime": "<datetime>"}`, with a timezone, date-only (S8), as a number, untyped, and inside an array: each was a
+    400 "Error format in _time" or "'_datetime' must be a map value". Each now stores an ISO 8601 text, GET returns
+    it, and the term and range queries find the document.
+  - `{"_float": 1577961000.5}` into a datetime field was a 500 "Unsupported Datetime: '_float'". It now stores
+    "2020-01-02T10:30:00.5".
+  - `{"_date": ...}` on a new field is now type date and served; into a datetime field it now stores the date at
+    midnight.
+- The parts form `{"_datetime": {"_year": ...}}` and plain datetime texts and numbers store the same text at both
+  commits.
+- No double cast. `index_item_value` (schema.cc:3549-3551) hands the same `item_value` to `index_item` and then to
+  `store_item`, and each casts it once. The indexed bytes and the stored text come from the same `Cast::cast` result,
+  so what is stored is what is indexed. The probe's term and range hits on every served datetime case confirm it.
+
+| ID | Blocking | Kind | Finding | Evidence | Fix |
+|---|---|---|---|---|---|
+| R1 | no | gap | `{"_datetime": {"_date": "2020-01-02", "_time": "10:30:00"}}` is a 400 "'_date' must be a map value" at both commits: the datetime map parser takes `_date` only as a parts map. This is pre-existing and does not change here. | b92bea, 2bdf03 | For the lead: a hunt row, or dsl-date-operators' neighbour. |
+| R2 | no | nit | S8 is fixed as a side effect of this commit. No test asserts it: the HTTP test covers `_date` only. | b92bea | Add `{"_datetime": "2020-01-02"}` and the 500 case `{"_float": ...}` into a datetime field to tests/test_serialize_validation_date_http.py. |
+
+The scripts are `http_probe4.py` and `run_probe4.sh` in `.scratch/xapiand/review-serialize-validation-correctness/`.
