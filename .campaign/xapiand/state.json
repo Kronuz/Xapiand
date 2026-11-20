@@ -28330,12 +28330,15 @@
       "milestone": "Track D",
       "needs": [],
       "provides": [],
-      "reason": "D117: no single-node release; the cluster ships in the first release",
+      "reason": "D2 to D8 follow the release (cluster-release.md section 4); no 30-node cluster (D35); gives sim/** and docs/design/simulator.md to group-heal now; resumes after the release, per item (replan-2026-11-20 section 4)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "blocked",
       "title": "Track D, distribution",
-      "updated": "2026-11-18T02:29:37"
+      "until": [
+        "release"
+      ],
+      "updated": "2026-11-20T05:28:03"
     },
     "track-p": {
       "accepted": {
