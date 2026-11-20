@@ -5188,12 +5188,28 @@
           "weakened": [
             "lens correctness removed"
           ]
+        },
+        {
+          "at": "2026-11-20T08:22:21",
+          "lenses": [
+            [
+              "security"
+            ],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "one review per feature (owner, 2026-11-20): the correctness review carried the wire and malformed-input questions (reviews/consensus-rpc-lane-correctness.md, question 2)",
+          "voided": [],
+          "weakened": [
+            "lens security removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-rpc-lane",
       "landed": [],
       "lenses": [
-        "security"
+        "correctness"
       ],
       "milestone": "Phase 7b",
       "needs": [],
@@ -5205,7 +5221,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T07:47:41",
+      "updated": "2026-11-20T08:22:21",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
