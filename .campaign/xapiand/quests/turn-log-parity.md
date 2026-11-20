@@ -55,7 +55,12 @@ each with its files and rows): cohort wait (1), zero-copy turn (2), segment ladd
 (3), checkpoint inside the window (4), packed turn (5), background flush (6), sorted runs in the merge
 policy (7), reopen at a changed loop count (8), refuse a log past the loop count (9), one log per
 device after its design review (10), unversioned upsert (11), VM profile (12). Tasks 3, 5, 9 and 10
-change journal: Detent's lead is told before each lands.
+change journal: Detent's lead gets each diff before it lands and checks it against its authority
+suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperation`, `PosixIO`,
+`NativeCompletionQueue`, `AsioCompletionDriver`, `LinuxCompletionPolicy`, `File`, `DirectoryCursor`,
+`drive_synchronously`, `MutationRequest`/`MutationCompletion`, `AdmissionLimits`, `PrimitiveKind`) and
+its completion ordering stay; a turn is durable before an artifact citing it publishes; a
+single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
 
 Needs `document-gate` and `group-core` (both hold `include/strata/core/**` or `index.hh`).
 
