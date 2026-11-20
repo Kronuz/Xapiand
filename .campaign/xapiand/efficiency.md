@@ -376,3 +376,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - hybrid VM chain re-ordered after document-gate's VM (shared VM caused the 11-18 shutdown); owner authorized the Qdrant/ES reruns.
 - Queue: 82 queued, 13 running; light slots 84% used (was 29%), drains 8 min. Load 49-53 on 16 CPUs.
 - Quota: weekly 9%, 0.10%/h. Disk 39 GiB free; prune freed ~0 (slots are 84 GiB, mostly active quests).
+
+## 2026-11-19 19h
+- Landed: light-share (Xapiand:ff38e1db0, merge 1895749a1).
+- Owner: campaign tool v3 becomes its own campaign (campaign-v3 at ~/code/Kronuz/campaign-v3, own lead); v2-replay (Opus) started here and moves there when its run ends; evidence-by-inputs dropped.
+- Reviews running: datetime-range-zone, keymaker-keys, dsl-not-wrap (Opus). http-limits 13 jobs queued after merging http main (35116b0).
+- Land loops: cheap-reopen (refused twice as master moved; re-accepted), serialize-validation, coverage-core-main, then freebsd-exe-path.
+- Queue: 92 queued, 11 running; light 68%, drains 20 min; load 10-22.
+- Quota: weekly 10%, 0.11%/h. Disk 37 GiB free.
