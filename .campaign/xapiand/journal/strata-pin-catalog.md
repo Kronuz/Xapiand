@@ -1,6 +1,6 @@
 # strata-pin-catalog: journal
 
-State: waiting on jobs 261120-015212-3d9e92 261120-015214-cc9845 261120-015215-bf532f
+State: ready to land (lead, 2026-11-20 03h).
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
 ## Doing
@@ -22,6 +22,6 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261120-015212-3d9e92 (5 ASan+UBSan runs) |
-| A2 | job 261120-015214-cc9845 (--fails-without, old pin) |
-| A3 | job 261120-015215-bf532f (campaign verify) |
+| A1 | 261120-015212-3d9e92 |
+| A2 | fails without: 261120-023044-64c800 (old pin 397c02d5: heap-use-after-free in task::detail::scheduler_vtable) |
+| A3 | build-test 261120-024602-994d61 (1733 checks); CI at the landed commit |
