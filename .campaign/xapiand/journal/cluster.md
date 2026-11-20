@@ -1,6 +1,6 @@
 # cluster: journal
 
-State: waiting on jobs 261120-095828-2b5e4d 261120-095830-2935c9 261120-095833-f98de7 261120-095855-16a31d
+State: waiting on jobs 261120-095830-2935c9 261120-095833-f98de7
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
@@ -73,7 +73,7 @@ locally (macOS arm64). Jobs at Xapiand:37f0c5a5f: plain 261120-095828-2b5e4d, TS
 | A2 | none yet |
 | A3 | none yet |
 | A4 | none yet |
-| A5 | jobs 261120-095828-2b5e4d (suite), 261120-095830-2935c9 (TSan), 261120-095833-f98de7 (ASan+UBSan), control 261120-095855-16a31d; pending |
+| A5 | 261120-095828-2b5e4d green (12 cases at Xapiand:37f0c5a5f); control 261120-095855-16a31d fails as required (exit 8 at the range-check mutant); TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 pending. Open: a CPU-hour fuzz of the decoders (needs the top-level FUZZ build, B1) |
 | A6 | none yet |
 
 ## Tasks for other agents
