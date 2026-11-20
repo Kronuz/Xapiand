@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: ready for review (prospect:15d2830)
+State: waiting on jobs 261120-145150-ba6eac (build-test) 261120-145151-fb3e16 (ASan: scorer_budget, expansion_bounds, phrase_expansion) 261120-145153-531c56 (TSan: scorer_budget) at prospect:dea0ffb. CI at 15d2830 failed scorer_budget_test: ASan alloc-dealloc-mismatch (stable_sort's buffer freed by the test's replaced delete) and TSan multiple definition of operator new; fixed by not replacing the allocator under a sanitizer (the test then checks only that bytes are offered)
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
