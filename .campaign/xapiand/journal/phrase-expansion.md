@@ -1,6 +1,6 @@
 # phrase-expansion: journal
 
-State: ready for review (prospect:facbd3e)
+State: waiting on jobs 261120-122152-e989f4 (build-test) 261120-122153-0a987b (20 mutants) 261120-122156-ec2e86 (scorer budget probe) at prospect:692e42e
 Quest: .campaign/xapiand/quests/phrase-expansion.md (the lead's; never edit it)
 
 ## Doing
@@ -25,6 +25,29 @@ under quiet light in a scratch clone (mutant applied to the copy, deleted after)
 0 failures on the mutant. prospect:facbd3e adds an absolute check: a glob's or fuzzy word's total
 charge must exceed what its automaton constructor charges alone (and the budget one below the
 total refuses). Mutant build: expansion_bounds_test 1 failure (that check); unmutated: 0 failures.
+
+## Review CHANGES (phrase-expansion-correctness.md, at facbd3e), folded in at prospect:692e42e
+
+- F1 (blocking, fixed): `scorer()` offers each segment's scorer bytes to the byte budget before
+  allocating (per present slot term: the slot's term_info copy, the cursor's postings iterator and
+  positions reader, the slot scorer's iterator and copies, +256 for vector growth and rounding),
+  summed across segments. Test: expansion_bounds_test "The byte budget covers the scorers too"
+  (a budget admitting the expansion but not one scorer refuses; exact at the total). Mutant "scorer:
+  a segment's scorer bytes are not charged" (20 mutants now). New `test/scorer_budget_test.cc`
+  (the reviewer's P1 as a test): charge within 10% of the heap, at 1 and 16 segments, both scorings;
+  first run 0.933x to 0.945x, +256/term brings it to about 1.0x (job below). The note states what
+  the budget covers (walks, scorer construction; not what a search decodes afterwards).
+  The mutant is proved by the mutant job (the script is the "fails without" run), not a separate
+  commit with the charge removed.
+- F2 (fixed): under the query's bound a word expands as `error` at max(room, 1), whatever its type;
+  test: first and most_frequent walk exactly the entries `error` does (mutant "a word the query
+  refuses keeps its first or most_frequent type").
+- F3: inherited from automata N1 (sliced matcher recharged); over-counting only; nothing here.
+- F4: stated in the note: the bound counts the snapshot's distinct live terms, not a segment's.
+- F5: NEAR needs distinct positions: kept as is, said in the note; for the owner (Lucene's unordered
+  intervals overlap), never blocking.
+- F6: identical words expand and charge once each, linear (P3); optional, left.
+- F7: note reworded: `expand` resumes a paused walk at once; pause() only bounds check granularity.
 
 ## Next
 
