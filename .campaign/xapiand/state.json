@@ -10009,7 +10009,8 @@
         "CMakeLists.txt",
         "docs/mechanisms/replication-group.md",
         "docs/REPLICATION.md",
-        "include/strata/core/index.hh"
+        "include/strata/core/index.hh",
+        "test/standalone_turn_log_test.cc"
       ],
       "history": [
         {
@@ -10043,7 +10044,7 @@
       "risk": "high",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T05:33:25",
+      "updated": "2026-11-20T10:57:42",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
