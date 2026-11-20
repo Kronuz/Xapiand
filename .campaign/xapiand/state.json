@@ -3714,11 +3714,12 @@
       "provides": [
         "xapiand:node-directory"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Node identity, --join, certificates, keepalives, /:nodes",
-      "updated": "2026-11-18T02:55:56"
+      "updated": "2026-11-20T05:26:40"
     },
     "cluster-migration": {
       "accepted": {},
