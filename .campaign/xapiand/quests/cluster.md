@@ -83,8 +83,8 @@ listener. `format-freeze` reviews these bytes.
 - `docs/design/cluster-release.md` open questions on which this builds with the lead's defaults:
   Q6 as written (no node-local accepted level, `?commit` = `ack=quorum&refresh=true`), Q7 (b)
   multicast kept as a seed source only (owner, D141), Q8 (a) the `:` routes with `COMMIT /idx/` as the checkpoint, Q9 (b)
-  one shard by default, Q-F27 (a) read-your-writes kept on the leader's replica. Each is
-  user-visible; the owner's answer is needed before this lands.
+  one shard by default, Q-F27 (a) read-your-writes kept on the leader's replica. The owner
+  accepted them (D142).
 - `needs consensus-rpc-lane` (F3, with its hello limits and version range); `after
   journal-replaces-wal, group-heal, placement` (the strata pin), so the early tasks can start before
   they land and only the last integration waits.
