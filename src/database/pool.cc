@@ -40,6 +40,7 @@
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "completion/posix.h"     // for kronuz::journal::PosixIO
+#include "engine/strata/io_options.h"  // for engine::strata::posix_io_options
 #include "engine/error.h"         // for engine::Error, engine::errc
 #include "engine/host_asio.h"     // for engine::AsioHost
 #include "engine/strata/shard.h"  // for engine::strata::index_options, engine::strata::new_uuid
@@ -565,7 +566,7 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 		const auto dir = (fs::path(path) / "strata").string();
 		const auto open = [&] {
 			return strata::counted_io::make(op.counts, [&] {
-				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, kronuz::journal::PosixIOOptions{true, true});
+				return std::make_unique<kronuz::journal::PosixIO>(dir, 0600, engine::strata::posix_io_options());
 			});
 		};
 		// The directory's open is its existence check: a reopen pays no separate stat (cheap-reopen D2).

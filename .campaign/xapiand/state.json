@@ -1689,9 +1689,9 @@
       ],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Prefix, wildcard and fuzzy term matching where search lives",
-      "updated": "2026-11-20T03:50:16",
+      "updated": "2026-11-20T06:29:22",
       "worktree": "../prospect-wt/xapiand/automata"
     },
     "automata-evaluation": {
