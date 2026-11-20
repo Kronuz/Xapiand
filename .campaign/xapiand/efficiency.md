@@ -369,3 +369,18 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Accepted: light-share (F1 confirmed, fix-scope for harness files), cheap-reopen re-accepted after master merge.
 - Queue: 102 queued (34 exclusive, 43 light), 10 running; light slots 29% used, drains 38 min: exclusive evidence (document-gate 39, track-p 11) is the bottleneck, not agents.
 - Quota: weekly 7%, burn 0.08%/h. Host load 12-15; disk 40 GiB free (96%).
+
+## 2026-11-19 18h
+- Tool: `campaign status` now lists active quests with no job queued and nothing to wait for (lead's uncommitted fix in the installed skill; suite rerun pending one failure).
+- Launched: http-limits F1 fix (Opus), queue-drain-throughput (Opus), loop-yield-tsan (Sonnet, dropped: fix already landed, ~100k tokens wasted on a stale hunt row), datetime-range-zone and keymaker-keys reviews (Opus).
+- hybrid VM chain re-ordered after document-gate's VM (shared VM caused the 11-18 shutdown); owner authorized the Qdrant/ES reruns.
+- Queue: 82 queued, 13 running; light slots 84% used (was 29%), drains 8 min. Load 49-53 on 16 CPUs.
+- Quota: weekly 9%, 0.10%/h. Disk 39 GiB free; prune freed ~0 (slots are 84 GiB, mostly active quests).
+
+## 2026-11-19 19h
+- Landed: light-share (Xapiand:ff38e1db0, merge 1895749a1).
+- Owner: campaign tool v3 becomes its own campaign (campaign-v3 at ~/code/Kronuz/campaign-v3, own lead); v2-replay (Opus) started here and moves there when its run ends; evidence-by-inputs dropped.
+- Reviews running: datetime-range-zone, keymaker-keys, dsl-not-wrap (Opus). http-limits 13 jobs queued after merging http main (35116b0).
+- Land loops: cheap-reopen (refused twice as master moved; re-accepted), serialize-validation, coverage-core-main, then freebsd-exe-path.
+- Queue: 92 queued, 11 running; light 68%, drains 20 min; load 10-22.
+- Quota: weekly 10%, 0.11%/h. Disk 37 GiB free.
