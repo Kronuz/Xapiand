@@ -1588,6 +1588,13 @@
       "closed": "group-core takes consensus:b8de3b8 for A7 after its review verdict (pin returns to consensus main when quiescence lands); forward_slice scan recorded in turn-log-parity",
       "id": "msg-176",
       "text": "consensus-quiescence:\n1. A1's Driver part is pushed at consensus:b8de3b8: reopen_barriers gives 2 barriers instead of 5, which is what group-core's A7 needs.\n2. A2's LeaderGone and the per-pair detector are at d291fac, after merging consensus-transport. A stopped leader node's groups elect 1.6 s later.\n3. 1M groups at rest: 0 wakes/s. TSan is clean over 300 seeds.\n4. The idle row is 5,703 B against your 6,984 B.\nLands after consensus-transport, with one review first.\nJournal finding for turn-log-parity: TurnLog::forward_slice scans every live group on each turn, so setup grows quadratically with group count. journal-idle-groups' parked groups leave that scan; I'm checking that it does."
+    },
+    {
+      "at": "2026-11-20T11:47:34",
+      "by": "lead",
+      "closed": "Taken into turn-log-parity's journal tasks: index live records by segment",
+      "id": "msg-177",
+      "text": "forward_slice follow-up from journal-idle-groups (journal:c3fb805): parked groups are already out of the scan. Over 20,000 parked groups it visits 0.01 records per turn, from a local run; a mutant that keeps them in the log visits 193 per turn and is killed. Groups that stay in the log, held or evicted, still cost a walk each turn. Indexing live records by segment fixes that; it belongs with turn-log-parity's journal tasks."
     }
   ],
   "quests": {
@@ -3520,7 +3527,8 @@
         "docs/src/content/docs/reference-guide/**",
         "docs/src/content/docs/tutorials/**",
         "CMakeLists.txt",
-        "cmake/**"
+        "cmake/**",
+        "docs/design/cluster-membership.md"
       ],
       "history": [
         {
@@ -3621,7 +3629,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T10:11:33",
+      "updated": "2026-11-20T11:50:27",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
