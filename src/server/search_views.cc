@@ -795,10 +795,30 @@ node_obj()
 }
 
 
+// A root command the node answers itself: a verb word (`:info`) or `:metrics`; any other (`:stats`,
+// `:schema`, an unknown word) is index metadata, and the root has no index.
+static bool
+is_node_command(std::string_view cmd)
+{
+	if (cmd.empty() || cmd == ":metrics") {
+		return true;
+	}
+	cmd.remove_prefix(1);
+	switch (http_methods.fhhl(cmd)) {
+		#define OPTION(name, str) \
+		case http_methods.fhhl(str): \
+			return true;
+		METHODS_OPTIONS()
+		#undef OPTION
+	}
+	return false;
+}
+
+
 bool
 is_node_route(PathParser& path_parser)
 {
-	return !path_parser.has_pth() && path_parser.get_id().empty();
+	return !path_parser.has_pth() && path_parser.get_id().empty() && is_node_command(path_parser.get_cmd());
 }
 
 

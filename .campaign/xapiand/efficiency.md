@@ -422,3 +422,80 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - queue-drain-throughput: the 3 suite failures predate it (main baseline fails the same 3); fresh contributor fixing them.
 - Explorer: nested MAYBE tree (dsl-not-wrap N1).
 - Quota weekly 14%, 0.14%/h. Load 3-6. Disk 36 GiB free.
+
+## 2026-11-20 01h
+- Landed: stopword-lists (Xapiand:4be13e4b2), queue-drain-throughput (agent-campaign:ad03084; dotfiles:1a40fe6 makes it live).
+- Reviews: consensus-sim-loops APPROVE (3 gaps to hunt), queue-drain-throughput APPROVE (tool findings F1/F4/F5 to campaign-v3).
+- Explorer nested-MAYBE: fix proven (job ab6ff7 pass, mutant dd82b5 fail), ~87k tokens; queued as a quest after dsl-date-operators.
+- Started: strata-pin-catalog, control-plane-wallclock (Sonnet). serialize-validation re-check of the lead's test-pin flip.
+- Light slots 32%, drains 13 min, 28 jobs ended (8 failed). Quota weekly 15%. Load 4-6. Disk 31 GiB free.
+
+## 2026-11-20 02h
+- Landed: datetime-range-zone (Xapiand:d7fa8fa14, merge dd8f377f8).
+- Accepted: serialize-validation (narrow Sonnet re-check of the lead's pin flip, 67k tokens, APPROVE), landing. control-plane-wallclock ready (mutant: wakes idle 330 vs parked 67), landing. strata-pin-catalog jobs queued.
+- Disk: removed 5 landed quests' build slots `land` had kept (cheap-reopen, license-closure, lua-name-miss, metrics-fd-count, name-index): 28 -> 40 GiB free. `job prune` freed 0 (v3 note: land should drop the slot unless a job still names it).
+- Light slots 38%, drains 28 min, 24 jobs ended (2 failed). Quota weekly 15%. Load 4-8.
+
+## 2026-11-20 03h
+- Landed: none this hour. Five land loops chase one master (serialize-validation, dsl-date-operators after it, control-plane-wallclock, freebsd-exe-path, then coverage-core-main) plus consensus-sim-loops chasing Detent's consensus landings; each landing forces the rest through another merge + CI round (v3: a merge queue would serialize this).
+- coverage-core-main red on test_node's 800 ms shutdown bound under Linux ASan (flake, hunt row); failed job rerun.
+- hybrid-go-no-go: Opus resume, 138k tokens; results + decision request for the owner (strata warm p99 3.1x faster than Qdrant; cold 1.2x behind after int8).
+- strata-pin-catalog: A1 and A2 proven (old pin: heap-use-after-free); build-test check fixed twice by the lead (target name, BUILD_TESTS).
+- track-p: Opus resume on P13's finished reruns.
+- Light slots 21%, drains 37 min. Quota weekly 16%. Load 3. Disk 41 GiB.
+
+## 2026-11-20 04h
+- Landed: consensus-sim-loops (consensus:8bdbd750), track-p (prospect:0a2af7dfe; Opus review 234k tokens, APPROVE, caught a hollow mutant job). Detent landed consensus-heal-snapshot-stall (consensus:39d9f1d).
+- Started: automata (Opus). Resumed with fresh contributors: document-gate (Opus), coverage-database (Sonnet).
+- Lead bug: a chained land watcher deadlocked on `pgrep -f 'landloop.sh X'` matching another watcher's own command line; coverage-core-main sat ~1 h unlanded. Restarted directly. (v3: the driver owns ordering, no pgrep chains.)
+- Light slots 40%, drains 15 min, 41 jobs ended (3 failed). Quota weekly 17%. Load 5-6. Disk 42 GiB.
+
+## 2026-11-20 05h
+- Landed: serialize-validation (Xapiand:9c0fe8189, merge cbb14d6b8).
+- Owner direction: quests are whole features built by tasks on the quest branch; one gate when done. Skill rewritten (agent-campaign main, 3,530 -> 3,413 words; suite running); v3 handoff campaign-v3:b966706.
+- Re-plan (Opus, 233k tokens): ~40 planned/blocked quests -> 10 features, 11 quick fixes, 9 parked (Xapiand:590967006); Sonnet applying it.
+- automata feature-complete (Opus, ~350k + compaction): 1,188 brute-force queries, 10/10 mutants caught locally; fuzz and timings moved to the feature end.
+- document-gate: contributor's reruns denied by the permission classifier; held for the owner.
+- Load 30+ (Detent's ddb builds plus ours, all light holds). Light slots 32%. Quota weekly 21% (0.20%/h). Disk 45 GiB.
+
+## 2026-11-20 06h
+- Landed: dsl-date-operators (Xapiand:440902ac4, merge 8e3c4cafb). Quick fix on master: nested MAYBE (Xapiand:280c47aef, 6ee8f3ed9; explorer's proven fix).
+- Skill: quests are features built by tasks, one gate when done (agent-campaign:21248b4, dotfiles:8344017); suite 285/286, the one failure was the lead's template edit, fixed.
+- Re-plan applied (Sonnet, 187k tokens): 33 -> 11 planned; 22 dropped (folded or quick fixes), 9 parked.
+- automata: one feature review (Opus) launched at the end, per the new model.
+- coverage-database: CI exposed a platform-dependent validation error (hash order names v14 vs v15); pin shortened, hunt row.
+- Light slots 26%. Quota weekly 23% (0.22%/h). Load 34 (Detent builds). Disk 36 GiB.
+
+## 2026-11-20 07h
+- Landed: automata and termdict libraries on their mains (automata:a289a07, termdict:edac74c merge keeping the pinned e3f6f54); prospect's landing waits on the pin-check job (the first, with a fetch, failed in the job's environment).
+- Feature reviews (Opus, one each): automata CHANGES (2 blockers, fixed by one Sonnet task in 10 min, 87k tokens); consensus-rpc-lane CHANGES (idle memory 373 B against a 372 B budget, controls never ran); fix task (Opus) running.
+- Owner decisions D141-D146 recorded; multicast-seeds quest created in consensus, shared with Detent (Detent filed its consumer quest).
+- Land loops: v2 churn. coverage-core-main and control-plane-wallclock chase master merges; coverage-database CI found a real platform divergence (Linux accepts years macOS refuses); document-gate's A7 needs its tagged jobs rerun at the landing code, and that rerun was denied by the permission classifier (owner decision).
+- Light slots 32%. Quota weekly 25% (0.24%/h). Load 11. Disk 34 GiB.
+
+## 2026-11-20 08h
+- Landed: automata across three repos (prospect, automata:a289a07, termdict:edac74c), document-gate (strata:d956c0f4, A7 waived D147). Master CI green on both quick-fix batches (Xapiand:7c627045a).
+- Owner decisions D141-D148: multicast seeds (shared in consensus), cluster questions, document-gate on its numbers, hybrid go, parity with RocksDB on every row, one log per device.
+- Design pass (Opus, 198k): every RocksDB loss's cause measured; prototype cohort wait 1.23x faster at K=4, 1.87x at K=8; one shared log 2.6x faster than per-loop at K=8. Design review (Opus, 214k): CHANGES, 6 protocol gaps, D148 holds; revision task running.
+- turn-log-parity started with two tool-registered tasks (cohort wait, sorted runs); sorted runs blocked on index.hh, held by group-core (resumed, idle 2 days: a lead miss).
+- Tooling: Opus adapting v2 (evidence across merges by inputs, land --merge-main, [ci] tag, task merge).
+- Detent: started journal-idle-groups at our ask; folded 15 step quests into 4 features.
+- Light slots 22%. Quota weekly 27% (0.25%/h). Load 10. Disk 35 GiB.
+
+## 2026-11-20 09h
+- Landed: consensus-rpc-lane (consensus:e1f249d8d), APFS-name 400 (Xapiand:cadd35e17), sort cast words (Xapiand:1c8091720). The cohort-wait task merged into turn-log-parity (strata:722e481b), the first task-model merge.
+- Agents: cohort-wait 164k (Opus); RocksDB note revision 299k (Opus); quick fixes 95k and 84k (Sonnet); group-core resume 227k (Opus, handed off fresh); phrase-expansion stopped at 234k (Sonnet).
+- Started: multicast-seeds (Opus) and cluster (Opus).
+- Quota: 29% weekly, 0.27%/h. Load 21-33 on 16 CPUs; 34 GiB free (97% used).
+- Friction: stale lead watchers (pgrep self-match, a stale CI watch); an untagged A3/A4 with no passing job blocked rpc-lane's landing for about 1 h.
+
+## 2026-11-20 10h
+- Landed: nothing new. Four quests (freebsd-exe-path, strata-pin-catalog, control-plane-wallclock, coverage-database) are green but lose the race: master moves during each roughly 30 min CI wait, so each land asks for another merge. The fix is the v2 `land --merge-main` with evidence carried by inputs (agent-campaign tool/feature-model, merged locally, suite rerunning).
+- Agents: multicast-seeds build 218k plus fixes 179k (Opus); multicast review 132k (Opus, CHANGES, 2 blockers); cluster 325k (Opus, shard RPC built); group-core A3 230k (Opus); tool adaptation 275k (Opus); phrase mutant 79k (Sonnet); coverage-server 82k (Sonnet).
+- Started: node-admission (consensus, Opus), filed from cluster's B2.
+- Quota: 33% weekly, 0.30%/h. Light slots 81% used. Disk: 34 GiB free.
+
+## 2026-11-20 11h
+- Landed: nothing; master was red from the APFS quick fix (async_check, then the gate-tools count check). Fixed at Xapiand:bf593a759 and 7290c10d8; the quick-fix agent ran only its own test, and the lead's first fix ran async_check but not test_gate_tools.
+- Agents: cluster pins 214k (Sonnet); node-admission 311k (Opus); group-core turn-log fix 134k (Opus); multicast fixes 191k (Opus, the SIGPIPE cause found by Linux CI); group-core review running; membership design (Opus, max) and placement simulation (Opus) running.
+- Quota: 35% weekly, 0.32%/h. Load 8-12. Disk: 34 GiB free.

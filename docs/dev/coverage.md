@@ -59,6 +59,13 @@ Each file is one `TEST_MAIN` binary registered by name in ctest (`ctest -R test_
 | `test_coverage_lua.cc` | `src/lua/` |
 | `test_coverage_geospatial.cc` | `src/geospatial/` |
 | `test_coverage_reader_registry.cc` | the reader registry's bytes per open index |
+| `test_coverage_main.cc` | the callable pieces of `src/main.cc` (compiled in under a renamed `main` and `opts`) |
+
+`harness/coverage.sh` discovers every `harness/coverage_e2e_<name>.*` driver and runs it as workload `<name>` (`DRIVER BINARY OUTDIR/<name>`, log in `OUTDIR/<name>.log`, a nonzero exit fails the workload); a quest adds its driver file and nothing else. `NOBUILD=1` skips the build and reuses the instrumented binaries in `BUILD`.
+
+`harness/coverage_e2e_main.sh` is the `main` workload: it runs the instrumented node through its flags, start-up
+refusals, signals, shutdowns, detach, dump and restore, and checks each exit status, message and file; it covers the rest of `main.cc` and
+the signal and shutdown paths of `manager.cc`.
 
 A test pins today's behavior, including behavior that looks wrong; the product bugs it found are in the quests
 `serialize-validation` and `geo-correctness`, and each pinned check names its finding so the fix flips one line.

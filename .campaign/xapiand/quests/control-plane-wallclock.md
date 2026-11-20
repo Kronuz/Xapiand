@@ -16,7 +16,6 @@ job can show it.
 
 - A1 The test asserts a count-based property that fails if pending keys make the loop do work per key: the suite job, and a fails-without job on a mutant that adds per-key loop work
 - A2 [manual] No wall-clock bound remains in that test; any timing kept is reported, not asserted: the lead reads the diff
-- A3 GitHub CI is green on Linux, FreeBSD and arm64 at the landed commit: the land gate
 
 ## Contracts
 
