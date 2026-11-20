@@ -28,10 +28,18 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <cstdint>
+#include <cstdio>
+
+#include "config.h"
+#include "cuuid.hh"
 #include "endpoint.h"
 #include "fs.hh"
 #include "index_path.h"
+#include "opts.h"
+#include "serialize.h"
 #include "xapiand_exception.h"
 
 static void test_endpoint_path() {
@@ -160,5 +168,91 @@ static void test_index_path_valid() {
 	CHECK_FALSE(index_path::valid("\\"sv));
 }
 
+// A normalized path is itself a path naming the same index: the registry, the flush and a restart's names rebuild
+// endpoints from it. Every UUID representation, partitioned or not, under both codecs.
+static void test_a_normalized_path_normalizes_to_itself() {
+	Endpoint::cwd = "/var/db/xapiand/";
+	const std::string uuids[] = {
+		"00000000-0000-1000-8000-010000000000", "a2d6e3b4-0000-1000-8000-0100000000ab", "A2D6E3B4-0000-1000-8000-0100000000AB",
+		"5759b016-10c3-4526-a981-47d6a8fd9c30", "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "e3e70682-c209-4cac-629f-ccf211ecf0f0",
+		"5759b016-10c3-4526-a981-47d6a8fd9c30;6ba7b810-9dad-11d1-80b4-00c04fd430c8", "{5759b016-10c3-4526-a981-47d6a8fd9c30}",
+		"urn:uuid:5759b016-10c3-4526-a981-47d6a8fd9c30", cuuid::generate(cuuid::Codec::v6).to_string(),
+		cuuid::generate(cuuid::Codec::v1).to_string(), cuuid::generate(cuuid::Codec::v1, false).to_string(),
+#ifdef XAPIAND_UUID_ENCODED
+		"~notmet",
+#endif
+	};
+	std::vector<std::uint32_t> reprs = {static_cast<std::uint32_t>(UUIDRepr::vanilla)};
+#ifdef XAPIAND_UUID_ENCODED
+	reprs.push_back(static_cast<std::uint32_t>(UUIDRepr::encoded));
+#endif
+#ifdef XAPIAND_UUID_GUID
+	reprs.push_back(static_cast<std::uint32_t>(UUIDRepr::guid));
+#endif
+#ifdef XAPIAND_UUID_URN
+	reprs.push_back(static_cast<std::uint32_t>(UUIDRepr::urn));
+#endif
+	int differ = 0;
+	for (const auto repr : reprs) {
+		for (const bool partition : {false, true}) {
+			for (const bool legacy : {false, true}) {
+				opts.uuid_repr = repr;
+				opts.uuid_partition = partition;
+				opts.legacy_ids = legacy;
+				for (const auto& u : uuids) {
+					for (const auto& name : {u, "idx/" + u, u + "/child", "idx." + u, "a/" + u + "/" + u, u + "/.__1"}) {
+						const auto path = Endpoint(name).path;
+						const auto again = Endpoint(path).path;
+						if (again != path) {
+							++differ;
+							std::fprintf(stderr, "  repr %u partition %d legacy %d: %s -> %s -> %s\n", repr, partition, legacy, name.c_str(), path.c_str(), again.c_str());
+						}
+					}
+				}
+			}
+		}
+	}
+	CHECK_EQ(differ, 0);
+	// The partitioned directories of a vanilla UUID, once, whether the path names them or not.
+	opts.uuid_repr = static_cast<std::uint32_t>(UUIDRepr::vanilla);
+	opts.uuid_partition = true;
+	opts.legacy_ids = false;
+	const std::string v4 = "5759b016-10c3-4526-a981-47d6a8fd9c30";
+	CHECK_EQ(Endpoint(v4).path, "4526/10c3/" + v4);
+	CHECK_EQ(Endpoint("4526/10c3/" + v4).path, "4526/10c3/" + v4);
+	CHECK_EQ(Endpoint("idx/" + v4 + "/child").path, "idx/4526/10c3/" + v4 + "/child");
+	CHECK_EQ(Endpoint("idx.4526/10c3/" + v4).path, "idx.4526/10c3/" + v4);
+	// Directories that only end like the partition's are not it.
+	CHECK_EQ(Endpoint("x4526/10c3/" + v4).path, "x4526/10c3/4526/10c3/" + v4);
+	opts.uuid_partition = false;
+}
+
+// A ':' in a file path is part of a name: "a:b" is not the host "a" with a port.
+static void test_a_colon_is_part_of_a_file_path() {
+	Endpoint::cwd = "/var/db/xapiand/";
+	opts.uuid_repr = static_cast<std::uint32_t>(UUIDRepr::vanilla);
+	opts.uuid_partition = false;
+	CHECK_EQ(Endpoint("a:b").path, std::string("a:b"));
+	CHECK_EQ(Endpoint("a:b/c").path, std::string("a:b/c"));
+	CHECK_EQ(Endpoint("file://a:b/c").path, std::string("a:b/c"));
+	CHECK_EQ(Endpoint("urn:uuid:5759b016-10c3-4526-a981-47d6a8fd9c30").path, std::string("5759b016-10c3-4526-a981-47d6a8fd9c30"));
+}
+
+// A node is named by its name: a URI whose authority has a port is malformed, not a URI of no node.
+static void test_a_node_uri_with_a_port_is_refused() {
+	for (const char* uri : {"xapiand://host:8880/idx", "xapiand://host:8880", "xapiand://host:/idx", "xapiand://:8880/idx"}) {
+		CHECK_TRUE(refused("/var/db/xapiand/", uri));
+	}
+	try {
+		Endpoint e("xapiand://host:8880/idx");
+	} catch (const ClientError& exc) {
+		CHECK(std::string(exc.what()).find("malformed") != std::string::npos);
+	}
+	for (const char* uri : {"xapiand://host/idx", "xapiand:///idx", "xapiand://host/a:b"}) {
+		CHECK_FALSE(refused("/var/db/xapiand/", uri));
+	}
+}
+
 TEST_MAIN(test_endpoint_path, test_normalize_path, test_endpoint_refuses_paths_outside_the_base,
-          test_endpoint_refuses_nul_and_unholdable_bytes, test_index_path_valid)
+          test_endpoint_refuses_nul_and_unholdable_bytes, test_index_path_valid, test_a_normalized_path_normalizes_to_itself,
+          test_a_colon_is_part_of_a_file_path, test_a_node_uri_with_a_port_is_refused)

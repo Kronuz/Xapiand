@@ -149,6 +149,26 @@ normalize_and_partition(const void *p, size_t size)
 }
 
 
+// Puts `normalized` in place of the segment of `sz` bytes that ends `buf`. The directories of a partitioned form
+// (`6000/0000/` of `6000/0000/<uuid>`) that already precede the segment are not added again, so a normalized path
+// normalizes to itself.
+static inline void
+replace_segment(std::string& buf, size_t sz, const std::string& normalized)
+{
+	buf.resize(buf.size() - sz);
+	const auto cut = normalized.rfind('/');
+	if (cut != std::string::npos) {
+		const std::string_view dirs(normalized.data(), cut + 1);
+		const auto at = buf.size() - std::min(buf.size(), dirs.size());
+		if (std::string_view(buf).substr(at) == dirs && (at == 0 || buf[at - 1] == '/' || buf[at - 1] == '.')) {
+			buf.append(normalized, cut + 1);
+			return;
+		}
+	}
+	buf.append(normalized);
+}
+
+
 using normalizer_t = std::string (*)(const void *, size_t);
 template<normalizer_t normalize>
 static inline std::string
@@ -168,8 +188,7 @@ normalizer(const void *p, size_t size)
 				if (sz) {
 					auto normalized = normalize(oq, sz);
 					if (!normalized.empty()) {
-						buf.resize(buf.size() - sz);
-						buf.append(normalized);
+						replace_segment(buf, sz, normalized);
 					}
 				}
 				buf.push_back(c);
@@ -184,8 +203,7 @@ normalizer(const void *p, size_t size)
 	if (sz) {
 		auto normalized = normalize(oq, sz);
 		if (!normalized.empty()) {
-			buf.resize(buf.size() - sz);
-			buf.append(normalized);
+			replace_segment(buf, sz, normalized);
 		}
 	}
 	return buf;
@@ -207,7 +225,6 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	}
 	auto _query = slice_after(uri, "?");
 	auto _path = slice_after(uri, "/");
-	auto _port = slice_after(uri, ":");
 
 	if (protocol == "file") {
 		if (node_name.empty()) {
@@ -219,10 +236,14 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 			_path = path = std::string(uri) + "/" + std::string(_path);
 		}
 	} else {
+		// A node is named by its name: an authority with a port names no node.
+		if (uri.find(':') != std::string_view::npos) {
+			THROW(ClientError, "Index URI {} is malformed: a node is named without a port", repr(original_uri));
+		}
 		if (node_name.empty()) {
-			if (_port.empty() && uri.empty()) {
+			if (uri.empty()) {
 				node_name = Node::get_local_node()->lower_name();
-			} else if (_port.empty()) {
+			} else {
 				auto uri_node = Node::get_node(uri);
 				if (uri_node) {
 					node_name = uri_node->lower_name();

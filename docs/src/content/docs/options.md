@@ -232,7 +232,12 @@ e2e:end -->
 - `--uuid` selects how generated document IDs and UUIDs are written: `vanilla` (the
   standard text form), `encoded` (base59) or, on builds that enable them, `guid`
   and `urn`; `compact` shortens the form, and `partition` partitions UUID index
-  paths. Without it the node uses `encoded` and `compact`.
+  paths. Without it the node uses `encoded` and `compact`. A UUID in an index path is
+  written in that form, so every spelling of one UUID (upper case, `{…}`, `urn:uuid:…`,
+  `~…`) names one index, and the path INFO reports names it too. In the default mode
+  a version 1 UUID is written by the v6 codec and its text changes (see
+  [Upgrading](/Xapiand/upgrade#red-flags)). With `partition`, a UUID's index lives two
+  directories down, under its third and second groups (`4526/10c3/5759b016-10c3-4526-…`).
 - `--legacy-ids` mints and decodes UUIDs with the legacy v1 codec only (pure v1,
   no v6), for a deployment that must stay byte-for-byte compatible with pre-1.0 ids.
 
