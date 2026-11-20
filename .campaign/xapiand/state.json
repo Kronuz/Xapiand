@@ -5127,6 +5127,9 @@
       ],
       "consumes": [],
       "files": [
+        "src/datetime_msgpack.cc",
+        "src/datetime_msgpack.h",
+        "tests/test_coverage_core_datetime.cc",
         "src/datetime.cc",
         "src/datetime.h",
         "tests/test_datetime*"
@@ -5140,7 +5143,7 @@
       "risk": "normal",
       "status": "active",
       "title": "datetime: map ranges and zone offsets compute the right instant",
-      "updated": "2026-11-19T16:20:26",
+      "updated": "2026-11-19T16:21:58",
       "worktree": "../Xapiand-wt/xapiand/datetime-range-zone"
     },
     "dir-shared-lock": {
