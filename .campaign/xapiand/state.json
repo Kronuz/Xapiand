@@ -20029,6 +20029,61 @@
       "title": "Update library pins and verify behavior",
       "updated": "2026-11-08T15:39:52"
     },
+    "placement": {
+      "accepted": {},
+      "after": [
+        "group-heal"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "strata:group",
+        "strata:group-install"
+      ],
+      "files": [
+        "include/strata/placement/**",
+        "src/placement/**",
+        "test/placement/**",
+        "bench/placement/**",
+        "docs/mechanisms/placement-root.md",
+        "docs/mechanisms/placement-repair.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [
+        "group-core"
+      ],
+      "provides": [
+        "strata:placement-records",
+        "strata:placement-repair"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "The root authority places and repairs groups",
+      "updated": "2026-11-20T05:21:55"
+    },
     "placement-repair": {
       "accepted": {},
       "after": [],
