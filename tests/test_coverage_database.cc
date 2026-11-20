@@ -398,7 +398,7 @@ std::vector<Req> requests() {
 	add("GET", "/sc5/1");
 	add("PUT", "/sc6/", R"({"_schema":{"_type":"object","_date_detection":false,"_numeric_detection":false,"_bool_detection":false,"_text_detection":false,"_uuid_detection":false,"_geo_detection":false,"_time_detection":false,"_timedelta_detection":false,"_datetime_detection":false}})");
 	add("PUT", "/sc6/1", R"({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00","f":"+01:00","g":"x"})");
-	add("PUT", "/sc7/1", R"({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00:00","f":"+01:00:00","g":"x y z","h":"POINT(1 2)","i":"2020-01-01T10:00:00"})");
+	add("PUT", "/sc7/1", R"j({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00:00","f":"+01:00:00","g":"x y z","h":"POINT(1 2)","i":"2020-01-01T10:00:00"})j");
 	add("GET", "/sc7/");
 	add("GET", "/sc7/1");
 	return reqs;
