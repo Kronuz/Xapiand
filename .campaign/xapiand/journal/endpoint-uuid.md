@@ -1,6 +1,6 @@
 # endpoint-uuid: journal
 
-State: working
+State: waiting on jobs 261119-163125-f61a3a 261119-163513-04c29c 261119-163515-6c3e3e
 Quest: .campaign/xapiand/quests/endpoint-uuid.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,8 +14,9 @@ Fix committed (src/endpoint.cc); tests in tests/test_endpoint.cc (unit) and test
 
 ## Next
 
-1. Build and run test_endpoint, test_endpoint_uuid as jobs (--for A1,A2,A3); then --fails-without at a mutant
-   commit that reverts src/endpoint.cc.
+1. Read jobs 261119-163125-f61a3a (tests at f3c9834de, A1-A3), 261119-163513-04c29c (A2 fails-without at
+   refs/mutants/endpoint-uuid/m1: replace_segment without the dedupe), 261119-163515-6c3e3e (A3 fails-without at
+   refs/mutants/endpoint-uuid/m2: no port refusal).
 2. `campaign verify endpoint-uuid` (A4).
 
 ## Blocked on
