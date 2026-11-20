@@ -8159,6 +8159,55 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "faultlab-adopt-prospect": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "faultlab"
+      ],
+      "files": [
+        "test/background_merge_test.cc",
+        "test/churn_test.cc",
+        "test/directory_test.cc",
+        "test/engine_query_test.cc",
+        "test/expand_test.cc",
+        "test/fields_test.cc",
+        "test/fixtures_test.cc",
+        "test/format13_test.cc",
+        "test/index_test.cc",
+        "test/lifecycle_test.cc",
+        "test/media_test.cc",
+        "test/merge_test.cc",
+        "test/multisegment_test.cc",
+        "test/reclaim_test.cc",
+        "test/reorder_test.cc",
+        "test/shards_test.cc",
+        "test/values_test.cc",
+        "tools/parity_terms.cc",
+        "CMakeLists.txt",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "phrase-expansion"
+      ],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
+      "updated": "2026-11-20T13:29:43"
+    },
     "faultlab-adopt-xapiand": {
       "accepted": {},
       "after": [
@@ -18582,6 +18631,35 @@
       "title": "Index patterns resolve from an ordered name index",
       "updated": "2026-11-17T22:34:05",
       "worktree": ""
+    },
+    "netlab-consensus": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "python3 -I bench/netlab/selftest.py",
+          "level": "light",
+          "minutes": 30,
+          "name": "selftest"
+        }
+      ],
+      "consumes": [
+        "faultlab:netlab"
+      ],
+      "files": [
+        "bench/netlab/**",
+        "docs/perf/netlab*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../consensus",
+      "risk": "low",
+      "status": "planned",
+      "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
+      "updated": "2026-11-20T13:29:50"
     },
     "nightly-retry": {
       "accepted": {},
