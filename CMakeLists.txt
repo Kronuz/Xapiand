@@ -929,7 +929,7 @@ include_directories(
 # Geometry/Collection-coupled debug viz writers the library dropped were already
 # dead in Xapiand (only a commented-out call). Depends on cartesian (already on the
 # path); compiled (htm.cc + constraint.cc into XAPIAND_OBJ).
-FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG bb5e01d219721c11b85eee64f56ea40d8456fa2e)
+FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG 0c09a0283a507b2cf08975a7c8572d95ece60b68)
 FetchContent_MakeAvailable(htm)
 include_directories("${htm_SOURCE_DIR}")
 

@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <algorithm>                                  // for std::all_of
+
 #include "intersection.h"
 #include "multicircle.h"
 #include "multiconvex.h"
@@ -155,7 +157,7 @@ public:
 	}
 
 	bool empty() const noexcept {
-		return multipoint.empty() && multicircle.empty() && multiconvex.empty() && multipolygon.empty() && intersections.empty();
+		return multipoint.empty() && multicircle.empty() && multiconvex.empty() && multipolygon.empty() && std::all_of(intersections.begin(), intersections.end(), [](const Intersection& i) { return i.empty(); });
 	}
 
 	const MultiPoint& getMultiPoint() const noexcept {
