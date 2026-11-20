@@ -4900,7 +4900,10 @@
         "test/host*",
         "test/transport/hello*",
         "docs/mechanisms/hello*",
-        "docs/design/hello*"
+        "docs/design/hello*",
+        "test/transport/node_hello_test.cc",
+        "fuzz/corpus/decoders/**",
+        "fuzz/seed.cc"
       ],
       "history": [
         {
@@ -5063,7 +5066,7 @@
       "risk": "high",
       "status": "active",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T05:24:37",
+      "updated": "2026-11-20T06:46:04",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
