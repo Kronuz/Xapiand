@@ -4,9 +4,9 @@ How nodes get identities, join, leave, and survive lost disks and nodes, copied 
 expiring certificates and a lost quorum, with no key ever handled by an operator.
 
 - Status: revision 1, 2026-11-20, for re-review (lens `design`); nothing is built. It folds in the
-  design review (`.campaign/xapiand/reviews/cluster-membership-design.md`) and D153, and closes
-  D150 to D152. Read at Xapiand `6e7ae7926`, consensus `e1f249d` and `64dbb06`, and pki `70a3b76`,
-  under the trusted-cluster threat model.
+  design review (`.campaign/xapiand/reviews/cluster-membership-design.md`), D153 and the owner's
+  answers (D154), and closes D150 to D152. Read at Xapiand `6e7ae7926`, consensus `e1f249d` and
+  `64dbb06`, and pki `70a3b76`, under the trusted-cluster threat model.
 - Models, extended from the review's, in the quest worktree's `.scratch/cluster-design/`:
   `m7_admission.py` (job `261120-122335-4b19c5`) and `m9_survivor.py` (job `261120-122337-e67e91`).
 
@@ -33,7 +33,7 @@ HTTP API. A deployment that must never found runs `xapiand join TOKEN` before ev
 | The data directory holds | `xapiand` | `xapiand join TOKEN` |
 |---|---|---|
 | nothing | founds a cluster of one | joins, never founds |
-| a cluster of one with no live token | runs | joins, carrying its indexes (M3) |
+| a cluster of one that never had a second node and has no live token | runs | joins, carrying its indexes (M3) |
 | a member of the token's cluster | runs | exits 0 unchanged, without the network |
 | a member of another cluster, or a cluster of one with a live token | runs | refused (`cluster`), naming both ids |
 | an identity the cluster refuses | exits naming the reason and what to do (M7) | the same |
@@ -65,7 +65,7 @@ first, so on a member it never waits on the cluster; otherwise it finds the clus
 It reads `XAPIAND_TOKEN`, since other users can read arguments. D152's `init` goes.
 
 A lost disk under plain `xapiand` founds a new cluster of one, which splits no membership (TS-R6):
-it neither announces nor holds a token, and old peers refuse its certificate (Limit 1, Q7).
+it neither announces nor holds a token, and old peers refuse its certificate (Limit 1, Q1).
 Refusing an empty directory (D152) would fail every newcomer, so founding warns and `GET /` shows
 the node count.
 Criteria: plain `xapiand` binds only the HTTP port and sends no datagram for 10 s; after `invite`,
@@ -78,8 +78,9 @@ paths (nested paths are distinct keys). After the commit the node drops its old 
 closes each group (a close checkpoints the applied position, `cluster-release.md:303`) and
 re-founds it from that checkpoint as a lone-voter group of the new cluster, copying no bytes
 (strata must add this), with a marker per shard so a crash resumes; placement then grows each index
-to its `number_of_replicas` (D7). At 1,000 creations a second
-(`cluster-release.md:221`), 10,000 indexes take 10 s of root commits.
+to its `number_of_replicas` (D7). Carrying, rather than joining only when empty, is the owner's
+(D154). At 1,000 creations a second (`cluster-release.md:221`), 10,000 indexes take 10 s of root
+commits.
 Criteria: a cluster of one holding `a` and `b/c` joins 3 nodes, both reading equal everywhere; a
 collision on `a` is refused naming it, both sides unchanged; one with a live token is refused; a
 kill at each carry step restarts to one whole state (a crash-point job).
@@ -87,8 +88,10 @@ kill at each carry step restarts to one whole state (a crash-point job).
 **M4. Tokens and the join exchange.** A token is one string, consensus's codec version 2: the
 cluster id, which picks its cluster's announcements (`seeds.md:18`); the SHA-256 of the CA's public
 key (SPKI, as kubeadm pins); and a 32-byte secret, printed once and never logged, whose hash alone
-the root keeps. `POST`, `GET` and `DELETE /:cluster/tokens[/<id>]` mint, list and revoke; rotation
-is mint, then revoke.
+the root keeps. A token lives 24 hours by default (kubeadm's) and is reusable within them, with
+`--ttl never` allowed (D154). `POST`, `GET` and `DELETE /:cluster/tokens[/<id>]` mint, list and
+revoke; rotation is mint, then revoke. These routes stay on the unauthenticated API until API tokens
+exist (TS-R9, D154), though a node they admit may become a root voter holding the CA key.
 
 Any member serves joins on its cluster port to TLS clients without a certificate, in their own
 pool: at most 64 at once and 8 per source, refused past the cap rather than evicting links, and a
@@ -115,17 +118,17 @@ first use fails.
 
 | Event | The node's replicas | Its identity |
 |---|---|---|
-| `xapiand leave` on it | drained by D7's steps after its leaderships and any root replica, with the CA key, are handed off | retired, its directory deleted (Q6) |
+| `xapiand leave` on it | drained by D7's steps after its leaderships and any root replica, with the CA key, are handed off | retired, its directory deleted (D154) |
 | `down` past `replace_after` | replaced | kept: it rejoins as itself |
 | `xapiand remove NODE` | lost with it; a group left without a quorum of unretired voters waits for `recover` (M9) | retired; an `up` node needs `--force` |
 
 `leave` refuses when the remaining nodes cannot hold the root or an index's `number_of_replicas`,
-naming the indexes (Q5); check and mark are one root command counting only nodes neither leaving,
-retired nor down, so concurrent `leave`s and `remove`s see each other. The drain is the root's
-record: a killed `leave` leaves it running (`leave --cancel` undoes it), and a node dying while
-leaving retires once its replicas are replaced. `replace_after` is one cluster setting (default
-300 s). Retiring revokes (TS-R5): every node drops the pin, so neither the node nor a copy of its
-disk connects or renews again.
+naming the indexes, never lowering it (D154); check and mark are one root command counting only
+nodes neither leaving, retired nor down, so concurrent `leave`s and `remove`s see each other. The
+drain is the root's record: a killed `leave` leaves it running (`leave --cancel` undoes it), and a
+node dying while leaving retires once its replicas are replaced. `replace_after` is one cluster
+setting (default 300 s). Retiring revokes (TS-R5): every node drops the pin, so neither the node nor
+a copy of its disk connects or renews again.
 Criteria: a leave on 5 nodes under writes keeps digests equal and resumes when killed at each step;
 of two concurrent leaves on 4 nodes at `rf = 3`, one is refused, naming the index; a removed node's
 directory copy exits `retired`; a node down past `replace_after` rejoins as itself.
@@ -206,10 +209,10 @@ Criteria: master's single-node directory serves its indexes.
 
 **M11. Containers and Kubernetes.** A StatefulSet with volumes runs `xapiand join` in an init
 container and `xapiand` in the main one, with `XAPIAND_TOKEN` from a Secret holding a `--ttl never`
-token and `--seed` naming the headless service. Bootstrap: `xapiand-0` starts alone, `xapiand
-invite --ttl never` there fills the Secret, and the init container is added, a no-op on `xapiand-0`
-(zero-touch is Q4). Scale-down runs `leave` in the highest pods before lowering `replicas`; a
-preStop hook would drain on every rolling restart.
+token and `--seed` naming the headless service. Bootstrap: `xapiand-0` starts alone, `xapiand invite
+--ttl never` there fills the Secret, and the init container is added, a no-op on `xapiand-0` (no
+zero-touch bootstrap by pre-shared secret in the first release, D154). Scale-down runs `leave` in
+the highest pods before lowering `replicas`; a preStop hook would drain on every rolling restart.
 Criteria: a StatefulSet-shaped harness (empty directories, one token, one DNS seed) scales 3 to 5
 to 3 through `leave` and restarts each node empty in turn, green between, no `quorum` write lost.
 
@@ -243,7 +246,7 @@ strata adds founding from a checkpoint (M3) and index paths in group metadata (M
 
 ## Limits
 
-1. **Silent:** a lost disk under plain `xapiand` serves routed clients an empty cluster (M2, Q7).
+1. **Silent:** a lost disk under plain `xapiand` serves routed clients an empty cluster (M2, Q1).
 2. **Silent:** a copy admitted while its original is cut off from the root past 2 s, a backup taken
    since its node's last refresh and restored after the node died, or a root replica restored while
    the root has no leader runs on duplicated or rolled-back state and can vote twice in a term (M7).
@@ -257,31 +260,19 @@ strata adds founding from a checkpoint (M3) and index paths in group metadata (M
 ## Other review findings
 
 - F7: the key current at the join's commit signs; a CA replacement waits for joins (M4, M8).
-- F10: added to Q3.
+- F10: noted in M4; the owner kept the routes unauthenticated until API tokens exist (D154).
 - F11: one SPKI pin kind for Xapiand and Detent, to agree with Detent's lead.
-- F13: the carry closes each group first; any cluster of one without a live token carries.
+- F13: the carry closes each group first; the never-had-a-second-node condition stays (D154).
 - F14: M8's key scan runs after a root replica moves, and covers routes and logs.
 - F15: M7 names the refresh's cost (Limit 2 its window).
 - F16: `recover` takes an index pattern.
 
 ## Questions for the owner
 
-- **Q1. Token defaults?** Default: 24 hours (kubeadm's), unlimited uses within them, `--ttl never`
-  allowed.
-- **Q2. Carry a cluster of one's indexes in (M3), or join only when empty?** Default: carry.
-- **Q3. Token routes on the unauthenticated API?** Anyone reaching it can already delete every
-  index, and a node it admits may become a root voter holding the CA key; the routes take the API
-  token once it exists (TS-R9). Default: yes.
-- **Q4. Zero-touch bootstrap of identical pods** by a pre-shared secret? Default: not in the
-  release.
-- **Q5. Downsizing below `number_of_replicas`: refuse, or warn and lower it?** Lowering changes
-  users' durability. Default: refuse, naming the indexes.
-- **Q6. `leave` deleting the drained node's data?** Its root replica, with the CA key, goes either
-  way. Default: yes.
-- **Q7. The founder's deployment (F12)?** A founder kept on plain `xapiand` founds again after a
-  lost disk (Limit 1). Options: (a) `invite` also prints the founder's own `join TOKEN` line for
-  its deployment; (b) plain `xapiand` refuses to found while `XAPIAND_TOKEN` is set; (c) keep
-  Limit 1. Default: (a).
+- **Q1. The founder's run command on bare metal (F12)?** A founder kept on plain `xapiand` founds
+  again after a lost disk (Limit 1). Options: (a) `invite` also prints the founder's own
+  `join TOKEN` line for its deployment; (b) plain `xapiand` refuses to found while `XAPIAND_TOKEN`
+  is set; (c) keep Limit 1. Default: (a).
 
 ## Status and first steps
 
@@ -294,7 +285,7 @@ criteria changes:
    `init` and the empty-directory refusal go.
 3. A8 founds at first start, not by `init`.
 4. A9 adds that `join` on a member exits 0 without the network.
-5. A10's token must be live (Q1), the new node admitted through any member.
+5. A10's token must be live (24 h, D154), the new node admitted through any member.
 6. New: M7's criteria, M9's traces, M4's concurrent joins and joiner crash, M6's concurrent leaves.
 
 Review first: M7's admission steps and the root's cold start, M9's survivor rule, M4's
