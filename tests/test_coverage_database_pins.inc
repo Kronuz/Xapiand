@@ -4,7 +4,8 @@
 //   H2 an array as the _value of an object-typed field is a 500 ("MAP cannot have numeric keys")
 //   H3 a string as _schema is a 500 ("Schema metadata is corrupt"), not a 400
 //   H4 _namespace with nested objects is a 500 ("Schema has an unsupported type: integer")
-//   H5 PATCH replace on a missing path answers with the internal "unordered_map::at" message
+//   H5 PATCH replace on a missing path answers with the internal "unordered_map::at" message (pinned up to the library's text)
+//   Hash-derived "_slot" numbers are cut from the pins: only the keys around them are defined
 const std::vector<Pin> pins = {
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Data inconsistency, '_weight' must be a positive integer or a not-empty array of positive integers\"}"},  // PUT /pr/1
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Data inconsistency, '_weight' must be a positive integer or a not-empty array of positive integers\"}"},  // PUT /pr/2
@@ -1138,49 +1139,49 @@ const std::vector<Pin> pins = {
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 0x58 is an unknown type\"}"},  // PUT /ty18/w20
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 0x58 is an unknown type\"}"},  // PUT /ty18/s21
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Type: 0x58 is an unknown type\"}"},  // PUT /ty18/w21
-	{204, ""},  // PUT /ty19/
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not NEGATIVE_INTEGER\"}"},  // PUT /ty19/s1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not NEGATIVE_INTEGER\"}"},  // PUT /ty19/w1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not NEGATIVE_INTEGER\"}"},  // PUT /ty19/s2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not NEGATIVE_INTEGER\"}"},  // PUT /ty19/w2
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not FLOAT\"}"},  // PUT /ty19/s3
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not FLOAT\"}"},  // PUT /ty19/w3
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''7''\"}"},  // PUT /ty19/s4
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''7''\"}"},  // PUT /ty19/w4
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''abc''\"}"},  // PUT /ty19/s5
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''abc''\"}"},  // PUT /ty19/w5
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-02''\"}"},  // PUT /ty19/s6
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-02''\"}"},  // PUT /ty19/w6
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''10:30:00''\"}"},  // PUT /ty19/s7
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''10:30:00''\"}"},  // PUT /ty19/w7
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''+01:00:00''\"}"},  // PUT /ty19/s8
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''+01:00:00''\"}"},  // PUT /ty19/w8
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''550e8400-e29b-41d4-a716-446655440000''\"}"},  // PUT /ty19/s9
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''550e8400-e29b-41d4-a716-446655440000''\"}"},  // PUT /ty19/w9
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''true''\"}"},  // PUT /ty19/s10
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''true''\"}"},  // PUT /ty19/w10
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not BOOLEAN\"}"},  // PUT /ty19/s11
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not BOOLEAN\"}"},  // PUT /ty19/w11
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/
+	{204, ""},  // PUT /ty19/s1
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w1
+	{204, ""},  // PUT /ty19/s2
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w2
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got 1.5\"}"},  // PUT /ty19/s3
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w3
+	{204, ""},  // PUT /ty19/s4
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w4
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"abc\\\"\"}"},  // PUT /ty19/s5
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w5
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"2020-01-02\\\"\"}"},  // PUT /ty19/s6
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w6
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"10:30:00\\\"\"}"},  // PUT /ty19/s7
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w7
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"+01:00:00\\\"\"}"},  // PUT /ty19/s8
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w8
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"550e8400-e29b-41d4-a716-446655440000\\\"\"}"},  // PUT /ty19/s9
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w9
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"true\\\"\"}"},  // PUT /ty19/s10
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w10
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got true\"}"},  // PUT /ty19/s11
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w11
 	{204, ""},  // PUT /ty19/s12
-	{204, ""},  // PUT /ty19/w12
-	{204, ""},  // PUT /ty19/s13
-	{204, ""},  // PUT /ty19/w13
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Expected array of [longitude, latitude] or [longitude, latitude, altitude]\"}"},  // PUT /ty19/s14
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Expected array of [longitude, latitude] or [longitude, latitude, altitude]\"}"},  // PUT /ty19/w14
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w12
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got [1,2]\"}"},  // PUT /ty19/s13
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w13
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got [\\\"a\\\",\\\"b\\\"]\"}"},  // PUT /ty19/s14
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w14
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field '_latitude' in 's' is not valid\"}"},  // PUT /ty19/s15
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Unknown cast type _latitude\"}"},  // PUT /ty19/w15
-	{204, ""},  // PUT /ty19/s16
-	{204, ""},  // PUT /ty19/w16
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w15
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"POINT(1 2)\\\"\"}"},  // PUT /ty19/s16
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w16
 	{204, ""},  // PUT /ty19/s17
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Expected map with one valid cast\"}"},  // PUT /ty19/w17
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: _latitude, _longitude and _altitude must be numeric\"}"},  // PUT /ty19/s18
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: _latitude, _longitude and _altitude must be numeric\"}"},  // PUT /ty19/w18
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not POSITIVE_INTEGER\"}"},  // PUT /ty19/s19
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Object must be string, map or array not POSITIVE_INTEGER\"}"},  // PUT /ty19/w19
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Geometry 'Abc' is not supported\"}"},  // PUT /ty19/s20
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Geometry 'Abc' is not supported\"}"},  // PUT /ty19/w20
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-01T00:00:00Z''\"}"},  // PUT /ty19/s21
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Syntax error in ''2020-01-01T00:00:00Z''\"}"},  // PUT /ty19/w21
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w17
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got []\"}"},  // PUT /ty19/s18
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w18
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got 18446744073709551615\"}"},  // PUT /ty19/s19
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w19
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"Abc Def\\\"\"}"},  // PUT /ty19/s20
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w20
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 's' expects a value of type integer, got \\\"2020-01-01T00:00:00Z\\\"\"}"},  // PUT /ty19/s21
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: 'nope' not supported, '_type' must be one of { 'object', 'boolean', 'date', 'datetime', 'floating', 'geo', 'integer', 'positive', 'script', '"},  // PUT /ty19/w21
 	{204, ""},  // PUT /inf/1
 	{204, ""},  // PUT /inf/2
 	{204, ""},  // PUT /inf/3
@@ -1203,7 +1204,7 @@ const std::vector<Pin> pins = {
 	{204, ""},  // PUT /inf/20
 	{204, ""},  // PUT /inf/21
 	{204, ""},  // PUT /t1/1
-	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"_id\":{\"_type\":\"integer\",\"_slot\":0,\"_prefix\":\"Q\"},\"s\":{\"_prefix\":\"s.\",\"_ngram\":false,\"_cjk_ngram\":false,\"_slot\":3731701092,\"_typ"},  // GET /t1/
+	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"_id\":{\"_type\":\"integer\",\"_slot\":0,\"_prefix\":\"Q\"},\"s\":{\"_prefix\":\"s.\",\"_ngram\":false,\"_cjk_ngram\":false,"},  // GET /t1/
 	{200, "{\"s\":\"hello world\",\"i\":5,\"f\":1.5,\"b\":true,\"d\":\"2020-01-02T00:00:00\",\"dt\":\"2020-01-02T03:04:05Z\",\"tm\":\"10:30:00\",\"td\":\"+01:30:00\",\"u\":\"550e8400-e29b-41d4-a716-446655440000\",\"n\":null,\"o\":{\"x\":1,\"y\":[1,2"},  // GET /t1/1
 	{200, "{\"s\":\"hello world\",\"i\":5,\"f\":1.5,\"b\":true,\"d\":\"2020-01-02T00:00:00\",\"dt\":\"2020-01-02T03:04:05Z\",\"tm\":\"10:30:00\",\"td\":\"+01:30:00\",\"u\":\"550e8400-e29b-41d4-a716-446655440000\",\"n\":null,\"o\":{\"x\":1,\"y\":[1,2"},  // GET /t1/1?volatile
 	{200, "{\x0a""  \"_settings\": {\x0a""    \"number_of_replicas\": 0,\x0a""    \"shards\": [\x0a""      \"loopyield\"\x0a""    ]\x0a""  },\x0a""  \"_schema\": {\x0a""    \"_id\": {\x0a""      \"_type\": \"integer\",\x0a""      \"_slot\": 0,\x0a""      \"_prefix\": \"Q\"\x0a""    },\x0a""    \"s\""},  // GET /t1/?pretty
@@ -1250,13 +1251,13 @@ const std::vector<Pin> pins = {
 	{201, ""},  // POST /id/
 	{201, ""},  // POST /id/
 	{200, "{\"a\":2,\"_id\":1,\"_version\":2}"},  // GET /id/1
-	{204, ""},  // PATCH /id/1
-	{204, ""},  // PATCH /id/1
-	{204, ""},  // PATCH /id/1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: In patch replace: unordered_map::at: key not found\"}"},  // PATCH /id/1  HUNT H5
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: In patch op: 'bogus' is not a valid value\"}"},  // PATCH /id/1
-	{204, ""},  // PATCH /id/1
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: A JSON Patch document MUST be an array of objects\"}"},  // PATCH /id/1
+	{204, ""},  // PATCH /id/1  HUNT H5
+	{204, ""},  // PATCH /id/1  HUNT H5
+	{204, ""},  // PATCH /id/1  HUNT H5
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: In patch replace: "},  // PATCH /id/1  HUNT H5
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: In patch op: 'bogus' is not a valid value\"}"},  // PATCH /id/1  HUNT H5
+	{204, ""},  // PATCH /id/1  HUNT H5
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: A JSON Patch document MUST be an array of objects\"}"},  // PATCH /id/1  HUNT H5
 	{204, ""},  // UPDATE /id/1
 	{204, ""},  // UPDATE /id/1
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Script error: [string \\\"62eb9771afd478a4418f04183ada5707\\\"]:1: attempt to index a nil value (global 'params')\"}"},  // UPDATE /id/1
@@ -1274,15 +1275,15 @@ const std::vector<Pin> pins = {
 	{200, ""},  // HEAD /id/2
 	{409, "{\"status\":409,\"type\":\"Conflict\",\"message\":\"Conflict: Version mismatch: the current version is 1\",\"_version\":1}"},  // DELETE /id/2?version=9
 	{501, "{\"status\":501,\"type\":\"Not Implemented\"}"},  // DELETE /id/
-	{204, ""},  // PUT /sc/
-	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"a\":{\"_prefix\":\"a.\",\"_slot\":9170759,\"_accuracy\":[100,1000,10000,100000,1000000,100000000],\"_accuracy_prefix\":[\"<64>.\",\"<3e8>.\",\""},  // GET /sc/
+	{204, ""},  // PUT /sc/  HUNT H3
+	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"a\":{\"_prefix\":\"a.\","},  // GET /sc/
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 'a' expects a value of type integer, got \\\"x\\\"\"}"},  // PUT /sc/1
 	{204, ""},  // PUT /sc/2
-	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"a\":{\"_prefix\":\"a.\",\"_slot\":9170759,\"_accuracy\":[100,1000,10000,100000,1000000,100000000],\"_accuracy_prefix\":[\"<64>.\",\"<3e8>.\",\""},  // GET /sc/
-	{204, ""},  // PUT /sc/
+	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"a\":{\"_prefix\":\"a.\","},  // GET /sc/
+	{204, ""},  // PUT /sc/  HUNT H3
 	{500, "{\"status\":500,\"type\":\"Internal Server Error\",\"message\":\"Schema metadata is corrupt: '_foreign' must contain index and docid ['x']\"}"},  // PUT /sc/  HUNT H3
-	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Invalid schema: Schema field '_foreign' does not exist\"}"},  // PUT /sc/
-	{204, ""},  // PUT /sc/
+	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Invalid schema: Schema field '_foreign' does not exist\"}"},  // PUT /sc/  HUNT H3
+	{204, ""},  // PUT /sc/  HUNT H3
 	{412, "{\"status\":412,\"type\":\"Precondition Failed\",\"message\":\"Type of field 'zz' is missing\"}"},  // PUT /sc/3
 	{204, ""},  // PUT /sc2/
 	{412, "{\"status\":412,\"type\":\"Precondition Failed\",\"message\":\"Type of field 'b' is missing\"}"},  // PUT /sc2/1
@@ -1298,6 +1299,6 @@ const std::vector<Pin> pins = {
 	{204, ""},  // PUT /sc6/
 	{204, ""},  // PUT /sc6/1
 	{204, ""},  // PUT /sc7/1
-	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"_id\":{\"_type\":\"integer\",\"_slot\":0,\"_prefix\":\"Q\"},\"a\":{\"_prefix\":\"a.\",\"_slot\":2248400811,\"_accuracy\":[\"hour\",\"day\",\"month\",\"year"},  // GET /sc7/
+	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"_id\":{\"_type\":\"integer\",\"_slot\":0,\"_prefix\":\"Q\"},\"a\":{\"_prefix\":\"a.\","},  // GET /sc7/
 	{200, "{\"a\":\"2020-01-01T00:00:00\",\"b\":\"1\",\"c\":\"true\",\"d\":\"550e8400-e29b-41d4-a716-446655440000\",\"e\":\"10:00:00\",\"f\":\"+01:00:00\",\"g\":\"x y z\",\"h\":\"POINT(1 2)\",\"i\":\"2020-01-01T10:00:00\",\"_id\":1,\"_version\":1}"},  // GET /sc7/1
 };

@@ -434,7 +434,11 @@ int main() {
 			out += "\t{" + std::to_string(r.status) + ", " + quoted(r.raw.substr(0, 200)) + "},  // " + req.method + " " + req.path + "\n";
 		} else if (i < pins.size()) {
 			CHECK_EQ(r.status, pins[i].status);
-			CHECK_EQ(r.raw.substr(0, std::strlen(pins[i].prefix)), std::string(pins[i].prefix));
+			const auto got = r.raw.substr(0, std::strlen(pins[i].prefix));
+			if (got != pins[i].prefix || r.status != pins[i].status) {
+				std::fprintf(stderr, "pin %zu %s %s: status %d (pinned %d)\n  got:    %s\n  pinned: %s\n", i, req.method.c_str(), req.path.c_str(), static_cast<int>(r.status), static_cast<int>(pins[i].status), r.raw.substr(0, 400).c_str(), pins[i].prefix);
+			}
+			CHECK_EQ(got, std::string(pins[i].prefix));
 		}
 	}
 	if (capture != nullptr) {
