@@ -1,6 +1,6 @@
 # control-plane-wallclock: journal
 
-State: waiting on jobs 261120-014220-5b29fc 261120-014220-5e1906
+State: ready to land (lead, 2026-11-20 02h).
 Quest: .campaign/xapiand/quests/control-plane-wallclock.md (the lead's; never edit it)
 
 ## Doing
@@ -23,9 +23,9 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | suite 261120-014220-5b29fc; fails-without 261120-014220-5e1906 |
-| A2 | [manual] no wall-clock assertion left in the test; wakes are counted, lag p50/p99/max only printed |
-| A3 | CI after push (lead) |
+| A1 | suite 261120-014220-5b29fc; fails without: 261120-014220-5e1906 (per-key 1 ms poll mutant: wakes idle 330, parked 67, CHECK(parked * 4 >= idle) fails) |
+| A2 | [manual] lead read the diff (2026-11-20 02h): the p99 assertion is gone; lag percentiles are printed only; wakes are compared over equal 400 ms windows with a 4x margin; fired and running counts are exact |
+| A3 | CI at the landed commit (land gate) |
 
 ## Result
 
