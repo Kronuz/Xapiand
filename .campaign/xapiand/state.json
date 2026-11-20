@@ -21130,7 +21130,7 @@
     "phrase-expansion": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-20T14:28:47",
+          "at": "2026-11-20T15:15:42",
           "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
           "blobs": {
             "CMakeLists.txt": "100644:63a2c9c5d0a095debe7e17e23a52c540ba481599",
@@ -21165,54 +21165,54 @@
             "test/phrase_expansion_fixture.hh": "100644:8cd0541eb261e1d0a026212cc9387e4aa7aceeac",
             "test/phrase_expansion_mutants.py": "100755:f0c53f1eae5c6c661164d078740b4291e1ab792e",
             "test/phrase_expansion_test.cc": "100644:2a5a0102b38ecff8c0dacc2e583c4272c0cd6f1e",
-            "test/scorer_budget_test.cc": "100644:e8945fc3a039ed84cf26bd36c1c8fbc793b8254c"
+            "test/scorer_budget_test.cc": "100644:ccbc0303c89bd95f6aea13058f953ea49df7a818"
           },
           "by": "review",
-          "commit": "15d2830eea3425a773628233fbc982fad852352a",
+          "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
           "criteria": "de191e8d1df19bb7",
           "diffs": {
             "": "3f6345fbb4f16f60",
             "CMakeLists.txt": "b97ef5d6992be816",
-            "docs/mechanisms/phrase-expansion.md": "10826173327f3a32",
-            "fuzz/corpus/phrase/r00": "735bec96b0468e01",
-            "fuzz/corpus/phrase/r01": "acf5b2347375ee12",
-            "fuzz/corpus/phrase/r02": "5faff7f2aa3db81f",
-            "fuzz/corpus/phrase/r03": "ff7b1bcebc30b66a",
-            "fuzz/corpus/phrase/r04": "acc54c9944c2a2c0",
-            "fuzz/corpus/phrase/r05": "b0049a49f5678951",
-            "fuzz/corpus/phrase/r06": "5721cc04f5a356ae",
-            "fuzz/corpus/phrase/r07": "4480453685b96b3e",
-            "fuzz/corpus/phrase/r08": "82800b507e4f3ad9",
-            "fuzz/corpus/phrase/r09": "00265c4b9ac3538f",
-            "fuzz/corpus/phrase/r10": "ef4e86ede6c54991",
-            "fuzz/corpus/phrase/r11": "8c14442c85d2dd2f",
-            "fuzz/corpus/phrase/r12": "9fca11dc9077b2d9",
-            "fuzz/corpus/phrase/r13": "d302d7e94acb8b70",
-            "fuzz/corpus/phrase/r14": "17553405593833ba",
-            "fuzz/corpus/phrase/r15": "d649e1f1a645b9ba",
-            "fuzz/corpus/phrase/r16": "578bd4e17fe6f425",
-            "fuzz/corpus/phrase/r17": "21b942729e21184c",
+            "docs/mechanisms/phrase-expansion.md": "4ac76d0555467620",
+            "fuzz/corpus/phrase/r00": "b54e3d291e9edbbb",
+            "fuzz/corpus/phrase/r01": "70fa4a4fd8122569",
+            "fuzz/corpus/phrase/r02": "52ac2edc56cf4669",
+            "fuzz/corpus/phrase/r03": "0c36f18aca003c61",
+            "fuzz/corpus/phrase/r04": "10b72da9e1af8d7f",
+            "fuzz/corpus/phrase/r05": "f6efa7ee91237f73",
+            "fuzz/corpus/phrase/r06": "4c5724b2c30afe71",
+            "fuzz/corpus/phrase/r07": "46987e61fa1a2423",
+            "fuzz/corpus/phrase/r08": "6c5e520236af6156",
+            "fuzz/corpus/phrase/r09": "33757f4be43133cf",
+            "fuzz/corpus/phrase/r10": "83308356d2e17c03",
+            "fuzz/corpus/phrase/r11": "4b79221a09cca837",
+            "fuzz/corpus/phrase/r12": "22b7d99f94bd2583",
+            "fuzz/corpus/phrase/r13": "f8c07dfbe42ffc13",
+            "fuzz/corpus/phrase/r14": "1019fbf8ff608bfc",
+            "fuzz/corpus/phrase/r15": "47f67369ca8ca383",
+            "fuzz/corpus/phrase/r16": "e23b820b8f53aeb4",
+            "fuzz/corpus/phrase/r17": "b803f6e790b54660",
             "fuzz/fuzz_phrase.cc": "c66dfaed44594fee",
             "include/prospect/phrase_expand.hh": "d024d09bf217423d",
             "test/expansion_bounds_test.cc": "e810e2fa4c41772c",
             "test/phrase_expansion_fixture.hh": "e965029b1fd5ac06",
             "test/phrase_expansion_mutants.py": "7992e69b1c182a22",
             "test/phrase_expansion_test.cc": "6705eccee2c5d6b0",
-            "test/scorer_budget_test.cc": "aaf16b28470feb7e"
+            "test/scorer_budget_test.cc": "96a9a011823d4bf7"
           },
           "findings": {
             "F1": {
               "jobs": [
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "15d2830eea3425a773628233fbc982fad852352a",
+                  "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261120-134019-bd8050",
+                  "job": "261120-145150-ba6eac",
                   "level": "light",
-                  "seconds": 192.8,
+                  "seconds": 260.5,
                   "state": "done",
-                  "what": "phrase-expansion check build-test at 15d2830eea34"
+                  "what": "phrase-expansion check build-test at dea0ffb3781b"
                 }
               ],
               "kind": "gap",
@@ -21223,7 +21223,7 @@
             "paths": [
               "test/scorer_budget_test.cc"
             ],
-            "reason": "test/scorer_budget_test.cc is F1's regression test (the scorer charge against the measured heap); it adds no mechanism"
+            "reason": "prospect:dea0ffb changes only scorer_budget_test: under a sanitizer it leaves the allocator alone (ASan delete mismatch, TSan duplicate operator new)"
           },
           "note": "",
           "review": "2b0c4ff77988db3d37de33a5694a7ec38aee9b07",
@@ -21395,7 +21395,7 @@
       "risk": "normal",
       "status": "review",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T14:28:47",
+      "updated": "2026-11-20T15:15:42",
       "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
