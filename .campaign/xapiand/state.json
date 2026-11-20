@@ -5447,7 +5447,7 @@
           "final": true,
           "from": "1c08c9fc40620c0be445069bb3b1e319aa4a28f1",
           "later": [
-            "261120-085507-4feb50"
+            "261120-123750-50b4a8"
           ],
           "reason": "",
           "tested": "e1f249d8d9ff64410f87042ba90f4c218d9ec336"
@@ -5467,7 +5467,7 @@
       "risk": "high",
       "status": "landed",
       "title": "A request lane on the host transport, streamed bodies",
-      "updated": "2026-11-20T08:55:08",
+      "updated": "2026-11-20T12:37:50",
       "worktree": "../consensus-wt/xapiand/consensus-rpc-lane"
     },
     "consensus-sim-loops": {
