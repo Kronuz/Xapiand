@@ -1,41 +1,38 @@
 # hybrid-go-no-go: journal
 
-State: waiting on jobs 261119-165343-b6aa97 (build-test at strata:7b02184a), 261119-165256-d9b97c (i8 arm builds), then A2 VM chain 261119-165320-4c7aab, 261119-165322-5de80e, 261119-165323-bbf0d1, 261119-165324-ab5d83, 261119-165325-5b4a2b, 261119-165327-df94fb, 261119-165328-679013, 261119-165329-cc2e38. A4 (owner) and Qdrant/ES at 1,000 (lead's rerun) open. Strata:7b02184a.
+State: A1 to A3 done (strata:08f372bc); A4 waits on the owner (decision request in Result). No jobs running.
 Quest: .campaign/xapiand/quests/hybrid-go-no-go.md (the lead's; never edit it)
 
 ## Doing
 
-Results read and written up (strata:ff10ac80): `docs/design/hybrid-search/c1-rerun.md` (table,
-jobs, raw JSON in `c1-rerun/`) and the fit verdict's "C1 rerun (2026-11-18)" in
-`docs/design/hybrid-search.md`. Main merged (strata:40788b0e, no rebase).
-
-Reading (100 / 1,000 tenants of 1,000 vectors, VM):
-1. Warm p99: strata 1.26 / 1.32 ms; 3.1x faster than Qdrant (100), 4.4x / 5.6x than pgvector,
-   7.6x than ES (100), 10.2x / 10.6x than LanceDB.
-2. Idle anon: strata 3.4 MB at both; pgvector 4.3; Qdrant 46 (+382 MB mapped); LanceDB 72; ES 8,802.
-3. Cold p99: strata 11.9 / 12.9 ms; Qdrant 4.0 (100; its mapped pages survive drop_caches), so
-   3.0x slower than Qdrant, 1.3x / 1.6x faster than pgvector, 1.3x / 1.7x than LanceDB, 4.4x than ES.
-4. Recommendation: go on steps 1 to 4, cold p99 the condition (A2: i8 codes read cold).
-
-Failures attributed (also in c1-rerun.md):
-1. 261118-000128-f4c57b: first dry run ran on macOS; Qdrant reset (fixed a950f1a4), ES recall
-   0.5655 (fixed 3e8dcb93). Not evidence.
-2. 261118-002809-0a06e7: macOS dry run, Qdrant 409 from a stale Qdrant on the port (fixed 72990a82).
-3. 261118-044500-19572d: VM powered off from outside 5.5 min into Qdrant's 1,000 load: console
-   (`~/.scratch/vm-document-gate/linux/console.log`) shows a clean systemd shutdown begun while
-   the SSH session was open, no OOM or panic; no campaign job drove the VM in 10:10-10:16. Its
-   chain (qdrant row c7b37f, es load 2593f7, es row 13047d) was skipped.
-Timeout 261118-002908-5c7ce8 (Qdrant 100 load, 12 min, no log): rerun 9eed59 loaded in 95.5 s.
+Nothing: A1 to A3 written up at strata:08f372bc; A4 is the owner's.
 
 ## Next
 
-1. When the A2 chain ends: read strata-i8 against strata at 100 and 1,000 (same commit, same VM),
-   write them into `docs/design/hybrid-search/c1-rerun.md` and the verdict, fill A2's Evidence row.
-2. If build-test fails on manifest_log again: show it with a job at main's commit (below).
-3. Qdrant and ES at 1,000 tenants: not measured (denied). The rerun of 19572d, c7b37f, 2593f7,
-   13047d was refused by the permission classifier; the lead will not run it either (msg, 2026-11-19):
-   it stays undone until the owner authorizes it. Reported as not measured in c1-rerun.md.
-4. Push the branch for CI (contributors do not push).
+1. Owner answers A4 (Result); record it as a Decisions row.
+2. Main changed 6 files since the branch: merge main before landing (a code merge, so evidence
+   reruns at the merge; the lead's call when).
+3. Push the branch for CI (contributors do not push).
+
+## Resumed 2026-11-20
+
+The A2 chain and the Qdrant and ES 1,000 rerun (the lead's, one chain at strata:7b02184a) all
+passed: rows 261119-173351-6dabcb, -173357-5a1aac, -173402-06e84b, -173414-b5197c,
+-173419-733f81, -173425-b0afb9 and their loads. Raw JSON copied into
+`docs/design/hybrid-search/c1-rerun/` (Qdrant, ES at 1,000) and `c1-rerun/a2/` (strata f32 and
+i8 at 7b02184a; A1's strata rows at ed42f792 and 3e8dcb93 stay as they were). A1 jobs
+(261118-*) re-checked: all done, exit 0, exclusive.
+
+Reading at 1,000 tenants (100 in c1-rerun.md):
+1. Warm p99: strata f32 1.32 ms (A1), i8 0.69; Qdrant 4.10 / 8.20 (warm1 / warm2), pgvector 7.38,
+   ES 11.9, LanceDB 14.0. f32 3.1x faster than Qdrant's better pass; i8 6.0x.
+2. Idle anon: strata 3.4 MB; pgvector 4.3; LanceDB 72; Qdrant 104 + 3,026 mapped (rss 3,129);
+   ES 8,787 heap, 15.8 CPU s per 30 s idle after queries.
+3. Cold p99: strata f32 12.9 (A1) / 10.8 (A2 chain); i8 5.74; Qdrant 4.69 (mapped, not cold);
+   pgvector 20.1; LanceDB 21.4; ES 66.5. i8: 1.9x faster than f32 at the same commit; 1.2x
+   slower than Qdrant (1.6x net of its client ms).
+4. $4 per GiB-month (idle-index.md's assumption): strata $0.01 a month per 1M vectors resident;
+   Qdrant $12.20 with its mapped collection; ES $34.30 plus $15.40 idle CPU.
 
 ## Resumed 2026-11-19
 
@@ -68,30 +65,69 @@ builds a LanceDB 0.40.0 venv. The macOS installs above serve the dry run only.
 
 ## Blocked on
 
-1. A4: the owner's go or no-go and Q1 to Q6 (recommendation: go on steps 1 to 4, cold p99 the
-   condition; Q2 to Q6 stand as ruled 2026-10-27, Q1 is this decision).
-2. A2: running, option (a) (an `i8` code-column prototype in bench/hybrid); see Resumed.
-3. Qdrant and ES at 1,000 tenants: not measured (denied): jobs 19572d (load, failed), c7b37f, 2593f7,
-   13047d (skipped); awaits the owner's authorization.
+1. A4: the owner's go or no-go (the decision request in Result). Not decided here.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261118-002831-fab1cd, 261118-002847-822bcf, 261118-002859-39b455, 261118-044446-7f14e4, 261118-044448-81dd25, 261118-044452-9ca15f, 261118-044455-07f613, 261118-044458-428db2 (Qdrant and ES at 1,000: not measured (denied), jobs 19572d, c7b37f, 2593f7, 13047d) |
-| A2 | <no evidence yet> |
-| A3 | strata:ff10ac80 `docs/design/hybrid-search.md` (C1 rerun) and `docs/design/hybrid-search/c1-rerun.md` |
-| A4 | <no evidence yet> |
+| A1 | Rows, exclusive, VM: 261118-002831-fab1cd (strata 100), 261118-002859-39b455 (pg 100), 261118-002847-822bcf (lance 100), 261118-044446-7f14e4 (qdrant 100), 261118-044448-81dd25 (es 100), 261118-044452-9ca15f (strata 1,000), 261118-044458-428db2 (pg 1,000), 261118-044455-07f613 (lance 1,000), 261119-173419-733f81 (qdrant 1,000), 261119-173425-b0afb9 (es 1,000); loads 261119-173416-dd03e0, 261119-173422-9a6925 |
+| A2 | `i8` against `f32`, both at strata:7b02184a (the i8 arm's commit; f32 is main's storage), one chain: rows 261119-173357-5a1aac (f32 100), 261119-173351-6dabcb (i8 100), 261119-173414-b5197c (f32 1,000), 261119-173402-06e84b (i8 1,000); loads 261119-173354-6399a6, 261119-173348-7e0d04, 261119-173408-a8663d, 261119-173359-d32394 |
+| A3 | strata:08f372bc `docs/design/hybrid-search.md` (C1 rerun, fit verdict) and `docs/design/hybrid-search/c1-rerun.md` (tables, A2, dollars; raw JSON in `c1-rerun/`) |
+| A4 | <owner's decision pending> |
 
 ## Result
 
-Partial: A1 rows at 100 (all five) and 1,000 (strata, pgvector, LanceDB) and A3 in strata:ff10ac80
-(`docs/design/hybrid-search/c1-rerun.md`). A2 and A4 open.
+A1 to A3 done at strata:08f372bc. A4 is the owner's: decision request below.
+
+**Decision request (A4): go on hybrid steps 1 to 4, or drop "best at AI retrieval".**
+
+Facts (1,000 tenants of 1,000 × 768-d vectors, Linux VM, exclusive jobs; 100 tenants agree):
+1. Warm p99: strata 1.32 ms with no vector code, 0.69 ms with `i8` codes; Qdrant 4.10 ms
+   (its better pass), pgvector 7.38, Elasticsearch 11.9, LanceDB 14.0. strata 3.1× faster than
+   the best other, 6.0× with `i8`.
+2. Idle cost: strata 3.4 MB anon, $0.01 a month per 1M vectors at $4 per GiB-month; pgvector
+   4.3 MB (parity); LanceDB 72 MB; Qdrant 104 MB plus 3,026 MB mapped ($12.20); Elasticsearch
+   8.8 GB heap ($34.30) plus half a core idle ($15.40).
+3. Cold p99: Qdrant 4.69 ms, but only because it keeps the whole collection mapped (not evicted
+   by `drop_caches`). strata 12.9 ms (`f32`), 5.74 ms with `i8` (1.9× faster at one commit; 1.2×
+   behind Qdrant, 1.6× net of Qdrant's client overhead); 3.5× faster than pgvector, 3.7× than
+   LanceDB, 11.6× than Elasticsearch.
+4. The bound: `i8` cut bytes 3.9× but cold time 1.9×; about 4 ms per cold tenant open is now
+   70% of the p99. `bit1` estimates to about 4.3 ms (Qdrant's level, two-point fit, not run); a
+   clear cold lead also needs the per-tenant open cut, which is engine work, not vector work.
+5. Not measured: 10^4 and 10^5 tenants (disk), Qdrant at equal memory (truly cold).
+
+Options:
+1. Go, steps 1 to 4, with cold p99 as step 4's condition (Q1 (a)). Steps 1 to 3 (`vecdist`, the
+   exact path, fusion and the DSL) build on a measured warm and idle lead; T8 at 10^5 tenants
+   decides the claim.
+2. Go without conditions (Q1 (b)): claim "best" now. Not supported: cold p99 trails Qdrant.
+3. Drop "best at AI retrieval" (Q1 (c)): vectors as table stakes (exact plus fusion), no ANN
+   program, no "best" claims.
+
+Recommendation: option 1. The leads hold with no vector code: warm p99 3.1× to 20× faster,
+idle memory at the field's floor (pgvector parity, 21× to 2,560× below the rest); the one gap, cold p99 against a system paying 3 GB resident for it, closed from
+2.7× to 1.2× with the first optimization, and the rest of it is the per-tenant open the cold tier
+already works on. Q2 to Q6 stand as ruled 2026-10-27; Q1 is this decision.
+
+What deferring costs: steps 1 to 3 are worth building under option 3 too (the design's Q1 note),
+so deferring delays `vecdist` and the exact path, not only the claim; the evidence decays as
+main moves (strata's own p99 drifted 15% to 30% between A1 and A2 commits), so a later
+decision needs the rows rerun (Qdrant and Elasticsearch loads alone take 16 and 19 minutes at
+1,000 tenants); the Q1 "not yet" has stood since 2026-10-27.
 
 ## Rulings I made
 
 - Results live in `docs/design/hybrid-search/c1-rerun.md` (the quest's file set), not
   `docs/perf/`; raw JSON beside it in `c1-rerun/`.
+- A2 rows live in `c1-rerun/a2/`; A1's strata rows keep their older commits. Against the field,
+  warm p99 is quoted at each system's better warm pass where the two differ (Qdrant 1,000:
+  4.10 against 8.20 ms), the conservative reading for strata.
+- Dollars at `docs/perf/idle-index.md`'s assumed $4 per GiB-month, plus $0.04 per core-hour
+  (`format-14-kv/q1-q2.md`); both stated as assumptions in the doc.
+- No new job: every planned row is present and valid; Qdrant truly cold is a new experiment
+  (memory-limited), named as not measured rather than run.
 - Warm is the second warm pass (C1's convention), the first pass's p99 shown beside it; ES idle
   CPU right after start (28.4 s) is startup work, so its after-queries 0.52 s is quoted too.
 
