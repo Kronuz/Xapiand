@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: working
+State: waiting on jobs 261119-222203-a28c39
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Implemented: _date/_time/_timedelta join the field/global cast-word dispatch in src/query_dsl.cc (_date is cast as _datetime, as Serialize::object has no DATE case; global _time/_timedelta name their type, as guess_serialize reads them as datetimes). HTTP test tests/test_query_dsl_date_http.py boots a node. Job 261119-222203-a28c39 (build + test) is the first probe; expected values for global queries unverified.
 
 ## Next
 
-1. <step>
+1. Read the job output; fix expectations or code. 2. Mutant job (--fails-without: run the test at master query_dsl.cc). 3. `campaign verify dsl-date-operators` for the suite (A3); push is the lead's.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Docs (outside my file set): casting-values.md:105-135 and its e2e assert `_date` answers 400 "Invalid operator"; it fails once this lands. The lead should assign the docs edit.
 
 ## Evidence
 
@@ -37,4 +37,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The sorter's cast-word list (get_sorter) is unchanged: sort cast words are a separate bug (sort-cast-word) and the sorter has no time/timedelta key.
+- No edit to serialize.cc (outside the file set): the DATE and global TIME gaps are bridged in query_dsl.cc.
