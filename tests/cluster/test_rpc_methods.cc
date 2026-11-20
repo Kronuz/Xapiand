@@ -30,6 +30,7 @@
 
 #include "cluster/rpc_methods.h"
 #include "rpc_pair.h"
+#include "rpc_samples.h"
 #include "test_harness.h"
 
 #include <cstring>  // for std::strcmp
@@ -38,45 +39,7 @@
 
 namespace {
 
-constexpr std::uint64_t max64 = std::numeric_limits<std::uint64_t>::max();
-
-rpc::Relayed relayed() {
-	rpc::Relayed r;
-	r.verb = "PUT";
-	r.path = "/twitter/user/42";
-	r.query = "ack=quorum&refresh=true";
-	r.content_type = "application/json";
-	r.accept = "application/x-msgpack";
-	r.group = 0x0123456789abcdefull;
-	r.incarnation = max64;
-	r.hops = 1;
-	return r;
-}
-rpc::Answer answer() {
-	return {201, "application/json", {{"Location", "/twitter/user/42"}, {"X-Version", "7"}}};
-}
-rpc::StatsRequest stats_request() {
-	return {{1, 2, max64}, {{"text", "hello"}, {"text", "wörld"}, {"", std::string("\0b", 2)}}};
-}
-rpc::StatsAnswer stats_answer() {
-	rpc::StatsAnswer a;
-	rpc::GroupStats g{7, 40, 1234, {}};
-	g.terms["text"]["hello"] = {3, 5};
-	g.terms["text"]["world"] = {0, 0};
-	g.terms["title"]["x"] = {max64, max64};
-	a.groups.push_back(g);
-	a.groups.push_back({8, 0, 0, {}});
-	return a;
-}
-rpc::SearchRequest search_request() {
-	rpc::SearchRequest r;
-	r.groups = {7, 8};
-	r.query = MsgPack({{"_query", {{"text", "hello"}}}});
-	r.params = MsgPack({{"_limit", 10}, {"_aggs", {{"n", {{"_count", {{"_field", "n"}}}}}}}});
-	r.stats = MsgPack({{"twitter", {{"n", 40}}}});
-	return r;
-}
-rpc::SearchAnswer search_answer() { return {std::string("\x00\x01partial\xff", 10), 40, {8}}; }
+using namespace rpc_samples;
 
 void test_codec() {
 	CHECK(rpc::Relayed::decode(relayed().encode()) == relayed());

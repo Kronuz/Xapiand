@@ -763,8 +763,14 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 95798a02f68c86f070401329a05c78d326ac2579)  # task main: settle blocks the firing loop; consensus pins it too
 FetchContent_MakeAvailable(task)
+
+# journal and completion: the storage and I/O libraries strata, prospect and consensus build on, at the
+# commits consensus pins (newer than the ones strata pins). journal's drivers run on completion::task.
+set(COMPLETION_TASK ON CACHE BOOL "" FORCE)
+FetchContent_Declare(completion GIT_REPOSITORY https://github.com/Kronuz/completion.git GIT_TAG d8b538c6778f0a1b969e42c8428995d1d29d4731)
+FetchContent_Declare(journal GIT_REPOSITORY https://github.com/Kronuz/journal.git GIT_TAG 9e11713edbb6e31681e1ae7a3f8f18f15eb7eaac)
 
 # varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
 FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git GIT_TAG 4dd60a8f199c52f98af2e784d4097cc86f243eb1)
@@ -851,6 +857,14 @@ include_directories("${http_log_SOURCE_DIR}")
 # http_asio.h does #include "reactor.h".
 FetchContent_MakeAvailable(reactor)
 include_directories("${reactor_SOURCE_DIR}")
+
+# consensus: the replicated log and its authenticated peer transport (TLS over TCP), which carry the
+# cluster's node-to-node calls (src/cluster). Built for the cluster tests: the server does not link it yet.
+FetchContent_Declare(consensus GIT_REPOSITORY https://github.com/Kronuz/consensus.git GIT_TAG e1f249d8d9ff64410f87042ba90f4c218d9ec336)  # consensus main: the RPC lane
+if (BUILD_TESTS AND TLS)
+	set(CONSENSUS_TRANSPORT ON CACHE BOOL "" FORCE)
+	FetchContent_MakeAvailable(consensus)
+endif ()
 
 
 
@@ -1934,6 +1948,11 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# The cluster's tests (src/cluster) need consensus's transport, hence OpenSSL 3.
+		if (TLS)
+			add_subdirectory(tests/cluster)
+		endif ()
 
 		# Loop-lag bounds hold only without parallel neighbors.
 		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)

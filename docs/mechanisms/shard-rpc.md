@@ -115,5 +115,10 @@ version word). `tests/cluster/test_rpc_methods.cc`: `codec` (each message with v
 extremes), `malformed` (every truncation, wrong types, missing keys, trailing bytes, 20,000 random
 mutations across eleven decoders: decoded or `Malformed`, nothing else) and `wire` (each method
 between two hosts, a 3 MiB relayed body and a 1 MiB blob streamed, a malformed envelope answered
-`bad_request`). Until the top-level build pins consensus, `tests/cluster/CMakeLists.txt` builds
-them standalone.
+`bad_request`). The top-level build pins consensus and builds them under `BUILD_TESTS`
+(`tests/cluster/CMakeLists.txt`, with TLS on).
+
+`tests/cluster/fuzz_rpc_methods.cc` is the decoders' libFuzzer target (`-DFUZZ=ON`, clang with
+libFuzzer): its first byte picks one of the eleven decoders, and a decoder must return a value
+whose re-encoding decodes to the same value, or throw `Malformed`. `fuzz_rpc_seed DIR` writes one
+valid envelope per decoder as the seed corpus.
