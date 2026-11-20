@@ -509,3 +509,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: nothing on master. Six quests wait on CI at merged heads; master's own docs commits (cluster-release at 9f1aedbe9) forced fresh merges and CI. Off master: agent-campaign:430204d (refused push falls back to the lead), dotfiles:a4127f7 (contributors push quest branches), faultlab:b64102f (README labs).
 - Agents: group-core fix 265k (Opus) plus re-check 137k (APPROVE) and CI fix 76k (Sonnet; its sanitizer guard missed a declaration, fixed by the lead); membership revision 247k (Opus) and re-check 169k (CHANGES: F17); rocksdb-parity review 285k (Opus max, CHANGES: 7 blockers with models); track-c-gates 193k (Sonnet; seed 399 traced by Detent to a harness bug fixed at consensus:85ed0e6); phrase-expansion fixes 158k.
 - Quota: 41% weekly, 0.37%/h. Load 4-10. Disk: 28 GiB free (down 5 GiB this hour).
+
+## 2026-11-20 14h
+- Landed: coverage-database (Xapiand), hybrid-go-no-go (strata:e328cf92), multicast-seeds (consensus:8801b99). Accepted: phrase-expansion correctness (F1 confirmed by build-test 261120-134019-bd8050, 20 of 20 mutants), turn-log-parity design (F8-F14 confirmed by probes H-K, G and a text check).
+- Agents: membership design revision 3 238k (Opus; D159, F17 closed by the m7 model: 0 violations in 33,280 cold starts); rocksdb-parity fix round 279k (Opus; 4 probe jobs); phrase-expansion mutant fix 180k (Sonnet-tier work at Opus, 4 resumes); netlab-consensus and group-core CI fix running.
+- Tool: `accept` crashed on a binary file in a quest diff (UnicodeDecodeError in sh()); fixed in agent-campaign with a regression test, suite running.
+- Disk: 28 to 264 GiB free. Job store pruned (769 jobs deleted, 53 slimmed, 66 idle slots, 97 GiB before); 159 clean worktrees removed (42 GiB; small .scratch files archived in ~/.scratch/xapiand/worktree-archive, 198 MiB); Docker.raw (34 GiB) and strata's unused VM pair (134 GiB, last job Nov 15, Detent agreed) deleted.
+- Quota: 43% weekly, 0.38%/h. Load 11-14.

@@ -1,108 +1,166 @@
-# turn-log-parity review: design (durability lens), strata docs/design/rocksdb-parity.md
+# turn-log-parity review: design (durability lens), strata docs/design/rocksdb-parity.md, round 2
 
-Commit: strata:0d93765c
+Commit: strata:e5721fd681b380fb4cc7a8b5f83275e55980ce61
 Verdict: CHANGES
 Date: 2026-11-20
 
-The owner's architecture holds (PLAN D148): one log and one flush per device, idle groups leaving
-the log, an opt-in unversioned upsert. The note's numbers match their probe logs. What is missing
-is the protocol text that the irreversible tasks need. That covers task 10's cross-loop handoff,
-task 5's ack=none window with more than one group, and the damage and parking rules for tasks 9
-and 10. Two items also need text before they build: the forward copy (task 2/3) and the
-checkpoint position under background flush (task 6). Every blocking row is a text fix to the
-note plus the test it names. None of them overturns D148.
+The revision closes the first round's F1, F2, F4 and N1-N7 as text; F7 stays the owner's. The new
+risk is F6's answer. As written, D4's checkpoint loses acknowledged writes (model, F8), and its
+background install drops two orderings that `commit()` keeps today (F9, F10). The park text
+predates `journal:idle-park` and conflicts with it in three places: a second state, forward
+copies removed under held idle groups (F11), and D6's pull against loop-owned table shards (F12).
+D1's ladder breaks the arithmetic journal uses to size every turn (F13). Read-your-writes, the
+tolerant open and large transactions (A1-A3) have no mechanism text in this note or in
+`standalone-turn-log.md` (F14). Every blocking row is a text fix plus the test it names. D148's
+shape stands.
 
 ## Evidence I relied on
 
-- Probe B, job 261120-072003-b88d0c (log and per-cell `wbytes.tsv` under
-  `~/.scratch/xapiand/turn-log-parity-design/b-072657/`). The ops/s means in "Group commit" and
-  "How many logs" match the log: K=4 cohort 180, K=8 cohort 327, K logs today 72-124, RocksDB
-  146/175. So do the ratios 1.23×, 1.87×, 2.5× and 2.6×.
-- Probe E, job 261120-074947-257624. The table matches: shared T=8 368.5, per-log 110.7,
-  device 252.9 (31% under shared), and without the cohort wait 187.2 at 4.05 per flush.
-- Probe D, job 261120-074846-356a48. The re-homing table matches the log, and so do the
-  extrapolations: 300k re-partition 2.063 − 0.776 s = 4.3 µs per group, so 4.3 s at 1M, plus
-  2.6 s to recover. That makes about 7 s and 550 MiB, stated in the note.
-- Code read at journal `cc95ba6` (strata's pin) and strata `d956c0f4` (index.hh extracted to the
-  scratch directory below).
+- Probe F (261120-083804-ec1239), probe G (261120-083208-36162a, `all ok`; its N5 rows read in the
+  log) and probe B2 (261120-083211-0cbbce): all exit 0, and the note's tables cite them. The
+  first round's probes B, D and E, as that review accepted them.
+- A4's cohort test (261120-082445-11a61b, and its mutant 261120-082448-f562c7), taken as the
+  status shows them. Not rerun.
+- Code read: strata e5721fd6 (`index.hh`, `turn_seal.hh`); journal cc95ba6 (strata's pin),
+  9e11713 and 1222e3b (`main`); Detent's `journal-idle-groups` at journal:c3fb805
+  (`docs/design/idle-groups.md`) and `docs/mechanisms/host-ranges.md` at 1222e3b; RocksDB 11.11
+  (`~/.scratch/rocksdb-11.11.fb`) and `bench/engines/rocksdb-11.11/kv_rocksdb.cc`.
 
 ## What I checked myself
 
-- `.scratch/xapiand/review-turn-log-parity-design/d7_model.py`, run under
-  `quiet light review-d7` (`python3 -I d7_model.py`). It models journal's `seal_turn`
-  (turn_driver.h:451-508) with D7's repeated sealer calls. Results:
-  1. Window. With N groups, each bounded at one turn's room and all saturating, a record waits
-     unsealed for up to N−1 turns: 0, 1, 3, 7 and 31 turns at N = 1, 2, 4, 8 and 32.
-  2. Fairness. A group bounded at 2× the room starves another group completely under the literal
-     resume rule (turn_driver.h:492, `resume_at = group`): 0 of 2,000 records sealed. With the
-     bound at or below the room, rotation is fair, with a wait of at most 1 turn.
-- Recovery and re-partition by reading code: turn_log.h:428-610 (recover), host.h:420-525 (open,
-  mark_lost, repartition), turn_driver.h (threading contract), turn_seal.hh (standalone loop),
-  index.hh (commit, checkpoint, freeze, read masks).
+Scripts are in `.scratch/xapiand/review-turn-log-parity-design/round2/`. Rerun them with
+`python3 -I <script> <depth>`.
+
+- `d4_covers_model.py`, job 261120-124240-07f24d (exit 0, depth 11). It explores every event
+  sequence of one logged group (join, two-chunk transaction, turn, freeze, install plus
+  checkpoint, close) with a power cut after each prefix. It then checks that every transaction
+  whose record is durable is in the reopened index.
+
+  | covers rule | install waits for the log | close needs covers = seq − 1 | states | silent loss | torn tx | log_lost | exposed past V |
+  |---|---|---|---|---|---|---|---|
+  | `note` (D4 item 3) | yes | yes | 89,864 | 5,443 | 1,196 | 0 | 0 |
+  | freeze closes the record | yes | yes | 76,253 | 0 | 0 | 0 | 0 |
+  | covers one back when shared | yes | yes | 89,733 | 0 | 0 | 0 | 0 |
+  | freeze closes the record | yes | no | 76,579 | 319 | 0 | 0 | 0 |
+  | covers one back when shared | yes | no | 90,248 | 503 | 0 | 0 | 0 |
+  | covers one back when shared | no | yes | 127,641 | 0 | 0 | 18,902 | 18,902 |
+
+  The first sequences that fail are:
+  - `JFJTIT`, loss: a write joins the record after the freeze, and the checkpoint covering that
+    record drops it.
+  - `JFCTJIT`, torn: a transaction's first chunk shares X_f's record.
+  - `JTFJITL`, close loss: the last record is a checkpoint that covers less than every batch.
+  - `JFI`: an install before the log is durable.
+- `d4_install_order_model.py`, job 261120-124622-b44851 (exit 0, depth 12). Two frozen buffers
+  are in flight, with checkpoints in freeze order as the note says. With installs also in freeze
+  order, 0 of 18,059 states lose anything. If the newer build installs first, 1,916 of 21,427
+  lose acknowledged writes. The first failing sequence is `JFJTFO`: the head passes the older
+  buffer, and replay skips its transactions.
 
 ## Answers to the lead's questions
 
-1. **One log per device.**
-   - **Ordering and the barrier.** Sound as far as the note goes. A turn is still one write plus
-     one barrier. Records from every loop ride it, and each group's sequence is checked at
-     `TurnLog::stage`.
-   - **Torn tail.** Unchanged. The newest epoch's incomplete last turn is dropped whole
-     (turn_log.h:530), whichever loops its records came from.
-   - **Partitioning at recovery.** By group id, which works because placement is a pure function
-     of the id (host.h:81-87).
-   - **One damaged block.** The loss set widens (F2), and parked groups would all be lost (F3).
-   - **Single writer.** The note does not specify the handoff that would preserve it (F1).
-2. **A changed loop count.**
-   - **Crash safety.** Today's protocol is safe. Generation-tagged logs and the layout replace
-     are the single commit point, and `mark_lost` precedes it and is idempotent. A crash at any
-     step either redoes the work or removes leftovers (host.h:430-446, 481-520). Nothing
-     acknowledged is lost or duplicated.
-   - **With D6.** No re-partition happens on a loop-count change.
-   - **Cost.** Stated (about 7 s and 550 MiB at 1M idle groups) but extrapolated past the
-     largest measured 300k, and bounded only linearly. Parking is the bound, after A6 (N2).
-3. **The cohort wait.**
-   - **Starvation.** None: a turn seals every open record that fits, and rotation carries the
-     rest.
-   - **Latency.** Each turn adds at most 1/16 of the last barrier. If "last barrier" includes
-     the wait, the turn converges to 16/15 of the barrier, so latency stays bounded.
-   - Non-blocking N3 and N4 below.
-4. **The packed turn and the checkpoint.**
-   - **D7.** It weakens the ack=none window for more than one group per log (F4, modelled). It
-     also delays ack=sync records behind other groups' backlog by the same number of turns.
-   - **D2 item 2.** By itself it changes only a trigger. `commit()` still waits for the log
-     through the applied position, then flushes, then makes the edit durable, then stages the
-     checkpoint (index.hh:1256-1273). Neither ack level weakens. It does weaken once D4 makes
-     the flush background (F6).
-5. **The unversioned upsert.**
-   - **Point reads and key scans** see the new copy, because the newest source wins
-     (index.hh:2486-2490).
-   - **Searches** see the old copy until the flush (F7).
-   - **Recovery** is fine. The log replays the key-only upsert, and resolution commits with the
-     flush's segment in one `commit_files`, so nothing is lost or resurrected.
+1. **Durability.**
+   - **D4 as written loses acknowledged writes.** D4 item 3 covers X_f.index, but that record
+     takes more transactions after the freeze. `freeze()` leaves the open record open
+     (`index.hh:5056-5061`), and `log_state::join` appends to it (`:492-511`). The losses are
+     silent (F8).
+   - **The background install skips commit()'s orderings.** It must wait for the log through
+     X_f.index (`index.hh:1258-1259`, `:3545-3548`), and builds must install in freeze order
+     (F9).
+   - **Close must cover every batch.** After task 6, a close or park whose checkpoint covers less
+     than every batch drops records. The drop is silent: `close_group` checks only the sequence
+     (journal 9e11713 `host.h:419-425`), and the reopen accepts head = X (`index.hh:3352-3356`)
+     (F10).
+   - **Park and reopen.** Detent's design is sound and covered by its own crash table. This
+     note's park text contradicts it (F11). The D6 pull model can seal a woken group's first
+     record before its loop commits the wake. Recovery then reads the stale `closed` entry and
+     drops that record silently (F12).
+   - **Torn records.** These are unchanged: the incomplete tail turn is dropped whole. A large
+     transaction spanning seals is torn by F8's rule (1,196 states). It also needs commit and
+     abort rules, which no design states (F14).
+2. **Read-your-writes.**
+   - **Nothing is designed.** The mechanism has no text (F14).
+   - **What the note touches.** Readers at V must never see a frozen buffer's writes through an
+     installed segment (F9's first half; 18,902 exposed states without the wait). A merge changes
+     no visibility.
+   - **D11 under background flush.** It can resurrect an old copy past a concurrent merge (N12,
+     only if Q4 is taken).
+3. **Large transactions.**
+   - **Memory.** D7's per-log counter bounds the unsealed chunk bytes to one room. The
+     transaction and its buffer form are the rest. D4's half-share active limit may cap A3's
+     "unlogged limit" (F14).
+   - **Turn seal contracts at journal:9e11713.**
+     - **Repeat sealer calls.** journal `main` already calls the sealer again and resumes after a
+       drained group, so task 5's journal half is done (N8).
+     - **Retired floor at the close's sequence + 1.** It is consistent with attach's restage at
+       `max(base, retired) + 1` (`index.hh:3357-3362`).
+     - **Create and reopen durable at the first turn.** strata's join tolerates a crash between
+       its head edit and the create's turn, because `status none` joins again
+       (`index.hh:3337-3340`, `:3415-3434`). D6 does not (F12). `turn_seal.hh:110` ("each is
+       durable when it returns") stops holding when the pin moves (N8).
+   - **Stall.** Each chunk adds up to two turns for every other writer on the log, or on the
+     device under D6. The note does not state this (F14). D1's smallest segment sets the chunk
+     rate (F13).
+4. **RocksDB parity.**
+   - **Claims that hold:**
+     - D7: RocksDB's unsynced WAL window has no time bound.
+     - D3: RocksDB builds a `WriteBatch` and copies it into the writer's buffer.
+     - D4's two-buffer bound: `max_write_buffer_number` defaults to 2 and kv_rocksdb leaves it.
+     - D9's trivial move.
+     - D11's blind `Put`.
+   - **Claims that do not hold:**
+     - D1's "one empty file" holds on macOS only (N10).
+     - D5's stated cause for RocksDB's grouping does not fit a 21 ms barrier (N11).
+     - D9 omits RocksDB's per-level binary search (N13).
+5. **Buildability.**
+   - **Order and tests.** Tasks 1-8 build in order. Each has a named test once F8-F10 and F13 are
+     in the text.
+   - **Duplicated scope.** Task 9's "durable `parked` state", and task 13's streaming and
+     creation in the turn, are `journal-idle-groups` D5-D6 (F11).
+   - **Missing steps.** No task moves strata's journal pin (cc95ba6) to `main` (N8). The quest
+     file gives tasks 3, 5 and 9 three items: the copy flag, a per-fragment checksum, and the
+     `block_bytes` refusal. The note's task rows list none of them. The quest file carries them,
+     so I raise no separate row.
+
+## Prior findings
+
+| ID | State at e5721fd6 |
+|---|---|
+| F1 | Closed (D6's handoff, probe F), except the table transitions (F12) |
+| F2 | Closed (D6's damage scope, the shared-log A2 test, the roster as task 14) |
+| F3 | Superseded by `journal:idle-park` (Detent D1: parked is closed); the note's version conflicts with it (F11) |
+| F4 | Closed (per-log bound, probe G) |
+| F5 | Closed through task 12; task 13 reopens it (F11) |
+| F6 | Answered, but the answer has the defects F8-F10 |
+| F7 | The owner's (Q4) |
+| N1-N7 | Closed. N3's text counts joins; the merged cohort wait counts released groups (`turn_seal.hh:334-341`), and the quest lists N3 as a follow-up. N5's rule is journal `main`'s already (N8). |
 
 ## Findings
 
 | ID | Blocking | Kind | Finding | Evidence | Fix |
 |---|---|---|---|---|---|
-| F1 | yes | gap | D6 names no handoff protocol. The note says only "a loop hands its sealed records to the owner's open turn", but every TurnDriver mutation is loop-confined: `seal` (On the loop), `stage` (pushes `pending_` unlocked), `link`/`unlink` and `forget`; Host table updates run "on the loop's thread". Every loop appending therefore needs either marshaling or a lock, and the note picks neither. Also unspecified: completion and failure fan-out (one failed barrier fences every index on the device), cohort counting across loops, and which mutex strata's standalone loop collapses to (`turn_mu_`, one per loop today). The probes measure D6's shape only as every index on one loop (probe B L=1) and as a C floor behind one mutex (`devbarrier.c` `group_flush`). The cross-loop handoff, one wake per loop per turn, is unmeasured, and on an NVMe flush of tens of µs it is the same order as the barrier. | turn_driver.h:164, :222-234, :403-422, :139-153; host.h:199; turn_seal.hh:325; probe-b.sh (L=1); devbarrier.c:56-95 | Before task 10, specify the handoff in a D6 subsection: per-loop SPSC queues drained by the owner at `seal_turn` (or `post_call` marshaling), waiters resumed on their home loop (`Wait` already posts to `waiter.home`), fail-all fan-out, and the cohort count. State that apply stays loop-local, with no lock on the write path. Task 10's Linux floor includes the handoff. Test: K loops on one device log under TSan, with a power cut at every operation, every acknowledged record recovered. |
-| F2 | yes | gap | One damaged block with no readable manifest costs "every group that wrote nothing after it", and on damage every open group without records is lost. Per loop, that set is one loop's groups; with one log per device it becomes every group on the device, L× wider. The note does not say so, and A2's mechanism must hold on the shared log. | turn_log.h:473-474, :604 | State the wider blast radius in D6 (and in Q1's trade-off). A2's tolerant-open test runs on one log holding groups from at least 2 loops: a damaged unmanifested block opens every covered group and fails only uncovered ones. |
-| F3 | yes | defect | Parking (D10 item 3) collides with recovery's damage rule. A parked group stays `open` in the table and has no log records, so any damage anywhere in the log marks it lost (`if (damaged) for known.open ... lost`). With one log per device and millions of parked indexes, one bad block fails every idle index on the device. The other half is the reverse case: a group that writes after parking has records only in the log, and the table cannot tell "wrote nothing since parking" from "its post-park record sat in the damaged block". | turn_log.h:604; host.h:405; note lines 423-427 | Task 9's journal record of item 3 defines a durable `parked` table state. Park works as `close_group` does: the table write is durable before `forget`. Unpark is a table transition in or before the turn carrying the group's first record (D10 item 5 makes it ride that turn). Recovery exempts parked groups from the damage rule. Test: damage an unmanifested block; parked groups open, and an unparked group whose only post-park record was in that block reports lost. |
-| F4 | yes | defect | D7 bounds each group's unsealed bytes at one turn's room, but the room is per turn, shared by every group. With N groups writing ack=none, the oldest unsealed record waits N−1 turns, so the crash-removable window is about N barriers, not "one barrier plus one turn" (D107). Under D6, N counts every group on the device. An ack=sync record behind them waits the same turns. | d7_model.py window rows (N=8: 7 turns; N=32: 31); turn_driver.h:454-478; note line 291-297 | Bound the unsealed bytes per log, not per group: one turn's room shared across groups, with the group's share or a log-wide admission counter (under D6, one atomic per device: say so in F1's protocol). Otherwise restate the window as ⌈Σ unsealed / room⌉ turns and take it to the owner. Test: 8 groups saturating ack=none; every record seals within 2 turns of its join. |
-| F5 | yes | gap | The forward copy's removal is ambiguous. D3 says "forward copies go (D2)", but `reclaim()` frees only segments with no live records, and an idle group's checkpoint stays live until it closes. Without the forward copy, and before parking (deferred past A6), any idle group pins its segment forever. The log then grows until ENOSPC fails it and every index on it fences. | turn_log.h:321, :352-354; note lines 167-168, 132-133 | State that the forward copy stays as the fallback for records outside a checkpoint's reach until parking lands. D2's "nothing is copied" then means for busy groups only. Test (tasks 2/3): one idle group's checkpoint in the oldest segment, 10× retain turns of another group; segment count stays at or below retain + spares. |
-| F6 | yes | gap | D4 does not say what position the checkpoint covers. Under background flush, `stage_checkpoint` reads `cur_.applied` when it stages, and by then the writer has moved past the freeze into the new active buffer. A checkpoint naming that position would let the log drop acknowledged records held only in the active buffer. | index.hh:3503, :1256-1273; note lines 173-181 | D4 states that the checkpoint names the frozen buffer's applied position, captured at `freeze()`, and is staged after that segment's `commit_files` is durable. Test (task 6): an ack=sync write lands in the active buffer during a background build, power is cut after the install, and the write recovers. |
-| F7 | yes | gap | D11 claims "reads already see the buffer first", which is true for key lookups and key scans only. Searches read `segments()`, which masks superseded segment copies only through the buffer's pending (segment, ordinal) deletes, and those are the per-write lookup D11 removes. Between the write and the flush, a search matches the old version (and counts it), alongside the new one. | index.hh:1495-1515, :2471-2476, :3114 | This defines user-visible semantics, so it is the owner's call. Options: (a) resolve the buffer's unresolved keys once per view at `segments()` (one sorted pass per view, not per write); (b) document that searches may see the old copy until the next flush or refresh; (c) check each segment hit's key against the buffer. Recommendation: (a). The test asserts that a search sees exactly one copy after an unversioned upsert. |
-| N1 | no | nit | Probe table names D's job as 261120-072006-46c758, which was cancelled (exit 143); the numbers are from 261120-074846-356a48. | `campaign job show` | Fix the row. |
-| N2 | no | gap | Re-partition cost is linear in groups, and its map (gap 1) is bounded by all logs' live bytes: up to L × retain × segment = 8 GiB at 32 loops of 64 MiB, so an open can OOM. The note gives only the idle-group cost. D6 removes it on a loop-count change; it remains if Q1 is not built. | host.h:482-494 | State the live-bytes worst case beside the 1M row. |
-| N3 | no | gap | D5 counts arrivals by `wake()`, which fires only when a record opens. Writers sharing one group never reach n, so the loop always waits the full bound. That is bounded, but it is a 6% tax at K writers per index. | index.hh:3541; cohort.py | Count joins (writers), not opened records; add a K-writers-one-index case to task 1's test. |
-| N4 | no | nit | "Last barrier" is undefined. If it includes the cohort wait, the bound feeds back (converging at 16/15 of the barrier). | note line 209 | Measure write plus barrier only. |
-| N5 | no | gap | Fairness under D7 depends on each group's bound staying at or below the turn's room. Above it, the literal resume rule starves later groups (model: 0 of 2,000 sealed). | d7_model.py fairness rows; turn_driver.h:492 | Resume after a group that a repeated call drained, or keep the bound at or below the room. Test with one saturating group and one sync group. |
-| N6 | no | nit | probe-b.sh prints 0 F_FULLFSYNC for every row, because the phase marks never reach wbytes (all rows are phase `start`). The note's syncs per op come from whole-process totals (466/1024 = 0.46; 394/1536 = 0.26), open-time syncs included. | b-072657/*.wbytes.tsv | Fix the phase filter or say "whole process". |
-| N7 | no | nit | "Device" is not defined. Two Host directories on one device still split flushes. | note line 257 | Say one log per Host directory, one Host per device. |
+| F8 | yes | defect | D4 item 3's `covers` = X_f.index supersedes the record that holds X_f. That record keeps taking transactions after the freeze until a turn seals it, because `freeze()` leaves the open record open and the checkpoint closes it only when staged. A power cut after the checkpoint's barrier loses those writes silently. A two-chunk transaction whose first chunk shares that record comes back torn. | Job 261120-124240-07f24d: 5,443 of 89,864 states lose and 1,196 are torn (`JFJTIT`, `JFCTJIT`). Both fixes lose 0. `index.hh:492-511`, `:5056-5061`. Note lines 204-213. | Option 1: `freeze()` closes the group's open record, so X_f ends its record. Option 2: `covers` = X_f.index − 1 when that record holds a later position. Replay already skips positions at or below the head (`index.hh:995`). Test (task 6): a write joins the open record between the freeze and that record's seal, power is cut after the checkpoint's barrier, and the write recovers. Also, a two-chunk transaction across that record recovers whole. The mutant `covers` = X_f.index fails both. |
+| F9 | yes | gap | D4 moves the flush off `commit()` without two of its orderings. (a) `commit()` waits for the log through the applied position before it flushes and commits (I1, "no flush publishes above V"). A background install that does not wait shows readers at V the frozen buffer's crash-removable writes through the segment (A1's "another reader does not"). A power cut then leaves the head past the log (`log_lost`). (b) The note orders checkpoints in freeze order but not installs. A newer build that installs first moves the head past an older buffer whose transactions replay then skips. | Job 261120-124240-07f24d: 18,902 states exposed past V and 18,902 `log_lost` without the wait. Job 261120-124622-b44851: 1,916 of 21,427 lose with out-of-order installs, 0 in order. `index.hh:1256-1273`, `:3545-3548`, `:3373`. | D4 item 2 states two rules. First, an install's `commit_files` and its publish wait until the log is durable through X_f.index. Second, builds install in freeze order, or only one builds at a time. Test (task 6): a reader at V during a build with `ack=none` writes in the frozen buffer sees none of them before their barrier. A second test runs two builds with the newer finishing first and cuts power after its install; every acknowledged write recovers. |
+| F10 | yes | gap | After task 6, a group's last record can be a checkpoint that covers less than every batch. `leave()` hands such a checkpoint to the table whenever it is the last record. `close_group` checks only that the sequence is not behind the last record, then supersedes everything through base. The reopen accepts the table's record when the head equals its X. Batches after `covers` are then lost silently. `journal:idle-park` D1 assumes "a checkpoint covering every batch" too. | Job 261120-124240-07f24d: 319 and 503 states lose (`JTFJITL`) when a close takes a partial checkpoint, 0 when the close requires `covers` = sequence − 1. `index.hh:3437-3445`, `:3352-3356`. journal 9e11713 `host.h:419-425`. | D4 states that `leave()`, and so close and park, drains: no build in flight, and a final checkpoint whose `covers` is its sequence − 1. Task 6's journal change makes `close_group` refuse a checkpoint with `covers` < sequence − 1, which makes any miss loud. Test: close with batches after the newest checkpoint's `covers`; the close drains or refuses, and the reopen holds every write. |
+| F11 | yes | defect | D10 item 3 and task 9 define a second park: `GroupState` 4, a table format change. The quest file rules it out ("consumes it and defines no second park"), and Detent's D1 rejects exactly this ("a new `parked` state beside `closed`"), along with the first round's version. Task 13 then removes `forward_slice`. But `journal:idle-park` parks only released groups (D2: "parking a held group is refused by construction"; strata parks by closing). It keeps forward copies as the fallback for held idle groups (D8). Every open strata index holds its group, so once task 13 lands an idle open index's checkpoint pins its segment, and the log grows until ENOSPC fences every index on it. That is F5 again. Task 13's streamed re-partition and creation in the turn are idle-groups D5-D6. | Note lines 136-143, 595-614, 700, 704. journal:c3fb805 `docs/design/idle-groups.md` D1, D2, D8, "Assumptions about turn-log-parity". `turn_log.h` `reclaim()` frees only segments with no live record. | D10 item 3 consumes `journal:idle-park`: parked is closed, and strata parks an idle index by closing it through `leave()`, after F10's drain. Tasks 9 and 13 drop the parked state, the streaming and creation in the turn. Task 13 removes `forward_slice` only if strata asks every quiet group for a fresh checkpoint before its record leaves the window, checkpoint-only groups included. Otherwise it keeps `forward_slice`. Test (task 13): an open idle index plus 10 × `retain_segments` of another group's turns, with `forward_slice` removed; the segment count stays at or below `retain_segments + spare_segments + 1`. |
+| F12 | yes (before task 10) | gap | D6's handoff pulls every record on the owner's thread. `journal:idle-park` makes create and wake durable through a `before_turn` hook that commits dirty table shards before the turn. Each shard belongs to its loop's thread, and no lock guards it. Detent's design assumes that under one log per device "each loop commits its own dirty slots before it hands its sealed records to the owner's turn". A pull cannot guarantee that. If the owner seals a woken group's first record before its loop commits the wake, a power cut leaves that record durable under a `closed` entry, and recovery drops it silently (idle-groups D5's lost alternative). `Host::park(loop)` also walks "the loop's log index" (D10), which under D6 belongs to the owner. | Note lines 365-395. idle-groups.md D5, D10, "Assumptions about turn-log-parity". host-ranges.md:19-23 at 1222e3b. | D6's protocol names the order. Option 1: a group's sealer returns nothing until the group's transition is durable, and the loop's commit wakes the owner. Option 2: the owner commits every loop's dirty shards in `before_turn` under a table lock, with its cost stated. Either way, state which thread `Host::park` runs on under D6. Test (task 10): a wake on a non-owner loop with a power cut at every operation; no acknowledged record of the woken group recovers under a `closed` entry. |
+| F13 | yes (before task 3) | gap | Journal sizes every turn by `options.segment_bytes`: `TurnLog::fits`, the encode's "turn exceeds a segment" `length_error`, and `TurnDriver`'s whole and half room. D7's counter is `turn_room(segment_bytes / 2)`. With D1's ladder below `segment_bytes`, a turn sized by that room may not fit the segment it opens. The encode then throws, the driver fails, and every index on the log fences in normal operation. Admitted `ack=none` records also stop sealing within one turn. At the ladder's bottom the room is one chunk per turn, the cap D7 removes for `wal` p99.99. | journal 1222e3b `turn_log.h:407`, `:477-480`. 9e11713 `turn_driver.h:496-498`, `:547-548`. Note lines 85-99, 434-443. | D1 states that the room (seal_turn's whole and half, `whole_room`, D7's counter) follows the segment the next turn writes, or that a turn opens a segment at least its size. A step down never leaves admitted bytes above the next room. Test (task 3): from an empty log, K groups saturate `ack=none`; no turn is refused and every record seals within 2 turns of its join. Rerun `wal` p99.99 from a fresh log. |
+| F14 | yes (before tasks `ryw`, `tolerant-open`, `large-tx`) | gap | A1-A3's mechanisms are designed nowhere. This note touches them in two lines (D1 item 1, D6's damage scope), and `standalone-turn-log.md` Q3-Q5 lists options only. Each needs text, because each depends on this note. Large transactions: a chunk joins without moving `applied` (`join` sets it today). Chunks are logged only once the transaction is accepted, or an abort record ends a refused one. Replay applies a transaction only with its last chunk, and a missing middle chunk is `log_lost`. F8's `covers` never passes an unapplied chunk. Chunks take from D7's counter: a T-byte transaction holds the log for ⌈T / room⌉ turns and adds up to 2 turns per chunk to every other writer on it. The text states the memory bound and whether D4's half-share active limit lowers the largest transaction. Read-your-writes: the writer reads at applied across the active and frozen buffers, and others read at V (F9a). Under D6, V comes from the owner's thread. Tolerant open: on the shared log, "covered" means the head is at or past every live record lost, not that the newest record is a checkpoint (task 6). | Note lines 88-89, 402-404. standalone-turn-log.md:508-535. `index.hh:492-511`. Job 261120-124240-07f24d torn rows. | Write the three mechanisms, here or in `standalone-turn-log.md`, with these constraints and each criterion's test, before those tasks start. |
+| N8 | no | nit | D7 and probe G describe journal at cc95ba6. Journal `main` already calls a sealer again while it returns records, and resumes after a drained group (9e11713 `turn_driver.h:562-614`). No task moves strata's pin. The move brings contract changes strata must meet: repeat calls replace `turn_records = 1`, the retired floor sits at close + 1, the close can end in doubt, and create and reopen become durable at the first turn once idle-groups lands (`turn_seal.hh:110`). | journal `git log cc95ba6..1222e3b` | Rebase D7's text on `main`. Add the pin move as the first journal task, with the suite run. |
+| N9 | no | gap | D2 item 2 divides (`retain_segments` − 1) × `segment_bytes` among the groups that wrote. At 10k writing groups and 64 MiB segments, each group checkpoints about every 19.7 KiB, and every checkpoint is an index commit with its own syncs. | Note lines 133-135 | Give the trigger a floor, and measure it on the many-indexes workload before task 4. |
+| N10 | no | nit | "As RocksDB's WAL costs one empty file" holds on macOS only. On Linux RocksDB preallocates each WAL with `fallocate(FALLOC_FL_KEEP_SIZE)` in blocks of 1.1 × `write_buffer_size`, about 35 MiB at the bench's 32 MiB memtable. The comparison still favors strata. | RocksDB `db_impl_write.cc:3428-3440`, `env/io_posix.cc` (`ROCKSDB_FALLOCATE_PRESENT`) | Say "on macOS", and state the Linux case. |
+| N11 | no | nit | D5's stated cause of RocksDB's grouping ("followers spin and yield before sleeping") does not fit a 21 ms barrier. `AwaitState` spins 200 times and yields for at most `write_thread_max_yield_usec` (100 µs) before blocking, so its followers sleep through the barrier as strata's writers do. The measured rows stand. | `write_thread.cc:76`, `:144-189`; `options.h:1475` | Drop the cause, or measure it. |
+| N12 | no | gap | Under D4, D11 resolves unversioned upserts in the background build and sets delete bits on segments that a concurrent merge may replace before the install. The old copy then survives in the merge output. | Note lines 515-522 | If Q4 is taken, resolve at install under the lease or remap through the merge. Test: an upsert during a merge of its key's segment. |
+| N13 | no | gap | D9's parity with trivial move covers writes. RocksDB also finds a key's file in a level by binary search, while the note's gets walk segments by key range, and D9 leaves the count of disjoint segments unbounded. | Note lines 503-510 | State the range index that gets use, and a cap on the segment count. |
+| N14 | no | gap | D4's freeze keeps `apply_pending()`. When the active buffer holds pending deletes, that call waits on the writer's thread for the log through the applied position, so on logged overwrite rows every freeze still costs the writer a barrier. | `index.hh:5056-5066`, `:3545-3548` | Move the pending deletes to the install, after F9's log wait, and say so in D4. |
 
 ## Not run
 
-- No build or test: tasks 1-9 have no landed code at `b112db88`, and F1-F7 are design text.
-- No probe of D6's cross-loop handoff cost (F1 asks task 10 to measure it on Linux).
-- D1 ladder recovery (variable segment sizes vs `scan_segment`'s `min(size, segment_bytes)`):
-  read, no issue found, not probed.
-- VM and Linux floors (task 12, task 10's precondition).
+- No build or suite. Tasks 2-14 have no code at e5721fd6. The cohort wait's A4 jobs were taken
+  as recorded.
+- Detent's idle-groups code (journal:b55e34d and later) was not read. Only its design doc was.
+- Not modeled: D6's handoff on Linux (task 10's floor), the roster (task 14, reasoned only), D11,
+  and D9's merge-runs branch, which is still in progress.
+- No RocksDB run. The parity rows rest on the gate's and the probes' numbers.
+- The quest file's journal follow-ups (copy flag, per-fragment checksum, `block_bytes` refusal)
+  were not reviewed. They are Detent's designs.
