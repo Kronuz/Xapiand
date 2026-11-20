@@ -108,6 +108,10 @@ Runs once, when the feature is complete and before it lands.
 - A9 A node given `--token` whose cluster is not reachable never creates one (D150): it retries with
   backoff, logs the cluster id it waits for, answers not-ready, and joins once a member appears; a
   malformed token exits nonzero with a named error.
+- A10 The founder is not special (D151): a 5-node cluster restarts with its founder's data directory
+  deleted and the other four started with or without `--token`; they rejoin from their persisted
+  state, elect, serve, and admit a new node with the original token through any surviving voter; a
+  node holding another cluster's token on an existing data directory is refused.
 
 ## May land early
 
