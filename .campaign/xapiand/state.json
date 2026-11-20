@@ -4560,6 +4560,32 @@
       "updated": "2026-11-18T17:24:50",
       "worktree": "../consensus-wt/xapiand/consensus-sim-loops"
     },
+    "control-plane-wallclock": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_control_plane.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
+      "updated": "2026-11-19T17:50:29"
+    },
     "core-lifecycle-tests": {
       "accepted": {},
       "after": [],
