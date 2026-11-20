@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs 261120-105027-66afcc 261120-105029-49a29d 261120-105031-bebe74 261120-105033-4b9fdb 261120-105035-bb5634 261120-105037-0d1c5a 261120-105039-f1c116 261120-105056-d0fc2d 261120-105058-5f6fec 261120-105100-ee6113
+State: ready for review (jobs 261120-105027-66afcc 261120-105029-49a29d 261120-105031-bebe74 261120-105033-4b9fdb 261120-105035-bb5634 261120-105037-0d1c5a 261120-105039-f1c116 261120-105056-d0fc2d 261120-105058-5f6fec 261120-105100-ee6113 pending)
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -55,7 +55,16 @@ certificate under the CA policy's prefix), `JoinFault`; `issue` test case; mutan
 
 ## Result
 
-Not yet.
+consensus:64dbb06 on quest/xapiand/node-admission (not pushed). `NodePins` is a shared,
+thread-safe directory with runtime `admit`/`remove`, a removal epoch and named refusals
+(`PinFault`); the trust policy defaults to the cluster CA (D149, pin recorded at first join), with
+`pre_approved_pins()` as the alternative; `HostTransport::admit_node`/`remove_node` route and drop
+nodes on their loop (`links.h` routes, removal, epoch check); `admission_join.h` issues a joining
+node's certificate for the join token (D150). Probe 261120-104658-5f4562: every admission case
+passes; 132,010 calls between two nodes during 8 remove/re-admit cycles of a third, 0 lost; a
+removal ends the removed node's calls both ways in 5-6 ms. How it works:
+`docs/mechanisms/admission.md`. Open: a seed dial by address returning the node (follow-up);
+serving the join exchange on the transport's own port (R8).
 
 ## Rulings I made
 
