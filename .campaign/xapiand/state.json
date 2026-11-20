@@ -2285,7 +2285,35 @@
         "tests/test_node.cc",
         "src/database/handler.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-19T20:06:39",
+          "commit": "30129f3ed6be7cb424407157cab287c6efc47eef",
+          "criteria": {
+            "A1": "`docs/design/cheap-reopen.md` (its measurements name their jobs)",
+            "A2": "261119-112059-d1220b (passed at a152bf614be4; only merges from main since)",
+            "A3": "261119-112102-8426f3 (passed at a152bf614be4; only merges from main since)",
+            "A4": "261119-112102-8426f3 (passed at a152bf614be4; only merges from main since)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "0dc08322aef87b2442e044f4d973942153f20b40",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-112102-8426f3",
+              "level": "light",
+              "seconds": 671.3,
+              "state": "done",
+              "what": "cheap-reopen check suite at 0dc08322aef8"
+            }
+          ],
+          "final": true,
+          "from": "2af5cdb4ae9e5c864e272894419afcec98fcc2cc",
+          "reason": "",
+          "tested": "732363fe7326dd371e44d581b31a870af5dab0a3"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
@@ -2294,9 +2322,9 @@
       "provides": [],
       "repo": ".",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "Reopening an evicted index costs near a cached open",
-      "updated": "2026-11-19T18:55:46",
+      "updated": "2026-11-19T20:06:39",
       "worktree": "../Xapiand-wt/xapiand/cheap-reopen"
     },
     "ci-quest-branches": {
