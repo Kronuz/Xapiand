@@ -6314,11 +6314,12 @@
       "provides": [
         "xapiand:search-fanout"
       ],
+      "reason": "folded into F5 cluster (replan-2026-11-20)",
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "Fan-out, exact statistics, merged aggregations, patterns from the root",
-      "updated": "2026-11-15T23:05:33"
+      "updated": "2026-11-20T05:26:47"
     },
     "docs-site-audit": {
       "accepted": {},
