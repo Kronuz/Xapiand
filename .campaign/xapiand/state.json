@@ -1390,6 +1390,20 @@
         "quest": "detent:journal-hold-loop-required"
       },
       "text": "detent:journal-hold-loop-required started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "at": "2026-11-19T23:27:54",
+      "by": "campaign detent",
+      "closed": "ordered --after detent:consensus-batch-turn-room",
+      "id": "msg-160",
+      "settles": {
+        "ours": [
+          "consensus-rpc-lane",
+          "group-core"
+        ],
+        "quest": "detent:consensus-batch-turn-room"
+      },
+      "text": "detent:consensus-batch-turn-room started and changes contract consensus:transport, which your consensus-rpc-lane consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
@@ -9039,7 +9053,8 @@
         "detent:consensus-peers-attempts-bound",
         "detent:consensus-blocking-hold-loop",
         "detent:consensus-heal-snapshot-stall",
-        "detent:journal-hold-loop-required"
+        "detent:journal-hold-loop-required",
+        "detent:consensus-batch-turn-room"
       ],
       "base": "491a1bdc2aa1e8856b9d7a583e90c4fabf673998",
       "branch": "quest/xapiand/group-core",
@@ -9104,7 +9119,7 @@
       "risk": "critical",
       "status": "active",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-19T23:05:05",
+      "updated": "2026-11-19T23:28:04",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-install": {
