@@ -384,3 +384,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Land loops: cheap-reopen (refused twice as master moved; re-accepted), serialize-validation, coverage-core-main, then freebsd-exe-path.
 - Queue: 92 queued, 11 running; light 68%, drains 20 min; load 10-22.
 - Quota: weekly 10%, 0.11%/h. Disk 37 GiB free.
+
+## 2026-11-19 20h
+- Landed: cheap-reopen (Xapiand:30129f3ed; land loop's 15-min timeout cut it mid-way, completed by hand, timeout raised).
+- Reviews: datetime-range-zone APPROVE (lands on the owner-decision default), dsl-not-wrap APPROVE, keymaker-keys CHANGES (M1 was based on a wrong hunt row; reverted), endpoint-uuid running.
+- consensus-sim-loops: 3 new failing seeds were a sim artifact (heal shorter than snapshot_timeout); Detent filed consensus-heal-snapshot-stall for the 60 s stall.
+- Land loops chase a moving master: each landing forces every other green quest through another CI round (coverage-core-main refused 3 times). Evidence for v3's merge queue.
+- Queue: 60 queued, 16 running; light 74%, drains 0 min; load 14-26. Quota weekly 11%, 0.12%/h. Disk 38 GiB free.
