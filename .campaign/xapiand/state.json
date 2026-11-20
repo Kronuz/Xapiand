@@ -2217,6 +2217,8 @@
     "catalog-post-lifetime": {
       "accepted": {},
       "after": [],
+      "base": "7cd834b3d86cd8e16335091d85dcfb3342e037e1",
+      "branch": "quest/xapiand/catalog-post-lifetime",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -2238,6 +2240,7 @@
         "test/CMakeLists.txt",
         "docs/mechanisms/catalog-delivery.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/catalog-post-lifetime",
       "landed": [],
       "lenses": [
         "correctness"
@@ -2245,11 +2248,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: document-gate's glob include/strata/core/** covers catalog.hh, but its branch changes no catalog file (git diff origin/main...HEAD: only test fixtures, kv_strata_batch_test.cc, standalone_turn_log_test.cc)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Catalog delivery never posts to a torn-down scheduler",
-      "updated": "2026-11-19T21:32:38"
+      "updated": "2026-11-19T21:32:50",
+      "worktree": "../strata-wt/xapiand/catalog-post-lifetime"
     },
     "census": {
       "accepted": {},
