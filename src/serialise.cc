@@ -24,6 +24,7 @@
 #include "serialise.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
+#include <limits>
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view
 
@@ -438,6 +439,9 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::timedelta:
 			return timedelta(field_value);
 		case FieldType::integer:
+			if (field_value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+				THROW(SerialisationError, "Type: {} cannot hold a number above 2^63-1 [{}]", enum_name(field_type), field_value);
+			}
 			return integer(field_value);
 		case FieldType::positive:
 			return positive(field_value);

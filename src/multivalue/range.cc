@@ -23,6 +23,8 @@
 
 #include "range.h"
 
+#include <cmath>
+#include <optional>
 #include <limits>                                 // for std::numeric_limits
 #include <stdexcept>                              // for out_of_range
 #include <sys/types.h>                            // for int64_t, uint64_t
@@ -80,6 +82,50 @@ truncate_saturating(double d)
 }
 
 
+// A range bound for an integer field as a T: a float bound rounds inward (a lower bound up, an upper bound
+// down) and a bound beyond T's limits saturates. No value means the bound leaves the range empty.
+template <typename T>
+static std::optional<T>
+integer_bound(const MsgPack& bound, bool upper)
+{
+	constexpr T lowest = std::numeric_limits<T>::min();
+	constexpr T highest = std::numeric_limits<T>::max();
+	switch (bound.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER: {
+			const auto value = bound.u64();
+			if (value > static_cast<uint64_t>(highest)) {
+				return upper ? std::optional<T>(highest) : std::nullopt;
+			}
+			return static_cast<T>(value);
+		}
+		case MsgPack::Type::NEGATIVE_INTEGER: {
+			const auto value = bound.i64();
+			if (!std::is_signed<T>::value) {
+				return upper ? std::nullopt : std::optional<T>(lowest);
+			}
+			return static_cast<T>(value);
+		}
+		case MsgPack::Type::FLOAT: {
+			const double value = upper ? std::floor(bound.f64()) : std::ceil(bound.f64());
+			if (std::isnan(value)) {
+				return std::nullopt;
+			}
+			if (value >= static_cast<double>(highest)) {  // 2^63 or 2^64: first out of range
+				return upper ? std::optional<T>(highest) : std::nullopt;
+			}
+			if (value < static_cast<double>(lowest)) {
+				return upper ? std::nullopt : std::optional<T>(lowest);
+			}
+			return static_cast<T>(value);
+		}
+		default:
+			if (std::is_signed<T>::value) {
+				return static_cast<T>(Cast::integer(bound));
+			}
+			return static_cast<T>(Cast::positive(bound));
+	}
+}
+
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
 engine::Query
 getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
@@ -102,31 +148,31 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			break;
 		}
 		case FieldType::integer: {
-			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : std::numeric_limits<int64_t>::min();
-			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : std::numeric_limits<int64_t>::max();
+			const auto val_s = start ? start->is_map() ? std::optional<int64_t>(Cast::cast(*start).i64()) : integer_bound<int64_t>(*start, false) : std::numeric_limits<int64_t>::min();
+			const auto val_e = end ? end->is_map() ? std::optional<int64_t>(Cast::cast(*end).i64()) : integer_bound<int64_t>(*end, true) : std::numeric_limits<int64_t>::max();
 
-			if (val_s > val_e) {
+			if (!val_s || !val_e || *val_s > *val_e) {
 				return engine::Query();
 			}
 
-			ser_start = Serialise::integer(val_s);
-			ser_end = Serialise::integer(val_e);
-			value_s = val_s;
-			value_e = val_e;
+			ser_start = Serialise::integer(*val_s);
+			ser_end = Serialise::integer(*val_e);
+			value_s = *val_s;
+			value_e = *val_e;
 			break;
 		}
 		case FieldType::positive: {
-			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : std::numeric_limits<uint64_t>::min();
-			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : std::numeric_limits<uint64_t>::max();
+			const auto val_s = start ? start->is_map() ? std::optional<uint64_t>(Cast::cast(*start).u64()) : integer_bound<uint64_t>(*start, false) : std::numeric_limits<uint64_t>::min();
+			const auto val_e = end ? end->is_map() ? std::optional<uint64_t>(Cast::cast(*end).u64()) : integer_bound<uint64_t>(*end, true) : std::numeric_limits<uint64_t>::max();
 
-			if (val_s > val_e) {
+			if (!val_s || !val_e || *val_s > *val_e) {
 				return engine::Query();
 			}
 
-			ser_start = Serialise::positive(val_s);
-			ser_end = Serialise::positive(val_e);
-			value_s = val_s;
-			value_e = val_e;
+			ser_start = Serialise::positive(*val_s);
+			ser_end = Serialise::positive(*val_e);
+			value_s = *val_s;
+			value_e = *val_e;
 			break;
 		}
 		default:

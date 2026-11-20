@@ -49,6 +49,7 @@
 #include "multivalue/range.h"
 #include "exception_xapian.h"
 #include "msgpack.h"
+#include "serialise.h"
 #include "utype.hh"
 
 static void test_numeric_terms() {
@@ -371,4 +372,52 @@ static void test_terms_only_datetime_range() {
 	}
 }
 
-TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_range_finds_every_value_in_range, test_datetime_range_finds_every_value_in_range, test_terms_only_numeric_range, test_terms_only_datetime_range)
+// An integer field's float bounds round inward (from up, to down) and saturate; a number past int64 is refused.
+static void test_integer_edge_cases() {
+	const std::vector<uint64_t> accuracy = { 1, 10, 100 };
+	const std::vector<int64_t> values = { -3, -2, -1, 0, 1, 2, 3, 4 };
+	const auto path = (std::filesystem::current_path() / "test_generate_terms_shard_edges").string();
+	std::filesystem::remove_all(path);
+	auto opened = engine::sync_wait(engine::xapian::open_local(path, true, true));
+	auto& shard = *opened.shard;
+	auto spc = make_spc(engine::BAD_VALUENO, FieldType::integer, accuracy);
+	for (auto v : values) {
+		engine::Document doc;
+		GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, v);
+		engine::sync_wait(shard.add(doc, {}));
+	}
+	engine::sync_wait(shard.commit(engine::Transaction::none));
+
+	auto values_in = [&](double lo, double hi) {
+		const MsgPack from(lo), to(hi);
+		std::vector<int64_t> found;
+		for (auto did : search_hits(shard, MultipleValueRange::getQuery(spc, range_obj(&from, &to)))) {
+			found.push_back(values[did - 1]);
+		}
+		std::sort(found.begin(), found.end());
+		return found;
+	};
+	using V = std::vector<int64_t>;
+	CHECK(values_in(1.5, 3.5) == (V{ 2, 3 }));
+	CHECK(values_in(-2.5, -0.5) == (V{ -2, -1 }));
+	CHECK(values_in(-1.5, -1.5).empty());
+	CHECK(values_in(2.0, 2.0) == (V{ 2 }));
+	CHECK(values_in(2.5, 2.9).empty());
+
+	// Beyond int64 the bound saturates, or leaves the range empty.
+	const MsgPack huge(1e30), tiny(-1e30);
+	CHECK(MultipleValueRange::getQuery(spc, range_obj(&huge, nullptr)).empty());
+	CHECK(MultipleValueRange::getQuery(spc, range_obj(nullptr, &tiny)).empty());
+
+	// A uint64 at or above 2^63 does not fit an integer field; it is refused, not wrapped negative.
+	auto field = make_spc(engine::BAD_VALUENO, FieldType::integer, {});
+	const uint64_t big = uint64_t(1) << 63;
+	CHECK_THROW(Serialise::MsgPack(field, MsgPack(big)), SerialisationError);
+	CHECK_THROW(Serialise::MsgPack(field, MsgPack(std::numeric_limits<uint64_t>::max())), SerialisationError);
+	CHECK_FALSE(Serialise::MsgPack(field, MsgPack(big - 1)).empty());
+	auto positive = make_spc(engine::BAD_VALUENO, FieldType::positive, {});
+	CHECK_FALSE(Serialise::MsgPack(positive, MsgPack(big)).empty());
+	std::filesystem::remove_all(path);
+}
+
+TEST_MAIN(test_numeric_terms, test_numeric_signed, test_id_accuracy_prefix, test_numeric_range_finds_every_value_in_range, test_datetime_range_finds_every_value_in_range, test_terms_only_numeric_range, test_terms_only_datetime_range, test_integer_edge_cases)
