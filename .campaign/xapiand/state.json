@@ -11375,11 +11375,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "redundant: loop-yield-race already landed the fix (Xapiand:9d56c48f8); the hunt row F6 predated it",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Fix the TSan race in test_loop_yield's count_delete",
-      "updated": "2026-11-19T17:50:56",
+      "updated": "2026-11-19T17:53:17",
       "worktree": "../Xapiand-wt/xapiand/loop-yield-tsan"
     },
     "lua-memory-bound": {
