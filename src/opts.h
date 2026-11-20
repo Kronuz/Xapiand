@@ -61,6 +61,7 @@ extern struct opts_t {
 	ssize_t num_async_wal_writers = 1;
 	ssize_t num_fsynchers = 1;
 	ssize_t database_pool_size = 10;
+	bool full_flush_ordering = false;          // macOS: order commits with a full flush, not the barrier (D10)
 	ssize_t max_search_indexes = 100000;       // the runaway cap: a search over more answers 400
 	ssize_t concurrent_search_indexes = 0;     // the most indexes one search holds open at once; 0: a reactor's share of the pool
 	ssize_t search_walk_queue = 8;             // the pattern walks that may wait behind the one that runs; a search over that answers 429

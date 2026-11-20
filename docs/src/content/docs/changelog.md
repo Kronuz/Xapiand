@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
+  ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
+  orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one

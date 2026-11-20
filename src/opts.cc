@@ -167,6 +167,8 @@ parseOptions(int argc, char** argv)
 #endif
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
 		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool (default: what 1% of RAM holds at ~40 KiB per open index, within the descriptor limit).");
+		bool full_flush_ordering = false;
+		app.add_flag("--full-flush-ordering", full_flush_ordering, "macOS: order commits with a full flush (F_FULLFSYNC) instead of the barrier, whose order is guaranteed only on internal Apple SSDs.");
 		std::size_t max_search_indexes = 100000;
 		app.add_option("--max-search-indexes", max_search_indexes, "Most indexes (shards) one search may name, and most directory entries its patterns may read to find them (at least 1); a search over more answers 400. A search reads its indexes in batches, so this bounds only a runaway pattern.")
 			->check(CLI::Range(std::size_t{1}, std::size_t{1} << 40));
@@ -370,6 +372,7 @@ parseOptions(int argc, char** argv)
 		o.uid = uid;
 		o.gid = gid;
 		o.database_pool_size = database_pool_size;
+		o.full_flush_ordering = full_flush_ordering;
 		o.max_search_indexes = max_search_indexes;
 		o.concurrent_search_indexes = concurrent_search_indexes;
 		o.search_walk_queue = search_walk_queue;
