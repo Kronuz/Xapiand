@@ -443,3 +443,9 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - strata-pin-catalog: A1 and A2 proven (old pin: heap-use-after-free); build-test check fixed twice by the lead (target name, BUILD_TESTS).
 - track-p: Opus resume on P13's finished reruns.
 - Light slots 21%, drains 37 min. Quota weekly 16%. Load 3. Disk 41 GiB.
+
+## 2026-11-20 04h
+- Landed: consensus-sim-loops (consensus:8bdbd750), track-p (prospect:0a2af7dfe; Opus review 234k tokens, APPROVE, caught a hollow mutant job). Detent landed consensus-heal-snapshot-stall (consensus:39d9f1d).
+- Started: automata (Opus). Resumed with fresh contributors: document-gate (Opus), coverage-database (Sonnet).
+- Lead bug: a chained land watcher deadlocked on `pgrep -f 'landloop.sh X'` matching another watcher's own command line; coverage-core-main sat ~1 h unlanded. Restarted directly. (v3: the driver owns ordering, no pgrep chains.)
+- Light slots 40%, drains 15 min, 41 jobs ended (3 failed). Quota weekly 17%. Load 5-6. Disk 42 GiB.
