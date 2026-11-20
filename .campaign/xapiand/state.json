@@ -27882,9 +27882,9 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Track P, the performance research items without a verdict",
-      "updated": "2026-11-17T15:52:12",
+      "updated": "2026-11-20T03:26:09",
       "worktree": "../prospect-wt/xapiand/track-p"
     },
     "track-p-research": {
