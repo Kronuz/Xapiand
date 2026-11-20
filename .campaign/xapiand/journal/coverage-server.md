@@ -1,6 +1,6 @@
 # coverage-server: journal
 
-State: waiting on jobs 261120-112532-8d4a2b
+State: waiting on jobs 261120-114034-9bd410
 Quest: .campaign/xapiand/quests/coverage-server.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -12,6 +12,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 Driver harness/coverage_e2e_server.py (groups per node flag set) + tests/test_coverage_server.cc written blind against an old binary; coverage.sh has a `server` workload and NOBUILD=1. Job 444b1a is the first coverage build (slot xapiand-coverage-server keeps build-cov: run the driver against its bin/xapiand to fix expectations, then NOBUILD=1 jobs). Baseline (coverage-areas job 8642ea): server 76.8/49.4, search_views.cc 76.3/48.9, mime_types.cc 88.2/66.0.
 
 ## Next
+
+000. 8d4a2b: server 87.0 lines / 57.1 branches (2008/2308, 949/1663). Added groups edges (multi-index refusals, every Accept type, odd URLs, split/chunked RESTORE bodies) and logged_bodies (--verbosity 5, access-log body renderers); rerun 9bd410. Then: read coverage-uncovered.txt again; remaining clusters seen: select/handlers at 1073-1131 (UPSERT/UPDATE of stored blobs, selectors), 1395-1411 (index settings), 1895-1950 (document/blob GET locators), 2347-2356, 2763-2786, 3246-3271 (413 for other views), 3296-3340. If 80% branches needs fault injection (cancelled tasks, 'request body ended early', reactor-binding THROW), list them in the journal as unreachable.
 
 00. Job 101643 ran the driver: 38 failures, server 74.3/48.9. Fixed the driver's expectations (commit "Fix the server driver's expectations"); all groups pass locally on the slot's build-cov. Rerun 8d4a2b measures coverage; read .scratch/cov-server/coverage-uncovered.txt (search_views.cc lines) and add scenarios until >= 90/80. Probes: ~/.scratch/xapiand/cov-server-probe (delete at the end).
 
