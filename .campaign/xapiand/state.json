@@ -10049,7 +10049,8 @@
         "docs/mechanisms/replication-group.md",
         "docs/REPLICATION.md",
         "include/strata/core/index.hh",
-        "test/standalone_turn_log_test.cc"
+        "test/standalone_turn_log_test.cc",
+        "include/strata/core/turn_seal.hh"
       ],
       "history": [
         {
@@ -10083,7 +10084,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T12:51:55",
+      "updated": "2026-11-20T12:54:08",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
