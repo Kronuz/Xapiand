@@ -18195,7 +18195,88 @@
       "updated": "2026-11-08T15:40:38"
     },
     "multicast-seeds": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T14:30:47",
+          "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
+          "blobs": {
+            "CHANGELOG.md": "100644:85e66e72794e48b56371f80c430ae1c70a8226d2",
+            "CMakeLists.txt": "100644:2415e229180d0b29633d4f97ff0ea105e39d946f",
+            "docs/mechanisms/seeds.md": "100644:25619b446232e44fc8f7aa47db0826c65304d001",
+            "fuzz/seeds_corpus/oversized": "100644:74f7124e9bd488a5400568a86bd5daccbb0b445e",
+            "fuzz/seeds_corpus/port-0": "100644:192180176ce584415ffe9e76a2ad62ec9ca27e0d",
+            "fuzz/seeds_corpus/repeated": "100644:5fc22cc3595f4d2d005e408cbb2933927b682bc7",
+            "fuzz/seeds_corpus/truncated": "100644:2f3bbf5b95b6ff5bea32182765e09120e173e351",
+            "fuzz/seeds_corpus/valid-eight": "100644:92babd98f238a78961c048d3ef84f62ca488350b",
+            "fuzz/seeds_corpus/valid-one": "100644:d41b7bda8f774730a534b0fd7b3a679684f3ddb8",
+            "fuzz/seeds_corpus/valid-three": "100644:17fa9d2120d0a5941821fdc09c0e95d9c4c23b5e",
+            "fuzz/seeds_corpus/version-2": "100644:b7caa9d6fe7982d5354771f8e754c0a45d1b5971",
+            "fuzz/seeds_fuzz.cc": "100644:ed69b6467767ef26d5b0e5355f978f5ddfecafd1",
+            "include/consensus/transport/seeds.h": "100644:86ce2bc2e8499f49066f767a82b67f340da81aa3",
+            "include/consensus/transport/seeds_codec.h": "100644:abc94ecee29ddbfb9bfbcd2b1ae2c07a7d2d52ea",
+            "test/transport/seeds_mutants.py": "100755:50d25670edab77cc036c354c9e3fcd69f16324ff",
+            "test/transport/seeds_test.cc": "100644:9b39651edaf8fe5dcc22ecfedf1bff88fa6a6954"
+          },
+          "by": "review",
+          "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "criteria": "626c6a159534c75f",
+          "diffs": {
+            "": "4254a72db85db5fd",
+            "CHANGELOG.md": "ef8a1572d87bf183",
+            "CMakeLists.txt": "c2fe64d335f6b332",
+            "docs/mechanisms/seeds.md": "555d82fdfd21ce21",
+            "fuzz/seeds_corpus/oversized": "08910a2597b2f6ed",
+            "fuzz/seeds_corpus/truncated": "687023595e5767ba",
+            "fuzz/seeds_corpus/valid-one": "578b34cea307956e",
+            "fuzz/seeds_corpus/valid-three": "aae4052430b19aa0",
+            "fuzz/seeds_fuzz.cc": "fb4ddc9389ceab84",
+            "include/consensus/transport/seeds.h": "61603f502e5abfab",
+            "include/consensus/transport/seeds_codec.h": "6ca3f6aba23c2887",
+            "test/transport/seeds_mutants.py": "09cbfff01f8a1ab1",
+            "test/transport/seeds_test.cc": "5f5c0755f1a78577"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R seeds --output-on-failure",
+                  "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-111956-ba7a28",
+                  "level": "light",
+                  "seconds": 4.5,
+                  "state": "done",
+                  "what": "seeds tests with SIGPIPE ignored, multicast required"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R seeds --output-on-failure",
+                  "commit": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-111956-ba7a28",
+                  "level": "light",
+                  "seconds": 4.5,
+                  "state": "done",
+                  "what": "seeds tests with SIGPIPE ignored, multicast required"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "8f56969b3ce662621ad109287db5c59c731bf835",
+          "reviewed": "8a369580128b7095bbb41cb08fc8e6ca06eba4ef",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/multicast-seeds",
@@ -18239,7 +18320,7 @@
       "risk": "high",
       "status": "review",
       "title": "Multicast seed discovery in consensus, shared by Xapiand and Detent",
-      "updated": "2026-11-20T09:32:55",
+      "updated": "2026-11-20T14:30:47",
       "worktree": "../consensus-wt/xapiand/multicast-seeds"
     },
     "name-index": {
