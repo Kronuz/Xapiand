@@ -42,6 +42,9 @@ Smoke (not a gate; light, one 4 s trial each, macOS host, fillrandom sync/1 100 
 K=4 strata 181 ops/s p50 21 ms against RocksDB 131 ops/s p50 30 ms; K=8 324 p50 22 ms against
 194 p50 42 ms. Same direction as the note's cohort prototype (180 and 327).
 
+Mutant, run locally (job queued): K=4, 19 of 84 commits waited a second barrier, 30 turns for 24
+rounds; the test fails (exit 1).
+
 ## Rulings I made
 
 - The cohort counts released *groups*, not writers: `wake()` fires once per opened record, and a
