@@ -1,6 +1,6 @@
 # group-core: journal
 
-State: ready for review
+State: waiting on jobs 261120-092528-6f13a3 261120-092528-a14183 261120-092530-8e1d75 261120-092537-7db5a0 261120-092539-50196a 261120-092541-cd604b 261120-092544-0e1fd2 261120-092546-475273 261120-092548-bda1ed
 Quest: .campaign/xapiand/quests/group-core.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,41 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Step 9 (lead: A3's unbuilt cases and the failed-open row close), strata:c2b656db. Jobs: Evidence.
+
+- No_space hand-off (D3, N15): a stalled leader arms a loop timer (`wheel::timer_entry` in the
+  group, armed only while stalled) for one election timeout (`timing.election_max`); at it, if
+  still stalled and leading, it asks `loop::applied_past(id, applied + 1)` (new host hook: the
+  host's view of its followers, health's later) and `transfer_leadership`s to the answer, then
+  re-arms while the stall lasts. voters_test `stalled_leader` (3, 5): leader's budget spent, its
+  write stalls, a follower applied past it takes over and answers a write, the old leader's
+  `quorum` answer waits, then answers `accepted` once space frees; digests equal. Mutant
+  no-hand-off.
+- `superseded` required: voters_test `superseded_entry` (3, 5): the leader is cut off inside its
+  request's prepare (past the ready point), places it alone, the others elect and commit; healed,
+  the request answers `superseded`, 0 forwards, its command in no node's log. Mutants
+  superseded-ignored (waiter takes another term's verdict), resubmit-superseded (writer loops).
+- Forward once: voters_test `forward_once` (3, 5): a follower's merge forwarded to the leader is
+  answered `accepted`, 1 forward; forwarded to another follower it answers 503, 0 placements, 1
+  forward. Mutant forward-twice (`if (forwarded)` -> `if (false)`).
+- Failed open closes its row: `open()` catches a create/recover or chore-recovery failure, fences
+  (inside the chore before any range applies, then on the loop), `Driver::close`s the row and
+  rethrows. lifetime_test `failed-open` (in ctest's default run): a reopen over a directory that
+  lost strata's index fails `P_b > P_H`, `groups() == 0`, then the same process reopens over the
+  real directory and reads a and b. Mutant failed-open-keeps-row.
+- Pre-existing at 33230b18, fixed (Rulings): voters_test `default_limits` fails at consensus
+  1c08c9f ("worker batch exceeds the host's turn room", D132): it set all of `cs::Limits{}`.
+  Now only the default log (log_bytes, log_entries), the test's wire limits kept. So
+  build-test 261120-090009-f2e837 at 33230b18 is expected red on `group_voters`.
+- Local (light holds): `group_voters_test 0` ok (write path: 1-2 superseded per 8 seeds, as
+  before), `group_lifetime_test failed-open` ok. Not run locally: crash, full ctest (jobs).
+- Lead's contract note (journal-idle-groups, journal:7b64376: create and reopen durable at the
+  first turn, not at return): no group-core case reads durability at `open()`'s return. Every
+  case writes (a turn) before a restart or crash it checks; A1's crash points between create and
+  the first turn recover to "no group" and create again, nothing acknowledged. `reopen-turn`
+  (A7) counts the reopen's barriers with its first write, which this contract matches. Nothing
+  to fix before the pin moves; recheck A1's crash run then.
 
 Step 8 (lead's resume under agent-campaign:21248b4: merge main, move pins, fix the design review's
 blocking findings, A7 and A8), strata:33230b18. Jobs: Evidence.
@@ -157,13 +192,18 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 
 ## Next
 
+00. Read step 9's jobs (State); fold any red in. Step 8's at 33230b18: crash 261120-090009-2638c9
+    green; build-test 261120-090009-f2e837 (expected red: default_limits, fixed at c2b656db),
+    append-on-retry 261120-090021-8a66ab, 261120-090029-d472af, sync-retry 261120-090036-a032b9,
+    read-skips-probe 261120-090043-0b4a03 and the A7 gap 261120-090052-9c8c69 still queued or
+    running at step 9's end. Then the lead's correctness review and CI push.
 0. Read step 8's jobs (Evidence); then the lead's correctness review and CI push.
 1. (done) Read step 7's jobs: build-test green at 88d72629, cold-schedulers killed, the size
    breakdown's 4096 B row gone; then lead's push for CI. Step 6's reading, for reference: closed (0 descriptors, 0 frames, heap by owner), destroyed split
    (ours, consensus's row: Detent's consensus-quiescence heap criterion), timing at 500 and
    1,000 flat in N; fix failures (if `gone_slack` 16 B is off, read the row's mirror first:
    `footprint_owners.py --at destroyed --base before --closes N`). Push for CI (lead).
-2. A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
+2. (done at c2b656db, step 9) A3's remainder. Built at strata:a4e7cf80 (`submit.hh`, `blob::app::prepare`, voters_test
    `write_paths`, mutants ack-at-commit, prepare-before-ready, pending-ignored, lift-the-bound,
    no-forward, resubmit-invalid). Left: a leader stalled on `no_space` hands leadership to a
    follower applied past it (`transfer_leadership`); assert an election replacing an uncommitted
@@ -236,7 +276,8 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
   failed group before dropping it; (c) only a process stop ends them, as today. Recommend (a)
   for the failed open (group-core's own) and (b) for fences once the catalog hook exists; Detent's
   answer: consensus-close-fenced (landed, consensus:9b218a0) closes fenced and half-opened rows,
-  so (a) is buildable in group-core.
+  so (a) is buildable in group-core. (2) built at c2b656db (step 9: a failed open closes its
+  row). (1) stays: a fence never closes the row; the catalog's (option b) once it has a hook.
 - Detent (forward): (1) 64 groups opened at once on one host fail with "storage fenced outside
   worker"; bare consensus rows reproduce it, no strata::group involved:
   `GROUP_FOOTPRINT_NOSYNC=1 GROUP_FOOTPRINT_WAVE=64 build/group_footprint_test 64 0` at
@@ -262,7 +303,7 @@ Step 5 (D111, A6 as written; D112, deferred create), strata:1b1601be, ba578486, 
 |---|---|
 | A1 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` B10 append-on-retry 261120-090021-8a66ab, B10 sync-retry 261120-090036-a032b9. Before: queued at strata:c99372d4 (one directory per group, deferred create): crash 261117-151220-79527f, TSan 261117-151216-02b5d8, `--fails-without` unlink-at-apply 261117-151147-f41da5, append-on-retry 261117-151150-e05468, sync-retry 261117-151154-9b1fbc, first-commit-unsynced 261117-151125-7ccde6. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, ASan+LSan 261117-112719-032b88; `--fails-without` (strata:e7bb6c70's mutants, same anchors): replay-from-ph 261117-041329-e493ed, unlink-at-apply 261117-041335-5055d0, publish-before-sync 261117-041341-82b222, capture-mid-entry 261117-041346-d08891, effects-gated 261117-041351-01ad6c, appstate-gated 261117-041356-b72595, no-mark 261117-041401-a4bc5e, commit-after-publish 261117-041406-4aaf54, append-on-retry 261117-041412-e13f97, sync-retry 261117-041417-101200. 174 script events, 175 crash points, 2,527 second crashes |
 | A2 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` B10 append-on-retry (voters, file-set ENOSPC once) 261120-090029-d472af. Before: queued at strata:c99372d4: append-on-retry (voters) 261117-151158-264d61, admission-waits 261117-151202-2b5482. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, 40 gated schedules per voter count 261117-112714-70e657, TSan 261117-112716-5eea20; `--fails-without` append-on-retry 261117-085651-94cdb1, admission-waits 261117-085659-d135d4, install-silent 261117-112707-8d20d3, checkpoint-ungated 261117-112710-55af69. Seeds 8, 12, 16, 18, 23, 24, 27 (3 voters) fixed ungated: named in `installs_needed()` (D109) |
-| A3 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. Left: `no_space` leadership hand-off, `superseded` required, forward-twice |
+| A3 | queued at strata:c2b656db: build-test 261120-092528-6f13a3, crash 261120-092528-a14183, named cases (`group_voters_test 0`: superseded_entry, forward_once, stalled_leader) 261120-092530-8e1d75, failed-open 261120-092537-7db5a0; `--fails-without` no-hand-off 261120-092539-50196a, superseded-ignored 261120-092541-cd604b, resubmit-superseded 261120-092544-0e1fd2, forward-twice 261120-092546-475273, failed-open-keeps-row 261120-092548-bda1ed. Before: queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases (`group_voters_test 0`) 261117-112639-0e3525; `--fails-without` close-keeps-waiters 261117-085705-587d4d (vacuous, superseded by 261117-112702-5fc7d8), quorum-at-placement 261117-085711-59939a (vacuous, superseded by 261117-112659-a0922c), ack-at-commit 261117-112642-eee4a9, prepare-before-ready 261117-112645-377e63, pending-ignored 261117-112648-9a2926, lift-the-bound 261117-112650-2e5ea4, no-forward 261117-112653-d75991, resubmit-invalid 261117-112656-b5bed0. |
 | A4 | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9; `--fails-without` read-skips-probe (anchor repointed) 261120-090043-0b4a03. Before: green at strata:1e88eb3f: build-test 261117-112713-54e643, crash 261117-112713-a33261, named cases 261117-112639-0e3525; `--fails-without` read-skips-probe 261117-112704-eaa423 (261117-085718-358fc4 was vacuous). Left: the publish-applied-before-write mutant (Rulings: no loop-side read to reach it) |
 | A5 (part) | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9 (ctest `group_lifetime` runs `reopen`: closed in the host's table, no live turn-log record, in-process reopen, restart). Before: queued at strata:b98362b7: build-test 261117-134414-aaeddb, crash 261117-134414-ef6998, TSan 261117-134416-c8e692; `--fails-without` close-uncovered 261117-134421-e77835, checkpoints-overlap 261117-134428-8708d8. Left for detent:consensus-quiescence: `TurnLog::read` finds none, in-process reopen |
 | A6 (part) | queued at strata:33230b18 (merge, pins 1c08c9f/9e11713/d8b538c): build-test 261120-090009-f2e837, crash 261120-090009-2638c9 (footprint ok locally: closed 2,945 B, destroyed 194 B). Before: Queued at strata:88d72629 (schedulers warmed; open groups fenced before destroy): build-test 261117-220121-0d17ad, crash 261117-220122-3683cd, `--fails-without` cold-schedulers 261117-220123-40de8b, size breakdown 261117-220126-1624db. At 47e7f140: build-test red 261117-174709-007299 (64 B, the chore queue: Doing, step 7); 10^4 counts 261117-174721-76cffc green. Before that, queued at strata:47e7f140 (closed and destroyed per closed group, consensus's closed row): build-test 261117-174709-007299, crash 261117-174709-c75fb1, counts at 10^4 with 1,000 closed (light, 60 min) 261117-174721-76cffc, strict 500 261117-174725-f04c3b and 1,000 261117-174730-8a0b8c (10 closes each), `--fails-without` destroy-keeps-member 261117-174734-de0aa7; TSan 261117-174738-0c9f4a (A1-A3, A5, A10). Before: green at c99372d4 (step 5 mutants, 151206 counts, 3cedb9 timing at 500; 6093d5 at 1,500 stopped at its cap, invalid). Budget: idle group 12,720 B = index 5,090 + the group's own 645 (5.7 KB, "about 5.4 KB") plus the stated overhead, consensus's row and journal group 6,984 (Detent's, outside the criterion); 2.00 descriptors, closed 0 (64 groups, local, strata:1b1601be). Queued at strata:c99372d4: build-test 261117-151220-00850f (ctest `group_footprint`, `group_file_set`), counts at 10^4 groups (light, 60 min) 261117-151206-b86dca, idle CPU per group strict at 500 261117-151209-3cedb9 and 1,500 261117-151213-6093d5 (per group, flat in N: compare the two); `--fails-without` no-prefix 261117-151128-1d419f, keeps-config 261117-151132-fc01a3, close-keeps-directory 261117-151136-c0239c, close-keeps-index 261117-151139-b815a7, files-keep-handle 261117-151143-991952, D112 first-commit-unsynced 261117-151125-7ccde6. Left: quiescent groups (consensus-quiescence), the catalog close |
@@ -281,6 +322,19 @@ proposed text. strata pins consensus 57745e8, journal 555b69f, task 95798a0, com
 
 ## Rulings I made
 
+- Step 9: the stalled leader's target comes from a host hook on `loop` (`applied_past`, beside
+  `send`): consensus's leader knows followers' matched index, not their applied position, so the
+  group cannot pick "a follower applied past it" alone. Unset, no hand-off (a lone voter, or a
+  host without health). The voters world sets it only in `stalled_leader` (`world(..., true)`),
+  so A2's schedules and the D109 seeds run as their evidence did.
+- A refused or aborted transfer (Busy, InvalidTarget) is dropped and tried again at the next
+  timeout while the stall lasts; a failed open's `Driver::close` error is dropped so the open's
+  own error is the answer (a left row is then loud: a reopen throws "open on this Driver").
+- voters_test `default_limits` (pre-existing red at 33230b18 under consensus 1c08c9f's D132):
+  keeps consensus's default log (log_bytes, log_entries), which is what it tests, and the test's
+  wire limits, so its batch fits the 16 KiB turn-log segment.
+- sizeof(group) grows by the hand-off timer and its delay (about 48 B); A6's own budget (1,024 B,
+  measured 539-645) absorbs it. The footprint job (build-test) checks it.
 - Step 8: `include/strata/core/turn_seal.hh:103` (turn-log-parity's file set) changed one line,
   `const auto* e` -> `const auto e`, so it compiles against journal 9e11713's optional
   `Host::entry`; the pin move required it and the line reads the same for a pointer.
