@@ -22803,11 +22803,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "quick fix (replan-2026-11-20 section 3)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "dropped",
       "title": "xapiand --restore exits nonzero when the restore fails",
-      "updated": "2026-11-19T12:22:53"
+      "updated": "2026-11-20T05:27:09"
     },
     "restore-free-off-loop": {
       "accepted": {
