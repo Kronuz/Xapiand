@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: waiting on jobs 261119-222203-a28c39 (probe, still queued), the mutant job and the suite (campaign status lists them)
+State: waiting on jobs 261119-225927-d1b679 (probe) and its mutant
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -41,3 +41,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - No edit to serialize.cc (outside the file set): the DATE and global TIME gaps are bridged in query_dsl.cc.
 
 - Lead widened the file set to casting-values.md: its edit (lines 105-135 and its e2e block, in the same file) waits for the probe job output, so the examples carry checked replies.
+
+- Probe 222203 failed 8: ids compared as strings but _id is an int (test bug, 5 field checks; the code answered right); a text _date inside _datetime is a clear 400 (expectation fixed); a float into a datetime field is a timestamp, 200 [] (expectation fixed); global queries matched nothing because no value was indexed globally (fixture: /gl/ index with _index global, plus a _datetime control). casting-values.md waits for the 225927 output.
