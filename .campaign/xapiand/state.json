@@ -18601,7 +18601,9 @@
         "test/transport/peers*",
         "docs/mechanisms/admission.md",
         "CMakeLists.txt",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "include/consensus/transport/links.h",
+        "include/consensus/transport/host_transport.h"
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
       "landed": [],
@@ -18613,12 +18615,11 @@
       "provides": [
         "consensus:node-admission"
       ],
-      "reason": "started by force: overlap is CMakeLists.txt and CHANGELOG.md only (a test target and a line each); whichever lands second merges main",
       "repo": "../consensus",
       "risk": "high",
       "status": "active",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T10:14:32",
+      "updated": "2026-11-20T10:55:07",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
