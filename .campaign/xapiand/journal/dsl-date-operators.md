@@ -1,6 +1,6 @@
 # dsl-date-operators: journal
 
-State: waiting on jobs 261119-222203-a28c39
+State: waiting on jobs 261119-222203-a28c39 (probe, still queued), the mutant job and the suite (campaign status lists them)
 Quest: .campaign/xapiand/quests/dsl-date-operators.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -39,3 +39,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 - The sorter's cast-word list (get_sorter) is unchanged: sort cast words are a separate bug (sort-cast-word) and the sorter has no time/timedelta key.
 - No edit to serialize.cc (outside the file set): the DATE and global TIME gaps are bridged in query_dsl.cc.
+
+- Lead widened the file set to casting-values.md: its edit (lines 105-135 and its e2e block, in the same file) waits for the probe job output, so the examples carry checked replies.
