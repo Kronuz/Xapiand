@@ -25346,7 +25346,7 @@
       "branch": "quest/xapiand/strata-pin-catalog",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target test_pool && build/bin/test_pool",
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -25356,6 +25356,34 @@
       "files": [
         "CMakeLists.txt",
         "tests/test_pool.cc"
+      ],
+      "history": [
+        {
+          "at": "2026-11-20T02:30:39",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target test_pool && build/bin/test_pool",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "the lead's check named a CMake target that does not exist (test_pool); the test's target is xapiand_test_pool",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [],
@@ -25368,7 +25396,7 @@
       "risk": "low",
       "status": "active",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T01:12:25",
+      "updated": "2026-11-20T02:30:39",
       "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
