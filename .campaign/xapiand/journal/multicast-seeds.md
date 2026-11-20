@@ -66,8 +66,6 @@ BIO that sends with MSG_NOSIGNAL). That is outside this file set and changes the
 contract. Recommendation: keep the contract for now, and have the cluster wiring (Xapiand, Detent)
 ignore SIGPIPE as these tests do.
 
-Nothing.
-
 ## Evidence
 
 | Criterion | Evidence |
