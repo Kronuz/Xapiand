@@ -10482,7 +10482,71 @@
       "worktree": "../Xapiand-wt/xapiand/license-closure"
     },
     "light-share": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-19T17:03:06",
+          "base": "1d90188d49c3a75ce67d176260d17a70fbbf4759",
+          "blobs": {
+            "docs/design/light-share.md": "100644:59fe60f614d4d3d986fe711e9576c090fecce4fa",
+            "harness/light_share_ab.sh": "100755:4db7ae673f4db8c1259df82f7c02e8e20cd80040",
+            "harness/light_share_build.sh": "100755:6e9e6682f237e8c2829ae17d312bb43d5aa7b3bd",
+            "harness/light_share_probe.cc": "100644:939d7f52b0e0f0492686b3c76b66986011feb51a",
+            "harness/light_share_probe.sh": "100755:7469e9bf2cbc9b5a45ecdb8aae258e69534c28d4",
+            "harness/light_share_report.py": "100755:267c22ffd488d871aae1883e39c934154dde9ffe",
+            "harness/light_share_t10.sh": "100755:fc4203f766f3a303aafc1fca964d9c54f66010c9",
+            "harness/light_share_t12.sh": "100755:c48624e52128512c8e4d67966f511dc5a703b044",
+            "harness/light_share_task.patch": "100644:bdac293d7d9064443cb77aae0932a05e7cd2aa52",
+            "harness/light_share_turns.py": "100755:2c17dfe9865bf78761fc1a2489f003e3c4a927fd"
+          },
+          "by": "review",
+          "commit": "ff38e1db0862f2d3ce3fee2cbb0d58921254fbfd",
+          "criteria": "10bafaf5a12aaad9",
+          "diffs": {
+            "": "6e644f9b05ec262c",
+            "docs/design/light-share.md": "cd5ba5f1975df60f",
+            "harness/light_share_ab.sh": "e61fcabe65242e6a",
+            "harness/light_share_build.sh": "9ae73ef865b2baa3",
+            "harness/light_share_probe.cc": "d6955e83a0b5516a",
+            "harness/light_share_probe.sh": "ff947e3415946793",
+            "harness/light_share_report.py": "18cc285829f7665e",
+            "harness/light_share_t10.sh": "796208dfd40883d0",
+            "harness/light_share_t12.sh": "f71007c9ae5226c8",
+            "harness/light_share_task.patch": "797bbc75315a7b74",
+            "harness/light_share_turns.py": "c7b77fe273df3b6c"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'harness/light_share_probe.sh \"$JOB_OUT\"'",
+                  "commit": "23ae3cd532842afa9c9c40c5aed78d9a058de273",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261119-144400-cb39e5",
+                  "level": "light",
+                  "seconds": 169.7,
+                  "state": "done",
+                  "what": "light-share probes at the merged head: task asio tests + cap/parked/bypass/heavyonly/gate under TSan (F1 test: parked)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "fix_scope": {
+            "paths": [
+              "harness/light_share_probe.cc",
+              "harness/light_share_probe.sh",
+              "harness/light_share_turns.py"
+            ],
+            "reason": "the three new files are measurement harness (p99.9 report, arm windows, turn-histogram reader) for the non-blocking gaps F3-F5; no product mechanism; F1's fix is in src/manager.cc, which the review saw"
+          },
+          "note": "",
+          "review": "02dd1b046e23243d5da8373edabfa9cc0a6a5d71",
+          "reviewed": "2b8c66958718e866230d2a22135cebb3cc866bf5",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "52c9d467b0ca6c4959899a6469409b41acbb731e",
       "branch": "quest/xapiand/light-share",
@@ -10512,7 +10576,7 @@
       "risk": "high",
       "status": "review",
       "title": "Light requests keep their bound under heavy load",
-      "updated": "2026-11-18T19:40:08",
+      "updated": "2026-11-19T17:03:06",
       "worktree": "../Xapiand-wt/xapiand/light-share"
     },
     "linux-sanitizers": {
