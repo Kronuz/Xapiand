@@ -5,7 +5,7 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Xapiand pins strata at strata:e3edb426 (catalog-post-lifetime: a delivery never posts to a torn-down scheduler), and tests/test_pool.cc carries the explorer's reproducer `test_a_delivery_never_posts_to_a_torn_down_scheduler` from branch explore/pool-uaf (Xapiand:7b89dc9f3), which failed 5/5 under ASan at the old pin (job 261119-210411-ddceb2).
 
 ## Acceptance criteria
 
@@ -14,7 +14,9 @@ needs a job tagged `--for A1` passing at the landed code, often the suite; tag o
 (a committed `path`), `[decision]` (a PLAN.md Decisions id) or `[manual]` (checked by hand) when no
 job can show it.
 
-- A1 <criterion>: <evidence>
+- A1 test_pool passes under ASan+UBSan at the new pin, the reproducer included, five runs: a job
+- A2 The reproducer fails at the old pin (397c02d5): a fails-without job
+- A3 The suite passes and CI is green
 
 ## Contracts
 
