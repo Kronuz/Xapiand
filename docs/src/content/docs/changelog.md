@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **The open-index pool is sized from memory**: with no `--database-pool-size` it holds what 1% of RAM covers at
+  about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit, not a fixed 200; a size you
+  give wins.
 - **Stop-word lists are compiled in, overridable and checked by every index.** The 18 shipped lists are part of the binary and
   nothing reads them from the data path; `<data path>/stopwords/<language>.txt` replaces a language's list (an unreadable file or a directory of that name stops the
   node). A language with no list used to stop nothing without a word; it is now an error (`400` for a query), and an index

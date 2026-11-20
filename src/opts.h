@@ -108,3 +108,6 @@ extern struct opts_t {
 } opts;
 
 opts_t parseOptions(int argc, char** argv);
+
+// The open-index pool size: `requested` when set (--database-pool-size), else what 1% of `ram_bytes` holds at ~40 KiB per open index.
+std::size_t database_pool_size_for(std::size_t requested, std::uint64_t ram_bytes);

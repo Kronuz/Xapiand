@@ -46,7 +46,7 @@
 #define WAL_WRITER_CACHE_SIZE        100          // Wal writer cache
 #define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
 #define SCHEMAS_VERSIONS_CACHE_SIZE  100          // Schema versions cache
-#define DATABASE_POOL_SIZE           200          // Maximum number of database endpoints in database pool
+#define DATABASE_POOL_SIZE           0            // 0: sized from physical memory (database_pool_size_for)
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
 
@@ -84,6 +84,17 @@
 
 
 #define fallback(a, b) (a) ? (a) : (b)
+
+
+std::size_t
+database_pool_size_for(std::size_t requested, std::uint64_t ram_bytes)
+{
+	if (requested != 0) {
+		return requested;
+	}
+	constexpr std::uint64_t bytes_per_open_index = 40 * 1024;   // measured cost of an open index
+	return static_cast<std::size_t>(std::max<std::uint64_t>(1, ram_bytes / 100 / bytes_per_open_index));
+}
 
 
 opts_t
@@ -155,7 +166,7 @@ parseOptions(int argc, char** argv)
 		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
 #endif
 		std::size_t database_pool_size = DATABASE_POOL_SIZE;
-		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
+		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool (default: what 1% of RAM holds at ~40 KiB per open index, within the descriptor limit).");
 		std::size_t max_search_indexes = 100000;
 		app.add_option("--max-search-indexes", max_search_indexes, "Most indexes (shards) one search may name, and most directory entries its patterns may read to find them (at least 1); a search over more answers 400. A search reads its indexes in batches, so this bounds only a runaway pattern.")
 			->check(CLI::Range(std::size_t{1}, std::size_t{1} << 40));
