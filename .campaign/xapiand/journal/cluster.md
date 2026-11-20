@@ -1,19 +1,23 @@
 # cluster: journal
 
-State: working
+State: waiting on jobs 261120-095828-2b5e4d 261120-095830-2935c9 261120-095833-f98de7 261120-095855-16a31d
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
 
-Task `rpc` (A5), on the quest branch while nothing else runs: `src/cluster/rpc.{h,cc}`, the shard
-RPC over consensus's request lane (consensus:e1f249d, `include/consensus/transport/host_transport.h`
-`call`/`handle`), with `tests/cluster/test_rpc.cc` and `docs/mechanisms/shard-rpc.md`. Built and
-tested through `tests/cluster/CMakeLists.txt`, a standalone project inside the file set (B1).
+Task `rpc` (A5) built: `src/cluster/rpc.{h,cc}` (call layer over consensus:e1f249d's lane),
+`src/cluster/rpc_methods.{h,cc}` (the seven methods' MessagePack envelopes),
+`tests/cluster/{test_rpc,test_rpc_methods}.cc`, `docs/mechanisms/shard-rpc.md`. Built and tested
+through `tests/cluster/CMakeLists.txt`, standalone inside the file set (B1): 12 ctest cases green
+locally (macOS arm64). Jobs at Xapiand:37f0c5a5f: plain 261120-095828-2b5e4d, TSan
+261120-095830-2935c9, ASan+UBSan 261120-095833-f98de7; control 261120-095855-16a31d at
+`mutant/xapiand/cluster-version` (Xapiand:7d7a90722, the server skips its range check:
+`cluster_rpc_versions` must fail).
 
 ## Next
 
-1. `rpc`: codec, client and service over `HostTransport`; tests per method with values, error
-   mapping, deadline, cancel, streamed `get` and `forward_write`, version refusal; job A5.
+1. Read the four A5 jobs; fold in any red. Fuzz target for the envelope decoders (A5's decoders;
+   the random-mutation case covers 20,000 inputs, not a CPU-hour) once the top-level build has FUZZ.
 2. `membership` once B2 and B3 are answered: node identity, `--join`, keepalives, `suspect`/`down`
    over the `keepalive` method, the directory behind an interface the root fills (placement).
 3. `shard-map`, `search`, `migration`, `api`: after `group-core`, `journal-replaces-wal` and
@@ -69,7 +73,7 @@ tested through `tests/cluster/CMakeLists.txt`, a standalone project inside the f
 | A2 | none yet |
 | A3 | none yet |
 | A4 | none yet |
-| A5 | none yet |
+| A5 | jobs 261120-095828-2b5e4d (suite), 261120-095830-2935c9 (TSan), 261120-095833-f98de7 (ASan+UBSan), control 261120-095855-16a31d; pending |
 | A6 | none yet |
 
 ## Tasks for other agents
@@ -83,6 +87,16 @@ two worth their own agents; `migration` and `api` follow. `membership` waits on 
 Not yet.
 
 ## Rulings I made
+
+- R3: application failures ride the lane's `Error` frame (code 256 + Status, text), never a
+  response body, so a stream that fails midway and one refused up front look the same to the
+  caller; `not_leader`'s hint and `version_refused`'s range are decimal text.
+- R4: an envelope is at most 16 MiB (Xapiand's largest buffered body, `search_service.h`);
+  bodies and blobs are payloads, streamed, so the bound never caps a document.
+- R5: `forward_write` and `get` relay the HTTP request itself (`Relayed`/`Answer`), so the
+  serving node runs the handler a local request runs and `hops` carries D8's bound.
+- R6: payload bytes that arrive before a handler sets its sink stay unconsumed, holding the
+  caller's credit instead of extra memory.
 
 - R1: the shard RPC carries its own version in every call's header (u16, the range `[1, 1]` now)
   instead of riding the lane's hello version (`Link::rpc`), which selects the lane's frame magic
