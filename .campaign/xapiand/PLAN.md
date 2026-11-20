@@ -329,6 +329,7 @@ A `[decision]` criterion's evidence names a row's ID here.
 | D144 | 2026-11-20 | Hybrid AI retrieval: go on steps 1 to 4; step 4 is conditional on cold p99 (now 1.2x behind, mostly a fixed 4 ms per-tenant open cost). | owner |
 | D145 | 2026-11-20 | Lua: a cyclic document past the result budget answers "too large", the budget being what was hit. `_fsec` refuses non-finite values and values outside [0,1). Global time and timedelta prefixes stay. Root commands not routed to a node answer 400 for every method (Xapiand:2c406ec53). | owner |
 | D146 | 2026-11-20 | Supersedes D143's "within 1.5x": strata must be at par or better than RocksDB on every row and axis of document-gate's report (turn-log-parity A6). A design pass on the turn log and flush path comes first, since the group-commit and tail losses come from mechanisms, not tuning. | owner |
+| D147 | 2026-11-20 | document-gate A7 waived (owner): the six earlier fuzz, fixture, version-rejection and coverage jobs ran at dd02c63d, and their rerun at the landing code was denied by the permission classifier; ASan, UBSan and TSan in CI at the landing commit stand in, and the CPU-hour of fuzzing per changed decoder stays deferred. | owner |
 
 ## Pending owner
 
