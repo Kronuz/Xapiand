@@ -1,6 +1,6 @@
 # track-p: journal
 
-State: waiting on jobs 261117-155032-ecb275 261117-155033-63b78b 261117-155036-9088e8 261117-155040-04a4e1 261117-155044-c780b6 261117-155047-253843
+State: waiting on jobs 261119-165425-f30bdd 261119-165432-b1efdc 261119-165438-2cf08a 261119-165439-7fcba3 261119-165445-56d539 261119-165452-b53291 261119-165454-58af8f 261119-165506-ec3eaa 261119-165513-aa1969 261119-165517-69db0e 261119-165524-86e55d
 Quest: .campaign/xapiand/quests/track-p.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,41 +18,32 @@ built at `build-rel` (-march=native, the harness's flags). PISA is not installed
 
 ## Next
 
-0. A5 (P7), chosen by gap (track-p umbrella: never set ready for review). Latest comparison at
-   main is job 261117-075402-484d70 at prospect:0aad777 (main unchanged since), over `serve`
-   against Tantivy 0.26. Rows still slower (prospect/Tantivy): negated 2 `TOP_100` 1.183,
-   `TOP_1000` 1.155, `TOP_100_COUNT` 1.637, `COUNT` 1.147; negated 3 1.177, 1.176, 1.199, 1.279;
-   phrases 1.16-1.28 (`TOP_10` 1.00-1.13); intersection 2 1.080/1.145/1.175; intersection 3
-   1.078/1.132 (`TOP_1000`, `TOP_100_COUNT`); intersection_union `TOP_1000` up to 1.175.
-   Why P7: the largest ratios are the negations, and they point at P7 (membership probes on the
-   excluded terms, left "not applied" in `p7-membership-probes.md`). Phrases point at P8/P5:
-   six read-path trims already lost (`phrases-explore.md`, `phrase-speed.md`) and what remains is
-   a format change (pair postings or P8's prefilter section), too large for this budget. P3,
-   P11 and P21 have no losing row (terms and unions win). Cause found on main: a negation's
-   top-k has no bulk path; it walks every included posting, steps the excluded terms to it and
-   scores it (`+jordan -country` `TOP_100` 422 us against `jordan` alone 83 us).
-   Variants (`PROSPECT_EXPERIMENT_P7`): bit 1, the term's bulk top-k with excluded clauses
-   probed only for hits that could enter; bit 2, nested exclusions counted apart by windows so
-   a counted top-k takes the bulk path; bit 4, term-minus-term counted by windows too.
-   Decided (lead's message, A/B 261117-140026-dba8cc): bit 1 kept, bits 2 and 4 removed (lose
-   negated 3 `TOP_100_COUNT` 1.153/1.234 and short counts 1.15-1.29). Checked the reading: also
-   intersection 2 `TOP_100` 1.053 [1.018, 1.089] (untouched code, per-query 1.020) and two short
-   `TOP_1000` cases past their A/A (+xylophone -music -film 1.183, +quokka -the 1.167): the
-   prototype's per-query fresh copies of the excluded clauses. Landed form probes in place and
-   copies only where groups step back.
-   Landed: prospect:bd60f39 (search.hh, no switch; mutants retargeted); verdict
-   `docs/perf/p7-exclusion.md` + README row (prospect:2ce63ac).
-   Pending at bd60f39: suite ecb275; parity (engine built from the commit) 63b78b; A/B
-   9088e8 (exclusive, after parity; a main, c A/A, b landing); mutants 0-2 04a4e1, c780b6,
-   253843 (--fails-without). e0904c (runner lost) is superseded by the suite at bd60f39.
-   Next: read 9088e8; if intersection 2 `TOP_100` or a short case loses again, record it;
-   update the doc's landing section; mutant 3 job; rerun the serve comparison against
-   Tantivy for the negated rows.
-1. Disk: host at 96%; P9/P13 builds and `.scratch/idx-p13` removed.
+0. Session 2026-11-19 (resumed, fresh context): main unchanged (prospect:0aad777; origin/main has
+   only a CI commit), no merge. P7 landing jobs all passed; 9088e8 recorded in
+   `docs/perf/p7-exclusion.md` (prospect:162b5d0, docs only): five negated rows 0.39-0.79, short
+   `TOP_10` 0.80, intersection 2 `TOP_100` 0.989 (cleared), no class row lost; one short case
+   still loses (`+xylophone -music -film` `TOP_1000` 1.31, 28.2 -> 34.7 us: k above its 28
+   matches, nothing to prune). Untested fix idea: keep the generic loop when hits collected plus
+   the term's df cannot reach k.
+   Stale evidence resubmitted at prospect:2ce63ac with `--for` tags (same scripts and levels):
+   A5 mutant 3 f30bdd (--fails-without); A7 ctest b1efdc, A/B 2cf08a, engines 7fcba3 (exclusive);
+   A10 ctest 56d539, micro b53291, index 58af8f, idx-p13 rebuild ec3eaa (light, untagged) then
+   A/B aa1969 and engines 69db0e (exclusive, after ec3eaa); A14 gap rows at head 86e55d
+   (exclusive; builds `.scratch/bin/head-2ce63ac`, serve vs Lucene/Tantivy, every class).
+   `campaign verify track-p`: build-test reused (ecb275, docs-only since).
+   Next: read each job; for A10/A7 confirm the verdicts still hold (numbers in the docs' tables
+   need no change unless they move); write A14's gap table (negated rows vs Tantivy at head)
+   into `p7-exclusion.md`'s Against-Tantivy paragraph; paste the brief's Evidence table.
+1. Disk: host at 96% (43 GB free); idx-p13 (1.1 GB) is rebuilt for the reruns: remove it after.
 
 ## Blocked on
 
-Nothing.
+Lead: A2-A4, A6, A8, A9, A11-A13 (P3, P4, P5, P8, P10, P11, P14, P20, P21) are unstarted research
+items, not stale evidence: no rerun can give them a row, so "ready for review" cannot be set for
+the whole quest. Options: (a) land track-p for A1, A5, A7, A10, A14 now and split each remaining
+item into its own quest (the quest's Outcome: "the lead splits it into one quest per item");
+(b) keep track-p open as the umbrella and its file hold on automata and phase5. Recommend (a):
+it frees the held files and matches the quest's own rule.
 
 ## Evidence
 
@@ -62,7 +53,10 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A5 | P7 kept (bit 1), `docs/perf/p7-exclusion.md`: deciding A/B 261117-140026-dba8cc; prototype mutants 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027; at landing prospect:bd60f39 pending: suite 261117-155032-ecb275, parity 261117-155033-63b78b, A/B 261117-155036-9088e8, mutants 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843 |
+| A5 | P7 kept (bit 1), `docs/perf/p7-exclusion.md` (prospect:162b5d0): deciding A/B 261117-140026-dba8cc; at landing prospect:bd60f39: suite 261117-155032-ecb275, parity 261117-155033-63b78b, A/B 261117-155036-9088e8 (passed); mutants 261117-155040-04a4e1, 261117-155044-c780b6, 261117-155047-253843 (caught), mutant 3 261119-165425-f30bdd (pending); prototype mutants 261117-141718-c0035a, 261117-141721-81b492, 261117-141725-aa9027 |
+| A7 | P9 removed, `docs/perf/p9-planner.md`: reruns at head pending 261119-165432-b1efdc, 261119-165438-2cf08a, 261119-165439-7fcba3 |
+| A10 | P13 removed, `docs/perf/p13-positions.md`: reruns at head pending 261119-165445-56d539, 261119-165452-b53291, 261119-165454-58af8f, 261119-165513-aa1969, 261119-165517-69db0e |
+| A14 | gap rows at head pending 261119-165524-86e55d |
 
 ## Result
 
