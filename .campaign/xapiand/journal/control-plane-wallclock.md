@@ -1,40 +1,37 @@
 # control-plane-wallclock: journal
 
-State: working
+State: waiting on jobs 261120-014220-5b29fc 261120-014220-5e1906
 Quest: .campaign/xapiand/quests/control-plane-wallclock.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Test rewritten (commit 653e4a845): probe wakes over equal 400 ms windows with 0 and 5,000 parked keys
+(assert parked*4 >= idle), running()==5000 and fired()==0 while parked, and 5,000 firing keys each fired
+exactly once. Lag percentiles printed to stderr, not asserted. Ran locally once under quiet light: 133 checks OK.
 
 ## Next
 
-1. <step>
+1. Read the two jobs: suite 261120-014220-5b29fc (A1), mutant 261120-014220-5e1906 (A1 --fails-without; script
+   ~/.scratch/xapiand/control-plane-wallclock/mutant.sh turns each key's wait into a 1 ms poll).
+2. A2 is manual (diff); A3 is CI after the lead pushes.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | suite 261120-014220-5b29fc; fails-without 261120-014220-5e1906 |
+| A2 | [manual] no wall-clock assertion left in the test; wakes are counted, lag p50/p99/max only printed |
+| A3 | CI after push (lead) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Pending jobs.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- No loop-turn or handler counter exists in reactor or LagProbe; the property uses the probe's wake count
+  (the lead's suggestion) plus exact task counts. The wake comparison is a ratio (4x), not a time bound.
