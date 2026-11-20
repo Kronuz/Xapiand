@@ -20449,11 +20449,12 @@
       "provides": [
         "strata:placement-records"
       ],
+      "reason": "folded into F2 placement (replan-2026-11-20)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "dropped",
       "title": "The root authority as a strata group: nodes and namespace records",
-      "updated": "2026-11-15T23:05:03"
+      "updated": "2026-11-20T05:26:30"
     },
     "placement-without-flush": {
       "accepted": {
