@@ -1,6 +1,6 @@
 # coverage-database: journal
 
-State: waiting on jobs 261119-221047-27d0fa (run1: exploration replies and per-file coverage in ~/.scratch/xapiand/coverage-database/run1.out), 261119-220855-4b8309 (suite); next: turn replies into value checks
+State: waiting on jobs 261119-225300-be51b7 (run3: captures the pin table into ~/.scratch/xapiand/coverage-database/pins3.inc; next: review it, commit as tests/test_coverage_database_pins.inc, resubmit A1-A3 and the suite)
 Quest: .campaign/xapiand/quests/coverage-database.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
