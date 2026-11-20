@@ -15,26 +15,17 @@ Every job resubmitted at http:67ff5fe; fill Evidence when they finish, then read
 
 ## Next
 
-1. Merge http main once detent:http-drop-user-data lands (expected conflicts: http_asio.h's
-   writer and connection body, timeouts_test's new deadline section, which takes `Limits`), then
-   rerun verify, TSan and the mutants (regenerate them with `.scratch/mutants.py` in the
-   worktree).
+1. When the jobs finish: fill the Criterion rows with the http:67ff5fe jobs, set "ready for review".
 2. Push for CI (the lead's call); A4 names CI.
 
 ## Blocked on
 
-Nothing.
-
-Lead (msg-147 to the lead): the file set lacks CMakeLists.txt (the reactor pin, limits_test's
-registration), bench/server_compare.cc and bench/idle-cost/server.cc (callers of the removed API;
-CI builds server_compare), README.md and AGENTS.md (name the removed API). Made the mechanical
-edits there (http:c10b9ff, http:30e48f8, http:96f9fe0's CMakeLists hunk, http:658b112);
-recommend widening the set to them. ARCHITECTURE.md needed no change.
+Nothing. (msg-147 resolved: the file set now includes CMakeLists.txt, bench/**, README.md, AGENTS.md.)
 
 ## Evidence
 
-Mutants are side branches `mutant/xapiand/http-limits-*` in the http repository at http:96f9fe0's
-code, never landed; each must fail `limits_test`:
+Mutants are side branches `mutant/xapiand/http-limits-*` in the http repository, never landed (the first eight at http:96f9fe0's code; all nine
+regenerated on http:67ff5fe); each must fail `limits_test`:
 
 | Job | What |
 |---|---|
