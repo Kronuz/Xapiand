@@ -129,6 +129,25 @@ class Node:
         finally:
             conn.close()
 
+    def raw(self, parts, wait=0.3):
+        """Send PARTS (bytes) down one socket, pausing between them; the whole answer, until the node closes."""
+        s = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+        out = b""
+        try:
+            for part in parts:
+                s.sendall(part)
+                time.sleep(wait)
+            while True:
+                chunk = s.recv(65536)
+                if not chunk:
+                    break
+                out += chunk
+        except OSError:
+            pass
+        finally:
+            s.close()
+        return out
+
     def __enter__(self):
         return self.start()
 
@@ -368,6 +387,69 @@ def documents(n):
         r = n.call(method, path, {"a": 1} if method in ("PUT", "PATCH") else None)
         error("%s %s" % (method, path), r, 400, "Bad Request: Method can only be used with single indexes")
     eq("HEAD over two indexes", n.call("HEAD", "/t,u/d1").status in (200, 400, 404), True)
+
+
+@group
+def edges(n):
+    """Refusals over several indexes, content types of every answer, odd URLs, split and chunked bodies."""
+    seed(n)
+    n.call("PUT", "/u/e1?commit", {"n": 1})
+    for method, path, body in (("CHECK", "/t,u/", None), ("WAL", "/t,u/", None), ("PUT", "/t,u/", {"a": 1}),
+                               ("UPSERT", "/t,u/x", {"a": 1}), ("DELETE", "/t,u/x", None), ("INFO", "/t,u/", None)):
+        error("%s %s" % (method, path), n.call(method, path, body), 400, "Bad Request: Method can only be used with single indexes")
+    eq("COMMIT over two indexes", (n.call("COMMIT", "/t,u/").status, n.call("COMMIT", "/t,u/").body), (200, b""))
+    eq("COMMIT of a document id", n.call("COMMIT", "/t,u/d1").status, 405)
+    r = n.call("RESTORE", "/t,u/", [])
+    eq("RESTORE over two indexes", (r.status, r.json["total"]), (200, 0))
+
+    for accept, ctype in (("application/x-json", "application/x-json"), ("application/x-yaml", "application/x-yaml"),
+                          ("application/yaml", "application/yaml"), ("application/msgpack", "application/msgpack"),
+                          ("application/x-msgpack", "application/x-msgpack")):
+        r = n.call("SEARCH", "/t/?sort=n&limit=1", headers={"Accept": accept})
+        eq("SEARCH as %s" % accept, (r.status, r.header("Content-Type")), (200, ctype + "; charset=utf-8"))
+        r = n.call("GET", "/t/nope", headers={"Accept": accept})
+        eq("a 404 as %s" % accept, (r.status, r.header("Content-Type")), (404, ctype + "; charset=utf-8"))
+    for accept in ("text/html", "application/x-ndjson", "image/png"):
+        r = n.call("SEARCH", "/t/?limit=1", headers={"Accept": accept})
+        eq("PIN: SEARCH accepting only %s answers 200 with no body" % accept, (r.status, r.body, r.header("Content-Type")), (200, b"", None))
+        r = n.call("GET", "/t/nope", headers={"Accept": accept})
+        eq("a 404 accepting only %s has no body" % accept, (r.status, r.body), (404, b""))
+
+    r = n.call("PUT", "/t/d9?echo", {"a": 1}, headers={"Expect": "100-continue"})
+    eq("PUT with Expect: 100-continue", (r.status, r.json["_id"]), (200, "d9"))
+
+    error("a command that is no metadata", n.call("GET", "/t/:bogus"), 404, "Not Found: Metadata not found")
+    for command in (":search", ":count", ":commit", ":dump", ":check", ":wal"):
+        error("GET /%s" % command, n.call("GET", "/" + command), 400, "Bad Request: Index path '' is empty or outside the data directory")
+    error("GET /:restore", n.call("GET", "/:restore"), 400, "Bad Request: Invalid request body")
+    eq("GET /:info", n.call("GET", "/:info").json["name"], "covnode")
+    eq("GET /_all/:count", n.call("GET", "/_all/:count").json["total"] >= 5, True)
+    eq("a doubled slash", n.call("GET", "/t//d1").json["_id"], "d1")
+    eq("a bad escape in the query", n.call("GET", "/t/d1?%zz").status, 200)
+    eq("a fragment", n.call("GET", "/t/d1#frag").status, 200)
+    eq("a NUL in the id", n.call("GET", "/t/%00").status, 404)
+    eq("a parent segment", n.call("GET", "/t/..").json["name"], "covnode")
+    status("a pattern as a document's index", n.call("GET", "/*/d1"), 404)
+
+    head = b"Host: x\r\nConnection: close\r\n"
+    out = n.raw([b"GET /t/d1 HTTP/1.1\r\nX-HTTP-Method-Override: SEARCH\r\n" + head + b"\r\n"])
+    check("a GET of a document overridden to SEARCH", out.startswith(b"HTTP/1.1 405"), repr(out[:30]))
+    out = n.raw([b"BREW /t HTTP/1.1\r\n" + head + b"\r\n"])
+    check("an unknown method gets no answer", not out.startswith(b"HTTP/1.1 200"), repr(out[:30]))
+    out = n.raw([b"GET http://[::1/x HTTP/1.1\r\n" + head + b"\r\n"])
+    check("an unparsable URL is a 400", out.startswith(b"HTTP/1.1 400"), repr(out[:30]))
+
+    body = b'{"_id":"a","v":1}\n{"_id":"b","v":2}'
+    split = b"RESTORE /rr/ HTTP/1.1\r\nContent-Type: application/x-ndjson\r\nContent-Length: %d\r\n" % len(body) + head + b"\r\n"
+    out = n.raw([split + body[:10], body[10:25], body[25:]])
+    check("RESTORE of NDJSON split mid-line", out.startswith(b"HTTP/1.1 200") and b'"total":2' in out, repr(out[:80]))
+    chunked = b"RESTORE /rr2/ HTTP/1.1\r\nContent-Type: application/x-ndjson\r\nTransfer-Encoding: chunked\r\n" + head + b"\r\n"
+    out = n.raw([chunked + b"%x\r\n" % len(body) + body + b"\r\n0\r\n\r\n"])
+    check("RESTORE of chunked NDJSON", out.startswith(b"HTTP/1.1 200") and b'"total":2' in out, repr(out[:80]))
+    mp = (b"\x94" + b"\x82\xa3_id\xa1a\xa1v\x01" + b"\x82\xa3_id\xa1b\xa1v\x02" + b"\x82\xa3_id\xa1c\xa1v\x03" + b"\x82\xa3_id\xa1d\xa1v\x04")
+    mhead = b"RESTORE /rr3/ HTTP/1.1\r\nContent-Type: application/msgpack\r\nAccept: application/json\r\nContent-Length: %d\r\n" % len(mp) + head + b"\r\n"
+    out = n.raw([mhead + mp[:9], mp[9:20], mp[20:]])
+    check("RESTORE of MsgPack split mid-object", out.startswith(b"HTTP/1.1 200") and b'"total":4' in out, repr(out[:120]))
 
 
 @group

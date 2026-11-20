@@ -46,6 +46,7 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - POST with an _id in the body ignores it and generates one (Location names the generated id).
 - version=abc is read as a stale version (409), not 400; limit=abc, offset=abc, check_at_least=abc, collapse_max=abc are not refused (read as 0).
 - Two q parameters are ANDed; a metadata path selector (/t/:key.a) answers 404.
+- SEARCH with an Accept that names no renderable type (text/html, ndjson, image/png) answers 200 with an empty body (GET of a document answers 406).
 - INFO ?raw puts raw bytes into the JSON text (invalid UTF-8).
 - RESTORE of an empty array answers took 4295797.02 (an unset start time).
 - --max-search-indexes counts shards: /p1,p2/ with 5 shards each "names 10".
