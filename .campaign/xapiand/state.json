@@ -20343,6 +20343,8 @@
     "phrase-expansion": {
       "accepted": {},
       "after": [],
+      "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
+      "branch": "quest/xapiand/phrase-expansion",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -20490,6 +20492,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/phrase-expansion",
       "landed": [],
       "lenses": [],
       "milestone": "Phase 5",
@@ -20499,9 +20502,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T05:25:52"
+      "updated": "2026-11-20T08:02:26",
+      "worktree": "../prospect-wt/xapiand/phrase-expansion"
     },
     "pins-2026-11": {
       "accepted": {},
