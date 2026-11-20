@@ -3237,8 +3237,16 @@
         "analysis:cjk-segmenter"
       ],
       "files": [
-        "src/**",
-        "harness/**",
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/reserved/schema.h",
+        "src/engine/text.cc",
+        "src/engine/text.h",
+        "src/multivalue/generate_terms.cc",
+        "src/multivalue/generate_terms.h",
+        "src/query_dsl.cc",
+        "CMakeLists.txt",
+        "cmake/**",
         "docs/mechanisms/cjk-words.md",
         "docs/src/content/docs/**",
         "tests/test_cjk_words*"
@@ -3347,7 +3355,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T05:25:54",
+      "updated": "2026-11-20T15:51:37",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
