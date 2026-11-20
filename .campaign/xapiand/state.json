@@ -21406,9 +21406,9 @@
       "provides": [],
       "repo": "../agent-campaign",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "Keep light slots busy around exclusive drains",
-      "updated": "2026-11-19T17:51:47",
+      "updated": "2026-11-20T01:09:12",
       "worktree": "../agent-campaign-wt/xapiand/queue-drain-throughput"
     },
     "reactor-server-composition": {
