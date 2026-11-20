@@ -22366,10 +22366,8 @@
         "license-closure",
         "closing-benchmark",
         "docs-upgrade-page",
-        "gate-prep-followups",
         "direct-pins",
         "postings-fuzz-memory",
-        "barrier-warning",
         "release-rows",
         "format-freeze",
         "more-like-this",
@@ -22488,7 +22486,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-18T02:29:15"
+      "updated": "2026-11-20T05:30:14"
     },
     "release-rows": {
       "accepted": {
