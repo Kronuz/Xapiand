@@ -1,6 +1,6 @@
 # stopword-lists: journal
 
-State: waiting on jobs 261119-122950-d249fa (campaign verify suite at b34001019). Wide-search probe rows written in docs/perf/stopword-lists.md; tests (a), (b) added. Probe jobs: 261119-121016-295597, 261119-121017-3c611b; search test 261119-121018-cdaf3a (18108e527).
+State: waiting on jobs 261119-145643-7a2f3f (campaign verify suite at b34001019). Wide-search probe rows written in docs/perf/stopword-lists.md; tests (a), (b) added. Probe jobs: 261119-121016-295597, 261119-121017-3c611b; search test 261119-121018-cdaf3a (18108e527).
 Quest: .campaign/xapiand/quests/stopword-lists.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,13 +25,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261119-125541-8652c9 (scenario `builtin`: 18 shipped files vs compiled lists, per-language counts, fingerprints, no data directory) |
-| A2 | 261119-125541-8652c9 (scenario `override`; `unreadable` throws) |
-| A3 | 261119-125541-8652c9 (unchanged passes, changed and missing refuse with index, list and both fingerprints, through `Schema::check_stop_words`) and 261119-093843-4ea7ac (the same test fails, 16 checks, at the mutant that makes `checkStopWords` return; branch deleted) |
-| A4 | 261119-125541-8652c9 (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
-| A5 | 261119-083443-f71030 (before), 261119-084202-4abafa and 261119-093907-83563b (after); `docs/perf/stopword-lists.md` |
+| A1 | 261119-165856-f21afa (scenario `builtin`: 18 shipped files vs compiled lists, per-language counts, fingerprints, no data directory) |
+| A2 | 261119-165856-f21afa (scenario `override`; `unreadable` throws) |
+| A3 | 261119-165856-f21afa (unchanged passes, changed and missing refuse with index, list and both fingerprints, through `Schema::check_stop_words`) and 261119-093843-4ea7ac (the same test fails, 16 checks, at the mutant that makes `checkStopWords` return; branch deleted) |
+| A4 | 261119-165856-f21afa (unknown language throws naming it in `getStopWords`, `stopWordsFingerprint`, `parse_text`) |
+| A5 | 261119-083443-f71030 (before), 261119-084202-4abafa and 261119-165857-26f18e (after); `docs/perf/stopword-lists.md` |
 | A6 | `docs/src/content/docs/reference-guide/search/query-dsl/leaf-queries/text-queries/stop-words.md`, `docs/src/content/docs/changelog.md` ([Unreleased] / Changed) |
-| A7 | suite 261119-122950-d249fa passed at eae0478d9; CI not read (the lead's) |
+| A7 | suite 261119-145643-7a2f3f passed at eae0478d9; CI not read (the lead's) |
 
 ## Result
 
