@@ -1,40 +1,65 @@
 # multicast-seeds: journal
 
-State: working
+State: waiting on jobs 261120-091403-d07446 261120-091405-447a5f 261120-091408-7fea6d 261120-091412-a2522f 261120-091415-fd5e8a 261120-091418-b91909 261120-091421-bfbc97 261120-091425-f90854 261120-091428-c734bd
 Quest: .campaign/xapiand/quests/multicast-seeds.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
+Code: consensus worktree `consensus-wt/xapiand/multicast-seeds`, branch quest/xapiand/multicast-seeds,
+consensus:32d9c9b (feature), consensus:db6d7f9 (failed() after joined). Not pushed (the lead pushes).
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Waiting on the jobs above (suite, seeds cases with multicast required, six mutants, fuzz).
 
 ## Next
 
-1. <step>
+1. When the jobs pass: paste `campaign brief`'s table, set State to "ready for review".
+2. A failing mutant job (the test passed at the mutant) means a weak test: strengthen it, resubmit.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261120-091403-d07446; seeds cases (CONSENSUS_SEEDS_REQUIRE=1) 261120-091405-447a5f: `processes`, `unavailable` |
+| A2 | 261120-091405-447a5f (`codec`, `drops`); mutants any-cluster 261120-091412-a2522f, unwanted-seeded 261120-091415-fd5e8a, trailing-accepted 261120-091418-b91909 (--fails-without); libFuzzer 300 s 261120-091428-c734bd; corpus replay `consensus_fuzz_seeds_replay` in ctest |
+| A3 | 261120-091405-447a5f (`forged`); mutant no-backoff 261120-091408-7fea6d (--fails-without) |
+| A4 | 261120-091405-447a5f (`rate`); mutants no-burst 261120-091421-bfbc97, no-interval 261120-091425-f90854 (--fails-without) |
+| A5 | `docs/mechanisms/seeds.md` in consensus, consensus:db6d7f9 |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`include/consensus/transport/seeds.h` (`Seeds`: announce, listen, seed set, backoff) and
+`seeds_codec.h` (DTSD0001, no I/O); `fuzz/seeds_fuzz.cc` + `fuzz/seeds_corpus/`;
+`test/transport/seeds_test.cc` (cases codec, drops, processes, unavailable, forged, rate);
+`test/transport/seeds_mutants.py`; how it works: `docs/mechanisms/seeds.md`; CHANGELOG 2026-11-20 Added.
+
+Local run (macOS, loopback): three processes each report {9101, 9102, 9103}; forged: impostor
+dialed 5 times in 2 s (backoff 100/200/400/800 ms) while forged every 10 ms, genuine node joined
+once; rate: 14 datagrams in 1.5 s at interval 100 ms + jitter 50 ms after a 3-datagram burst.
+
+Open for the lead: AGENTS.md asks each landed change be recorded in Detent's
+`docs/LIBRARY_BOUNDARIES.md` (outside this file set). Xapiand's `--discovery-*` wiring is cluster's task.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The codec is its own header (`seeds_codec.h`, std only) so the fuzz target and its replay link
+  `consensus::consensus` without Asio.
+- The seed address is the datagram's source address; the announcement names ports only, so a
+  sender cannot aim listeners at a third host without spoofing its source.
+- Version lives in the magic's digits (`DTSD0001`), like `DTRPnnnn`; another version is dropped
+  and counted (`version`), never parsed.
+- Sender identity is 16 random bytes per `Seeds`, used to drop a process's own announcements and to
+  key seeds with the source address (three processes on one host share an address).
+- Backoff state lives on the seed and survives re-announcement; an entry backing off is kept past
+  `expire` until its backoff ends, so a returning forger resumes its backoff.
+- `on_dial`/`failed`/`joined` instead of a dialer inside the library: the product dials with its own
+  pins (Xapiand's join, Detent's voters/relays); the test's dial is TCP + `Connection::handshake`.
+- Tests announce with TTL 0 on loopback, falling back to the default interface; a host where
+  neither carries multicast skips with the reason (ctest exit 77), and CONSENSUS_SEEDS_REQUIRE=1
+  makes that a failure (the evidence job sets it).
+- `SO_REUSEPORT` beside `SO_REUSEADDR` so Xapiand and Detent processes on one host share the port.
+- IPv4 interface by address, IPv6 by interface name; defaults 239.192.168.1:58880, TTL 3
+  (Xapiand's pre-removal `config.h.in` and `discovery.cc`).
