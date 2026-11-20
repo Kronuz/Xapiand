@@ -10750,10 +10750,34 @@
         "harness/test_gate_tools.py",
         "docs/mechanisms/journal-durability.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T05:24:06",
+          "lenses": [
+            [
+              "correctness",
+              "design"
+            ],
+            [
+              "durability"
+            ]
+          ],
+          "reason": "owner 2026-11-20: whole features, reviewed and measured once when done",
+          "risk": [
+            "critical",
+            "high"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk critical -> high",
+            "lens correctness removed",
+            "lens design removed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
-        "correctness",
-        "design"
+        "durability"
       ],
       "milestone": "Phase 7b",
       "needs": [
@@ -10768,10 +10792,10 @@
         "xapiand:ack-read-levels"
       ],
       "repo": ".",
-      "risk": "critical",
+      "risk": "high",
       "status": "planned",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-15T23:05:08"
+      "updated": "2026-11-20T05:24:06"
     },
     "journal-seal-repeat": {
       "accepted": {
