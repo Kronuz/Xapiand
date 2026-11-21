@@ -1,32 +1,23 @@
 # single-flight-budget: journal
 
-State: waiting on jobs 261121-133028-a36e8e 261121-133137-9c63f2 261121-133202-0764e5
+State: waiting on jobs 261121-133028-a36e8e 261121-133832-38434f 261121-133833-1d6960 261121-133836-974d76
 Quest: .campaign/xapiand/quests/single-flight-budget.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs queued: the new test at the mutant (expect fail), at the fix (with test_control_plane's
-SingleFlight tests), and under TSan (5 runs).
+All code is in (eea2bee55); jobs queued: the mutant (fails-without), the test at head, TSan at head,
+the suite.
 
 ## Next
 
-1. Read the three jobs; on the lead's file-set ruling (Blocked on), wire the two schema call sites
-   and update the Limits bullet, then `campaign verify single-flight-budget` and push.
+1. Read the four jobs and CI at the pushed head; on all green, set State to ready for review.
 
 ## Blocked on
 
-The lead: the file set misses the two files the outcome needs.
-
-1. `src/database/schemas_lru.cc`: `SingleFlight::run` now takes the joiner's token (4th argument,
-   default empty), but its two schema callers (`metadata_loads.run` at line 371, `foreign_loads.run`
-   at line 616) must pass it, `budget ? budget->token() : task::cancel_token{}` (`budget` is the
-   `task::budget*` already given to the load). Without it, production joiners still wait token-less.
-   `index_resolver_lru.cc`'s `settings_loads.run` has no budget in scope; it stays token-less.
-2. `docs/mechanisms/cancellation.md`: the Limits bullet lives there; `docs/dev/cancellation.md` (the
-   file set's and A3's path) does not exist.
-Recommendation: add both paths to the file set; the change is two one-line arguments and one doc
-bullet. Alternative considered: a cancellable `task::event` wait in the task library (as
-`async_mutex::lock(token)`), which would need a task bump; not needed for one user.
+Nothing. msg (lead, file set): answered: both callers in src/database/schemas_lru.cc pass
+`budget ? budget->token() : task::cancel_token{}` (eea2bee55); Limits bullet moved into How in
+docs/mechanisms/cancellation.md; A1 jobs rerun at the head; suite queued; branch pushed once.
+`index_resolver_lru.cc`'s `settings_loads.run` has no budget in scope and stays token-less.
 
 ## Evidence
 
@@ -35,12 +26,12 @@ Cause on main (src/single_flight.h at 70ad01dd6): a joiner `co_await flight->don
 
 | Criterion | Evidence |
 |---|---|
-| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (pending); passes at 35d03172c: 261121-133137-9c63f2 (pending); TSan 5 runs: 261121-133202-0764e5 (pending) |
-| A2 | not run yet (waits for the call-site wiring) |
-| A3 | blocked: path |
-| A4 | not pushed: held so CI runs once, after the call-site wiring (Blocked on) |
+| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (pending); passes at eea2bee55: 261121-133832-38434f (pending); TSan 5 runs at eea2bee55: 261121-133833-1d6960 (pending) |
+| A2 | suite at eea2bee55: 261121-133836-974d76 (pending) |
+| A3 | docs/mechanisms/cancellation.md: the joiner is out of Limits; How step 1 says a joiner waits under its own token |
+| A4 | CI at the pushed head (pending) |
 
-Cancelled (mistyped target or command, superseded): 261121-133017-722cfb, 261121-133148-972c79.
+Cancelled (mistyped target or command, superseded): 261121-133017-722cfb, 261121-133148-972c79; superseded by the reruns at eea2bee55: 261121-133137-9c63f2, 261121-133202-0764e5.
 
 ## Result
 
@@ -49,7 +40,8 @@ list, under the map's lock), set by the flight's end or by a `task::cancel_callb
 whichever is first. A woken joiner checks `Flight::ended` under the lock: not ended means its token
 woke it, so it leaves the list and throws `task::cancelled`. The leader, its value and the one load
 per key are unchanged; a joiner whose leader was cancelled loads again only while its token is not
-requested. Tests: tests/test_single_flight.cc (3 cases).
+requested. src/database/schemas_lru.cc passes the budget's token at both callers (metadata and
+foreign schema loads). Tests: tests/test_single_flight.cc (3 cases). Doc: docs/mechanisms/cancellation.md.
 
 ## Rulings I made
 
