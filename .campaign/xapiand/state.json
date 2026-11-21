@@ -19224,7 +19224,7 @@
         {
           "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
           "level": "light",
-          "minutes": 30,
+          "minutes": 60,
           "name": "suite"
         },
         {
@@ -19297,6 +19297,54 @@
           "reason": "",
           "voided": [],
           "weakened": []
+        },
+        {
+          "at": "2026-11-20T18:16:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
         }
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
@@ -19313,7 +19361,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T18:16:35",
+      "updated": "2026-11-20T18:16:54",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
