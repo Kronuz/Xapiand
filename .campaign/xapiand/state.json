@@ -12136,7 +12136,9 @@
             "include/strata/group/group.hh",
             "include/strata/group/install.hh",
             "test/group/install_build.sh",
-            "test/group/install*"
+            "test/group/install*",
+            "test/group/mutants.py",
+            "test/group/voters_test.cc"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--install",
           "worktree": "../strata-wt/xapiand/group-heal--install"
@@ -12155,7 +12157,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T15:36:54",
+      "updated": "2026-11-21T15:37:45",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
