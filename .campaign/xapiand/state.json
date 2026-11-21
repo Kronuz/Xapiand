@@ -4021,7 +4021,7 @@
           "name": "e2e"
         },
         {
-          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 3 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 5",
           "level": "light",
           "minutes": 90,
           "name": "cluster"
@@ -4253,6 +4253,92 @@
             "gate check build-test changed",
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-21T05:54:07",
+          "checks": [
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 3 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 5",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ]
+          ],
+          "reason": "the old command ran `harness/run_all.sh cluster`, a layer run_all.sh does not have (exit 2, 'unknown layer'); it now runs the cluster checklist on 3 and 5 nodes, which is stricter; no review was accepted yet",
+          "voided": [],
+          "weakened": [
+            "gate check cluster changed"
+          ]
         }
       ],
       "landed": [],
@@ -4274,7 +4360,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T18:21:20",
+      "updated": "2026-11-21T05:54:07",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
