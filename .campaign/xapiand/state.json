@@ -22034,17 +22034,44 @@
         "tests/test_engine_strata.cc",
         "tests/test_node.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T12:20:08",
+          "commit": "2bb0431110ecc7e8cbf7eaabdd260cae2133ed0f",
+          "criteria": {
+            "A1": "261121-103611-090052: the suite at the landed code, test_engine_strata and test_node included",
+            "A2": "261121-103611-090052 (the suite check); 261121-103611-090052"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+              "commit": "9f82202c6d0b5ad2091bec35cb6607e299983b06",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-103611-090052",
+              "level": "light",
+              "seconds": 697.8,
+              "state": "done",
+              "what": "racing-put-409 check suite at 9f82202c6d0b"
+            }
+          ],
+          "final": true,
+          "from": "804a682b0932180acb2dfd9cca5b256c7fcc9a1b",
+          "reason": "",
+          "tested": "62cdb8d2d9fa796e41fde646c11c80c4013d53c5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "A replace that lost a delete-and-recreate race is a version conflict, not a 500",
-      "updated": "2026-11-21T10:36:12",
-      "worktree": "../Xapiand-wt/xapiand/racing-put-409"
+      "updated": "2026-11-21T12:20:24",
+      "worktree": ""
     },
     "reactor-open-files": {
       "accepted": {},
