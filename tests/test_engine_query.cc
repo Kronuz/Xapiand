@@ -46,6 +46,7 @@
 #include "engine/error.h"
 #include "engine/query.h"
 #include "engine/text.h"
+#include "exception_engine.h"                     // for AggregationError
 #include "engine_support.h"
 #include "exception_engine.h"
 #include "length.h"
