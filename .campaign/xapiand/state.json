@@ -17074,13 +17074,15 @@
       "landed": [],
       "lenses": [],
       "milestone": "",
-      "needs": [],
+      "needs": [
+        "split-xapiand-src"
+      ],
       "provides": [],
       "repo": ".",
       "risk": "normal",
       "status": "planned",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-21T13:22:01"
+      "updated": "2026-11-21T13:23:10"
     },
     "netlab-consensus": {
       "accepted": {},
