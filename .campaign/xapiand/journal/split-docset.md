@@ -1,13 +1,16 @@
 # split-docset: journal
 
-State: waiting on jobs 261121-130438-3642f5 261121-130439-48037a 261121-130440-16e9c6 261121-130443-a0ab12
+State: waiting on jobs 261121-130438-3642f5 261121-130855-ced313 (split check 261121-130439-48037a fails until split-check-sources lands)
 Quest: .campaign/xapiand/quests/split-docset.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at docset:2878b0e (pushed): build-test (A1) 261121-130438-3642f5, split (A2)
-261121-130439-48037a, ctest -N diff against docset:53da120 (A3) 261121-130440-16e9c6, new-header
-self-containment (A6) 261121-130443-a0ab12.
+Jobs at docset:2878b0e (pushed): build-test (A1) 261121-130438-3642f5; split (A2)
+261121-130439-48037a failed: the tool the check runs today treats docs/source-layout.md as source
+(23 errors, all on the note's lines), which split-check-sources fixes; the lead reruns A2 once it
+lands. ctest -N diff (A3): 261121-130440-16e9c6 failed on my command (ctest -N on an unbuilt tree
+prints executable search paths that name each build dir), resubmitted as 261121-130855-ced313
+keeping only the `Test #` and `Total Tests` lines. A6 261121-130443-a0ab12 passed: no new headers.
 
 ## Next
 
@@ -22,11 +25,11 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | pending 261121-130438-3642f5 |
-| A2 | pending 261121-130439-48037a; local run of split_check.py (split-check-sources worktree) at docset:2878b0e vs 53da120: 0 errors, 0 warnings, 2 notes (docset.hh 1,455 and test/docset_old.hh 1,171 over 1,000, both kept whole) |
-| A3 | pending 261121-130440-16e9c6 |
+| A2 | 261121-130439-48037a failed (pre-split-check-sources tool reads the .md note as source: 23 errors, all docs/source-layout.md lines); local run of split_check.py (split-check-sources worktree) at docset:2878b0e vs 53da120: 0 errors, 0 warnings, 2 notes (docset.hh 1,455 and test/docset_old.hh 1,171 over 1,000, both kept whole) |
+| A3 | pending 261121-130855-ced313 (261121-130440-16e9c6 failed on my diff of build-dir paths, superseded) |
 | A4 | [artifact] `docs/source-layout.md` at docset:2878b0e |
 | A5 | CI on the pushed branch |
-| A6 | pending 261121-130443-a0ab12 (no new headers: the job lists headers added since 53da120 and runs selfcontained.sh on them if any) |
+| A6 | 261121-130443-a0ab12 passed (no new headers: the job lists headers added since 53da120 and runs selfcontained.sh on them if any) |
 | A7 | the lead's read |
 
 ## Result
