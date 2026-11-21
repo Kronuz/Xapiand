@@ -17050,6 +17050,38 @@
       "updated": "2026-11-20T18:29:10",
       "worktree": ""
     },
+    "nan-range-bound": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/multivalue/range.cc",
+        "src/multivalue/range.h",
+        "src/aggregations/bucket.h",
+        "tests/test_coverage_multivalue_range.cc",
+        "tests/test_nan_range*",
+        "docs/src/content/docs/reference/query-dsl*"
+      ],
+      "hunt": "query-dsl-fixes review F5",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A NaN range bound is one behavior on every field type",
+      "updated": "2026-11-21T13:22:01"
+    },
     "netlab-consensus": {
       "accepted": {},
       "after": [
