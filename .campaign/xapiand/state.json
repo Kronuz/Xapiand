@@ -1937,9 +1937,127 @@
         "quest": "detent:journal-tail-second-sector"
       },
       "text": "detent:journal-tail-second-sector started and may change files your journal-turn-buffers changes (order them with --after detent:journal-tail-second-sector, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T09:58:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T09:58:44",
+      "by": "kronuz",
+      "closed": "done: group-catalog quest (D169), journal-replaces-wal files widened to 40 globs, after=group-catalog; pin rides strata-pin-catalog",
+      "id": "msg-199",
+      "text": "journal-replaces-wal: need (1) CMakeLists.txt: strata pin at/after strata:51dcff1e (group-core; main efa5214b; master and strata-pin-catalog's e3edb426 predate it) and strata::group linked into XAPIAND_OBJ; (2) src/engine/strata/shard.{h,cc} + src/engine/shard.h to split the engine's write into leader prepare (version check, finalise, stamp) and apply-time transaction_of(document, index) (fill reads the voter's field table mark); (3) new files src/database/command.{h,cc} and src/database/shard_group.{h,cc}; tests/test_cheap_reopen.cc, test_endpoint_uuid.cc, test_loop_yield.cc, test_node.cc (they name DB_DISABLE_WAL); search_views.cc as planned. (4) A strata blocker with no quest: strata::group opens and owns its index (group.hh:835) while Xapiand's catalog owns each index by value (catalog.hh:347 open_index); two opens of one directory cannot coexist. Recommend a strata task group-catalog: group::config takes the slot's index (borrowed), the catalog's commit chore for a group's index is the group's checkpoint and its close runs the group's close first, the group's chore on another lane than the catalog's transitions; test: a catalog close of an idle group publishes a bundle covering applied (group-core A6's clause). Alternatives (groups outside the catalog; a group wrapped as the catalog's Index, ~20 forwarded methods) in my journal's Blocked on. Core step c (catalog slot opens the group) waits on (4); steps a-b need (1)-(3)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T09:58:45",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T09:58:45",
+      "by": "kronuz",
+      "closed": "done: tasks ordered core, chunks+restore, levels in the quest file; group-catalog started",
+      "id": "msg-200",
+      "text": "journal-replaces-wal: tasks: keep the quest table's order: core (me: command codec, application, loop+journal host, ShardEndpoint writes through propose, WAL deleted) first; then chunks (handler.*, tests/test_group_chunk*, harness/blob_crash_check.sh) and restore (manager.*, tests/test_wal_replay.cc, wal_*_check.sh, profile_bulk.sh) in parallel on core's codec; then levels (opts.*, search_views.cc, request tests, power_loss_check.sh, run_all.sh, docs). Add strata group-catalog (blocker 4 in my previous message) now, ahead of core's step c: it is the only piece that can run in parallel today."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T10:09:46",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T10:09:46",
+      "by": "group-catalog",
+      "closed": "agreed (a); D169 and A3 revised, five paths added",
+      "id": "msg-201",
+      "text": "group-catalog: two findings. (1) File set: a borrowed index changes group's constructor, so the 8 construction sites in test/group/{lone_voter,voters,lifetime,footprint}_test.cc and the two A6 mutants in test/group/mutants.py (close-keeps-index, close-keeps-directory: the group no longer closes either) must change. Please add those five paths to group-catalog's files. Default: I migrate them mechanically in a separate commit now (no behavior change, same suites); revert it if you rule otherwise. (2) Contract: a commit hook that sync-waits on the group's checkpoint deadlocks on the index's write lease, separate lanes or not: the catalog runs h_.commit inside chore_scope (catalog.hh run_close/run_replace/commit_merge_output), and the group's chore takes the lease in apply()/commit() via lease_scope, which waits while the chore bit is held (owner.hh). Options: (a) recommended: the commit hook for a group's index stays a strata commit (safe: it only raises P_H, P_b stays, D16 recovery holds), and a new catalog hook close_payload runs the group's close (checkpoints covering applied) outside the lease, right before index.close(); A3 is proven on that wait. (b) move every h_.commit call out of chore_scope (4 sites, bound mode needs a second scope; touches chore-pin semantics). (c) the commit hook posts a checkpoint without waiting. I proceed with (a); journal-replaces-wal must not make the catalog's commit hook wait on group.checkpoint()."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T10:26:53",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T10:26:53",
+      "by": "turn-log-parity--large-tx",
+      "closed": "agreed: quest set widened with all eight paths; task set refused (index.hh overlap forced at start), task merge takes them as warnings",
+      "id": "msg-202",
+      "text": "turn-log-parity--large-tx needs its file set widened (A3 cannot land inside index.hh alone). Please add: (1) include/strata/core/command.hh: a part payload kind (3) for a transaction's parts past command_bytes, encoder and decoder beside the batch's; batch bytes unchanged. (2) test/standalone_turn_log_test.cc: T8 asserts the refusal past command_bytes that A3 removes, and T9's codec case lists kind 3 as unknown; the part fixture goes in T9. (3) test/fixtures/command/** and fuzz/fuzz_command.cc, fuzz/corpus/command/**: the part fixture and its decoder under the fuzzer. (4) bench/kv/kv_strata.hh and test/kv_strata_batch_test.cc: a sync batch is one transaction past 1 MiB (document-gate F2); the test today asserts the split. (5) docs/mechanisms/large-transactions.md: the how-it-works note. I keep working on index.hh and test/test_large_tx.cc meanwhile and commit the rest once widened."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T10:55:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T10:55:07",
+      "by": "journal-replaces-wal",
+      "closed": "chunks and restore tasks started at cf65ae78b with the named files; contributors build against command.h and shard_group.h",
+      "id": "msg-203",
+      "text": "journal-replaces-wal: chunks and restore can start at Xapiand:cf65ae78b, files: chunks = src/database/handler.*, tests/test_group_chunk*.cc, harness/blob_crash_check.sh; restore = src/manager.*, tests/test_wal_replay.cc, harness/{wal_recovery_check,wal_replay_check,wal_replay_agg_check}.sh, harness/profile_bulk.sh. Interface: src/database/command.h (D3 command with batch writes, D12 chunk/final entries, split_command at 1 MiB with header) and src/database/shard_group.h (ShardApplication: chunk effects into stage-ID or an upload's own vol-N, lower-term retirement, blob placement). Not yet there: ShardEndpoint's propose path (core step d) and the group over the slot's index (step c, waits on group-catalog's group(loop, config, IO&, index&, app, chore)); both tasks build against the codec and application now and wire to propose when step d lands. Also: task pin bumped to strata's 95798a02 (strata::group's journal/consensus need blocking_scheduler)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T11:01:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T11:01:57",
+      "by": "journal-replaces-wal--restore",
+      "closed": "ruled (a); quest file Decisions at master",
+      "id": "msg-204",
+      "text": "journal-replaces-wal restore task, file set (needs the lead): RESTORE's batching (D17) has no home in my set. src/manager.* holds no RESTORE code: the RESTORE view and --restore run through handler.cc's DocIndexer (chunks' file) and shard.cc's Shard::apply_slice (core's). Options: (a, recommended) add new files src/database/restore_batch.{h,cc} and tests/test_restore_batch.cc to my task, plus one function in command.h, encoded_size(const CommandWrite&), so packing measures each write once instead of encoding it twice; the batcher packs a shard's prepared writes in input order into commands within COMMAND_ENTRY_BYTES (a write alone over it goes through split_command), pipelines proposes through one marked seam that step d fills with ShardEndpoint's propose, and maps a batch's verdict (op, docids, versions) back to per-object results, re-preparing a refused op on a leader-chosen conflict up to max_placements. Wiring it into DocIndexer::apply_shards and deleting apply_slice happens at step d, in handler.cc/shard.cc, by whoever holds them then. (b) the same inside src/database/command.* (core's, quiet during c/d). Also renames, since the WAL goes: tests/test_wal_replay.cc -> tests/test_journal_replay.cc; wal_replay_check.sh -> harness/journal_replay_check.sh, with wal_replay_agg_check.sh folded into it (its assertions are a subset); wal_recovery_check.sh deleted (levels' power_loss_check.sh replaces it, per the quest). Grant the new names, or I rewrite in place under the old ones. And manager.*: core's step c wants it for the group loop and journal::Host setup; I can cede it. Meanwhile I do profile_bulk.sh (--put/--ack for T11, a journal layer row) and rewrite the WAL test and scripts in place."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T11:03:15",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T11:03:15",
+      "by": "journal-replaces-wal--restore",
+      "closed": "ruled (a); quest file Decisions at master",
+      "id": "msg-205",
+      "text": "journal-replaces-wal restore task, follow-up to msg-204 (core's step d decides it, so it goes to you): D17 pipelines batches without waiting for each commit, but engine::strata::Shard::prepare reads the live core (prepare_write), never writes proposed and not yet applied, and core's ruling 6 sets the leader's expectation on every replace_key. So batch 2 prepared while batch 1 is in flight carries stale expectations and predicted docids wherever it repeats a term or allocates new ids, and assigned() then throws 'a different id or version than the write expected'. Options: (a, recommended) RESTORE's writes are prepared as replace_key with no expectation (RESTORE overwrites unconditionally today: replace_document_term(..., version=false)), the docid and version assigned at apply and read back per op from the batch verdict's docids/versions, so a batch depends on no earlier batch's apply; (b) keep the expectation and allow one batch in flight per shard (no pipelining: costs T12); (c) a prepare overlay of in-flight writes per shard (a second version map: more code, one more mechanism). (a) needs the application's transaction() to keep a batch write's version from the document and the result mapping to use verdict.docids[i] rather than [0]."
     }
   ],
   "quests": {
+    "agents-md": {
+      "accepted": {},
+      "after": [
+        "ninja-only"
+      ],
+      "base": "dcfd06fe6d5ba8b04bb20ade93d8996dcc81fe0e",
+      "branch": "quest/xapiand/agents-md",
+      "checks": [
+        {
+          "cmd": "test $(wc -l < AGENTS.md) -le 80",
+          "level": "light",
+          "minutes": 30,
+          "name": "lines"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "AGENTS.md",
+        "docs/dev/agent-*.md",
+        "docs/dev/contributing.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: ninja-only changes one line of AGENTS.md (the configure command); this rewrite keeps -G Ninja and lands after it (after=ninja-only)",
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "AGENTS.md says how Xapiand is built and worked on today",
+      "updated": "2026-11-21T09:47:14",
+      "worktree": "../Xapiand-wt/xapiand/agents-md"
+    },
     "agg-shard-parity": {
       "accepted": {
         "correctness": {
@@ -4103,14 +4221,8 @@
         "tests/cluster/**",
         "harness/cluster/**",
         "src/index_resolver_lru.*",
-        "src/database/pool.*",
-        "src/database/shard.*",
-        "src/database/handler.*",
-        "src/opts.*",
-        "src/manager.*",
         "src/engine/search.*",
         "src/engine/strata/search.*",
-        "src/server/search_views.cc",
         "src/index_pattern.*",
         "src/walk_gate.h",
         "tests/test_index_pattern.cc",
@@ -4405,7 +4517,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-21T05:54:07",
+      "updated": "2026-11-21T09:42:43",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -8663,6 +8775,8 @@
     "empty-aggregation": {
       "accepted": {},
       "after": [],
+      "base": "8a1bd39433efe0f8fb45f507b3a7a86638cd3621",
+      "branch": "quest/xapiand/empty-aggregation",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -8681,11 +8795,13 @@
       "milestone": "M2",
       "needs": [],
       "provides": [],
+      "reason": "started by force: xapiand-final-release lands on the xapiand release branch, not master",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "An aggregation with no type, two types or an unknown key is a 400",
-      "updated": "2026-11-21T09:07:29"
+      "updated": "2026-11-21T09:08:51",
+      "worktree": "../Xapiand-wt/xapiand/empty-aggregation"
     },
     "endpoint-uuid": {
       "accepted": {
@@ -9242,18 +9358,41 @@
         "docs/STATUS.md",
         "docs/book/OUTLINE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-strata",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T09:39:15",
+          "commit": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+          "criteria": {
+            "A1": "261121-050042-88219e, 261121-050043-dd30d3",
+            "A2": "261121-085221-7f63bf",
+            "A3": "CI green at efa5214bacd3"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "753bc62c4c32210535e10b31f8156f448d560549",
+          "reason": "",
+          "tested": "efa5214bacd3a0c7ecc4870071ee0bb611968799"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strata's crash tests run on faultlab's faultfs (step 3)",
-      "updated": "2026-11-21T04:04:43",
-      "worktree": "../strata-wt/xapiand/faultlab-adopt-strata"
+      "updated": "2026-11-21T09:39:21",
+      "worktree": ""
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
@@ -11312,6 +11451,49 @@
       "updated": "2026-11-18T13:04:31",
       "worktree": ""
     },
+    "group-catalog": {
+      "accepted": {},
+      "after": [],
+      "base": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+      "branch": "quest/xapiand/group-catalog",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/group/group.hh",
+        "include/strata/core/catalog.hh",
+        "test/group/group_catalog*",
+        "docs/mechanisms/group-catalog.md",
+        "CMakeLists.txt",
+        "test/group/lone_voter_test.cc",
+        "test/group/voters_test.cc",
+        "test/group/lifetime_test.cc",
+        "test/group/footprint_test.cc",
+        "test/group/mutants.py"
+      ],
+      "journal": "../Xapiand-wt/xapiand/group-catalog",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "strata:group"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "active",
+      "title": "a replication group runs on its catalog slot's index",
+      "updated": "2026-11-21T10:14:06",
+      "worktree": "../strata-wt/xapiand/group-catalog"
+    },
     "group-core": {
       "accepted": {},
       "after": [
@@ -12877,9 +13059,71 @@
       "title": "a host deletes a left group's journal, so the node can rejoin it",
       "updated": "2026-11-21T00:05:24"
     },
+    "journal-lost-bound": {
+      "accepted": {},
+      "after": [
+        "detent:journal-tail-second-sector"
+      ],
+      "base": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
+      "branch": "quest/xapiand/journal-lost-bound",
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/host.h",
+        "src/host*",
+        "include/journal/turn_log.h",
+        "test/lost_bound*",
+        "docs/mechanisms/lost-bound.md",
+        "CHANGELOG.md",
+        "CMakeLists.txt",
+        "include/journal/journal.h",
+        "include/journal/turn_driver.h",
+        "test/host_test.cc",
+        "test/placement_test.cc"
+      ],
+      "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:recovery"
+      ],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "active",
+      "title": "damage bounds a group's loss instead of losing the group",
+      "updated": "2026-11-21T11:02:16",
+      "worktree": "../journal-wt/xapiand/journal-lost-bound"
+    },
     "journal-replaces-wal": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "group-catalog"
+      ],
+      "base": "ce5e4df02373983150ccacc74c230b0e6d9c6062",
+      "branch": "quest/xapiand/journal-replaces-wal",
       "checks": [
         {
           "cmd": "ci:Build + unit + smoke",
@@ -12933,8 +13177,6 @@
         "src/xapiand_storage_io.h",
         "src/manager.*",
         "src/opts.*",
-        "src/server/search_views.cc",
-        "CMakeLists.txt",
         "tests/test_wal_replay.cc",
         "tests/test_pool.cc",
         "tests/test_engine_error.cc",
@@ -12953,7 +13195,24 @@
         "harness/async_check.py",
         "harness/removed_options_check.sh",
         "harness/test_gate_tools.py",
-        "docs/mechanisms/journal-durability.md"
+        "docs/mechanisms/journal-durability.md",
+        "CMakeLists.txt",
+        "src/engine/strata/shard.*",
+        "src/engine/shard.h",
+        "src/database/command.*",
+        "src/database/shard_group.*",
+        "tests/test_cheap_reopen.cc",
+        "tests/test_endpoint_uuid.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_node.cc",
+        "src/server/search_views.cc",
+        "tests/test_command*",
+        "tests/test_shard_group*",
+        "src/database/restore_batch.*",
+        "tests/test_restore_batch.cc",
+        "tests/test_journal_replay.cc",
+        "harness/journal_replay_check.sh",
+        "src/database/command.h"
       ],
       "history": [
         {
@@ -13085,9 +13344,40 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
+      "tasks": {
+        "chunks": {
+          "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
+          "branch": "quest/xapiand/journal-replaces-wal--chunks",
+          "files": [
+            "src/database/handler.*",
+            "tests/test_group_chunk*.cc",
+            "harness/blob_crash_check.sh"
+          ],
+          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--chunks"
+        },
+        "restore": {
+          "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
+          "branch": "quest/xapiand/journal-replaces-wal--restore",
+          "files": [
+            "tests/test_wal_replay.cc",
+            "harness/wal_recovery_check.sh",
+            "harness/wal_replay_check.sh",
+            "harness/wal_replay_agg_check.sh",
+            "harness/profile_bulk.sh",
+            "src/database/restore_batch.*",
+            "tests/test_restore_batch.cc",
+            "tests/test_journal_replay.cc",
+            "harness/journal_replay_check.sh",
+            "src/database/command.h",
+            "src/database/shard_group.*"
+          ],
+          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--restore"
+        }
+      },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-20T18:21:32"
+      "updated": "2026-11-21T11:10:40",
+      "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
       "accepted": {
@@ -13434,17 +13724,44 @@
         "tests/test_coverage_multivalue_range.cc",
         "docs/dev/keyword-open-range.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T10:50:05",
+          "commit": "170ab58b2f98ca65802066a69d9f3b3ce094c2dd",
+          "criteria": {
+            "A1": "261121-045337-0a227e (passed at 2957f2077703; only 3 merges from main since, none touching its files); fails without: 261121-045338-baa3ca",
+            "A2": "261121-045340-5b4053"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "2957f2077703727615f348f8268a5ca0122672dc",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-045340-5b4053",
+              "level": "light",
+              "seconds": 646.0,
+              "state": "done",
+              "what": "keyword-open-range check suite at 2957f2077703"
+            }
+          ],
+          "final": true,
+          "from": "7ee2a2253f63128359d450ed57f469afd2b317a7",
+          "reason": "",
+          "tested": "f65b671c958b71bd2614fc7930df29e1f369e90c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Lower-bound-only keyword and text ranges match",
-      "updated": "2026-11-21T06:10:02",
-      "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
+      "updated": "2026-11-21T10:50:11",
+      "worktree": ""
     },
     "kv-scan": {
       "accepted": {},
@@ -16664,6 +16981,94 @@
       "updated": "2026-11-19T15:32:58",
       "worktree": ""
     },
+    "ninja-only": {
+      "accepted": {},
+      "after": [],
+      "base": "8c2cc555bd65d43b9b0826720a645c5a5fdfd339",
+      "branch": "quest/xapiand/ninja-only",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "README.md",
+        "cmake/ccache_build.sh",
+        "docs/dev/testing.md",
+        "docs/src/content/docs/benchmarks.md",
+        "harness/coverage.sh",
+        "harness/coverage_mutants.sh",
+        "harness/coverage_one.sh",
+        "harness/light_share_build.sh",
+        "harness/lua_mem.sh",
+        "harness/restore_stall_build.sh",
+        "harness/run_all.sh",
+        "harness/ninja_only_check.sh",
+        "tests/exact_id_mutants.sh",
+        "tests/lua_fetch.sh",
+        "tests/name_index_mutants.sh",
+        "tests/one_id_mutants.sh",
+        "tests/test_engine_error_mutant.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "M2",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: a 4-line guard after project() and -G Ninja in build commands (D168); the overlapping quests change pins, test registrations and other lines of these files, so merges stay textual",
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Xapiand builds with CMake and Ninja only",
+      "updated": "2026-11-21T09:14:57",
+      "worktree": "../Xapiand-wt/xapiand/ninja-only"
+    },
+    "ninja-only-strata": {
+      "accepted": {},
+      "after": [],
+      "base": "753bc62c4c32210535e10b31f8156f448d560549",
+      "branch": "quest/xapiand/ninja-only-strata",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "README.md",
+        "bench/catalog_tiers/**",
+        "bench/hybrid/CMakeLists.txt",
+        "bench/idle_index/k6.sh",
+        "bench/open_sync/**",
+        "docs/design/standalone-turn-log.md",
+        "test/vm_repeat.sh",
+        "test/ninja_only_check.sh"
+      ],
+      "journal": "../Xapiand-wt/xapiand/ninja-only-strata",
+      "landed": [],
+      "lenses": [],
+      "milestone": "M2",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: a 4-line guard after project() and -G Ninja in build commands (D168); the overlapping quests change pins, test registrations and other lines of these files, so merges stay textual",
+      "repo": "../strata",
+      "risk": "low",
+      "status": "active",
+      "title": "strata builds with CMake and Ninja only",
+      "updated": "2026-11-21T09:15:04",
+      "worktree": "../strata-wt/xapiand/ninja-only-strata"
+    },
     "no-stalls": {
       "accepted": {},
       "after": [],
@@ -17240,6 +17645,36 @@
       "title": "A document's id is its only id; docids stay internal and dense",
       "updated": "2026-11-13T11:06:58",
       "worktree": "../Xapiand-wt/xapiand/one-id"
+    },
+    "open-files-floor": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/main.cc",
+        "tests/test_coverage_main.cc",
+        "harness/coverage_e2e_main.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "failed-restore-exit"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
+      "updated": "2026-11-21T10:26:50"
     },
     "open-mix": {
       "accepted": {},
@@ -19681,7 +20116,8 @@
             "test/placement/repair*",
             "docs/mechanisms/placement-repair.md",
             "docs/mechanisms/placement-root.md",
-            "test/placement/root_fuzz*"
+            "test/placement/root_fuzz*",
+            "test/placement/root_corpus/**"
           ],
           "journal": "../Xapiand-wt/xapiand/placement--repair",
           "worktree": "../strata-wt/xapiand/placement--repair"
@@ -19718,7 +20154,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-21T00:57:15",
+      "updated": "2026-11-21T10:20:28",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
@@ -21389,6 +21825,37 @@
       "updated": "2026-11-20T01:24:04",
       "worktree": ""
     },
+    "racing-put-409": {
+      "accepted": {},
+      "after": [],
+      "base": "1e7eb86b9a346096e078320c33a7a8de1c970ab5",
+      "branch": "quest/xapiand/racing-put-409",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/engine/strata/shard.cc",
+        "tests/test_engine_strata.cc",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "review",
+      "title": "A replace that lost a delete-and-recreate race is a version conflict, not a 500",
+      "updated": "2026-11-21T10:36:12",
+      "worktree": "../Xapiand-wt/xapiand/racing-put-409"
+    },
     "reactor-open-files": {
       "accepted": {},
       "after": [],
@@ -22620,10 +23087,10 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T04:33:54",
-          "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+          "at": "2026-11-21T09:51:10",
+          "base": "9d0d2703aeee6a0db8d70448274f90b704cff2e1",
           "blobs": {
-            "docs/perf/bulk-load-rss.md": "100644:9c3c42f86ad2d3979040702dce845553bf9705d8",
+            "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
             "src/server/search_views.cc": "100644:7da59d340be662732180a457db271b430ae4adf4",
             "src/server/search_views.h": "100644:eb6a60f3be8a26417775a17117e9657507de66ca",
@@ -22631,10 +23098,10 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "c5b2c0689ce51c7293cafe5ed909b2fa50299a46",
+          "commit": "06a6f8bc003b6ccbd01ec1b552ad2acded02c64e",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
-            "docs/perf/bulk-load-rss.md": "55616a000938f1cb",
+            "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
             "harness/bench/bulk_rss_probe.py": "e19856f1df42ee22",
             "src/server/search_views.cc": "ffa03e257f52da3b",
             "src/server/search_views.h": "85b01300a82774b2",
@@ -22642,7 +23109,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "",
+          "note": "re-read main's code changes since the review (e1be368395a1..9d0d2703aeee): only src/manager.cc reorders READY after http_service->start; no change to RESTORE parsing or streaming",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -22691,7 +23158,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T04:33:54",
+      "updated": "2026-11-21T09:51:10",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -22927,6 +23394,38 @@
       "title": "Concurrent first uses of a schema load it once, foreign links included",
       "updated": "2026-11-13T02:49:54",
       "worktree": ""
+    },
+    "schema-split": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "/usr/local/bin/python3 harness/split_check.py --before 7d185f626 src/database/schema.cc src/database/schema",
+          "level": "light",
+          "minutes": 30,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/database/schema/**",
+        "harness/split_check.py",
+        "docs/dev/schema-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "cjk-words"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "schema.cc becomes a set of files under 1,000 lines each",
+      "updated": "2026-11-21T10:07:21"
     },
     "script-method": {
       "accepted": {},
@@ -27626,6 +28125,66 @@
       "title": "One pool: WorkPool only, ThreadPool family deleted",
       "updated": "2026-11-08T15:40:27"
     },
+    "tls-watch-cancel": {
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-21T10:50:35",
+          "base": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+          "blobs": {
+            "CMakeLists.txt": "100644:616e26f4b6060ae884580c5a47a2a27e2e5db67f",
+            "docs/perf/watch-peek.md": "100644:8a9297dcb1877307037bbf3d71653d187aa24f7f",
+            "http_asio.h": "100644:5446f7594d85a6896cfc30f2e1f403e5fe2ef4d8",
+            "test/tls_watch_test.cc": "100644:1de95557240cd4ecdf9d72e2cc968df090ac3c90"
+          },
+          "by": "review",
+          "commit": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "criteria": "3ac7c0ab4a3aeb17",
+          "diffs": {
+            "CMakeLists.txt": "2516a9379cf9789d",
+            "docs/perf/watch-peek.md": "2fa04df41337473a",
+            "http_asio.h": "b93ef48412ec78f5",
+            "test/tls_watch_test.cc": "c237674e27ad3f39"
+          },
+          "findings": {},
+          "note": "APPROVE at http:e4ad5b9, no blocking findings; probe job 261121-104541-7b84d9",
+          "review": "8713977473d0d26d13c1eedcada03540ffa3d962",
+          "reviewed": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+      "branch": "quest/xapiand/tls-watch-cancel",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "test/tls_watch_test.cc",
+        "CMakeLists.txt",
+        "docs/perf/watch-peek.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/tls-watch-cancel",
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "high",
+      "status": "review",
+      "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
+      "updated": "2026-11-21T10:50:35",
+      "worktree": "../http-wt/xapiand/tls-watch-cancel"
+    },
     "track-c": {
       "accepted": {},
       "after": [
@@ -28587,7 +29146,19 @@
         "test/test_checkpoint_window*",
         "bench/kv/probes/rocksdb-parity/**",
         "test/*ryw*",
-        "test/fixtures/**"
+        "test/fixtures/**",
+        "include/strata/core/writer.hh",
+        "include/strata/core/write_buffer.hh",
+        "test/test_large_tx*",
+        "test/test_tx*",
+        "test/*crash*",
+        "include/strata/core/command.hh",
+        "test/fixtures/command/**",
+        "fuzz/fuzz_command.cc",
+        "fuzz/corpus/command/**",
+        "bench/kv/kv_strata.hh",
+        "test/kv_strata_batch_test.cc",
+        "docs/mechanisms/large-transactions.md"
       ],
       "history": [
         {
@@ -28646,6 +29217,19 @@
           "merged": "2f5f103366ddce071afc4c182ed1e9823767841d",
           "worktree": ""
         },
+        "group-commit": {
+          "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
+          "branch": "quest/xapiand/turn-log-parity--group-commit",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/turn_seal.hh",
+            "test/test_barrier*",
+            "test/test_group_commit*",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--group-commit",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--group-commit"
+        },
         "journal-pin": {
           "base": "db214892159e0102e17f5b390e1a37b299546031",
           "branch": "quest/xapiand/turn-log-parity--journal-pin",
@@ -28660,6 +29244,21 @@
           "journal": "",
           "merged": "3719795800084ba30529e7a654c7a84bd11a694c",
           "worktree": ""
+        },
+        "large-tx": {
+          "base": "9a452ed2a645a02ac0ea4abeb37f21b14c32de16",
+          "branch": "quest/xapiand/turn-log-parity--large-tx",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/writer.hh",
+            "include/strata/core/write_buffer.hh",
+            "test/test_large_tx*",
+            "test/test_tx*",
+            "test/*crash*",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--large-tx",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--large-tx"
         },
         "merge-runs": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
@@ -28696,12 +29295,28 @@
             "test/fixtures/**",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--ryw",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--ryw"
+          "journal": "",
+          "merged": "d16abf5a0f2df6edfca68756f46ae4d116ce8023",
+          "worktree": ""
+        },
+        "tolerant-open": {
+          "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
+          "branch": "quest/xapiand/turn-log-parity--tolerant-open",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/manifest_log.hh",
+            "include/strata/core/catalog.hh",
+            "test/test_tolerant_open*",
+            "test/*open*_test.cc",
+            "fuzz/**",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--tolerant-open",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--tolerant-open"
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T08:53:04",
+      "updated": "2026-11-21T10:28:27",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
@@ -31895,29 +32510,7 @@
       "consumes": [],
       "files": [
         "tests/test_xapiand_final_release*",
-        "docs/release/xapiand-final*",
-        "CMakeLists.txt",
-        "docs/dev/agg-blowup.md",
-        "docs/src/content/docs/changelog.md",
-        "harness/agg_buckets_check.py",
-        "harness/id_zero_check.py",
-        "harness/run_all.sh",
-        ".github/workflows/release.yml",
-        ".github/workflows/freebsd.yml",
-        ".github/workflows/bottles.yml",
-        ".github/actions/build-bottle/action.yml",
-        "src/aggregations/aggregations.*",
-        "src/aggregations/bucket.h",
-        "src/database/handler.cc",
-        "src/database/schema.cc",
-        "src/engine/xapian/query.cc",
-        "src/engine/xapian/text_parser.*",
-        "src/multivalue/range.cc",
-        "src/serialise.cc",
-        "tests/test_engine_sort.cc",
-        "tests/test_generate_terms.cc",
-        "tests/test_text_parser.cc",
-        "config.h.in"
+        "docs/release/xapiand-final*"
       ],
       "history": [
         {
@@ -31982,7 +32575,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T23:24:37",
+      "updated": "2026-11-21T09:42:46",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
@@ -32106,9 +32699,9 @@
       "worktree": ""
     }
   },
-  "suite": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+  "suite": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
   "suites": {
-    "strata": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4"
+    "strata": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4"
   },
   "tested_docs": [
     "docs/src/content/docs/**"
