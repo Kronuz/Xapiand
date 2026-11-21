@@ -1,41 +1,39 @@
 # ninja-only-strata: journal
 
-State: working
+State: waiting on jobs 261121-091844-0f7501 261121-091847-30861e 261121-091849-c76b1c
 Quest: .campaign/xapiand/quests/ninja-only-strata.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Work committed in strata at 9cefc0e5d (guard, 9 files with -G Ninja, AGENTS.md rule, test/ninja_only_check.sh).
+Jobs queued at that commit.
 
 ## Next
 
-1. <step>
+1. When the jobs finish: fill the Evidence rows from `campaign brief`, set State to ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pass job 261121-091844-0f7501 (check at the head); mutant job 261121-091847-30861e (`--fails-without`: the base CMakeLists.txt has no guard, the check must exit nonzero) |
+| A2 | suite job 261121-091849-c76b1c (`campaign verify ninja-only-strata`, configured with `-G Ninja`) |
+| A3 | `test/ninja_only_check.sh` grep half, run at the head by 261121-091844-0f7501: no configure without `-G Ninja` outside the records |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Guard in CMakeLists.txt after `project()`: `if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT CMAKE_GENERATOR MATCHES "^Ninja")`
+-> `message(FATAL_ERROR "Ninja only: configure with -G Ninja (not ${CMAKE_GENERATOR})")`.
+Files changed: AGENTS.md (rule once, in "Verify a change", strata's AGENTS.md has no separate build section),
+README.md, bench/catalog_tiers/{CMakeLists.txt,tiers.sh}, bench/hybrid/CMakeLists.txt, bench/idle_index/k6.sh,
+bench/open_sync/{build.sh,first_commit_mutant.sh}, docs/design/standalone-turn-log.md, test/vm_repeat.sh.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- bench/hybrid/CMakeLists.txt and bench/catalog_tiers/CMakeLists.txt held the configure only in a comment; the
+  comment now carries -G Ninja.
+- The check's temp tree is under `.scratch/` of the checkout (ignored), removed on exit.
