@@ -1,6 +1,6 @@
 # placement--root: journal
 
-State: working
+State: waiting on jobs 261120-180504-a88f58
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
