@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs 261121-084542-caa3bb 261121-084542-5d6e7b 261121-084542-1a47bc 261121-084543-0d22ac 261121-084543-3e2e91 261121-084543-9810bb 261121-084552-dda508 261121-084553-56b4a8 261121-062203-ed682b; CI at consensus:9e66e5b
+State: waiting on reruns at consensus:781f0d0 (main merged; main touched host_transport.h): 261121-092255-2df121 0e0f26 02c927 b62830 b1a3bb 9b252d 57ecdd(TSan) 38cf24 210ae6, and CI. Then the lead: `campaign accept node-admission correctness --confirm F1=261121-092258-38cf24 --confirm F2=261121-092256-02c927 --confirm F3=261121-092259-210ae6 --fix-scope REASON` (since the review: open_of in the test; hold()'s nodes_ lookup swapped for routed()), then land
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
