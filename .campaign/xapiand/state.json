@@ -25011,6 +25011,49 @@
       "title": "Xapiand's free large sources split under 1,000 lines",
       "updated": "2026-11-21T11:38:50"
     },
+    "split-xapiand-tests": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master tests",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_lua*",
+        "tests/lua/**",
+        "tests/test_engine_search_strata*",
+        "tests/engine_search_strata/**",
+        "tests/test_engine_query*",
+        "tests/engine_query/**",
+        "tests/test_engine_callbacks*",
+        "tests/engine_callbacks/**",
+        "tests/CMakeLists.txt",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand's free large tests split under 1,000 lines, same test names",
+      "updated": "2026-11-21T11:38:52"
+    },
     "stash-claim-hint-d64": {
       "accepted": {},
       "after": [],
