@@ -578,3 +578,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - crash-wrong-row: 510 more macOS trials (300 Release, 210 ASan+UBSan), 0 wrong rows; 937 total. FreeBSD build lost its VM to a poweroff; one self-contained job requeued (600acb).
 - netlab-consensus: 3 nodes 43/45 (the known loss/reorder stall, Detent's fix); 5 nodes running.
 - Quota 55% weekly, 0.45%/h, reset in 47 h. Load 3.3-3.8. Disk 299 GiB free.
+
+## 2026-11-20 23h
+- Landed: coverage-server (Xapiand:b6909a56e). Owner: homebrew-tap:8fac0ef pushed (xapian and nginx load on current Homebrew); D160 faultlab adopted everywhere, portable RPMs for Xapiand and Detent.
+- Agents finished: faultlab-strata-gaps 217k (Opus; faultlab:b5640d7: power_on, operations(op), sync_latency added; 16 strata cases ported; 2 faultfs fixes, each with a fails-without job; suite 18 of 18). In correctness review (Opus).
+- Started: faultlab-strata-gaps, completion-task-pin (lead-done, completion:714186e, task 18eb516 -> 95798a0 for Detent's pin wave), placement task repair (Opus). Filed: faultlab-adopt-strata, faultlab-journal-oracle (Detent msg-193). Detent started detent-faultlab (step 7).
+- Placement sat 4 h with both tasks merged and its branch unpushed: pushed; repair started. Lead miss: merged-task quests need their next task started at merge.
+- Tool: scheduler rule (light work starts while an exclusive job is queued only if it ends within DRAIN_HOLD of the drain's due). 12 h replay, staged: 2 h hold 2.92 drains/h vs 2.67, heavy p50 5.5 vs 9.2 min; 4 h hold unchanged. Default 4 h; suite running.
+- Quota 57% weekly, 0.47%/h, reset in 46 h. Load 42-45 (reader-s6 native 7.3 cores, A4 strict, campaign suite). Disk 300 GiB free.
