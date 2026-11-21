@@ -1,6 +1,6 @@
 # split-queryparser: journal
 
-State: waiting on jobs 261121-130451-f1eea0 261121-130451-f8682b 261121-130453-379519 261121-130456-b1dd83 261121-130500-1fe08d
+State: waiting on jobs 261121-130451-f1eea0 261121-130456-b1dd83
 Quest: .campaign/xapiand/quests/split-queryparser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Split committed (queryparser:2679882); jobs queued for A1, A2, A3, A6.
+Split committed and pushed (queryparser:2679882); A2 and A6 passed; build-test (A1) and the ctest -N diff (A3) queued; CI dispatched on the branch (run 44950018532: ci.yml has no quest/** push trigger).
 
 ## Next
 
-1. Read the jobs' results, paste `campaign brief`'s Evidence table, push the branch, set "ready for review".
+1. Read f1eea0 and b1dd83 and CI run 44950018532, paste `campaign brief`'s Evidence table, push the branch, set "ready for review".
 
 ## Blocked on
 
@@ -29,11 +29,11 @@ same tool with `--base 64c9a973efdb`.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-130451-f1eea0 (pending) |
-| A2 | split_check (split-check-sources version, --base 64c9a97) 261121-130453-379519 (pending); gate `split` 261121-130451-f8682b runs --base main (stale, see Blocked on) |
+| A2 | split_check (split-check-sources version, --base 64c9a97) 261121-130453-379519 passed: 0 errors, 0 warnings, 1 note (queryparser.cc 1,295 lines, kept whole: see the layout note); gate `split` 261121-130451-f8682b failed: --base main is the stale 40743e3, so it reports the 20 unrelated origin/main commits (10,862 errors, all in files this quest never touched); rerun once main is reset |
 | A3 | 261121-130456-b1dd83: configures 64c9a97 and head, diffs `ctest -N` (pending) |
 | A4 | `docs/source-layout.md` at queryparser:2679882 |
-| A5 | CI after push |
-| A6 | no header created; job 261121-130500-1fe08d checks no *.h/*.hh/*.hpp/*.hxx was added since 64c9a97 (pending) |
+| A5 | CI run 44950018532 (workflow_dispatch on the quest branch), pending |
+| A6 | no header created; job 261121-130500-1fe08d checks no *.h/*.hh/*.hpp/*.hxx was added since 64c9a97 passed: only `docs/source-layout.md` and `queryparser_describe.cc` were added |
 | A7 | the lead's read |
 
 ## Result
