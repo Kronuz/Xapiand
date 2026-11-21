@@ -99,7 +99,7 @@ export default defineConfig({
       ],
       // "Edit this page" -> GitHub, like the Jekyll "Improve this page" link.
       editLink: {
-        baseUrl: `${REPO_URL}/edit/master/docs-astro/`,
+        baseUrl: `${REPO_URL}/edit/master/docs/`,
       },
       expressiveCode: { themes: [kronuzDark, kronuzLight], shiki: { langs: restLangs }, plugins: [pluginRestCurl()] },
       social: [
@@ -117,10 +117,12 @@ export default defineConfig({
         // Header social bar, plus a version pill (the built release) and a live CI badge,
         // so the page always shows which Xapiand version it documents.
         SocialIcons: './src/components/SocialIcons.astro',
-        // Edit link moves onto the page-title line (right-aligned); the stock footer
-        // edit link renders nothing.
+        // The footer keeps author-only edit links; the title row holds only the title.
         PageTitle: './src/components/PageTitle.astro',
         EditLink: './src/components/EditLink.astro',
+        Search: './src/components/Search.astro',
+        ThemeSelect: './src/components/ThemeSelect.astro',
+        MarkdownContent: './src/components/MarkdownContent.astro',
         // Server-rendered sidebar: clickable group headers, chevron-only toggle, groups
         // stay expanded when they contain the current page.
         Sidebar: './src/components/Sidebar.astro',
