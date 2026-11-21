@@ -1,6 +1,6 @@
 # newman-pin: journal
 
-State: waiting on jobs 261121-033126-9fcc12 (A1), 261121-033127-c0dfa7 (A2); A3 on CI after push
+State: working (resubmitting A1 with the default CMake generator; A2 = 261121-033217-4835c4 done at f83d834)
 Quest: .campaign/xapiand/quests/newman-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,7 +16,7 @@ TESTING.md: new "Docs E2E" section. A1 job runs harness/newman_pin_check.sh (4.5
 
 ## Next
 
-1. Record A1/A2 job ids; push; check CI Functional E2E (docs) for A3.
+1. Submit A1 (build without -GNinja), record id; push; A3 = CI Functional E2E (docs); test_lua red is the lua-method-flake quest's.
 
 ## Blocked on
 
@@ -27,8 +27,8 @@ Nothing. The lead widened the file set; arm64.yml, freebsd.yml, e2e_capture.sh a
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-033126-9fcc12 |
-| A2 | job 261121-033127-c0dfa7 (the quest's full grep); one place = harness/package.json |
+| A1 | (pending) |
+| A2 | job 261121-033217-4835c4 (the quest's full grep); one place = harness/package.json |
 | A3 | CI after push |
 
 ## Result
@@ -41,3 +41,4 @@ Nothing. The lead widened the file set; arm64.yml, freebsd.yml, e2e_capture.sh a
 2. harness/node_modules self-ignores via a `*` .gitignore the install writes (.gitignore is outside the file set).
 3. The major>=6 check in e2e_capture.sh is gone: the pin replaces it.
 4. e2e_capture.sh is now the one place every caller (gate7c_rows, coverage, run_all) gets the pin; engine_e2e.sh and run_all.sh also source newman_env.sh to print the version / skip early (idempotent).
+5. Job 436565 failed in the build step, not the check: -GNinja mismatches the shared .deps subbuild dirs (Unix Makefiles). A1 is rebuilt with the default generator, like the other Xapiand jobs.
