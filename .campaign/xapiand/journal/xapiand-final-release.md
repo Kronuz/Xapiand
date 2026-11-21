@@ -25,9 +25,9 @@ Results: fails-without at 30815d91f reproduce both causes: 261120-225040-bec8a6 
 
 ## Next
 
-0. Release prep at fc7142e3a: 1114106db adds `publish`/`ref` dispatch inputs to release.yml, freebsd.yml, bottles.yml (and the build-bottle action); fc7142e3a is `Release 1.0.0-alpha.11` (CMakeLists.txt PACKAGE_VERSION and the changelog header, the alpha.10 commit's two files). Dispatch for A5: `gh workflow run <wf> -f tag=v1.0.0-alpha.11 -f publish=false -f ref=<xapiand sha>` (the sha must be on GitHub; bottles builds from its archive).
-1. Lead: fast-forward `xapiand` to the quest head and push. Then, then fast-forward `xapiand` to it and push (CI there: build-test, asan, e2e, Release/FreeBSD/Bottles dispatch).
-2. A5: read CI and the three workflows at the final commit; report to the lead. No tag.
+1. Jobs at Xapiand:68a091f38 (code = Xapiand:cfc2a5b80): build-test with -G Ninja for A1-A3 261121-145254-58eeb6 (the gate's own command has no -G Ninja; this run uses it, build dir build-ninja); A5 CI-run check 261121-145240-4ff3db (level none). Cite them in Evidence when done.
+2. Lead: the base and file set under Blocked on; push nothing new to `xapiand` (it is at Xapiand:cfc2a5b80 already).
+3. Owner: A6, approve the tag v1.0.0-alpha.11 at Xapiand:cfc2a5b80. No tag from agents.
 
 ## Blocked on
 
