@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: waiting on jobs 261121-054406-7d4001 261121-054409-747579 261121-054411-7b5102 261121-054413-b9e484 261121-054427-5c7193 261121-054430-e8d994 261121-054432-66bbee
+State: ready for review (merged into the quest branch; group cases need the consensus pin group-heal brings)
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,13 +27,8 @@ Third round (resumed 11-21 05h) at strata `e45b1d5d` (task head `d30901ae` merge
 
 ## Next
 
-1. Read the seven jobs; record them in Evidence.
-2. When consensus has the fix on a commit that also carries `b8de3b8`'s reopen (Detent's
-   consensus-leaving-removal after consensus-quiescence), the lead repins strata's consensus
-   (CMakeLists.txt is the lead's) and the group cases and `replace-now` rerun at the quest head
-   with no `--ref`. Until then `placement_repair_group` fails in CI on every platform (run
-   44886359089: replace's fence), so the task cannot merge green.
-3. Integrate against group-heal with `--ref` once its install binds.
+1. Merged into the quest branch (11-21 resume); the quest's journal (placement.md) carries the
+   evidence at the merged head.
 
 ## Blocked on
 
@@ -65,16 +60,23 @@ Third round (resumed 11-21 05h) at strata `e45b1d5d` (task head `d30901ae` merge
 
 ## Evidence
 
+All at the task head strata:d30901ae; group cases with `--ref CONSENSUS=consensus@20198fc`
+(strata's pin `b8de3b8` plus the leaving-removal fix `9a2476d`).
+
 | Criterion | Evidence |
 |---|---|
-| A1 | root tests and corpus replay with `S` 261121-054430-e8d994 (pending); libFuzzer 261121-054432-66bbee (pending) |
-| A3 | plan 261121-002711-934d7a passed (3,000 seeds); mutants fail: setting-ignored 261121-002719-b7c57d, drain-ignored 261121-002720-cd7f2d, no-leaving 261121-002752-d9cb1d, no-quorum-guard 261121-002723-86ef33, record-ignored 261121-002724-b25808, leader-not-first 261121-002725-07f209, shrink-order 261121-002726-d6fee4, no-window-replace 261121-002727-19a20a; group cases on consensus 20198fc pending (Doing) |
-| A4 | `defer` 3 seeds 261121-004906-0a1389 passed; mutants fail: transfer-anyway 261121-004909-30fad7, transfer-anyway-plan 261121-002729-8d49af |
+| A1 | root tests and corpus replay with `S` 261121-085245-cf7c4e; libFuzzer 5 min 261121-085246-5545a9 |
+| A3 | plan 261121-131722-598daa (3,000 seeds); group `replace` 261121-131723-0326d9, `drain` 261121-085245-d3bfc1, `replicas` 261121-131723-5feffe, `waits` 261121-131723-350e25 (3 seeds each); mutants fail: setting-ignored 261121-002719-b7c57d, drain-ignored 261121-002720-cd7f2d, no-leaving 261121-002752-d9cb1d, no-quorum-guard 261121-002723-86ef33, record-ignored 261121-002724-b25808, leader-not-first 261121-002725-07f209, shrink-order 261121-002726-d6fee4, no-window-replace 261121-002727-19a20a, replace-now 261121-054427-5c7193 |
+| A4 | `defer` 3 seeds 261121-131722-93347f; mutants fail: transfer-anyway 261121-004909-30fad7, transfer-anyway-plan 261121-002729-8d49af |
 | A5 | `docs/mechanisms/placement-repair.md` (repair's half) |
+
+Superseded diagnosis runs (seed 1, at the unfixed pin, older code; not evidence): 261121-000231-24e66d,
+261121-003512-50dacf, 261121-003514-940aa0, 261121-003517-dd0df9, 261121-003522-a43d42,
+261121-004525-2c425b.
 
 ## Result
 
-Not yet: see Doing.
+Done at strata:d30901ae: A3 and A4 proven at the consensus fix; merged into the quest branch.
 
 Built (strata quest/xapiand/placement--repair): `include/strata/placement/repair.hh` (the plan,
 the root's operations `set_replace_after`, `set_rf`, `drain`, `drained`, `record_shard`),
