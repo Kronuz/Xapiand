@@ -14898,16 +14898,40 @@
         "tests/test_node.cc",
         "tests/test_stopword_search.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T05:16:10",
+          "commit": "eb954a6672307a735bc7f91041febee192fdb250",
+          "criteria": {
+            "A1": "D163",
+            "A2": "261121-024314-671378",
+            "A3": "D163",
+            "A4": "261121-024354-89c85f",
+            "A5": "CI green at 574d3fd1624f"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "574d3fd1624f2f22c82fee14fbaccb881d435668",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a9561086f8c3016cadbb765cece6c37f8d820519",
+          "reason": "",
+          "tested": "574d3fd1624f2f22c82fee14fbaccb881d435668"
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "test_lua's method case passes every run, under load and beside parallel tests",
-      "updated": "2026-11-21T02:38:29",
+      "updated": "2026-11-21T05:16:10",
       "worktree": "../Xapiand-wt/xapiand/lua-method-flake"
     },
     "lua-name-miss": {
