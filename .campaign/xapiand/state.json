@@ -24525,7 +24525,7 @@
       ],
       "consumes": [],
       "files": [
-        "docs/src/content/docs/reference-guide/schemas/**"
+        "docs/src/content/docs/reference-guide/schemas/*.md"
       ],
       "landed": [],
       "lenses": [],
@@ -24536,7 +24536,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Document _store (index without keeping the value) with E2E blocks",
-      "updated": "2026-11-21T03:26:37"
+      "updated": "2026-11-21T03:27:28"
     },
     "stored-check-cache": {
       "accepted": {
