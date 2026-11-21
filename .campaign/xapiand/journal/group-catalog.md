@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: working
+State: waiting on jobs 261121-103856-a3faa5 261121-103905-bc298a 261121-103914-1a21ad
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code round done (group.hh, catalog.hh, test/group/group_catalog_test.cc, the migrated tests, the
-note); building and running the group tests locally before the jobs.
+Code done at strata:096dbd04 (pushed; CI running). Waiting on the A2 and A3 mutant jobs and the
+suite.
 
 ## Next
 
-1. Targeted local run of group_* and catalog tests green; commit work, then the test migration
-   separately.
-2. Mutant commits on side branches: A2 `close-skips-checkpoint` (close()'s `if (!fenced_.load())`
-   -> `if (false)`), A3 `close-in-commit-hook` (the test's commit hook closes the group,
-   close_payload does nothing, blocking()'s lease guard removed): `--fails-without` jobs.
-3. `campaign verify group-catalog --for A1,A2,A3`; push the branch for asan/tsan CI.
+1. When 261121-103856-a3faa5 (A2 mutant), 261121-103905-bc298a (A3 mutant) and
+   261121-103914-1a21ad (suite) pass and CI (asan, tsan) is green: paste `campaign brief`'s
+   table below, State "ready for review". A failed mutant job means the test misses it: read its
+   log (`campaign job log ID`) before changing anything.
 
 ## Blocked on
 
@@ -47,11 +45,24 @@ teardown on the loop via new `tear_down()`, `chore_idle()`/`idle_awaiter`, `torn
 
 | Criterion | Evidence |
 |---|---|
-| A1-A4 | none yet |
+| A1 | 261121-103852-b1cb8c (group_catalog_test at strata:096dbd04, exit 0) |
+| A2 | 261121-103852-b1cb8c; mutant 261121-103856-a3faa5 at strata:053aede3 (branch mutant/group-catalog/close-skips-checkpoint, local) pending |
+| A3 | 261121-103852-b1cb8c; mutant 261121-103905-bc298a at strata:1d3155e7 (branch mutant/group-catalog/close-in-commit-hook, local: commit hook closes the group, close_payload empty, lease guard removed) pending; TSan is CI's |
+| A4 | [artifact] strata `docs/mechanisms/group-catalog.md` (strata:513d959d) |
+
+Suite: 261121-103914-1a21ad pending. Local targeted runs (not evidence): all 9 group_* tests and
+`catalog` green at strata:096dbd04.
 
 ## Result
 
-<When ready for review.>
+strata:513d959d lends a group its slot's index and directory (constructor references,
+`group::open_index` for the host), makes close() tear down on the loop and return with the chore
+idle, adds `open_blocking`/`close_blocking` with self-wait guards, and gives the catalog
+`opening::io` and `host::close_payload` (run before every `index.close()`, outside the lease).
+strata:096dbd04 migrates the group tests. How it works: strata `docs/mechanisms/group-catalog.md`.
+Open for the lead: strata `docs/mechanisms/replication-group.md`'s status line still says "the
+catalog's ownership follow[s]" (not in my file set); mutants.py's `destroy-keeps-member` targets a
+destructor text main no longer has (pre-existing at main, untouched).
 
 ## Rulings I made
 
