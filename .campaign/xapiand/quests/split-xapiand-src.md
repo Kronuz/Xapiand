@@ -1,0 +1,50 @@
+# split-xapiand-src: Xapiand's free large sources split where it helps maintenance
+
+Risk: low. The lead writes this quest; contributors read it and never edit it. Its
+machine state is in `state.json`: `campaign status split-xapiand-src`.
+
+## Outcome
+
+Owner, 2026-11-21, later: "The split must make sense and improve maintainability. Let's not
+split for the sake of splitting. For example, a 10K file might be ok if it makes complete sense to
+keep it that way." The sizes below flag a file for a look; they are not the reason to split it.
+
+Owner, 2026-11-21: "Any 6K file is just unmaintainable at that size. Source code files should be
+much smaller and well organized." A split moves code and changes none: bodies, names, order inside
+a function and behavior stay as they were.
+
+Files: `src/serialize.cc` (1,696 lines), `src/aggregations/metrics.h` (1,265),
+`src/aggregations/bucket.h` (1,262), `src/lua/processor.cc` (1,125). No active quest holds them.
+
+## How to split
+
+- Follow cpp-libraries' `docs/SPLITTING.md` (cpp-libraries:7cab8ec): when to split, where to cut,
+  what stays whole, moves only, and what lands a split.
+
+Pieces stay in their file's directory with its name as prefix (`src/serialize_*.cc`,
+`src/aggregations/metrics_*.h`): CMake globs sources per directory, so no build file changes.
+
+## Acceptance criteria
+
+- A1 The suite passes at the split code: the suite check
+- A2 Every moved line moved unchanged: the `split`
+  check (cpp-libraries' `tools/split_check.py`), with its warnings answered in the journal
+- A3 Release builds use LTO (CMakeLists.txt `-flto` for RELEASE), so moved functions keep their
+  inlining: the moved functions' sizes in a Release build (`nm -S --size-sort`) match before and
+  after, or each difference is listed and explained: a job at each commit
+- A4 [artifact] the layout note (`docs/dev/source-layout.md`) lists each
+  new file and what it holds
+- A5 [ci] CI is green on every platform
+- A6 Every header this quest creates compiles alone, checked the way cpp-libraries'
+  `tools/selfcontained.sh` checks one (a translation unit that only includes it twice,
+  `-fsyntax-only`), over the new headers only: a job at the head
+- A7 [manual] The lead read the split: each piece is a unit a maintainer opens alone, and the
+  layout note names each file kept whole over 1,000 lines and why
+
+## Contracts
+
+None: nothing callers see changes.
+
+## May land early
+
+Each split file on its own, once A1, A2 and CI hold for it.

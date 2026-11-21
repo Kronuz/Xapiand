@@ -284,8 +284,8 @@ void test_string_range_query() {
 		const auto field = spc(5, type);
 		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(&a, &z))),
 			range_source(5, Serialize::MsgPack(field, a), Serialize::MsgPack(field, z)));
-		// M2: with no upper bound the end serializes empty and sorts below the start, so a lower-bound-only string range is empty.
-		CHECK(MultipleValueRange::getQuery(field, range_of(&a, nullptr)).empty());
+		// A lower bound alone is the open-ended source, not the empty query (an absent end must not be compared as "").
+		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(&a, nullptr))), ge_source(5, Serialize::MsgPack(field, a)));
 		CHECK_EQ(described(MultipleValueRange::getQuery(field, range_of(nullptr, &z))), le_source(5, Serialize::MsgPack(field, z)));
 		CHECK(MultipleValueRange::getQuery(field, range_of(&z, &a)).empty());
 		CHECK(MultipleValueRange::getQuery(spc(engine::BAD_VALUENO, type), range_of(&a, &z)).empty());
@@ -294,6 +294,8 @@ void test_string_range_query() {
 	CHECK_EQ(described(MultipleValueRange::getQuery(boolean, range_of(&no, &yes))),
 		range_source(6, Serialize::boolean(false), Serialize::boolean(true)));
 	CHECK(MultipleValueRange::getQuery(boolean, range_of(&yes, &no)).empty());
+	CHECK_EQ(described(MultipleValueRange::getQuery(boolean, range_of(&yes, nullptr))), ge_source(6, Serialize::boolean(true)));
+	CHECK_EQ(described(MultipleValueRange::getQuery(boolean, range_of(nullptr, &no))), le_source(6, Serialize::boolean(false)));
 }
 
 // Dates: a closed range is filtered by the terms of the date accuracies; an open one is the source alone.
