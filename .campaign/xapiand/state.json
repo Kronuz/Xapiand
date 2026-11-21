@@ -28595,8 +28595,9 @@
             "CMakeLists.txt",
             "include/strata/core/turn_seal.hh"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--checkpoint-window",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--checkpoint-window"
+          "journal": "",
+          "merged": "1e42abcd4a1c90bd1a5e6c5b1e21f786b50bb64a",
+          "worktree": ""
         },
         "cohort-wait": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
@@ -28652,7 +28653,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T20:41:14",
+      "updated": "2026-11-21T08:52:27",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
