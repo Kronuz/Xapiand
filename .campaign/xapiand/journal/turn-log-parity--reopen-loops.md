@@ -1,6 +1,6 @@
 # turn-log-parity--reopen-loops: journal
 
-State: waiting on jobs 261120-194415-bf027b
+State: ready for review (strata CI run 44862924195 queued at a38d4c26)
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,30 +9,37 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-strata:a38d4c26 on quest/xapiand/turn-log-parity--reopen-loops: `kv_strata` keeps each index's
-group in `<dir>/<i>/kv-group` (picked at create, read at reopen); `test/test_reopen_loops.cc`.
-First run: job 261120-194415-bf027b.
+Nothing: the test passes and its mutant fails; CI run 44862924195 on the pushed branch.
 
 ## Next
 
-1. Read 261120-194415-bf027b; fix what it shows.
-2. Mutant commit (reopen derives the group from L again, `pick_group(i)`) on branch
-   `mutant/turn-log-parity--reopen-loops`; `--fails-without` job at it.
-3. Push; record CI.
+1. Lead: merge strata:a38d4c26 into the quest branch once CI is green. rocksdb-parity.md's gap 4
+   (line 731) still cites `kv_strata.hh:288-290` deriving the id; that file is outside this task.
 
 ## Blocked on
 
-Nothing.
+Nothing. Row 9's refusal was not needed: no case reached a current-generation log at loop >= L.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| parity row 8 (D10 item 2) | test: pending 261120-194415-bf027b; fails without: pending |
+| A6 (parity row 8, D10 item 2) | 261120-194415-bf027b at strata:a38d4c26 (exit 0: L 1->3 151 cases over 74 mutations, 136 cut inside the open; L 3->2 117 cases over 57 mutations, 106 inside); fails without: 261120-195114-cec936 at the mutant strata:0a2b2883 (branch `mutant/turn-log-parity--reopen-loops`, reopen derives the group from L: exit 1, 146 failures, every one `log_mismatch`, "the index's turn_group names another host or group") |
 
 ## Result
 
-<pending>
+- `bench/kv/kv_strata.hh`: each index's group is picked at create (index i on loop i mod L, as
+  before) and kept in `<dir>/<i>/kv-group`; a reopen reads it, never derives it from L. Tests get
+  `index(i)`, `group(i)`, `loops()`, and `strata_kv::opening{create, loops}`. A failed turn ends
+  its loop thread (the sealer keeps the failure) instead of `std::terminate`, and a throwing
+  constructor stops the loops it started.
+- `test/test_reopen_loops.cc` (`reopen_loops` in ctest): four logged indexes created at L = 1,
+  reopened at 3 and then 2 with a power cut before each reopen; every index read whole after each
+  reopen: each acknowledged key with its exact value, each key in its routed index, each index in
+  its created group, the host at the new L; unacknowledged `ack=none` tails absent or whole, then
+  stable. Each re-partitioning reopen is cut at every mutation under 2 power-loss seeds
+  (`--seeds N`), with an acknowledged batch after it, then recovered, written and cut again.
+- Run time 53 s for build and run in the job (Release).
 
 ## Rulings I made
 
