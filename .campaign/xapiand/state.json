@@ -27260,6 +27260,18 @@
       "risk": "high",
       "status": "active",
       "tasks": {
+        "checkpoint-window": {
+          "base": "fcf5b55b98b2027ed2cd7f5171322ad5cc3885e1",
+          "branch": "quest/xapiand/turn-log-parity--checkpoint-window",
+          "files": [
+            "include/strata/core/index.hh",
+            "test/test_checkpoint_window*",
+            "bench/kv/probes/rocksdb-parity/checkpoint-floor*",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--checkpoint-window",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--checkpoint-window"
+        },
         "cohort-wait": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
           "branch": "quest/xapiand/turn-log-parity--cohort-wait",
@@ -27314,7 +27326,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T20:04:24",
+      "updated": "2026-11-20T20:05:58",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
