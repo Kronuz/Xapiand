@@ -24530,6 +24530,35 @@
       "title": "Publish and reclaim guarded reader views",
       "updated": "2026-11-08T15:39:29"
     },
+    "single-flight-budget": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/single_flight.h",
+        "tests/test_single_flight*",
+        "tests/CMakeLists.txt",
+        "docs/dev/cancellation.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A request joining a schema load leaves when its client does",
+      "updated": "2026-11-21T13:22:25"
+    },
     "sort-cast-not-wrap": {
       "accepted": {},
       "after": [],
