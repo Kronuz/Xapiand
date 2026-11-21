@@ -594,3 +594,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Filed: journal-group-delete (Detent's lead: not theirs; after their 4 journal quests; consensus half is detent:consensus-replica-delete). Xapiand tls_seconds_to_expiry duplicate -> extraction row.
 - Tool: agent-campaign:c6a4324 (CAMPAIGN_DRAIN_HOLD, 4 h; suite 298 OK), dotfiles:08a02c5; worker restarted.
 - Quota 58% weekly, 0.47%/h, reset in 45 h. Load 25-40. Disk 299 GiB free.
+
+## 2026-11-21 01h
+- Landed: reactor-open-files (reactor:01db032). Accepted: task-timers-followups correctness after fix round 1 (task:dc2be96; lands on CI).
+- Agents finished (Opus): timers review 166k (CHANGES: F1 deadlock of two fire_pending() calls, proved both ways); timers fix round 176k (13 jobs green); placement repair resume 252k (planner model fixed, 3,000 seeds pass; consensus bug found and routed: Detent took it as consensus-leaving-removal, option b).
+- Lead work (no agent): RapidJSON backport on the release branch (Xapiand:d2fa3e15d); master gets the no-publish release mode and macos-15/26 runners (Xapiand:79f86b9ef), master dry runs dispatched; bulk-load-rerun doc (Xapiand:379a6592f): strata loads shakespeare 1.35x, logs 1.88x faster than ES 9.5.4 (2018: ~2x slower).
+- Cost: landing loops re-merge master on every code push (cjk-words, strata-pin-catalog restarted CI at 00:50); GitHub runner queue ~26 min behind master's dry runs. Batch master code pushes.
+- Launched: explorer bulk-load peak RSS (Opus, explore/ branch).
+- Quota 60% weekly, 0.48%/h, reset in 44 h. Load 10-15. Disk 299 GiB free.
