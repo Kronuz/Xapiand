@@ -25314,7 +25314,8 @@
       "consumes": [],
       "files": [
         "CMakeLists.txt",
-        "tests/test_pool.cc"
+        "tests/test_pool.cc",
+        "harness/pool_asan_repro.sh"
       ],
       "history": [
         {
@@ -25381,7 +25382,7 @@
       "risk": "low",
       "status": "review",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T03:35:41",
+      "updated": "2026-11-21T08:47:56",
       "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
