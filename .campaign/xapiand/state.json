@@ -10691,7 +10691,9 @@
     },
     "group-heal": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "detent:consensus-driver-install"
+      ],
       "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
       "branch": "quest/xapiand/group-heal",
       "checks": [
@@ -10826,7 +10828,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T18:37:21",
+      "updated": "2026-11-20T18:37:53",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
