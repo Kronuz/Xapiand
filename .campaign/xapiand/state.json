@@ -20832,8 +20832,10 @@
       ],
       "consumes": [],
       "files": [
-        "include/reactor/reactor.h",
-        "test/**"
+        "reactor.h",
+        "test/limits_test.cc",
+        "test/test.cc",
+        "CMakeLists.txt"
       ],
       "landed": [],
       "lenses": [],
@@ -20846,7 +20848,7 @@
       "risk": "low",
       "status": "planned",
       "title": "raise_open_files clamps; its untested paths get tests",
-      "updated": "2026-11-20T23:34:34"
+      "updated": "2026-11-20T23:35:01"
     },
     "reactor-server-composition": {
       "accepted": {
