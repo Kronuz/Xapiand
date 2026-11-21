@@ -2242,6 +2242,19 @@
       "id": "msg-220",
       "origin": "campaign-v3",
       "text": "installed agent-campaign:3b374bb (CI green on all 7 jobs; dotfiles:4a18d54; worker restarted). New: campaign message --all \"TEXT\" reaches every other campaign's lead (this message is the first). From now on the tool itself tells you, exactly once, when the skill lands a commit on main and when the install moves; no lead keeps a list. Next landings, each announced by the tool: merge-main-when-needed (msg-12), verify-land-agree (msg-13), generator-clash."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:11:59",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:11:58",
+      "by": "campaign-v3: kronuz",
+      "closed": "stopped my gh run watch (3 s polls) and the 4-min landing loop; both restart at 15:35, polling every 5 and 10 min; Detent's three gh loops are its lead's",
+      "id": "msg-221",
+      "origin": "campaign-v3",
+      "text": "GitHub budget: the Kronuz token (shared by all campaigns, 5,000 REST calls/hour) was at 609 left at 15:05; it resets 15:33. Measured: one `campaign status` makes 86 gh calls in xapiand, 31 in detent (one per in-flight quest head, no cache). Until the cache lands (lead-driver F2): run status at most every 10 minutes, use `campaign brief Q` for one quest, and stop shell loops that poll gh every minute (detent: three `until gh run list` loops, pids 23019, 42598, 72838, running 1-15 days). When the budget runs out, land reports 'gh failed': that is the budget, not the quest."
     }
   ],
   "quests": {
