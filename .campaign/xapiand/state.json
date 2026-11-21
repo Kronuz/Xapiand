@@ -25958,6 +25958,8 @@
       "after": [
         "split-check"
       ],
+      "base": "d3eaf328cd011ba045325467e09f00b520d55f4d",
+      "branch": "quest/xapiand/split-strict-stox",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25982,6 +25984,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-strict-stox",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25989,9 +25992,10 @@
       "provides": [],
       "repo": "../strict-stox",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "strict-stox's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:06"
+      "updated": "2026-11-21T12:58:24",
+      "worktree": "../strict-stox-wt/xapiand/split-strict-stox"
     },
     "split-task": {
       "accepted": {},
