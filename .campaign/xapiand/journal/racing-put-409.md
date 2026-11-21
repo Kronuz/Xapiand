@@ -1,6 +1,6 @@
 # racing-put-409: journal
 
-State: working
+State: waiting on jobs 261121-103611-090052
 Quest: .campaign/xapiand/quests/racing-put-409.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
