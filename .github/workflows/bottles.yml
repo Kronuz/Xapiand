@@ -14,6 +14,10 @@ name: Bottles
 #                    `bottle do` block and pushes it to Kronuz/homebrew-tap. It
 #                    depends only on `bottle`, so the tap updates in ~minutes; a
 #                    slow Intel bottle is folded in whenever it happens to be ready.
+#
+# A dispatch with publish=false (and ref=<commit or branch>) builds every bottle from
+# the source at ref and merges them into a local clone of the tap, but attaches
+# nothing to any release and pushes nothing to the tap.
 
 on:
   workflow_dispatch:
@@ -22,6 +26,14 @@ on:
         description: "Release tag to bottle (e.g. v1.0.0-alpha.1)"
         required: true
         default: v1.0.0-alpha.1
+      publish:
+        description: "Publish the bottles and the tap (false builds and merges locally only)"
+        type: boolean
+        default: true
+      ref:
+        description: "Commit or branch to build when publish is false (default: the tag)"
+        required: false
+        default: ""
   push:
     tags:
       - 'v[0-9]+.*'
@@ -31,6 +43,11 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # Tag pushes publish; a dispatch publishes unless publish is false.
+  PUBLISH: ${{ github.event.inputs.publish != 'false' }}
+  # What to build: the tag, or `ref` when not publishing (a release is always
+  # built from its tag).
+  REF: ${{ (github.event.inputs.publish == 'false' && github.event.inputs.ref) || github.event.inputs.tag || github.ref_name }}
 
 jobs:
   bottle:
@@ -45,8 +62,11 @@ jobs:
         os: [macos-14, macos-15]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - uses: ./.github/actions/build-bottle
         with:
+          publish: ${{ env.PUBLISH }}
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
           os: ${{ matrix.os }}
@@ -68,6 +88,8 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - name: Set up Rosetta 2 and an x86_64 Homebrew
         shell: bash
         run: |
@@ -80,6 +102,7 @@ jobs:
           arch -x86_64 /usr/local/bin/brew --version
       - uses: ./.github/actions/build-bottle
         with:
+          publish: ${{ env.PUBLISH }}
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
           os: macos-14-x86_64
@@ -100,6 +123,8 @@ jobs:
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - name: Collect the per-cell bottle JSONs
         uses: actions/download-artifact@v4
         with:
@@ -107,9 +132,8 @@ jobs:
           merge-multiple: true
           path: json
 
-      - name: Merge the bottle DSL into the tap formula and push
+      - name: Merge the bottle DSL into the tap formula
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           # brew bottle refuses to load a formula from a non-official ("untrusted")
           # tap. We own kronuz/tap, so opt out of the trust requirement for this step.
           HOMEBREW_NO_REQUIRE_TAP_TRUST: "1"
@@ -128,11 +152,23 @@ jobs:
           # head-only, so this injects rather than rewrites; awk is idempotent and
           # never touches labeled bottle-block sha256 lines.
           cp contrib/homebrew/xapiand.rb "$FORMULA"
-          SRC_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          # A no-publish run has no tag: build from the checked-out commit's archive,
+          # with the version stated since a sha-named tarball carries none.
+          SRC_REF="refs/tags/${TAG}"; VER=""
+          if [ "$PUBLISH" != true ]; then SRC_REF="$(git rev-parse HEAD)"; VER="${TAG#v}"; fi
+          SRC_URL="https://github.com/${{ github.repository }}/archive/${SRC_REF}.tar.gz"
           SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
-          awk -v u="$SRC_URL" -v s="$SRC_SHA" '/^  url /{next} /^  sha256 "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
+          awk -v u="$SRC_URL" -v s="$SRC_SHA" -v v="$VER" '/^  url /{next} /^  sha256 "/{next} /^  version "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""; if (v != "") print "  version \"" v "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
           # Merge the per-cell bottle DSL into that formula.
           brew bottle --merge --write --no-commit json/*.bottle.json
+          git -C "$(brew --repository kronuz/tap)" diff
+
+      - name: Commit and push the tap
+        if: env.PUBLISH == 'true'
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -eux
           # Commit + push from the tapped clone, authenticating with the PAT.
           TAP_DIR="$(brew --repository kronuz/tap)"
           cd "$TAP_DIR"
