@@ -5,6 +5,9 @@
     "arm64",
     "FreeBSD"
   ],
+  "env": [
+    "CMAKE_GENERATOR=Ninja"
+  ],
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
@@ -2077,6 +2080,30 @@
       "closed": "workspace renamed 'xapiand \u00b7 lead'",
       "id": "msg-209",
       "text": "Session titles: the cmux sender name is the workspace title (detent verified). Please run: cmux workspace rename 'xapiand \u00b7 lead' (your messages still arrive as 'Async search engine to replace Xapian')."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T12:43:13",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T12:43:13",
+      "by": "kronuz",
+      "closed": "installed agent-campaign:b6929d5 noted; env set and slots swept",
+      "id": "msg-210",
+      "text": "installed agent-campaign:b6929d5 (CI green on all 7 jobs, run 44943172830; dotfiles:0efc235 pushed; worker restarted, running jobs kept). New for leads: config env=NAME=VALUE for your jobs (4c40575); --hunt WORDS on new / hunt= on set closes a hunt row when its quest lands (b34fef9); start refuses a quest that would hold the files of a quest it lands after (6f0b679); contributors push once per round of code (02077e2)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T12:48:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T12:48:36",
+      "by": "kronuz",
+      "closed": "session-name step relayed to the owner; harness gap (SendMessage to uds peers) sent to campaign-v3",
+      "id": "msg-211",
+      "text": "From campaign-v3: (1) Name your Claude session after your campaign: Claude Code sets the session name only at launch (claude -n 'xapiand \u00b7 lead') or by the owner's /rename (or renaming it in the Claude app); no hook or agent command can, and an explicit name is never replaced by the auto-title. The cmux sender name is the workspace title (cmux workspace-action --action rename --title '<campaign> \u00b7 lead'). Quest session-title will make brief/status check the transcript's custom-title and print the exact /rename. (2) New rule: every harness-specific mechanism the campaign relies on is listed in references/harness.md's 'Harness-specific mechanisms' table (agent-campaign:4e70a03, lands with the split); if your campaign leans on a hook or harness feature the table lacks, send it to me."
     }
   ],
   "quests": {
@@ -13636,37 +13663,39 @@
     "journal-turn-buffers": {
       "accepted": {
         "durability": {
-          "at": "2026-11-20T21:07:02",
-          "base": "178030b38f5617337486407e6cc35d70881a0841",
+          "at": "2026-11-21T12:52:25",
+          "base": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
           "blobs": {
-            "CMakeLists.txt": "100644:20def4d16515562652667df4623b1ccb652f5a13",
-            "docs/mechanisms/framing.md": "100644:e7351bcfe36fe92cc2db54efe1c46695cf0578c3",
-            "docs/mechanisms/turn-seal.md": "100644:1de68db8eb37b81b30753415531fc17307d48482",
-            "include/journal/framing.h": "100644:6a237fbd75af72908dc1a5baa9c1b2f364dc6005",
-            "include/journal/turn_driver.h": "100644:f8950bf0bca960fce55420eae978d3e6fd2bcf7e",
-            "include/journal/turn_log.h": "100644:b611c7abea69b35e726275512bd0175fc1e8aca5",
-            "test/turn_buffers_probe.cc": "100644:1d5a9470f2062094ef33558420030391c2e92ea6",
-            "test/turn_buffers_test.cc": "100644:d567d4af82bd7ac640285dd1bd2251e20eec7e01",
-            "test/turn_seal_mutants.sh": "100644:8ccf95f2b109ad87ff18fc8ecf927829c04c3848"
+            "CMakeLists.txt": "100644:eb330ce775fc6ed23188161c2f8a3a632ee91be6",
+            "docs/mechanisms/framing.md": "100644:757b2400be4ed24d0bddfaf64f8678b94849b44f",
+            "docs/mechanisms/turn-seal.md": "100644:21aa7717280151a6a2103ece5052ad2105b30a5d",
+            "include/journal/framing.h": "100644:2b0d9160a96d87133174f4a56d6512fa44c950e7",
+            "include/journal/turn_driver.h": "100644:06dd34013e398844ed56bff9afcb13b11cb2ad3b",
+            "include/journal/turn_log.h": "100644:5a22c95cfd6834d6b4ebec6b20731690f377c3db",
+            "test/framing_test.cc": "100644:01e0cca8369780122f2a49c1c325446dd3422e21",
+            "test/turn_buffers_probe.cc": "100644:ea0fd344b48bc4d1aa0e0011d1007537194ee5dc",
+            "test/turn_buffers_test.cc": "100644:9f460570b71930a667ff46bf4c7b3c04810cccb8",
+            "test/turn_seal_mutants.sh": "100644:a7b4f4a6bdc08108671ed9b173d8a5883107de2d"
           },
           "by": "review",
-          "commit": "5ace07ee9e1f2833e5adeec27a40ccb9ed2a443c",
+          "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
           "criteria": "832f225897cde40f",
           "diffs": {
             "CMakeLists.txt": "581c236fed872990",
-            "docs/mechanisms/framing.md": "ad00bcdb9281c5b7",
-            "docs/mechanisms/turn-seal.md": "f4838cc97e5b3e60",
-            "include/journal/framing.h": "b12703f9c4290164",
-            "include/journal/turn_driver.h": "514b6da551afa285",
-            "include/journal/turn_log.h": "180896b2b0cf86a5",
-            "test/turn_buffers_probe.cc": "762daef20ec16c36",
-            "test/turn_buffers_test.cc": "c1c4eee0b72f4328",
-            "test/turn_seal_mutants.sh": "50c650714bc574c5"
+            "docs/mechanisms/framing.md": "b10de0f8c9d4449a",
+            "docs/mechanisms/turn-seal.md": "2ebe562bbac21dbe",
+            "include/journal/framing.h": "b55aecb3218fe381",
+            "include/journal/turn_driver.h": "ca861b89ba629b54",
+            "include/journal/turn_log.h": "34933c539eb8f002",
+            "test/framing_test.cc": "950282bf18ca5ce8",
+            "test/turn_buffers_probe.cc": "aff69183dfa6678c",
+            "test/turn_buffers_test.cc": "64defacea1def1a8",
+            "test/turn_seal_mutants.sh": "644ffb50fdca2613"
           },
           "findings": {},
           "note": "",
-          "review": "5db34a6b78a9d0143c02854b2fd5721517784403",
-          "reviewed": "b88565f0a276c4ea392a171861d8044edd2f1964",
+          "review": "87abb92b14efddc257fb11846ccd0b475ee51724",
+          "reviewed": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
           "verdict": "APPROVE"
         }
       },
@@ -13723,7 +13752,7 @@
       "risk": "high",
       "status": "active",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-20T21:07:02",
+      "updated": "2026-11-21T12:52:25",
       "worktree": "../journal-wt/xapiand/journal-turn-buffers"
     },
     "key-field": {
@@ -25250,7 +25279,74 @@
         "tools/test_split_check.py",
         "tools/README.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-check",
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T12:29:17",
+          "commit": "920d1b27e9a75816a6528082b8c6e6377aa34967",
+          "criteria": {
+            "A1": "261121-121041-cfdb7d (the test check), 261121-121041-cfdb7d (passed at dc0ecfe9ad8d; only 1 merge from main since, none touching its files)",
+            "A2": "261121-121044-64007d (passed at dc0ecfe9ad8d; only 1 merge from main since, none touching its files)",
+            "A3": "[artifact] cpp-libraries tools/README.md: names split_check.py and `split_check.py [--base REF] [--max-lines N] PATH...`",
+            "A4": "CI green at 920d1b27e9a7"
+          },
+          "evidence": [
+            {
+              "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+              "commit": "dc0ecfe9ad8d087901c113fbd45f506be4da503f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121041-cfdb7d",
+              "level": "light",
+              "seconds": 24.5,
+              "state": "done",
+              "what": "/usr/local/bin/python3 tools/test_split_check.py at dc0ecfe9ad8d"
+            }
+          ],
+          "final": true,
+          "from": "7cab8ec5bd1861885ea58212d8afc2451193723e",
+          "reason": "",
+          "tested": "920d1b27e9a75816a6528082b8c6e6377aa34967"
+        }
+      ],
+      "lenses": [],
+      "messages": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "landed",
+      "title": "split_check.py proves a file split moved code and changed none",
+      "updated": "2026-11-21T12:29:17",
+      "worktree": ""
+    },
+    "split-check-sources": {
+      "accepted": {},
+      "after": [],
+      "base": "920d1b27e9a75816a6528082b8c6e6377aa34967",
+      "branch": "quest/xapiand/split-check-sources",
+      "checks": [
+        {
+          "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+          "level": "light",
+          "minutes": 10,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py'",
+          "level": "light",
+          "minutes": 10,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "docs/SPLITTING.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/split-check-sources",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25259,15 +25355,17 @@
       "repo": "../cpp-libraries",
       "risk": "low",
       "status": "active",
-      "title": "split_check.py proves a file split moved code and changed none",
-      "updated": "2026-11-21T11:40:02",
-      "worktree": "../cpp-libraries-wt/xapiand/split-check"
+      "title": "split_check compares only C and C++ sources",
+      "updated": "2026-11-21T12:39:08",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-sources"
     },
     "split-completion": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "714186eab63d5b1b8001a9f9a1afcfc7602f8766",
+      "branch": "quest/xapiand/split-completion",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25292,6 +25390,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-completion",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25299,15 +25398,18 @@
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "completion's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:20"
+      "updated": "2026-11-21T12:57:36",
+      "worktree": "../completion-wt/xapiand/split-completion"
     },
     "split-constexpr-phf": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "6f97931e4563b9beef8cad214e36a75f91556f5c",
+      "branch": "quest/xapiand/split-constexpr-phf",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25332,6 +25434,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-constexpr-phf",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25339,15 +25442,18 @@
       "provides": [],
       "repo": "../constexpr-phf",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "constexpr-phf's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:23"
+      "updated": "2026-11-21T12:57:42",
+      "worktree": "../constexpr-phf-wt/xapiand/split-constexpr-phf"
     },
     "split-datetime": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "b5d46a8796a80169f71c0535602a5a9a8714e688",
+      "branch": "quest/xapiand/split-datetime",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25373,8 +25479,11 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-datetime",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25382,15 +25491,18 @@
       "provides": [],
       "repo": "../datetime",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:27"
+      "updated": "2026-11-21T12:29:42",
+      "worktree": "../datetime-wt/xapiand/split-datetime"
     },
     "split-docset": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "53da120c0350460109cabb21bbbe8982bda7dabd",
+      "branch": "quest/xapiand/split-docset",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25415,6 +25527,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-docset",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25422,15 +25535,18 @@
       "provides": [],
       "repo": "../docset",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "docset's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:30"
+      "updated": "2026-11-21T12:57:49",
+      "worktree": "../docset-wt/xapiand/split-docset"
     },
     "split-enum-reflection": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "7059876d6742b901c2664ed99f347d9968fd4476",
+      "branch": "quest/xapiand/split-enum-reflection",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25455,6 +25571,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-enum-reflection",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25462,15 +25579,18 @@
       "provides": [],
       "repo": "../enum-reflection",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "enum-reflection's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:33"
+      "updated": "2026-11-21T12:57:55",
+      "worktree": "../enum-reflection-wt/xapiand/split-enum-reflection"
     },
     "split-faultlab": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+      "branch": "quest/xapiand/split-faultlab",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25495,6 +25615,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-faultlab",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25502,15 +25623,18 @@
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "faultlab's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:36"
+      "updated": "2026-11-21T12:58:02",
+      "worktree": "../faultlab-wt/xapiand/split-faultlab"
     },
     "split-htm": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "0c09a0283a507b2cf08975a7c8572d95ece60b68",
+      "branch": "quest/xapiand/split-htm",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25535,6 +25659,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-htm",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25542,9 +25667,10 @@
       "provides": [],
       "repo": "../htm",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "htm's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:40"
+      "updated": "2026-11-21T12:58:09",
+      "worktree": "../htm-wt/xapiand/split-htm"
     },
     "split-http": {
       "accepted": {},
@@ -25649,6 +25775,8 @@
       "after": [
         "split-check"
       ],
+      "base": "18be8a3c3c1919e9c4331e1490212d5295aec7f5",
+      "branch": "quest/xapiand/split-logger",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25674,8 +25802,10 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "docs/exit-lifetime.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-logger",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25683,9 +25813,10 @@
       "provides": [],
       "repo": "../logger",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "logger's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:51"
+      "updated": "2026-11-21T12:30:32",
+      "worktree": "../logger-wt/xapiand/split-logger"
     },
     "split-msgpack": {
       "accepted": {},
@@ -25739,6 +25870,8 @@
       "after": [
         "split-check"
       ],
+      "base": "40743e38e62c7fae00f744167dbee76323cdfc17",
+      "branch": "quest/xapiand/split-queryparser",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25763,6 +25896,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-queryparser",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25770,15 +25904,18 @@
       "provides": [],
       "repo": "../queryparser",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "queryparser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:58"
+      "updated": "2026-11-21T12:58:16",
+      "worktree": "../queryparser-wt/xapiand/split-queryparser"
     },
     "split-storage": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "e0e7bedb6bfa231f880c790ea9814b2fbb4c3c92",
+      "branch": "quest/xapiand/split-storage",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25803,6 +25940,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-storage",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25810,15 +25948,18 @@
       "provides": [],
       "repo": "../storage",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "storage's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:02"
+      "updated": "2026-11-21T12:21:49",
+      "worktree": "../storage-wt/xapiand/split-storage"
     },
     "split-strict-stox": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "d3eaf328cd011ba045325467e09f00b520d55f4d",
+      "branch": "quest/xapiand/split-strict-stox",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25843,6 +25984,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-strict-stox",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25850,15 +25992,18 @@
       "provides": [],
       "repo": "../strict-stox",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "strict-stox's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:06"
+      "updated": "2026-11-21T12:58:24",
+      "worktree": "../strict-stox-wt/xapiand/split-strict-stox"
     },
     "split-task": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+      "branch": "quest/xapiand/split-task",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25887,8 +26032,10 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-task",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25896,15 +26043,18 @@
       "provides": [],
       "repo": "../task",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "task's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:10"
+      "updated": "2026-11-21T12:30:50",
+      "worktree": "../task-wt/xapiand/split-task"
     },
     "split-traceback": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "066853d586179b2e801d4c419b764eb483c80045",
+      "branch": "quest/xapiand/split-traceback",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25929,6 +26079,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-traceback",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25936,9 +26087,10 @@
       "provides": [],
       "repo": "../traceback",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "traceback's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:14"
+      "updated": "2026-11-21T12:58:31",
+      "worktree": "../traceback-wt/xapiand/split-traceback"
     },
     "split-uinteger-t": {
       "accepted": {},
@@ -25992,6 +26144,8 @@
       "after": [
         "split-check"
       ],
+      "base": "166bad2365daeea7af722d460f2edcb935f62fc8",
+      "branch": "quest/xapiand/split-url-parser",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -26016,6 +26170,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-url-parser",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26023,15 +26178,18 @@
       "provides": [],
       "repo": "../url-parser",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "url-parser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:22"
+      "updated": "2026-11-21T12:58:38",
+      "worktree": "../url-parser-wt/xapiand/split-url-parser"
     },
     "split-workpool": {
       "accepted": {},
       "after": [
         "split-check"
       ],
+      "base": "406d2f37cefb7386428a92e7cb6d993324eab536",
+      "branch": "quest/xapiand/split-workpool",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -26056,6 +26214,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-workpool",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26063,9 +26222,10 @@
       "provides": [],
       "repo": "../workpool",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:26"
+      "updated": "2026-11-21T12:58:45",
+      "worktree": "../workpool-wt/xapiand/split-workpool"
     },
     "split-xapiand-core": {
       "accepted": {},
