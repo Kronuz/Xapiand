@@ -1,6 +1,6 @@
 # split-htm: journal
 
-State: waiting on jobs 261121-130530-a1b9d9 261121-130530-dc9d96 261121-130532-356ce9 261121-130535-f05536
+State: waiting on jobs 261121-130530-a1b9d9 261121-130532-356ce9
 Quest: .campaign/xapiand/quests/split-htm.md (the lead's; never edit it)
 
 ## Doing
@@ -25,17 +25,19 @@ The lead, outside this quest's file set (not blocking the split itself; docs go 
 2. Xapiand compiles htm sources by path (Xapiand `CMakeLists.txt` line 1214 lists
    `${htm_SOURCE_DIR}/htm.cc`). When its htm pin moves past this split, that list must add
    `htm_descent.cc` and `htm_set_ops.cc`, or Xapiand fails to link. Same pattern as split-url-parser.
+3. `campaign brief` says main changed `.github/workflows/ci.yml` since the branch: merge main
+   (`campaign land split-htm --merge-main`) is the lead's; I left it to avoid cancelling CI.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-130530-a1b9d9 (pending) |
-| A2 | split 261121-130530-dc9d96 (pending); local run of the split-check-sources tool: 0 errors, 3 warnings, answered below |
+| A2 | split 261121-130530-dc9d96 failed with the landed tool: 33 errors, all CMakeLists.txt and docs/source-layout.md lines (non-C/C++ files) plus the 3 htm.cc include lines; the split-check-sources tool (lead's rule 4) passes with 0 errors, 3 warnings, answered below. Lead reruns A2 when split-check-sources lands. |
 | A3 | 261121-130532-356ce9 (pending): configures head and base (htm:0c09a02), diffs `ctest -N` |
 | A4 | `docs/source-layout.md` at htm:8e7cad4 |
 | A5 | CI on the pushed branch (CI's) |
-| A6 | 261121-130535-f05536 (pending): the quest creates no header, so no header to check |
+| A6 | 261121-130535-f05536 passed: the quest creates no header, so no header to check |
 | A7 | lead's read |
 
 split_check warnings (all three are htm.cc include lines whose trailing comments changed):
