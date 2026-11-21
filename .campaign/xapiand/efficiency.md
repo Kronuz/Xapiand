@@ -619,3 +619,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Started: faultlab-journal-oracle (Sonnet). catalog-stress-cap: jobs had finished hours ago with the journal still "waiting"; rows filled, main merged, A2's passing run tagged; lands on CI.
 - Messages: Detent orders detent-multicast-seeds after node-admission (seed records unchanged).
 - Quota 62% weekly, 0.49%/h, reset in 42 h. Load 13-18. Disk 297 GiB free.
+
+## 2026-11-21 04h
+- Landed: faultlab-journal-oracle (faultlab:e3fcfe3; A2 amended by the lead: the opt-in generator includes MemoryIO's header by design, so A2 checks the default configure), catalog-stress-cap (strata:753bc62c; its jobs had sat done for hours with the journal "waiting"). Detent told: journal's memory_io.h deletion unblocked once its pin wave reaches faultlab:e3fcfe3.
+- Agents finished (Sonnet): store-docs 89k (page and five asserting blocks; lead added the index and sidebar links, file set widened), newman-pin 84k + 95k resume (one pin for three workflows and two scripts; lead fixed a top-level `return` that let a failed install pass the FreeBSD step: exits 0 before, 1 after), faultlab-journal-oracle 90k + 103k, faultlab-adopt-strata 147k (49 callers migrated, no shim; lead pointed STATUS and the book outline at faultlab). Opus: restore-stream resume 155k (A3's failure was the probe: es-logs has 0 `_id` keys, shakespeare 111,396, checked by the lead).
+- restore-stream reruns: peak logs 1,357 -> 344 MB, shakespeare 1,860 -> 405 MB; time shakespeare 11.21 -> 7.65 s, logs 8.47 -> 9.19 s (A/A 7.98) under strict: exclusive logs A/B queued. Security review (Opus) running.
+- Started: faultlab-adopt-strata (forced: CMakeLists.txt and two turn-log-parity files, an include rename), explorers keyword-open-range and geo-global-prefix-order (Sonnet; explore/ branches beside cjk-words). Hunt: sort cast-word row stale (Xapiand:570afc7a7).
+- Host: light slots 46% used; exclusive jobs queued up to 300 min (turn-log-parity trials, bulk-load dry runs, restore-stream A/B) behind drains. C2 condition 2's CPU-hours wait on Detent's fix and a per-decoder pin.
+- Quota 63% weekly, 0.49%/h, reset in 41 h. Load 5-7. Disk 295 GiB free.
