@@ -27457,18 +27457,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/track-c-gates",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T02:45:49",
+          "commit": "560e8851ddbced7458f2d98442397471d5f1dee2",
+          "criteria": {
+            "A1": "docs/gates/track-c-c2.md (artifact), strata:45b0ab43: every row at consensus 8801b99 / journal 178030b filled with its job: macOS 4592f2 86e99e 18b807 83dd88 75f543 b711ce 2b2fc3 369f91 c43dad 4175b8 b0da39; Linux VM 124538 2096f8; FreeBSD VM dd591f d74166. **T9 jpower 200 fails at journal 178030b** (18b807 macOS, d74166 FreeBSD: 7 failures, seeds 91 140 145 199 122), passed at d90797c (e136e7); Detent msg-183",
+            "A2": "docs/gates/track-c-c4.md, strata:560e8851: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 273aa8 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 fd5a96 4e57e4 ce0b7a 743b1d fa2caa b7499c; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x); R19 256 KiB Control past at 0 ms in 1 of 2 runs (59.0/15.1, then 7.8/11.5), gaps under bound + idle floor; T7e and D18 not runnable (group-heal)",
+            "A3": "docs/reviews/track-c-c2.md and track-c-c4.md (strata:ea2652b1): both APPROVE WITH CONDITIONS; C4 conditions 1-2 folded in at strata:560e8851; open conditions listed as each report's residuals"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "560e8851ddbced7458f2d98442397471d5f1dee2",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "b469475736ebacbfdf8676f93a47f2bf2e7204b2",
+          "reason": "",
+          "tested": "560e8851ddbced7458f2d98442397471d5f1dee2"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-21T01:52:19",
-      "worktree": "../strata-wt/xapiand/track-c-gates"
+      "updated": "2026-11-21T02:45:54",
+      "worktree": ""
     },
     "track-d": {
       "accepted": {},
