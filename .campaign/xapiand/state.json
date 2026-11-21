@@ -25222,6 +25222,49 @@
       "updated": "2026-11-21T11:44:47",
       "worktree": "../http-wt/xapiand/split-http"
     },
+    "split-http-parser": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_parser.cc",
+        "http_parser_*",
+        "http_parser/**",
+        "test/diff.cc",
+        "test/diff_*",
+        "test/diff/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http-parser",
+      "risk": "low",
+      "status": "planned",
+      "title": "http-parser's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:15"
+    },
     "split-xapiand-core": {
       "accepted": {},
       "after": [
