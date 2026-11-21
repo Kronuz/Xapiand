@@ -79,14 +79,60 @@ struct Outcome {
 	bool ok() const { return !limit && !too_large && !script_error && !cancelled && !failed; }
 };
 
-Outcome outcome_of(std::exception_ptr error);
+inline Outcome outcome_of(std::exception_ptr error) {
+	Outcome out;
+	if (!error) {
+		return out;
+	}
+	try {
+		std::rethrow_exception(error);
+	} catch (const lua::ScriptLimitError& e) {
+		out.limit = true;
+		out.what = e.what();
+	} catch (const lua::ScriptResultTooLarge& e) {
+		out.too_large = true;
+		out.what = e.what();
+	} catch (const lua::ScriptError& e) {
+		out.script_error = true;
+		out.what = e.what();
+	} catch (const task::cancelled&) {
+		out.cancelled = true;
+	} catch (const std::exception& e) {
+		out.failed = true;
+		out.what = e.what();
+	}
+	return out;
+}
 
-MsgPack doc_of(std::initializer_list<std::pair<const char*, int64_t>> fields);
+inline MsgPack doc_of(std::initializer_list<std::pair<const char*, int64_t>> fields) {
+	MsgPack doc = MsgPack::MAP();
+	for (auto& [key, value] : fields) {
+		doc[key] = value;
+	}
+	return doc;
+}
 
 // Runs one call to its end on this thread (no budget: it never suspends).
-Outcome call(Processor& processor, MsgPack doc, const MsgPack& params = MsgPack::MAP());
+inline Outcome call(Processor& processor, MsgPack doc, const MsgPack& params = MsgPack::MAP()) {
+	::alarm(600);   // the watchdog bounds one call, not the whole run (a sanitizer build is slow)
+	Outcome out;
+	out.doc = std::move(doc);
+	MsgPack old_doc = MsgPack::MAP();
+	std::exception_ptr error;
+	try {
+		task::sync_wait(processor("PUT", out.doc, old_doc, params));
+	} catch (...) {
+		error = std::current_exception();
+	}
+	auto result = outcome_of(error);
+	result.doc = std::move(out.doc);
+	return result;
+}
 
-Outcome call(const std::string& body, MsgPack doc, Limits limits = {});
+inline Outcome call(const std::string& body, MsgPack doc, Limits limits = {}) {
+	Processor processor("test", body, MsgPack::MAP(), limits);
+	return call(processor, std::move(doc));
+}
 
 // A call that runs on a scheduler under a budget, to interleave with others.
 struct Pending {
@@ -97,21 +143,45 @@ struct Pending {
 	Outcome outcome;
 };
 
-void start(task::inline_scheduler& scheduler, Pending& pending, Processor& processor, task::budget& budget);
+inline void start(task::inline_scheduler& scheduler, Pending& pending, Processor& processor, task::budget& budget) {
+	task::spawn(task::scheduler_ref::of(scheduler),
+		processor("PUT", pending.doc, pending.old_doc, pending.params, &budget),
+		[&pending](std::exception_ptr error) {
+			pending.outcome = outcome_of(error);
+			pending.finished = true;
+		});
+}
 
 constexpr std::chrono::nanoseconds every_checkpoint{1};   // a slice so short that every checkpoint yields
 
 // A nil assigned to a field leaves no field.
-bool absent(const MsgPack& doc, const char* key);
+inline bool absent(const MsgPack& doc, const char* key) {
+	return doc.find(key) == doc.end();
+}
 
-std::string str(const MsgPack& doc, const char* key);
+inline std::string str(const MsgPack& doc, const char* key) {
+	return doc.at(key).str();
+}
 
-Limits quick();
+inline Limits quick() {
+	Limits limits;
+	limits.max_instructions = 2'000'000;
+	limits.max_bytes = 8u << 20;
+	return limits;
+}
 
-// Other work on the loop: `rounds` turns, then it reports whether the script had finished.
 task::task<void> other_requests(std::size_t rounds, std::size_t& turns, const bool& script_finished, bool& script_finished_at_end);
 
+// Other work on the loop: `rounds` turns, then it reports whether the script had finished.
+inline task::task<void> other_requests(std::size_t rounds, std::size_t& turns, const bool& script_finished, bool& script_finished_at_end) {
+	for (; turns < rounds; ++turns) {
+		co_await task::yield();
+	}
+	script_finished_at_end = script_finished;
+}
+
 // About 800,000 short strings in 800 tables, alive at the call's end, and a print once they are built.
+// Defined in environment.cc, since its initializer is dynamic.
 extern const std::string short_strings_800k;
 
 }  // namespace detail

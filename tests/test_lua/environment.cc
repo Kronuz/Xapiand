@@ -255,6 +255,10 @@ void test_overlapping_calls_of_a_large_script_take_turns() {
 	}
 }
 
+// About 800,000 short strings in 800 tables, alive at the call's end, and a print once they are built.
+const std::string short_strings_800k =
+	"local t = {} for j = 1, 800 do local u = {} for k = 1, 1000 do u[k] = j .. ':' .. k end t[j] = u end print('built') ";
+
 void test_the_after_call_collection_frees_in_slices() {
 	// The call's garbage is freed over many steps, each a slice, not in the first step of a sweep (S4).
 	Processor processor("sweep", short_strings_800k + "_doc.n = #t", MsgPack::MAP());
