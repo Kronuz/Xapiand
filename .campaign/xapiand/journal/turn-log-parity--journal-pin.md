@@ -1,6 +1,6 @@
 # turn-log-parity--journal-pin: journal
 
-State: waiting on jobs 261120-174858-0afc2a 261120-174913-536451 261120-174901-9520ed 261120-174904-c6260c
+State: waiting on jobs 261120-174913-536451 261120-174901-9520ed 261120-174904-c6260c
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -25,7 +25,7 @@ Task jobs (no quest criterion: task 0 moves no row):
 
 | Check | Job | Commit |
 |---|---|---|
-| t5d double damage at 178030b | 261120-174858-0afc2a | strata:37197958 |
+| t5d double damage at 178030b: passed, 15 acknowledged writes, the reopen threw log_lost | 261120-174858-0afc2a | strata:37197958 |
 | t5d at the mutant, journal back at 9e11713 (must exit 1) | 261120-174913-536451 | strata:e046c913 (`refs/mutants/turn-log-parity--journal-pin`) |
 | strata suite, Release | 261120-174901-9520ed | strata:37197958 |
 | turn-log tests, RelWithDebInfo without NDEBUG (standalone_turn_log, barrier_cohort, kv_strata_batch) | 261120-174904-c6260c | strata:37197958 |
