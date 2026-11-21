@@ -1,11 +1,21 @@
 # journal-lost-bound: journal
 
-State: waiting on jobs 261121-103021-5d2ded 261121-103024-e1fed8 261121-103026-c450ec
+State: waiting on jobs 261121-105355-e0cfd0 261121-105358-5bfdac 261121-105412-c88261 261121-105413-504c72 261121-105415-3c8f01 and CI at journal:ebd3038
 Quest: .campaign/xapiand/quests/journal-lost-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Code pushed at journal:1e3505a (quest/xapiand/journal-lost-bound); jobs queued; CI runs on the push.
+Code pushed at journal:ebd3038 (quest/xapiand/journal-lost-bound); jobs queued; CI runs on the push.
+
+Lead's message (CI 44935872008, `journal_host_idle_damage` failing at journal:1e3505a): fixed at
+journal:ebd3038. idle_damage asserted the old whole-group loss; it now checks values: group 1
+bounded at its damaged batch (woke + 1) with no record after it, then `lose(1)` leaves it lost;
+groups 2-5 closed with their table records; group 6 bounded at 2 keeping exactly records 3-5
+(`later3`..`later5`). Its bounded checks fail at the old recover, and at the every-named-lost
+mutant, rebuilt on the new head (refs/scratch/journal-lost-bound/named-lost = journal:63494f8):
+job 261121-105358-5bfdac. Local: host_test 80,615 checks, 0 failures. CMakeLists.txt and
+CHANGELOG.md are both intended (test registration; the 2026-11-21 entry); CHANGELOG.md is in the
+set already.
 
 ## Next
 
@@ -26,6 +36,8 @@ Lead: the file set lacks four files the mechanism needs; each edit is committed 
 4. `test/placement_test.cc`: its damage cases asserted today's rule (victims `lost`); they now
    check each victim bounded at its bound with exactly its records after it, through every remap
    crash point, re-partition and retention.
+5. `test/host_test.cc`: idle_damage asserted the old loss (CI 44935872008); it now checks the
+   bounds and the records after them (journal:ebd3038).
 
 Not in the set and not touched: `src/host*` does not exist (host.h is header-only).
 
@@ -33,8 +45,8 @@ Not in the set and not touched: `src/host*` does not exist (host.h is header-onl
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-103021-5d2ded queued (`lost_bound_test bounds`); 261121-103024-e1fed8 queued, `--fails-without` at the mutant journal:1d773a5 (refs/scratch/journal-lost-bound/named-lost: every named group lost) |
-| A2 | 261121-103026-c450ec queued: `lost_bound_test crash second retention`, turn_log_test (double damage), turn_log_power_test, placement damage cases and all 8 remap shards |
+| A1 | At journal:ebd3038: 261121-105412-c88261 (`lost_bound_test bounds`), 261121-105355-e0cfd0 (host_test whole); `--fails-without` at the mutant journal:63494f8 (every named group lost): 261121-105415-3c8f01 (bounds), 261121-105358-5bfdac (idle_damage). At journal:1e3505a: 5d2ded passed, e1fed8 failed at the mutant journal:1d773a5 as required |
+| A2 | At journal:ebd3038: 261121-105413-504c72: `lost_bound_test crash second retention`, turn_log_test (double damage), turn_log_power_test, placement damage cases and all 8 remap shards (passed at journal:1e3505a as c450ec) |
 | A3 | `docs/mechanisms/lost-bound.md` at journal:2a0ff36 |
 
 Local runs before submitting (Debug, under quiet light): lost_bound 111 checks 0 failures;
@@ -43,7 +55,7 @@ shards 0 and 1 0 failures (400 groups, 0 lost: victims bounded).
 
 ## Result
 
-journal:2a0ff36 and journal:1e3505a.
+journal:2a0ff36, journal:1e3505a and journal:ebd3038 (idle_damage's expectations).
 
 - `TurnLog::recover`: `named` carries each group's highest sequence the damage could hold. A named
   group whose latest kept checkpoint follows the bound recovers whole; one without is lost and
