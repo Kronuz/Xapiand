@@ -38,8 +38,9 @@ differential tests (`*_old.*`, `test/old/`, `frozen_*`): they are never edited b
 - A3 `ctest -N` lists the same tests before and after: a job at each commit, diffed
 - A4 [artifact] `docs/source-layout.md` lists each new file and what it holds
 - A5 [ci] CI is green on every platform
-- A6 Every header under the library's public paths compiles alone: cpp-libraries'
-  `tools/selfcontained.sh -q .` as a job at the head
+- A6 Every header this quest creates compiles alone, checked the way cpp-libraries'
+  `tools/selfcontained.sh` checks one (a translation unit that only includes it twice,
+  `-fsyntax-only`), over the new headers only: a job at the head
 
 ## Contracts
 

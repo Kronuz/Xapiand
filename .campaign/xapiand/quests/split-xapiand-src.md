@@ -39,8 +39,9 @@ Pieces stay in their file's directory with its name as prefix (`src/serialize_*.
 - A4 [artifact] the layout note (`docs/dev/source-layout.md`) lists each
   new file and what it holds
 - A5 [ci] CI is green on every platform
-- A6 Every header under the library's public paths compiles alone: cpp-libraries'
-  `tools/selfcontained.sh -q .` as a job at the head
+- A6 Every header this quest creates compiles alone, checked the way cpp-libraries'
+  `tools/selfcontained.sh` checks one (a translation unit that only includes it twice,
+  `-fsyntax-only`), over the new headers only: a job at the head
 
 ## Contracts
 
