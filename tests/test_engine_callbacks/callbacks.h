@@ -24,15 +24,22 @@
 
 // The key makers, spies and posting sources the callback tests hand to a search.
 
-#include "../test_harness.h"
-
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <vector>
+#include <string_view>
+#include <utility>
 
 #include "engine/callbacks.h"
 
 namespace detail {
+
+// Value slots (slot 1 is the shard's own version slot).
+constexpr engine::valueno KEY = 21, GROUP = 22, NUMBER = 23, EMPTY = 29;
 
 // Orders by the value of one slot.
 class SlotKey final : public engine::KeyMaker {

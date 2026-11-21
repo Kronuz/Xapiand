@@ -56,9 +56,6 @@ namespace detail {
 using engine::Op;
 using engine::Query;
 
-// Value slots (slot 1 is the shard's own version slot).
-constexpr engine::valueno KEY = 21, GROUP = 22, NUMBER = 23, EMPTY = 29;
-
 struct Index {
 	std::vector<std::unique_ptr<engine::Shard>> owned;
 

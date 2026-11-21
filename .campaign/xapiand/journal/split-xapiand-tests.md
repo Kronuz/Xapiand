@@ -48,3 +48,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - Dynamic initializers stay in the test's own .cc: the lua watchdog and the query test's `data_path` (setenv).
 - The lua `forward declaration of other_requests` and `quick` and `short_strings_800k` moved to support.cc (short_strings_800k now `extern const`).
 - Piece headers include `../test_harness.h` and `../engine_support.h`: the pieces are one directory below tests/.
+- Checked against cpp-libraries docs/SPLITTING.md (msg from the lead): pieces are separate translation units with a support header, each a test topic; only tests/test_engine_query/support.cc is under 100 lines (57), kept apart as the definitions of its header's three helpers. Found and fixed one compile bug: callbacks.h used the slot constants defined after its include; they now live in callbacks.h, which is self-contained.
+- The 22 `static void test_x()` of test_engine_query lose `static`: a linkage change, listed above.

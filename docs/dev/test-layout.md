@@ -15,6 +15,8 @@ Each directory has the same shape:
   anonymous namespace.
 - A namespace-scope object with a dynamic initializer stays in `tests/test_NAME.cc`.
 
+No file is kept whole over 1,000 lines: the four tests were each split, and every piece is a test topic opened alone (the one file under 100 lines, `tests/test_engine_query/support.cc`, holds the three helpers every query piece calls, next to their header).
+
 ## test_lua
 
 | File | Holds |
@@ -65,7 +67,7 @@ Each directory has the same shape:
 | File | Holds |
 |---|---|
 | `tests/test_engine_callbacks.cc` | The `main` that runs the tests selected by `ONLY` |
-| `tests/test_engine_callbacks/callbacks.h` | The key makers, spies and posting sources the tests hand to a search |
+| `tests/test_engine_callbacks/callbacks.h` | The value slots and the key makers, spies and posting sources the tests hand to a search |
 | `tests/test_engine_callbacks/support.h` | The corpus types, the model's types, the helpers that run a search |
 | `tests/test_engine_callbacks/corpus.cc` | The corpus written to shards and to one merged shard |
 | `tests/test_engine_callbacks/model.cc` | Which documents a query matches; wildcard and edit-distance expansions |
