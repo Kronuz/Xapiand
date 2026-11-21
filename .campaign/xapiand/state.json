@@ -18935,52 +18935,7 @@
       "worktree": ""
     },
     "postings-fuzz-memory": {
-      "accepted": {
-        "security": {
-          "at": "2026-11-11T00:28:41",
-          "base": "bf4ed913f093ea0644520c58465c3b18270bc975",
-          "blobs": {
-            "CMakeLists.txt": "100644:6219ae70e669f381d1388ae85a47164ced5b6918",
-            "fuzz/MEMORY.md": "100644:c93a5c128354aa533ef12743a5ca0e8aeb1352c5",
-            "fuzz/rss.sh": "100755:4df89aa01b3dc0516673436f19be6c4214abc0cf"
-          },
-          "by": "review",
-          "commit": "f0d78713625bb97e346d1ec12ba6a747a59d3140",
-          "criteria": "364efe5c4d4453c3",
-          "findings": {
-            "S1": {
-              "jobs": [
-                {
-                  "cmd": "bash /Users/kronuz/code/Kronuz/prospect/.scratch/review-pfm/overlap.sh",
-                  "commit": "7cb5226ab5db1ffd957f6d04090832fd020077d4",
-                  "docs": [
-                    "fuzz/MEMORY.md"
-                  ],
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261110-232705-0b3de6",
-                  "level": "light",
-                  "seconds": 322.8,
-                  "state": "done",
-                  "what": "bash /Users/kronuz/code/Kronuz/prospect/.scratch/review-pfm/ at 7cb5226ab5db"
-                }
-              ],
-              "kind": "defect",
-              "reproduced": true
-            }
-          },
-          "fix_scope": {
-            "paths": [
-              "fuzz/MEMORY.md"
-            ],
-            "reason": "fuzz/MEMORY.md is a note recording the measurements; it adds no code"
-          },
-          "note": "",
-          "review": "53b0d4f2bc3b14adbcd969766da101ff7d7c40a2",
-          "reviewed": "35a98864d80fbea8b1f0d9279a6cb114fbfa5150",
-          "verdict": "CHANGES"
-        }
-      },
+      "accepted": {},
       "after": [
         "stored-frame-bound"
       ],
@@ -18998,13 +18953,6 @@
           "level": "none",
           "minutes": 1,
           "name": "asan"
-        },
-        {
-          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
-          "later": true,
-          "level": "light",
-          "minutes": 240,
-          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -19098,6 +19046,53 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:29:13",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              }
+            ]
+          ],
+          "reason": "CI runs ASan/UBSan and TSan on every push (cpp-libraries cmake.yml, Xapiand ci.yml); local macOS sanitizer runs duplicated it (D57)",
+          "voided": [
+            "security"
+          ],
+          "weakened": [
+            "deferred check asan-macos removed"
+          ]
         }
       ],
       "journal": "",
@@ -19153,7 +19148,7 @@
       "risk": "high",
       "status": "landed",
       "title": "The postings fuzz target's memory growth",
-      "updated": "2026-11-11T01:29:11",
+      "updated": "2026-11-20T18:29:13",
       "worktree": ""
     },
     "pressure-flush": {
