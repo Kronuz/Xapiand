@@ -530,3 +530,9 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:4979989 (sidebar only from the home). Message delivery fix (lead record takeover, retries, owner notice) in its suite. Detent never received msg-171/172 for an hour; a Nov 15 message to Detent sat in xapiand's own cmux inbox.
 - Bottleneck: GitHub Actions. Xapiand 9 runs queued, Detent 13, strata 4; Xapiand CI takes ~2 h (TSan). Four quests wait only on CI.
 - Quota 46% weekly, 0.40%/h. Load 57-95 (a Detent ASan test at 7.7 cores on a light slot). Disk 299 GiB free.
+
+## 2026-11-20 17h
+- No landings. group-core re-check reviewer 72k (Sonnet; APPROVE at strata:6421d4b, test-only diff); accepted, main merged, A7 rerun passed; lands on CI. netlab-consensus: both exclusive rows measured, then crashed in the results table; fresh Opus contributor took over (the first was at 338k).
+- Tool: agent-campaign:36ab19e (message delivery: no lead-record takeover, retries, owner notice). Xapiand:af65bd9f2 (FreeBSD workflow cancels superseded branch builds).
+- Queue: 61 jobs queued, mostly Detent's (dense-distribution-build 12, loop-idle-waits 17, journal-idle-groups 8). Cancelled one superseded faultlab build of ours.
+- Quota 46% weekly, 0.40%/h. Load 35-42. Disk 298 GiB free.
