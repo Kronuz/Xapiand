@@ -20742,73 +20742,7 @@
       "updated": "2026-11-20T18:21:52"
     },
     "release-rows": {
-      "accepted": {
-        "correctness": {
-          "at": "2026-11-12T08:45:16",
-          "base": "fcd9f3e1f803e9b8e9a1d275a0555a282df8c893",
-          "blobs": {
-            "docs/gates/release-rows.md": "100644:7b7ed1d4cff7cb97efaff3fa84c025cf944143ea",
-            "test/aggregate_test.cc": "100644:f986fd1314270b75587f3d1bfbc2e64e9c05d661",
-            "test/segment_test.cc": "100644:6c0ce43f63930b7506865a0e8f99bb28c7c2dda7",
-            "tools/parity.cc": "100644:efc6043760035b46efa0751f4b7e17412560458f",
-            "tools/release_rows/CMakeLists.txt": "100644:67529fad6dfa716fce041f41045897635f595456",
-            "tools/release_rows/rows.sh": "100755:e3c7a243f53b4fdcab3938c707cbd31f348fcc0b",
-            "tools/release_rows/stem_parity.cc": "100644:0c5881b8199fd38f85fbe6f341eca6e4c299d878"
-          },
-          "by": "review",
-          "commit": "a938de6ce99e505da900d8eecdc355e0843d1af6",
-          "criteria": "b5d229769326efa3",
-          "diffs": {
-            "docs/gates/release-rows.md": "9073dd4ba2dc6d54",
-            "test/aggregate_test.cc": "9f5b7f98150fde94",
-            "test/segment_test.cc": "1d840f83e181b7db",
-            "tools/parity.cc": "6246fb65ed1f2616",
-            "tools/release_rows/CMakeLists.txt": "6eb7566a42bb2677",
-            "tools/release_rows/rows.sh": "10d2d91a4b95fc54",
-            "tools/release_rows/stem_parity.cc": "6c0aed476afbd6a1"
-          },
-          "findings": {
-            "F1": {
-              "jobs": [
-                {
-                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261111-201233-507d9b",
-                  "level": "light",
-                  "seconds": 112.7,
-                  "state": "done",
-                  "what": "release-rows check build-test at 2cc69d4d1e91"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            },
-            "F2": {
-              "jobs": [
-                {
-                  "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "2cc69d4d1e917414c44c34d650f517db38c4622e",
-                  "exit": 0,
-                  "host": "kronuz",
-                  "job": "261111-201233-507d9b",
-                  "level": "light",
-                  "seconds": 112.7,
-                  "state": "done",
-                  "what": "release-rows check build-test at 2cc69d4d1e91"
-                }
-              ],
-              "kind": "gap",
-              "reproduced": false
-            }
-          },
-          "note": "lead read main's changes since review (0aa68f4..fcd9f3e): scan-slices 256-ordinal scan check, test IO wrapper forwards, damaged-segment cases to strata lazy segments, strata pin d8ae10b8; none touches the rows' harness or verdicts; rows rerun at the release's pins (D39)",
-          "review": "8671c164333afe021f595f815d7fb5e673e844f5",
-          "reviewed": "7a3a54bbb8f0933d34bdf187f1d53dbd47f7004a",
-          "verdict": "CHANGES"
-        }
-      },
+      "accepted": {},
       "after": [],
       "base": "0aa68f435bd2579e8f43eaec28f34e46669001fc",
       "branch": "quest/xapiand/release-rows",
@@ -20824,13 +20758,6 @@
           "level": "none",
           "minutes": 1,
           "name": "asan"
-        },
-        {
-          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
-          "later": true,
-          "level": "light",
-          "minutes": 240,
-          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -20925,6 +20852,53 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:29:15",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              }
+            ]
+          ],
+          "reason": "CI runs ASan/UBSan and TSan on every push (cpp-libraries cmake.yml, Xapiand ci.yml); local macOS sanitizer runs duplicated it (D57)",
+          "voided": [
+            "correctness"
+          ],
+          "weakened": [
+            "deferred check asan-macos removed"
+          ]
         }
       ],
       "journal": "",
@@ -20980,7 +20954,7 @@
       "risk": "high",
       "status": "landed",
       "title": "The rows of Phases 3 to 6 the release waits on",
-      "updated": "2026-11-12T09:02:11",
+      "updated": "2026-11-20T18:29:15",
       "worktree": ""
     },
     "repo-split": {
