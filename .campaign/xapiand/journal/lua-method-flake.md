@@ -47,9 +47,9 @@ three runs. Repro: `delay_listen.c` (~/.scratch/xapiand/lua-method-flake/, DYLD-
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-023345-2ed0fe (master, --fails-without, listen() delayed 500 ms), 261121-024310-c2672c (head, same job) |
+| A1 | D163 (owner, land on probable cause); the trace 261121-050057-bd4912 at master shows the first connect refused (errno 61) about 500 ms before listen() returns and the same 9 checks failing |
 | A2 | 261121-024314-671378 (50 runs, 8 at once, --cpus 4, at head) |
-| A3 | 261121-024311-504e9e (mutant 2906afb92 = head without the manager fix, --fails-without), 261121-024312-003829 (head); test_node's test_a_ready_node_accepts_its_first_connection under the shim |
+| A3 | D163; 261121-024312-003829 (test_node's first-connection test passes at the fix); its fails-without 261121-024311-504e9e passed too, so the proof is the hunt-list row |
 | A4 | 261121-024354-89c85f (grep: no free_port/connect_to/::connect copy in tests/*.cc; the six node tests pass, ctest -j4) |
 | A5 | CI at the head (pushed) |
 
