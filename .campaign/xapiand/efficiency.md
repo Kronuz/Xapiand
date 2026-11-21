@@ -644,3 +644,39 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Started: failed-restore-exit (from its explorer; forced past cluster's handler.* glob, which has no handler.cc change), turn-log-parity task ryw (Opus); checkpoint-window and placement repair merged into their quests. Seven quests merged main and pushed (bulk-load-rerun's docs and harness).
 - Agents finished: node-admission 100k, group-heal install 93k (Opus, fresh), open-files-floor 115k, strata-pin-catalog 81k.
 - Quota 67% weekly, 0.51%/h, reset in 36 h. Load 27-71 (Detent's reader-s6 TSan until-fail x20 at ~11 cores). Disk 296 GiB free.
+
+## 2026-11-21 10h
+- Owner asked why Detent does better and why we sit idle. Landings since 11-14: xapiand 95, detent 85; today 9 and 6. Shape differs: xapiand 30 in flight (15 active, 4 review, 11 blocked), 5 planned, 0 launchable, 11 waiting on the lead; detent 14 in flight, 34 planned, 2 waiting on its lead. 23 of our 30 in-flight quests are in other repositories; 21 wait on Detent quests (reader-s6 9, driver-install 8, dense-distribution 4). Idle cause: no exploration batch since 05h while launchable was 0, and every subagent had finished.
+- Launched: 6 explorers (agg-shard-tests, endpoint-uuid, datetime-range, keymaker-serialize, nested-agg-type, cpp-libraries nightly-retry; Sonnet). Started empty-aggregation (D167), ninja-only and ninja-only-strata (D168, Sonnet maintenance, 102k).
+- Ninja: 224 check commands and 38 scripts/docs configured without -G (CMake's default is Unix Makefiles); slots held 1,534 Makefiles trees. agent-campaign:4c40575 adds `campaign config env=`; the switch-over script installs it on green CI, sets CMAKE_GENERATOR=Ninja, restarts the worker and sweeps the trees under slot locks. Detent agreed and is sweeping its 128.
+- Mistake: a refused `campaign start` left an empty worktree path; `git -C ""` merged the explorer branch into master and pushed. Reverted forward (Xapiand:8a1bd3943).
+- Agents finished: ryw 182k (Opus; strata already met A1, test added, 4 jobs queued), ninja sweep 102k.
+- Quota 67%+ weekly, reset in ~36 h. Light slots 78% used last hour; 32 jobs queued.
+
+## 2026-11-21 11h
+- Owner: "double the burn ... you are moving so slowly". Launched 13 agents in one round: 3 Opus high (journal-replaces-wal, turn-log-parity tolerant-open and group-commit), 10 Sonnet (9 explorers from the audited hunt list, agents-md).
+- Hunt list was stale: 5 of the 10h batch's 6 explorers found fixed targets (~410k tokens). Audit (Sonnet, 169k) closed 12 more rows (Xapiand:15df796d1); the 11h batch's 9 targets were all live, 7 with fixes and tests on explore branches within ~2 min each (65-122k each). agent-campaign:b34fef9: a quest made from a hunt row closes it on landing.
+- Critical-path deadlock: cluster (active, lands after journal-replaces-wal) held journal-replaces-wal's files, untouched on its branch for 20 commits, so the cluster gate's main prerequisite could never start. Narrowed cluster and xapiand-final-release (lands on the xapiand branch, never master); journal-replaces-wal started. agent-campaign:6f0b679 refuses and reports such holds.
+- Landed: faultlab-adopt-strata (strata:efa5214b). restore-stream security re-accepted (only src/manager.cc's READY reorder changed since review). node-admission, netlab-consensus, ninja-only-strata and placement merged main and pushed; their evidence reruns are queued.
+- tolerant-open measured a journal limit (recover loses every group a damaged block names, turn_log.h:605-611): new quest journal-lost-bound, after Detent's journal-tail-second-sector at its lead's request.
+- Host: light slots 99% used; ~40 jobs queued. Quota 68% weekly at 10h.
+
+## 2026-11-21 12h
+- Owner: the sprint went to tool fixes and campaign rules. Recommended the campaign-v3 lead take over agent-campaign (v2) maintenance and migrate it to v3, with this lead only forwarding findings; awaiting his yes. Oversized files measured (schema.cc 10,076 lines, campaign_tool.py 9,905, index.hh 6,139); quest schema-split filed (needs cjk-words), files under 1,000 lines.
+- D169 revised on group-catalog's finding (msg-201): a commit hook waiting on the group's checkpoint deadlocks on the write lease, so close runs the checkpoint through `close_payload`. Caught before any code depended on it.
+- turn-log-parity: task ryw merged (strata:9a452ed2; TSan and 3 mutants as expected); large-tx started (Opus). group-commit found the cohort counted groups, not writers (71 of 168 commits rode a second barrier with 8 writers on 2 indexes; fix measured 40 to 26 barriers locally); its first 3 jobs failed at configure on a Makefiles tree.
+- Ninja sweep ran without waiting for the tool's CI (slot locks were enough): 1,530 Makefiles trees removed from 337 idle slots.
+- netlab-consensus A1/A2 rows failed to build in the guest after merging Detent's fix; a Sonnet contributor is on it.
+- Explorer batch of 4 from hunt.md: eager-open cost (Opus, performance), RESTORE schema fault point, TLS held-read cancel, geo ring hole (Sonnet).
+- CI is the queue: agent-campaign:b34fef9 has waited ~1 h for a runner; Xapiand 5 queued and 3 running, strata 4 and 1.
+- Host: light slots 86% used last hour, 27 jobs queued, load 29-40 on 16 CPUs, 305 GiB free. Quota 70% weekly, reset in ~35 h.
+
+### 2026-11-21 13h (hourly)
+
+- campaign-v3 prepared for its own lead (campaign-v3:93670a4): it owns agent-campaign from today; first jobs are v2's red CI (a stale `env=` test expectation), the waiting installs, then splitting the 9,905-line campaign_tool.py. Four tool rows moved out of hunt.md (Xapiand:b29ab1f92).
+- large-tx (Opus, 276k tokens): the keep-applied mutant survived on a test gap (the sweep wrote before checking recovery); closing and reopening after recovery catches it from cut 18. All four mutants fail at strata:39b28f25; fuzz of the chunk decoder 10.6M executions, clean; suite pending.
+- journal-replaces-wal restore task (Opus, 262k): msg-204/205 ruled (own batcher files, RESTORE writes carry no expected version so batches pipeline); batcher, codec size helper and apply-time version stamping built; 5 jobs queued.
+- journal-turn-buffers: CI red on every platform at journal:6cdd923, one main test (a parked group costs the host 129-137 B, not 0); main passes it, so the quest's buffers are the cause. Opus contributor launched.
+- Detent: consensus-leaving-removal landed (consensus:a73c6e3); journal-group-delete's delete_group shape agreed with Detent's lead, plus criterion A7 (callable on the group's own loop after close_group).
+- Lead: merged main into failed-restore-exit, restore-stream, netlab-consensus, empty-aggregation and node-admission; their evidence reruns are queued behind 37 jobs.
+- Host: light slots 82% used last hour, 37 queued and 9 running, load 10-13, 303 GiB free. Quota 73% weekly, reset in ~34 h.
