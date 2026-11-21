@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: waiting on jobs 261121-004526-522f59 261121-004906-0a1389 261121-004909-30fad7 261121-002719-b7c57d 261121-002720-cd7f2d 261121-002752-d9cb1d 261121-002723-86ef33 261121-002724-b25808 261121-002725-07f209 261121-002726-d6fee4 261121-002727-19a20a 261121-002729-8d49af
+State: waiting on jobs 261121-004906-0a1389 261121-004909-30fad7 261121-002719-b7c57d 261121-002720-cd7f2d 261121-002752-d9cb1d 261121-002723-86ef33 261121-002724-b25808 261121-002725-07f209 261121-002726-d6fee4 261121-002727-19a20a 261121-002729-8d49af
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,8 +31,7 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
 
 ## Next
 
-1. Read 261121-004526-522f59 (all group cases, seed 1, on the consensus probe): what fails past
-   the removal bug. Fix what is repair's.
+1. (none until consensus funds the removal)
 2. Evidence: plan 261121-002711-934d7a passed (A3); plan mutants `--fails-without` queued:
    261121-002719-b7c57d setting-ignored, 261121-002720-cd7f2d drain-ignored, 261121-002752-d9cb1d
    no-leaving, 261121-002723-86ef33 no-quorum-guard, 261121-002724-b25808 record-ignored,
@@ -54,13 +53,14 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
   `propose_membership` for `committed.leaving` and emits a `Persist`; `ingest` throws. Every
   replacement window through the Driver hits it: `replace`, `waits` (the root's), `drain`,
   `replicas` at rf 2 to 3 (the leaving witness). Options: (a) the worker funds one
-  configuration append on a leader Tick when a removal is due (probe below); (b) the core
-  proposes the removal only on an admitted event that carries a reservation; (c) repair avoids
-  `leaving` (not possible for 2 + witness, D9's windows need it). Recommend (a), sized by the
-  membership's encoded bound, with a Driver-level replacement test in consensus. Probe: local
-  branch consensus `probe/xapiand/repair-leaving-tick` (fd8d977, worktree
-  ~/.scratch/xapiand/placement--repair/consensus-probe, not pushed); job 261121-004526-522f59 runs
-  the group cases on it.
+  configuration append for every event whose drive may propose the removal; (b) the core
+  proposes the removal only from an admitted event that reserved it (for example the next
+  Tick, planned with one configuration append when a removal is due); (c) repair avoids
+  `leaving` (not possible: D9's 3 + 1 and 2 + 2 windows need it). Recommend (b), with a
+  Driver-level replacement test in consensus (none exists: its replacement tests are Core-only).
+  A probe funding only the leader Tick (job 261121-004526-522f59, consensus fd8d977, removed)
+  fenced identically at the same index, so the removal is proposed on another event too, likely
+  the AppendResponse that commits the promotion (planned with one hard-state append).
 - group-heal (its install binding, itself on Detent's `consensus-driver-install`). These A3 steps
   wait on it; every other step is tested here by log catch-up (no checkpoint truncates a log in
   the tests):
