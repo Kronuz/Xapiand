@@ -25552,8 +25552,8 @@
       "repo": "../http-parser",
       "risk": "low",
       "status": "active",
-      "title": "http-parser's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:48:07",
+      "title": "http-parser's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:44",
       "worktree": "../http-parser-wt/xapiand/split-http-parser"
     },
     "split-logger": {
