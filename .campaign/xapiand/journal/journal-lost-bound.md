@@ -1,26 +1,47 @@
 # journal-lost-bound: journal
 
-State: waiting on jobs 261121-105413-504c72 261121-105415-3c8f01 and CI at journal:ebd3038
+State: waiting on jobs 261121-143020-cf1f10 261121-143022-821a58 261121-143041-c78107 261121-143044-e9efc6 261121-143052-131df7 261121-143056-1352b6 at journal:80e58b5
 Quest: .campaign/xapiand/quests/journal-lost-bound.md (the lead's; never edit it)
 
 ## Doing
 
-Code pushed at journal:ebd3038 (quest/xapiand/journal-lost-bound); jobs queued; CI runs on the push.
+Durability review (CHANGES at journal:ebd3038), one round:
 
-Lead's message (CI 44935872008, `journal_host_idle_damage` failing at journal:1e3505a): fixed at
-journal:ebd3038. idle_damage asserted the old whole-group loss; it now checks values: group 1
-bounded at its damaged batch (woke + 1) with no record after it, then `lose(1)` leaves it lost;
-groups 2-5 closed with their table records; group 6 bounded at 2 keeping exactly records 3-5
-(`later3`..`later5`). Its bounded checks fail at the old recover, and at the every-named-lost
-mutant, rebuilt on the new head (refs/scratch/journal-lost-bound/named-lost = journal:63494f8):
-job 261121-105358-5bfdac. Local: host_test 80,615 checks, 0 failures. CMakeLists.txt and
-CHANGELOG.md are both intended (test registration; the 2026-11-21 entry); CHANGELOG.md is in the
-set already.
+- Merge: journal main (journal:60ab864, turn-buffers) merged at journal:6cc553d. Conflict in
+  turn_log.h's contiguity loop: kept the branch's `record_of`/`live_of` loop. F4: `live_of` passes
+  `item.payload.size()`, and `Live` now takes every field through its constructor, so a 4-field
+  `Live{...}` no longer compiles (the guard against a silent 0).
+- F1 (blocking): journal:c851826. A gap item records `last`, its last block whose bytes may begin
+  a lost record (bad fragment, damaged header, failed read, short record; not a block holding only
+  the rest of a record the gap already covers, so a record spanning blocks costs no intact
+  neighbor). `gap_damage` names every manifest from the gap's first block through `last`, and is
+  `unknown` when one is missing. Test: `lost_bound_test spans` (the reviewer's layout).
+  `--fails-without` at the mutant journal:6d1502c (refs/scratch/journal-lost-bound/gap-first-block:
+  the head with turn_log.h's F1 hunks reverted, i.e. ebd3038's first-block rule; ebd3038 itself
+  has no spans case): 261121-143022-821a58.
+- F2 (pre-existing): journal:80e58b5 narrows lost-bound.md: the crash claim holds for damage a
+  later kept turn acknowledges; Limits states the rule-5 cut with jobs 261121-141538-9a63b7 and
+  261121-141627-fe334f.
+- F3: the owner's call (keep, and land strata's pin bump only with tolerant-open; or refuse a
+  bounded group's `stage` until a `resume(group, head)`); the lead posts it. Nothing changed here.
+- F4: see Merge.
+- F5: A2's "a second damage keeps the lower bound" reads, in the code, as the bound never lowers
+  and rises to a second damage above it: the maximum is kept (`lost_bound_test second`). The
+  quest's wording is the lead's.
+- F6: CI runs on the push of this round.
+
+Jobs at journal:80e58b5: cf1f10 (A1: lost_bound whole incl. spans, host_test whole); c78107 (A2
+and the crash cases on faultfs: lost_bound crash/second/retention/spans, turn_log, turn_log_power,
+turn_buffers power/forward, turn_bound crash, turn_seal crash, placement damage cases and 8 remap
+shards); e9efc6 (TSan: lost_bound whole and host_test whole); 131df7 (suite: ctest whole);
+1352b6 (the reviewer's multi_block_gap_probe, expecting exit 0). `campaign verify` queued nothing
+(its gate is CI).
 
 ## Next
 
-1. Read the three jobs and CI; paste `campaign brief`'s table under Evidence.
-2. Lead: widen the file set (Blocked on), then the durability review; Detent's lead reviews the diff.
+1. Read the six jobs; push the branch (`GH_TOKEN=... git -C WT push`); CI is the gate.
+2. Lead: `campaign accept journal-lost-bound durability --confirm F1=261121-143052-131df7`
+   once the suite job passes; widen the file set (Blocked on).
 
 ## Blocked on
 
@@ -38,6 +59,10 @@ Lead: the file set lacks four files the mechanism needs; each edit is committed 
    crash point, re-partition and retention.
 5. `test/host_test.cc`: idle_damage asserted the old loss (CI 44935872008); it now checks the
    bounds and the records after them (journal:ebd3038).
+
+6. `docs/mechanisms/turn-log-damage.md` rule 3 says a damaged gap costs "its first block's
+   manifest"; since journal:c851826 it costs every block's from the first through its last that
+   may begin a lost record. One sentence; not in the set, so not touched.
 
 Not in the set and not touched: `src/host*` does not exist (host.h is header-only).
 
@@ -75,7 +100,7 @@ journal:2a0ff36, journal:1e3505a and journal:ebd3038 (idle_damage's expectations
 ## Rulings I made
 
 - A2's "a second damage keeps the lower bound": implemented as the bound never lowers, and rises
-  to a second damage above it (`lost_bound_test second` checks both). Keeping the lower of two
+  to a second damage above it, so the maximum is kept (`lost_bound_test second` checks both). Keeping the lower of two
   bounds would let a reader that covers only the lower one replay past records the higher damage
   took. Flag if the criterion meant something else.
 - A named group with a kept checkpoint after the bound is not lost at all: the checkpoint covers
@@ -85,3 +110,9 @@ journal:2a0ff36, journal:1e3505a and journal:ebd3038 (idle_damage's expectations
   the Host, which stores the bound durably, keeps them.
 - Shard format: a flag bit in the state byte, not a new field for every entry (no magic bump;
   pre-release, no migration).
+- F1's range stops at the last block that may begin a lost record, not at the block where the
+  next record starts: a block holding only the continuation of a record the gap already covers
+  names nothing new (each block's manifest names every record touching it), and reading it
+  would bound intact records after the gap (`second`'s one-7, `bounds`' one-3/four-3).
+- F4's guard is a constructor on `Live`, not a runtime check: a payload of 0 bytes is legal, a
+  missing initializer is not.
