@@ -25295,6 +25295,8 @@
     "split-check-sources": {
       "accepted": {},
       "after": [],
+      "base": "920d1b27e9a75816a6528082b8c6e6377aa34967",
+      "branch": "quest/xapiand/split-check-sources",
       "checks": [
         {
           "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
@@ -25314,6 +25316,7 @@
         "tools/split_check.py",
         "tools/test_split_check.py"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-check-sources",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25321,9 +25324,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "split_check compares only C and C++ sources",
-      "updated": "2026-11-21T12:38:29"
+      "updated": "2026-11-21T12:38:32",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-sources"
     },
     "split-completion": {
       "accepted": {},
