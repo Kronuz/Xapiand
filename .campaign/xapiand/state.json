@@ -24940,6 +24940,34 @@
       "title": "The sortable codec library (step 1)",
       "updated": "2026-11-08T15:41:41"
     },
+    "split-check": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+          "level": "light",
+          "minutes": 10,
+          "name": "test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/README.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "split_check.py proves a file split moved code and changed none",
+      "updated": "2026-11-21T11:38:49"
+    },
     "stash-claim-hint-d64": {
       "accepted": {},
       "after": [],
