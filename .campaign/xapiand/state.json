@@ -1985,6 +1985,18 @@
       "closed": "agreed: quest set widened with all eight paths; task set refused (index.hh overlap forced at start), task merge takes them as warnings",
       "id": "msg-202",
       "text": "turn-log-parity--large-tx needs its file set widened (A3 cannot land inside index.hh alone). Please add: (1) include/strata/core/command.hh: a part payload kind (3) for a transaction's parts past command_bytes, encoder and decoder beside the batch's; batch bytes unchanged. (2) test/standalone_turn_log_test.cc: T8 asserts the refusal past command_bytes that A3 removes, and T9's codec case lists kind 3 as unknown; the part fixture goes in T9. (3) test/fixtures/command/** and fuzz/fuzz_command.cc, fuzz/corpus/command/**: the part fixture and its decoder under the fuzzer. (4) bench/kv/kv_strata.hh and test/kv_strata_batch_test.cc: a sync batch is one transaction past 1 MiB (document-gate F2); the test today asserts the split. (5) docs/mechanisms/large-transactions.md: the how-it-works note. I keep working on index.hh and test/test_large_tx.cc meanwhile and commit the rest once widened."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T10:55:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T10:55:07",
+      "by": "journal-replaces-wal",
+      "closed": "chunks and restore tasks started at cf65ae78b with the named files; contributors build against command.h and shard_group.h",
+      "id": "msg-203",
+      "text": "journal-replaces-wal: chunks and restore can start at Xapiand:cf65ae78b, files: chunks = src/database/handler.*, tests/test_group_chunk*.cc, harness/blob_crash_check.sh; restore = src/manager.*, tests/test_wal_replay.cc, harness/{wal_recovery_check,wal_replay_check,wal_replay_agg_check}.sh, harness/profile_bulk.sh. Interface: src/database/command.h (D3 command with batch writes, D12 chunk/final entries, split_command at 1 MiB with header) and src/database/shard_group.h (ShardApplication: chunk effects into stage-ID or an upload's own vol-N, lower-term retirement, blob placement). Not yet there: ShardEndpoint's propose path (core step d) and the group over the slot's index (step c, waits on group-catalog's group(loop, config, IO&, index&, app, chore)); both tasks build against the codec and application now and wire to propose when step d lands. Also: task pin bumped to strata's 95798a02 (strata::group's journal/consensus need blocking_scheduler)."
     }
   ],
   "quests": {
