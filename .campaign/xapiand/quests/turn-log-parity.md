@@ -62,6 +62,20 @@ suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperat
 its completion ordering stay; a turn is durable before an artifact citing it publishes; a
 single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
 
+Copy flag (Detent ruling R3, journal-double-damage at journal:cca2427): damage that no manifest names
+loses every group, loudly. A copy flag in the record format lets recovery keep the groups that write
+again after the damage; tasks 3 and 5 (record format) add it, with a test that a group rewritten after
+double damage recovers and one that is not still reports the loss.
+
+Journal follow-ups (Detent's journal-double-damage review, journal:178030b): task 9 refuses at
+construction a block_bytes that is neither a multiple nor a divisor of 512 (F3); tasks 3 or 5 add a
+per-fragment checksum so a damaged fragment crossing a sector, and the damaged headers still silent
+at some block sizes, are reported (a format change), beside the copy flag above.
+
+TurnLog::forward_slice scans every live group each turn (Detent, msg-176), so setup grows with the square
+of the group count; parked groups leave that scan (journal:c3fb805: 0.01 records visited a turn over 20,000 parked, 193 for a mutant that keeps them); groups held or evicted still cost a walk, so a journal task indexes live records by segment, and and the D5/D7 tasks measure the
+turn cost at 1k, 100k and 1M groups with most parked.
+
 Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
 F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
 and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,

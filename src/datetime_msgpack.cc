@@ -23,7 +23,9 @@
 
 #include "datetime_msgpack.h"
 
+#include <climits>                                // for INT_MAX
 #include <string_view>                            // for std::string_view
+#include <utility>                                // for std::pair
 
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
@@ -455,6 +457,23 @@ static inline void process_date_datetime(Datetime::tm_t& tm, Zone& zone, const M
 }
 
 
+// A timestamp names a year from 1 to INT_MAX, like the library's date math. Outside it (or NaN) the conversion to
+// whole seconds is undefined and x86 and arm64 give different years, so the range is checked first.
+static Datetime::tm_t
+timestamp_to_tm(double timestamp)
+{
+	static const auto bounds = [] {
+		Datetime::tm_t first{1, 1, 1, 0, 0, 0};
+		Datetime::tm_t last{INT_MAX, 12, 31, 23, 59, 59};
+		return std::pair<double, double>(static_cast<double>(Datetime::timegm(first)), static_cast<double>(Datetime::timegm(last)) + 1);
+	}();
+	if (!(timestamp >= bounds.first && timestamp < bounds.second)) {
+		throw DatetimeError("Year is out of range");
+	}
+	return Datetime::to_tm_t(timestamp);
+}
+
+
 /*
  * Returns struct tm according to the datetime specified by value.
  *
@@ -471,13 +490,13 @@ Datetime::DatetimeParser(const MsgPack& value)
 	switch (value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			_timestamp = value.u64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			_timestamp = value.i64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::FLOAT:
 			_timestamp = value.f64();
-			return Datetime::to_tm_t(_timestamp);
+			return timestamp_to_tm(_timestamp);
 		case MsgPack::Type::STR:
 			return Datetime::DatetimeParser(value.str_view());
 		case MsgPack::Type::MAP: {

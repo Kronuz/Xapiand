@@ -11,7 +11,7 @@ One strict-consensus root group holds the node directory and one namespace recor
 path, with nested paths distinct. Placement chooses `rf` distinct nodes with the fewest groups and
 spreads leaders. Records are scanned in key order by a caller's matcher that seeks past keys it
 cannot match, so Xapiand's `Glob` drives a pattern scan under a work bound. The root keeps every
-shard at its `rf`: a node down past `--replace-after` is replaced, a drain moves a node's replicas,
+shard at its `rf`: a node down past the cluster setting `replace_after` (default 300 s, held in the root, changed at runtime; not a node flag) is replaced, a drain moves a node's replicas,
 `number_of_replicas` grows and shrinks through D7's steps, leader balance defers while a chunked
 command is open, and a new root voter installs the root's records.
 
@@ -27,7 +27,7 @@ Gate: the suite (`build-test`) and CI (`asan`, `tsan`). Every criterion is a tes
   matcher (`*`, `?`, classes, `**`, `_all`, a leading `*`, `**/x`, `-` exclusions, `.` names never
   listed, nested paths), and the keys it visits for a one-subtree pattern stay within a stated
   multiple of that subtree: a property test with a counter
-- A3 Replace past `--replace-after`, drain, and `number_of_replicas` 0, 1, 2, 1, 0 under writes lose
+- A3 Replace past `replace_after` (a setting changed at runtime takes effect without a restart), drain, and `number_of_replicas` 0, 1, 2, 1, 0 under writes lose
   no acknowledged write, leave digests equal after each step, and keep every shard at `rf` wherever
   a replacement exists; an `rf = 1` group waits for its node: simulation-style tests
 - A4 Leader balance defers a transfer while the group reports an open multi-entry command and makes
@@ -59,6 +59,12 @@ pre-release bytes (D30); `format-freeze` reviews them.
 
 - Needs `group-core`; `after group-heal` (repair uses its learner and membership steps).
 - Nested index paths are core (`twitter` and `twitter/user` distinct).
+- Namespace keys sort in path order (lead, 11-20): a key stores `/` as byte 0 (names hold no
+  NUL), so `twitter` < `twitter/user` < `twitter-a`; a path's subtree is the contiguous range
+  [`P` p `\0`, `P` p `\1`) right after it, and a scan reads each record once. The preferred
+  leader is the node with the fewest leaderships (root's ruling, accepted).
+- Each task registers its tests in `test/placement/<task>.cmake`; `CMakeLists.txt` is the lead's
+  (quest branch 4a42c30c).
 
 ## When done
 
