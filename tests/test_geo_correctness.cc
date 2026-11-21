@@ -271,6 +271,31 @@ void test_ring_covers_its_band_whatever_the_order_of_its_circles() {
 	}
 }
 
+// --- R2: a ring's cover never takes in the interior of its hole, at any error -----------------------------
+
+void test_ring_cover_leaves_its_hole_out_at_every_error() {
+	const auto center = at(19.702778, -101.192222);
+	const auto antipode = at(-19.702778, 78.807778);
+
+	// 5,003 km to 6,000 km around the antipode.
+	Convex ring;
+	ring.add(Circle(center, 15011335.5));
+	ring.add(Circle(antipode, 6000000));
+	for (const double e : { 0.1, 0.2, 0.3 }) {
+		for (const bool partials : { true, false }) {
+			const auto ranges = ring.getRanges(partials, e);
+			for (int bearing = 0; bearing < 360; bearing += 5) {
+				// Well inside the hole: 2,000 km or more from its edge.
+				for (const double km : { 0.0, 500.0, 1500.0, 2500.0, 3000.0 }) {
+					CHECK_FALSE(covers(ranges, toward(-19.702778, 78.807778, bearing, km / 111.1949)));
+				}
+				// In the ring.
+				CHECK(covers(ranges, toward(-19.702778, 78.807778, bearing, 5500.0 / 111.1949)));
+			}
+		}
+	}
+}
+
 // --- circles that never meet: the intersection is empty and covers nothing ---------------------------
 
 void test_circles_that_never_meet_cover_nothing() {
@@ -360,6 +385,7 @@ int main() {
 		{ "test_lens_of_wide_circles_covers_its_center", test_lens_of_wide_circles_covers_its_center },
 		{ "test_negative_circle_in_a_convex_covers_its_center_and_not_its_hole", test_negative_circle_in_a_convex_covers_its_center_and_not_its_hole },
 		{ "test_ring_covers_its_band_whatever_the_order_of_its_circles", test_ring_covers_its_band_whatever_the_order_of_its_circles },
+		{ "test_ring_cover_leaves_its_hole_out_at_every_error", test_ring_cover_leaves_its_hole_out_at_every_error },
 		{ "test_circles_that_never_meet_cover_nothing", test_circles_that_never_meet_cover_nothing },
 		{ "test_multiconvex_serves_in_the_map_form", test_multiconvex_serves_in_the_map_form },
 	};
