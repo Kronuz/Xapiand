@@ -1,7 +1,8 @@
 # bulk-load-rss: where a bulk RESTORE's peak RSS goes
 
 > Status: CURRENT (2026-11-21) profiles of master's RESTORE (Xapiand:b2cd24fa0's `src/`, equal to master
-> Xapiand:79f86b9ef for this path) and a prototype fix on branch `explore/bulk-load-rss` (Xapiand:b60d09d64).
+> Xapiand:79f86b9ef for this path), the explorer's prototype (Xapiand:b60d09d64), and the change that streams a
+> top-level array (quest restore-stream, Xapiand:a131ad2b2) against master Xapiand:e1be368395a1.
 
 Question: `docs/perf/bulk-load-rerun.md` (branch `quest/xapiand/bulk-load-rerun`) measured Xapiand peaking at
 1,303 MB RSS restoring Kibana's logs sample (14,005 documents, 45.6 MB index) and 1,827 MB restoring shakespeare
@@ -70,34 +71,43 @@ The suspects, against the evidence:
 
 ## The change
 
-Stream a top-level array's elements: `Request::append` skips the array's header (1, 3 or 5 bytes) at the start of a
-streamed MessagePack body, so the unpacker yields each element as it completes, as for a stream of objects. Batches
-are then one body chunk's objects, applied and freed before the next chunk is parsed, and the stream's flow control
-paces the client. Eleven lines on this branch (Xapiand:b60d09d64).
+`Request::append` (`src/server/search_views.cc`) takes a non-empty top-level array's header (1, 3 or 5 bytes, however
+the body's chunks cut it) and parses the elements as they arrive, with an unpacker one level shallower than the
+body's, the array being one of its `MAX_JSON_DEPTH` levels. Each chunk's complete elements reach the indexer as one
+array, the shape the whole array had, so `DocIndexer::index` expands them exactly as before: a nested array element
+stays one element (refused as a non-object), and no element's `_settings` becomes the index's. Batches are one
+chunk's elements, applied and freed before the next chunk is parsed, and the stream's flow control paces the client.
+An empty array is not streamed: the unpacker reads its header and yields `[]` as before.
 
-Measured, the array body before and after (three trials each, strict):
+The header's count holds. A body that ends short of it, or carries anything past it, answers 400 (`The request body
+ended inside its top-level array`, `The request body holds more than its top-level array declares`), and an element
+the unpacker refuses (malformed, or nested deeper than the whole array allowed) answers 400 naming it. Master
+answered these 200, restoring nothing (a short array, a malformed or too-deep element) or the surplus as more
+documents (D162). Elements of chunks before the failing one are restored, as NDJSON's lines before a bad one; the
+failing chunk's elements and the rest are not, where NDJSON skips the bad line and goes on.
+`tests/test_restore_stream.cc` holds each body's answers, master's captured first.
 
-| Dataset | Peak RSS before | Peak RSS after | Seconds before (min-max) | Seconds after (min-max) | Jobs before, after |
-|---|---|---|---|---|---|
-| logs | 1,329 MB | 339 MB (74% less) | 4.894 (4.86-5.23) | 4.953 (4.66-5.20) | 261121-013217-d93ce8, 261121-013604-b2c5a2 |
-| shakespeare | 1,824 MB | 396 MB (78% less) | 5.577 (5.42-5.70) | 5.731 (5.54-5.77) | 261121-013219-203ab9, 261121-013605-c47571 |
+Measured, the array body, five interleaved rounds of master, the change and master again (A/A), one trial each,
+`strict` (Release, system malloc; each job ran beside one light hold):
 
-Each trial's `:count` matched (14,005 and 111,396). The peak lands on the stream body's (341 and 400 MB at master),
-as it should: the server now takes the body at the pace it indexes (last byte at 3.9-4.5 s instead of 0.07-0.15 s).
-Load time does not move beyond noise (1% and 3% slower, ranges overlapping). One figure is unexplained: master's
-own stream body loaded shakespeare in 4.789 s (4.69-4.80), 14% faster than either array run; the prototype's array
-body does not reproduce it. It is a different build of the same flags run in a different job, so host state is the
-likeliest cause; a fix quest's timing would settle it with both bodies on one binary in one exclusive job.
+| Dataset | Peak RSS master | Peak RSS change | Peak RSS A/A | Seconds master (min-max) | Seconds change (min-max) | Seconds A/A (min-max) | Job |
+|---|---|---|---|---|---|---|---|
+| logs | 1,322 MB | 333 MB (75% less) | 1,333 MB | 9.79 (4.83-9.95) | 9.59 (5.31-9.84) | 9.90 (5.81-11.40) | 261121-020723-9399ae |
+| shakespeare | 1,846 MB | 423 MB (77% less) | 1,845 MB | 13.43 (13.02-14.10) | 10.21 (9.10-10.33) | 11.25 (5.95-13.33) | 261121-020724-73f7ef |
 
-One behavior differs: an element of the top-level array that is itself an array is now expanded into its objects (a
-batch's array is "the objects it holds"); before, it was rejected as a non-object. A fix quest would keep the old
-rule or document the new one, and add a test for a dump that splits an array's header across body chunks.
+(Medians.) The explorer's prototype, which only skipped the header and expanded a nested array element, peaked at 339
+and 396 MB (E3). Load time does not regress: the change's median is within the master runs' spread on logs and below
+it on shakespeare. The times are about twice the explorer's (4.9 and 5.6 s) on a busier host, and master's spread is
+wide (4.8-11.4 s on logs), so the change's time is "no slower", not a gain. `bulk_rss_probe.py --identity` checks that
+restoring each dump as its array and as the same objects streamed without it leaves the same documents (logs carries
+no `_id`, so its documents are compared without the ids each restore generates).
 
 ## What remains
 
-With the body streamed, the peak is 341-400 MB, of which strata's write buffer is the largest holder (about 230 MB
-live on logs and 160 MB on shakespeare, growing with the restore until the closing commit; a RESTORE opens its shard with
-`DB_DISABLE_AUTOCOMMIT`). The next lever is that buffer's flush share during a long restore. Shakespeare's 925 MB of
+With the body streamed, the peak is 333-423 MB, held mostly by strata's write buffer until the RESTORE's one closing
+commit (about 230 MB live on logs and 160 MB on shakespeare in the stream-body attribution above; a RESTORE opens its
+shard with `DB_DISABLE_AUTOCOMMIT`). The rest is one chunk's decoded elements and their prepared state, and the
+process baseline. The next lever is that buffer's flush share during a long restore. Shakespeare's 925 MB of
 per-document zones also says a MsgPack's 8 KB zone per small object is costly wherever many objects are held at
 once; streaming removes the case here.
 
@@ -109,5 +119,6 @@ once; streaming removes the case here.
 | 261121-013221-bcb3be, 261121-013223-854e98, 261121-013606-c8f8c3, 261121-013607-5f0a58 | E2: `malloc_history` near the peak, array and stream bodies |
 | 261121-013602-c1cadb | Release build of the prototype |
 | 261121-013604-b2c5a2, 261121-013605-c47571 | E3: peak RSS and time with the prototype, array bodies |
+| 261121-020723-9399ae, 261121-020724-73f7ef | The change: peak RSS and time, master, change and A/A interleaved |
 
 Captures (call trees, timelines, vmmap) are under `~/.scratch/xapiand/explore-bulk-rss/{e1,e2,e3}`.

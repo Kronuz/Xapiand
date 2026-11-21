@@ -21,7 +21,7 @@
 """Peak RSS of one `RESTORE /idx/?commit` (docs/perf/bulk-load-rss.md).
 
 bulk_rss_probe.py --bin BIN --msgpack FILE --out DIR [--body array|stream] [--trials N] [--pause-at MB] [--msl]
-bulk_rss_probe.py --bin BIN --msgpack FILE --out DIR --identity
+bulk_rss_probe.py --bin BIN --msgpack FILE --out DIR --identity [--ids given|generated]
 
 Starts BIN fresh per trial (`--shards 1`, as harness bench bulk_load.sh's xapiand arm), sends the dump in 1 MiB
 pieces and samples the server's RSS every 20 ms against the bytes sent. `--body stream` strips the dump's top-level
@@ -31,7 +31,9 @@ server under MallocStackLogging=lite, `malloc_history -callTree`, inverted and n
 After each response it captures `vmmap --summary` again. Writes DIR/<name>.json and DIR/<name>-*.txt.
 
 `--identity` restores the dump into one server twice, as the array and as its objects streamed without it, and
-checks that DUMP answers the same documents (ids and full contents) for both. Writes DIR/<name>-identity.json.
+checks that DUMP answers the same documents (ids and full contents) for both. A dump whose documents carry no
+`_id` (`--ids generated`, Kibana's logs) gets fresh ids on each restore: each restore's ids are then checked
+distinct, and the documents compared whole but for `_id`. Writes DIR/<name>-identity.json.
 """
 
 from __future__ import annotations
@@ -199,9 +201,21 @@ def identity(a: argparse.Namespace, raw: bytes, stream: bytes, n: int, ds: str) 
             }
         by_id = {k: {json.dumps(d.get("_id"), sort_keys=True): d for d in v} for k, v in docs.items()}
         res["ids"] = len(by_id["array"])
-        res["same_ids"] = by_id["array"].keys() == by_id["stream"].keys()
-        res["same_contents"] = docs["array"] == docs["stream"]
-        res["differing"] = sum(1 for k, d in by_id["array"].items() if by_id["stream"].get(k) != d)
+        res["stream_ids"] = len(by_id["stream"])
+        res["shared_ids"] = len(by_id["array"].keys() & by_id["stream"].keys())
+        if a.ids == "given":
+            res["same_ids"] = by_id["array"].keys() == by_id["stream"].keys()
+            res["same_contents"] = docs["array"] == docs["stream"]
+            res["differing"] = sum(1 for k, d in by_id["array"].items() if by_id["stream"].get(k) != d)
+        else:
+            res["same_ids"] = res["ids"] == res["stream_ids"] == n
+            bare = {
+                k: sorted(json.dumps({f: x for f, x in d.items() if f != "_id"}, sort_keys=True) for d in v)
+                for k, v in docs.items()
+            }
+            res["same_contents"] = bare["array"] == bare["stream"]
+            pairs = zip(bare["array"], bare["stream"], strict=False)
+            res["differing"] = sum(1 for x, y in pairs if x != y) + abs(len(bare["array"]) - len(bare["stream"]))
         print(f"{ds} identity: " + json.dumps(res), flush=True)
         with open(os.path.join(a.out, f"{ds}-identity.json"), "w") as f:
             json.dump(res, f, indent=1)
@@ -224,6 +238,7 @@ def main() -> None:
     ap.add_argument("--msl", action="store_true")
     ap.add_argument("--name", default=None)
     ap.add_argument("--identity", action="store_true")
+    ap.add_argument("--ids", choices=["given", "generated"], default="given", help="--identity: the dump's own ids")
     a = ap.parse_args()
 
     raw = open(a.msgpack, "rb").read()

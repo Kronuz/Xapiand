@@ -482,6 +482,35 @@ void check_answers(const std::string& name, const std::string& path, const std::
 // Each body's answers, captured at master (Xapiand:e1be368395a1) unless marked.
 const std::map<std::string, Answers>& expected_answers() {
 	static const std::map<std::string, Answers> answers = {
+	{"array1", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"empty1", {R"~(200 {"prepared":0,"processed":0,"indexed":0,"total":0,"items":[]})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: empty1"})~"}},
+	{"array3", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"empty3", {R"~(200 {"prepared":0,"processed":0,"indexed":0,"total":0,"items":[]})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: empty3"})~"}},
+	{"array5", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"empty5", {R"~(200 {"prepared":0,"processed":0,"indexed":0,"total":0,"items":[]})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: empty5"})~"}},
+	{"split1at1", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split3at1", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split3at2", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split3at3", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split5at1", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split5at2", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split5at3", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split5at4", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"split5at5", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"nested", {R"~(200 {"prepared":2,"processed":2,"indexed":2,"total":2,"items":[{"_id":"a"},{"_id":"d"}]})~", R"~(200 {"total":2})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"d","n":4,"_version":1}])~"}},
+	{"nonmap", {R"~(200 {"prepared":2,"processed":2,"indexed":2,"total":2,"items":[{"_id":"a"},{"_id":"e"}]})~", R"~(200 {"total":2})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"e","n":5,"_version":1}])~"}},
+	{"deep", {R"~(200 {"prepared":1,"processed":1,"indexed":1,"total":1,"items":[{"_id":"after"}]})~", R"~(200 {"total":1})~", R"~(200 [{"_id":"after","n":1,"_version":1}])~"}},
+	{"settings", {R"~(200 {"prepared":2,"processed":2,"indexed":2,"total":2,"items":[{"_id":"s"},{"_id":"t"}]})~", R"~(200 {"total":2})~", R"~(200 [{"_id":"s","n":1,"_version":1},{"_id":"t","n":2,"_version":1}])~"}},
+	{"stream", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"ndjson", {R"~(200 {"prepared":3,"processed":3,"indexed":3,"total":3,"items":[{"_id":"a"},{"_id":"b"},{"_id":"c"}]})~", R"~(200 {"total":3})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1},{"_id":"c","n":3,"_version":1}])~"}},
+	{"single", {R"~(204 )~", R"~(200 {"total":1})~", R"~(200 [{"_id":"one","n":1,"_version":1}])~"}},
+	// The change's (D162): master answered these 200, restoring nothing or part of the body, or more than declared.
+	{"fewer", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body ended inside its top-level array"})~", R"~(200 {"total":2})~", R"~(200 [{"_id":"a","n":1,"_version":1},{"_id":"b","n":2,"_version":1}])~"}},
+	{"more", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body holds more than its top-level array declares"})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: more"})~"}},
+	{"toodeep", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body's top-level array holds an invalid element: depth size overflow"})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: toodeep"})~"}},
+	{"invalid", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body's top-level array holds an invalid element: parse error"})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: invalid"})~"}},
+	{"trailing", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body holds more than its top-level array declares"})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: trailing"})~"}},
+	{"twoarrays", {R"~(400 {"status":400,"type":"Bad Request","message":"Bad Request: The request body holds more than its top-level array declares"})~", R"~(200 {"total":0})~", R"~(404 {"status":404,"type":"Not Found","message":"Not Found: No such database: twoarrays"})~"}},
 	};
 	return answers;
 }
@@ -558,7 +587,7 @@ void test_a_long_array_fails() {
 	restore_msgpack("more", {header(3, 2) + join(docs)});
 }
 
-// The answers of bodies the change refuses (they differ from master's by design: see the journal's rulings).
+// The answers of bodies the change refuses (they differ from master's by design, D162).
 void test_refused_bodies_fail() {
 	const auto docs = three_docs();
 	restore_msgpack("toodeep", {header(1, 2) + nested(MAX_JSON_DEPTH) + doc("after", 1)});
