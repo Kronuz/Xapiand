@@ -1,6 +1,6 @@
 # split-htm: journal
 
-State: waiting on jobs 261121-131843-3e7231 261121-131843-0b551d 261121-131843-5adddc
+State: waiting on jobs 261121-131843-3e7231 261121-131843-0b551d 261121-131843-5adddc 261121-132934-57906c
 Quest: .campaign/xapiand/quests/split-htm.md (the lead's; never edit it)
 
 ## Doing
@@ -33,7 +33,7 @@ runs the main merge (ci.yml) at landing.
 | A3 | 261121-131843-5adddc at htm:f20c061 (pending): configures head and base (htm:0c09a02), diffs `ctest -N` |
 | A4 | `docs/source-layout.md` at htm:f20c061: htm.cc named kept whole, with the reasons and the cut to make |
 | A5 | CI on the pushed branch (CI's) |
-| A6 | 261121-130535-f05536 passed (at htm:8e7cad4); at htm:f20c061 the quest still creates no header |
+| A6 | 261121-132934-57906c at htm:f20c061 (pending; rerun of 261121-130535-f05536, which passed at htm:8e7cad4): the quest creates no header |
 | A7 | Lead's read: keep htm.cc whole (message above) |
 
 Superseded jobs: 261121-130530-a1b9d9 (build-test at htm:8e7cad4, cancelled),
