@@ -103,6 +103,8 @@ added A6; done.)
 | A6 | 261120-204027-99b762 (4 sealers' 128 KiB bodies: warm begin() and completed() 0 allocations, turns 4-7; 28 of 28 later bodies encoded into the returned buffer; 32 returns cleared with capacity, all after the turn is durable; unsealed-in-flight gets nothing; a throwing recycler fails the driver after its turn); fails without: 261120-204028-be128e (drop-recycled: begin() 4 allocations, 524,320 bytes) |
 | A5 | manual: Detent's lead re-reviewed journal:60ab864 and APPROVED (cross-session message to the lead, 2026-11-21): differential probe 261121-124532-0dc107 (evict rename) gives IDENTICAL TurnLog output at the branch and at journal main 335b1b5, covering recovered and evicted records, a reopen and every flipped byte; recycler probe 261121-121414-237c59 passed under ASan+UBSan at journal:87af246, and nothing after it touches the recycler; park_count 0.565 B per parked group against main's 0.448 B (261121-121340-140534) accepted. Earlier round: journal:b88565f APPROVE (msg-185). |
 
+Job 261121-122656-ebc979 (A5 differential probe) failed on an unset JOB_REF_BASE: it was submitted without `--ref base=`, so it never compared. Detent's 261121-124532-0dc107 is that probe run correctly.
+
 ## Result
 
 journal's turn path copies each logged byte once (strata rocksdb-parity D3, journal's half).
