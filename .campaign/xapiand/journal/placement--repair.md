@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: waiting on jobs 261121-004906-0a1389 261121-004909-30fad7 261121-002719-b7c57d 261121-002720-cd7f2d 261121-002752-d9cb1d 261121-002723-86ef33 261121-002724-b25808 261121-002725-07f209 261121-002726-d6fee4 261121-002727-19a20a 261121-002729-8d49af
+State: waiting on jobs 261121-054406-7d4001 261121-054409-747579 261121-054411-7b5102 261121-054413-b9e484 261121-054427-5c7193 261121-054430-e8d994 261121-054432-66bbee
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,63 +9,41 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Second round at strata `786d1e66` (code as of `c5125902`). Job 261121-000231-24e66d (990d5e80)
-compiled; the plan test failed 43 property rounds, all "it waits only with no free node" at rf 1
-from 2 + witness with a lost data voter; the group test failed every case on 3 seeds.
+Third round (resumed 11-21 05h) at strata `e45b1d5d` (task head `d30901ae` merges the quest's
+`d44ae7da`, a test-only fix). The second round's jobs all finished as expected: plan
+261121-002711-934d7a passed; the ten plan mutants and `transfer-anyway` fail their checks; `defer`
+3 seeds 261121-004906-0a1389 passed.
 
-- Plan, fixed (`f2e10fea`): the wrong model was that a lost member leaves only by removal and a
-  replacement only grows toward the target. Under D9, 2 + witness can drop neither a lost data
-  voter (1 voter + witness is no shape) nor the witness first (one up voter of two, no quorum), so
-  at rf 1 nothing was valid. Now a lost member no removal drops leaves beside a promoted learner
-  whatever the target; the learner joins only when that promotion would be valid (checked on the
-  membership with it added), so none joins to be removed. Value case `shrink_past_lost`, mutant
-  `no-window-replace`.
-- Group test, seed 1 each at strata `c40ca8aa`: `replace` 261121-003512-50dacf, `replicas`
-  261121-003514-940aa0, `waits` 261121-003517-dd0df9, `drain` 261121-003522-a43d42 all stop at
-  one consensus bug (Blocked on): the leader fences on D3's removal of the leaving member, in
-  the root (replace, waits) and in shards (replicas' leaving witness, drain's leaving leader).
-  `drain` also failed by construction before (idx is placed on the root's nodes 1-3): it now
-  drains a node off the root that leads a shard. `defer` chose incarnation 0 for its hand
-  transfer: a range-for over `state()->membership.members` read a destroyed temporary (`state()`
-  returns an optional by value); fixed in `30c3d26b`, `defer` seed 1 passes (261121-004525-2c425b).
+- Detent's probe 261121-012106-ce07f5 ran this test's five cases (seed 1) at consensus `20198fc`
+  (the pin `b8de3b8` plus the leaving-removal fix `9a2476d`, branch
+  `probe/leaving-removal-on-b8de3b8`) and every case passed. Their quest branch builds on consensus
+  `main`, whose `Driver::recover` lacks the `closed` overload strata's pin has, so it does not
+  build here (261121-011658-34495c): the pin must move to a commit with both.
+- Queued at `e45b1d5d`, `--ref CONSENSUS=consensus@20198fc`, `--for A3`: `replace`
+  261121-054406-7d4001, `replicas` 261121-054409-747579, `waits` 261121-054411-7b5102, `drain`
+  261121-054413-b9e484 (3 seeds each); mutant `replace-now` `--fails-without` 261121-054427-5c7193.
+- The settings record `S` is in the root's fuzz target (selector 6) and corpus (`e45b1d5d`):
+  root tests and replay 261121-054430-e8d994 (A1), libFuzzer 5 min 261121-054432-66bbee.
 
 ## Next
 
-- (lead, 11-21) Jobs 0a1389 (defer, 3 seeds) passed; the ten mutants fail on their checks. The S row is in
-  placement-root.md (strata:51bb7466). Left: S in root_fuzz.cc's corpus; the group cases after
-  detent:consensus-leaving-removal lands (Detent sends the commit; repin consensus and rerun replace,
-  replicas, waits, drain).
-
-1. (none until consensus funds the removal)
-2. Evidence: plan 261121-002711-934d7a passed (A3); plan mutants `--fails-without` queued:
-   261121-002719-b7c57d setting-ignored, 261121-002720-cd7f2d drain-ignored, 261121-002752-d9cb1d
-   no-leaving, 261121-002723-86ef33 no-quorum-guard, 261121-002724-b25808 record-ignored,
-   261121-002725-07f209 leader-not-first, 261121-002726-d6fee4 shrink-order, 261121-002727-19a20a
-   no-window-replace (A3), 261121-002729-8d49af transfer-anyway-plan (A4); group `defer` 3 seeds
-   261121-004906-0a1389 (A4), mutant transfer-anyway 261121-004909-30fad7 (A4).
-3. Once consensus funds the removal (Blocked on): group `replace`, `drain`, `replicas`, `waits`
-   with `--ref` at its fix, `--for A3`, and mutant `replace-now`; then rerun all at the head.
-4. Integrate against group-heal with `--ref` once its install binds.
+1. Read the seven jobs; record them in Evidence.
+2. When consensus has the fix on a commit that also carries `b8de3b8`'s reopen (Detent's
+   consensus-leaving-removal after consensus-quiescence), the lead repins strata's consensus
+   (CMakeLists.txt is the lead's) and the group cases and `replace-now` rerun at the quest head
+   with no `--ref`. Until then `placement_repair_group` fails in CI on every platform (run
+   44886359089: replace's fence), so the task cannot merge green.
+3. Integrate against group-heal with `--ref` once its install binds.
 
 ## Blocked on
 
-- **consensus (Detent's library; lead to route), blocks A3's group cases.** Job
-  261121-003512-50dacf (`replace`, seed 1): the root leader fences with "persistence lacks
-  preowned reservation" on committing the promotion beside the lost voter, when its drive
-  proposes D3's removal of the leaving member. Cause, consensus `b8de3b8` (also `main` bb961b3):
-  `Worker::submit_retained` admits a leader's `Tick` with no append reservation
-  (`if (leader && Tick) plan.count = 0`), but `Core::drive` on that Tick calls
-  `propose_membership` for `committed.leaving` and emits a `Persist`; `ingest` throws. Every
-  replacement window through the Driver hits it: `replace`, `waits` (the root's), `drain`,
-  `replicas` at rf 2 to 3 (the leaving witness). Options: (a) the worker funds one
-  configuration append for every event whose drive may propose the removal; (b) the core
-  proposes the removal only from an admitted event that reserved it (for example the next
-  Tick, planned with one configuration append when a removal is due); (c) repair avoids
-  `leaving` (not possible: D9's 3 + 1 and 2 + 2 windows need it). Recommend (b), with a
-  Driver-level replacement test in consensus (none exists: its replacement tests are Core-only).
-  A probe funding only the leader Tick (job 261121-004526-522f59, consensus fd8d977, removed)
-  fenced identically at the same index, so the removal is proposed on another event too, likely
-  the AppendResponse that commits the promotion (planned with one hard-state append).
+- **consensus pin (lead), blocks A3's group cases at the head.** The fence on D3's removal of a
+  leaving member (consensus `b8de3b8`: a leader's unreserved `Tick`, and the `Persisted` after the
+  commit, proposed the removal) is fixed by Detent's consensus-leaving-removal (option b,
+  `9a2476d`, a Driver-level replacement test). It is on consensus `main`'s line, which lacks
+  `b8de3b8`'s reopen; `20198fc` is the fix on `b8de3b8` and passes this test (Detent's
+  261121-012106-ce07f5). Strata's consensus pin (CMakeLists.txt, the lead's) must move to a commit
+  holding both before `placement_repair_group` passes in CI.
 - group-heal (its install binding, itself on Detent's `consensus-driver-install`). These A3 steps
   wait on it; every other step is tested here by log catch-up (no checkpoint truncates a log in
   the tests):
@@ -82,17 +60,16 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
   same incarnation returns). When it lands, the world moves to one host per node and these run
   unchanged. Until then a binding must not place a learner on a node holding the group's old
   journal (the plan has no such input; the cluster quest's binding owns it).
-- For the lead: `docs/mechanisms/placement-root.md` is outside this task's files, so its key table
-  lacks the settings record; the row to add: `| S | the cluster settings | replace_after in ms
-  (repair's, placement-repair.md); put, never erased |`. The root task's fuzz corpus does not
-  cover `S` yet (`root_fuzz.cc`). The settings record stays in `records.hh` (lead's ruling).
+- Done for the lead's notes: placement-root.md lists `S` (strata:51bb7466); the fuzz target and
+  corpus cover it (strata:e45b1d5d).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A3 | plan 261121-002711-934d7a passed (3,000 seeds); plan mutants pending (Next 2); group cases blocked on consensus |
-| A4 | `defer` seed 1 passed 261121-004525-2c425b; pending: `defer` 3 seeds 261121-004906-0a1389, mutants 261121-004909-30fad7, 261121-002729-8d49af |
+| A1 | root tests and corpus replay with `S` 261121-054430-e8d994 (pending); libFuzzer 261121-054432-66bbee (pending) |
+| A3 | plan 261121-002711-934d7a passed (3,000 seeds); mutants fail: setting-ignored 261121-002719-b7c57d, drain-ignored 261121-002720-cd7f2d, no-leaving 261121-002752-d9cb1d, no-quorum-guard 261121-002723-86ef33, record-ignored 261121-002724-b25808, leader-not-first 261121-002725-07f209, shrink-order 261121-002726-d6fee4, no-window-replace 261121-002727-19a20a; group cases on consensus 20198fc pending (Doing) |
+| A4 | `defer` 3 seeds 261121-004906-0a1389 passed; mutants fail: transfer-anyway 261121-004909-30fad7, transfer-anyway-plan 261121-002729-8d49af |
 | A5 | `docs/mechanisms/placement-repair.md` (repair's half) |
 
 ## Result
@@ -132,3 +109,6 @@ the root's operations `set_replace_after`, `set_rf`, `drain`, `drained`, `record
 - The settings record's bytes are described in `placement-repair.md`, not the root's note (out of
   this task's files); the drain case drains a shard leader off the root's nodes.
 - msg-1 (scan's, on the quest) is the lead's: nothing in this task changes for it.
+- The fuzz target picks the settings decoder on selector 6 (`data[0] % 7`), keeping 0-5 as they
+  were so the corpus files keep their decoders; `root_fuzz.cc` is the root task's file, done here
+  as the lead's 11-21 Next item.
