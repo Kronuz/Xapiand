@@ -67,6 +67,27 @@ struct WriteArgs {
 	std::function<void(Document&, WriteResult&)> finalise;
 };
 
+// The kind of a document write.
+enum class WriteOp : std::uint8_t {
+	none,           // nothing to apply: a WAL replay's line the index already holds
+	add,            // a new document under a new id
+	replace,        // the document at an id
+	replace_key,    // the document holding a key
+	erase,          // the document at an id, removed
+	erase_key,      // the document holding a key, removed
+};
+
+// A write once prepared (cluster-release D3): where it lands, what the index must hold for it to apply, and
+// the document as prepare left it (finalised and stamped). Applying it is a function of these and the index.
+struct PreparedWrite {
+	WriteOp op = WriteOp::none;
+	docid did = 0;                // the id it addresses or lands at
+	std::string key;              // the key it addresses (replace_key, erase_key)
+	std::optional<rev> expected;  // the version apply requires the target to have; 0 means absent
+	WriteResult result;           // the id, version and key term it lands at
+	bool replayed = false;        // a WAL replay's line (its crash point)
+};
+
 // What a shard knows about itself, read in one call.
 struct Stats {
 	std::string uuid;
@@ -100,20 +121,43 @@ class Shard {
 public:
 	virtual ~Shard() = default;
 
+	// A write is a prepare and an apply. Prepare checks it against the index as the writes left it, resolves
+	// its id and version, and finalises and stamps `doc` (null for an erase); it changes nothing. Apply writes
+	// it, refusing it when the index no longer holds what prepare expected (version_conflict). A replicated
+	// shard prepares on the leader and applies the prepared write, with the document's bytes, on every voter.
+	virtual task::task<PreparedWrite> prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args) = 0;
+	virtual task::task<WriteResult> apply(const PreparedWrite& prepared, Document* doc) = 0;
+
 	// Appends a document under a new id.
-	virtual task::task<WriteResult> add(Document& doc, WriteArgs args) = 0;
+	task::task<WriteResult> add(Document& doc, WriteArgs args) {
+		return write(WriteOp::add, 0, std::string(), &doc, std::move(args));
+	}
 
 	// Replaces the document with that id, creating it if absent.
-	virtual task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) = 0;
+	task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) {
+		return write(WriteOp::replace, did, std::string(), &doc, std::move(args));
+	}
 
 	// Replaces the document holding the key term, creating it if absent.
-	virtual task::task<WriteResult> replace_by_key(const std::string& key, Document& doc, WriteArgs args) = 0;
+	task::task<WriteResult> replace_by_key(const std::string& key, Document& doc, WriteArgs args) {
+		return write(WriteOp::replace_key, 0, key, &doc, std::move(args));
+	}
 
 	// Removes a document; the version check is skipped when expected_version is empty.
-	virtual task::task<void> erase(docid did, bool local, std::optional<rev> expected_version) = 0;
+	task::task<void> erase(docid did, bool local, std::optional<rev> expected_version) {
+		WriteArgs args;
+		args.local = local;
+		args.expected_version = expected_version;
+		co_await write(WriteOp::erase, did, std::string(), nullptr, std::move(args));
+	}
 
-	// Removes the document holding the key term and returns its id (0 for a remote proxy).
-	virtual task::task<docid> erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version) = 0;
+	// Removes the document holding the key term and returns its id.
+	task::task<docid> erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version) {
+		WriteArgs args;
+		args.local = local;
+		args.expected_version = expected_version;
+		co_return (co_await write(WriteOp::erase_key, 0, key, nullptr, std::move(args))).did;
+	}
 
 	virtual task::task<void> commit(Transaction transaction) = 0;
 	virtual task::task<void> begin_transaction(bool flushed) = 0;
@@ -186,6 +230,12 @@ public:
 	virtual rev revision() const = 0;
 	virtual doccount doc_count() const = 0;
 	virtual std::string uuid() const = 0;
+
+private:
+	task::task<WriteResult> write(WriteOp op, docid did, std::string key, Document* doc, WriteArgs args) {
+		const auto prepared = co_await prepare(op, did, key, doc, std::move(args));
+		co_return co_await apply(prepared, doc);
+	}
 };
 
 }  // namespace engine

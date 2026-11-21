@@ -83,11 +83,8 @@ public:
 	~Shard() override;
 
 
-	task::task<WriteResult> add(Document& doc, WriteArgs args) override;
-	task::task<WriteResult> replace(docid did, Document& doc, WriteArgs args) override;
-	task::task<WriteResult> replace_by_key(const std::string& key, Document& doc, WriteArgs args) override;
-	task::task<void> erase(docid did, bool local, std::optional<rev> expected_version) override;
-	task::task<docid> erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version) override;
+	task::task<PreparedWrite> prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args) override;
+	task::task<WriteResult> apply(const PreparedWrite& prepared, Document* doc) override;
 	task::task<void> commit(Transaction transaction) override;
 	task::task<void> begin_transaction(bool flushed) override;
 	task::task<void> commit_transaction() override;
@@ -140,6 +137,20 @@ private:
 	bool host_;
 	Chores* chores_;
 };
+
+class StrataDocument;
+
+// The index's transaction for a prepared write, built against `table`, the field table of the index it applies
+// to: a field the table lacks is declared by the transaction. `doc` is the prepared document (null for an erase).
+// Every voter builds it at apply from the same command, so a field an earlier entry declared resolves the same.
+prospect::transaction transaction_of(const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table);
+
+// Appends the prepared write to `t` (a batch's transaction): a field an earlier write of `t` declared keeps that
+// declaration.
+void append_write(prospect::transaction& t, const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table);
+
+// The id and version the index assigned to an accepted write, checked against the ones prepare predicted.
+WriteResult assigned(const ::strata::verdict& verdict, const PreparedWrite& prepared);
 
 struct Opened {
 	std::unique_ptr<Shard> shard;

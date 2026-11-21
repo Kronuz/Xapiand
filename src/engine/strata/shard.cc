@@ -706,8 +706,16 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		if (const auto id = table.find(name)) {
 			part.field = ::strata::field_ref::id(*id);
 		} else {
-			part.field = ::strata::field_ref::declared(static_cast<std::uint32_t>(t.fields.size()));
-			t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
+			// A field an earlier write of the transaction declared keeps that declaration, as a later
+			// transaction would find it in the table.
+			std::uint32_t at = 0;
+			while (at < t.fields.size() && t.fields[at].name != name) {
+				++at;
+			}
+			if (at == t.fields.size()) {
+				t.fields.push_back({name, ::strata::field_role::indexed, postings_of(field.kind), false});
+			}
+			part.field = ::strata::field_ref::declared(at);
 		}
 		part.terms.reserve(field.term_count);
 		bool within = true;
@@ -726,7 +734,7 @@ fill(prospect::transaction& t, prospect::index::document& out, StrataDocument& d
 		length += part.length;
 		out.fields.push_back(std::move(part));
 	}
-	if (!table.key_field()) {
+	if (!table.key_field() && std::none_of(t.fields.begin(), t.fields.end(), [](const auto& f) { return f.role == ::strata::field_role::key; })) {
 		t.fields.push_back({std::string(KEY_FIELD), ::strata::field_role::key, ::strata::field_postings::docs, false});
 	}
 	out.length = static_cast<std::uint32_t>(std::min<std::uint64_t>(length, 0xffffffffULL));
@@ -784,21 +792,6 @@ apply_t(Core& core, const Handle& handle, Chores& chores, prospect::transaction&
 	co_return verdict;
 }
 
-// Reads the id and version the index assigned to a write that apply_t accepted.
-WriteResult
-assigned(const ::strata::verdict& verdict, const WriteResult& expected)
-{
-	WriteResult result = expected;
-	if (!verdict.docids.empty()) {
-		result.did = static_cast<docid>(verdict.docids[0]);
-		result.version = verdict.versions[0];
-	}
-	if (result.did != expected.did || result.version != expected.version) {
-		throw Error(errc::internal, "The index assigned a different id or version than the write expected");
-	}
-	return result;
-}
-
 // The errors for a write that cannot happen: a remote proxy, or a read-only handle.
 void
 require_local(const WriteArgs& args)
@@ -825,52 +818,52 @@ Shard::Shard(std::unique_ptr<Handle> handle, bool writable, const OpenOptions& o
 Shard::~Shard() = default;
 
 
-task::task<WriteResult>
-Shard::add(Document& doc, WriteArgs args)
+namespace {
+
+// The census's name of a write.
+[[maybe_unused]] const char*
+census_name(WriteOp op) noexcept
 {
-	ENGINE_CENSUS_COUNT("shard.add");
-	try {
-		require_local(args);
-		require_writable(writable_);
-		auto& core = *handle_->core;
-		WriteResult info;
-		prospect::transaction t;
-		{
-			core.check(*handle_);
-			check_version(args.expected_version, std::nullopt);
-			info.did = next_docid(core);
-			info.version = 1;
-			if (args.finalise) {
-				args.finalise(doc, info);
-			}
-			ENGINE_CENSUS_DOCUMENT(doc, info.term);
-			auto& op = t.ops.emplace_back();
-			op.type = prospect::operation::add;
-			auto& native = native_of(doc);
-			stamp_version(native, info.version);
-			fill(t, op.doc, native, core.index->fields());
-		}
-		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
-	} catch (...) {
-		rethrow_translated(handle_->core);
+	switch (op) {
+		case WriteOp::add: return "shard.add";
+		case WriteOp::replace: return "shard.replace";
+		case WriteOp::replace_key: return "shard.replace_by_key";
+		case WriteOp::erase: return "shard.erase";
+		case WriteOp::erase_key: return "shard.erase_by_key";
+		case WriteOp::none: break;
 	}
+	return "shard.write";
 }
 
-
-task::task<WriteResult>
-Shard::replace(docid did, Document& doc, WriteArgs args)
+bool
+writes_document(WriteOp op) noexcept
 {
-	ENGINE_CENSUS_COUNT("shard.replace");
-	try {
-		require_local(args);
-		require_writable(writable_);
-		auto& core = *handle_->core;
-		auto& native = native_of(doc);
-		const bool replayed = native.replayed();
-		WriteResult info;
-		prospect::transaction t;
-		{
-			core.check(*handle_);
+	return op == WriteOp::add || op == WriteOp::replace || op == WriteOp::replace_key;
+}
+
+// Prepares a write against the index as the writes left it, under the host's turn: checks it, resolves its id and
+// version, finalises and stamps the document. Nothing is written.
+PreparedWrite
+prepare_write(Core& core, WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs& args)
+{
+	PreparedWrite p;
+	p.op = op;
+	switch (op) {
+		case WriteOp::add: {
+			check_version(args.expected_version, std::nullopt);
+			p.result.did = next_docid(core);
+			p.result.version = 1;
+			if (args.finalise) {
+				args.finalise(*doc, p.result);
+			}
+			ENGINE_CENSUS_DOCUMENT(*doc, p.result.term);
+			stamp_version(native_of(*doc), p.result.version);
+			p.did = p.result.did;
+			return p;
+		}
+		case WriteOp::replace: {
+			auto& native = native_of(*doc);
+			p.replayed = native.replayed();
 			std::optional<rev> stored;
 			assert(!args.must_exist || !native.key().empty());   // must_exist is checked by key
 			if (!native.key().empty()) {
@@ -883,19 +876,19 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 				}
 				if (found) {
 					if (found->first != did) {
-						if (replayed) {
+						if (p.replayed) {
 							// The key was erased and added again after this line: the index is past it.
-							WriteResult skipped;
-							skipped.did = did;
-							skipped.version = static_cast<rev>(found->second);
-							co_return skipped;
+							p.op = WriteOp::none;
+							p.result.did = did;
+							p.result.version = static_cast<rev>(found->second);
+							return p;
 						}
 						throw Error(errc::invalid, "The key belongs to another document");
 					}
 					stored = static_cast<rev>(found->second);
 				} else {
 					stored = version_of(core, did);
-					if (stored && !replayed) {
+					if (stored && !p.replayed) {
 						// The id holds another document: the keyed one does not exist, and the other is not overwritten.
 						throw version_conflict(0);
 					}
@@ -903,29 +896,173 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 			} else {
 				stored = version_of(core, did);
 			}
-			info.did = did;
-			if (replayed && !replay_applies(native, stored)) {
+			p.did = did;
+			p.result.did = did;
+			if (p.replayed && !replay_applies(native, stored)) {
 				// A log line the index already holds: replaying it again changes nothing.
-				info.version = *stored;
-				co_return info;
+				p.op = WriteOp::none;
+				p.result.version = *stored;
+				return p;
 			}
 			check_version(args.expected_version, stored);
-			info.version = stored.value_or(0) + 1;
-			if (args.finalise) {
-				args.finalise(doc, info);
+			p.result.version = stored.value_or(0) + 1;
+			if (!p.replayed) {
+				p.expected = stored.value_or(0);
 			}
-			ENGINE_CENSUS_DOCUMENT(doc, info.term);
-			stamp_version(native, info.version);
-			auto& op = t.ops.emplace_back();
+			if (args.finalise) {
+				args.finalise(*doc, p.result);
+			}
+			ENGINE_CENSUS_DOCUMENT(*doc, p.result.term);
+			stamp_version(native, p.result.version);
+			return p;
+		}
+		case WriteOp::replace_key: {
+			p.key = key;
+			p.result.term = key;
+			std::optional<rev> stored;
+			if (const auto found = core.index->find_key(key)) {
+				p.result.did = static_cast<docid>(found->first);
+				stored = static_cast<rev>(found->second);
+			} else {
+				p.result.did = next_docid(core);  // a new document goes after the last: docids stay in append order
+			}
+			p.did = p.result.did;
+			auto& native = native_of(*doc);
+			p.replayed = native.replayed();
+			if (p.replayed && !replay_applies(native, stored)) {
+				p.op = WriteOp::none;
+				p.result.version = *stored;
+				return p;
+			}
+			check_version(args.expected_version, stored);
+			p.result.version = stored.value_or(0) + 1;
+			if (!p.replayed) {
+				p.expected = stored.value_or(0);
+			}
+			if (args.finalise) {
+				args.finalise(*doc, p.result);
+			}
+			ENGINE_CENSUS_DOCUMENT(*doc, p.result.term);
+			if (native.key() != key) {
+				native.set_key(key);
+			}
+			stamp_version(native, p.result.version);
+			return p;
+		}
+		case WriteOp::erase: {
+			const auto stored = version_of(core, did);
+			check_version(args.expected_version, stored);  // first: an expected version on a missing document conflicts
+			if (!stored) {
+				throw Error(errc::doc_not_found, "Document not found");
+			}
+			// strata checks a version only by key: the id's version is prepare's alone.
+			p.did = did;
+			p.result.did = did;
+			return p;
+		}
+		case WriteOp::erase_key: {
+			const auto found = core.index->find_key(key);
+			check_version(args.expected_version, found ? std::optional<rev>(found->second) : std::nullopt);  // first, as in erase
+			if (!found) {
+				throw Error(errc::doc_not_found, "Document not found");
+			}
+			p.key = key;
+			p.did = static_cast<docid>(found->first);
+			p.expected = static_cast<rev>(found->second);
+			p.result.did = p.did;
+			return p;
+		}
+		case WriteOp::none:
+			break;
+	}
+	throw Error(errc::invalid, "Not a write");
+}
+
+}  // namespace
+
+
+prospect::transaction
+transaction_of(const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table)
+{
+	prospect::transaction t;
+	append_write(t, prepared, doc, table);
+	return t;
+}
+
+
+void
+append_write(prospect::transaction& t, const PreparedWrite& prepared, StrataDocument* doc, const ::strata::field_table& table)
+{
+	if (prepared.op == WriteOp::none) {
+		return;
+	}
+	if (writes_document(prepared.op) && doc == nullptr) {
+		throw Error(errc::invalid, "A document write has no document");
+	}
+	auto& op = t.ops.emplace_back();
+	switch (prepared.op) {
+		case WriteOp::add:
+			op.type = prospect::operation::add;
+			break;
+		case WriteOp::replace:
 			op.type = prospect::operation::replace_docid;
-			op.docid = did;
-			fill(t, op.doc, native, core.index->fields());
+			op.docid = prepared.did;
+			break;
+		case WriteOp::replace_key:
+			op.type = prospect::operation::replace_key;
+			op.key = prepared.key;
+			break;
+		case WriteOp::erase:
+			op.type = prospect::operation::delete_docid;
+			op.docid = prepared.did;
+			break;
+		case WriteOp::erase_key:
+			op.type = prospect::operation::delete_key;
+			op.key = prepared.key;
+			break;
+		case WriteOp::none:
+			break;
+	}
+	op.expected_version = prepared.expected;
+	if (writes_document(prepared.op)) {
+		fill(t, op.doc, *doc, table);
+	}
+}
+
+
+WriteResult
+assigned(const ::strata::verdict& verdict, const PreparedWrite& prepared)
+{
+	WriteResult result = prepared.result;
+	if (!writes_document(prepared.op)) {
+		return result;
+	}
+	if (!verdict.docids.empty()) {
+		result.did = static_cast<docid>(verdict.docids[0]);
+		result.version = verdict.versions[0];
+	}
+	if (result.did != prepared.result.did || result.version != prepared.result.version) {
+		throw Error(errc::internal, "The index assigned a different id or version than the write expected");
+	}
+	return result;
+}
+
+
+task::task<PreparedWrite>
+Shard::prepare(WriteOp op, docid did, const std::string& key, Document* doc, WriteArgs args)
+{
+	ENGINE_CENSUS_COUNT(census_name(op));
+	try {
+		if (writes_document(op)) {
+			require_local(args);
+			if (doc == nullptr) {
+				throw Error(errc::invalid, "A document write has no document");
+			}
 		}
-		auto result = assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
-		if (replayed) {
-			crash_point("replay");
-		}
-		co_return result;
+		require_writable(writable_);
+		auto& core = *handle_->core;
+		core.check(*handle_);
+		co_return prepare_write(core, op, did, key, doc, args);
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
@@ -933,105 +1070,24 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 
 
 task::task<WriteResult>
-Shard::replace_by_key(const std::string& key, Document& doc, WriteArgs args)
+Shard::apply(const PreparedWrite& prepared, Document* doc)
 {
-	ENGINE_CENSUS_COUNT("shard.replace_by_key");
 	try {
-		require_local(args);
-		require_writable(writable_);
-		auto& core = *handle_->core;
-		WriteResult info;
-		prospect::transaction t;
-		{
-			core.check(*handle_);
-			const auto ekey = key;
-			info.term = key;
-			std::optional<rev> stored;
-			if (const auto found = core.index->find_key(ekey)) {
-				info.did = static_cast<docid>(found->first);
-				stored = static_cast<rev>(found->second);
-			} else {
-				info.did = next_docid(core);  // a new document goes after the last: docids stay in append order
-			}
-			auto& native = native_of(doc);
-			if (native.replayed() && !replay_applies(native, stored)) {
-				info.version = *stored;
-				co_return info;
-			}
-			check_version(args.expected_version, stored);
-			info.version = stored.value_or(0) + 1;
-			if (args.finalise) {
-				args.finalise(doc, info);
-			}
-			ENGINE_CENSUS_DOCUMENT(doc, info.term);
-			if (native.key() != key) {
-				native.set_key(key);
-			}
-			stamp_version(native, info.version);
-			auto& op = t.ops.emplace_back();
-			op.type = prospect::operation::replace_key;
-			op.key = ekey;
-			fill(t, op.doc, native, core.index->fields());
+		if (prepared.op == WriteOp::none) {
+			co_return prepared.result;
 		}
-		co_return assigned(co_await apply_t(core, *handle_, *chores_, t, true), info);
-	} catch (...) {
-		rethrow_translated(handle_->core);
-	}
-}
-
-
-task::task<void>
-Shard::erase(docid did, bool local, std::optional<rev> expected_version)
-{
-	ENGINE_CENSUS_COUNT("shard.erase");
-	try {
 		require_writable(writable_);
 		auto& core = *handle_->core;
 		prospect::transaction t;
 		{
 			core.check(*handle_);
-			const auto stored = version_of(core, did);
-			check_version(expected_version, stored);  // first: an expected version on a missing document conflicts
-			if (!stored) {
-				throw Error(errc::doc_not_found, "Document not found");
-			}
-			t.ops.emplace_back();
-			t.ops[0].type = prospect::operation::delete_docid;
-			t.ops[0].docid = did;
+			t = transaction_of(prepared, doc ? &native_of(*doc) : nullptr, core.index->fields());
 		}
-		co_await apply_t(core, *handle_, *chores_, t, true);
-		co_return;
-	} catch (...) {
-		rethrow_translated(handle_->core);
-	}
-}
-
-
-task::task<docid>
-Shard::erase_by_key(const std::string& key, bool local, std::optional<rev> expected_version)
-{
-	ENGINE_CENSUS_COUNT("shard.erase_by_key");
-	try {
-		require_writable(writable_);
-		auto& core = *handle_->core;
-		prospect::transaction t;
-		docid erased;
-		{
-			core.check(*handle_);
-			const auto ekey = key;
-			const auto found = core.index->find_key(ekey);
-			check_version(expected_version, found ? std::optional<rev>(found->second) : std::nullopt);  // first, as in erase
-			if (!found) {
-				throw Error(errc::doc_not_found, "Document not found");
-			}
-			t.ops.emplace_back();
-			t.ops[0].type = prospect::operation::delete_key;
-			t.ops[0].key = ekey;
-			erased = static_cast<docid>(found->first);
+		auto result = assigned(co_await apply_t(core, *handle_, *chores_, t, true), prepared);
+		if (prepared.replayed) {
+			crash_point("replay");
 		}
-		co_await apply_t(core, *handle_, *chores_, t, true);
-		(void)local;
-		co_return erased;
+		co_return result;
 	} catch (...) {
 		rethrow_translated(handle_->core);
 	}
