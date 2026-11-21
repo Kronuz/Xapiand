@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-172811-fc88f8
+State: waiting on jobs 261120-174741-3e4b95
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Backports on the quest branch (based on the `xapiand` tip e692a64b1, so the tool's worktree base fits). Done: parser cherry-picks (4b9ee717e, 8ab6b2b26) with the adapter on by default and a nested NEAR test; id 0 (971f90559, d0c9a5733) with the harness check added to the smoke layer; A3 (fdb32df96); changelog (72ebbfa83). Job 261120-155714-a3ba72 failed (getStopWords include resolved to the wrong stopper.h); fixed; waiting on build-test 261120-172811-fc88f8.
+Backports on the quest branch (based on the `xapiand` tip e692a64b1, so the tool's worktree base fits). Done: parser cherry-picks (4b9ee717e, 8ab6b2b26) with the adapter on by default and a nested NEAR test; id 0 (971f90559, d0c9a5733) with the harness check added to the smoke layer; A3 (fdb32df96); changelog (72ebbfa83). Job 261120-155714-a3ba72 failed (getStopWords include resolved to the wrong stopper.h); fixed; build-test 261120-172811-fc88f8 failed 3 of 61 checks of test_generate_terms (lines 334-336, the positive/floating terms-only loop); base-commit run (e692a64b1) is job 261120-174741-3e4b95 to tell pre-existing from mine.
 
 ## Next
 
