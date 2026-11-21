@@ -2116,6 +2116,36 @@
       "closed": "noted: wait --commits will carry the lead's to-do list",
       "id": "msg-213",
       "text": "From campaign-v3, heads-up on a behavior change both campaigns will get (quest lead-driver, next after the split; I'll tell you again before it lands): campaign wait --commits will also return when the lead's to-do list gains an item (a quest becomes launchable, a task's jobs pass, a quest crosses the nothing-moving bound, idle slots beside ready work), re-fire for an item left undone after 30 min, return at once if started with a non-empty list, and end every return (and status/brief) with the list as exact commands instead of 'wait again'. Plus an owner alarm when a lead sits on one tool call (a permission prompt) over 10 min. Root cause: wait_events returns only on branch moves, job ends and messages. Evidence: xapiand at 13:00 had 18 quests under 'nothing moves without the lead'; 140 min on one Bash call 06:20-08:41."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:06:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:06:46",
+      "by": "campaign detent",
+      "closed": "noted: turn-log-parity builds against detent:journal-tail-cut-header-design's brief",
+      "id": "msg-214",
+      "settles": {
+        "ours": [
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-tail-cut-header-design"
+      },
+      "text": "detent:journal-tail-cut-header-design started and changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:03:20",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:03:19",
+      "by": "split-queryparser",
+      "closed": "lead reset queryparser's local main to origin/main (64c9a97; its 2 extra commits were patch-equal) and added CI's quest/** trigger (queryparser:a4ffbeb)",
+      "id": "msg-212",
+      "text": "split-queryparser: queryparser's local main (40743e3) is stale: it is 11a6365 plus two commits patch-equivalent to origin/main's top two (git cherry shows both as '-'); origin/main is 64c9a97, 20 commits further, where queryparser.cc has 1,400 lines (603 at 40743e3). The quest base 40743e3 is that stale main. I rebased the empty quest branch onto origin/main (64c9a97, nothing lost). The landing check and the split check (--base main) compare against local main, so they see 20 unrelated commits until main is reset: suggested fix, since main is checked out nowhere: git -C /Users/kronuz/code/Kronuz/queryparser branch -f main origin/main. The other split quests may have the same stale-main shape in their repos."
     }
   ],
   "quests": {
@@ -23345,8 +23375,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T09:51:10",
-          "base": "9d0d2703aeee6a0db8d70448274f90b704cff2e1",
+          "at": "2026-11-21T13:09:43",
+          "base": "0547322a4d72d6bdd23ab95dce87505826c89d40",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -23356,7 +23386,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "06a6f8bc003b6ccbd01ec1b552ad2acded02c64e",
+          "commit": "e3265faf514789f623ca060c7b8fd700e0530ef4",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -23367,7 +23397,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "re-read main's code changes since the review (e1be368395a1..9d0d2703aeee): only src/manager.cc reorders READY after http_service->start; no change to RESTORE parsing or streaming",
+          "note": "lead read main's changes since the review (git diff 9d0d2703aeee 0547322a4d72): shard.cc's stale-id replace now throws version_conflict (racing-put-409), range.cc compares only given range ends (keyword-open-range), and tests and a doc follow them; none reaches the restore stream's input path (search_views.cc), which the review covered",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -23416,7 +23446,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T09:51:10",
+      "updated": "2026-11-21T13:09:43",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -25400,7 +25430,10 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "docs/mechanisms/barriers.md",
+        "docs/mechanisms/commit-barriers.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-completion",
       "landed": [],
@@ -25412,7 +25445,7 @@
       "risk": "low",
       "status": "active",
       "title": "completion's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:36",
+      "updated": "2026-11-21T13:13:39",
       "worktree": "../completion-wt/xapiand/split-completion"
     },
     "split-constexpr-phf": {
