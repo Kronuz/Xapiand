@@ -8835,6 +8835,41 @@
       "updated": "2026-11-20T18:35:59",
       "worktree": ""
     },
+    "faultlab-adopt-strata": {
+      "accepted": {},
+      "after": [
+        "faultlab-strata-gaps"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "faultlab"
+      ],
+      "files": [
+        "include/strata/core/faultfs.hh",
+        "test/**",
+        "bench/**",
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "README.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "strata's crash tests run on faultlab's faultfs (step 3)",
+      "updated": "2026-11-20T23:04:34"
+    },
     "faultlab-adopt-xapiand": {
       "accepted": {},
       "after": [
