@@ -8430,6 +8430,39 @@
       "updated": "2026-11-12T08:03:28",
       "worktree": ""
     },
+    "drop-open-verify": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/engine/strata/shard.cc",
+        "src/engine/strata/shard.h",
+        "tests/test_engine_strata*.cc",
+        "CMakeLists.txt",
+        "docs/dev/strata-fields.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "field-check-at-map",
+        "prospect-check-fields"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Xapiand drops its open-time field check; strata checks at map",
+      "updated": "2026-11-21T11:43:46"
+    },
     "drop-replicas": {
       "accepted": {},
       "after": [],
