@@ -27387,9 +27387,9 @@
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-20T18:21:57",
+      "updated": "2026-11-21T01:52:19",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
