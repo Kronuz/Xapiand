@@ -23,5 +23,5 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261120-015212-3d9e92 |
-| A2 | fails without: 261120-023044-64c800 (old pin 397c02d5: heap-use-after-free in task::detail::scheduler_vtable) |
-| A3 | build-test 261120-024602-994d61 (1733 checks); CI at the landed commit |
+| A2 | `ci:Unit tests under ASan + UBSan` (test_pool and its reproducer pass at the new pin); fails without: 261120-023044-64c800 (old pin 397c02d5: heap-use-after-free in task::detail::scheduler_vtable) |
+| A3 | `ci:Build + unit + smoke` and `ci:Functional E2E (docs)` at the head (D57: CI runs the suite) |
