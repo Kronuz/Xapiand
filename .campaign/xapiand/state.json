@@ -24968,6 +24968,49 @@
       "title": "split_check.py proves a file split moved code and changed none",
       "updated": "2026-11-21T11:38:49"
     },
+    "split-xapiand-src": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/serialize*",
+        "src/serialize/**",
+        "src/aggregations/metrics*",
+        "src/aggregations/bucket*",
+        "src/aggregations/metrics/**",
+        "src/aggregations/bucket/**",
+        "src/lua/processor*",
+        "src/lua/processor/**",
+        "CMakeLists.txt",
+        "docs/dev/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand's free large sources split under 1,000 lines",
+      "updated": "2026-11-21T11:38:50"
+    },
     "stash-claim-hint-d64": {
       "accepted": {},
       "after": [],
