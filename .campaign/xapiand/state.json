@@ -25642,8 +25642,8 @@
       "repo": "../msgpack",
       "risk": "low",
       "status": "active",
-      "title": "msgpack's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:48:05",
+      "title": "msgpack's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:55",
       "worktree": "../msgpack-wt/xapiand/split-msgpack"
     },
     "split-queryparser": {
