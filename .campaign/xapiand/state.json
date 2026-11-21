@@ -12688,6 +12688,32 @@
       "updated": "2026-11-19T22:07:44",
       "worktree": ""
     },
+    "http-log-logger-pin": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http-log",
+      "risk": "low",
+      "status": "planned",
+      "title": "http-log pins a logger without the scheduler",
+      "updated": "2026-11-21T12:11:31"
+    },
     "http-phase7c-l3": {
       "accepted": {},
       "after": [],
