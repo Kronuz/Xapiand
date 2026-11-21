@@ -1778,6 +1778,23 @@
       "closed": "fixed in agent-campaign:90ad2fc (dropped/merged tasks hold no files; a hand-merged task records merged without jobs) and 3706f16; Detent confirmed",
       "id": "msg-189",
       "text": "Campaign tool bug (you maintain it): campaign set ID --task T files=... checks overlap against dropped tasks too. After 'campaign set dense-distribution-build --task relay-pages status=dropped', widening history-ranges still failed with 'files overlap tasks relay-pages'; I worked around it by setting the dropped tasks' files to a placeholder. Also: a task whose branch is already fully merged into its quest branch cannot be recorded merged without its own --task jobs at its old head, which may predate the scripts the job needs."
+    },
+    {
+      "at": "2026-11-20T16:01:44",
+      "by": "campaign",
+      "closed": "informational: faultlab-adopt-prospect has landed (prospect:0448b877)",
+      "id": "msg-180",
+      "items": {
+        "faultlab-adopt-prospect": "faultlab-adopt-prospect",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5"
+      },
+      "settles": {
+        "start": [
+          "faultlab-adopt-prospect",
+          "phase5"
+        ]
+      },
+      "text": "phrase-expansion landed: unlocks faultlab-adopt-prospect; frees include/**, test/**, bench/**, docs/perf/** for phase5"
     }
   ],
   "quests": {
