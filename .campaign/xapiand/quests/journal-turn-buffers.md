@@ -55,6 +55,11 @@ turn-log-parity consumes it.
 
 - The driver hands sealed bodies back (A6, lead 11-20): D3 reuses one encode buffer per log every
   turn; without the hand-back, strata's log_state allocates a body per turn.
+- Lead, 2026-11-21 (contributor's question): the 1,168 B the quest keeps above main after first use
+  is a fixed cost per TurnLog, one per host, not per group: it stays, since keeping buffers for reuse
+  is this quest's purpose. What must be zero is the per-group slope, which park_count now holds
+  (0.565 B per group at journal:87af246, main 0.448 B from host work, job 261121-121340-140534). If
+  the 1,168 B turns out to scale with groups or indexes, it is a defect.
 
 ## May land early
 
