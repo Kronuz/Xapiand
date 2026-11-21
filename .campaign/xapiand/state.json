@@ -20792,6 +20792,35 @@
       "updated": "2026-11-20T01:24:04",
       "worktree": ""
     },
+    "reactor-open-files": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/reactor/reactor.h",
+        "test/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "reactor:limits"
+      ],
+      "repo": "../reactor",
+      "risk": "low",
+      "status": "planned",
+      "title": "raise_open_files clamps; its untested paths get tests",
+      "updated": "2026-11-20T23:34:34"
+    },
     "reactor-server-composition": {
       "accepted": {
         "correctness": {
