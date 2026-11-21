@@ -1,6 +1,6 @@
 # newman-pin: journal
 
-State: waiting on jobs 261121-032949-19a6ee (A1), 261121-032951-b7522b (A2); A3 on CI after push
+State: waiting on jobs 261121-033126-9fcc12 (A1), 261121-033127-c0dfa7 (A2); A3 on CI after push
 Quest: .campaign/xapiand/quests/newman-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,8 +27,8 @@ Nothing. The lead widened the file set; arm64.yml, freebsd.yml, e2e_capture.sh a
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-032949-19a6ee |
-| A2 | job 261121-032951-b7522b (the quest's full grep); one place = harness/package.json |
+| A1 | job 261121-033126-9fcc12 |
+| A2 | job 261121-033127-c0dfa7 (the quest's full grep); one place = harness/package.json |
 | A3 | CI after push |
 
 ## Result
