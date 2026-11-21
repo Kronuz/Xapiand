@@ -1553,13 +1553,6 @@ public:
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
 		ready_ = !exited_.load() && XapiandManager::get_state() == XapiandManager::State::READY;
-		if (ready_) {   // READY is set before the listener binds: ready is when it accepts
-			const int fd = test_utils::connect_to(port_.port());
-			ready_ = fd >= 0;
-			if (fd >= 0) {
-				::close(fd);
-			}
-		}
 	}
 
 	~MethodNode() {

@@ -25,10 +25,8 @@
 
 // A node that a test runs in its own process: the port it serves on and a connection to its listener.
 
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <thread>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -81,27 +79,18 @@ private:
 	int port_ = 0;
 };
 
-// A connection to the node's listener, -1 when there is none by `limit`: the node is READY a moment before its
-// listener accepts, so a refused connect is tried again.
-inline int connect_to(int port, std::chrono::milliseconds limit = std::chrono::seconds(5)) {
-	const auto end = std::chrono::steady_clock::now() + limit;
-	while (true) {
-		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (fd >= 0 && ::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
-			return fd;
-		}
-		if (fd >= 0) {
-			::close(fd);
-		}
-		if (std::chrono::steady_clock::now() >= end) {
-			return -1;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+// A connection to the node's listener on `port`, -1 when it refuses: a node is READY only once its listener accepts.
+inline int connect_to(int port) {
+	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+	sockaddr_in addr{};
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(static_cast<uint16_t>(port));
+	::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+	if (fd >= 0 && ::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+		::close(fd);
+		return -1;
 	}
+	return fd;
 }
 
 }  // namespace test_utils
