@@ -1,6 +1,6 @@
 # turn-log-parity--large-tx: journal
 
-State: waiting on jobs 261121-110105-830c31 261121-110107-c64ff6 261121-110108-aa171b 261121-110110-5b9806 261121-110112-a647c1 261121-110113-052233 261121-104124-6f93ff
+State: waiting on jobs 261121-110105-830c31 261121-110107-c64ff6 261121-110108-aa171b 261121-110110-5b9806 261121-110112-a647c1 261121-110113-052233
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,7 +29,7 @@ Jobs at strata:39b28f25 (mutants rebuilt on it):
 | 261121-110110-5b9806 | mutant early-v (strata:a09553de2476): visible must fail |
 | 261121-110112-a647c1 | mutant keep-applied (strata:c4d7a01a3da8): sweep must fail |
 | 261121-110113-052233 | the suite at the task head |
-| 261121-104124-6f93ff | A3 fuzz at strata:e8e12a8c (still running); command.hh and fuzz/ are unchanged in strata:39b28f25 |
+| 261121-104124-6f93ff | A3 fuzz at strata:e8e12a8c, passed: 10.6M execs over 615 s, 0 crashes, timeouts or OOMs; command.hh and fuzz/ are unchanged in strata:39b28f25 |
 
 Round 1 at strata:e8e12a8c, for the record:
 
@@ -59,7 +59,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A3 | at strata:39b28f25: 261121-110105-830c31 (test_large_tx); mutants 261121-110107-c64ff6 (limit), 261121-110108-aa171b (per-chunk), 261121-110110-5b9806 (early-v), 261121-110112-a647c1 (keep-applied), all --fails-without; fuzz 261121-104124-6f93ff (kind 3, at strata:e8e12a8c, same codec); all pending |
+| A3 | at strata:39b28f25: 261121-110105-830c31 (test_large_tx); mutants 261121-110107-c64ff6 (limit), 261121-110108-aa171b (per-chunk), 261121-110110-5b9806 (early-v), 261121-110112-a647c1 (keep-applied), all --fails-without; fuzz 261121-104124-6f93ff passed (kind 3, 10.6M execs, 0 crashes; at strata:e8e12a8c, codec unchanged since); the rest pending |
 
 ## Result
 
