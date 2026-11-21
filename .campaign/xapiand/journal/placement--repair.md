@@ -31,6 +31,11 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
 
 ## Next
 
+- (lead, 11-21) Jobs 0a1389 (defer, 3 seeds) passed; the ten mutants fail on their checks. The S row is in
+  placement-root.md (strata:51bb7466). Left: S in root_fuzz.cc's corpus; the group cases after
+  detent:consensus-leaving-removal lands (Detent sends the commit; repin consensus and rerun replace,
+  replicas, waits, drain).
+
 1. (none until consensus funds the removal)
 2. Evidence: plan 261121-002711-934d7a passed (A3); plan mutants `--fails-without` queued:
    261121-002719-b7c57d setting-ignored, 261121-002720-cd7f2d drain-ignored, 261121-002752-d9cb1d
