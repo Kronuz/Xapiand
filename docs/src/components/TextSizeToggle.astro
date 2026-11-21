@@ -1,0 +1,117 @@
+---
+/**
+ * <TextSizeToggle placement="theme" | "search" /> — the "Aa" reading text size toggle.
+ *
+ * It sets html[data-text-size="large"] (custom.css, "Reading text size"), remembers the choice
+ * in localStorage (starlightRouteData.ts re-applies it before paint), and keeps the line at the
+ * top of the screen in place while the page reflows.
+ *
+ * Rendered twice, one visible at a time: beside the theme selector on desktop (ThemeSelect.astro,
+ * which Starlight moves into the mobile menu below 50rem), and in the header next to the search
+ * button on a phone (Search.astro), so it stays one tap away there. Pages without a sidebar (the
+ * splash home page) hide it, because the large size does not apply to them.
+ */
+interface Props {
+	placement: "theme" | "search";
+}
+const { placement } = Astro.props;
+---
+
+<button
+	type="button"
+	class:list={["kz-text-size", `kz-text-size--${placement}`, "print:hidden"]}
+	data-kz-text-size
+	aria-pressed="false"
+	aria-label="Larger text"
+	title="Larger text"
+>
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<path d="M2 20 5.5 11 9 20M3.2 16.9h4.6M10.5 20 16 4l5.5 16M12.6 14h6.8"></path>
+	</svg>
+</button>
+
+<style>
+	.kz-text-size {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+	}
+	.kz-text-size:hover {
+		color: var(--sl-color-white);
+	}
+	:global(:root[data-text-size='large']) .kz-text-size {
+		color: var(--sl-color-text-accent);
+	}
+	.kz-text-size svg {
+		width: 1.15rem;
+		height: 1.15rem;
+	}
+	/* The phone header: sized like Starlight's search icon button beside it. */
+	.kz-text-size--search {
+		height: 2.5rem;
+		padding-inline: 0.5rem;
+		color: var(--sl-color-gray-1);
+	}
+	.kz-text-size--search svg {
+		width: 1.35rem;
+		height: 1.35rem;
+	}
+	@media (min-width: 50rem) {
+		.kz-text-size--search {
+			display: none;
+		}
+	}
+	@media (max-width: 49.99rem) {
+		.kz-text-size--theme {
+			display: none;
+		}
+	}
+	:global(:root:not([data-has-sidebar])) .kz-text-size {
+		display: none;
+	}
+</style>
+
+<script>
+	const KEY = "kz-text-size";
+	const root = document.documentElement;
+	const sync = () => {
+		const large = String(root.dataset.textSize === "large");
+		for (const button of document.querySelectorAll("[data-kz-text-size]")) button.setAttribute("aria-pressed", large);
+	};
+	// The content's blocks. A post's body sits inside <article class="kz-post">, so its blocks
+	// are the article's children; other pages' are the content's own.
+	const BLOCKS = "main .sl-markdown-content > :not(article), main .sl-markdown-content > article > *";
+	// The point being read: where the screen's top edge falls in the first block still on it.
+	const readingPoint = () => {
+		const edge = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+		for (const el of document.querySelectorAll(BLOCKS)) {
+			const rect = el.getBoundingClientRect();
+			if (rect.bottom <= edge || !rect.height) continue;
+			const y = Math.max(edge, rect.top);
+			return { el, y, at: (y - rect.top) / rect.height };
+		}
+		return null;
+	};
+	sync();
+	document.addEventListener("click", (event) => {
+		if (!(event.target as Element).closest("[data-kz-text-size]")) return;
+		const point = readingPoint();
+		const large = root.dataset.textSize !== "large";
+		if (large) root.dataset.textSize = "large";
+		else delete root.dataset.textSize;
+		try {
+			if (large) localStorage.setItem(KEY, "large");
+			else localStorage.removeItem(KEY);
+		} catch {}
+		sync();
+		if (point) {
+			const rect = point.el.getBoundingClientRect();
+			window.scrollBy(0, rect.top + point.at * rect.height - point.y);
+		}
+	});
+</script>

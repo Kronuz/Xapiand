@@ -692,3 +692,53 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Stale Makefiles trees cost two tolerant-open jobs; 7 removed by the sweep; runner fix forwarded to campaign-v3.
 - Started split-task, split-logger, split-datetime and split-storage (Sonnet).
 - Host: light slots 59% used last hour, 82 queued and 4 running, load 13-23, 299 GiB free. Quota 76% weekly, reset in ~33 h.
+
+### 2026-11-21 15h (hourly)
+
+- Landed: split-check (cpp-libraries:920d1b2), so split quests have the shared moves-only check. cpp-libraries:12bae98 makes the shared CI configure with Ninja; ninja-only-strata's guard had failed every strata CI job on Makefiles.
+- split-check-sources (lead, ~30 lines of tool plus 9 tests): the landed check read every split's layout note and CMake lines as code, and failed on include guards, `static` becoming `inline`, a `using` of a detail namespace and dropped section comments. Those now pass as warnings the journal answers. 44 tests pass at cpp-libraries:d1bca40; it lands on CI.
+- 11 library splits launched (one Opus contributor each, 78-151k tokens so far):
+  - Split: completion (posix.h 1,212 to 504 plus 4 pieces), faultlab (faultfs.h 1,480 to a 46-line umbrella), workpool (work_pool.hh 1,535 to 1,039 plus 3), queryparser (the 140-line describe printer moved out).
+  - Kept whole: docset (single-header contract), traceback and url-parser (consumers compile the one .cc; url-parser's code layout affects speed), htm (lead's A7 ruling: Xapiand compiles htm.cc by path).
+- journal-turn-buffers: Detent's lead approved A5 and re-checked durability at journal:60ab864 (differential probe vs main identical); re-accepted, and it lands on journal's CI.
+- journal-replaces-wal restore task: its first job did not compile (leb128::encode returns a pointer). Lead fixed it at Xapiand:fcd06fe and requeued its 3 mutant jobs at the fix.
+- Lead pass over the 18 quests waiting on the lead (relayed from the owner):
+  - Merged main into 8 and set a landing loop; re-accepted restore-stream's security review; launched group-catalog's durability reviewer (Opus).
+  - Detent reviews journal-lost-bound; merged turn-log-parity's large-tx task; reran stale jobs under group-heal, placement and node-admission.
+  - `land --merge-main` re-pushed 7 branches on campaign-only master commits and cancelled their CI. The loop now merges only on code changes; campaign-v3 is building the fix (merge-main-when-needed).
+- Nine library repos' local main lagged origin by 1-20 commits (queryparser's carried a stale cut); fast-forwarded, and queryparser gained CI's quest/** trigger (queryparser:a4ffbeb).
+- Host: two exclusive measurements (Detent's netlab-consensus and reader-s6) hold the machine; 82 queued, 3 running, load 30 falling to 5, 302 GiB free. Quota 80% weekly, reset in ~32 h.
+
+### 2026-11-21 16h (hourly)
+
+- Landed: journal-turn-buffers (journal:60ab864; a parked group's host heap back to main's slope, 0.565 B vs main's 0.448 B), prospect-check-fields (prospect:abfeeda), store-docs (Xapiand:34270cf). Detent landed consensus-driver-install (consensus:8780e44), which 11 of ours waited on.
+- Agent runs (Opus): group-catalog fixes R1-R4 288k; durability review of group-catalog 198k (CHANGES, 4 blocking from code reading; its TSan probe never ran before the verdict); split-xapiand-tests fix round 176k; single-flight-budget explorer 148k (cause found, fixed, wired into both schemas_lru callers); split-htm 139k (reverted to whole by ruling); enum-reflection 120k, constexpr-phf 103k, strict-stox 91k (all kept whole: single-header contracts).
+- Splits, 11 of 11 reported: 4 split (completion, faultlab, workpool, queryparser), 7 kept whole. Lead fixes this hour: completion's mutants s1, s2, s6 pointed at posix_sync.h (completion:02ab67f); two A3 test-list diffs resubmitted comparing only test lines (ctest's build-dir paths differ, 4 quests hit it); one mutant set cancelled at a commit that did not compile, where it would have "failed" for the wrong reason.
+- group-heal install: lead pinned consensus at 8780e44 and registered its test (strata:95bdaa2); its mutant rebuilt on the new pin (strata:89f2f50).
+- journal-lost-bound: Detent's review CHANGES, F1 blocking (a gap spanning blocks reads one manifest, so group 1 reports bounded at 2 with acknowledged 3 gone; main loses the group loudly). Fix round launched; F2 pre-existing on main (11 of 17 power cuts forget rule-5 damage) filed.
+- Tool: --merge-main re-pushed branches on campaign-only commits (fix building as merge-main-when-needed); verify's reuse and land's gate disagree (verify-land-agree); slot checkouts fail on commits the slot clone lacks (twice; fetch-and-retry queued). agent-campaign:453cb47 installed (the tool split into 24 modules, no behavior change).
+- Each Xapiand landing restarts every waiting quest's CI: store-docs' landing re-merged 7 branches.
+- Host: load 37-61 on 16 CPUs (cmux at 183% CPU, this lead session at 99%), 146 queued and 7 running, 300 GiB free. Quota 83% weekly, burn 0.60%/h, reset in ~31 h.
+
+### 2026-11-21 17h (hourly)
+
+- Landed: http-log-logger-pin (Xapiand:5d440ca), split-faultlab (faultlab:71a617f), ninja-only-strata (strata:cc30217; --no-ci citing the green workflow_dispatch rerun 44950558785 at the same commit, since land reads only the first, red run).
+- Owner, via campaign-v3: the lead had done landing chores by hand while 24 quests sat lead-held. Response: 17 contributors launched in one pass, landing chores moved to each quest's contributor.
+- Agent runs, Sonnet: 12 split resumes (62-75k each; merge main, fixed-checker job, citations, doc follow-ups), node-admission landing round 71k, strata-pin-catalog fails-without 84k (the harness got per-run timeouts, stage timestamps and -G Ninja).
+- Agent runs, Opus: journal-lost-bound fix round 161k (F1 multi-block gap, F4 Live ctor guard, F2 doc), turn-log-parity task merges 143k (found 3 red CI tests on the quest head, one a durability throw in recovery), xapiand-final-release 93k (a release line on `xapiand`, never merge master), ninja-only-strata 62k (no fix needed).
+- Stopped one agent that kept waking on its own job poll after reporting (split-xapiand-src, 3 wakes).
+- Unblocking moves:
+  - split-check-sources' lint check reused a passing job at identical code. It had been queued 90 min behind 155 jobs.
+  - Its tools CI was dispatched by hand, since a push at the commit fires no run.
+  - Removed a slot `build` dir that cached an unlanded journal override (turn-log-parity's gate check would have built against it).
+  - Slot sweep after agent-campaign:3b374bb: 168 Makefiles trees removed today, 0 left.
+- Waste:
+  - `gh run watch` polled GitHub every 3 s for 17 min, about 340 of the shared 5,000/h REST budget, which fell to 121. It's replaced by 5-min polls, and the landing loop by 10-min rounds.
+  - Two mutant/A3 jobs were queued at a non-compiling commit and had to be cancelled.
+- Tool findings sent to campaign-v3:
+  - A merge voids a high-risk acceptance (node-admission: a CHANGELOG-only conflict cost 9 reruns).
+  - Journal citations go stale on every rerun.
+  - land dies after its push on a branch delete.
+  - land reads the first CI run, not the newest.
+  - No per-quest base branch (put to the owner).
+- Host: load 7 (was 61 at 14:20), 299 GiB free. Quota 86% weekly, burn 0.62%/h; at this rate it is exhausted about 7 h before the reset in 29.7 h.

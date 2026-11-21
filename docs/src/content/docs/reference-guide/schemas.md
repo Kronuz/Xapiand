@@ -63,6 +63,13 @@ Indexing mode defines what parts of the documents are indexed and how.
 
 You can read more about this mode [here](indexing-mode).
 
+## [Storing Mode](store)
+
+Storing mode decides whether a field's value is kept in the stored document; an unstored field
+is still indexed and searchable.
+
+You can read more about this mode [here](store).
+
 ## [Metadata](meta-data)
 
 Schemas can have custom meta data associated with it.
