@@ -12466,7 +12466,8 @@
         "test/turn_buffers*",
         "test/turn_seal_mutants.sh",
         "CMakeLists.txt",
-        "docs/**"
+        "docs/mechanisms/framing.md",
+        "docs/mechanisms/turn-seal.md"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-turn-buffers",
       "landed": [],
@@ -12482,7 +12483,7 @@
       "risk": "high",
       "status": "active",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-20T19:36:14",
+      "updated": "2026-11-20T19:36:55",
       "worktree": "../journal-wt/xapiand/journal-turn-buffers"
     },
     "key-field": {
