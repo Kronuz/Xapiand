@@ -1,6 +1,6 @@
 # split-msgpack: journal
 
-State: waiting on jobs 261121-121649-8e64c6 (build-test) 261121-121647-167eff (A6) 261121-121651-f87cf4 (A3) 261121-121649-b844e7 (split: fails until split-check lands)
+State: waiting on jobs 261121-145023-9444f2 (A2 split_check, fixed checker, at 68e45d8; main already merged)
 Quest: .campaign/xapiand/quests/split-msgpack.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,7 +14,7 @@ Reassessed against cpp-libraries docs/SPLITTING.md; pushed at msgpack:68e45d8 (a
 ## Next
 
 1. Read the jobs below.
-2. Rerun `campaign verify split-msgpack` for split once split-check has landed; answer its warnings.
+2. Answer the warnings of 261121-145023-9444f2 (using-declarations, dropped static, new prototypes); fix any error with moves only and rerun.
 
 ## Blocked on
 
@@ -25,7 +25,7 @@ Nothing (split waits on split-check landing).
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test job 261121-121649-8e64c6 |
-| A2 | split job 261121-121111-c110b0 fails exit 2 until split-check lands; rerun after |
+| A2 | 261121-145023-9444f2 (fixed split_check from split-check-sources, at 68e45d8; replaces 261121-123003-6b4772) |
 | A3 | ctest -N before 261121-115120-acd826 (1e9aaaf4ac5b), after 261121-121651-f87cf4 at 68e45d8 (the earlier after-run at edfd97b listed the same 13 tests) |
 | A4 | docs/source-layout.md |
 | A5 | CI on the pushed branch |
