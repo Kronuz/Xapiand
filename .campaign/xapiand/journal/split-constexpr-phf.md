@@ -1,6 +1,6 @@
 # split-constexpr-phf: journal
 
-State: waiting on jobs 261121-130253-74ad7d 261121-131354-2a6f84
+State: master merged at 58653a7; A2 job reused 261121-130255-fe1094 (same command and tree; ci.yml-only merge); ready for review once lead reruns gate with landed checker
 Quest: .campaign/xapiand/quests/split-constexpr-phf.md (the lead's; never edit it)
 
 ## Doing
@@ -20,11 +20,11 @@ Nothing. master changed `.github/workflows/ci.yml` since the branch: the lead's 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130253-74ad7d (queued) |
+| A1 | build-test 261121-130253-74ad7d |
 | A2 | 261121-130255-fe1094: split-check-sources tool, 0 errors, 0 warnings, 2 notes (the two files over 1,000 lines) |
-| A3 | 261121-131354-2a6f84 (queued): diffs `ctest -N` test lines at base constexpr-phf:6f97931 and head |
+| A3 | 261121-131354-2a6f84 (done): diffs `ctest -N` test lines at base constexpr-phf:6f97931 and head |
 | A4 | `docs/source-layout.md` at constexpr-phf:c5efe76: no new files; names `phf.hh` (1,484 lines) kept whole and why, and the gperf output in bench/ as generated |
-| A5 | CI at c5efe76: running |
+| A5 | CI at head after the master merge |
 | A6 | 261121-130301-172ca6: no new headers; selfcontained.sh over `phf.hh` at head, 1 ok, 0 failed (c++17) |
 | A7 | the lead's read |
 
