@@ -28,6 +28,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
+| A1 | 261121-095112-fac804 (the tests fail at master), 261121-095122-f2ce08 (pass at the fix); the `suite` check reruns them at the landed code |
+| A2 | the `suite` check at the landed code |
 | <A1> | <from `campaign brief`> |
 
 ## Result
