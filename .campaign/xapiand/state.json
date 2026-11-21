@@ -18721,12 +18721,13 @@
             "include/strata/placement/scan*",
             "test/placement/scan*"
           ],
-          "journal": "../Xapiand-wt/xapiand/placement--scan",
-          "worktree": "../strata-wt/xapiand/placement--scan"
+          "journal": "",
+          "merged": "2620ba75577415ff935461ad3a60ebbc02b17330",
+          "worktree": ""
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T19:33:11",
+      "updated": "2026-11-20T19:33:13",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
