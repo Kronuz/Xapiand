@@ -19,7 +19,19 @@ waits at most 30 s for READY and the calls then run against a node that is not r
 - A1 The cause, named with evidence: a job that reproduces the failure on master (for example
   test_lua beside a parallel ctest run or under load), and the same job passing at the fix
 - A2 test_lua passes 50 runs in a row, 8 at once on 4 cores, at the fix: a job
-- A3 [ci] CI is green on every platform
+- A3 READY means the HTTP listener accepts: `set_ready_impl` (src/manager.cc) starts the listener
+  before it sets READY (the cause found 11-21), so a client that connects once after READY, with
+  no retry, is never refused: a test that fails at master under the delayed-listen shim
+  (`--fails-without`) and passes at the fix
+- A4 One node-test helper: every test that picks a port or connects to a test node (test_coverage_database,
+  test_endpoint_uuid, test_loop_yield, test_lua, test_node, test_stopword_search) uses
+  tests/utils_node.h; no other free_port or connect_to copy remains
+- A5 [ci] CI is green on every platform
+
+## Decisions
+
+- Lead, 2026-11-21: fix the cause in manager.cc, not only the test; src/manager.* is in cluster's
+  file set, but quest/xapiand/cluster has no change to it, so this quest takes it by a recorded exception.
 
 ## Contracts
 
