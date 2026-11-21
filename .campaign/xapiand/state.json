@@ -19935,7 +19935,8 @@
             "test/placement/repair*",
             "docs/mechanisms/placement-repair.md",
             "docs/mechanisms/placement-root.md",
-            "test/placement/root_fuzz*"
+            "test/placement/root_fuzz*",
+            "test/placement/root_corpus/**"
           ],
           "journal": "../Xapiand-wt/xapiand/placement--repair",
           "worktree": "../strata-wt/xapiand/placement--repair"
@@ -19972,7 +19973,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-21T00:57:15",
+      "updated": "2026-11-21T10:20:28",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
