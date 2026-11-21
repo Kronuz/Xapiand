@@ -28,8 +28,8 @@ runs the main merge (ci.yml) at landing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-131843-3e7231 at htm:f20c061 (pending) |
-| A2 | split gate 261121-131843-0b551d at htm:f20c061 (pending). The tree now differs from main only in `docs/source-layout.md`: no C/C++ line moved. Earlier 261121-130530-dc9d96 (at htm:8e7cad4, the split) failed with the landed tool on non-C/C++ files and include comments; superseded. |
+| A1 | build-test 261121-131843-3e7231 at htm:f20c061 (passed; main since added only a ci.yml line) |
+| A2 | split_check, split-check-sources version, 261121-154223-674e70 at htm:c4577b7 (pending; replaces 261121-131843-0b551d, the old checker). The tree now differs from main only in `docs/source-layout.md`: no C/C++ line moved. Earlier 261121-130530-dc9d96 (at htm:8e7cad4, the split) failed with the landed tool on non-C/C++ files and include comments; superseded. |
 | A3 | 261121-131843-5adddc at htm:f20c061 (pending): configures head and base (htm:0c09a02), diffs `ctest -N` |
 | A4 | `docs/source-layout.md` at htm:f20c061: htm.cc named kept whole, with the reasons and the cut to make |
 | A5 | CI on the pushed branch (CI's) |
@@ -56,3 +56,7 @@ reverted. Net change against main: `docs/source-layout.md` only.
    origin/quest/xapiand/htm-edge-points are all merged into main.
 3. The revert's message was amended before the push to say why (local, never pushed before).
 4. A3 is one job that configures both commits and diffs (`--ref BASE=`), rather than two jobs.
+
+## State
+
+waiting on jobs 261121-154223-674e70. Main merged into htm:c4577b7 and pushed. Next: answer any warnings; none expected (no C/C++ line moved).
