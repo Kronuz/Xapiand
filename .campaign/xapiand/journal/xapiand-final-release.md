@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-231338-2550ab (FreeBSD build at df3ff48b8 with clang 18)
+State: A1-A5 met at cfc2a5b80 (`xapiand` is there); A6 waits on the owner's approval of the tag.
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -45,6 +45,7 @@ checked what), and answer each message by its id (msg-N).
 | A2 | build-test 261120-202700-a1e84b (id_zero_check in ctest, 9.3 s); fails-without 261120-202653-9ebd4f at 5c4c0ce2d: "RESTORE answered 200 with item 0 {"_id": 43}", "indexed 1000" |
 | A3 | build-test 261120-202700-a1e84b |
 | A4 | `docs/src/content/docs/changelog.md`: "Some numbers are stored in a lossy sortable form." |
+| A5 | on `xapiand` at cfc2a5b80 (11-21): CI 44895581156 green (build + unit + smoke, E2E, ASan+UBSan, TSan); dry runs publish=false from `xapiand`: Release 44895581852, FreeBSD 44895584092, Bottles 44895586318 (arm64 macos-15 and macos-26 green; the best-effort Intel cell fails: Homebrew's installer refuses x86_64) |
 
 ## Result
 
