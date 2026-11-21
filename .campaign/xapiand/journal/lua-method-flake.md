@@ -1,6 +1,6 @@
 # lua-method-flake: journal
 
-State: waiting on jobs 261121-023345-2ed0fe 261121-024310-c2672c 261121-024311-504e9e 261121-024312-003829 261121-024314-671378 261121-024354-89c85f
+State: waiting on jobs 261121-050057-bd4912
 Quest: .campaign/xapiand/quests/lua-method-flake.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,8 +14,19 @@ the A3 test). Jobs queued; branch pushed for A5.
 
 ## Next
 
-1. Read the jobs: 2ed0fe (master) and 504e9e (mutant) must fail at the expected check; the rest pass.
-2. A5: CI green on every platform at the head.
+1. Read probe 261121-050057-bd4912 (master, trace_listen.c: listen() +500 ms, bind/connect traced with times):
+   does the method case's first connect come before the listen, and is it refused? If it is refused yet the test
+   passes, the shim run is not exercising MethodNode; if it connects, something accepts before listen.
+2. Build the --fails-without job from what the trace shows (A1, A3), then CI green (A5).
+
+## Findings 11-21 (resume)
+
+- 2ed0fe (master) and 504e9e (mutant) passed under the 500 ms listen shim: A1/A3 unproven.
+- CI: passing test_lua takes 62 s (newman-pin run 44899560445); failing ones 61 s and 50 s. So the failing PUT
+  returned at once (refusal or a fast non-2xx), not a 60 s recv timeout. Linux CI runs ctest serially, so no
+  parallel-test port clash there. ASan (--parallel 4) fails PUT..RESTORE (12 checks); the CLI restore's GETs
+  after it pass: requests fail only early in the node's life, which fits READY before listen.
+- The shim binary and test are both x86_64, `_listen` is an import of the test binary: interposition should apply.
 
 ## Blocked on
 
