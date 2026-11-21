@@ -40,13 +40,9 @@ one include callers name; it includes its pieces.
 | `src/aggregations/bucket_terms.h` | `ValuesAggregation`, `TermsAggregation`, `FilterAggregation` |
 | `src/aggregations/bucket_numeric.h` | `HistogramAggregation`, `RangeAggregation` |
 
-## src/lua/processor.cc
+## Kept whole
 
-The Lua script `Processor` (declared in `src/lua/processor.h`).
-
-| File | Holds |
-|---|---|
-| `src/lua/processor.cc` | `Processor` and this thread's script cache: compiling local and foreign scripts |
-| `src/lua/processor_state.cc` | `detail::State`: the metered allocator, count hook, host functions, base chunk, and the library patch's `lua_x*` meters |
-| `src/lua/processor_run.cc` | the document conversion between MsgPack and Lua, `run` (one call's resume loop) and `collect` |
-| `src/lua/processor_detail.h` | what the pieces share: `detail::State`, `Call`, `current_call`, `printed`, `hook`, `throw_if_condemned`, `run`, `collect` |
+`src/lua/processor.cc` (1,125 lines) stays one file. Its anonymous namespace is one translation
+unit's private state: the call's meters (`Call`, `current_call`, `hook`), the allocator, the base
+chunk, the conversion and the cache all read each other's internals. Cutting it would export about
+eight symbols and make a thread-local read across translation units, for pieces nobody opens alone.
