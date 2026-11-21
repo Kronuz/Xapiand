@@ -12435,6 +12435,8 @@
       "after": [
         "detent:journal-idle-groups"
       ],
+      "base": "178030b38f5617337486407e6cc35d70881a0841",
+      "branch": "quest/xapiand/journal-turn-buffers",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -12466,6 +12468,7 @@
         "CMakeLists.txt",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/journal-turn-buffers",
       "landed": [],
       "lenses": [
         "durability"
@@ -12477,9 +12480,10 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-20T19:36:00"
+      "updated": "2026-11-20T19:36:14",
+      "worktree": "../journal-wt/xapiand/journal-turn-buffers"
     },
     "key-field": {
       "accepted": {},
