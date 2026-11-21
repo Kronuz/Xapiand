@@ -25895,8 +25895,8 @@
       "repo": "../uinteger_t",
       "risk": "low",
       "status": "active",
-      "title": "uinteger_t's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:48:00",
+      "title": "uinteger_t's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:05:17",
       "worktree": "../uinteger_t-wt/xapiand/split-uinteger-t"
     },
     "split-url-parser": {
