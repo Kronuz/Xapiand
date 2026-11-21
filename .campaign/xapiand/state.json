@@ -9745,10 +9745,41 @@
         "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-strata-gaps",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T03:22:34",
+          "commit": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "criteria": {
+            "A1": "261120-231216-b15c65",
+            "A2": "261120-231216-b15c65",
+            "A3": "261120-231216-b15c65; fails without: 261120-231240-34dc25, 261120-231241-145756",
+            "A4": "261120-231216-b15c65",
+            "A5": "`docs/api.md`: \"Ends the cut as a process crash\"",
+            "A6": "CI green at b5640d71303b"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b5640d71303b74de041aef039a2c9ff8d9861405",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-231216-b15c65",
+              "level": "light",
+              "seconds": 39.9,
+              "state": "done",
+              "what": "faultlab-strata-gaps check build-test at b5640d71303b"
+            }
+          ],
+          "final": true,
+          "from": "b64102f2c95ad0ab49fc34189f3be8cda0507145",
+          "reason": "",
+          "tested": "b5640d71303b74de041aef039a2c9ff8d9861405"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -9756,9 +9787,9 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "faultlab's faultfs covers every call strata makes",
-      "updated": "2026-11-20T23:32:58",
+      "updated": "2026-11-21T03:22:37",
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-table": {
