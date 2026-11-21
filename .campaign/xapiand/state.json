@@ -30866,7 +30866,8 @@
         "src/serialise.cc",
         "tests/test_engine_sort.cc",
         "tests/test_generate_terms.cc",
-        "tests/test_text_parser.cc"
+        "tests/test_text_parser.cc",
+        "config.h.in"
       ],
       "history": [
         {
@@ -30931,7 +30932,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T22:24:05",
+      "updated": "2026-11-20T23:24:37",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
