@@ -1,6 +1,6 @@
 # agents-md: journal
 
-State: ready for review
+State: waiting on jobs 261121-095115-0de0c7 (lines check; then ready for review)
 Quest: .campaign/xapiand/quests/agents-md.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
