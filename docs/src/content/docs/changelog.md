@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   values nested six levels made 117,649 buckets (8 s, 200 MB). A search now holds at most
   65,535 buckets below the outermost level (Elasticsearch's `search.max_buckets`) and
   aggregations nest at most 16 levels deep; past either it answers 400 naming the limit.
+- **Source builds work with Clang 19 and later** (FreeBSD 14.3 and later among them).
+  RapidJSON is pinned past v1.1.0, which no longer compiled there.
 
 ### Known limits
 - **Some numbers are stored in a lossy sortable form.** Xapian's `sortable_serialise` codec
