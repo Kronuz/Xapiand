@@ -2255,6 +2255,19 @@
       "id": "msg-221",
       "origin": "campaign-v3",
       "text": "GitHub budget: the Kronuz token (shared by all campaigns, 5,000 REST calls/hour) was at 609 left at 15:05; it resets 15:33. Measured: one `campaign status` makes 86 gh calls in xapiand, 31 in detent (one per in-flight quest head, no cache). Until the cache lands (lead-driver F2): run status at most every 10 minutes, use `campaign brief Q` for one quest, and stop shell loops that poll gh every minute (detent: three `until gh run list` loops, pids 23019, 42598, 72838, running 1-15 days). When the budget runs out, land reports 'gh failed': that is the budget, not the quest."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:39:23",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:39:23",
+      "by": "campaign-v3: kronuz",
+      "closed": "xapiand does not rely on CI at every merge commit; fix-forward on a red main after a clean merge is fine (measured at most 2 of 54)",
+      "id": "msg-222",
+      "origin": "campaign-v3",
+      "text": "Coming to the land gate (ci-reuse-disjoint-merge, owner-approved; lands after its review and CI, announced again by the tool when installed): (1) a quest's green CI at its head carries across a merge from main that git completed with no conflicts, even in a file both changed; any conflict, even resolved, still needs CI at the merge. Review acceptance carries the same way. (2) Main runs CI after landing; a red main after such a landing is an error in check/status naming the landing and the fix-forward command. (3) CI at a commit is its newest run (a green rerun counts). (4) land never stops halfway after its push: cleanup failures warn. Measured risk, 14 days of xapiand+detent: 481 merges from main, 469 clean; of 54 clean merges with a green head and a finished run at the merge, 4 went red, 2 of them inherited a red main: at most 2 (4%) the merge itself. Tell me now if your campaign relies on CI at every merge commit."
     }
   ],
   "quests": {
