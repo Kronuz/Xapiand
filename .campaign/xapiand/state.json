@@ -23178,6 +23178,38 @@
       "updated": "2026-11-13T02:49:54",
       "worktree": ""
     },
+    "schema-split": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "/usr/local/bin/python3 harness/split_check.py --before 7d185f626 src/database/schema.cc src/database/schema",
+          "level": "light",
+          "minutes": 30,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/database/schema/**",
+        "harness/split_check.py",
+        "docs/dev/schema-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "cjk-words"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "schema.cc becomes a set of files under 1,000 lines each",
+      "updated": "2026-11-21T10:07:21"
+    },
     "script-method": {
       "accepted": {},
       "after": [],
