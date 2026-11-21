@@ -25717,6 +25717,46 @@
       "title": "task's large files split under 1,000 lines",
       "updated": "2026-11-21T11:47:18"
     },
+    "split-traceback": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "traceback.cc",
+        "traceback_*",
+        "traceback/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../traceback",
+      "risk": "low",
+      "status": "planned",
+      "title": "traceback's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:36"
+    },
     "split-url-parser": {
       "accepted": {},
       "after": [
