@@ -1870,6 +1870,18 @@
         "quest": "detent:consensus-leaving-removal"
       },
       "text": "detent:consensus-leaving-removal started and may change files your node-admission changes (order them with --after detent:consensus-leaving-removal, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T01:34:45",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T01:34:45",
+      "by": "lead",
+      "closed": "cluster uses HostTransport and the rpc lane only, never decodes Driver messages; tag 9 needs no change",
+      "id": "msg-195",
+      "text": "Heads-up, consensus wire change (consensus-quiescence, consensus:3b20d96, in re-review, not landed): new Driver message Gone{term}, wire tag 9. When a group fences on a live node, its Driver tells the group's other members, and a follower in that term treats it as LeaderGone, so resting groups elect instead of waiting forever. If your cluster decodes consensus Driver messages itself (rpc-lane), it needs tag 9."
     }
   ],
   "quests": {
