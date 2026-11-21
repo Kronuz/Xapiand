@@ -26864,11 +26864,52 @@
         "docs/API.md",
         "docs/mechanisms/lifecycle.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-timers-followups",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T01:56:25",
+          "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+          "criteria": {
+            "A1": "261121-004731-d3f93a; fails without: 261120-234620-0cc4fe, 261121-004736-a76f3d",
+            "A2": "261121-004731-d3f93a, 261121-004754-b167fb, 261121-004756-0173e0, 261121-004757-b2ddf1; fails without: 261120-234623-f45356, 261120-234625-726b55, 261120-234627-d28a8b, 261121-004739-df20cc, 261121-004741-f7a445, 261121-004744-3c233d, 261121-004747-973743, 261121-004749-c4fc38",
+            "A3": "261121-004752-269b3f",
+            "A4": "261121-004734-c4ee7e, 261121-004734-b8ec84, 261121-004754-b167fb, 261121-004757-b2ddf1",
+            "A5": "CI green at dc2be963fbb5"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-004734-c4ee7e",
+              "level": "light",
+              "seconds": 27.4,
+              "state": "done",
+              "what": "task-timers-followups check suite at dc2be963fbb5"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-004734-b8ec84",
+              "level": "light",
+              "seconds": 15.3,
+              "state": "done",
+              "what": "task-timers-followups check tsan at dc2be963fbb5"
+            }
+          ],
+          "final": true,
+          "from": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
+          "reason": "",
+          "tested": "dc2be963fbb5638c605bcae30c43aacb0286655c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -26876,10 +26917,10 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-21T01:00:17",
-      "worktree": "../task-wt/xapiand/task-timers-followups"
+      "updated": "2026-11-21T01:56:28",
+      "worktree": ""
     },
     "termdict-forward-seek": {
       "accepted": {},
