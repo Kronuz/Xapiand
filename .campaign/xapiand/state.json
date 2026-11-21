@@ -25106,6 +25106,8 @@
       "after": [
         "split-check"
       ],
+      "base": "8b65a55f9688765491c7d55131d353d939e2a2fa",
+      "branch": "quest/xapiand/split-btree",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25133,6 +25135,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-btree",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25140,9 +25143,10 @@
       "provides": [],
       "repo": "../btree",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "btree's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:13"
+      "updated": "2026-11-21T11:48:03",
+      "worktree": "../cpp-btree-wt/xapiand/split-btree"
     },
     "split-check": {
       "accepted": {},
