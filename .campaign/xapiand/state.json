@@ -3029,6 +3029,8 @@
     "catalog-stress-cap": {
       "accepted": {},
       "after": [],
+      "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+      "branch": "quest/xapiand/catalog-stress-cap",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -3041,6 +3043,7 @@
       "files": [
         "test/catalog_stress_test.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/catalog-stress-cap",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -3048,9 +3051,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "catalog_stress reaches its maps cap deterministically",
-      "updated": "2026-11-20T23:34:37"
+      "updated": "2026-11-20T23:35:10",
+      "worktree": "../strata-wt/xapiand/catalog-stress-cap"
     },
     "census": {
       "accepted": {},
