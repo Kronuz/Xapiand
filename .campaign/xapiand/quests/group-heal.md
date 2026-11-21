@@ -69,6 +69,14 @@ and the membership steps (add learner, promote, remove, add witness). Consumes `
 consensus's `SnapshotChannel` and fetch lane. `format-freeze` reviews the transfer. The simulator
 consumes `strata:group` through its public C++ API only and provides nothing on disk or wire.
 
+The Driver's install surface comes from Detent's `consensus-driver-install` (msg-187; contract in
+consensus `docs/DRIVER.md`, section Install, at consensus:2c598fb): with `GroupOptions::snapshots` set the
+Driver owns the group's SnapshotChannel; the Sink gets `SendTransfer` (host sends it with
+`transport::send_transfer`), `ValidateImage` (stage here, answer `validated`/`validation_failed`) and
+`ActivateImage` (replaces `ActivateInstall`; the image is borrowed for the call); received transfer
+payloads go to `transfer()`, the rest to `receive()`; the whole transfer finishes within
+`Timing::snapshot_timeout`. The install task binds to it once that code lands.
+
 ## Decisions
 
 - Design D7 (short groups are one voter plus learners, never two voters), D16, F1, F9, F24 (no
