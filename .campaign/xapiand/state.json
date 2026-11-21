@@ -15612,7 +15612,106 @@
       "updated": "2026-11-08T15:39:34"
     },
     "node-admission": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T19:12:46",
+          "base": "8801b99025ba4f094e2566e7284d76b5b119a8b0",
+          "blobs": {
+            "CHANGELOG.md": "100644:7c9f59b5d9af58cb8ac78c9e428a569dae95aa7f",
+            "CMakeLists.txt": "100644:caaeaa8867e7b04983ab6e7679c76d4ca87aed4f",
+            "docs/mechanisms/admission.md": "100644:a574b9ac38abc02b48db000e0f25d20e5113256d",
+            "docs/mechanisms/host-connection.md": "100644:8e4b19b86e7ea6607d64e3973b27fc70dd65a130",
+            "include/consensus/transport/admission.h": "100644:4d8e08627349051ef142ded131dc91d620b8d8ea",
+            "include/consensus/transport/admission_join.h": "100644:a59f126530060db00f43a2e01e7bcc6585c29c04",
+            "include/consensus/transport/connection.h": "100644:e1a6f0f9cba5d40564be47e23c38879489d496a2",
+            "include/consensus/transport/host_transport.h": "100644:90413df1f5cb9c9277ce0d08fb6f47b812feea8e",
+            "include/consensus/transport/links.h": "100644:82831b8803118174901268eae8fa170986fa9578",
+            "include/consensus/transport/node_pins.h": "100644:94de96550dd0eb1ae20c91bc5a48a54981e45446",
+            "test/transport/admission_certificates.cmake": "100644:acd16c3c2093718bcc3bfe584e8ca8de5435968b",
+            "test/transport/admission_mutants.py": "100755:1f7e87be2cb90f37ebcf5037a028dc5e4e37eb02",
+            "test/transport/admission_nodes_test.cc": "100644:27eb0308dcbc4f26496629dd029926349f53ad03",
+            "test/transport/connection_test.cc": "100644:14521d9b4189a7507a5de65efb28b772f0363d8c",
+            "test/transport/links_test.cc": "100644:a464e78318d62834c826b3008381765a6366cf21"
+          },
+          "by": "review",
+          "commit": "803442fd75702581cd1943ce07ced4ea3f1c8a67",
+          "criteria": "a4b8d0cea601af32",
+          "diffs": {
+            "CHANGELOG.md": "b387692525ee5c84",
+            "CMakeLists.txt": "01e5b78feb8b5d9a",
+            "docs/mechanisms/admission.md": "51b9d75055755433",
+            "docs/mechanisms/host-connection.md": "d5eab019ac449d5e",
+            "include/consensus/transport/admission.h": "7b78bd1a093ebf70",
+            "include/consensus/transport/admission_join.h": "2e8feba99b8ffb0e",
+            "include/consensus/transport/connection.h": "8ff7b0f4905a92d8",
+            "include/consensus/transport/host_transport.h": "bbdf11a24b28244c",
+            "include/consensus/transport/links.h": "12f0e1c43de36ac0",
+            "include/consensus/transport/node_pins.h": "3b1779def3288edd",
+            "test/transport/admission_certificates.cmake": "ac83f016a68ee063",
+            "test/transport/admission_mutants.py": "ef26078e5286ffbf",
+            "test/transport/admission_nodes_test.cc": "f1babf8c95f8ce09",
+            "test/transport/connection_test.cc": "bc533be2c8fa12a4",
+            "test/transport/links_test.cc": "b0452423604c8a5e"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_epoch_(ca|pins)$' --output-on-failure",
+                  "commit": "803442fd75702581cd1943ce07ced4ea3f1c8a67",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-190018-0294af",
+                  "level": "light",
+                  "seconds": 2.1,
+                  "state": "done",
+                  "what": "F1 epoch cases plain"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_issue$' --output-on-failure",
+                  "commit": "803442fd75702581cd1943ce07ced4ea3f1c8a67",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-190020-fe207b",
+                  "level": "light",
+                  "seconds": 1.3,
+                  "state": "done",
+                  "what": "F2 issue with impostor plain"
+                }
+              ],
+              "kind": "gap",
+              "reproduced": false
+            },
+            "F3": {
+              "jobs": [
+                {
+                  "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_save$' --output-on-failure",
+                  "commit": "803442fd75702581cd1943ce07ced4ea3f1c8a67",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-190022-ac8ca2",
+                  "level": "light",
+                  "seconds": 1.9,
+                  "state": "done",
+                  "what": "F3 save plain"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "cb69cfa0914384a632f9d0e221b157666b879fe8",
+          "reviewed": "50446f8c835a60326a683fe6014cf63b396c9d85",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-transport"
       ],
@@ -15809,7 +15908,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T18:21:37",
+      "updated": "2026-11-20T19:12:46",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
