@@ -25980,10 +25980,13 @@
       ],
       "consumes": [],
       "files": [
-        "include/task/task.hh",
-        "include/task/lifecycle.hh",
-        "test/**",
-        "docs/service-shape.md"
+        "task.hh",
+        "lifecycle.hh",
+        "test/lifecycle_test.cc",
+        "test/inbox_test.cc",
+        "test/task_test.cc",
+        "CMakeLists.txt",
+        "docs/design/service-shape.md"
       ],
       "landed": [],
       "lenses": [
@@ -25998,7 +26001,7 @@
       "risk": "high",
       "status": "planned",
       "title": "a self-reposting loop cannot starve a cross-thread post",
-      "updated": "2026-11-20T23:34:29"
+      "updated": "2026-11-20T23:34:52"
     },
     "task-lanes": {
       "accepted": {
