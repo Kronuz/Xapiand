@@ -105,6 +105,15 @@ Convex::verifyTrixel(const Cartesian& v0, const Cartesian& v1, const Cartesian& 
 
 	switch (F) {
 		case 0: {
+			// A trixel with every vertex inside a hole (a cap under a hemisphere is convex) lies wholly in it.
+			for (const auto& circle : circles) {
+				const auto& c = circle.constraint;
+				if (c.sign == Constraint::Sign::NEG && !HTM::insideVertex_Constraint(v0, c) &&
+					!HTM::insideVertex_Constraint(v1, c) && !HTM::insideVertex_Constraint(v2, c)) {
+					return TypeTrixel::OUTSIDE;
+				}
+			}
+
 			// If bounding circle doesnot intersect all circles, the trixel is considered OUTSIDE.
 			if (!intersectCircles(HTM::getBoundingCircle(v0, v1, v2))) {
 				return TypeTrixel::OUTSIDE;
