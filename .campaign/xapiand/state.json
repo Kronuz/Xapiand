@@ -20898,7 +20898,7 @@
       "branch": "quest/xapiand/phase4-gate",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -21014,6 +21014,58 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:39",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/phase4-gate",
@@ -21033,7 +21085,7 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:28:18",
+      "updated": "2026-11-20T18:21:39",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
