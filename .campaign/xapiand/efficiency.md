@@ -719,3 +719,26 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: --merge-main re-pushed branches on campaign-only commits (fix building as merge-main-when-needed); verify's reuse and land's gate disagree (verify-land-agree); slot checkouts fail on commits the slot clone lacks (twice; fetch-and-retry queued). agent-campaign:453cb47 installed (the tool split into 24 modules, no behavior change).
 - Each Xapiand landing restarts every waiting quest's CI: store-docs' landing re-merged 7 branches.
 - Host: load 37-61 on 16 CPUs (cmux at 183% CPU, this lead session at 99%), 146 queued and 7 running, 300 GiB free. Quota 83% weekly, burn 0.60%/h, reset in ~31 h.
+
+### 2026-11-21 17h (hourly)
+
+- Landed: http-log-logger-pin (Xapiand:5d440ca), split-faultlab (faultlab:71a617f), ninja-only-strata (strata:cc30217; --no-ci citing the green workflow_dispatch rerun 44950558785 at the same commit, since land reads only the first, red run).
+- Owner, via campaign-v3: the lead had done landing chores by hand while 24 quests sat lead-held. Response: 17 contributors launched in one pass, landing chores moved to each quest's contributor.
+- Agent runs, Sonnet: 12 split resumes (62-75k each; merge main, fixed-checker job, citations, doc follow-ups), node-admission landing round 71k, strata-pin-catalog fails-without 84k (the harness got per-run timeouts, stage timestamps and -G Ninja).
+- Agent runs, Opus: journal-lost-bound fix round 161k (F1 multi-block gap, F4 Live ctor guard, F2 doc), turn-log-parity task merges 143k (found 3 red CI tests on the quest head, one a durability throw in recovery), xapiand-final-release 93k (a release line on `xapiand`, never merge master), ninja-only-strata 62k (no fix needed).
+- Stopped one agent that kept waking on its own job poll after reporting (split-xapiand-src, 3 wakes).
+- Unblocking moves:
+  - split-check-sources' lint check reused a passing job at identical code. It had been queued 90 min behind 155 jobs.
+  - Its tools CI was dispatched by hand, since a push at the commit fires no run.
+  - Removed a slot `build` dir that cached an unlanded journal override (turn-log-parity's gate check would have built against it).
+  - Slot sweep after agent-campaign:3b374bb: 168 Makefiles trees removed today, 0 left.
+- Waste:
+  - `gh run watch` polled GitHub every 3 s for 17 min, about 340 of the shared 5,000/h REST budget, which fell to 121. It's replaced by 5-min polls, and the landing loop by 10-min rounds.
+  - Two mutant/A3 jobs were queued at a non-compiling commit and had to be cancelled.
+- Tool findings sent to campaign-v3:
+  - A merge voids a high-risk acceptance (node-admission: a CHANGELOG-only conflict cost 9 reruns).
+  - Journal citations go stale on every rerun.
+  - land dies after its push on a branch delete.
+  - land reads the first CI run, not the newest.
+  - No per-quest base branch (put to the owner).
+- Host: load 7 (was 61 at 14:20), 299 GiB free. Quota 86% weekly, burn 0.62%/h; at this rate it is exhausted about 7 h before the reset in 29.7 h.
