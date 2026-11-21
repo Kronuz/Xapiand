@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: working
+State: waiting on jobs 261121-054230-6f2ce0 261121-054233-ce72e0 261121-055544-08fada
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,19 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Task `install` (journal group-heal--install): the transfer is done; its binding to consensus's
+Driver install surface (driver-install branch, 887a88b) is written at strata:87bc0ebf on
+quest/xapiand/group-heal--install, first build queued. Task `sim-port` merged.
 
 ## Next
 
-1. <step>
+1. install: build and prove the binding (A1, A2), then merge into the quest branch.
+2. repair, witness (order 2), then sim-rows (order 3): not started.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Lead: CMakeLists.txt's consensus pin and group_install_test registration (group-heal--install,
+Blocked on 1).
 
 ## Evidence
 
