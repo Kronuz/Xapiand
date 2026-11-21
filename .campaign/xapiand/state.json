@@ -25380,8 +25380,8 @@
       "repo": "../enum-reflection",
       "risk": "low",
       "status": "planned",
-      "title": "enum-reflection's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:23"
+      "title": "enum-reflection's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:33"
     },
     "split-faultlab": {
       "accepted": {},
