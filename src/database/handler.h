@@ -151,6 +151,9 @@ public:
 	// The budget's token, which the index uses this handler makes pass to their turn waits (empty without one).
 	task::cancel_token turn_token() const { return budget != nullptr ? budget->token() : task::cancel_token{}; }
 
+	// The method of the write a script runs for, its `_method` ("PUT", "RESTORE"); empty for the node's own writes.
+	std::string method;
+
 	// Reads of a key in a shard that by-id lookups made, one per key and shard (tests count them).
 	static inline std::atomic<std::uint64_t> key_reads{0};
 
