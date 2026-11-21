@@ -12,7 +12,8 @@ by `campaign verify --for A1`; the split job proves A2), ctest -N diff vs 066853
 
 ## Next
 
-1. When the jobs pass, paste `campaign brief`'s Evidence table and set State to ready for review.
+1. When build-test 261121-130417-01d2eb, A3 261121-130845-a8f326 and A2 261121-130848-594a3e pass, paste `campaign brief`'s Evidence table and set State to ready for review.
+2. main changed .github/workflows/ci.yml since the branch point; the brief suggests `campaign land split-traceback --merge-main` (the lead's).
 
 ## Blocked on
 
