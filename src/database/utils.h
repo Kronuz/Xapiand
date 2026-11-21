@@ -81,8 +81,6 @@ struct query_field_t {
 	bool writable = false;
 	bool patterns = false;   // the path may name patterns (`_all`, `test*`): a search or a count
 	bool primary = false;
-	bool spelling = true;
-	bool synonyms = false;
 	bool commit = false;
 	bool unique_doc = false;
 	std::string collapse;
@@ -95,7 +93,6 @@ struct query_field_t {
 
 	// Only used when the sort type is string.
 	std::string metric;
-	bool icase = false;
 };
 
 

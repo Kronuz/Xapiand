@@ -69,7 +69,6 @@ replace the parameters of the same name; a body `_sort` and `sort` parameters ad
 | `selector` | `_selector` | Keeps one part of each hit (`accountNumber`, `contact.city`). |
 | `volatile` | | Opens the index for writing, so the search sees the writer's latest view. |
 | `pretty`, `human`, `comments` | | How the answer is written; see [Options](/Xapiand/options). |
-| `spelling`, `synonyms`, `icase` | | Read and ignored. |
 
 Sources: `src/server/search_views.cc:2340-2470` (the parameters), `src/database/handler.cc:1140-1230`
 (the body keys), `src/server/search_views.cc:1932-2090` (the answer).

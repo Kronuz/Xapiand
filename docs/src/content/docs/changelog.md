@@ -280,6 +280,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `char[PATH_MAX + 1]` buffer in its log message and left it unterminated for a path of `PATH_MAX` bytes or more.
 
 ### Removed
+- **The `spelling`, `synonyms` and `icase` parameters and the `_missing` bucket**: nothing served them. The
+  parameters are unknown query parameters now, ignored like any other; a `_missing` aggregation is a 400 like any
+  unknown aggregation type.
 - **`--committers`, `--fsynchers` and `--http-servers`.** The commit threads are gone (autocommits are tasks on the control loop), the fsync pool is sized from `--processors`
   (half of them, at least 1, at most 10), and the node runs one HTTP loop per processor: `--processors N` sets both (it was capped at 10 loops, now it is not).
   The `num_committers` key of the root `GET /` statistics and the `xapiand_http_clients_*`, `xapiand_committers_capacity` and `xapiand_committers_pool_size` gauges of `:metrics` are gone.

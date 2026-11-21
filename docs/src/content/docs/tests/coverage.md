@@ -82,5 +82,5 @@ check it, and lists what no request covers, with the reason.
 | A body over 16 MiB (`413`), streamed blobs up to 4 GiB | Too large for a docs request. |
 | 4,096 clauses or 100 levels of a query | The request would be pages long; `harness/query_depth_check.py` covers the depth. |
 | `Retry-After` with `503` and `429` | Needs a loaded node. |
-| `check_at_least`, `volatile`, `spelling`, `synonyms`, `icase` | No effect a request can observe; the last three are read and ignored. |
+| `check_at_least`, `volatile` | No effect a request can observe. |
 | `--max-search-indexes` and the other startup options | The harness starts the node with its own options; [Options](/Xapiand/options) documents them. |

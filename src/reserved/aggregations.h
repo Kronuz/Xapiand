@@ -64,7 +64,6 @@ constexpr const char RESERVED_AGGS_GEO_IP[]                 = RESERVED__ "geo_ip
 constexpr const char RESERVED_AGGS_GEO_TRIXELS[]            = RESERVED__ "geo_trixels";
 constexpr const char RESERVED_AGGS_HISTOGRAM[]              = RESERVED__ "histogram";
 constexpr const char RESERVED_AGGS_IP_RANGE[]               = RESERVED__ "ip_range";
-constexpr const char RESERVED_AGGS_MISSING[]                = RESERVED__ "missing";
 constexpr const char RESERVED_AGGS_RANGE[]                  = RESERVED__ "range";
 constexpr const char RESERVED_AGGS_VALUES[]                 = RESERVED__ "values";
 constexpr const char RESERVED_AGGS_TERMS[]                  = RESERVED__ "terms";

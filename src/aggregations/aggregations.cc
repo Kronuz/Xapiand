@@ -58,7 +58,7 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 	assert(context.is_map());
 
 	// Every reserved aggregation word is in the phf, including the ones not implemented
-	// yet (cardinality, the geo_* / percentiles / date_* / *_range family, missing,
+	// yet (cardinality, the geo_* / percentiles / date_* / *_range family,
 	// scripted_metric): recognizing them lets the dispatch below fail with a clear
 	// "not implemented" error instead of silently producing no result, which is what
 	// happened while they were left out of the phf and hashed to an arbitrary slot.
@@ -90,7 +90,6 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 		hh(RESERVED_AGGS_GEO_DISTANCE),
 		hh(RESERVED_AGGS_GEO_TRIXELS),
 		hh(RESERVED_AGGS_HISTOGRAM),
-		hh(RESERVED_AGGS_MISSING),
 		hh(RESERVED_AGGS_RANGE),
 		hh(RESERVED_AGGS_IP_RANGE),
 		hh(RESERVED_AGGS_GEO_IP),
@@ -204,9 +203,6 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 						case _.fhh(RESERVED_AGGS_HISTOGRAM):
 							add_bucket<HistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 							break;
-						// case _.fhh(RESERVED_AGGS_MISSING):
-						// 	add_bucket<MissingAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						// 	break;
 						case _.fhh(RESERVED_AGGS_RANGE):
 							add_bucket<RangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 							break;
@@ -233,7 +229,6 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 						case _.fhh(RESERVED_AGGS_DATE_RANGE):
 						case _.fhh(RESERVED_AGGS_GEO_DISTANCE):
 						case _.fhh(RESERVED_AGGS_GEO_TRIXELS):
-						case _.fhh(RESERVED_AGGS_MISSING):
 						case _.fhh(RESERVED_AGGS_IP_RANGE):
 						case _.fhh(RESERVED_AGGS_GEO_IP):
 							THROW(AggregationError, "Aggregation {} is reserved but not implemented yet", repr(sub_agg_type));

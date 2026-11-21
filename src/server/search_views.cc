@@ -2470,26 +2470,6 @@ query_field_maker(Request& request, int flags)
 		query_field.patterns = true;
 
 		request.query_parser.rewind();
-		if (request.query_parser.next("spelling") != -1) {
-			query_field.spelling = true;
-			if (request.query_parser.len != 0u) {
-				try {
-					query_field.spelling = Serialize::boolean(request.query_parser.get()) == "t";
-				} catch (const Exception&) { }
-			}
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("synonyms") != -1) {
-			query_field.synonyms = true;
-			if (request.query_parser.len != 0u) {
-				try {
-					query_field.synonyms = Serialize::boolean(request.query_parser.get()) == "t";
-				} catch (const Exception&) { }
-			}
-		}
-
-		request.query_parser.rewind();
 		while (request.query_parser.next("query") != -1) {
 			L_SEARCH("query={}", request.query_parser.get());
 			query_field.query.emplace_back(request.query_parser.get());
@@ -2509,11 +2489,6 @@ query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 		if (request.query_parser.next("metric") != -1) {
 			query_field.metric = request.query_parser.get();
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("icase") != -1) {
-			query_field.icase = Serialize::boolean(request.query_parser.get()) == "t";
 		}
 
 		request.query_parser.rewind();

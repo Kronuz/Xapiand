@@ -444,59 +444,6 @@ parent-level aggs have been pruned. Ordinarily, all branches of the aggregation
 tree are expanded in one _depth-first_ pass and only then any pruning occurs.
 In some scenarios this can be very wasteful and can hit memory constraints.
 
-### Missing Value
-
-:::hint[Unimplemented Feature!]{.unimplemented}
-This feature hasn't yet been implemented...
-<br>[Pull requests are welcome!](https://github.com/Kronuz/Xapiand/pulls)
-:::
-
-Today `_missing` is read and ignored: the example below passes only because every
-document has the field.
-
-The `_missing` parameter defines how documents that are missing a value should
-be treated. By default they will be ignored but it is also possible to treat
-them as if they had a value.
-
-```rest
-SEARCH /bank/
-
-{
-  "_query": "*",
-  "_limit": 0,
-  "_check_at_least": 1000,
-  "_aggs": {
-    "gender": {
-      "_values": {
-        "_field": "gender",
-        "_missing": "N/A"
-      }
-    }
-  }
-}
-```
-
-<!-- e2e:begin
-
-```js
-pm.test("Response is success", function() {
-  pm.response.to.be.success;
-});
-```
-
-```js
-pm.test("Missing Value aggregation", function() {
-  var jsonData = pm.response.json();
-  pm.expect(jsonData.aggregations["gender"].length).to.equal(2);
-  pm.expect(jsonData.aggregations["gender"][0]._key).to.equal("male");
-  pm.expect(jsonData.aggregations["gender"][0]._doc_count).to.equal(494);
-});
-```
-e2e:end -->
-
-Documents without a value in the `gender` field will fall into the same bucket
-as documents that have the value `"N/A"`.
-
 ## Sub Aggregations
 
 Side-by-side the `<bucket_aggregation_type>`, an additional `_aggregations`
