@@ -13226,6 +13226,8 @@
     "keyword-open-range": {
       "accepted": {},
       "after": [],
+      "base": "de5ea84117a0a41650df12f719d23610d9100aed",
+      "branch": "quest/xapiand/keyword-open-range",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -13244,11 +13246,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: xapiand-final-release writes the xapiand release branch; this writes master, and a backport is its own cherry-pick",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Lower-bound-only keyword and text ranges match",
-      "updated": "2026-11-21T04:53:04"
+      "updated": "2026-11-21T04:53:25",
+      "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
     },
     "kv-scan": {
       "accepted": {},
