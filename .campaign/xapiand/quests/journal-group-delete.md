@@ -9,8 +9,9 @@ machine state is in `state.json`: `campaign status journal-group-delete`.
 the old segments and manifest stay, and the group cannot reopen empty there (placement--repair,
 11-21: a drain or replace moves a replica off a node and later back). Host deletes a closed
 group's segments and manifest durably, and a later open of that group starts empty (Detent's
-lead, msg-187, 11-21). consensus needs the same for a left replica: the quest asks Detent's lead
-whether Driver needs a hook, and builds it here if it does.
+lead, msg-187, 11-21). consensus's half is Detent's consensus-replica-delete, after this quest: a
+replica removed from membership deletes its log and image and rejoins as a fresh learner. The
+contributor sends the delete API's final shape to Detent's lead once it is fixed.
 
 ## Acceptance criteria
 
@@ -27,12 +28,13 @@ whether Driver needs a hook, and builds it here if it does.
 ## Contracts
 
 Provides journal:host (a new delete call; nothing existing changes). Consumed by placement
-(repair's rejoin) and, if Detent's lead says so, consensus's Driver.
+(repair's rejoin) and detent:consensus-replica-delete.
 
 ## Decisions
 
 - Detent's lead, 2026-11-21 (msg-187): no Detent quest covers it; filed in journal on our side,
-  after journal-idle-groups and journal-loop-handoff, which change Host and its range table.
+  after journal-idle-groups and journal-loop-handoff, which change Host and its range table, and
+  after journal-tail-second-sector, which fixes a silent loss of acknowledged turns in src/turn_log.
 
 ## May land early
 
