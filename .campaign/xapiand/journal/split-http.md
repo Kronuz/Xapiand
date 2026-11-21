@@ -1,6 +1,6 @@
 # split-http: journal
 
-State: waiting on jobs 261121-121235-b632ee 261121-121244-ae1958 261121-121251-4665eb
+State: waiting on jobs 261121-145036-b836fa (A2, split_check from split-check-sources at 944e8cf)
 Quest: .campaign/xapiand/quests/split-http.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,20 +16,20 @@ http:944e8cf (tests reverted to moves-only). Jobs queued at 944e8cf: build-test 
 
 ## Next
 
-1. Read the three jobs; fix A6 include-path failures if any (the first run failed only on the asio include path; -I added).
-2. After split-check lands (`campaign status split-check`): `campaign verify split-http` for `split`; answer its warnings.
+1. Read A2 job 261121-145036-b836fa; answer each warning (using-declarations, dropped static, prototypes: see Rulings); fix any real error as moves only.
+2. After split-check lands the lead reruns `campaign verify split-http`.
 3. A7: the lead reads the split.
 
 ## Blocked on
 
-Nothing; the split check waits on quest split-check.
+Nothing. Main merge: already up to date (base e4ad5b9). A1/A3/A6 jobs passed at 944e8cf, no rerun needed. Branch already pushed.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-121235-b632ee at 944e8cf (f75201 at b283dcd cancelled, superseded) |
-| A2 | pending split-check landing; `split` job 261121-121236-b52a0a cancelled (tool absent) |
+| A2 | 261121-145036-b836fa (fixed checker at 944e8cf; replaces cancelled 121236-b52a0a and failed 123002-407242, which ran the old checker). Warnings to answer when it finishes |
 | A3 | 261121-121244-ae1958 at 944e8cf vs base e4ad5b9. Earlier first-round ctest -N jobs, same list shape: 261121-114853-b2726f (b283dcd), 261121-114903-8148a4 (3d931dd), 261121-115542-54b74a (8c6cd46) |
 | A4 | docs/source-layout.md |
 | A6 | 261121-121251-4665eb at 944e8cf. Failed run examined: 261121-115533-838bff (asio.hpp not on the include path; the command now passes -I and -DASIO_STANDALONE) |
