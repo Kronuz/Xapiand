@@ -1,0 +1,12 @@
+---
+/**
+ * Search override: Starlight's own search, followed by the reading text size toggle. On a phone
+ * Starlight's header shows only the search and menu buttons, so this is where the toggle can stay
+ * visible there; the toggle hides itself at 50rem and up, where it sits beside the theme selector.
+ */
+import Default from "@astrojs/starlight/components/Search.astro";
+import TextSizeToggle from "./TextSizeToggle.astro";
+---
+
+<Default {...Astro.props} />
+<TextSizeToggle placement="search" />

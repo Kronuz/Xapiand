@@ -1660,3 +1660,77 @@ figure.diagram .diagram-dark {
   display: block;
   margin-inline: auto;
 }
+
+/* Reading text size. Lato fits about 100 characters in Starlight's 720px column.
+   At 18px, a 1.08 width increase keeps the line near 98 characters. The width
+   token lives at the root because the header and TOC read it there. */
+:root[data-text-size='large'][data-has-sidebar] {
+	--kz-reading-scale: 1.125;
+	--sl-content-width: calc(45rem * 1.08);
+}
+:root[data-text-size='large'][data-has-sidebar] main {
+	--sl-text-2xs: calc(0.75rem * var(--kz-reading-scale));
+	--sl-text-xs: calc(0.8125rem * var(--kz-reading-scale));
+	--sl-text-sm: calc(0.875rem * var(--kz-reading-scale));
+	--sl-text-base: calc(1rem * var(--kz-reading-scale));
+	--sl-text-lg: calc(1.125rem * var(--kz-reading-scale));
+	--sl-text-xl: calc(1.25rem * var(--kz-reading-scale));
+	--sl-text-2xl: calc(1.5rem * var(--kz-reading-scale));
+	--sl-text-3xl: calc(1.8125rem * var(--kz-reading-scale));
+	--sl-text-4xl: calc(2.1875rem * var(--kz-reading-scale));
+	--sl-text-5xl: calc(2.625rem * var(--kz-reading-scale));
+	--sl-text-6xl: calc(4rem * var(--kz-reading-scale));
+	/* The semantic tokens were resolved against the default scale at :root; re-derive them here. */
+	--sl-text-body: var(--sl-text-base);
+	--sl-text-body-sm: var(--sl-text-xs);
+	--sl-text-code: var(--sl-text-sm);
+	--sl-text-code-sm: var(--sl-text-xs);
+	--sl-text-h1: var(--sl-text-4xl);
+	--sl-text-h2: var(--sl-text-3xl);
+	--sl-text-h3: var(--sl-text-2xl);
+	--sl-text-h4: var(--sl-text-xl);
+	--sl-text-h5: var(--sl-text-lg);
+	--ec-codeFontSize: calc(0.875rem * var(--kz-reading-scale));
+	/* <main> inherits the body's computed 16px, so it has to take the new size explicitly. */
+	font-size: var(--sl-text-body);
+}
+@media (min-width: 50em) {
+	:root[data-text-size='large'][data-has-sidebar] main {
+		--sl-text-h1: var(--sl-text-5xl);
+		--sl-text-h2: var(--sl-text-4xl);
+		--sl-text-h3: var(--sl-text-3xl);
+		--sl-text-h4: var(--sl-text-2xl);
+	}
+}
+
+/* Image zoom (ImageZoom.astro): on a desktop pointer, a content image or D2 diagram that would
+   show meaningfully larger opens in a modal, fitted to the window. The zoom-in cursor marks
+   exactly those images. The image sits on the page background so a transparent diagram stays
+   readable over the dark backdrop. */
+@media (hover: hover) and (pointer: fine) {
+	.sl-markdown-content img[data-kz-zoom] {
+		cursor: zoom-in;
+	}
+}
+.kz-zoom {
+	max-width: none;
+	max-height: none;
+	margin: auto;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
+	cursor: zoom-out;
+}
+.kz-zoom::backdrop {
+	background: rgba(0, 0, 0, 0.75);
+}
+.kz-zoom img {
+	display: block;
+	box-sizing: content-box;
+	max-width: none;
+	padding: 1rem;
+	border-radius: 0.6rem;
+	background: var(--sl-color-bg);
+	box-shadow: var(--sl-shadow-lg);
+}
