@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261121-112935-470d0a 261121-112938-b90e6c 261121-112940-8f72c2 261121-112943-a14c94 261121-112945-a24d08 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b 261121-113018-351103 261121-113020-69fb20 (park_count with and without the fix, A1-A6 and the four mutants, TSan, Detent's two review probes, all at journal:5a5972d or the fix's parent) and CI at journal:5a5972d
+State: waiting on jobs 261121-113430-26daa5 261121-113432-44c9c7 261121-112940-8f72c2 261121-112943-a14c94 261121-112945-a24d08 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b 261121-113018-351103 261121-113020-69fb20 (park_count with and without the fix, A1-A6 and the four mutants, TSan, Detent's two review probes, all at journal:5a5972d or the fix's parent) and CI at journal:5a5972d
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,8 +18,9 @@ and 24 B there; 80,025 B apart, 8 B each) plus about 9.8 KB. journal:5a5972d kee
 vector: completed() moves flight_ out and hands it back cleared, unless a turn begun meanwhile
 took one. Nothing per group: what the driver keeps is sized by its largest turn, once.
 
-Jobs: park_count at journal:5a5972d 261121-112935-470d0a; --fails-without at journal:6cdd923
-261121-112938-b90e6c. Every rerun configures with -G Ninja into build-ninja (the slot's build
+Jobs: park_count at journal:5a5972d 261121-113430-26daa5; --fails-without at journal:6cdd923
+261121-113432-44c9c7 (target journal_journal_test; the first pair, 261121-112935-470d0a and
+261121-112938-b90e6c, named journal_test and never built). Every rerun configures with -G Ninja into build-ninja (the slot's build
 is Makefiles); Detent's probes run with CMAKE_GENERATOR=Ninja, the differential one against
 main journal:335b1b5 (was journal:178030b).
 
@@ -35,7 +36,7 @@ For the lead, since the durability review accepted journal:5ace07e:
 4. journal:5a5972d (this fix): turn_driver.h completed() and the member list only; turn_log.h
    and the turn_buffers tests unchanged. turn-seal.md "The driver's own buffers" updated.
 Confirm by job: `git -C <journal> diff 5ace07e 5a5972d -- include/journal/turn_driver.h`
-(6 lines of the fix plus main's), park_count 261121-112935-470d0a and 261121-112938-b90e6c,
+(6 lines of the fix plus main's), park_count 261121-113430-26daa5 and 261121-113432-44c9c7,
 A6 261121-112949-d67fc2 and its mutant 261121-113006-d7b0ff.
 
 ## Next
