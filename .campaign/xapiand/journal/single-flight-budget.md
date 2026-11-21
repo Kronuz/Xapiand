@@ -3,39 +3,34 @@
 State: working
 Quest: .campaign/xapiand/quests/single-flight-budget.md (the lead's; never edit it)
 
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
-
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Confirm on main: tests/test_single_flight.cc at the mutant commit (run() takes a token and ignores it,
+which is main's wait exactly: a joiner awaits the flight's one `done` event, which nothing but the
+leader sets).
 
 ## Next
 
-1. <step>
+1. Confirm job at the mutant (expect FAIL: B keeps waiting), then the fix and its jobs.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing yet.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <pending> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<pending>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The `--fails-without` commit is a mutant on this branch, not main: the new test passes a token
+  to `run()`, which main's `run()` has no parameter for, so at main it would fail to compile rather
+  than on its assertion. The mutant adds the parameter and ignores it, the behavior of main.
+- The tests go in a new tests/test_single_flight.cc (in the file set); the CMake glob registers it,
+  so tests/CMakeLists.txt (which does not exist) is not needed.

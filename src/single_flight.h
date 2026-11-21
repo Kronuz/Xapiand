@@ -91,8 +91,9 @@ public:
 
 	// The same, where a leader takes probe()'s value, when it has one, instead of loading (not a load).
 	template <typename Load, typename Probe>
-	task::task<Value> run(Key key, Load load, Probe probe)
+	task::task<Value> run(Key key, Load load, Probe probe, task::cancel_token token = {})
 	{
+		(void)token;
 		for (;;) {
 			std::shared_ptr<Flight> flight;
 			bool leader = false;
