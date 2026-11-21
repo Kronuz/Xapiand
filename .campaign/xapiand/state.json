@@ -27288,12 +27288,13 @@
             "bench/kv/kv_strata.cc",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--reopen-loops",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--reopen-loops"
+          "journal": "",
+          "merged": "a38d4c261e2436620a88f40d1a6630fd76223c47",
+          "worktree": ""
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T19:36:10",
+      "updated": "2026-11-20T20:04:24",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
