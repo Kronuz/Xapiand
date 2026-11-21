@@ -25130,14 +25130,9 @@
       "consumes": [],
       "files": [
         "src/serialize*",
-        "src/serialize/**",
         "src/aggregations/metrics*",
         "src/aggregations/bucket*",
-        "src/aggregations/metrics/**",
-        "src/aggregations/bucket/**",
         "src/lua/processor*",
-        "src/lua/processor/**",
-        "CMakeLists.txt",
         "docs/dev/source-layout.md"
       ],
       "landed": [],
@@ -25149,7 +25144,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Xapiand's free large sources split under 1,000 lines",
-      "updated": "2026-11-21T11:38:50"
+      "updated": "2026-11-21T11:40:29"
     },
     "split-xapiand-tests": {
       "accepted": {},
