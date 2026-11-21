@@ -1,12 +1,20 @@
 # restore-stream: journal
 
-State: working
+State: waiting on jobs 261121-020515-7502ec 261121-020516-e55b7e 261121-020606-cadac7 261121-020556-58a126 261121-020723-9399ae 261121-020724-73f7ef 261121-020725-ebb489 261121-020737-3fde05
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
 
-Capturing master's answers: commit A (tests, note, probe; no src change) runs
-`tests/test_restore_stream.cc` with RESTORE_STREAM_CAPTURE=1; commit B is the change.
+Commit A (Xapiand:879d1eac6: tests, note, probe; src = master) and commit B (Xapiand:a131ad2b2: the change).
+Jobs queued:
+- 261121-020515-7502ec: capture master's answers (A, `node` tests, RESTORE_STREAM_CAPTURE=1)
+- 261121-020516-e55b7e: capture the change's answers + feed unit tests (B)
+- 261121-020606-cadac7, 261121-020556-58a126: Release xapiand at e1be368395a1 / a131ad2b22b6 into
+  ~/.scratch/xapiand/restore-stream/xapiand-<sha>
+- 261121-020723-9399ae (logs), 261121-020724-73f7ef (shakespeare): strict, 5 interleaved rounds of
+  before / after / before again (A/A), array body (A1, A2)
+- 261121-020725-ebb489: identity, array vs stream DUMPs, both binaries (A3)
+- 261121-020737-3fde05: ASan+UBSan fuzz, 4 seeds x 480 s (A6)
 
 ## Next
 
