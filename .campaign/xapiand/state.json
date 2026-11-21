@@ -22183,6 +22183,51 @@
       "updated": "2026-11-12T09:00:45",
       "worktree": ""
     },
+    "restore-stream": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "ci:AddressSanitizer + UBSan",
+          "level": "light",
+          "minutes": 150,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/server/search_views.h",
+        "tests/test_restore_stream*",
+        "tests/restore_cli_check.sh",
+        "harness/bench/bulk_rss_probe.py",
+        "docs/perf/bulk-load-rss.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "planned",
+      "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
+      "updated": "2026-11-21T01:47:19"
+    },
     "retention": {
       "accepted": {},
       "after": [],
