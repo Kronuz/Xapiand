@@ -19,22 +19,8 @@ holds them. `tests/test_coverage_geospatial.cc` waits for the geo-ring explorer'
 
 ## How to split
 
-- Split only along boundaries a maintainer recognizes: separate classes, algorithm families,
-  subsystems, test topics. Each piece is a unit someone opens alone to work on one thing, and it
-  opens with a one-line comment saying what. Size is never the reason for a cut.
-- A file that is one coherent unit stays whole at any size: one function or state machine, one
-  class whose members only make sense together, a table, a test of one behavior. The layout note
-  names it and why. A quest may split none of its files.
-- No piece is a fragment included inside a function, switch, class or namespace body, and no piece
-  is too small to stand alone: under about 100 lines, it joins its natural neighbor.
-- A header keeps its path as the one include for its callers (it includes its pieces), so no caller
-  changes. A test file keeps its build target and its ctest names: its pieces are added to the same
-  target, so `ctest -N` lists the same tests before and after.
-- A helper that several pieces now share moves to an internal header in a `detail` namespace; that
-  linkage change is listed in the journal. A namespace-scope object with a dynamic initializer stays
-  in the translation unit that defines what it depends on, or becomes a function-local static, so
-  static initialization order cannot change.
-- One commit per split file, so a conflict with another branch is found per file.
+- Follow cpp-libraries' `docs/SPLITTING.md` (cpp-libraries:7cab8ec): when to split, where to cut,
+  what stays whole, moves only, and what lands a split.
 
 Each test's pieces go in `tests/test_NAME/` and join test NAME's executable through one generic
 rule in CMakeLists.txt (`tests/test_NAME/*.cc` added to `xapiand_test_NAME`): the only build change.

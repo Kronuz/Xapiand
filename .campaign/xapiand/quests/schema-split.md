@@ -15,6 +15,8 @@ the includes each file needs, and `static` helpers made file-local or shared thr
 header. Sources are globbed (CMakeLists.txt:1122), so no CMakeLists change is needed. Owner,
 2026-11-21: "Source code files should be much smaller and well organized."
 
+Follow cpp-libraries' `docs/SPLITTING.md` (cpp-libraries:7cab8ec).
+
 ## Acceptance criteria
 
 - A1 The suite passes at the split code: the `suite` check

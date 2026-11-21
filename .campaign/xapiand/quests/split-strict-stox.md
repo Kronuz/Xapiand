@@ -20,24 +20,8 @@ differential tests (`*_old.*`, `test/old/`, `frozen_*`): they are never edited b
 
 ## How to split
 
-- Split only along boundaries a maintainer recognizes: separate classes, algorithm families,
-  subsystems, test topics. Each piece is a unit someone opens alone to work on one thing, and it
-  opens with a one-line comment saying what. Size is never the reason for a cut.
-- A file that is one coherent unit stays whole at any size: one function or state machine, one
-  class whose members only make sense together, a table, a test of one behavior. The layout note
-  names it and why. A quest may split none of its files.
-- No piece is a fragment included inside a function, switch, class or namespace body, and no piece
-  is too small to stand alone: under about 100 lines, it joins its natural neighbor.
-- A header keeps its path as the include its users name (Xapiand, Detent and the other libraries):
-  it includes its pieces, so no user changes. Installed headers stay installed (CMake install rules
-  and the package's include directory list the pieces).
-- Test pieces join their existing test target: `ctest -N` lists the same tests before and after.
-- A helper several pieces share moves to an internal header in a `detail` namespace; a
-  namespace-scope object with a dynamic initializer stays with what it depends on. Each such
-  non-move goes under the journal's "Rulings I made".
-- Every new header is self-contained: it includes what it uses (its siblings and the standard
-  headers) and compiles alone, so a piece is a real file, not a fragment of its umbrella.
-- One commit per split file.
+- Follow cpp-libraries' `docs/SPLITTING.md` (cpp-libraries:7cab8ec): when to split, where to cut,
+  what stays whole, moves only, and what lands a split.
 
 ## Acceptance criteria
 
