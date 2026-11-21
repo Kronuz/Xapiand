@@ -25597,7 +25597,12 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "tools/mutants.py",
+        "bench/bench.cc",
+        "README.md",
+        "ARCHITECTURE.md",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-http-parser",
       "landed": [],
@@ -25609,7 +25614,7 @@
       "risk": "low",
       "status": "active",
       "title": "http-parser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:44",
+      "updated": "2026-11-21T12:14:13",
       "worktree": "../http-parser-wt/xapiand/split-http-parser"
     },
     "split-logger": {
