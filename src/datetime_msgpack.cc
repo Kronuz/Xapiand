@@ -104,9 +104,15 @@ static inline void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
 	switch (hour.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (hour.u64() >= 24) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+			}
 			tm.hour = hour.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (hour.i64() < 0 || hour.i64() >= 24) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_HOUR));
+			}
 			tm.hour = hour.i64();
 			return;
 		default:
@@ -118,9 +124,15 @@ static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
 static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
 	switch (min.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (min.u64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+			}
 			tm.min = min.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (min.i64() < 0 || min.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_MIN));
+			}
 			tm.min = min.i64();
 			return;
 		default:
@@ -132,9 +144,15 @@ static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
 static inline void process_date_sec(Datetime::tm_t& tm, const MsgPack& sec) {
 	switch (sec.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
+			if (sec.u64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+			}
 			tm.sec = sec.u64();
 			return;
 		case MsgPack::Type::NEGATIVE_INTEGER:  // a signed integer, not necessarily negative
+			if (sec.i64() < 0 || sec.i64() >= 60) {
+				throw DatetimeError(strings::format("'{}' is out of range", RESERVED_SEC));
+			}
 			tm.sec = sec.i64();
 			return;
 		default:
@@ -228,7 +246,7 @@ static inline void process_date_time(Datetime::tm_t& tm, Zone& zone, std::string
 											auto m = strict_stoul(&errno_save, tz_m);
 											if (errno_save != 0) { goto error; }
 											if (m < 60) {
-												Datetime::computeTimeZone(tm, str_time[8], tz_h, tz_m);
+												zone = Zone{str_time[8], tz_h, tz_m};
 												return;
 											}
 										}
@@ -253,7 +271,7 @@ static inline void process_date_time(Datetime::tm_t& tm, Zone& zone, std::string
 															auto m = strict_stoul(&errno_save, tz_m);
 															if (errno_save != 0) { goto error; }
 															if (m < 60) {
-																Datetime::computeTimeZone(tm, c, tz_h, tz_m);
+																zone = Zone{c, tz_h, tz_m};
 																auto fsec = strict_stod(&errno_save, std::string_view(it, aux - it));
 																if (errno_save != 0) { goto error; }
 																tm.fsec = Datetime::normalize_fsec(fsec);
