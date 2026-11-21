@@ -16255,7 +16255,11 @@
         "harness/run_all.sh",
         "harness/newman*",
         "harness/package*.json",
+        "harness/e2e_capture.sh",
+        "harness/coverage.sh",
         ".github/workflows/ci.yml",
+        ".github/workflows/arm64.yml",
+        ".github/workflows/freebsd.yml",
         "TESTING.md"
       ],
       "landed": [],
@@ -16263,12 +16267,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: xapiand-final-release lands on the xapiand release branch, never master: its .github files do not meet this quest's on master",
       "repo": ".",
       "risk": "low",
       "status": "active",
       "title": "Pin newman for the docs E2E in one place",
-      "updated": "2026-11-21T03:27:36",
+      "updated": "2026-11-21T03:30:26",
       "worktree": "../Xapiand-wt/xapiand/newman-pin"
     },
     "nightly-retry": {
