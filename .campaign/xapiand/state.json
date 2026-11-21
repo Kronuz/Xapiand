@@ -17488,17 +17488,13 @@
       ],
       "consumes": [],
       "files": [
-        "include/consensus/transport/peers*",
         "include/consensus/transport/node_pins*",
         "include/consensus/transport/admission*",
-        "src/transport/peers*",
         "src/transport/node_pins*",
         "src/transport/admission*",
         "test/transport/admission*",
-        "test/transport/peers*",
         "docs/mechanisms/admission.md",
         "CMakeLists.txt",
-        "CHANGELOG.md",
         "include/consensus/transport/links.h",
         "include/consensus/transport/host_transport.h",
         "include/consensus/transport/connection.h",
@@ -17657,7 +17653,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T11:41:56",
+      "updated": "2026-11-21T13:25:50",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
