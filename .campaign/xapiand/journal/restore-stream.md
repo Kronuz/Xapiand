@@ -1,25 +1,17 @@
 # restore-stream: journal
 
-State: waiting on jobs 261121-034148-685f8b 261121-034201-4acbcc 261121-034203-69a143 261121-034214-a0dea9 261121-034215-99dd61 261121-034217-cc2491, and CI at 5842f9ef3
+State: ready for review (A8 waits on the lua-method-flake fix; exclusive logs A/B 261121-040146-c8fed8 queued, the lead's)
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
 
-Head Xapiand:5842f9ef3 (pushed): expected answers pasted, probe's identity takes `--ids generated`, note's
-before/after and remaining-peak sections written. Jobs queued at it:
-- 261121-034148-685f8b: the RESTORE stream tests, feed and node (A4, A5)
-- 261121-034201-4acbcc, 261121-034203-69a143: `--fails-without` at the prototype b60d09d64 with the tests from
-  5842f9ef3, FILTER=fewer and FILTER=more (A4)
-- 261121-034214-a0dea9: identity rerun, both binaries; shakespeare ids exact, logs by content without `_id` (A3)
-- 261121-034215-99dd61 (logs), 261121-034217-cc2491 (shakespeare): A1/A2 rerun, same command; the probe file
-  changed, so 261121-020723-9399ae and 261121-020724-73f7ef no longer count at head
+Jobs at 5842f9ef3 all finished green. A1/A2 reruns replaced the note's table (before: logs 1,322 -> 333 MB, 9.79 /
+9.59 / 9.90 s; shakespeare 1,846 -> 423 MB, 13.43 / 10.21 / 11.25 s; after: logs 1,357 -> 344, 8.47 / 9.19 / 7.98;
+shakespeare 1,860 -> 405, 11.21 / 7.65 / 9.66). Memory cut unchanged within 4%; the times are a wash on logs.
 
 ## Next
 
-1. When the jobs pass: if the A1/A2 reruns' medians differ from the note's table (from 9399ae/73f7ef), put the
-   reruns' numbers and ids in docs/perf/bulk-load-rss.md; fill the Evidence table; push.
-2. CI green at head (A8): the only CI failure at 7df95f564 was test_restore_stream's empty expected table.
-3. State "ready for review".
+1. Lead: read 261121-040146-c8fed8 when it runs; land once CI is green (lua-method-flake).
 
 ## Blocked on
 
@@ -29,14 +21,14 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-034215-99dd61, 261121-034217-cc2491 (pending; 261121-020723-9399ae, 261121-020724-73f7ef passed with a131ad2b2's probe: logs 1,322 -> 333 MB, shakespeare 1,846 -> 423 MB) |
-| A2 | same jobs (pending; earlier medians: logs 9.79 s master, 9.59 change, 9.90 A/A; shakespeare 13.43, 10.21, 11.25) |
-| A3 | 261121-034214-a0dea9 (pending) |
-| A4 | 261121-034148-685f8b, 261121-034201-4acbcc, 261121-034203-69a143 (pending) |
-| A5 | 261121-034148-685f8b (pending) |
+| A1 | 261121-034215-99dd61, 261121-034217-cc2491 at 5842f9ef3 (peak RSS median, master -> change: logs 1,357 -> 344 MB, shakespeare 1,860 -> 405 MB; A/A 1,351 and 1,854) |
+| A2 | same jobs (seconds, master / change / A/A: logs 8.47 / 9.19 / 7.98, shakespeare 11.21 / 7.65 / 9.66; ranges in the note; logs +8% inside the spread, not shown absent) |
+| A3 | 261121-034214-a0dea9 |
+| A4 | 261121-034148-685f8b; fails without: 261121-034201-4acbcc, 261121-034203-69a143 (exit 1 as required) |
+| A5 | 261121-034148-685f8b |
 | A6 | 261121-020737-3fde05 |
-| A7 | `docs/perf/bulk-load-rss.md`: "With the body streamed, the peak is 333-423 MB, held mostly by strata's write buffer until the RESTORE's one closing" |
-| A8 | CI at 5842f9ef3 (pending) |
+| A7 | `docs/perf/bulk-load-rss.md`: "With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing" |
+| A8 | CI red at 5842f9ef3 on every branch from test_lua (known flake, lua-method-flake quest); not this quest's |
 
 ## Result
 

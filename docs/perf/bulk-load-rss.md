@@ -88,23 +88,31 @@ failing chunk's elements and the rest are not, where NDJSON skips the bad line a
 `tests/test_restore_stream.cc` holds each body's answers, master's captured first.
 
 Measured, the array body, five interleaved rounds of master, the change and master again (A/A), one trial each,
-`strict` (Release, system malloc; each job ran beside one light hold):
+`strict` (Release, system malloc; each job ran beside two light holds), with the probe at Xapiand:5842f9ef3:
 
 | Dataset | Peak RSS master | Peak RSS change | Peak RSS A/A | Seconds master (min-max) | Seconds change (min-max) | Seconds A/A (min-max) | Job |
 |---|---|---|---|---|---|---|---|
-| logs | 1,322 MB | 333 MB (75% less) | 1,333 MB | 9.79 (4.83-9.95) | 9.59 (5.31-9.84) | 9.90 (5.81-11.40) | 261121-020723-9399ae |
-| shakespeare | 1,846 MB | 423 MB (77% less) | 1,845 MB | 13.43 (13.02-14.10) | 10.21 (9.10-10.33) | 11.25 (5.95-13.33) | 261121-020724-73f7ef |
+| logs | 1,357 MB | 344 MB (75% less) | 1,351 MB | 8.47 (7.72-10.06) | 9.19 (8.55-11.60) | 7.98 (7.84-11.27) | 261121-034215-99dd61 |
+| shakespeare | 1,860 MB | 405 MB (78% less) | 1,854 MB | 11.21 (9.49-11.44) | 7.65 (7.28-9.82) | 9.66 (8.70-11.62) | 261121-034217-cc2491 |
 
-(Medians.) The explorer's prototype, which only skipped the header and expanded a nested array element, peaked at 339
-and 396 MB (E3). Load time does not regress: the change's median is within the master runs' spread on logs and below
-it on shakespeare. The times are about twice the explorer's (4.9 and 5.6 s) on a busier host, and master's spread is
-wide (4.8-11.4 s on logs), so the change's time is "no slower", not a gain. `bulk_rss_probe.py --identity` checks that
-restoring each dump as its array and as the same objects streamed without it leaves the same documents (logs carries
-no `_id`, so its documents are compared without the ids each restore generates).
+(Medians; the peaks' spread is 1,326-1,378, 337-350, 1,333-1,360 MB on logs and 1,848-1,864, 376-411, 1,848-1,864 MB
+on shakespeare, so the memory cut is far outside it.) The first pair of jobs, run with the probe at Xapiand:a131ad2b2
+(261121-020723-9399ae, 261121-020724-73f7ef), gave 1,322 -> 333 MB on logs and 1,846 -> 423 MB on shakespeare, within
+4% of these. The explorer's prototype, which only skipped the header and expanded a nested array element, peaked at
+339 and 396 MB (E3).
+
+The times are not a result either way. On shakespeare the change's median is below master's and the A/A's in both
+pairs of jobs (7.65 s against 11.21 and 9.66; 10.21 against 13.43 and 11.25). On logs the change's median is above
+master's in this pair (9.19 s against 8.47, 8% more, and 7.98 for the A/A) and below it in the first (9.59 against
+9.79); a job's master and its A/A differ by up to 16% (11.21 against 9.66 on shakespeare) and a round's time by up to 40%, so a gap of
+that size is inside the spread but is not shown to be absent. The times are about twice the explorer's (4.9 and 5.6 s)
+on a busier host. `bulk_rss_probe.py --identity` checks that restoring each dump as its array and as the same objects
+streamed without it leaves the same documents (261121-034214-a0dea9: shakespeare's ids and documents exactly; logs
+carries no `_id`, so its documents are compared without the ids each restore generates).
 
 ## What remains
 
-With the body streamed, the peak is 333-423 MB, held mostly by strata's write buffer until the RESTORE's one closing
+With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing
 commit (about 230 MB live on logs and 160 MB on shakespeare in the stream-body attribution above; a RESTORE opens its
 shard with `DB_DISABLE_AUTOCOMMIT`). The rest is one chunk's decoded elements and their prepared state, and the
 process baseline. The next lever is that buffer's flush share during a long restore. Shakespeare's 925 MB of
@@ -119,6 +127,8 @@ once; streaming removes the case here.
 | 261121-013221-bcb3be, 261121-013223-854e98, 261121-013606-c8f8c3, 261121-013607-5f0a58 | E2: `malloc_history` near the peak, array and stream bodies |
 | 261121-013602-c1cadb | Release build of the prototype |
 | 261121-013604-b2c5a2, 261121-013605-c47571 | E3: peak RSS and time with the prototype, array bodies |
-| 261121-020723-9399ae, 261121-020724-73f7ef | The change: peak RSS and time, master, change and A/A interleaved |
+| 261121-034215-99dd61, 261121-034217-cc2491 | The change: peak RSS and time, master, change and A/A interleaved (probe at Xapiand:5842f9ef3) |
+| 261121-020723-9399ae, 261121-020724-73f7ef | The same, first pair (probe at Xapiand:a131ad2b2) |
+| 261121-034214-a0dea9 | The change: identity of the array and stream restores' DUMPs |
 
 Captures (call trees, timelines, vmmap) are under `~/.scratch/xapiand/explore-bulk-rss/{e1,e2,e3}`.
