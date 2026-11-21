@@ -19141,6 +19141,7 @@
           "files": [
             "src/placement/repair*",
             "include/strata/placement/repair*",
+            "include/strata/placement/records.hh",
             "test/placement/repair*",
             "docs/mechanisms/placement-repair.md"
           ],
@@ -19179,7 +19180,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T23:22:57",
+      "updated": "2026-11-21T00:03:21",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
