@@ -27169,7 +27169,9 @@
           "name": "build-test"
         }
       ],
-      "consumes": [],
+      "consumes": [
+        "journal:turn-buffers"
+      ],
       "files": [
         "include/strata/core/turn_seal.hh",
         "include/strata/core/merge_policy.hh",
@@ -27268,7 +27270,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T19:34:44",
+      "updated": "2026-11-20T19:36:10",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
