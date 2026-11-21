@@ -28754,6 +28754,8 @@
       "after": [
         "document-gate"
       ],
+      "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+      "branch": "quest/xapiand/turn-log-parity",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -28792,6 +28794,7 @@
           ]
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/turn-log-parity",
       "landed": [],
       "lenses": [
         "durability"
@@ -28801,9 +28804,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T08:08:04"
+      "updated": "2026-11-20T08:08:15",
+      "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
       "accepted": {
