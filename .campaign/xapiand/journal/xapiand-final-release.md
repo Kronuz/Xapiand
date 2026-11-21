@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-225040-bec8a6 261120-224651-baca46 261120-225042-599237 261120-224652-8177ce (VM builds before/after df3ff48b8; 224303/224312 replaced: legacy docker has no --progress)
+State: waiting on jobs 261120-231338-2550ab (FreeBSD build at df3ff48b8 with clang 18)
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,6 +20,8 @@ No-publish dry runs at 30815d91f (Release 44871494230, FreeBSD 44871496282; CI g
 2. FreeBSD (clang -Werror): config.h.in `#define XXH_STATIC_LINKING_ONLY 1` vs /usr/local/include/xxhash.h's empty definition. Fix: empty define, master's b078d5a18 line.
 3. Bottles (run 44876492170): GitHub retired macos-14; a4ca8aedf moves the arm64 matrix to macos-15/macos-26 (GA labels per actions/runner-images README) and the Rosetta cell to macos-15 (bottle targets Sequoia). No other branch workflow names macos-14; master's bottles.yml still does (lead's).
 VM jobs (~/.scratch/xapiand/final-release-build/vmbuild.sh: Linux VM 18782 runs the Dockerfile builder stage in docker.io; FreeBSD VM 18784 runs freebsd.yml's steps plus pkg xxhash): fails-without at 30815d91f 261120-225040-bec8a6 (linux), 261120-224651-baca46 (freebsd); at df3ff48b8 261120-225042-599237 (linux), 261120-224652-8177ce (freebsd).
+
+Results: fails-without at 30815d91f reproduce both causes: 261120-225040-bec8a6 (gcc Docker, PRIME32 ambiguous), 261120-224651-baca46 (FreeBSD, XXH macro redefined). At df3ff48b8 the Docker builder stage passes: 261120-225042-599237 (gcc-13, full build and install; -Wodr warnings on compressor_deflate.h only). FreeBSD 261120-224652-8177ce failed past the XXH fix on rapidjson v1.1.0's GenericStringRef::operator= (document.h:319), which clang 19 (the VM's base) rejects and clang 18 (the workflow's FreeBSD 14.2 image, per the dry-run log) accepts; master pins rapidjson 24b5e7a. Rerun with pkg llvm18: 261120-231338-2550ab. Pre-existing on the branch, not this quest's change: risk for the lead (FreeBSD 14.3+/clang 19 source builds).
 
 ## Next
 
