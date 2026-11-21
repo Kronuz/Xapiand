@@ -8,7 +8,7 @@ stay the transport's TLS hello with node certificates, so an announcement is onl
 cluster (D141) and Detent use the same source for the zero-flag demo; `--join` seeds stay the way on
 Kubernetes and clouds. One mechanism in the shared library, never one per product.
 
-## Criteria
+## Acceptance criteria
 
 - A1 Three processes on one host find each other through the multicast source alone and report the
   same seed set; with multicast unavailable (no route, sandbox) the source reports that once and the

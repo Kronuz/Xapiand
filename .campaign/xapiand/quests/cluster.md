@@ -37,10 +37,10 @@ Gate: the suite (`build-test`), the process tier (`e2e`, `cluster`), `no-walk` a
   the coordinator and match one merged index (a mutant expanding per shard fails); patterns from the
   root return what master's walk returns for the glob set, and the walk is gone (the `no-walk` check: `git grep -n "expand(Endpoint::cwd" -- src` is empty)
 - A4 Three nodes form from one seed; a node of another cluster and one whose certificate is not pinned
-  are refused with named errors; plaintext peers only behind the flag and only on loopback; a killed
-  node is logged `down` within 2 s; with no `--join`, three nodes on one L2 find each other by
-  multicast announcements and join over TLS, and a forged or other-cluster announcement adds no
-  member: tests and the `cluster` check
+  are refused with named errors; every link is TLS, with no plaintext flag; a killed node is logged
+  `down` within 2 s; with no `--seed`, three nodes on one L2 find each other by multicast
+  announcements and join over TLS, and a forged or other-cluster announcement adds no member: tests
+  and the `cluster` check
 - A5 Each shard-RPC method round-trips with values, its error mapping, deadlines and cancellation;
   `get` and `forward_write` stream their bodies; a peer outside the hello's range is refused: tests,
   a suite-sized body
@@ -98,6 +98,40 @@ Runs once, when the feature is complete and before it lands.
 - The cluster gate (`cluster-gate`) is this feature's measurement and the milestone's review: it runs
   its rows R1 to R10 over `group-heal`, `placement`, `journal-replaces-wal` and this feature, once all
   have landed; its rows are not gates of this landing.
+- A7 Zero key configuration (D150, D154, D157, D158; docs/design/cluster-membership.md M1, M2, M4):
+  plain `xapiand` on an empty directory founds a cluster of one, binds only the HTTP port and sends no
+  datagram for 10 s; `xapiand token create` opens the cluster port and prints a token (24 h, reusable,
+  `--ttl never` allowed); `token list` and `token revoke ID` manage them; membership routes answer
+  only on a 0600 Unix socket; no flag disables authentication.
+- A8 Each founding is a new cluster (D150, D157): two empty directories started without a token form
+  two clusters with different ids, CAs and tokens on one multicast group; neither seeds from the
+  other; a token for one is refused by the other; a joiner refuses a server whose CA fingerprint
+  differs from its token's.
+- A9 The token on the run command (D157): an empty directory with `--token` or `XAPIAND_TOKEN` never
+  founds, waits with backoff naming the cluster id until a member answers, then joins; a member
+  ignores the token; a member of another cluster is refused naming both ids; an expired, revoked or
+  malformed token exits nonzero naming it; a never-peered solo node joins carrying its indexes (M3).
+- A10 The founder is not special (D151): a 5-node cluster restarts with its founder's directory
+  emptied, all five started with one live token; the four rejoin from their state, elect and serve,
+  and the emptied node joins as a new node through any surviving member.
+- A11 Admission (M7): a hot copy beside a running original exits `duplicate` within 3 s and opens no
+  group, across 20 root leader changes; a backup older than one refresh exits `stale` on every
+  restart; a cold whole-cluster start with one lagging voter copy admits every voter; after a root
+  salvage, a node whose refresh was lost and one whose join was lost rejoin with their data; a
+  supervisor's immediate restart is admitted; every crash point in the admission steps ends
+  admitted. Each case also runs in `docs/design/cluster-membership/m7_admission.py` (job
+  261120-132700-b74ba7).
+- A12 Leaving and removal (M6, D154): `node leave` drains, hands off leaderships and any root replica,
+  deletes the data and leaves a retired marker, so a restart with the token exits `retired`; two
+  concurrent `node leave`s cannot both pass the size check; downsizing below `number_of_replicas`
+  is refused naming the indexes; `node remove NODE` retires a dead node and revokes its pin.
+- A13 Health and salvage (M9, D158): `xapiand cluster health` reports green, yellow or red, nodes up,
+  down since, leaving or retired, and groups under-replicated, waiting on down nodes, or lost naming
+  the salvage command; `index salvage PATTERN` and `cluster salvage` print the plan and, with
+  `--accept-loss`, force each group to the survivor holding every entry any survivor heard committed,
+  losing none of those (m9, job 261120-125810-f56d46).
+- A14 Joins under load (M4): the join cap holds (64 at once, 8 per source, slowed past 10 a second
+  from one source); a joiner killed after the root commits it comes back as the same node.
 
 ## May land early
 

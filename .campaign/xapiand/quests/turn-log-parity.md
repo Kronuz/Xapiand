@@ -55,7 +55,34 @@ each with its files and rows): cohort wait (1), zero-copy turn (2), segment ladd
 (3), checkpoint inside the window (4), packed turn (5), background flush (6), sorted runs in the merge
 policy (7), reopen at a changed loop count (8), refuse a log past the loop count (9), one log per
 device after its design review (10), unversioned upsert (11), VM profile (12). Tasks 3, 5, 9 and 10
-change journal: Detent's lead is told before each lands.
+change journal: Detent's lead gets each diff before it lands and checks it against its authority
+suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperation`, `PosixIO`,
+`NativeCompletionQueue`, `AsioCompletionDriver`, `LinuxCompletionPolicy`, `File`, `DirectoryCursor`,
+`drive_synchronously`, `MutationRequest`/`MutationCompletion`, `AdmissionLimits`, `PrimitiveKind`) and
+its completion ordering stay; a turn is durable before an artifact citing it publishes; a
+single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
+
+Copy flag (Detent ruling R3, journal-double-damage at journal:cca2427): damage that no manifest names
+loses every group, loudly. A copy flag in the record format lets recovery keep the groups that write
+again after the damage; tasks 3 and 5 (record format) add it, with a test that a group rewritten after
+double damage recovers and one that is not still reports the loss.
+
+Journal follow-ups (Detent's journal-double-damage review, journal:178030b): task 9 refuses at
+construction a block_bytes that is neither a multiple nor a divisor of 512 (F3); tasks 3 or 5 add a
+per-fragment checksum so a damaged fragment crossing a sector, and the damaged headers still silent
+at some block sizes, are reported (a format change), beside the copy flag above.
+
+TurnLog::forward_slice scans every live group each turn (Detent, msg-176), so setup grows with the square
+of the group count; parked groups leave that scan (journal:c3fb805: 0.01 records visited a turn over 20,000 parked, 193 for a mutant that keeps them); groups held or evicted still cost a walk, so a journal task indexes live records by segment, and and the D5/D7 tasks measure the
+turn cost at 1k, 100k and 1M groups with most parked.
+
+Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
+F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
+and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,
+`evicted` the in-memory release. Contract: create and reopen are durable at the group's first turn, not
+when the call returns; Xapiand's idle policy calls `Host::park` (Detent docs/design/idle-groups.md). Follow-up tasks from the revised note (strata:e5721fd6): 13 removes forward
+copies once parking lands; 14 a per-segment roster narrowing damage scope (16 B a live group); N3, the
+cohort wait counting writers rather than opened records.
 
 Needs `document-gate` and `group-core` (both hold `include/strata/core/**` or `index.hh`).
 

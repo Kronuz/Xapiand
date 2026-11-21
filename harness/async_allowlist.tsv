@@ -12,7 +12,8 @@ src/database/pool.cc	mutex	pending_mtx	allow	3	the catalog timer's pending callb
 src/database/pool.cc	mutex	weak\.lock\(\)	allow	1	std::weak_ptr::lock in the catalog timer's callback, not a mutex: it takes no lock (D58)
 src/database/pool.cc	mutex	.	allow	5	the shutdown's state: O(1) sections that set or read its flag and the keys whose commit failed, none with I/O (x-pool D10)
 src/database/pool.cc	wait	state\.cv\.wait	allow	3	join() and ~DatabasePool await the catalog's shutdown on the main thread after the loops stopped; join is guarded by check_may_block (x-pool D10, C24)
-src/database/pool.cc	file	fs	allow	4	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
+src/database/pool.cc	file	fs	allow	2	the catalog's resolve runs in its open chore on a WorkPool worker: it checks and makes the index directory there (x-pool D6)
+src/database/pool.cc	file	filesystem	allow	2	create_index_directory makes the index directory in the catalog's resolve, in its open chore on a WorkPool worker, and maps APFS's EILSEQ to a 400 (x-pool D6)
 src/database/pool.cc	sleep	sleep_for\(std::chrono::milliseconds\(1\)\)	allow	1	IndexChores::cancel_all polls the groups at shutdown on the main thread, after the loops stopped (task D8)
 src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached task with no control loop runs to its end on the thread that started it (a timer thread, the CLI); guarded by check_may_block
 src/database/wide_search.cc	mutex	mutex_	allow	3	Pins' count and room event: O(1) sections that test or change the free count or swap the room pointer, none with I/O; they run on the loops (take, and give from a batch's end) and the event is set outside the lock (wide-search-loop D3)
@@ -34,7 +35,7 @@ src/engine/host.h	mutex	.	allow	8	BlockingScheduler: its queue (resumes and post
 src/engine/host.h	wait	.	allow	2	BlockingScheduler::drive waits for a resume or a timer on the thread that called engine::sync_wait; guarded by check_may_block
 src/engine/host.h	sleep	.	allow	2	SleepFor suspends the task on its host's timer; a task that runs on no host (a test, the CLI) sleeps its own thread, never a loop's
 src/engine/host_asio.h	mutex	.	compiled_out	3	NDEBUG: Counted exists only in debug builds, where a request's queued resumes sit under one mutex in O(1) sections (push, swap, empty check)
-src/engine/strata/shard.cc	file	.	allow	5	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4); borrow only names the directory, in the catalog's open chore (x-pool D2)
+src/engine/strata/shard.cc	file	.	allow	6	acquire runs only in a query chore (open_local, check): opening the core reads the directory there, never on a reactor (D4); borrow only names the directory, in the catalog's open chore (x-pool D2)
 src/engine/strata/shard.cc	mutex	entry->	allow	2	the entry lock: acquire holds it across the open I/O inside a chore, only while no handle exists, so no ~Handle can contend for it; ~Handle takes it for an O(1) count (D4, D5)
 src/engine/strata/shard.cc	sleep	sleep_for	allow	1	drain_readers suspends the closing task between polls for the readers of the old index (D6); it holds no thread
 src/engine/strata/shard.cc	mutex	registry_mutex	allow	1	map lookup and insert of the open-core registry: O(log n) under the lock, no I/O (D1)
