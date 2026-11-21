@@ -2194,8 +2194,13 @@ if (BUILD_TESTS)
 			$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 			${CMAKE_THREAD_LIBS_INIT} ${UUID_LIBRARIES} ${M_LIBRARIES} ${DL_LIBRARIES} ${ZLIB_LIBRARIES}
 		)
+		# Its "xapian.h" is the vendored umbrella, ahead of any system Xapian (e.g. /usr/local/include).
+		target_include_directories(${PROJECT_NAME}_test_text_parser BEFORE PRIVATE "${PROJECT_SOURCE_DIR}/src/engine/xapian")
 		add_test(NAME test_text_parser COMMAND ${PROJECT_NAME}_test_text_parser)
 		add_dependencies(check ${PROJECT_NAME}_test_text_parser)
+
+		# A numeric document id 0 is refused and takes no other document with it.
+		add_test(NAME id_zero_check COMMAND python3 "${PROJECT_SOURCE_DIR}/harness/id_zero_check.py" $<TARGET_FILE:${PROJECT_NAME}>)
 
 	# The legacy oldtests/ suite predates a lot of the current code and doesn't all
 	# compile as-is; it's off by default.  The modules that became standalone Kronuz
