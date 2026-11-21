@@ -1,6 +1,6 @@
 # prospect-check-fields: journal
 
-State: working
+State: waiting on jobs 261121-114531-b60a00 261121-114518-396743
 Quest: .campaign/xapiand/quests/prospect-check-fields.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Code done and pushed (prospect:abfeeda, branch quest/xapiand/prospect-check-fields). Waiting on A1 and build-test jobs.
 
 ## Next
 
-1. <step>
+1. When the jobs pass: fill Evidence from `campaign brief`, set ready for review; A3 needs CI on the pushed branch.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -28,14 +28,15 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | job 261121-114531-b60a00: fielddict_media_test (check_fields through a segment's reader: ids past the table, key field own or pooled throw; a big enough table passes) and fielddict_test |
+| A2 | build-test job 261121-114518-396743 |
+| A3 | CI on abfeeda |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+inverted_plugin::reader::check_fields forwards to fielddict::reader::check_fields (include/prospect/reader.hh). Test in test/fielddict_media_test.cc; docs/mechanisms/fields.md row updated. Strata's map-time caller is quest field-check-at-map.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Brought over only the forwarding. The prototype's fielddict.hh fast path (two seeks for tables up to 240 fields) is an optimization of the dictionary pass, not named by the quest, and stays on the explore branch.
+- The test lives in fielddict_media_test (its segment already has own, pooled and multi-byte-id fields), not a new binary.
