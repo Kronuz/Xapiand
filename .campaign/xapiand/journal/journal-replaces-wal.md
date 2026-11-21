@@ -1,6 +1,6 @@
 # journal-replaces-wal: journal
 
-State: implementing core (session 2): strata pin + group link, engine prepare/apply split, command codec
+State: waiting on jobs 261121-105359-853976 261121-105428-7308c6 261121-105431-21e0e8 261121-105434-07ffd7 and CI at cf65ae78b; core steps 1-3 and b committed, next c (on group-catalog) and d
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -22,13 +22,24 @@ need group-catalog:
 
 ## Next
 
-1. Build and run the two tests; commit each step.
-2. b. `src/database/shard_group.{h,cc}`: the application (effects, transaction via `transaction_of`
-   on the borrowed index's field table, advance, encode/decode of the state).
-3. c. stays behind a seam until group-catalog's `group::config` takes the slot's index (D169).
-4. d. ShardEndpoint writes as prepare then propose; the checkpoint per D169 revised (msg below).
-5. e. delete the WAL; `no-wal` check.
-6. Post "chunks and restore can start" once the codec and application interface are committed.
+1. Read the four jobs (plain tests A3; mutants: split-whole A3, no-retire A3, no-expected A1) and CI at
+   cf65ae78b (build-test, e2e, tsan). Local: test_group_command, test_group_prepare, test_shard_group,
+   test_pool, test_engine_{callbacks,error,replay}, test_wal_replay pass; test_engine_strata passes at
+   the commit (it failed only with racing-put-409's change applied ahead, since reverted).
+2. c. Build against group-catalog (FETCHCONTENT_SOURCE_DIR_STRATA=/Users/kronuz/code/Kronuz/strata-wt/
+   xapiand/group-catalog, strata:096dbd04): its `group(loop&, config, jn::IO& directory, index_type& index,
+   App&, chore)` borrows the slot's index. One `strata::group::loop` per reactor loop and one
+   `journal::Host` per data directory in manager.* (restore task holds manager.*: coordinate, or the
+   lead moves the loop/host setup into pool.*); the catalog slot constructs
+   `group<ShardApplication>` over its index and IO.
+3. d. ShardEndpoint writes: prepare under the turn (engine prepare), the blobs moved from
+   storage_push_blobs into CommandBlob records (compressed at prepare, placeholder locators), then
+   `split_command` and `propose`; ack levels via `propose(level)`; the blob read path for app. volumes
+   (storage_get_stored); commit() posts a checkpoint to the group's chore (msg D169 revised: never awaited
+   from a commit hook); open_blocking's WAL replay goes. id_high: from the index at open, or into
+   ShardGroupState (decide at d).
+4. e. Delete the WAL (wal.*, fsyncher, DB_DISABLE_WAL / DB_SYNCHRONOUS_WAL and the four tests' flag,
+   options), `no-wal` check; merge racing-put-409 and resolve it in prepare_write's replace case.
 
 ## Messages
 
@@ -61,11 +72,14 @@ item 4 is D169, option (a), built by strata quest group-catalog, which this ques
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
+Jobs prove criteria by their tags; paste `campaign brief`'s generated table here when they finish.
 
 | Criterion | Evidence |
 |---|---|
-| A1-A7 | none yet |
+| A1 | partial: 261121-105434-07ffd7 (mutant: apply without prepare's expectation fails test_group_prepare); the group, WAL deletion and no-wal pending |
+| A3 | partial: 261121-105359-853976 (codec, application, prepare tests), 261121-105428-7308c6 (mutant: a command proposed whole fails test_group_command), 261121-105431-21e0e8 (mutant: no lower-term retirement fails test_shard_group); propose path and the upload's error answer pending (chunks task) |
+| A2, A4-A6 | none yet |
+| A7 | draft: docs/mechanisms/journal-durability.md (built parts) |
 
 ## Result
 
@@ -85,3 +99,19 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 3. The command carries `engine::Document::serialize()` bytes as D3 says; the strata transaction
    is built at apply against the voter's own field table, so a field declared by an earlier entry
    resolves the same on every voter.
+4. The task pin moves to strata's own (95798a02): strata::group's journal and consensus headers need
+   task's blocking_scheduler, which Xapiand's 18eb5167 lacks. A consequence of the strata bump the lead
+   assigned (CMakeLists.txt is in the set); CI tells whether anything else in Xapiand depended on 18eb5167.
+5. faultlab is fetched for test_pool only, at strata's e3fcfe3 (strata declares it only as top level).
+6. `engine::PreparedWrite` (not `Prepared`: engine/search.cc has a `Prepared` query class). Its
+   `expected` is always set by prepare for replace and replace_key (the leader's expectation, D3), the
+   key's version for erase_key, and none for erase by id (strata checks versions only by key; prepare
+   checks it). `WriteOp::none` and `replayed` exist only for the WAL's replay and go with it (step e).
+7. A batch's transaction declares a new field once: a later write of it names the earlier declaration
+   (the table keeps the first document's kind, as sequential transactions would).
+8. Volumes rotate past 32 GiB (`VOLUME_BYTES`, master's data-storage volume bound, storage.h); locators keep
+   byte offsets. Chunked-command ids must be unique across the group's log (the proposer puts its term in
+   the high bits); a chunk of an id open in a lower term is dropped, and its final writes nothing.
+9. The command codec is LEB128 over the kinds command/chunk/final with a version byte (pre-release bytes,
+   contract `xapiand:command`/`xapiand:chunked-command`, format-freeze reviews them); `split_command`
+   stages the largest in-place bytes first until the final fits.
