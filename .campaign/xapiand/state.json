@@ -21722,6 +21722,34 @@
       "updated": "2026-11-20T01:24:04",
       "worktree": ""
     },
+    "racing-put-409": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/engine/strata/shard.cc",
+        "tests/test_engine_strata.cc",
+        "tests/test_node.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A replace that lost a delete-and-recreate race is a version conflict, not a 500",
+      "updated": "2026-11-21T10:35:38"
+    },
     "reactor-open-files": {
       "accepted": {},
       "after": [],
