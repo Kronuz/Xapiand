@@ -9044,6 +9044,35 @@
       "title": "Key-ordered format 14 segments",
       "updated": "2026-11-08T15:39:22"
     },
+    "failed-restore-exit": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/handler.cc",
+        "src/main.cc",
+        "harness/coverage_e2e_main.sh",
+        "harness/restore_exit_check.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "M2",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A CLI restore of a file that is not a dump fails",
+      "updated": "2026-11-21T08:45:45"
+    },
     "faultlab-adopt-prospect": {
       "accepted": {},
       "after": [],
