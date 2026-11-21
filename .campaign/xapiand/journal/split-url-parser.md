@@ -1,6 +1,6 @@
 # split-url-parser: journal
 
-State: waiting on jobs 261121-130327-f7cc1a 261121-130732-91be46 261121-130734-9ce653
+State: waiting on jobs 261121-145046-c7fc25
 Quest: .campaign/xapiand/quests/split-url-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs queued at url-parser:e3dfd07 (layout note only; no code moved).
+Merged main into the branch (url-parser:657f7fe; only ci.yml changed, so earlier passes stand per the brief). Fixed-checker split job 261121-145046-c7fc25 at 657f7fe. Pushed; CI for A5 pending.
 
 ## Next
 
-1. Read the four jobs; paste `campaign brief`'s Evidence table; answer split_check warnings (if any).
+1. Read 261121-145046-c7fc25 (answer warnings, if any); cite CI at 657f7fe for A5; paste `campaign brief`'s Evidence table; answer split_check warnings (if any).
 
 ## Blocked on
 
