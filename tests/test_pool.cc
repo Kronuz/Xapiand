@@ -72,7 +72,7 @@
 #include "length.h"
 #include "node.h"
 #include "reactor.h"
-#include "strata/core/faultfs.hh"
+#include "faultlab/faultfs.h"
 #include "task.hh"
 #include "utype.hh"
 #include "work_pool.hh"
@@ -1711,18 +1711,18 @@ void test_a_repin_after_a_reopen_is_not_a_use() {
 	CHECK_EQ(freq(), used + 1);   // a request's own pin does
 }
 
-// Indexes whose files are on `fs` (strata's faultfs), their logs and blobs on the disk at their path, and the log's
+// Indexes whose files are on `fs` (faultlab's faultfs), their logs and blobs on the disk at their path, and the log's
 // writer for them: a test can then fail the index's syncs, and see what the log replays.
 struct FaultyIndexes {
-	strata::faultfs::filesystem& fs;
+	kronuz::faultlab::filesystem& fs;
 	DatabasePool pool{control_loop(), 8};
 	DatabaseWALWriter writer{"WF{:02}", 1};
 
-	explicit FaultyIndexes(strata::faultfs::filesystem& fs_) : fs(fs_) {
+	explicit FaultyIndexes(kronuz::faultlab::filesystem& fs_) : fs(fs_) {
 		pool.set_wal_writer(&writer);
 		pool.set_index_io([this](const std::string& path) -> std::unique_ptr<kronuz::journal::IO> {
 			std::filesystem::create_directories(path);
-			return std::make_unique<strata::faultfs::io>(fs);
+			return std::make_unique<kronuz::faultlab::io>(fs);
 		});
 	}
 	~FaultyIndexes() {
@@ -1739,7 +1739,7 @@ constexpr int LOGGED = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_SYNCHRONOUS_WAL | DB
 // commit failed leaves a write in the log only, and the next process's first pin reads it.
 void test_a_cold_pin_reads_what_the_log_replays() {
 	Watchdog watchdog("a cold pin replays the log", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("cold_replay");
 	{
 		FaultyIndexes indexes(fs);
@@ -1747,7 +1747,7 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 		engine::sync_wait(shard.add_document(make("Kb", "b")));   // logged, not committed
-		fs.add_fault({strata::faultfs::op::sync});                 // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});                 // the shutdown's commit fails
 	}
 	fs.clear_faults();
 	FaultyIndexes indexes(fs);
@@ -1762,7 +1762,7 @@ void test_a_cold_pin_reads_what_the_log_replays() {
 // the failed commit left in the log.
 void test_a_fenced_index_is_replaced_and_replays_its_log() {
 	Watchdog watchdog("a fenced index is replaced", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("fenced");
 	FaultyIndexes indexes(fs);
 	{
@@ -1770,7 +1770,7 @@ void test_a_fenced_index_is_replaced_and_replays_its_log() {
 		engine::sync_wait(shard.add_document(make("Ka", "a")));
 		CHECK_TRUE(engine::sync_wait(shard.commit()));
 		engine::sync_wait(shard.add_document(make("Kb", "b")));
-		fs.add_fault({strata::faultfs::op::sync});
+		fs.add_fault({kronuz::faultlab::op::sync});
 		CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.commit()); }) == engine::errc::database);
 		fs.clear_faults();
 		shard.release();   // the use ends: it hands its pin back
@@ -1810,7 +1810,7 @@ std::uint64_t issue(Shard& shard, const std::string& n) {
 // writes the last commit missed; each document keeps the id it was written with.
 void test_the_id_counter_persists_replays_and_advances() {
 	Watchdog watchdog("the id counter persists, replays and advances", 60s);
-	strata::faultfs::filesystem fs;
+	kronuz::faultlab::filesystem fs;
 	const auto path = fresh("id_counter");
 	std::map<std::uint64_t, std::string> written;   // id -> n
 	{
@@ -1828,7 +1828,7 @@ void test_the_id_counter_persists_replays_and_advances() {
 		Shard shard(pin(indexes.pool, path, LOGGED), LOGGED);
 		written[issue(shard, "d")] = "d";
 		written[issue(shard, "e")] = "e";   // logged, not committed
-		fs.add_fault({strata::faultfs::op::sync});   // the shutdown's commit fails
+		fs.add_fault({kronuz::faultlab::op::sync});   // the shutdown's commit fails
 	}
 	fs.clear_faults();
 	{
@@ -2022,7 +2022,7 @@ void test_a_destroyed_root_that_held_a_pin_lets_the_pool_join() {
 void test_a_cancelled_pin_stops_waiting() {
 	Watchdog watchdog("a cancelled pin stops waiting");
 	std::mutex fs_mutex;
-	std::map<std::string, std::unique_ptr<strata::faultfs::filesystem>> fs;   // one per index: each locks its own
+	std::map<std::string, std::unique_ptr<kronuz::faultlab::filesystem>> fs;   // one per index: each locks its own
 	DatabasePool pool(control_loop(), 8);
 	std::promise<void> gate;
 	std::shared_future<void> opens = gate.get_future().share();
@@ -2034,9 +2034,9 @@ void test_a_cancelled_pin_stops_waiting() {
 		std::lock_guard<std::mutex> lk(fs_mutex);
 		auto& one = fs[at];
 		if (!one) {
-			one = std::make_unique<strata::faultfs::filesystem>();
+			one = std::make_unique<kronuz::faultlab::filesystem>();
 		}
-		return std::make_unique<strata::faultfs::io>(*one);
+		return std::make_unique<kronuz::faultlab::io>(*one);
 	});
 	const auto path = fresh("cancelled_pin");
 	std::thread opener([&] { (void)pin(pool, path); });

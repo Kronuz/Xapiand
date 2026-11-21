@@ -536,7 +536,7 @@ public:
 		wal_writer_.store(writer, std::memory_order_release);
 	}
 
-	// Gives the indexes' files another IO (a test's strata::faultfs); set before the first pin. An IO with no index
+	// Gives the indexes' files another IO (a test's faultlab faultfs); set before the first pin. An IO with no index
 	// in it is a missing index, created by a create pin.
 	void set_index_io(std::function<std::unique_ptr<kronuz::journal::IO>(const std::string& path)> io) {
 		index_io_ = std::move(io);

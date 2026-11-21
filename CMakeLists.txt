@@ -763,7 +763,7 @@ option(TASK_COUNT_FRAMES "Count live task frames for the teardown tests" OFF)
 if (TASK_COUNT_FRAMES)
 	add_compile_definitions(TASK_COUNT_FRAMES=1)
 endif ()
-FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 18eb51672e4f306aac508bd0444f6d367eac4291)  # task main: the heavy lane (task-lanes), deadlines on Kronuz/wheel
+FetchContent_Declare(task GIT_REPOSITORY https://github.com/Kronuz/task.git GIT_TAG 95798a02f68c86f070401329a05c78d326ac2579)  # task main: blocking_scheduler, which strata::group's journal and consensus drive
 FetchContent_MakeAvailable(task)
 
 # varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
@@ -772,7 +772,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG efa5214bacd3a0c7ecc4870071ee0bb611968799)  # strata main: strata::group (group-core), tests on faultlab's faultfs
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -1242,6 +1242,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	analysis::analysis
 	queryparser::queryparser
 	prospect::prospect
+	strata::group
 	task::asio
 	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
@@ -1934,6 +1935,11 @@ if (BUILD_TESTS)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
 			add_dependencies(check "${PROJECT_TEST}")
 		endforeach ()
+
+		# faultlab's faultfs, the crash model test_pool runs its indexes on; it reuses strata's completion target.
+		FetchContent_Declare(faultlab GIT_REPOSITORY https://github.com/Kronuz/faultlab.git GIT_TAG e3fcfe3ca197d40e53371dffee1497708fc438b5)
+		FetchContent_MakeAvailable(faultlab)
+		target_link_libraries(${PROJECT_NAME}_test_pool PRIVATE faultlab::faultlab)
 
 		# Loop-lag bounds hold only without parallel neighbors.
 		set_tests_properties(test_control_plane PROPERTIES RUN_SERIAL TRUE)
