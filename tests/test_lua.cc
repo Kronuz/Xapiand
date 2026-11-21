@@ -24,6 +24,7 @@
 // the call with a ScriptLimitError (a 400), and the state serves the next call.
 
 #include "test_harness.h"
+#include "utils_node.h"
 
 #include <algorithm>
 #include <atomic>
@@ -46,10 +47,8 @@
 #include "opts.h"
 #include "task.hh"
 
-#include <arpa/inet.h>
 #include <fcntl.h>
 #include <filesystem>
-#include <netinet/in.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -1521,7 +1520,7 @@ void test_a_script_error_leaves_the_request_light() {
 
 // --- a script reads the method of its write in `_method` ------------------------------------------------------
 
-// A node in this process with one HTTP loop, in a data directory of its own.
+// A node in this process with one HTTP loop, on a port of its own, in a data directory of its own.
 class MethodNode {
 public:
 	MethodNode() {
@@ -1536,8 +1535,7 @@ public:
 		std::filesystem::create_directories(root / ".xapiand");
 		std::filesystem::current_path(root);
 		Endpoint::cwd = root.string() + "/";
-		port = free_port();
-		std::vector<std::string> args = {"xapiand", "--port", std::to_string(port), "--name", "luamethod", "-D", root.string(), "--shards", "1", "--processors", "1"};
+		std::vector<std::string> args = {"xapiand", "--port", std::to_string(port_.port()), "--name", "luamethod", "-D", root.string(), "--shards", "1", "--processors", "1"};
 		std::vector<char*> argv;
 		for (auto& arg : args) {
 			argv.push_back(arg.data());
@@ -1572,13 +1570,8 @@ public:
 
 	// One request on a connection of its own: the response's status (0 when there is none), its body into `reply`.
 	int call(const std::string& method, const std::string& path, const std::string& body, std::string* reply = nullptr) const {
-		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (fd < 0 || ::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-			::close(fd);
+		const int fd = test_utils::connect_to(port_.port());
+		if (fd < 0) {
 			return 0;
 		}
 		timeval timeout{60, 0};
@@ -1607,21 +1600,7 @@ public:
 	}
 
 private:
-	static int free_port() {
-		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = htonl(INADDR_ANY);
-		socklen_t len = sizeof(addr);
-		if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-			std::fprintf(stderr, "FAIL: no free port\n");
-			std::exit(1);
-		}
-		::close(fd);
-		return ntohs(addr.sin_port);
-	}
-
-	int port = 0;
+	test_utils::ReservedPort port_;   // held while the node lives
 	std::thread thread_;
 	bool ready_ = false;
 	std::atomic<bool> exited_{false};
