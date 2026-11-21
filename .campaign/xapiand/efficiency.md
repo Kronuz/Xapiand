@@ -523,3 +523,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Agents: group-core CI fix 144k (Opus; cause: a test closing on a second thread under journal's new debug assert, plus an unordered draw on gcc); netlab-consensus 338k (Opus; harness, selftest, light rows; exclusive rows queued); bulk-load-rerun 115k so far (Sonnet); track-c-gates resumed (Opus) after 15 of 19 gate jobs passed.
 - Disk: 299 GiB free (old Xapian folder removed by the owner; 484 MiB of datasets kept in ~/Development/Kronuz/datasets).
 - Quota: 44% weekly, 0.38%/h. Load 24-43 (two Detent suites over their light share). 51 jobs queued.
+
+## 2026-11-20 16h
+- Landed: phrase-expansion (prospect:dea0ffb). Started: cjk-words, xapiand-final-release, faultlab-adopt-prospect (held for days by placeholder globs the lead never narrowed; owner had to ask).
+- Agents: cjk-words 132k (Sonnet; impl, jobs queued); xapiand-final-release 121k (Sonnet; 4 backports, job queued); faultlab-adopt-prospect 96k (Sonnet; migration plus interface_clean check); track-c-gates 194k (Opus; 3 failures explained, 27 jobs requeued); group-core re-check reviewer launched (Sonnet).
+- Tool: agent-campaign:4979989 (sidebar only from the home). Message delivery fix (lead record takeover, retries, owner notice) in its suite. Detent never received msg-171/172 for an hour; a Nov 15 message to Detent sat in xapiand's own cmux inbox.
+- Bottleneck: GitHub Actions. Xapiand 9 runs queued, Detent 13, strata 4; Xapiand CI takes ~2 h (TSan). Four quests wait only on CI.
+- Quota 46% weekly, 0.40%/h. Load 57-95 (a Detent ASan test at 7.7 cores on a light slot). Disk 299 GiB free.
