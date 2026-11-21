@@ -26723,7 +26723,50 @@
       "worktree": ""
     },
     "task-timers-followups": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-21T01:00:17",
+          "base": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
+          "blobs": {
+            "docs/API.md": "100644:ca28d2d3b05dbb986cf3023ae581b57ac2ffec86",
+            "docs/mechanisms/lifecycle.md": "100644:12453296cb2811042b42dc3ffcc8b013def49cbd",
+            "task_timers.hh": "100644:406ea1c9b30d0747465a52b1edd1d571ab0d5082",
+            "test/timers_test.cc": "100644:1533d38f574b41a867460183561f9a7e0cf5534c"
+          },
+          "by": "review",
+          "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+          "criteria": "207e414043718936",
+          "diffs": {
+            "docs/API.md": "31810432984f329b",
+            "docs/mechanisms/lifecycle.md": "072b3841b4317640",
+            "task_timers.hh": "131194a2848d8048",
+            "test/timers_test.cc": "607e79073bd4e3a6"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread >/dev/null && cmake --build build-tsan -j4 --target task_timers_test && n=0; for i in $(seq 50); do for t in debounce-mid-fire debounce-overlap debounce-held debounce-held-twice debounce-cross debounce-lock debounce-after-stop; do ./build-tsan/task_timers_test $t >/dev/null 2>tsan-err.txt || { echo FAIL $t run $i; cat tsan-err.txt; exit 1; }; n=$((n+1)); done; done; echo passed $n'",
+                  "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261121-004754-b167fb",
+                  "level": "light",
+                  "seconds": 218.5,
+                  "state": "done",
+                  "what": "r1 TSan x50: mid-fire, overlap, held, held-twice, cross, lock, after-stop"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "8bfff89ad1616159b76c73b018b163be678d81a9",
+          "reviewed": "340746a770749470bd97afd5938b464c8344c7ba",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
       "branch": "quest/xapiand/task-timers-followups",
@@ -26762,7 +26805,7 @@
       "risk": "high",
       "status": "review",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-21T00:24:43",
+      "updated": "2026-11-21T01:00:17",
       "worktree": "../task-wt/xapiand/task-timers-followups"
     },
     "termdict-forward-seek": {
