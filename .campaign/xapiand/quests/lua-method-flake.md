@@ -1,36 +1,30 @@
 # lua-method-flake: test_lua's method case passes every run, under load and beside parallel tests
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status lua-method-flake`.
+Risk: low (a test). The lead writes this quest; contributors read it and never edit it. Its machine
+state is in `state.json`: `campaign status lua-method-flake`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`test_a_script_reads_the_method_of_its_write` (tests/test_lua.cc, landed with script-method,
+Xapiand:4360188de) fails nondeterministically: every `_method` call in a run fails (from
+test_lua.cc:1673), while master passes the same code. Seen on 11-21 in three runs: Linux on
+quest/xapiand/strata-pin-catalog (run 44886765917, test 29.46 s) and cjk-words (44887030318,
+54.03 s), and FreeBSD on bulk-load-rerun (44889113706, a docs-only branch). Suspects: MethodNode
+waits at most 30 s for READY and the calls then run against a node that is not ready; or
+`free_port()` picks a port that a parallel ctest test binds first. Find the cause and fix the test
+(or the code, if the node is at fault), so it cannot fail for either reason.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The cause, named with evidence: a job that reproduces the failure on master (for example
+  test_lua beside a parallel ctest run or under load), and the same job passing at the fix
+- A2 test_lua passes 50 runs in a row, 8 at once on 4 cores, at the fix: a job
+- A3 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
