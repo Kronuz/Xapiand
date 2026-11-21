@@ -1,6 +1,6 @@
 # turn-log-parity--group-commit: journal
 
-State: waiting on jobs 261121-101105-1c95d9 261121-101111-6888d0 261121-101116-d36e5e
+State: waiting on jobs 261121-101429-f8726f 261121-101433-65f5c5 261121-101437-69bee8
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -12,8 +12,8 @@ test) at `refs/mutants/turn-log-parity--group-commit`, not pushed. CI run 449340
 
 ## Next
 
-1. Read jobs 261121-101105-1c95d9 (test, A4), 261121-101111-6888d0 (mutant, `--fails-without`,
-   A4), 261121-101116-d36e5e (suite), and CI run 44934094130's `linux-tsan`; paste the brief's
+1. Read jobs 261121-101429-f8726f (test, A4), 261121-101433-65f5c5 (mutant, `--fails-without`,
+   A4), 261121-101437-69bee8 (suite), and CI run 44934094130's `linux-tsan`; paste the brief's
    Evidence table; State "ready to merge" when all pass.
 
 ## Blocked on
@@ -24,7 +24,11 @@ Nothing. No journal change needed.
 
 | Criterion | Evidence |
 |---|---|
-| A4 | test 261121-101105-1c95d9 (queued); mutant 261121-101111-6888d0 (`--fails-without`, queued); suite 261121-101116-d36e5e (queued); TSan: CI run 44934094130 `linux-tsan` (queued) |
+| A4 | test 261121-101429-f8726f (queued); mutant 261121-101433-65f5c5 (`--fails-without`, queued); suite 261121-101437-69bee8 (queued); TSan: CI run 44934094130 `linux-tsan` (queued) |
+
+Failed, not evidence: 261121-101105-1c95d9, 261121-101111-6888d0, 261121-101116-d36e5e exited 1 at
+configure: the slot's `build` is a Makefiles tree and the jobs pass `-G Ninja` (D168). Resubmitted
+into `build-ninja`; the slot's `build` was left alone, since other tasks' queued jobs use it.
 
 Local runs (light holds, not evidence): the new test against the base mechanism fails 4 checks
 (below); at the fix it passes.
