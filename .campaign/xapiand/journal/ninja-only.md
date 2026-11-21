@@ -1,41 +1,45 @@
 # ninja-only: journal
 
-State: working
+State: waiting on jobs 261121-091759-59baa5 261121-091802-8fc0f2 261121-091806-2e89a7
 Quest: .campaign/xapiand/quests/ninja-only.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Work committed at 6ffcee88f (guard, 14 files with -G Ninja, AGENTS.md rule, harness/ninja_only_check.sh).
+Jobs queued at that commit.
 
 ## Next
 
-1. <step>
+1. When the jobs finish: fill the Evidence rows from `campaign brief`, set State to ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | pass job 261121-091806-2e89a7 (check at the head); mutant job 261121-091759-59baa5 (`--fails-without`: the base CMakeLists.txt has no guard, the check must exit nonzero) |
+| A2 | suite job 261121-091802-8fc0f2 (`campaign verify ninja-only`, configured with `-G Ninja`) |
+| A3 | `harness/ninja_only_check.sh` (its grep half; run at the head by 261121-091806-2e89a7): lists configures without `-G Ninja` outside the records; docs/dev/engine-census.md is excluded by name, see Rulings |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Guard in CMakeLists.txt after `project()`: `if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT CMAKE_GENERATOR MATCHES "^Ninja")`
+-> `message(FATAL_ERROR "Ninja only: configure with -G Ninja (not ${CMAKE_GENERATOR})")`.
+Every configure in the listed files passes `-G Ninja` (cmake/ccache_build.sh, docs/dev/testing.md,
+docs/src/content/docs/benchmarks.md, harness/{coverage,coverage_mutants,coverage_one,light_share_build,lua_mem,
+restore_stall_build,run_all}.sh, tests/{exact_id,name_index,one_id}_mutants.sh, tests/lua_fetch.sh,
+tests/test_engine_error_mutant.sh); AGENTS.md carries the rule once; README.md and AGENTS.md build with
+`cmake -G Ninja -S . -B build && cmake --build build`. Listed files with no configure or `make` (nothing to change):
+harness/light_share_build.sh's build line already used `cmake --build`.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- docs/dev/engine-census.md (outside the file set) holds `cmake -S . -B build-census ...` as the rerun of a past
+  measurement (gate 0.5 census, commit 8170a3ef6). I treated it as a record and left it unedited; the check excludes
+  it by name. The lead may add it to the file set and drop the exclusion instead.
+- docs/dev/ccache.md:111 is `cmake -DTEMPLATE=... -P script` (script mode, no configure): the check's pattern
+  does not match `-D`-first commands.
+- The check's temp tree is under `.scratch/` of the checkout (ignored), removed on exit.
