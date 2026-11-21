@@ -5,7 +5,8 @@ name: arm64
 
 on:
   push:
-    branches: [master, 'quest/**', 'quick/**']
+    # master only: quests land on CI's Linux run; arm64 is a deferred check (D166)
+    branches: [master]
     paths-ignore: ['.campaign/**']
   workflow_dispatch:
 
