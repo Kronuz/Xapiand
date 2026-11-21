@@ -25257,8 +25257,8 @@
       "repo": "../constexpr-phf",
       "risk": "low",
       "status": "planned",
-      "title": "constexpr-phf's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:27"
+      "title": "constexpr-phf's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:23"
     },
     "split-datetime": {
       "accepted": {},
