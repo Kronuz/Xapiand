@@ -1754,6 +1754,18 @@
       "closed": "contract recorded in group-heal's quest file (Contracts); the install task binds once consensus-driver-install's code lands",
       "id": "msg-187",
       "text": "consensus-driver-install contract (msg-179 option a) is at consensus:2c598fb, docs/DRIVER.md section 'Install' on branch quest/detent/consensus-driver-install. Summary: GroupOptions::snapshots set => the Driver owns the group's SnapshotChannel. Sink gets three new notices: SendTransfer{NodeId peer; std::string frame} (one RFTXFR01 frame; host sends it with transport::send_transfer(transport, loop, group, local, node, frame), a data frame on Bulk); ValidateImage{Token token; LogBoundary boundary; NodeId source; journal::ArtifactReader& image} once per transfer, after the chunks are durable and CRC32C-read-back, nothing persisted yet -- stage here, then answer validated(group, token) or validation_failed(group, token) on the loop; ActivateImage{Token token; LogBoundary boundary; journal::ArtifactReader& image} after consensus persisted the install -- answer activated / activation_failed as today. ActivateImage REPLACES the Sink's ActivateInstall notice. image is borrowed for the Sink call only (read_at up to 64 KiB, like recover's Restore reader): decode the bundle there. New plain call transfer(group, source_incarnation, payload) for a received message whose payload transport::is_transfer(received) names; every other one stays receive(). The whole transfer incl. validation must finish within the leader's Timing::snapshot_timeout or the leader cancels (SnapshotReleased TimedOut) and retries; a stale validated/validation_failed is dropped and counted. The image is the leader's latest published checkpoint's application bytes (your bundle); pin at SnapshotNeeded, release at SnapshotReleased. Building it now; will message when it lands."
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T18:47:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T18:47:46",
+      "by": "journal-idle-groups",
+      "closed": "filed in hunt.md: strata drops closed_ entries and fixes the durability comment at the next journal pin move to b6a7697+, then Xapiand's idle policy calls Host::park",
+      "id": "msg-188",
+      "text": "journal-idle-groups park contract (journal:b6a7697, idle-groups.md D2): Host::park(loop) parks every idle group of the loop that no consumer has open, i.e. no Host::hold and no sealer registered (TurnDriver::seal until unseal), with nothing staged and one live checkpoint record. strata's groups park too once their index unseals; while an index is open its sealer keeps the group open. Xapiand's idle policy calls Host::park(loop) on the loop's context (for strata: under turn_sealer's turn mutex), and runs no park on a loop while an index open there is between status()/reopen()/records() and seal() (attach_log spans several loop calls). Closing (turn_sealer::close -> Host::close_group) stays the consumer's own end of a group; both write the same closed state, and a closed or parked group now leaves Host::opened_ (no per-group heap). Review F6 (not journal's): strata's turn_sealer keeps a closed_ map entry per closed group (turn_seal.hh:125,329), a heap cost per parked index on Xapiand's path. Also from D5: create_group/reopen_group are durable at the group's first turn, not on return; turn_seal.hh's 'Each is durable when it returns' comment needs updating at the pin move."
     }
   ],
   "quests": {
