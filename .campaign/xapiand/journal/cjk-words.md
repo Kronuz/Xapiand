@@ -1,6 +1,6 @@
 # cjk-words: journal
 
-State: review round 1 (correctness, CHANGES at 02e890123): fixing F1, F2, F5, F6; jobs next
+State: waiting on jobs 261120-180508-3004d5 261120-180509-eba9f4 261120-180518-6b069d 261120-180527-da1cd7 (round 1 fixes at bf63b5546)
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
@@ -19,8 +19,9 @@ Review round 1 (`.campaign/xapiand/reviews/cjk-words-correctness.md`):
 
 ## Next
 
-1. Jobs at the fix commit: build-test and e2e (`campaign verify`), probe2.sh rerun (F1
-   confirmation), revert check of the new test (`--fails-without`).
+1. Read the jobs at bf63b5546: build-test 261120-180508-3004d5, e2e 261120-180509-eba9f4,
+   F1 confirmation (reviewer's probe2.sh rerun, same command) 261120-180518-6b069d, revert check
+   of the new test (`--fails-without`, text.cc at 02e890123) 261120-180527-da1cd7.
 
 ## Blocked on
 
