@@ -1,6 +1,6 @@
 # split-http: journal
 
-State: waiting on jobs 261121-114840-f75201 261121-115542-54b74a 261121-115533-838bff
+State: waiting on jobs 261121-121235-b632ee 261121-121244-ae1958 261121-121251-4665eb
 Quest: .campaign/xapiand/quests/split-http.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code done and committed on quest/xapiand/split-http (repo Kronuz/http, worktree http-wt/xapiand/split-http):
-http:8c6cd46 http_asio.h, http:3d931dd coroutine_test.cc, http:b283dcd readahead_test.cc (docs/source-layout.md grows
-with each). Jobs: build-test f75201 (A1), ctest -N at b283dcd b2726f and 3d931dd 8148a4, 8c6cd46 54b74a,
-selfcontained (A6) 838bff. The A3 job at base e4ad5b94a41f must run after the others (a new quest job cancels
-queued ones). The `split` check waits for split-check to land (tools/split_check.py does not exist yet).
+Reassessed against cpp-libraries docs/SPLITTING.md. Branch pushed at http:944e8cf (repo Kronuz/http). Commits: http:8c6cd46,
+http:3d931dd, http:b283dcd (first round), then http:7de3a54 (http_asio/ merged to four pieces), http:4009a43 and
+http:944e8cf (tests reverted to moves-only). Jobs queued at 944e8cf: build-test b632ee (A1), A3 ae1958 (head vs base via
+--ref, diffed), A6 4665eb (selfcontained). The `split` check waits for split-check to land (split_check.py is absent).
 
 ## Next
 
-1. When 54b74a is done, submit the A3 job at e4ad5b94a41f (same command), diff the four `Test #` lists.
-2. After split-check lands (`campaign status split-check`): `campaign verify split-http` for the `split` check; answer its warnings here.
-3. Push the branch once jobs are green.
+1. Read the three jobs; fix A6 include-path failures if any (the first run failed only on the asio include path; -I added).
+2. After split-check lands (`campaign status split-check`): `campaign verify split-http` for `split`; answer its warnings.
+3. A7: the lead reads the split.
 
 ## Blocked on
 
@@ -27,18 +26,14 @@ Nothing; the split check waits on quest split-check.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-114840-f75201 at b283dcd |
-| A2 | split check pending split-check landing |
-| A3 | ctest -N jobs 261121-114853-b2726f (b283dcd), 261121-114903-8148a4 (3d931dd), 261121-115542-54b74a (8c6cd46), base at e4ad5b94a41f pending |
+| A1 | build-test 261121-121235-b632ee at 944e8cf (f75201 at b283dcd cancelled, superseded) |
+| A2 | pending split-check landing; `split` job 261121-121236-b52a0a cancelled (tool absent) |
+| A3 | 261121-121244-ae1958 at 944e8cf vs base e4ad5b9. Earlier first-round ctest -N jobs, same list shape: 261121-114853-b2726f (b283dcd), 261121-114903-8148a4 (3d931dd), 261121-115542-54b74a (8c6cd46) |
 | A4 | docs/source-layout.md |
-| A6 | selfcontained 261121-115533-838bff |
+| A6 | 261121-121251-4665eb at 944e8cf. Failed run examined: 261121-115533-838bff (asio.hpp not on the include path; the command now passes -I and -DASIO_STANDALONE) |
+| A7 | the lead reads the split |
 
 ## Result
 
@@ -48,19 +43,24 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-- Pieces: http_asio/ directory (the repo is flat headers http_*.h, so http_asio.h + http_asio/ keeps users' include).
-  http_asio.h keeps the licence and overview comment and includes the six pieces; http_asio/options.h carries the
-  include block (moved from http_asio.h) so each piece is self-contained by including the previous one (A6).
-- Added lines (not moves): `#pragma once`, a one-line comment, the include of the previous piece, and namespace
-  openers/closers (`namespace http {`, `namespace detail {` and their closers) per piece; the original `namespace detail {` was
-  one block across connection_io.h, connection_state.h and serve_connection.h.
-- Tests: the sections of main() become functions `section_X(App&)` (coroutine) and `section_X()` (readahead) wrapping the
-  original blocks unchanged (comment and block lines verbatim), called by main in the original order; `body_stream_tests`,
-  `affinity_death_test`, `lazy_watch_tests`, `held_read_tests`, `lane_tests`, `read_ahead_tests`, `input_tests` lose `static`
-  (declared in sections.h / input.h). The affinity death tests stay first in main (forked before any thread).
-- Linkage: shared helpers in test/*/support.h and input.h (`check`, `since_ms`, `header_value`, `get`, `post`, `one`,
-  `wait_listen`, `spin`, `pattern`, `pending_bytes`, `read_once`) went from `static` to `inline` in `namespace detail`
-  (with `using namespace detail;`); `g_fail` is now `inline int` (one counter across the TUs); `until` is a plain template.
-  Server/Held/App/Obs/Conn types moved into detail unchanged. No dynamic-initialized namespace-scope objects were moved.
+- http_asio.h: four pieces, units a maintainer opens alone: response.h (shared includes, configuration, AsioResponseWriter), connection_io.h
+  (write helpers and ConnectionInput), connection.h (the session's shared state and serve_connection), service.h (HttpAsioService).
+  The first-round options.h (92 lines) and connection_state.h (162) joined neighbors. The repo is flat http_*.h headers, so http_asio/ is a directory
+  named after the header. http_asio.h keeps the licence and overview comment and includes the pieces; response.h carries the include block, and each
+  piece includes the previous one, so each compiles alone (A6).
+- Added lines only: `#pragma once`, a one-line comment, the include of the previous piece, `namespace http {` / `namespace detail {` openers and closers
+  (the original `namespace detail {` spans connection_io.h and connection.h).
+- Tests: NO section wraps remain. The first-round wraps (sections of main as functions, http:3d931dd, http:b283dcd) are undone by http:4009a43 and
+  http:944e8cf: a statement moved out of main is not a move (SPLITTING.md, split_check rule 3). main() and its sections stay whole in coroutine_test.cc
+  (about 770 lines, twelve sections sharing one application) and readahead_test.cc (about 430 lines). If the lead wants the sections as functions in
+  topic files, that is a reviewed non-move; the first-round commits show it works.
+- Moved out as pure moves: test/coroutine/support.h (client, Obs, wrapper_scheduler, in `detail`), app.h (App), body_stream.cc (body_stream_tests);
+  test/readahead/support.h (client, App, Server, Held) and input_tests.cc (the [U] sections, one file with its original #ifndef pair, about 600 lines,
+  one topic kept whole).
+- Linkage changes: `g_fail` is `inline int` (one counter across the translation units; was `static int`); `body_stream_tests`, `input_tests` and
+  `read_ahead_tests` lose `static` (prototypes added in app.h's includer coroutine_test.cc and support.h). The helper functions in the headers keep
+  `static`. No namespace-scope object with a dynamic initializer moved. Test headers keep their included `static` functions per translation unit.
+- Inlining: tests and a header-only library, so no Release size comparison applies.
 - CMake: the extra .cc files are added to the existing coroutine_test and readahead_test targets; test names unchanged.
-- Test headers (support.h, app.h, sections.h, input.h) chain includes; selfcontained.sh skips test dirs, so they are self-contained by construction only.
+- Test headers (support.h, app.h) chain includes; selfcontained.sh skips test directories, so they are self-contained by construction only.
+- Files kept whole above 1,000 lines: none.
