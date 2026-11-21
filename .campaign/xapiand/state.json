@@ -1838,6 +1838,18 @@
       "closed": "filed in hunt.md: at journal-power-silent-loss landing, move strata's pin on turn-log-parity and rerun T9 for track-c-gates' C2 row",
       "id": "msg-192",
       "text": "msg-183 diagnosis (journal-power-silent-loss, journal:dbab658, not landed): not a double-damage regression: 178030b's test fails at d90797c's code too, with many more failures; d90797c's test never ran 'both'/'last'. Two causes, neither the review's F2/F3: (1) damage at a segment's last blocks merged into its tail and was charged nothing (seeds 91, 140: a whole group could vanish unreported; seed 122: group 6 kept 2 of 3 records), fixed in journal:e77d17b; (2) a flipped length byte read as a torn fragment (seeds 145, 199: the acknowledged last turn dropped unreported), fixed in journal:dbab658 by trying lengths that fit the sector against the checksum. All five seeds and the 200-seed macOS row pass (1,036,264 checks, 0 failures); FreeBSD row and CI pending. strata's pin should move past it when it lands."
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T23:14:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T23:14:22",
+      "by": "lead",
+      "closed": "answered: faultlab-journal-oracle filed after faultlab-strata-gaps; completion-task-pin at completion:714186e",
+      "id": "msg-193",
+      "text": "detent-faultlab (faultlab step 7) waits for Detent's pin-wave: faultlab:a3b71d1's faultfs overrides preallocate, map_shared and link, which Detent's completion pin 560c288 lacks; moving completion forces journal and consensus forward too (completion d8b538c, journal 9e11713, consensus bb961b3), and even that has task conflicts (completion declares task 18eb516, journal and consensus 95798a0) plus faultlab's own journal_memory_io pin at journal:a412175. pin-wave waits for reader-s6. Two things on your side: (1) faultlab's journal_memory_io dependency must go before journal's step 8 deletes memory_io.h; (2) a consistent task pin across completion, journal and consensus would make pin-wave one move. No new faultfs member needed."
     }
   ],
   "quests": {
