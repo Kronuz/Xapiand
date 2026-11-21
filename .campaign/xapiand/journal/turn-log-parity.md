@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261121-145544-911db0 261121-145545-2e50d3 261121-145547-24d332 261121-145549-3a3a17 261121-145550-f81cd5 261121-145551-877bc0 261121-145553-9dd19f 261121-145601-f05091 261121-145607-0e1ac9 261121-145613-34602d
+State: waiting on jobs 261121-151646-4dcef9 261121-151648-9ffb16 261121-151714-b5123c 261121-151701-7bf803 261121-151703-21b6d5 261121-151716-4f387f 261121-151725-649183
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,43 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Resume pass at strata:b146febc (pushed): main (strata:cc30217f) merged into the quest branch.
+CI-red pass (lead's three failures of run 44938627226) at strata:e59af09e, pushed:
+
+1. `reopen_loops` "a turn-log wait with nothing to write" and `standalone_turn_log`'s ASan abort
+   are one bug, in main's `turn_sealer::await`/`await_sealed` (strata:1755bfb8 fixes it). With no
+   loop serving, a waiter checks its record, then writes a turn inline; another thread's turn
+   (a second inline waiter, or a loop thread starting: `served_` still false at the check) may
+   write the record in between, so the waiter's turn writes nothing and it threw, fencing an index
+   whose record was durable. The ASan abort is `served()`'s writer thread hitting it
+   (`terminate ... logic_error`, same message; the log has no ASan report). reopen_loops' label
+   "step 1 cut 44 seed 5764: threw" is build()'s catch: the create's first writes, not recovery;
+   the seed does not reach that code, so it is timing, not seed. Fix: a wait rereads under `mu_`
+   after each inline turn and throws only when a turn that wrote nothing leaves it unsatisfied.
+   Test: standalone case `rival` (another thread's turn held 100 ms at its sync while the writer
+   waits). Attribution: pre-existing on main (main's await is the same code; `served`/`lag` and
+   kv_strata's loop thread are main's); job 261121-151714-b5123c runs `rival` on main cc30217f.
+2. `large_tx` TSan race at test_large_tx.cc:436: the quest's own test (`test_large_tx.cc` is not on
+   main: `git ls-tree origin/main test/` lacks it). `seen` and `reads` were plain counters the main
+   thread polls; now atomics, and the reader counts torn reads for a check after the join rather
+   than a CHECK on its thread (strata:e59af09e).
+
+Mutant and attribution commits are local branches `mutant/turn-log-parity/{await-throws,
+visible-race,main-rival}` in strata (not pushed).
+
+Earlier resume pass at strata:b146febc: main (strata:cc30217f) merged into the quest branch.
 Merged tasks: checkpoint-window, cohort-wait, journal-pin, large-tx, merge-runs, reopen-loops, ryw.
 Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:b146febc is queued.
 
 ## Next
 
-1. Read jobs 261121-145544-911db0 (suite), 145545-2e50d3 and 145547-24d332 (A1, A1 TSan),
+1. Read the CI-red pass jobs: 151646-4dcef9 (fix, Release), 151648-9ffb16 (mutant must fail),
+   151714-b5123c (main must fail), 151701-7bf803 (TSan), 151703-21b6d5 (TSan mutant must fail),
+   151716-4f387f (ASan+UBSan), 151725-649183 (suite at strata:e59af09e); then CI at strata:e59af09e.
+2. Read jobs 261121-145544-911db0 (suite), 145545-2e50d3 and 145547-24d332 (A1, A1 TSan),
    145549-3a3a17 and 145601-f05091 (A3 sweep, A3 fuzz), 145550-f81cd5 (A4), 145551-877bc0 and
    145553-9dd19f (A6 D9, D2/D10) into Evidence; tolerant-open's 145607-0e1ac9 (A2 test at
    strata:a16d117c, journal:1e3505a) and 145613-34602d (its opens-every mutant, `--fails-without`).
-2. Lead: Blocked on items 1-4.
+3. Lead: Blocked on items 1-3.
 
 ## Blocked on
 
@@ -45,7 +71,8 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
    verify` would build the quest against journal-lost-bound. I did not run it; suite
    261121-145544-911db0 stands in (`-G Ninja -B build-q`, journal override cleared). Suggested check:
    `cmake -G Ninja -B build-q -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_JOURNAL= && ...`.
-4. Lead, the quest head is red on CI before this merge. Large-tx's run 44938627226 (merged at
+4. Resolved in the CI-red pass (Doing): fix and tests at strata:e59af09e, jobs pending. Was: the
+   quest head is red on CI before this merge. Large-tx's run 44938627226 (merged at
    b467309d): `standalone_turn_log` aborts under ASan; `large_tx` has a TSan data race at
    test/test_large_tx.cc:436 (`visible()`); `reopen_loops` on linux-arm64-gcc throws "strata: a
    turn-log wait with nothing to write" (turn_seal.hh:241/269) during recovery, seed-dependent (also
@@ -82,8 +109,10 @@ at mutant commits.
 | A4 | base cohort test (per group) 261121-145550-f81cd5 (pending; replaces 261120-192604-5eca03); fails without: 261120-082448-f562c7. The per-writer count is group-commit's, not merged (Blocked on 1) |
 | A5 | none: the note still records Q3-Q5 open; design-note task not run |
 | A6 | partial, no gate rows: merge_policy 261121-145551-877bc0, checkpoint window + reopen loops + kv batch 261121-145553-9dd19f (pending; replace 261120-192628-0cc5e8, 261120-194415-bf027b, 261120-204250-36020e, 261121-050248-2f7f8d, 261121-054157-2f69f9); fails without: 261120-081225-8f09de, 261120-204252-7f2e9c, 261120-204253-47f1cc |
-| build-test | suite 261121-145544-911db0 (pending; stands in for the check, Blocked on 3) |
-| CI | strata:b146febc pushed; run pending |
+| build-test | suite 261121-151725-649183 at strata:e59af09e (pending; stands in for the check, Blocked on 3; superseded the queued 261121-145544-911db0 at b146febc) |
+| await reread (CI-red 1, 3) | fix 261121-151646-4dcef9, ASan+UBSan 261121-151716-4f387f, TSan 261121-151701-7bf803 (pending). Fails without: 261121-151648-9ffb16 (pending). Pre-existing on main: 261121-151714-b5123c (pending; passes when `rival` fails at main cc30217f plus the test) |
+| large_tx race (CI-red 2) | TSan 261121-151701-7bf803 (pending). Fails without: 261121-151703-21b6d5 (TSan at the plain-counter mutant, pending) |
+| CI | strata:e59af09e pushed; run pending (b146febc's 44959280523 superseded) |
 
 Smallest jobs, once built (each a `campaign job submit --quest turn-log-parity`):
 
@@ -108,6 +137,16 @@ at journal:b6a7697 or later; this branch pins journal:178030b, and b6a7697 is on
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (CI-red pass, 2026-11-21)
+
+- Fixed main's await bug in the quest, not a follow-up: `turn_seal.hh` is in the file set, and the
+  quest's tests (reopen_loops, served, visible) cannot go green without it. It changes no contract:
+  a wait that threw on a durable record now returns; one with no sealer still throws.
+- await_sealed got the same shape as await (reread under `mu_`, throw only after an idle turn);
+  it already rechecked `ready()`, so it has no separate test.
+- Submitted the suite at strata:e59af09e; it superseded the queued suite at b146febc, which would
+  have tested the pre-fix code.
 
 ## Rulings I made (resume pass, 2026-11-21)
 
