@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261121-113430-26daa5 261121-113432-44c9c7 261121-112940-8f72c2 261121-112943-a14c94 261121-112945-a24d08 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b 261121-113018-351103 261121-113020-69fb20 (park_count with and without the fix, A1-A6 and the four mutants, TSan, Detent's two review probes, all at journal:5a5972d or the fix's parent) and CI at journal:5a5972d
+State: waiting on jobs 261121-113430-26daa5 261121-113432-44c9c7 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b (park_count with and without the fix, A4, A6, the four mutants, TSan) and CI at journal:5a5972d
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -41,6 +41,13 @@ A6 261121-112949-d67fc2 and its mutant 261121-113006-d7b0ff.
 
 ## Next
 
+Done at journal:5a5972d: A1 261121-112940-8f72c2, A2 261121-112943-a14c94, A3
+261121-112945-a24d08, Detent's recycler probe (ASan+UBSan) 261121-113020-69fb20. Detent's
+differential probe 261121-113018-351103 failed to build: it calls TurnLog::park()/parked(),
+which main renamed evict()/evicted() (turn_log_diff_probe.cc lines 50, 74); it is Detent's
+script, outside this file set: under Blocked on.
+
+
 1. When the jobs and CI at journal:5a5972d pass: update the Evidence table with them and set
    State to ready for review. If park_count still fails, the ~9.8 KB remainder is next.
 2. A5: Detent's probes rerun at the head (261121-113018-351103, 261121-113020-69fb20); the
@@ -48,7 +55,13 @@ A6 261121-112949-d67fc2 and its mutant 261121-113006-d7b0ff.
 
 ## Blocked on
 
-Nothing. (The hand-back gap: the lead ruled option 1, widened the file set to `turn_driver.h` and
+Detent's lead (A5, not this quest's files): its differential probe,
+`Detent/.scratch/detent/review-journal-turn-buffers/diff_probe/turn_log_diff_probe.cc`, needs
+main's rename (park -> evict, parked -> evicted) to build against main or this branch; then
+rerun 261121-113018-351103. Recommendation: Detent's lead renames and reruns it, or the lead
+rules the recycler probe and the merge's unchanged byte tests (A1) enough for A5.
+
+Otherwise nothing. (The hand-back gap: the lead ruled option 1, widened the file set to `turn_driver.h` and
 added A6; done.)
 
 ## Evidence
