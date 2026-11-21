@@ -890,7 +890,8 @@ Shard::replace(docid did, Document& doc, WriteArgs args)
 							skipped.version = static_cast<rev>(found->second);
 							co_return skipped;
 						}
-						throw Error(errc::invalid, "The key belongs to another document");
+						// The id is stale (the document was deleted and recreated): a conflict the writer retries.
+						throw version_conflict(static_cast<rev>(found->second));
 					}
 					stored = static_cast<rev>(found->second);
 				} else {
