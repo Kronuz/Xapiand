@@ -27,6 +27,8 @@ differential tests (`*_old.*`, `test/old/`, `frozen_*`): they are never edited b
 - A helper several pieces share moves to an internal header in a `detail` namespace; a
   namespace-scope object with a dynamic initializer stays with what it depends on. Each such
   non-move goes under the journal's "Rulings I made".
+- Every new header is self-contained: it includes what it uses (its siblings and the standard
+  headers) and compiles alone, so a piece is a real file, not a fragment of its umbrella.
 - One commit per split file.
 
 ## Acceptance criteria
@@ -37,6 +39,8 @@ differential tests (`*_old.*`, `test/old/`, `frozen_*`): they are never edited b
 - A3 `ctest -N` lists the same tests before and after: a job at each commit, diffed
 - A4 [artifact] `docs/source-layout.md` lists each new file and what it holds
 - A5 [ci] CI is green on every platform
+- A6 Every header under the library's public paths compiles alone: cpp-libraries'
+  `tools/selfcontained.sh -q .` as a job at the head
 
 ## Contracts
 

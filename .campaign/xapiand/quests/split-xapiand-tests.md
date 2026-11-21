@@ -39,6 +39,8 @@ The glob of `tests/test_*.cc` must not pick pieces up as tests of their own.
 - A4 [artifact] the layout note (`docs/dev/test-layout.md`) lists each
   new file and what it holds
 - A5 [ci] CI is green on every platform
+- A6 Every header under the library's public paths compiles alone: cpp-libraries'
+  `tools/selfcontained.sh -q .` as a job at the head
 
 ## Contracts
 

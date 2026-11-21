@@ -35,6 +35,8 @@ before it starts.
 - A4 [artifact] the layout note (`docs/source-layout.md`) lists each
   new file and what it holds
 - A5 [ci] CI is green on every platform
+- A6 Every header under the library's public paths compiles alone: cpp-libraries'
+  `tools/selfcontained.sh -q .` as a job at the head
 
 ## Contracts
 
