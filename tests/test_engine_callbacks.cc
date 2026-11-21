@@ -34,6 +34,12 @@
 
 #include "test_engine_callbacks/support.h"
 
+namespace detail {
+
+const std::vector<std::string> words = {"apple", "apricot", "apply", "banana", "band", "bandana", "bond", "cat", "cart", "cast", "coat", "caf\xc3\xa9", "cafe", "caf\xc3\xa9s", "na\xc3\xafve"};
+
+}  // namespace detail
+
 using namespace detail;
 
 static void test_sorter_() { test_sorter(); }
