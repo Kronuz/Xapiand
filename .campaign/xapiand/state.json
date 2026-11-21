@@ -26480,6 +26480,45 @@
       "updated": "2026-11-19T14:16:09",
       "worktree": ""
     },
+    "task-timers-followups": {
+      "accepted": {},
+      "after": [
+        "task-inbox-starvation"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+          "level": "light",
+          "minutes": 40,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/task/task_timers.hh",
+        "test/timers_test.cc"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "task:timers"
+      ],
+      "repo": "../task",
+      "risk": "high",
+      "status": "planned",
+      "title": "fire_pending's hang, starvation and double fire",
+      "updated": "2026-11-20T23:34:32"
+    },
     "termdict-forward-seek": {
       "accepted": {},
       "after": [],
