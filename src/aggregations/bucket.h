@@ -1079,9 +1079,6 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				}
 				default: {
 					const auto d = std::ceil(value.as_f64());
-					if (std::isnan(d)) {
-						THROW(AggregationError, "bounds must be numbers");
-					}
 					if (d < lowest) {
 						return { Reach::below, T() };
 					}
@@ -1145,6 +1142,9 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
 					case MsgPack::Type::FLOAT:
+						if (std::isnan(bound_value.as_f64())) {
+							THROW(AggregationError, "'{}' cannot be NaN", name);
+						}
 						return reach_of<T>(bound_value);
 					default:
 						THROW(AggregationError, "'{}' must be a number", name);

@@ -94,9 +94,6 @@ numeric_bound(const MsgPack& bound)
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return { Serialize::integer(bound.i64()), saturate<T>(bound.i64()) };
 		case MsgPack::Type::FLOAT:
-			if (std::isnan(bound.f64())) {
-				THROW(SerializationError, "A range bound cannot be NaN");
-			}
 			return { Serialize::floating(bound.f64()), GenerateTerms::truncate<T>(bound.f64()) };
 		default:
 			THROW(SerializationError, "A range bound must be a number, got {}", bound.to_string());
@@ -326,6 +323,16 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 }
 
 
+// A NaN bound selects no well-defined range, whatever the field's numeric or date type.
+static void
+refuse_nan(const char* name, const MsgPack* bound)
+{
+	if (bound && bound->get_type() == MsgPack::Type::FLOAT && std::isnan(bound->f64())) {
+		THROW(SerializationError, "A range bound '{}' cannot be NaN", name);
+	}
+}
+
+
 engine::Query
 MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
@@ -345,6 +352,21 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	try {
 		if (!start && !end) {
 			return engine::Query::match_all();
+		}
+
+		switch (field_spc.get_type()) {
+			case FieldType::integer:
+			case FieldType::floating:
+			case FieldType::positive:
+			case FieldType::date:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta:
+				refuse_nan(RESERVED_QUERYDSL_FROM, start);
+				refuse_nan(RESERVED_QUERYDSL_TO, end);
+				break;
+			default:
+				break;
 		}
 
 		switch (field_spc.get_type()) {
