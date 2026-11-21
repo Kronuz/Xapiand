@@ -1,7 +1,10 @@
 {
   "campaign": "xapiand",
   "ci": "github",
-  "ci_later": [],
+  "ci_later": [
+    "arm64",
+    "FreeBSD"
+  ],
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
@@ -9047,6 +9050,8 @@
     "failed-restore-exit": {
       "accepted": {},
       "after": [],
+      "base": "d15ff5bd5b4d16d9db01bc18b5d642fefa469c1a",
+      "branch": "quest/xapiand/failed-restore-exit",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -9067,11 +9072,13 @@
       "milestone": "M2",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cluster's handler.* glob has no change to handler.cc at its head (git diff master...quest/xapiand/cluster is empty there); xapiand-final-release lands on the xapiand release branch, not master; this change is 9 lines in restore_documents",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A CLI restore of a file that is not a dump fails",
-      "updated": "2026-11-21T08:45:45"
+      "updated": "2026-11-21T08:46:30",
+      "worktree": "../Xapiand-wt/xapiand/failed-restore-exit"
     },
     "faultlab-adopt-prospect": {
       "accepted": {},
@@ -25310,7 +25317,8 @@
       "consumes": [],
       "files": [
         "CMakeLists.txt",
-        "tests/test_pool.cc"
+        "tests/test_pool.cc",
+        "harness/pool_asan_repro.sh"
       ],
       "history": [
         {
@@ -25377,7 +25385,7 @@
       "risk": "low",
       "status": "review",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-20T03:35:41",
+      "updated": "2026-11-21T08:47:56",
       "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
@@ -28547,7 +28555,12 @@
         "docs/perf/**",
         "CMakeLists.txt",
         "test/merge_policy_test.cc",
-        "test/standalone_turn_log_test.cc"
+        "test/standalone_turn_log_test.cc",
+        "include/strata/core/index.hh",
+        "test/test_checkpoint_window*",
+        "bench/kv/probes/rocksdb-parity/**",
+        "test/*ryw*",
+        "test/fixtures/**"
       ],
       "history": [
         {
@@ -28590,8 +28603,9 @@
             "CMakeLists.txt",
             "include/strata/core/turn_seal.hh"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--checkpoint-window",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--checkpoint-window"
+          "journal": "",
+          "merged": "1e42abcd4a1c90bd1a5e6c5b1e21f786b50bb64a",
+          "worktree": ""
         },
         "cohort-wait": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
@@ -28644,10 +28658,23 @@
           "journal": "",
           "merged": "a38d4c261e2436620a88f40d1a6630fd76223c47",
           "worktree": ""
+        },
+        "ryw": {
+          "base": "61e223394933a2bbb855c6ccfa2c29d281673f03",
+          "branch": "quest/xapiand/turn-log-parity--ryw",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/turn_seal.hh",
+            "test/*ryw*",
+            "test/fixtures/**",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--ryw",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--ryw"
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T20:41:14",
+      "updated": "2026-11-21T08:53:04",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
