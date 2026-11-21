@@ -13370,14 +13370,16 @@
             "tests/test_restore_batch.cc",
             "tests/test_journal_replay.cc",
             "harness/journal_replay_check.sh",
-            "src/database/command.h",
-            "src/database/shard_group.*"
+            "src/database/shard_group.*",
+            "src/database/command.*",
+            "harness/run_all.sh",
+            "docs/src/content/docs/tests/coverage.md"
           ],
           "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--restore"
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T11:25:29",
+      "updated": "2026-11-21T11:25:33",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
