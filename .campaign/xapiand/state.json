@@ -30565,7 +30565,8 @@
         "docs/dev/agg-blowup.md",
         "docs/src/content/docs/changelog.md",
         "harness/agg_buckets_check.py",
-        "harness/id_zero_check.py"
+        "harness/id_zero_check.py",
+        "src/database/schema.cc"
       ],
       "history": [
         {
@@ -30630,7 +30631,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T20:20:06",
+      "updated": "2026-11-20T20:40:47",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
