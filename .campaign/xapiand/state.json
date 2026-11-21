@@ -23588,8 +23588,8 @@
       "repo": ".",
       "risk": "low",
       "status": "planned",
-      "title": "schema.cc becomes a set of files under 1,000 lines each",
-      "updated": "2026-11-21T11:39:44"
+      "title": "schema.cc split along its responsibilities",
+      "updated": "2026-11-21T12:05:42"
     },
     "script-method": {
       "accepted": {},
