@@ -27540,11 +27540,15 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
+      "reason": "SYS-8 (ratify the shared turn log) and SYS-2/SYS-3 (the landed host transport is the design) wait on the owner; posted 2026-11-21 05h with recommendation (a) for both",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "blocked",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-20T19:59:35",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T05:22:26",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
