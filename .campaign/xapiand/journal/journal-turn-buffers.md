@@ -101,7 +101,7 @@ added A6; done.)
 | A3 | 261120-204136-b4641b (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-204136-c0795f |
 | A4 | 261120-204136-af907d (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
 | A6 | 261120-204027-99b762 (4 sealers' 128 KiB bodies: warm begin() and completed() 0 allocations, turns 4-7; 28 of 28 later bodies encoded into the returned buffer; 32 returns cleared with capacity, all after the turn is durable; unsealed-in-flight gets nothing; a throwing recycler fails the driver after its turn); fails without: 261120-204028-be128e (drop-recycled: begin() 4 allocations, 524,320 bytes) |
-| A5 | manual: Detent's lead reviewed journal:b88565f and ran its probes; APPROVE, no blocking findings (reply to msg-185, 11-20; review in Detent's .scratch/detent/review-journal-turn-buffers/review.md; ASan+UBSan probe 261120-210314-994981, byte-identity probe 261120-210107-0bdf51). F2 documented in docs/mechanisms/turn-seal.md; F1 is Detent's pin wave |
+| A5 | manual: Detent's lead re-reviewed journal:60ab864 and APPROVED (cross-session message to the lead, 2026-11-21): differential probe 261121-124532-0dc107 (evict rename) gives IDENTICAL TurnLog output at the branch and at journal main 335b1b5, covering recovered and evicted records, a reopen and every flipped byte; recycler probe 261121-121414-237c59 passed under ASan+UBSan at journal:87af246, and nothing after it touches the recycler; park_count 0.565 B per parked group against main's 0.448 B (261121-121340-140534) accepted. Earlier round: journal:b88565f APPROVE (msg-185). |
 
 ## Result
 
