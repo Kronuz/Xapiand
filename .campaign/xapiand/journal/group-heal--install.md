@@ -9,32 +9,36 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Step 1, strata worktree strata-wt/xapiand/group-heal--install (base strata:51dcff1e): the install
+transfer engine, transport-agnostic, in `include/strata/group/install.hh`, with its tests in
+`test/group/install_test.cc`. Leader: pin (strata checkpoint generation + file list with
+CRC32C), chunk server (64 KiB). Learner: plan (lacks / holds short), staged fetch under `is.`
+(strata) and `ia.` (file set) names, `ip` marker, activation (renames, strata install, sweep),
+and recovery's completion of an interrupted activation.
 
 ## Next
 
-1. <step>
+1. Engine + tests (values, crash at every step, mutant skip-file-set).
+2. Blocked items below for the Driver binding (A1's promote/replace/remove, A2's schedules).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+See "Findings for the lead" (filled as found).
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | <no evidence yet> |
+| A2 | <no evidence yet> |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+<pending>
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- consensus pin stays at b8de3b8 (consensus-quiescence, which group-core needs for
+  closed_state/reopen); its snapshot headers (snapshot_channel.h, snapshot_transfer.h,
+  snapshot.h, membership.h) are byte-identical to consensus main 8801b99, so "build on main"
+  holds for the install surface. CMakeLists.txt is not in this task's files either.
