@@ -5,6 +5,9 @@
     "arm64",
     "FreeBSD"
   ],
+  "env": [
+    "CMAKE_GENERATOR=Ninja"
+  ],
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
