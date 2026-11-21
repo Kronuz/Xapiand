@@ -11367,6 +11367,40 @@
       "updated": "2026-11-18T13:04:31",
       "worktree": ""
     },
+    "group-catalog": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/group/group.hh",
+        "include/strata/core/catalog.hh",
+        "test/group/group_catalog*",
+        "docs/mechanisms/group-catalog.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "strata:group"
+      ],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "a replication group runs on its catalog slot's index",
+      "updated": "2026-11-21T10:00:54"
+    },
     "group-core": {
       "accepted": {},
       "after": [
