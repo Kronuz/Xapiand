@@ -77,7 +77,17 @@ paces the client. Eleven lines on this branch (Xapiand:b60d09d64).
 
 Measured, the array body before and after (three trials each, strict):
 
-E3_TABLE
+| Dataset | Peak RSS before | Peak RSS after | Seconds before (min-max) | Seconds after (min-max) | Jobs before, after |
+|---|---|---|---|---|---|
+| logs | 1,329 MB | 339 MB (74% less) | 4.894 (4.86-5.23) | 4.953 (4.66-5.20) | 261121-013217-d93ce8, 261121-013604-b2c5a2 |
+| shakespeare | 1,824 MB | 396 MB (78% less) | 5.577 (5.42-5.70) | 5.731 (5.54-5.77) | 261121-013219-203ab9, 261121-013605-c47571 |
+
+Each trial's `:count` matched (14,005 and 111,396). The peak lands on the stream body's (341 and 400 MB at master),
+as it should: the server now takes the body at the pace it indexes (last byte at 3.9-4.5 s instead of 0.07-0.15 s).
+Load time does not move beyond noise (1% and 3% slower, ranges overlapping). One figure is unexplained: master's
+own stream body loaded shakespeare in 4.789 s (4.69-4.80), 14% faster than either array run; the prototype's array
+body does not reproduce it. It is a different build of the same flags run in a different job, so host state is the
+likeliest cause; a fix quest's timing would settle it with both bodies on one binary in one exclusive job.
 
 One behavior differs: an element of the top-level array that is itself an array is now expanded into its objects (a
 batch's array is "the objects it holds"); before, it was rejected as a non-object. A fix quest would keep the old
@@ -98,6 +108,6 @@ once; streaming removes the case here.
 | 261121-013217-d93ce8, 261121-013218-7c445e, 261121-013219-203ab9, 261121-013220-3ed25e | E1: peak RSS and time at master, array and stream bodies |
 | 261121-013221-bcb3be, 261121-013223-854e98, 261121-013606-c8f8c3, 261121-013607-5f0a58 | E2: `malloc_history` near the peak, array and stream bodies |
 | 261121-013602-c1cadb | Release build of the prototype |
-| E3_JOBS | E3: peak RSS and time with the prototype, array bodies |
+| 261121-013604-b2c5a2, 261121-013605-c47571 | E3: peak RSS and time with the prototype, array bodies |
 
 Captures (call trees, timelines, vmmap) are under `~/.scratch/xapiand/explore-bulk-rss/{e1,e2,e3}`.
