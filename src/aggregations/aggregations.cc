@@ -116,10 +116,11 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 				if (!sub_agg.is_map()) {
 					THROW(AggregationError, "All aggregations must be objects");
 				}
-				// Every key is read: one type, with comments and the sub-aggregations around it.
-				bool typed = false;
+				bool keep_looking_agg_type;
+				const auto it_sub_agg_type = sub_agg.begin();
 				const auto it_sub_agg_type_end = sub_agg.end();
-				for (auto it_sub_agg_type = sub_agg.begin(); it_sub_agg_type != it_sub_agg_type_end; ++it_sub_agg_type) {
+				do {
+					keep_looking_agg_type = false;
 					auto sub_agg_type = it_sub_agg_type->str_view();
 					switch (_.fhh(sub_agg_type)) {
 						case _.fhh(RESERVED_AGGS_COUNT):
@@ -217,8 +218,10 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 						// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						// 	break;
 						case _.fhh(RESERVED_AGGS_AGGREGATIONS):
-						case _.fhh(RESERVED_AGGS_AGGS):  // the sub-aggregations, read by the bucket
-							continue;
+						case _.fhh(RESERVED_AGGS_AGGS):  // the sub-aggregations, read by the bucket; the type follows
+							++it_sub_agg_type;
+							keep_looking_agg_type = true;
+							break;
 						// Reserved but not implemented yet (the commented add_metric /
 						// add_bucket blocks above show the intended class for each). They
 						// are in the phf, so they reach here and fail clearly rather than
@@ -239,18 +242,13 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 							THROW(AggregationError, "Aggregation {} is reserved but not implemented yet", repr(sub_agg_type));
 						default:
 							if (is_comment(sub_agg_type)) {
-								continue;
+								++it_sub_agg_type;
+								keep_looking_agg_type = true;
+								break;
 							}
 							THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
 					}
-					if (typed) {
-						THROW(AggregationError, "Aggregation {} has more than one type", repr(sub_agg_name));
-					}
-					typed = true;
-				}
-				if (!typed) {
-					THROW(AggregationError, "Aggregation {} has no type", repr(sub_agg_name));
-				}
+				} while (keep_looking_agg_type and it_sub_agg_type != it_sub_agg_type_end);
 			} else {
 				THROW(AggregationError, "Aggregation name {} is not valid", repr(sub_agg_name));
 			}

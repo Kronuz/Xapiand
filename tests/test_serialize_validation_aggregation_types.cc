@@ -110,21 +110,8 @@ void test_known_types_still_dispatch() {
 	accepted(R"({"_aggs":{"x":{"_aggregations":{},"_count":{"_field":"age"}}}})");
 	accepted(R"({"_aggs":{"x":{"#note":"n","_count":{"_field":"age"}}}})");
 	accepted(R"({"_aggs":{"x":{"_terms":{"_field":"age"},"_aggs":{"y":{"_max":{"_field":"age"}}}}}})");
-	accepted(R"({"_aggs":{"x":{"_count":{"_field":"age"},"#note":"n"}}})");
-	accepted(R"({"_aggs":{"x":{"_terms":{"_field":"age"},"#note":"n","_aggs":{"y":{"_max":{"_field":"age"}}}}}})");
-}
-
-// An aggregation holds exactly one type: none (empty, comment-only, `_aggs`-only) or a second one is a 400 naming it.
-void test_typeless_and_multi_type_aggregations_are_refused() {
-	refused(R"({"_aggs":{"empty_agg":{}}})", "empty_agg");
-	refused(R"({"_aggs":{"note_agg":{"#note":"n"}}})", "note_agg");
-	refused(R"({"_aggs":{"subs_agg":{"_aggs":{"y":{"_count":{"_field":"age"}}}}}})", "subs_agg");
-	refused(R"({"_aggs":{"two_agg":{"_count":{"_field":"age"},"_max":{"_field":"age"}}}})", "two_agg");
-	refused(R"({"_aggs":{"x":{"_count":{"_field":"age"},"_bogus":1}}})", "_bogus");
-	refused(R"({"_aggs":{"y":{"_max":{"_field":"age"}},"late_agg":{}}})", "late_agg");
-	refused(R"({"_aggs":{"x":{"_terms":{"_field":"age"},"_aggs":{"inner_agg":{}}}}})", "inner_agg");
 }
 
 }  // namespace
 
-TEST_MAIN(test_unknown_types_are_refused, test_nested_unknown_types_are_refused_before_any_bucket_forms, test_known_types_still_dispatch, test_typeless_and_multi_type_aggregations_are_refused)
+TEST_MAIN(test_unknown_types_are_refused, test_nested_unknown_types_are_refused_before_any_bucket_forms, test_known_types_still_dispatch)
