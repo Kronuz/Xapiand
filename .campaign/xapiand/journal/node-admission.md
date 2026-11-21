@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on reruns at consensus:781f0d0 (main merged; main touched host_transport.h): 261121-092255-2df121 0e0f26 02c927 b62830 b1a3bb 9b252d 57ecdd(TSan) 38cf24 210ae6, and CI. Then the lead: `campaign accept node-admission correctness --confirm F1=261121-092258-38cf24 --confirm F2=261121-092256-02c927 --confirm F3=261121-092259-210ae6 --fix-scope REASON` (since the review: open_of in the test; hold()'s nodes_ lookup swapped for routed()), then land
+State: waiting on jobs at consensus:a5c615a (main merged at 8780e44; lead read a73c6e3..8780e44: nothing touching admission): 261121-144251-c4fe6d (F1 epoch) 261121-144250-ae978d (F2 issue) 261121-144251-fe5d36 (F3 save) 261121-144251-8155dd (every case) 261121-144252-07afc2 (TSan) 261121-144250-a686e0 (refused_pins) 261121-144249-290072 (refused_ca) 261121-144248-dad8de (remove_ca) 261121-144248-e12c22 (transport set); all queued; CI run 44958120227 queued. When F1-F3 pass, the lead runs: `campaign accept node-admission correctness --confirm F1=261121-144251-c4fe6d --confirm F2=261121-144250-ae978d --confirm F3=261121-144251-fe5d36 --note "F1-F3 confirmed at a5c615a; main's changes since the review (a73c6e3..8780e44) read, none touch admission; since the review: open_of in the test, hold() uses routed()"`. If linux-tsan is the only red CI job and fails consensus_transport_rpc_host_fetch (TSan timing, shared by main run 44930858682; Detent's consensus-transport-test-flakes), land with --no-ci citing it.
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -84,11 +84,12 @@ alone"), as intended.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | refused_pins 261121-112337-27fd23, refused_ca 261121-095253-b8cc25, remove_ca 261121-095252-330d78, issue 261121-113224-3a60bf, every case 261121-131011-10a70a; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
-| A2 | remove_ca 261121-095252-330d78, epoch 261121-113224-8358a1; TSan: CI 44858867076 linux-tsan (remove_*, epoch_* pass); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-185145-6600d3 and at 803442f 261120-190024-386b01, 261120-105033-4b9fdb |
-| A3 | every admission case under both policies (`_ca`, `_pins`) 261121-131011-10a70a |
+| A1 | at a5c615a: refused_pins 261121-144250-a686e0, refused_ca 261121-144249-290072, remove_ca 261121-144248-dad8de, issue 261121-144250-ae978d, every case 261121-144251-8155dd; fails without (commits unchanged): no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
+| A2 | at a5c615a: remove_ca 261121-144248-dad8de, epoch 261121-144251-c4fe6d, TSan 261121-144252-07afc2 (and CI linux-tsan); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-190024-386b01 (at 803442f), 261120-105033-4b9fdb |
+| A3 | at a5c615a: every admission case under both policies 261121-144251-8155dd, TSan 261121-144252-07afc2 |
 | A4 | `docs/mechanisms/admission.md` (consensus:674bb21) |
-| A5 | issue 261121-113224-3a60bf, save 261121-113225-813081; fails without: any-token 261120-173348-7a0880, join-unchained-issuer 261120-185148-3c31ce and at 803442f 261120-190026-ce7445, save-chmod-after 261120-185150-a20006 and at 803442f 261120-190027-3570be, 261120-105035-bb5634 |
+| A5 | at a5c615a: issue 261121-144250-ae978d, save 261121-144251-fe5d36, every case 261121-144251-8155dd; fails without: any-token 261120-173348-7a0880, join-unchained-issuer 261120-190026-ce7445 (at 803442f), save-chmod-after 261120-190027-3570be (at 803442f), 261120-105035-bb5634 |
+| transport set (connection/links/groups/rpc_host) | 261121-144248-e12c22 at a5c615a |
 
 Messages: the coordinator's D149 (default policy is the cluster CA): done in consensus:4bf833f —
 `NodePins(local, pins, context)` builds `ClusterCa(context, local)`; `pre_approved_pins()` is the
