@@ -1,6 +1,6 @@
 # group-heal--install: journal
 
-State: waiting on jobs 261121-054230-6f2ce0 261121-054233-ce72e0 261121-055544-08fada
+State: waiting on jobs 261121-084738-bee937 261121-084747-cde37d
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,11 +23,18 @@ only flipped a byte (CRC fails first). Fixed at strata:acca8f77: re-encoded pins
 `app.vol-1`, `ip` as strata files are refused. Rerun: 261121-054230-6f2ce0, mutant
 261121-054233-ce72e0.
 
+Build fix (strata:23f4dff4): 261121-055544-08fada failed to compile. `release_pins` passed
+nullopt to `read_generation` (takes a generation): now `index_detail::read_state(dir).pins`, the
+newest state. `same_digests` moved above `install_gap` (used before its definition). Jobs:
+261121-084738-bee937 (install_suite.sh, A1/A2, consensus@887a88b); 261121-084747-cde37d
+(install-silent, `--fails-without` at strata:6fa31367 on refs/mutants/group-heal--install/install-silent,
+voters_test only, after the plain).
+
 ## Next
 
-1. Jobs (State); fix the build and the cases until 261121-055544-08fada's successor passes.
-2. Mutant job: `test/group/mutants.py install-silent` against the ungated schedules
-   (needs CONSENSUS_DIR configure, like install_suite.sh).
+1. Jobs (State): fix the cases until 261121-084738-bee937 (or its successor) passes; the
+   install-silent mutant 261121-084747-cde37d must fail.
+2. Mutant reruns only if the lead asks (finished results stand).
 3. Rerun the install_mutants at the head (they ran at 0e67dcb7) with STRATA_CMAKE_ARGS for the
    consensus override, since install_test includes group.hh through oracle.hh.
 
@@ -45,8 +52,8 @@ only flipped a byte (CRC fails first). Fixed at strata:acca8f77: re-encoded pins
 | Criterion | Evidence |
 |---|---|
 | A1 (transfer half) | 261120-181817-a0cc80 install_test all cases at 0e67dcb7; `--fails-without` mutants: skip-file-set 261120-181820-54034f, keep-unchecked 261120-181823-382ea2, write-past-failure 261120-181826-ed7951, marker-before-sync 261120-181829-f2050f, holder-unordered 261120-181832-5929d9, no-resume 261120-181835-53159e, serve-past-length 261120-181842-4fc87c; pin-names-unchecked survived (261120-181838-e03e4e), fixed at acca8f77: 261121-054230-6f2ce0, mutant 261121-054233-ce72e0 (pending) |
-| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-055544-08fada (voters_test `install_gap`, `grow_and_heal`) |
-| A2 | pending: 261121-055544-08fada (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent not yet submitted |
+| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-084738-bee937 (voters_test `install_gap`, `grow_and_heal`); 261121-055544-08fada failed to compile at df6c992d |
+| A2 | pending: 261121-084738-bee937 (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent 261121-084747-cde37d |
 | TSan (`threads`) | CI's linux-tsan runs ctest; group_install_test reaches it only once CMakeLists.txt registers it (Blocked on 1). No local sanitizer job, per the lead. |
 
 ## Result
