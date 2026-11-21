@@ -25514,6 +25514,8 @@
       "after": [
         "split-check"
       ],
+      "base": "acb0aff70266cbdbdc0d326e5ac2769effed2b7f",
+      "branch": "quest/xapiand/split-http-parser",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25541,6 +25543,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-http-parser",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25548,9 +25551,10 @@
       "provides": [],
       "repo": "../http-parser",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "http-parser's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:15"
+      "updated": "2026-11-21T11:48:07",
+      "worktree": "../http-parser-wt/xapiand/split-http-parser"
     },
     "split-logger": {
       "accepted": {},
