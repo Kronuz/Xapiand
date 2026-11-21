@@ -3107,18 +3107,41 @@
       "files": [
         "test/catalog_stress_test.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/catalog-stress-cap",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T03:52:59",
+          "commit": "753bc62c4c32210535e10b31f8156f448d560549",
+          "criteria": {
+            "A1": "261120-234052-36bc35 (passed at 0da17cad23de; only 1 merge from main since, none touching its files), 261120-234054-b30f9c (passed at 0da17cad23de; only 1 merge from main since, none touching its files), 261120-234057-859dd5 (passed at 0da17cad23de; only 1 merge from main since, none touching its files)",
+            "A2": "261120-234052-36bc35 (passed at 0da17cad23de; only 1 merge from main since, none touching its files); fails without: 261120-234100-691f38",
+            "A3": "CI green at 753bc62c4c32"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "753bc62c4c32210535e10b31f8156f448d560549",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "560e8851ddbced7458f2d98442397471d5f1dee2",
+          "reason": "",
+          "tested": "753bc62c4c32210535e10b31f8156f448d560549"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "catalog_stress reaches its maps cap deterministically",
-      "updated": "2026-11-20T23:35:10",
-      "worktree": "../strata-wt/xapiand/catalog-stress-cap"
+      "updated": "2026-11-21T03:53:05",
+      "worktree": ""
     },
     "census": {
       "accepted": {},
