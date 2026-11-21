@@ -26552,6 +26552,8 @@
     "task-timers-followups": {
       "accepted": {},
       "after": [],
+      "base": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
+      "branch": "quest/xapiand/task-timers-followups",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -26571,6 +26573,7 @@
         "task_timers.hh",
         "test/timers_test.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-timers-followups",
       "landed": [],
       "lenses": [
         "correctness"
@@ -26582,9 +26585,10 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-20T23:34:55"
+      "updated": "2026-11-20T23:35:13",
+      "worktree": "../task-wt/xapiand/task-timers-followups"
     },
     "termdict-forward-seek": {
       "accepted": {},
