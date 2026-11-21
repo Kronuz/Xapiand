@@ -25840,6 +25840,49 @@
       "title": "traceback's large files split under 1,000 lines",
       "updated": "2026-11-21T11:47:36"
     },
+    "split-uinteger-t": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master . test",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "uinteger_t.hh",
+        "uinteger_t_*",
+        "uinteger_t/**",
+        "test/property.cc",
+        "test/property_*",
+        "test/property/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../uinteger_t",
+      "risk": "low",
+      "status": "planned",
+      "title": "uinteger_t's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:47"
+    },
     "split-url-parser": {
       "accepted": {},
       "after": [
