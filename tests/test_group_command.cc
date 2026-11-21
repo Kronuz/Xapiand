@@ -118,7 +118,8 @@ void test_round_trip() {
 	CHECK(std::get<CommandFinal>(f).command == command);
 
 	const std::string bytes = pattern(77, 'z');
-	const auto c = decode_entry(encode_entry(CommandChunk{9, CommandStream::upload, 1ull << 33, bytes}));
+	const auto chunk_entry = encode_entry(CommandChunk{9, CommandStream::upload, 1ull << 33, bytes});
+	const auto c = decode_entry(chunk_entry);   // its bytes view the entry
 	REQUIRE(std::holds_alternative<CommandChunk>(c));
 	CHECK_EQ(std::get<CommandChunk>(c).id, 9u);
 	CHECK(std::get<CommandChunk>(c).stream == CommandStream::upload);
@@ -135,20 +136,20 @@ void test_fits_whole() {
 	CHECK(entries[0] == encode_entry(command));
 }
 
-// A 3 MiB document with two blobs becomes chunks and a final entry, each within the 1 MiB limit with its header,
+// A 3 MiB document with a 1.1 MiB and a small blob becomes chunks and a final entry, each within the 1 MiB limit with its header,
 // and reassembles to the command.
 void test_chunked_within_limit() {
 	Command command;
 	command.schema_version = 3;
-	command.writes.push_back(write(CommandOp::replace_key, pattern(3 * 1024 * 1024 + 17, 'd'), {pattern(700 * 1024, 'b'), pattern(100, 'c')}));
+	command.writes.push_back(write(CommandOp::replace_key, pattern(3 * 1024 * 1024 + 17, 'd'), {pattern(1100 * 1024, 'b'), pattern(100, 'c')}));
 	const std::uint64_t id = 0xdeadbeefcafeull;
 	const auto entries = split_command(command, id);
-	CHECK_GT(entries.size(), 4u);   // 3.7 MiB staged, at most 1 MiB a chunk
+	CHECK_GT(entries.size(), 4u);   // 4.1 MiB staged, at most 1 MiB a chunk
 	for (const auto& entry : entries) {
 		CHECK_LE(entry.size(), COMMAND_ENTRY_BYTES);
 	}
 	REQUIRE(std::holds_alternative<CommandFinal>(decode_entry(entries.back())));
-	const auto& final = std::get<CommandFinal>(decode_entry(entries.back()));
+	const auto final = std::get<CommandFinal>(decode_entry(entries.back()));
 	CHECK(final.command.writes[0].document.staged);
 	CHECK(final.command.writes[0].blobs[0].record.staged);
 	CHECK_FALSE(final.command.writes[0].blobs[1].record.staged);   // small bytes stay in place

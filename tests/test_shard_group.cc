@@ -143,7 +143,8 @@ void test_blobs_at_the_offsets_the_state_names() {
 
 	// Applied again from the same starting state (a retry, a replay), the effects rewrite the same bytes.
 	ShardGroupState again;
-	const strata::group::entry e{1, 1, cs::EntryKind::Command, encode_entry(command)};
+	const auto bytes = encode_entry(command);
+	const strata::group::entry e{1, 1, cs::EntryKind::Command, bytes};
 	r.app->effects(again, e, *r.files);
 	CHECK_EQ(r.files->length(volume_name(1)), 137u);
 	CHECK(r.files->read(volume_name(1), 0, 100) == pattern(100, 'a'));
@@ -173,7 +174,7 @@ void test_chunked_command_applies_at_its_final_entry() {
 	command.writes.push_back(put("Kbig", "application/x", pattern(3 * 1024 * 1024 / 2, 'z')));
 	const std::uint64_t id = (1ull << 32) | 7;
 	const auto entries = split_command(command, id);
-	REQUIRE_GT(entries.size(), 2u);
+	REQUIRE(entries.size() > 2u);
 	for (std::size_t i = 0; i + 1 < entries.size(); ++i) {
 		CHECK_FALSE(r.apply(entries[i], 1).has_value());
 		CHECK_EQ(r.state.open.count(id), 1u);

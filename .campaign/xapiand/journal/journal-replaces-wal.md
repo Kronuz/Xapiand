@@ -40,6 +40,11 @@ need group-catalog:
   the group's chore (periodic or explicit), never awaited from a commit hook. Push once per round of
   code, when only jobs remain (a push cancels the branch's CI run).
 
+- Lead 2026-11-21 (racing-put-409 lands first in src/engine/strata/shard.cc, Xapiand:01ec326b6 and
+  Xapiand:cc8c27362): a replace whose key sits at another docid is `version_conflict(found->second)`, not
+  `invalid`. Not applied ahead (test_engine_strata.cc, outside my set, still expects `invalid` until it lands):
+  when master brings it, the merge conflicts in Shard::replace; resolve it in prepare_write's replace case.
+
 ## Proposed tasks (posted to the lead)
 
 The quest's own table holds: `core` (me) first; then `chunks` (handler.*, tests/test_group_chunk*,
