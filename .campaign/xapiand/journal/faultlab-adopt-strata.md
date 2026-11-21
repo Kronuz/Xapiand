@@ -1,6 +1,6 @@
 # faultlab-adopt-strata: journal
 
-State: waiting on jobs 261121-040338-57550f 261121-040340-abd200 261121-040345-ee15e1 261121-040455-3c1deb (lead: docs at strata:afda6e61 point at faultlab; A2 rerun there)
+State: waiting on jobs 261121-050042-88219e (A1 suite at strata:efa5214b) 261121-050043-dd30d3 (which faultlab commit moves the reclaim orphan count); CI at efa5214b (A3)
 Quest: .campaign/xapiand/quests/faultlab-adopt-strata.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -22,12 +22,19 @@ main origin/main 753bc62c, slot adopt-main), 261121-040345-ee15e1 (A1 suite at h
 
 ## Next
 
-1. When the jobs finish: diff the two count outputs; explain any moved line by a named faultlab fix
-   (candidates: faultlab:7d38b8d sync-after-effect on a staged file, faultlab:e25e663 reclaim-candidate
-   open of a missing name, power_on's kill-style release).
-2. Fix compile or test failures from the suite job (written blind; nothing compiled locally).
-3. A2 fails on docs/STATUS.md (1) and docs/book/OUTLINE.md (3), outside the file set: see Blocked on.
-4. Push, then CI (A3).
+1. Suite 261121-050042-88219e passes, CI green at efa5214b: A1 suite and A3.
+2. Bisect 261121-dd30d3 names the faultlab commit behind the +3 truncated orphans (below); write it
+   under Evidence A1.
+3. A2 passed at afda6e61 (261121-040455-3c1deb): docs added to the file set by the lead.
+
+Fixed at strata:efa5214b (pushed): the suite and macOS CI failed on bench/field_table/field_table.cc
+(`namespace fl` sat inside the non-Apple #else); Linux CI failed on counted_io (probe_io did not
+forward open_reclaim_candidate, so its open_existing default threw ENOENT for a missing name).
+
+Count diff, main (261121-040340-abd200) vs head (261121-040338-57550f): 38 of 40 lines identical
+(seeds, crash points, manifests checked, pass states). Moved: `reclaim` 2835 -> 2838 and
+`reclaim_bg_crash` 2735 -> 2738 truncated orphans seen; crash points (3128, 3094) unchanged; the
+mapped variants unchanged. Cause pending the bisect job.
 
 ## Blocked on
 
