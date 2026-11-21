@@ -1,6 +1,6 @@
 # turn-log-parity--ryw: journal
 
-State: waiting on jobs 261121-090415-53357a 261121-090430-5cd461 261121-090433-fa1d1f 261121-090436-c180a4 261121-090438-28fbcd
+State: waiting on jobs 261121-090430-5cd461 261121-090433-fa1d1f 261121-090436-c180a4 261121-090438-28fbcd
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
@@ -9,7 +9,7 @@ A1's test and its mutants, queued at strata:d16abf5a (branch quest/xapiand/turn-
 
 ## Next
 
-1. Read the five jobs; fix test_ryw if a build or the race's `behind > 0` misfires; rerun.
+1. Read the four queued jobs (the branch job 261121-090415-53357a passed: held, crash, race with 634 of 6251 reads behind the owner, 0 missed, 0 exposed; t4, served).
 2. Push the branch; hand to the lead for the task merge.
 
 ## Blocked on
