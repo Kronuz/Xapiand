@@ -2021,6 +2021,26 @@
       "closed": "ruled (a); quest file Decisions at master",
       "id": "msg-205",
       "text": "journal-replaces-wal restore task, follow-up to msg-204 (core's step d decides it, so it goes to you): D17 pipelines batches without waiting for each commit, but engine::strata::Shard::prepare reads the live core (prepare_write), never writes proposed and not yet applied, and core's ruling 6 sets the leader's expectation on every replace_key. So batch 2 prepared while batch 1 is in flight carries stale expectations and predicted docids wherever it repeats a term or allocates new ids, and assigned() then throws 'a different id or version than the write expected'. Options: (a, recommended) RESTORE's writes are prepared as replace_key with no expectation (RESTORE overwrites unconditionally today: replace_document_term(..., version=false)), the docid and version assigned at apply and read back per op from the batch verdict's docids/versions, so a batch depends on no earlier batch's apply; (b) keep the expectation and allow one batch in flight per shard (no pipelining: costs T12); (c) a prepare overlay of in-flight writes per shard (a second version map: more code, one more mechanism). (a) needs the application's transaction() to keep a batch write's version from the document and the result mapping to use verdict.docids[i] rather than [0]."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T11:40:29",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T11:40:29",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-206",
+      "items": {
+        "split-xapiand-src": "frees src/serialize*, src/aggregations/metrics*, src/aggregations/bucket*, src/lua/processor*, docs/dev/source-layout.md for split-xapiand-src"
+      },
+      "settles": {
+        "start": [
+          "split-xapiand-src"
+        ]
+      },
+      "text": "set split-xapiand-src: unlocks frees src/serialize*, src/aggregations/metrics*, src/aggregations/bucket*, src/lua/processor*, docs/dev/source-layout.md for split-xapiand-src"
     }
   ],
   "quests": {
@@ -25113,6 +25133,8 @@
       "after": [
         "split-check"
       ],
+      "base": "9e93078fc3b6326aaf249e27e05fa185c9e10260",
+      "branch": "quest/xapiand/split-xapiand-src",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -25142,9 +25164,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand's free large sources split under 1,000 lines",
-      "updated": "2026-11-21T11:40:29"
+      "updated": "2026-11-21T11:40:31",
+      "worktree": "../Xapiand-wt/xapiand/split-xapiand-src"
     },
     "split-xapiand-tests": {
       "accepted": {},
