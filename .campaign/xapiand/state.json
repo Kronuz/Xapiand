@@ -32004,29 +32004,7 @@
       "consumes": [],
       "files": [
         "tests/test_xapiand_final_release*",
-        "docs/release/xapiand-final*",
-        "CMakeLists.txt",
-        "docs/dev/agg-blowup.md",
-        "docs/src/content/docs/changelog.md",
-        "harness/agg_buckets_check.py",
-        "harness/id_zero_check.py",
-        "harness/run_all.sh",
-        ".github/workflows/release.yml",
-        ".github/workflows/freebsd.yml",
-        ".github/workflows/bottles.yml",
-        ".github/actions/build-bottle/action.yml",
-        "src/aggregations/aggregations.*",
-        "src/aggregations/bucket.h",
-        "src/database/handler.cc",
-        "src/database/schema.cc",
-        "src/engine/xapian/query.cc",
-        "src/engine/xapian/text_parser.*",
-        "src/multivalue/range.cc",
-        "src/serialise.cc",
-        "tests/test_engine_sort.cc",
-        "tests/test_generate_terms.cc",
-        "tests/test_text_parser.cc",
-        "config.h.in"
+        "docs/release/xapiand-final*"
       ],
       "history": [
         {
@@ -32091,7 +32069,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T23:24:37",
+      "updated": "2026-11-21T09:42:46",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
