@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: working
+State: waiting on jobs 261120-234442-a0ef19
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,32 +9,71 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+First build of the plan and group tests (job 261120-234442-a0ef19, strata
+quest/xapiand/placement--repair at 3a83bf2e; CI also runs on the pushed branch). Nothing has
+compiled yet: fix what the build reports, then the tests.
 
 ## Next
 
-1. <step>
+1. Green `placement_repair_plan` and `placement_repair_group` (jobs `--for A3,A4`: plan test,
+   group test per case).
+2. Mutant jobs, one per mechanism, `--fails-without`: `python3 test/placement/repair_mutants.py build NAME`
+   (transfer-anyway for A4; replace-now, setting-ignored, drain-ignored, no-leaving, no-quorum-guard,
+   record-ignored, leader-not-first, shrink-order, transfer-anyway-plan for A3).
+3. Integrate against group-heal with `--ref` once its install binds (see Blocked on).
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+- Lead: commit strata `8f252987` edits `include/strata/placement/records.hh` (the root task's
+  file, inside the quest's set) to add the settings record `S` (`replace_after_ms`, default 300 s,
+  put but never erased) that the quest's outcome needs ("held in the root, changed at runtime").
+  It also adds one row to `docs/mechanisms/placement-root.md`. Keep it, or move it and say where.
+  The root task's fuzz corpus does not cover the new record yet (root's `root_fuzz.cc`).
+- group-heal / Detent: A3's learners here catch up from the log (no checkpoint truncates it in
+  the tests). These wait on group-heal's install binding (itself on Detent's
+  `consensus-driver-install`): a learner added after a checkpoint truncated the log (every A3 step
+  once logs are compacted), and "a new root voter installs the root's records" by install rather
+  than by log catch-up. The group test's `replace` case already adds a new root voter by log.
+- Finding for the lead (cluster quest, not repair's): a node that left a group cannot host a new
+  incarnation of it on the same journal host, because `journal::Host` has no way to delete a
+  group's journal; the test world gives each replica its own host to step around it.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A3 | pending: job 261120-234442-a0ef19 (build), then plan, group and mutant jobs |
+| A4 | pending: group test `defer` and mutant `transfer-anyway` |
+| A5 | `docs/mechanisms/placement-repair.md` (repair's half) |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+Not yet: see Doing.
+
+Built (strata quest/xapiand/placement--repair): `include/strata/placement/repair.hh` (the plan,
+the root's operations `set_replace_after`, `set_rf`, `drain`, `drained`, `record_shard`),
+`test/placement/repair_plan_test.cc`, `test/placement/repair_world.hh`,
+`test/placement/repair_group_test.cc`, `test/placement/repair_mutants.py`, `test/placement/repair.cmake`,
+`docs/mechanisms/placement-repair.md`.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The settings record lives in the root as key `S` (see Blocked on): a format byte and LEB128
+  milliseconds; absent means the 300 s default; a command may put it, never erase it.
+- Repair plans, it does not drive: `plan()` is pure and level-triggered (one step per group per
+  pass, from what the group is), so a lost or refused step is planned again. The binding (the
+  cluster quest's) runs `change_membership`/`transfer_leadership` at the group's leader.
+- The record follows the group: when they differ the first step records the group as it is;
+  the planner never writes intent ahead of consensus.
+- The shape is placement's (`placement.hh`): `min(rf, usable)` data voters, 2 take a witness on a
+  third node, else voter + learner. Usable means not lost (lost: down for replace_after, or state
+  not active).
+- Every planned change passes consensus's `validate_change` and keeps a quorum of up voters;
+  where none does, the shard waits ("no node or no valid change reaches rf yet").
+- Leader balance: the preferred leader moves only to a healthy voter with two fewer leaderships,
+  and a pass counts each record's load change before the next shard, so it never flaps.
+- Every transfer the plan makes waits while the leader reports an open multi-entry command,
+  including the one before retiring the current leader (drain), not only balance.
+- The root group (consensus id 1000 in tests) is planned with no record and no balance.
+- The `report`'s `open_command` comes from the application (Xapiand's open chunked commands; the
+  blob test application's open uploads), not from strata::group, which holds no such state.
