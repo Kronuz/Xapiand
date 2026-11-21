@@ -2146,6 +2146,26 @@
       "closed": "lead reset queryparser's local main to origin/main (64c9a97; its 2 extra commits were patch-equal) and added CI's quest/** trigger (queryparser:a4ffbeb)",
       "id": "msg-212",
       "text": "split-queryparser: queryparser's local main (40743e3) is stale: it is 11a6365 plus two commits patch-equivalent to origin/main's top two (git cherry shows both as '-'); origin/main is 64c9a97, 20 commits further, where queryparser.cc has 1,400 lines (603 at 40743e3). The quest base 40743e3 is that stale main. I rebased the empty quest branch onto origin/main (64c9a97, nothing lost). The landing check and the split check (--base main) compare against local main, so they see 20 unrelated commits until main is reset: suggested fix, since main is checked out nowhere: git -C /Users/kronuz/code/Kronuz/queryparser branch -f main origin/main. The other split quests may have the same stale-main shape in their repos."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:25:09",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:25:09",
+      "by": "campaign detent",
+      "closed": "answered Detent's lead; node-admission narrowed; CMakeLists.txt only shared file",
+      "id": "msg-215",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-peers-wake"
+      },
+      "text": "detent:consensus-peers-wake started and may change files your node-admission changes (order them with --after detent:consensus-peers-wake, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
