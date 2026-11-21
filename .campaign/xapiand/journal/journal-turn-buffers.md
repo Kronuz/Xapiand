@@ -40,7 +40,7 @@ added A6; done.)
 | A3 | 261120-201739-07500d (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-201748-82c5c4 |
 | A4 | 261120-201741-5c74c1 (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
 | A6 | 261120-204027-99b762 (4 sealers' 128 KiB bodies: warm begin() and completed() 0 allocations, turns 4-7; 28 of 28 later bodies encoded into the returned buffer; 32 returns cleared with capacity, all after the turn is durable; unsealed-in-flight gets nothing; a throwing recycler fails the driver after its turn); fails without: 261120-204028-be128e (drop-recycled: begin() 4 allocations, 524,320 bytes) |
-| A5 | <no evidence yet> |
+| A5 | manual: Detent's lead reviewed journal:b88565f and ran its probes; APPROVE, no blocking findings (reply to msg-185, 11-20; review in Detent's .scratch/detent/review-journal-turn-buffers/review.md; ASan+UBSan probe 261120-210314-994981, byte-identity probe 261120-210107-0bdf51). F2 documented in docs/mechanisms/turn-seal.md; F1 is Detent's pin wave |
 
 ## Result
 
