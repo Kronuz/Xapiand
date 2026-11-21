@@ -179,3 +179,55 @@ group.hh's hand-off is the same at ffab229e.
   under it), so I did not run it. CI's linux-asan-ubsan was still running at ffab229e.
 - Multi-voter reopen with a closed record (follower resumes its leader): consensus's own
   `closing` simulation cases cover it. group-core has no such test.
+
+## Re-check (CI fix)
+
+Commit: strata:6421d4b3852390e3062a31d0f9427f685142af36
+Verdict: APPROVE
+Date: 2026-11-20
+
+Scope: `git diff ffab229e..6421d4b3` (5 files, tests, one CMake test target, docs). No library
+header or source changes, so no mechanism the earlier rounds relied on moved. Answer to the
+question: nothing is weakened, and t6w keeps everything but the thread it closes on.
+
+| ID | Finding | Blocking | Kind |
+|----|---------|----------|------|
+| R1 | None blocking. | no | none |
+| R2 | The placement-strategies.md "Scripted placement (parked)" section arrived through the main merge (strata:a2619696), not this fix; it is outside group-core and I did not review it. | no | note |
+
+### What I checked
+
+- **t6w (standalone_turn_log_test.cc:1310-1337).** Before: main turned the sealer, a thread
+  `owner` ran `ix.close()`. Now: a thread `loop` turns the sealer until `closed`, and main runs
+  `ix.close()` then sets `closed`. The roles swap and the rest is the same: the waiter thread still
+  parks in `await_durable` first (`waiting() == 1` wait, unchanged), `served(true)` still holds the
+  barrier open, the close still races the turns, and the `outcome == 1 || outcome == 2` check, the
+  reopen's `index_closed`, the restaged sequence `base + 2` and the new-host recovery are
+  untouched. The new `CHECK(turned)` is stricter: the old `until` result was checked inline, and now
+  a deadline miss on the loop thread still fails the test. The turn and the close still run
+  concurrently, joined before the main thread's own `turn()` calls resume, so there is no overlap
+  between two writers of the host's table. Main created the index and ran the first turns, so it
+  remains the owner thread the debug assertion names.
+- **Pre-fix failure is the assertion, not noise.** 261120-143842-94692c at d1793ae exits 134 on
+  host.h:534; the assertions-on full ctest at 6421d4b (261120-143835-d4f803) passes. I added a
+  repeat probe, 40 runs of t6w in the assertions-on build at 6421d4b: job 261120-162244-cded19,
+  exit 0 (script `.scratch/xapiand/review-group-core-correctness-ci/t6w_repeat.sh`). No
+  flake at the changed timing.
+- **voters_test case 0 (:440-445).** The draw order is now text then count, which is the order
+  clang already used on the recorded seeds, so macOS schedules are unchanged and gcc now matches
+  them. The other `gen()` uses in a `+` chain (:460, :465, :822) have one draw each, so nothing
+  else depends on operand order. The mutant killed at 6421d4b (261120-143852-9d288c, exit 1) shows
+  the test still bites.
+- **group_footprint.** In an unsanitized build the counting allocator and the test body are
+  byte-identical to before (the `#ifndef` arm is the old code, with `traces` hoisted). The
+  `#else` arm only defines the names the body references, and `main` returns 77 first, mapped to
+  SKIP by `SKIP_RETURN_CODE`. A real failure cannot return 77 (the test returns 0/1). The cost
+  is that the A6 heap counts are not exercised under ASan/TSan, which they never could be (the
+  sanitizer owns `operator new`); the Release and assertions builds still run them (143826,
+  143835). Backtrace is linked through `find_package(Backtrace)`, optional, and `execinfo.h` is
+  guarded.
+
+### Not done
+
+- I did not run FreeBSD or gcc myself; the jobs above are macOS. The gcc fix and the FreeBSD link
+  are the contributor's claim, to be confirmed by CI.
