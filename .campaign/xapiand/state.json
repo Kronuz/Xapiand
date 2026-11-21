@@ -30548,7 +30548,12 @@
       "consumes": [],
       "files": [
         "tests/test_xapiand_final_release*",
-        "docs/release/xapiand-final*"
+        "docs/release/xapiand-final*",
+        "CMakeLists.txt",
+        "docs/dev/agg-blowup.md",
+        "docs/src/content/docs/changelog.md",
+        "harness/agg_buckets_check.py",
+        "harness/id_zero_check.py"
       ],
       "history": [
         {
@@ -30613,7 +30618,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T15:52:25",
+      "updated": "2026-11-20T20:20:06",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
