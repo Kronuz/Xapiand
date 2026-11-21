@@ -17461,7 +17461,35 @@
         "test/ninja_only_check.sh"
       ],
       "journal": "../Xapiand-wt/xapiand/ninja-only-strata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T14:52:05",
+          "ci_skipped": "CI run 44950558785 (workflow_dispatch) at the same commit cc30217fc2fe passed 9 of 9 jobs (1 skipped by design); the earlier red run 44932359761 failed only because the shared cpp-libraries cmake.yml then configured without -G Ninja, fixed at cpp-libraries:12bae98",
+          "commit": "cc30217fc2fe2c231487c564318a520aa1bff640",
+          "criteria": {
+            "A1": "261121-095327-0995a3; fails without: 261121-091847-30861e",
+            "A2": "suite job 261121-095312-4789e2 (`campaign verify ninja-only-strata`, configured with `-G Ninja`)",
+            "A3": "`test/ninja_only_check.sh` grep half, run at the head by 261121-095327-0995a3: no configure without `-G Ninja` outside the records"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cc30217fc2fe2c231487c564318a520aa1bff640",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-095312-4789e2",
+              "level": "light",
+              "seconds": 462.4,
+              "state": "done",
+              "what": "ninja-only-strata check suite at cc30217fc2fe"
+            }
+          ],
+          "final": true,
+          "from": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+          "reason": "",
+          "tested": "cc30217fc2fe2c231487c564318a520aa1bff640"
+        }
+      ],
       "lenses": [],
       "milestone": "M2",
       "needs": [],
@@ -17469,9 +17497,9 @@
       "reason": "started by force: a 4-line guard after project() and -G Ninja in build commands (D168); the overlapping quests change pins, test registrations and other lines of these files, so merges stay textual",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strata builds with CMake and Ninja only",
-      "updated": "2026-11-21T09:15:04",
+      "updated": "2026-11-21T14:52:05",
       "worktree": "../strata-wt/xapiand/ninja-only-strata"
     },
     "no-stalls": {
