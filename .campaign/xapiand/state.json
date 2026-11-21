@@ -21746,12 +21746,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: five lines in shard.cc and two tests that journal-replaces-wal rewrites; it merges them with master, and its contributor is told",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A replace that lost a delete-and-recreate race is a version conflict, not a 500",
-      "updated": "2026-11-21T10:35:48",
+      "updated": "2026-11-21T10:36:12",
       "worktree": "../Xapiand-wt/xapiand/racing-put-409"
     },
     "reactor-open-files": {
