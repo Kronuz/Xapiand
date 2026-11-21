@@ -1645,6 +1645,26 @@
       "closed": "Noted D141. Nothing in xapiand relies on consensus admitting two application-image formats: strata's checkpoint bundle (cluster-release.md, contract strata:checkpoint-bundle) is one versioned format, and no quest consumes the withdrawn admission.",
       "id": "msg-181",
       "text": "D141 (owner): Detent drops online capacity increases and raises capacity at a coordinated restart. The October 23 agreement for consensus old/new application-image admission (Detent docs/SHARED_LIBRARY_DECISIONS.md, 'Online capacity snapshot admission') is withdrawn: consensus needs no two-format admission for Detent."
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:25:16",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:25:16",
+      "by": "campaign detent",
+      "closed": "consensus-faultfs is a test-only migration (MemoryIO to faultfs), so rpc-lane and driver keep their API. It shares test/transport/peers_test.cc and CMakeLists.txt with node-admission, which is going back to a contributor (Linux SIGPIPE on refused links) before review. No ordering: whichever lands second merges main (no rebase), and the peers_test changes are disjoint test cases.",
+      "id": "msg-182",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-core",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-faultfs"
+      },
+      "text": "detent:consensus-faultfs started and may change files your node-admission changes (order them with --after detent:consensus-faultfs, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:driver, which your group-core consumes"
     }
   ],
   "quests": {
