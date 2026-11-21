@@ -1,10 +1,7 @@
 {
   "campaign": "xapiand",
   "ci": "github",
-  "ci_later": [
-    "arm64",
-    "FreeBSD"
-  ],
+  "ci_later": [],
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
