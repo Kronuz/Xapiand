@@ -1,6 +1,6 @@
 # strata-pin-catalog: journal
 
-State: ready to land (lead, 2026-11-20 03h).
+State: waiting on jobs 261121-045943-2b0229 (A2 --fails-without at head 555a48b5f70f; the old job 261120-023044-64c800 was never tagged --for A2, so it did not count).
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
 ## Doing
@@ -12,7 +12,9 @@ under quiet light running; job scripts in ~/.scratch/xapiand/strata-pin-catalog/
 
 ## Next
 
-1. Wait on the jobs; local ASan test_pool passed once (1647 checks). A2 reverts the pin by sed in its own slot, then builds.
+1. When 261121-045943-2b0229 finishes, confirm A2 met in `campaign status`, then push.
+2. CI at 555a48b5f70f: only `Build + unit + smoke` red, and only test_lua.cc:1673 (known flake, lua-method-flake quest owns it); every other job green (ASan, TSan, E2E, arm64, FreeBSD). Not mine.
+3. A3: `campaign verify --for A3` reuses build-test 261120-024602-994d61 (passed at f8d8ddcfb43a; no merged file touches CMakeLists.txt pin or tests/test_pool.cc).
 
 ## Blocked on
 
@@ -23,5 +25,5 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261120-015212-3d9e92 |
-| A2 | `ci:Unit tests under ASan + UBSan` (test_pool and its reproducer pass at the new pin); fails without: 261120-023044-64c800 (old pin 397c02d5: heap-use-after-free in task::detail::scheduler_vtable) |
-| A3 | `ci:Build + unit + smoke` and `ci:Functional E2E (docs)` at the head (D57: CI runs the suite) |
+| A2 | fails without: 261121-045943-2b0229 at head (old pin 397c02d5; earlier 261120-023044-64c800 exit 134: heap-use-after-free in task::detail::scheduler_vtable); passes at the new pin: `ci:Unit tests under ASan + UBSan` |
+| A3 | 261120-024602-994d61 (build-test) + `ci:Functional E2E (docs)` at the head; CI red only from test_lua (known flake) |
