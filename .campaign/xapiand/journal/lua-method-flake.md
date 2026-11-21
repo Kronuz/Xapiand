@@ -52,6 +52,6 @@ ReservedPort.
 
 - Test fix, not node fix: READY before the listener is outside this quest's file set (src/manager.cc); other
   tests already work around it with connect_to. Recommendation for the lead: a follow-up to set READY after
-  `http_service->start()`, or migrate the six copies of free_port/connect_to (test_node, test_endpoint_uuid,
+  `http_service->start()`, or migrate the other copies of free_port/connect_to (test_node, test_endpoint_uuid,
   test_loop_yield, test_coverage_database, test_stopword_search) to tests/utils_node.h. Out of my file set.
 - macOS keeps a small port window (release, then the node binds); a clash there fails the node's bind loudly.
