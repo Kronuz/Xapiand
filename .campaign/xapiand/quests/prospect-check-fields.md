@@ -1,36 +1,29 @@
 # prospect-check-fields: prospect's inverted reader forwards check_fields
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status prospect-check-fields`.
+Risk: low. The lead writes this quest; contributors read it and never edit it. Its
+machine state is in `state.json`: `campaign status prospect-check-fields`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`inverted_plugin::reader::check_fields(size, key)` forwards to its dictionary's check, so
+strata's map-time check (field-check-at-map) covers prospect's segments.
+
+Evidence: the eager-open explorer, 2026-11-21: `docs/perf/eager-open.md` on strata
+`explore/eager-open` (strata:7107f9bc), prototype there and on prospect `explore/xapiand/eager-open`
+(prospect:3f88c3c); identity job 261121-110632-e10bb1.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A dictionary with a field id outside the table, or the key field, makes `check_fields`
+  throw; a good one passes: a test with values
+- A2 prospect's suites pass (fielddict, fields, index, lifecycle, merge, multisegment,
+  background_merge, reclaim): the `build-test` check
+- A3 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Consumes strata:segment-check.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
