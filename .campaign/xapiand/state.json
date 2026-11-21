@@ -10235,6 +10235,39 @@
       "updated": "2026-11-21T03:22:37",
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
+    "field-check-at-map": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/reader.hh",
+        "test/field_check_map_test.cc",
+        "test/CMakeLists.txt",
+        "CMakeLists.txt",
+        "docs/mechanisms/field-check.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata checks a segment's field ids wherever it maps",
+      "updated": "2026-11-21T11:43:36"
+    },
     "field-table": {
       "accepted": {},
       "after": [],
