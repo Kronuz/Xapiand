@@ -19,8 +19,8 @@ header. Sources are globbed (CMakeLists.txt:1122), so no CMakeLists change is ne
 
 - A1 The suite passes at the split code: the `suite` check
 - A2 No file under `src/database/schema*` exceeds 1,000 lines, and every function body moved
-  unchanged: the `split` check (`harness/split_check.py`, written by this quest, which compares the
-  multiset of function bodies before and after, ignoring whitespace, and counts lines)
+  unchanged: the `split` check (cpp-libraries' `tools/split_check.py`, quest split-check), with its
+  warnings answered in the journal
 - A3 [artifact] `docs/dev/schema-layout.md` lists each file and what it holds
 
 ## Contracts
