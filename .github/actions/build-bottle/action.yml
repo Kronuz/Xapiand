@@ -5,6 +5,12 @@ description: >
   artifact for the tap-merge step. Expects the repo to already be checked out.
 
 inputs:
+  publish:
+    description: >
+      "true" attaches the bottle to the release; anything else builds from the
+      checked-out commit's source archive and attaches nothing.
+    required: false
+    default: "true"
   tag:
     description: "Release tag the bottle is built for (used in the bottle root URL)."
     required: true
@@ -49,10 +55,16 @@ runs:
         # idempotent: it drops any bare source url/sha256 then re-adds them right
         # after `homepage`; labeled bottle-block sha256 lines (not `^  sha256 "`)
         # are never touched.
-        SRC_URL="https://github.com/${{ inputs.repository }}/archive/refs/tags/${{ inputs.tag }}.tar.gz"
+        # A no-publish run has no tag: use the checked-out commit's archive and state
+        # the version, since a sha-named tarball carries none.
+        SRC_REF="refs/tags/${{ inputs.tag }}"; VER=""
+        if [ "${{ inputs.publish }}" != true ]; then
+          SRC_REF="$(git rev-parse HEAD)"; VER="${{ inputs.tag }}"; VER="${VER#v}"
+        fi
+        SRC_URL="https://github.com/${{ inputs.repository }}/archive/${SRC_REF}.tar.gz"
         SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
-        awk -v u="$SRC_URL" -v s="$SRC_SHA" '/^  url /{next} /^  sha256 "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
-        grep -E '^  (url|sha256) ' "$FORMULA"
+        awk -v u="$SRC_URL" -v s="$SRC_SHA" -v v="$VER" '/^  url /{next} /^  sha256 "/{next} /^  version "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""; if (v != "") print "  version \"" v "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
+        grep -E '^  (url|sha256|version) ' "$FORMULA"
         $BREW install --build-bottle "$TAP/xapiand"
         $BREW bottle --json --no-rebuild \
           --root-url="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}" \
@@ -76,6 +88,7 @@ runs:
         done
 
     - name: Attach bottle to the release
+      if: inputs.publish == 'true'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ inputs.tag }}

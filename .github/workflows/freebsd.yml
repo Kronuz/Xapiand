@@ -3,6 +3,9 @@ name: FreeBSD
 # Build Xapiand inside a real FreeBSD VM (vmactions runs it on the Linux runner)
 # and attach a FreeBSD package to the release. Unlike Homebrew, the VM has network,
 # so the FetchContent deps resolve exactly like the Linux/Docker builds.
+#
+# A dispatch with publish=false (and ref=<commit or branch>) builds the package at
+# ref and attaches nothing to any release; the .pkg stays as a run artifact.
 
 on:
   workflow_dispatch:
@@ -11,6 +14,14 @@ on:
         description: "Release tag to build (e.g. v1.0.0-alpha.1)"
         required: true
         default: v1.0.0-alpha.1
+      publish:
+        description: "Attach the package to the release (false builds only)"
+        type: boolean
+        default: true
+      ref:
+        description: "Commit or branch to build when publish is false (default: the tag)"
+        required: false
+        default: ""
   push:
     branches: [master, 'quest/**', 'quick/**', 'codex/**']
     tags:
@@ -26,6 +37,11 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # Tag pushes publish; a dispatch publishes unless publish is false.
+  PUBLISH: ${{ github.event.inputs.publish != 'false' }}
+  # What to build: the tag, or `ref` when not publishing (a release is always
+  # built from its tag).
+  REF: ${{ (github.event.inputs.publish == 'false' && github.event.inputs.ref) || github.event.inputs.tag || github.ref_name }}
 
 jobs:
   freebsd-test:
@@ -90,6 +106,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
 
       - name: Build + package in a FreeBSD VM
         uses: vmactions/freebsd-vm@v1
@@ -127,7 +145,16 @@ jobs:
             pkg create -M +MANIFEST -r "$PWD/stage" -p "$PWD/plist" -o "$PWD"
             ls -la ./*.pkg
 
+      - name: Keep the package as a run artifact (not published)
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-pkg
+          path: ./*.pkg
+          retention-days: 1
+
       - name: Attach FreeBSD package to the release
+        if: env.PUBLISH == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}

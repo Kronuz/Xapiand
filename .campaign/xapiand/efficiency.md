@@ -586,3 +586,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Placement sat 4 h with both tasks merged and its branch unpushed: pushed; repair started. Lead miss: merged-task quests need their next task started at merge.
 - Tool: scheduler rule (light work starts while an exclusive job is queued only if it ends within DRAIN_HOLD of the drain's due). 12 h replay, staged: 2 h hold 2.92 drains/h vs 2.67, heavy p50 5.5 vs 9.2 min; 4 h hold unchanged. Default 4 h; suite running.
 - Quota 57% weekly, 0.47%/h, reset in 46 h. Load 42-45 (reader-s6 native 7.3 cores, A4 strict, campaign suite). Disk 300 GiB free.
+
+## 2026-11-21 00h
+- Landed: strata varint pin (strata:b46947573), completion-task-pin (completion:714186e; sent to Detent for pin-wave), script-method (Xapiand:4360188de). faultlab-strata-gaps review APPROVE (148k, Opus; 0 blocking, 2 notes to hunt); lands on CI.
+- Agents finished (Opus): final-release build fixes 177k (Xapiand:df3ff48b8 compressors declared before storage + empty XXH define; Xapiand:a4ca8aedf bottles on macos-15/26; dry runs redispatched at daf272e9d); reactor-open-files 120k (reactor:303febb, 01db032); catalog-stress-cap 117k (strata:0da17cad); task-timers-followups 145k (task:2012f28 N3 double fire; task:340746a docs); placement repair 321k (strata:8f252987..990d5e80; first build: planner property test fails 11 of 3,000 seeds; fresh contributor fixing).
+- Waste: task-inbox-starvation 95k on a stale hunt row (fixed by task:b7e2449), dsl-not-wrap stale too (Xapiand:f4b9edff8); hunt header now requires a log check first.
+- Filed: journal-group-delete (Detent's lead: not theirs; after their 4 journal quests; consensus half is detent:consensus-replica-delete). Xapiand tls_seconds_to_expiry duplicate -> extraction row.
+- Tool: agent-campaign:c6a4324 (CAMPAIGN_DRAIN_HOLD, 4 h; suite 298 OK), dotfiles:08a02c5; worker restarted.
+- Quota 58% weekly, 0.47%/h, reset in 45 h. Load 25-40. Disk 299 GiB free.
