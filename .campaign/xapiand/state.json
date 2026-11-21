@@ -22371,7 +22371,36 @@
       "worktree": ""
     },
     "restore-stream": {
-      "accepted": {},
+      "accepted": {
+        "security": {
+          "at": "2026-11-21T04:33:54",
+          "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+          "blobs": {
+            "docs/perf/bulk-load-rss.md": "100644:9c3c42f86ad2d3979040702dce845553bf9705d8",
+            "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
+            "src/server/search_views.cc": "100644:7da59d340be662732180a457db271b430ae4adf4",
+            "src/server/search_views.h": "100644:eb6a60f3be8a26417775a17117e9657507de66ca",
+            "tests/test_restore_stream.cc": "100644:710551eb9d89e593abd329fb73e07f373ae08522",
+            "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
+          },
+          "by": "review",
+          "commit": "c5b2c0689ce51c7293cafe5ed909b2fa50299a46",
+          "criteria": "fd024766c8bfafd1",
+          "diffs": {
+            "docs/perf/bulk-load-rss.md": "55616a000938f1cb",
+            "harness/bench/bulk_rss_probe.py": "e19856f1df42ee22",
+            "src/server/search_views.cc": "ffa03e257f52da3b",
+            "src/server/search_views.h": "85b01300a82774b2",
+            "tests/test_restore_stream.cc": "0086dbd0a80ec82d",
+            "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
+          },
+          "findings": {},
+          "note": "",
+          "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
+          "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
       "branch": "quest/xapiand/restore-stream",
@@ -22415,7 +22444,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T04:01:59",
+      "updated": "2026-11-21T04:33:54",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
