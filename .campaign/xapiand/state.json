@@ -22410,12 +22410,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: cluster holds src/server/search_views.cc for its task 4 (api), not started; quest/xapiand/cluster has no change to the file. restore-stream touches Request::append and one Request field only and lands before api starts from master",
       "repo": ".",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T01:48:11",
+      "updated": "2026-11-21T04:01:59",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
