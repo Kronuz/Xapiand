@@ -10353,7 +10353,64 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/group-core",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T17:41:31",
+          "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "criteria": {
+            "A1": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-041329-e493ed, 261117-041335-5055d0, 261117-041341-82b222, 261117-041346-d08891, 261117-041351-01ad6c, 261117-041356-b72595, 261117-041401-a4bc5e, 261117-041406-4aaf54, 261117-041412-e13f97, 261117-041417-101200, 261117-151125-7ccde6, 261117-151147-f41da5, 261117-151150-e05468, 261117-151154-9b1fbc, 261120-090021-8a66ab, 261120-090036-a032b9, 261120-121551-0fb5d1",
+            "A10": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-134435-94dd84, 261117-134505-949822",
+            "A2": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085651-94cdb1, 261117-085659-d135d4, 261117-112707-8d20d3, 261117-112710-55af69, 261117-151158-264d61, 261117-151202-2b5482, 261120-090029-d472af, 261120-143842-94692c, 261120-143852-9d288c",
+            "A3": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085705-587d4d, 261117-085711-59939a, 261117-112642-eee4a9, 261117-112645-377e63, 261117-112648-9a2926, 261117-112650-2e5ea4, 261117-112653-d75991, 261117-112656-b5bed0, 261117-112659-a0922c, 261117-112702-5fc7d8, 261120-092539-50196a, 261120-092541-cd604b, 261120-092544-0e1fd2, 261120-092546-475273, 261120-092548-bda1ed, 261120-121542-01253e, 261120-121544-aeb1f7",
+            "A4": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085718-358fc4, 261117-112704-eaa423, 261120-090043-0b4a03, 261120-121549-49be3a",
+            "A5": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-132517-62b8d5, 261117-134421-e77835, 261117-134428-8708d8, 261120-121545-005bf5, 261120-121547-534c19",
+            "A6": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-151125-7ccde6, 261117-151128-1d419f, 261117-151132-fc01a3, 261117-151136-c0239c, 261117-151139-b815a7, 261117-151143-991952, 261117-174734-de0aa7, 261117-220123-40de8b",
+            "A7": "261120-163605-68024d",
+            "A8": "[decision] D113 (owner, 2026-11-17): cluster-release Q2 (a), document mode with `quorum` and `none`",
+            "A9": "strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6421d4b3852390e3062a31d0f9427f685142af36",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-143826-fc1ff1",
+              "level": "light",
+              "seconds": 253.2,
+              "state": "done",
+              "what": "group-core check build-test at 6421d4b38523"
+            },
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R group_crash",
+              "commit": "6421d4b3852390e3062a31d0f9427f685142af36",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-143827-809109",
+              "level": "light",
+              "seconds": 184.5,
+              "state": "done",
+              "what": "group-core check crash at 6421d4b38523"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5",
+          "reason": "",
+          "tested": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7"
+        }
+      ],
       "lenses": [
         "correctness",
         "design"
@@ -10366,9 +10423,9 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T16:35:49",
+      "updated": "2026-11-20T17:41:31",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
