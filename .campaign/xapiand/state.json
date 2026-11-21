@@ -26123,12 +26123,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: overlap is CMakeLists.txt only: one generic rule adding tests/test_NAME/*.cc to test NAME's executable, in the tests block no other quest edits",
       "repo": ".",
       "risk": "low",
       "status": "active",
-      "title": "Xapiand's free large tests split under 1,000 lines, same test names",
-      "updated": "2026-11-21T11:40:43",
+      "title": "Xapiand's free large tests split where it helps maintenance, same test names",
+      "updated": "2026-11-21T12:05:38",
       "worktree": "../Xapiand-wt/xapiand/split-xapiand-tests"
     },
     "stash-claim-hint-d64": {
