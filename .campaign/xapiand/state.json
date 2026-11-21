@@ -24973,6 +24973,8 @@
     "split-check": {
       "accepted": {},
       "after": [],
+      "base": "c95e6cbb64a78d14a70aa0c7cc5c9b3378db3575",
+      "branch": "quest/xapiand/split-check",
       "checks": [
         {
           "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
@@ -24987,6 +24989,7 @@
         "tools/test_split_check.py",
         "tools/README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-check",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -24994,9 +24997,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "split_check.py proves a file split moved code and changed none",
-      "updated": "2026-11-21T11:38:49"
+      "updated": "2026-11-21T11:40:02",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check"
     },
     "split-http": {
       "accepted": {},
