@@ -9496,18 +9496,46 @@
         "README.md",
         "docs/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-journal-oracle",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T03:46:41",
+          "commit": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+          "criteria": {
+            "A1": "261121-034036-778aff, 261121-034039-bc66b3",
+            "A2": "261121-034118-d9974d",
+            "A3": "CI green at e3fcfe3ca197"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-034039-bc66b3",
+              "level": "light",
+              "seconds": 18.3,
+              "state": "done",
+              "what": "faultlab-journal-oracle check build-test at e3fcfe3ca197"
+            }
+          ],
+          "final": true,
+          "from": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "reason": "",
+          "tested": "e3fcfe3ca197d40e53371dffee1497708fc438b5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultlab's sector test stops fetching journal's memory_io.h",
-      "updated": "2026-11-21T03:23:14",
-      "worktree": "../faultlab-wt/xapiand/faultlab-journal-oracle"
+      "updated": "2026-11-21T03:46:43",
+      "worktree": ""
     },
     "faultlab-netlab": {
       "accepted": {},
