@@ -1,6 +1,6 @@
 # turn-log-parity--large-tx: journal
 
-State: waiting on jobs 261121-104119-d0dd11 261121-104122-87c06b 261121-104124-6f93ff 261121-104127-764b43
+State: waiting on jobs 261121-110105-830c31 261121-110107-c64ff6 261121-110108-aa171b 261121-110110-5b9806 261121-110112-a647c1 261121-110113-052233 261121-104124-6f93ff
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,33 +9,40 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 1 pushed (strata:e8e12a8c on origin). Jobs at the task head:
+Round 2 pushed (strata:39b28f25): the lead's finding that the keep-applied mutant survived
+(261121-104122-87c06b exited 0, so the sweep passed with the mutation). It was a gap in the test,
+not an equivalent mutant. The sweep's second life wrote before it committed, so the new records'
+position hid an applied position left behind a dropped run. With the mutant, a checkpoint that
+comes with no write after recovery throws: a close's leave stages one with x at the head and
+`next` past the dropped run. The sweep now closes right after the first recovery and reopens,
+checking the state again by value. Locally under light holds, with one seed: the fix passes (124
+cases); the mutant fails from cut 18: "recovery or its close threw: strata: a checkpoint record
+with batches not yet durable".
+
+Jobs at strata:39b28f25 (mutants rebuilt on it):
 
 | Job | What |
 |---|---|
-| 261121-104110-491873 | A3: test_large_tx, every case |
-| 261121-104113-4f8cbb | mutant limit (strata:dc3ca2e60bb9): admit must fail |
-| 261121-104116-816fc6 | mutant per-chunk (strata:cb5fa6cda2cc): sweep must fail |
-| 261121-104119-d0dd11 | mutant early-v (strata:d4f7165bb272): visible must fail |
-| 261121-104122-87c06b | mutant keep-applied (strata:f686420039da): sweep must fail |
-| 261121-104124-6f93ff | A3 fuzz: fuzz_command with the chunk kind, 2 x 10 min |
-| 261121-104127-764b43 | the suite at the task head |
+| 261121-110105-830c31 | A3: test_large_tx, every case |
+| 261121-110107-c64ff6 | mutant limit (strata:32759353de29): admit must fail |
+| 261121-110108-aa171b | mutant per-chunk (strata:1af1de02b9ba): sweep must fail |
+| 261121-110110-5b9806 | mutant early-v (strata:a09553de2476): visible must fail |
+| 261121-110112-a647c1 | mutant keep-applied (strata:c4d7a01a3da8): sweep must fail |
+| 261121-110113-052233 | the suite at the task head |
+| 261121-104124-6f93ff | A3 fuzz at strata:e8e12a8c (still running); command.hh and fuzz/ are unchanged in strata:39b28f25 |
 
-Locally (targeted, under light holds): codec, t8, t9o, kv_strata_batch_test, the fuzz corpus
-replay, admit (66 MiB in 67 chunk records) and visible pass; sweep and big were not timed locally
-(the host was full), so the A3 job sizes them.
+Round 1 at strata:e8e12a8c, for the record:
 
-Results so far:
-
-- 261121-104110-491873 passed: admit (66 MiB in 67 chunk records; both refuse past the unlogged
-  cap); sweep 558 cases over 61 mutations (26 records), 531 runs cut, all whole prefixes; big 147
-  cases at 49 of 503 mutations (74 records), 105 runs cut; visible 0 exposed early.
-- 261121-104113-4f8cbb (limit) failed as required: admit refuses the 66 MiB transaction.
-- 261121-104116-816fc6 (per-chunk) failed as required: "no whole prefix matches" from cut 8.
+- 261121-104110-491873 passed: admit (66 MiB in 67 chunk records); sweep 558 cases over 61
+  mutations; big 147 cases at 49 of 503 mutations; visible 0 exposed.
+- Mutants limit (261121-104113-4f8cbb), per-chunk (261121-104116-816fc6) and early-v
+  (261121-104119-d0dd11: "exposed early: 1") failed as required. keep-applied
+  (261121-104122-87c06b) survived: the gap above.
+- 261121-104127-764b43 (suite at strata:e8e12a8c) was cancelled for the head's run.
 
 ## Next
 
-1. Read the four pending jobs; a failure is fixed with its test, as a job.
+1. Read each job; a failure is fixed with its test, as a job.
 2. Fill Evidence from `campaign brief`, write Result, State "ready to merge".
 
 ## Blocked on
@@ -52,7 +59,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A3 | 261121-104110-491873 (test_large_tx, passed); mutants 261121-104113-4f8cbb (limit), 261121-104116-816fc6 (per-chunk) failed as required; pending: 261121-104119-d0dd11 (early-v), 261121-104122-87c06b (keep-applied), 261121-104124-6f93ff (fuzz_command with kind 3), 261121-104127-764b43 (suite) |
+| A3 | at strata:39b28f25: 261121-110105-830c31 (test_large_tx); mutants 261121-110107-c64ff6 (limit), 261121-110108-aa171b (per-chunk), 261121-110110-5b9806 (early-v), 261121-110112-a647c1 (keep-applied), all --fails-without; fuzz 261121-104124-6f93ff (kind 3, at strata:e8e12a8c, same codec); all pending |
 
 ## Result
 
