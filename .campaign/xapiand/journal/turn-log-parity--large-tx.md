@@ -1,6 +1,6 @@
 # turn-log-parity--large-tx: journal
 
-State: working
+State: waiting on jobs 261121-104110-491873 261121-104113-4f8cbb 261121-104116-816fc6 261121-104119-d0dd11 261121-104122-87c06b 261121-104124-6f93ff 261121-104127-764b43
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code round 1 committed (strata:e8e12a8c); timing the sweeps locally to size the jobs. Mutant
-commits on local branches `mutant/large-tx/*`: limit (strata:dc3ca2e60bb9), per-chunk
-(strata:cb5fa6cda2cc), early-v (strata:d4f7165bb272), keep-applied (strata:f686420039da).
+Round 1 pushed (strata:e8e12a8c on origin). Jobs at the task head:
+
+| Job | What |
+|---|---|
+| 261121-104110-491873 | A3: test_large_tx, every case |
+| 261121-104113-4f8cbb | mutant limit (strata:dc3ca2e60bb9): admit must fail |
+| 261121-104116-816fc6 | mutant per-chunk (strata:cb5fa6cda2cc): sweep must fail |
+| 261121-104119-d0dd11 | mutant early-v (strata:d4f7165bb272): visible must fail |
+| 261121-104122-87c06b | mutant keep-applied (strata:f686420039da): sweep must fail |
+| 261121-104124-6f93ff | A3 fuzz: fuzz_command with the chunk kind, 2 x 10 min |
+| 261121-104127-764b43 | the suite at the task head |
+
+Locally (targeted, under light holds): codec, t8, t9o, kv_strata_batch_test, the fuzz corpus
+replay, admit (66 MiB in 67 chunk records) and visible pass; sweep and big were not timed locally
+(the host was full), so the A3 job sizes them.
 
 ## Next
 
-1. Submit jobs: the suite at the head, test_large_tx (all cases), the fuzzer over the command
-   corpus, and one `--fails-without` job per mutant.
-2. Push the branch once; wait once; record ids.
+1. Read each job; a failure is fixed with its test, as a job.
+2. Fill Evidence from `campaign brief`, write Result, State "ready to merge".
 
 ## Blocked on
 
