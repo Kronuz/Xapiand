@@ -18,6 +18,10 @@ included, still counts as lost.
 - A4 An include guard on a new header (`#ifndef`/`#define` of a guard-like name and its `#endif`)
   passes, and any other new `#define` fails (split-btree's 18 guard lines, job 261121-123001-f68c62):
   the `test` check
+- A5 A static helper becoming `inline`, `inline` added to a moved definition, and a namespace-scope
+  `using` of a detail namespace pass with a warning; `using namespace std;` and a `using` inside a
+  function still fail; a dropped include or comment is a warning (the 2026-11-21 split checks:
+  http, xapiand-src, xapiand-tests): the `test` check
 - A2 ruff check, ruff format and the existing tests pass: the `lint` and `test` checks
 - A3 [ci] CI is green
 
