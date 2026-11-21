@@ -1,6 +1,6 @@
 # split-workpool: journal
 
-State: waiting on jobs 261121-130515-92a210
+State: ready for review (A5: CI on workpool:bdf8932 pending)
 Quest: .campaign/xapiand/quests/split-workpool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,7 @@ Nothing.
 | A2 | split_check from cpp-libraries-wt split-check-sources: 261121-130517-25263e at 22acbb0 passed, 0 errors, 0 warnings, 1 note (work_pool.hh 1,039 lines); a local run at 7d93de5 gave 0 errors, 0 warnings, 1 note (work_pool.hh 1,039 lines). The landed tool's `split` check (261121-130515-ab5a4c) reads docs/source-layout.md as source and fails on it, failed 4 errors, 17 warnings, all in the .md, as at d958170 (261121-130433-254720); the lead reruns A2 once split-check-sources lands |
 | A3 | `ctest -N`: before 261121-130449-723d31 at workpool:406d2f3 (main), after 261121-130520-f98c9e at 22acbb0, both passed; the `Test #` and `Total Tests` lines diff empty: 6 tests (thread_restart, work_pool, work_group, work_counts, work_scheduling, work_wait) |
 | A4 | docs/source-layout.md (workpool:22acbb0) |
-| A5 | CI run 44949736609 at 22acbb0 (queued) |
+| A5 | CI on workpool:bdf8932 (pushed, after merging main) |
 | A6 | selfcontained.sh over the three new headers: 261121-130523-77f795 at 22acbb0 passed, 3 ok, 0 failed; at d958170 (same headers) 261121-130440-45a7f8 passed, 3 ok |
 | A7 | the lead's read |
 
@@ -52,6 +52,8 @@ Layout note: workpool docs/source-layout.md, naming work_pool.hh kept whole at 1
 why. No include path, target or test changed.
 
 ## Rulings I made
+
+- Resumed: merged main (ci.yml only), updated AGENTS.md repo map and ARCHITECTURE.md intro to name the three pieces and point at docs/source-layout.md (workpool:bdf8932). A1/A2/A3/A6 jobs stand: the merge and the docs touch none of their code; the fixed-checker job 25263e was reused for HEAD.
 
 - Flat `work_pool_*.hh` names beside the umbrella, not a `work_pool/` directory: the repo is
   flat and every header sits at its root.
