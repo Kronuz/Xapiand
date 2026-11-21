@@ -65,6 +65,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+- C4 Linux suite (lead, 11-20): job 261120-152231-ab18c1 (ctest -E consensus_mutants in the VM at
+  consensus 8801b99) is cancelled; consensus CI ran the full suite at 8801b99 on Linux x86_64
+  (gcc, clang), arm64, macOS and FreeBSD, plus ASan+UBSan and TSan, all green: cite
+  `ci:linux-x86_64-gcc` at consensus 8801b99 for that row (D57). The timed mutants (5ce427) stay local.
 
 - consensus main's own pins (journal 4272229, completion 7731315) do not build with journal main (`IO::sync_data_files`); consensus rows use `--ref` pins of journal 4d364f1 and completion f4c19b1 (journal's pin), and a row at consensus's own pins runs beside them. Not changed in consensus (lead's/Detent's).
 - T8's CPU-hour: `journal_fuzz` takes both decoders through data[0]; five 1,500 s jobs (125 CPU-minutes) stand for the CPU-hour per decoder, stated as the binary's.
