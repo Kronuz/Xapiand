@@ -1,77 +1,58 @@
 # split-htm: journal
 
-State: waiting on jobs 261121-130530-a1b9d9 261121-130532-356ce9
+State: waiting on jobs 261121-131843-3e7231 261121-131843-0b551d 261121-131843-5adddc
 Quest: .campaign/xapiand/quests/split-htm.md (the lead's; never edit it)
 
 ## Doing
 
-Split done at htm:8e7cad4 (pushed); gate and evidence jobs queued.
+Lead's A7 ruling applied: split reverted (htm:a3dc52a, a `git revert` of htm:87bc3b8), layout note
+rewritten to name htm.cc as kept whole (htm:f20c061, pushed). A1/A3 rerun at htm:f20c061.
 
 ## Next
 
-1. When the jobs finish: paste `campaign brief`'s table below, set State "ready for review" (or
-   fix what failed).
+1. When the jobs finish: paste `campaign brief`'s table below, set State "ready for review".
 
 ## Blocked on
 
-The lead, outside this quest's file set (not blocking the split itself; docs go stale on landing):
+Nothing. The lead's ruling cleared both earlier blockers: AGENTS.md, ARCHITECTURE.md, README.md
+and test/gen_golden.cc stay accurate with htm.cc whole, and Xapiand needs no change. The lead
+runs the main merge (ci.yml) at landing.
 
-1. Docs naming `htm.cc` as the whole implementation: `AGENTS.md` (repo map line 12, lines 27, 127,
-   130), `ARCHITECTURE.md` ("Two headers and two compiled translation units", lines 15, 70), and
-   the build command in `test/gen_golden.cc` line 4 (needs `htm_descent.cc htm_set_ops.cc` added,
-   or it fails to link). Options: (a) widen the file set to `AGENTS.md`, `ARCHITECTURE.md`,
-   `README.md`, `test/gen_golden.cc` and I update them in this quest; (b) a follow-up quest.
-   Recommend (a): four small edits, and the split should not land with a broken regen command.
-2. Xapiand compiles htm sources by path (Xapiand `CMakeLists.txt` line 1214 lists
-   `${htm_SOURCE_DIR}/htm.cc`). When its htm pin moves past this split, that list must add
-   `htm_descent.cc` and `htm_set_ops.cc`, or Xapiand fails to link. Same pattern as split-url-parser.
-3. `campaign brief` says main changed `.github/workflows/ci.yml` since the branch: merge main
-   (`campaign land split-htm --merge-main`) is the lead's; I left it to avoid cancelling CI.
+## Messages
+
+- Lead's A7 ruling (keep htm.cc whole, revert, rewrite the note, rerun A1 and A3): done as asked;
+  revert htm:a3dc52a, note htm:f20c061, jobs 261121-131843-3e7231 (build-test, A1),
+  261121-131843-5adddc (ctest -N diff, A3), split gate 261121-131843-0b551d.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130530-a1b9d9 (pending) |
-| A2 | split 261121-130530-dc9d96 failed with the landed tool: 33 errors, all CMakeLists.txt and docs/source-layout.md lines (non-C/C++ files) plus the 3 htm.cc include lines; the split-check-sources tool (lead's rule 4) passes with 0 errors, 3 warnings, answered below. Lead reruns A2 when split-check-sources lands. |
-| A3 | 261121-130532-356ce9 (pending): configures head and base (htm:0c09a02), diffs `ctest -N` |
-| A4 | `docs/source-layout.md` at htm:8e7cad4 |
+| A1 | build-test 261121-131843-3e7231 at htm:f20c061 (pending) |
+| A2 | split gate 261121-131843-0b551d at htm:f20c061 (pending). The tree now differs from main only in `docs/source-layout.md`: no C/C++ line moved. Earlier 261121-130530-dc9d96 (at htm:8e7cad4, the split) failed with the landed tool on non-C/C++ files and include comments; superseded. |
+| A3 | 261121-131843-5adddc at htm:f20c061 (pending): configures head and base (htm:0c09a02), diffs `ctest -N` |
+| A4 | `docs/source-layout.md` at htm:f20c061: htm.cc named kept whole, with the reasons and the cut to make |
 | A5 | CI on the pushed branch (CI's) |
-| A6 | 261121-130535-f05536 passed: the quest creates no header, so no header to check |
-| A7 | lead's read |
+| A6 | 261121-130535-f05536 passed (at htm:8e7cad4); at htm:f20c061 the quest still creates no header |
+| A7 | Lead's read: keep htm.cc whole (message above) |
 
-split_check warnings (all three are htm.cc include lines whose trailing comments changed):
-
-1. `<algorithm> // for std::merge, std::back_inserter`: merge moved to htm_set_ops.cc (its own
-   `<algorithm>` line); htm.cc still uses `std::clamp`, comment now says so.
-2. `<cmath> // ... std::cos`: htm.cc keeps the include; comment drops `std::cos` (unused anywhere)
-   and the descent's `std::sqrt` moved with its own `<cmath>` line.
-3. `<iterator> // for std::make_move_iterator`: every use moved to htm_set_ops.cc, which includes
-   `<iterator>`; htm.cc no longer needs it.
+Superseded jobs: 261121-130530-a1b9d9 (build-test at htm:8e7cad4, cancelled),
+261121-130532-356ce9 (ctest -N at htm:8e7cad4, cancelled by its replacement).
 
 ## Result
 
-htm.cc (1,051 lines) split into three units, moves only (htm:87bc3b8), layout note (htm:8e7cad4):
-
-1. `htm_descent.cc` (317): `getId(Cartesian)`, the fusion-safe descent with its macros, MSVC
-   `fp_contract(off)` region, probes and form choice. Its floating-point rules apply only here.
-2. `htm_set_ops.cc` (452): trixel/range union, intersection, exclusive disjunction and their
-   static helpers, then simplifyTrixels/simplifyRanges (ARCHITECTURE.md groups them as set ops).
-3. `htm.cc` (340): geometry helpers, names, ids from names, ranges, getTrixels, getCorners.
-
-`CMakeLists.txt`: one `HTM_SOURCES` list feeds `htm`, `htm_fma` and `htm_rounded`.
-Docs: `docs/source-layout.md`. No file in the repo is over 1,000 lines now.
+htm.cc (1,051 lines) stays whole, by the lead's A7 ruling. `docs/source-layout.md` names each
+source and test file, lists htm.cc as kept whole with why (consumers compile it by path, so a
+split breaks every consumer's link until each repins; 5% over the mark with clear sections), and
+records the cut to make if the owner ever wants one: `htm_set_ops.cc` (old lines 34-382, 490-559),
+`htm.cc` (385-487, 851-1051), `htm_descent.cc` (562-848), plus the `HTM_SOURCES` list, the four
+docs, and the consumer pin-bump step. The tried split (htm:87bc3b8) is in the branch history,
+reverted. Net change against main: `docs/source-layout.md` only.
 
 ## Rulings I made
 
-1. Split rather than keep whole: the descent is a self-contained unit with its own floating-point
-   rules (and an MSVC pragma that applies to everything between its on/off lines); the set ops are
-   a separate algorithm family; neither calls the other. Each piece is over 300 lines.
-2. Simplify goes with the set ops as a second slice (old lines 490-559) rather than staying with
-   the geometry, matching ARCHITECTURE.md's "Set operations" section.
-3. No open branch edits htm.cc: explore/htm-edge-nearest, pins-wave and
+1. (Superseded by the lead's A7 ruling.) I first split htm.cc into three files at the cut above.
+2. No open branch edits htm.cc: explore/htm-edge-nearest, pins-wave and
    origin/quest/xapiand/htm-edge-points are all merged into main.
-4. Each piece's first line is a comment saying what it holds, above the license (datetime split
-   precedent); htm.cc gets one too.
-5. `HTM_SOURCES` variable instead of three copies of the source list (CMake is in the file set).
-6. A3 is one job that configures both commits and diffs (`--ref BASE=`), rather than two jobs.
+3. The revert's message was amended before the push to say why (local, never pushed before).
+4. A3 is one job that configures both commits and diffs (`--ref BASE=`), rather than two jobs.
