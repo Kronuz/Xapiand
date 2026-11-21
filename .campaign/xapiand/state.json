@@ -21710,8 +21710,27 @@
       "repo": "../strata",
       "risk": "high",
       "status": "active",
+      "tasks": {
+        "root": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/placement--root",
+          "files": [
+            "include/strata/placement/root*",
+            "include/strata/placement/records*",
+            "include/strata/placement/placement*",
+            "src/placement/root*",
+            "src/placement/records*",
+            "src/placement/placement*",
+            "test/placement/root*",
+            "bench/placement/**",
+            "docs/mechanisms/placement-root.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/placement--root",
+          "worktree": "../strata-wt/xapiand/placement--root"
+        }
+      },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T17:42:41",
+      "updated": "2026-11-20T17:43:14",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
