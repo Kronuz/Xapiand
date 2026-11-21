@@ -277,6 +277,16 @@ void test_numeric_range_query() {
 	CHECK(what.find("integer") != std::string::npos);
 }
 
+// A NaN bound selects no well-defined range: a query error, on every numeric and date field type.
+void test_nan_bound_is_refused() {
+	const MsgPack nan(std::nan("")), pos(9);
+	for (auto type : { FieldType::integer, FieldType::positive, FieldType::floating, FieldType::date, FieldType::datetime }) {
+		const auto field = spc(3, type);
+		CHECK_THROW(MultipleValueRange::getQuery(field, range_of(&nan, &pos)), QueryParserError);
+		CHECK_THROW(MultipleValueRange::getQuery(field, range_of(&pos, &nan)), QueryParserError);
+	}
+}
+
 // Strings: the source over the bounds serialized as the field's type; without a slot there is no source.
 void test_string_range_query() {
 	const MsgPack a("apple"), z("zebra"), yes(true), no(false);
@@ -448,6 +458,7 @@ TEST_MAIN(
 	test_le_source_accepts_a_value_at_or_below,
 	test_sources_round_trip,
 	test_numeric_range_query,
+	test_nan_bound_is_refused,
 	test_string_range_query,
 	test_date_range_query,
 	test_time_range_query,

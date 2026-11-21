@@ -1339,6 +1339,25 @@ static void test_range_aggregation_open_bounds() {
 
 
 // An engine error that escapes a test is a failure with its text, not an abort.
+// A NaN bound selects no well-defined range: a 400 naming the bound, on every numeric field type.
+static void test_range_aggregation_nan_bound() {
+	const double nan = std::nan("");
+	for (const char* field : { "i", "p", "f", "d" }) {
+		for (const char* name : { "_from", "_to" }) {
+			MsgPack range = MsgPack::MAP();
+			range[name] = MsgPack(nan);
+			const auto config = MsgPack({ { "_aggs", { { "r", { { "_range", { { "_field", field }, { "_ranges", MsgPack({ range }) } } } } } } } });
+			std::string what;
+			try {
+				AggregationMatchSpy spy(config, range_schema());
+			} catch (const AggregationError& exc) {
+				what = exc.what();
+			}
+			CHECK(what.find(name) != std::string::npos);
+		}
+	}
+}
+
 #define GUARDED(fn) \
 	static void fn##_guarded() { \
 		try { \
@@ -1371,5 +1390,6 @@ GUARDED(test_corrupt_stored_value)
 GUARDED(test_dsl_not_is_none_of)
 GUARDED(test_dsl_one_character_keyword_is_a_term)
 GUARDED(test_range_aggregation_open_bounds)
+GUARDED(test_range_aggregation_nan_bound)
 
-TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialize_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_dsl_one_character_keyword_is_a_term_guarded, test_range_aggregation_open_bounds_guarded)
+TEST_MAIN(test_leaves_and_ops_guarded, test_emptiness_guarded, test_registered_sources_guarded, test_unserialize_garbage_guarded, test_expansions_guarded, test_expansion_limits_guarded, test_append_guarded, test_text_guarded, test_posting_source_guarded, test_key_maker_guarded, test_match_spy_guarded, test_source_ownership_guarded, test_wildcard_patterns_guarded, test_fuzzy_limit_guarded, test_binary_equals_list_guarded, test_append_chain_guarded, test_depth_cap_guarded, test_chain_cap_guarded, test_corrupt_stored_value_guarded, test_dsl_not_is_none_of_guarded, test_dsl_one_character_keyword_is_a_term_guarded, test_range_aggregation_open_bounds_guarded, test_range_aggregation_nan_bound_guarded)
