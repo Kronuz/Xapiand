@@ -8663,6 +8663,8 @@
     "empty-aggregation": {
       "accepted": {},
       "after": [],
+      "base": "8a1bd39433efe0f8fb45f507b3a7a86638cd3621",
+      "branch": "quest/xapiand/empty-aggregation",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -8681,11 +8683,13 @@
       "milestone": "M2",
       "needs": [],
       "provides": [],
+      "reason": "started by force: xapiand-final-release lands on the xapiand release branch, not master",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "An aggregation with no type, two types or an unknown key is a 400",
-      "updated": "2026-11-21T09:07:29"
+      "updated": "2026-11-21T09:08:51",
+      "worktree": "../Xapiand-wt/xapiand/empty-aggregation"
     },
     "endpoint-uuid": {
       "accepted": {
