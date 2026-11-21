@@ -25308,6 +25308,52 @@
       "title": "logger's large files split under 1,000 lines",
       "updated": "2026-11-21T11:47:17"
     },
+    "split-task": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "task.hh",
+        "task_*",
+        "task/**",
+        "test/asio_test.cc",
+        "test/asio_test_*",
+        "test/asio_test/**",
+        "test/sync_test.cc",
+        "test/sync_test_*",
+        "test/sync_test/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../task",
+      "risk": "low",
+      "status": "planned",
+      "title": "task's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:18"
+    },
     "split-xapiand-core": {
       "accepted": {},
       "after": [
