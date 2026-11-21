@@ -1,6 +1,6 @@
 # split-traceback: journal
 
-State: waiting on jobs 261121-130417-01d2eb 261121-130417-7d9331 261121-130428-319638 261121-130431-d0c0e2
+State: waiting on jobs 261121-130417-01d2eb 261121-130845-a8f326 261121-130848-594a3e
 Quest: .campaign/xapiand/quests/split-traceback.md (the lead's; never edit it)
 
 ## Doing
@@ -23,11 +23,11 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | pending build-test 261121-130417-01d2eb |
-| A2 | pending split 261121-130417-7d9331 (no moved lines: the diff only adds the note) |
-| A3 | pending 261121-130428-319638 (ctest -N at base 066853d and head, diffed) |
+| A2 | pending 261121-130848-594a3e: split_check.py from the split-check-sources worktree (ignores non-C/C++ files). The landed tool's split check 261121-130417-7d9331 failed only on docs/source-layout.md's prose lines (26 errors, 0 warnings): the pre-split-check-sources tool checks every file; the lead reruns A2 once that tool lands |
+| A3 | pending 261121-130845-a8f326 (ctest -N `Test #`/`Total Tests` lines at base 066853d and head, diffed). Failed 261121-130428-319638: the diff compared unbuilt-executable warnings that name the build dirs ctn-base vs ctn-head, not tests |
 | A4 | [artifact] `docs/source-layout.md` at traceback:29f0dd1 |
 | A5 | CI on the pushed branch |
-| A6 | pending 261121-130431-d0c0e2 (no new headers: the job lists headers added since 066853d and runs selfcontained.sh on them if any) |
+| A6 | 261121-130431-d0c0e2 done, exit 0: "headers new since 066853d: none" (selfcontained.sh runs only when a header was added) |
 | A7 | the lead's read |
 
 ## Result
