@@ -1,36 +1,31 @@
 # nan-range-bound: A NaN range bound is one behavior on every field type
 
-Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status nan-range-bound`.
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine
+state is in `state.json`: `campaign status nan-range-bound`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A NaN range bound is a 400 on integer and positive fields but matches nothing on float and date
+fields (query-dsl-fixes review F5, `reviews/query-dsl-fixes-correctness.md`). After this quest a
+NaN bound gets one answer on every numeric and date field, in queries and in range aggregations:
+a 400 naming the field and the bound, which is what integer fields already do. That narrows what
+float and date fields accept, so the contributor confirms first that no documented example or
+test relies on NaN matching nothing; if one does, it stops and reports it (the owner decides
+narrowing user-visible behavior).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test per field type (integer, positive, float, date) and per form (query `_range`, range
+  aggregation): a NaN bound answers 400 with the field named; it fails without the fix
+  (`--fails-without` at main)
+- A2 The suite passes at the landed code: the `suite` check
+- A3 [artifact] The query DSL reference says a NaN bound is refused
+- A4 [ci] CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.

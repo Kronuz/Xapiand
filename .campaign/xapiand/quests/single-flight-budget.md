@@ -1,36 +1,30 @@
 # single-flight-budget: A request joining a schema load leaves when its client does
 
-Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status single-flight-budget`.
+Risk: normal. The lead writes this quest; contributors read it and never edit it. Its machine
+state is in `state.json`: `campaign status single-flight-budget`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A request that joins another request's in-flight schema load in `SingleFlight`
+(src/single_flight.h) waits without its own budget token, so its client leaving does not end its
+wait (hunt row, from x7-cancel-rows; docs/dev/cancellation.md Limits). After this quest a joiner
+waits under its own token: when its client disconnects or its deadline passes, the joiner stops
+waiting and answers its own cancellation, while the load and the other waiters continue. If
+current main already does this, the result is that finding, with the job that shows it.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A test where request B joins request A's slow load and B's token fires first: B returns
+  cancelled within a bound while A completes with the schema; it fails without the fix
+  (`--fails-without` at main)
+- A2 The suite passes at the landed code: the `suite` check
+- A3 [artifact] docs/dev/cancellation.md's Limits no longer lists the joiner, or says why it stays
+- A4 [ci] CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
