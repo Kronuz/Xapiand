@@ -1,26 +1,54 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-172038-99d4ac (diagnosis, light) 261120-172057-f95412 (selftest)
+State: waiting on jobs 261120-174938-19c0ac (3 nodes) 261120-174941-0e6ee9 (5 nodes) 261120-174928-5e07e0 (calibrate), all exclusive at consensus:e12ee46
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
 
-Takeover (fresh contributor, 2026-11-20). The exclusive rows at consensus:2dd22b3
-(261120-144148-bb326b, 261120-144150-16ef0b) measured every shape and died in table() on the
-loss row's `{'error': 'no answer'}`. consensus:a447b7d: table() writes error cells; the A1 round
-trip expects set + unshaped + 2 timer wakes measured by an hrtimer sleep at that delay (the 1 us
-hold never arms a real timer); roles reset per shape (the isolated leader's "term 11/8" was
-earlier shapes' clusters: from the cut on, the cut leader only stepped down at 2,006 ms in term 1
-(CheckQuorum) and followed term 2 after heal; consensus has pre-vote). Diagnosis job: calibrate
-curve, then loss1%/reorder5% at 3 nodes with --diag (applied index + leader ss -tin each 0.5 s),
-load wait 90 s, rpc_timeout 500 vs 5000. Hypothesis: core.h resets a flight after rpc_timeout
-(500 ms) and resends the whole 2 MiB batch; at 1% loss a 2 MiB append takes longer than that.
+Exclusive rows and the calibration are queued at consensus:e12ee46 (a447b7d plus the doc's method
+section). Diagnosis 261120-172038-99d4ac and selftest 261120-172057-f95412 (green) are read.
+
+Calibration (in 261120-172038-99d4ac, light, on a busy host): ping's excess over the set round trip
+against 2 x the median sleep lateness at the same delay:
+| hold ms | 0.001 | 0.1 | 0.5 | 1 | 2 | 5 | 20 | 80 |
+| excess ms | 0.29 | 2.94 | 2.14 | 1.19 | 2.02 | 3.00 | 7.35 | 3.00 |
+| 2 x late p50 | 0.30 | 2.97 | 2.17 | 1.16 | 2.24 | 3.00 | 5.63 | 2.45 |
+It agrees within 0.25 ms from 1 us to 5 ms. At 20 and 80 ms the wakes' spread is wide on a loaded
+host (late p90 8.4 and 5.1 ms), which the check's spread term absorbs. The exclusive calibration
+gives the table for the doc.
+
+## Finding for Detent: 64 KiB entries at 32 in flight stall under 1% loss and 5% reorder
+
+Measured in 261120-172038-99d4ac (3 nodes, 20 ms one way, light): `--diag` sampled every node's
+applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised to 92 s.
+- It is not the bench's client timeout. With loss 1%, once the 32 x 64 KiB load starts, every
+  node's applied index stays at 3,689 (rto 500) and 3,648 (rto 5000) from 4 s to 90 s. The load
+  commits at most about 3 entries and never answers in 92 s.
+- It is not the rpc_timeout resend alone. With `Timing::rpc_timeout` 5000 ms instead of 500
+  (core.h:1121 resets a timed-out flight), loss still stalls, and reorder 5% stalls as well. At
+  500 ms reorder finished slowly: 65 commits, p50 1,919 ms, 1.04 MB/s.
+- TCP delivers what it is given: bytes_acked tracks bytes_sent on both follower sockets. At
+  rto 500 the leader sends about 8.5 MB per follower in the first 16 s (roughly 4 copies of the
+  2 MiB batch), then the sockets go idle: Send-Q 0, about 1.2 KB/s, heartbeats only, to 90 s.
+  At rto 5000 it sends about 2.1 MB per follower (one batch) and is idle from 8 s.
+- So the leader holds uncommitted entries and stops replicating them, while heartbeats flow and
+  no election happens. One in flight (64 KiB) commits under the same loss: 7.7/s, p50 128 ms.
+  32 x 65,536 B is exactly `Limits::rpc_bytes` (2 MiB, types.h:61): one full batch per flight.
+  Candidate sites: the follower's capacity rejections (core.h:938-952 answer failure without a
+  hint) with `retry_after = deadline(rpc_timeout)` (core.h:1021), and the batch bound at
+  core.h:1183-1187. Not pinned down; it needs a consensus-side trace of the stuck flight's
+  responses.
+- Next bench-side experiment (not run): the same shape with 31 in flight, so a batch stays below
+  rpc_bytes. If that does not stall, the bound is the trigger.
 
 ## Next
 
-1. Read the diagnosis: calibration (does excess = 2 x late?), loss rows at 500 vs 5000.
-2. Set the jitter term from the calibration data; rerun the exclusive rows at the fixed head.
-3. Write docs/perf/netlab-consensus.md (A3), push.
+1. When the rows finish: `python3 bench/netlab/bench.py table <result-3> <result-5> --job 3=<id>
+   --job 5=<id>`. The loss row's large_throughput is expected to read "error: no answer in 32 s"
+   (the finding above).
+2. Write docs/perf/netlab-consensus.md (A3): where it ran, the calibration table, the results
+   table, the findings (stall, the timer floor, term-11 was a bench bug, rejoin 218 to 1,334 ms is
+   TCP retransmission backoff on the cut link (hypothesis, unmeasured)). Commit and push.
 
 ## Blocked on
 
@@ -30,8 +58,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-172057-f95412 pending; rows pending a rerun at the fixed head (2dd22b3 rows failed in table()) |
-| A2 | the same rows' partition-1ms history check, pending |
+| A1 | selftest 261120-172057-f95412 (green, a447b7d); rows 261120-174938-19c0ac (3), 261120-174941-0e6ee9 (5) pending |
+| A2 | rows 261120-174938-19c0ac, 261120-174941-0e6ee9 partition-1ms history check, pending |
 | A3 | `docs/perf/netlab-consensus.md` pending |
 
 ## Result
