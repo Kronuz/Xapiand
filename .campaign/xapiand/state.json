@@ -25250,18 +25250,47 @@
         "tools/test_split_check.py",
         "tools/README.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-check",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T12:29:17",
+          "commit": "920d1b27e9a75816a6528082b8c6e6377aa34967",
+          "criteria": {
+            "A1": "261121-121041-cfdb7d (the test check), 261121-121041-cfdb7d (passed at dc0ecfe9ad8d; only 1 merge from main since, none touching its files)",
+            "A2": "261121-121044-64007d (passed at dc0ecfe9ad8d; only 1 merge from main since, none touching its files)",
+            "A3": "[artifact] cpp-libraries tools/README.md: names split_check.py and `split_check.py [--base REF] [--max-lines N] PATH...`",
+            "A4": "CI green at 920d1b27e9a7"
+          },
+          "evidence": [
+            {
+              "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+              "commit": "dc0ecfe9ad8d087901c113fbd45f506be4da503f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121041-cfdb7d",
+              "level": "light",
+              "seconds": 24.5,
+              "state": "done",
+              "what": "/usr/local/bin/python3 tools/test_split_check.py at dc0ecfe9ad8d"
+            }
+          ],
+          "final": true,
+          "from": "7cab8ec5bd1861885ea58212d8afc2451193723e",
+          "reason": "",
+          "tested": "920d1b27e9a75816a6528082b8c6e6377aa34967"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check.py proves a file split moved code and changed none",
-      "updated": "2026-11-21T11:40:02",
-      "worktree": "../cpp-libraries-wt/xapiand/split-check"
+      "updated": "2026-11-21T12:29:17",
+      "worktree": ""
     },
     "split-completion": {
       "accepted": {},
