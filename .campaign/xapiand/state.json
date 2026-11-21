@@ -17531,6 +17531,36 @@
       "updated": "2026-11-13T11:06:58",
       "worktree": "../Xapiand-wt/xapiand/one-id"
     },
+    "open-files-floor": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/main.cc",
+        "tests/test_coverage_main.cc",
+        "harness/coverage_e2e_main.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "failed-restore-exit"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
+      "updated": "2026-11-21T10:26:50"
+    },
     "open-mix": {
       "accepted": {},
       "after": [],
