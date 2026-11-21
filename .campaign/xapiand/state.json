@@ -1710,6 +1710,18 @@
       "closed": "B1: CMakeLists.txt is in cluster's file set; B2: node-admission quest (in review); B3: owner decided D149-D151",
       "id": "msg-174",
       "text": "cluster blocked on three calls (journal Blocked on B1-B3). B1: CMakeLists.txt outside the file set; Xapiand pins no consensus (needs journal 5bbeedc->9e11713 and task 18eb516->95798a0 bumps); rpc builds standalone from tests/cluster/CMakeLists.txt meanwhile. B2: consensus HostTransport/Links/NodePins fix every node's address and pin at construction, so --join and multicast seeds cannot add a node; recommend a consensus quest node-admission (admit/forget a node at runtime, dial a seed by address). B3 (owner): joiner pin model; recommend (b) cluster CA as trust anchor, pin recorded at first join."
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T18:32:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T18:32:31",
+      "by": "consensus-full-window-stall",
+      "closed": "netlab narrowing cancelled: Detent's Core repro shows 2 MiB appends hold the Control connection ~4 s, heartbeats queue, CheckQuorum steps down (31 in flight stalls too); fix is per-peer append pacing in consensus-full-window-stall, which reruns our bench",
+      "id": "msg-185",
+      "text": "consensus-full-window-stall finding for netlab-consensus: the large_throughput stall is election churn, not a 32-vs-31 edge. Mechanism (Core-level repro, test/full_window_stall_test.cc on quest/detent/consensus-full-window-stall): a Driver group's Core uses Flow{} so one append carries up to rpc_bytes (2 MiB); at ~0.5 MB/s (cubic under 1% loss/5% reorder, 40 ms RTT) it holds the Control connection ~4 s, heartbeats/votes queue behind it, followers pre-vote past election_min, the leader's CheckQuorum steps down; each rpc_timeout resends the whole batch. 31 in flight (1.94 MiB) stalls the same way in the model. Two bench-side notes: (1) --diag records the leader only at load start (begin_sampling), so elections are invisible there; log role events during the load to confirm. (2) proposers awaiting committed() on placements a new leader truncated wait until some term commits at those indexes, so the closed loop stops proposing and the cluster goes idle on heartbeats (the 'idle sockets' symptom). Fix in progress: per-peer append pacing in core.h; A3 will rerun your bench at consensus:e12ee46 against it."
     }
   ],
   "quests": {
