@@ -44,6 +44,10 @@ changes a durability mechanism: "Direct path first"), `no-wal` and CI (`asan`, `
 - A6 [decision] Read-your-writes default (Q-F27) and the default `ack` (Q1 and Q6): lead defaults
   `quorum` and Q6 as written, pending the owner; `docs/design/cluster-release.md`
 - A7 [artifact] `docs/mechanisms/journal-durability.md`
+- A8 Nothing in Xapiand uses the scheduler library once the fsyncher is gone (Detent's lead,
+  2026-11-21, so stash and scheduler can be archived): CMakeLists.txt has no `FetchContent_Declare(scheduler`
+  block, `src/manager.h` no `debouncer.h` include, `src/xapiand_scheduler_trace.h` is deleted and
+  `src/logger_fwd.h` keeps no scheduler or stash stubs; the suite check at that code builds without them
 
 ## Tasks
 
