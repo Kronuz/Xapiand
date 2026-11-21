@@ -24966,32 +24966,7 @@
       "worktree": ""
     },
     "task-fire-pending-guard": {
-      "accepted": {
-        "correctness": {
-          "at": "2026-11-19T15:09:35",
-          "base": "0316befffa225849f04a8064ea6c46a334e52b94",
-          "blobs": {
-            "docs/API.md": "100644:32741c47ff48f57fe0991238d8dec0315ca53ecf",
-            "docs/mechanisms/lifecycle.md": "100644:c73af5dc80ba18f46d61110bb094c6b5f1eeee67",
-            "task_timers.hh": "100644:8a148fce42afe7aa1c9729fd8b70607bcc0873e4",
-            "test/timers_test.cc": "100644:15a46836728a6960f9bc949a9a69a98a722f8dea"
-          },
-          "by": "review",
-          "commit": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
-          "criteria": "a377025b6ec8bfbc",
-          "diffs": {
-            "docs/API.md": "baae7e58b162129e",
-            "docs/mechanisms/lifecycle.md": "d550f577ad1e3475",
-            "task_timers.hh": "8fe8be4e43803b7a",
-            "test/timers_test.cc": "747459e8562fa764"
-          },
-          "findings": {},
-          "note": "",
-          "review": "9cb691cd4ee1c03a733a98dacd9e3ec405b05cfb",
-          "reviewed": "f937bc2f513ff83e1cd810d528c79f0b55434c04",
-          "verdict": "APPROVE"
-        }
-      },
+      "accepted": {},
       "after": [],
       "base": "0316befffa225849f04a8064ea6c46a334e52b94",
       "branch": "quest/xapiand/task-fire-pending-guard",
@@ -25001,13 +24976,6 @@
           "level": "light",
           "minutes": 30,
           "name": "suite"
-        },
-        {
-          "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
-          "later": true,
-          "level": "light",
-          "minutes": 40,
-          "name": "tsan"
         }
       ],
       "consumes": [],
@@ -25016,6 +24984,43 @@
         "test/timers_test.cc",
         "docs/mechanisms/lifecycle.md",
         "docs/API.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-20T18:29:20",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+                "later": true,
+                "level": "light",
+                "minutes": 40,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "CI runs ASan/UBSan and TSan on every push (cpp-libraries cmake.yml, Xapiand ci.yml); local macOS sanitizer runs duplicated it (D57)",
+          "voided": [
+            "correctness"
+          ],
+          "weakened": [
+            "deferred check tsan removed"
+          ]
+        }
       ],
       "journal": "",
       "landed": [
@@ -25060,7 +25065,7 @@
       "risk": "normal",
       "status": "landed",
       "title": "debounce: fire_pending() from inside a fire is caught, not a hang",
-      "updated": "2026-11-19T15:33:56",
+      "updated": "2026-11-20T18:29:20",
       "worktree": ""
     },
     "task-inbox-first": {
