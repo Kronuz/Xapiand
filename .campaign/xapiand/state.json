@@ -25217,8 +25217,8 @@
       "repo": "../completion",
       "risk": "low",
       "status": "planned",
-      "title": "completion's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:34"
+      "title": "completion's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:20"
     },
     "split-constexpr-phf": {
       "accepted": {},
