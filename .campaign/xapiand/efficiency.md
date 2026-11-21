@@ -644,3 +644,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Started: failed-restore-exit (from its explorer; forced past cluster's handler.* glob, which has no handler.cc change), turn-log-parity task ryw (Opus); checkpoint-window and placement repair merged into their quests. Seven quests merged main and pushed (bulk-load-rerun's docs and harness).
 - Agents finished: node-admission 100k, group-heal install 93k (Opus, fresh), open-files-floor 115k, strata-pin-catalog 81k.
 - Quota 67% weekly, 0.51%/h, reset in 36 h. Load 27-71 (Detent's reader-s6 TSan until-fail x20 at ~11 cores). Disk 296 GiB free.
+
+## 2026-11-21 10h
+- Owner asked why Detent does better and why we sit idle. Landings since 11-14: xapiand 95, detent 85; today 9 and 6. Shape differs: xapiand 30 in flight (15 active, 4 review, 11 blocked), 5 planned, 0 launchable, 11 waiting on the lead; detent 14 in flight, 34 planned, 2 waiting on its lead. 23 of our 30 in-flight quests are in other repositories; 21 wait on Detent quests (reader-s6 9, driver-install 8, dense-distribution 4). Idle cause: no exploration batch since 05h while launchable was 0, and every subagent had finished.
+- Launched: 6 explorers (agg-shard-tests, endpoint-uuid, datetime-range, keymaker-serialize, nested-agg-type, cpp-libraries nightly-retry; Sonnet). Started empty-aggregation (D167), ninja-only and ninja-only-strata (D168, Sonnet maintenance, 102k).
+- Ninja: 224 check commands and 38 scripts/docs configured without -G (CMake's default is Unix Makefiles); slots held 1,534 Makefiles trees. agent-campaign:4c40575 adds `campaign config env=`; the switch-over script installs it on green CI, sets CMAKE_GENERATOR=Ninja, restarts the worker and sweeps the trees under slot locks. Detent agreed and is sweeping its 128.
+- Mistake: a refused `campaign start` left an empty worktree path; `git -C ""` merged the explorer branch into master and pushed. Reverted forward (Xapiand:8a1bd3943).
+- Agents finished: ryw 182k (Opus; strata already met A1, test added, 4 jobs queued), ninja sweep 102k.
+- Quota 67%+ weekly, reset in ~36 h. Light slots 78% used last hour; 32 jobs queued.
