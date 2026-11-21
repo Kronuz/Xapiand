@@ -4,16 +4,20 @@ name: Bottles
 # the tap so `brew install Kronuz/tap/xapiand` serves a pre-built binary.
 #
 # Structure:
-#   - `bottle`       builds the arm64 cells (sonoma, sequoia). These are required
+#   - `bottle`       builds the arm64 cells (sequoia, tahoe). These are required
 #                    and gate the tap merge.
-#   - `bottle-intel` builds the x86_64 (Intel) cell on GitHub's deprecated,
-#                    heavily-oversubscribed macos-13 runners. It is best-effort:
-#                    it attaches its bottle to the release and uploads its JSON,
-#                    but it never gates the arm64 bottles or the tap merge.
+#   - `bottle-intel` builds the x86_64 (Intel) cell under Rosetta 2 on an arm64
+#                    macos-15 runner. It is best-effort: it attaches its bottle to
+#                    the release and uploads its JSON, but a failure never blocks
+#                    the arm64 bottles or the tap merge.
 #   - `publish`      merges every bottle JSON that is available into the formula's
 #                    `bottle do` block and pushes it to Kronuz/homebrew-tap. It
 #                    depends only on `bottle`, so the tap updates in ~minutes; a
 #                    slow Intel bottle is folded in whenever it happens to be ready.
+#
+# A dispatch with publish=false (and ref=<commit or branch>) builds every bottle from
+# the source at ref and merges them into a local clone of the tap, but attaches
+# nothing to any release and pushes nothing to the tap.
 
 on:
   workflow_dispatch:
@@ -22,6 +26,14 @@ on:
         description: "Release tag to bottle (e.g. v1.0.0-alpha.1)"
         required: true
         default: v1.0.0-alpha.1
+      publish:
+        description: "Publish the bottles and the tap (false builds and merges locally only)"
+        type: boolean
+        default: true
+      ref:
+        description: "Commit or branch to build when publish is false (default: the tag)"
+        required: false
+        default: ""
   push:
     tags:
       - 'v[0-9]+.*'
@@ -31,6 +43,11 @@ permissions:
 
 env:
   TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  # Tag pushes publish; a dispatch publishes unless publish is false.
+  PUBLISH: ${{ github.event.inputs.publish != 'false' }}
+  # What to build: the tag, or `ref` when not publishing (a release is always
+  # built from its tag).
+  REF: ${{ (github.event.inputs.publish == 'false' && github.event.inputs.ref) || github.event.inputs.tag || github.ref_name }}
 
 jobs:
   bottle:
@@ -40,26 +57,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # arm64 (Apple Silicon): macos-14 = Sonoma, macos-15 = Sequoia. These are
-        # required and gate the tap merge below.
-        os: [macos-14, macos-15]
+        # arm64 (Apple Silicon): macos-15 = Sequoia, macos-26 = Tahoe (GitHub retired
+        # macos-14). These are required and gate the tap merge below.
+        os: [macos-15, macos-26]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - uses: ./.github/actions/build-bottle
         with:
+          publish: ${{ env.PUBLISH }}
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
           os: ${{ matrix.os }}
 
   bottle-intel:
-    name: Bottle (x86_64 via Rosetta on macos-14)
-    runs-on: macos-14
+    name: Bottle (x86_64 via Rosetta on macos-15)
+    runs-on: macos-15
     # GitHub's real x86_64 runners (macos-13) are deprecated and can queue for many
     # hours, so build the x86_64 bottle on an arm64 runner under Rosetta 2 instead: a
     # second, x86_64 Homebrew at /usr/local pulls x86_64 dependency bottles and builds
-    # xapiand emulated (~30 min). The bottle targets Sonoma (macOS 14, the oldest arm64
-    # runner GitHub offers), not Ventura -- x86_64 users on macOS 14+ get it, older
-    # ones build from source. publish WAITS for this cell so the tap carries the x86_64
+    # xapiand emulated (~30 min). The bottle targets Sequoia (macOS 15, the oldest arm64
+    # runner GitHub offers) -- x86_64 users on macOS 15+ get it, older ones build
+    # from source. publish WAITS for this cell so the tap carries the x86_64
     # bottle; it stays continue-on-error so a Rosetta/emulation hiccup degrades the
     # release to arm64-only bottles (the cell shows as failed but the run stays green)
     # instead of blocking it, and timeout-minutes bounds how long publish can wait on a
@@ -68,6 +88,8 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - name: Set up Rosetta 2 and an x86_64 Homebrew
         shell: bash
         run: |
@@ -80,9 +102,10 @@ jobs:
           arch -x86_64 /usr/local/bin/brew --version
       - uses: ./.github/actions/build-bottle
         with:
+          publish: ${{ env.PUBLISH }}
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
-          os: macos-14-x86_64
+          os: macos-15-x86_64
           brew: arch -x86_64 /usr/local/bin/brew
 
   publish:
@@ -100,6 +123,8 @@ jobs:
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
       - name: Collect the per-cell bottle JSONs
         uses: actions/download-artifact@v4
         with:
@@ -107,9 +132,8 @@ jobs:
           merge-multiple: true
           path: json
 
-      - name: Merge the bottle DSL into the tap formula and push
+      - name: Merge the bottle DSL into the tap formula
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           # brew bottle refuses to load a formula from a non-official ("untrusted")
           # tap. We own kronuz/tap, so opt out of the trust requirement for this step.
           HOMEBREW_NO_REQUIRE_TAP_TRUST: "1"
@@ -128,11 +152,23 @@ jobs:
           # head-only, so this injects rather than rewrites; awk is idempotent and
           # never touches labeled bottle-block sha256 lines.
           cp contrib/homebrew/xapiand.rb "$FORMULA"
-          SRC_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          # A no-publish run has no tag: build from the checked-out commit's archive,
+          # with the version stated since a sha-named tarball carries none.
+          SRC_REF="refs/tags/${TAG}"; VER=""
+          if [ "$PUBLISH" != true ]; then SRC_REF="$(git rev-parse HEAD)"; VER="${TAG#v}"; fi
+          SRC_URL="https://github.com/${{ github.repository }}/archive/${SRC_REF}.tar.gz"
           SRC_SHA="$(curl -fsSL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)"
-          awk -v u="$SRC_URL" -v s="$SRC_SHA" '/^  url /{next} /^  sha256 "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
+          awk -v u="$SRC_URL" -v s="$SRC_SHA" -v v="$VER" '/^  url /{next} /^  sha256 "/{next} /^  version "/{next} {print} /^  homepage /{print "  url \"" u "\""; print "  sha256 \"" s "\""; if (v != "") print "  version \"" v "\""}' "$FORMULA" > "$FORMULA.tmp" && mv "$FORMULA.tmp" "$FORMULA"
           # Merge the per-cell bottle DSL into that formula.
           brew bottle --merge --write --no-commit json/*.bottle.json
+          git -C "$(brew --repository kronuz/tap)" diff
+
+      - name: Commit and push the tap
+        if: env.PUBLISH == 'true'
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -eux
           # Commit + push from the tapped clone, authenticating with the PAT.
           TAP_DIR="$(brew --repository kronuz/tap)"
           cd "$TAP_DIR"

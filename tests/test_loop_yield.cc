@@ -26,6 +26,7 @@
 // of heavy turns (docs/design/loop-scheduling.md). The node runs in this process with one HTTP loop.
 
 #include "test_harness.h"
+#include "utils_node.h"
 
 #include <atomic>
 #include <cctype>
@@ -42,8 +43,6 @@
 #include <time.h>
 #include <vector>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/resource.h>
@@ -135,21 +134,7 @@ bool eventually(F&& done, std::chrono::milliseconds limit) {
 	return done();
 }
 
-int free_port() {
-	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	socklen_t len = sizeof(addr);
-	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-		std::fprintf(stderr, "FAIL: no free port\n");
-		std::exit(1);
-	}
-	::close(fd);
-	return ntohs(addr.sin_port);
-}
-
-const int node_port = free_port();
+const test_utils::ReservedPort node_port;
 
 // A node in this process with one HTTP loop, in a data directory of its own.
 class RunningNode {
@@ -166,7 +151,7 @@ public:
 		std::filesystem::create_directories(root / ".xapiand");
 		std::filesystem::current_path(root);
 		Endpoint::cwd = root.string() + "/";
-		std::vector<std::string> args = {"xapiand", "--port", std::to_string(node_port), "--name", "loopyield", "-D", root.string(), "--shards", "1", "--processors", "1"};
+		std::vector<std::string> args = {"xapiand", "--port", std::to_string(node_port.port()), "--name", "loopyield", "-D", root.string(), "--shards", "1", "--processors", "1"};
 		std::vector<char*> argv;
 		for (auto& arg : args) {
 			argv.push_back(arg.data());
@@ -204,19 +189,7 @@ private:
 // One request on a connection of its own, its body sent in `pieces` with `pause` between them; the response's status
 // (0 when there is none), its body into `reply`.
 int http_call_pieces(const std::string& method, const std::string& path, const std::vector<std::string>& pieces, const std::string& content_type, std::chrono::milliseconds pause, std::string* reply = nullptr) {
-	int fd = -1;
-	for (int attempt = 0; attempt < 100 && fd < 0; ++attempt) {
-		fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(node_port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-			::close(fd);
-			fd = -1;
-			std::this_thread::sleep_for(50ms);
-		}
-	}
+	const int fd = test_utils::connect_to(node_port.port());
 	if (fd < 0) {
 		return 0;
 	}
@@ -544,15 +517,7 @@ public:
 // Requests on one keep-alive connection, each response read to its Content-Length.
 class KeepAlive {
 public:
-	KeepAlive() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(node_port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (fd_ >= 0 && ::connect(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-			::close(fd_);
-			fd_ = -1;
-		}
+	KeepAlive() : fd_(test_utils::connect_to(node_port.port())) {
 		timeval timeout{60, 0};
 		if (fd_ >= 0) {
 			::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));

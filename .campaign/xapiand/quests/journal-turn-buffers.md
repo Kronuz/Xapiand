@@ -30,13 +30,20 @@ Gate: the suite (`build-test`, CI's macos-arm64) and CI's sanitizers (`asan`, `t
 - A4 Crash safety holds: `turn_log_power_test` and `turn_seal_test` pass unchanged, and a power cut
   at every write of a turn built through the new path recovers exactly the acknowledged records: a
   test with values.
+- A6 A sealed body returns to its sealer. When a turn completes, the driver hands each sealed
+  record's buffer back to its sealer (a `recycle(std::string&&)` beside `Sealer`, in
+  `turn_driver.h`), cleared and with its capacity kept, so a warm sealer allocates nothing across
+  turns. Evidence: a test with values through the driver (0 allocations over warm turns, and the
+  returned buffer is the one the next body uses), plus a `--fails-without` job at a mutant that
+  drops the returned buffer.
 - A5 [manual] Detent's lead reviewed the diff with its journal tests and ran journal's authority
   suite on it: the reply's message id.
 
 ## Contracts
 
 Provides `journal:turn-buffers`: a group-owned encode buffer with header room, a seal that takes it
-by move, and an emitter that frames into the turn buffer. The record format is unchanged (A1).
+by move and hands it back when its turn completes (A6), and an emitter that frames into the turn
+buffer. The record format is unchanged (A1).
 turn-log-parity consumes it.
 
 ## Decisions
@@ -45,6 +52,9 @@ turn-log-parity consumes it.
   turn-log-parity's quest file); this quest changes only the turn path's buffers.
 - No format change: if the copy-free path needs one, stop and ask the lead, since task 3 owns the
   record-format changes (the copy flag and the per-fragment checksum).
+
+- The driver hands sealed bodies back (A6, lead 11-20): D3 reuses one encode buffer per log every
+  turn; without the hand-back, strata's log_state allocates a body per turn.
 
 ## May land early
 
