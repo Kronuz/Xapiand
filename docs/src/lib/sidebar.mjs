@@ -192,6 +192,9 @@ export const sidebar = [
             "slug": "reference-guide/schemas/indexing-mode"
           },
           {
+            "slug": "reference-guide/schemas/store"
+          },
+          {
             "slug": "reference-guide/schemas/meta-data"
           },
           {
