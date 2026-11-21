@@ -1,32 +1,26 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-144148-bb326b 261120-144150-16ef0b
+State: waiting on jobs 261120-172038-99d4ac (diagnosis, light) 261120-172057-f95412 (selftest)
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
 
-Sweep at consensus:2dd22b3: selftest 261120-144146-5b3dfb; exclusive rows `vm.sh run --nodes 3`
-261120-144148-bb326b and `--nodes 5` 261120-144150-16ef0b (`--for A1,A2`). Smoke at 85f1968
-(261120-143711-cc6bda, light, 3 nodes, loopback, 1ms, partition, quick): 20 of 20 checks; held
-floor 0.71 ms against 0.07 unshaped; the cut leader reached term 3 isolated and named the term-2
-leader 1.4 s after heal, no election after it. 2dd22b3 only adds the role trace to the result
-(and the doc draft), so the smoke stands for it. Rows at 85f1968 (e3c9fd, 9444ba) cancelled.
-
-Quick dry runs of every shape at consensus:113572a (3 nodes 261120-141708-9ccd3e, 5 nodes
-261120-141710-78f9a8, light, a busy host): every check passed but the 1 ms round trip (ping
-2.3-2.9 ms against 2 ms set, the guest's netem timer). Fixed in 85f1968 by measuring the held
-floor. Seen: 1 ms commit p50 4.7-5.2 ms and RPC p50 4.1-4.7 ms against ping 2.5-2.8 (not at 20
-ms); 64 KiB commit at 80 ms one way takes 2 round trips (325 ms); the first RPC call costs 4
-round trips (Bulk dial, TLS, hellos).
+Takeover (fresh contributor, 2026-11-20). The exclusive rows at consensus:2dd22b3
+(261120-144148-bb326b, 261120-144150-16ef0b) measured every shape and died in table() on the
+loss row's `{'error': 'no answer'}`. consensus:a447b7d: table() writes error cells; the A1 round
+trip expects set + unshaped + 2 timer wakes measured by an hrtimer sleep at that delay (the 1 us
+hold never arms a real timer); roles reset per shape (the isolated leader's "term 11/8" was
+earlier shapes' clusters: from the cut on, the cut leader only stepped down at 2,006 ms in term 1
+(CheckQuorum) and followed term 2 after heal; consensus has pre-vote). Diagnosis job: calibrate
+curve, then loss1%/reorder5% at 3 nodes with --diag (applied index + leader ss -tin each 0.5 s),
+load wait 90 s, rpc_timeout 500 vs 5000. Hypothesis: core.h resets a flight after rpc_timeout
+(500 ms) and resends the whole 2 MiB batch; at 1% loss a 2 MiB append takes longer than that.
 
 ## Next
 
-1. When the exclusive rows finish (queued behind light holds at 14:55): read them; rerun a row only
-   if it straddles a check; the partition's `roles` trace explains the cut leader's term 3 and its
-   1.4 s rejoin.
-2. Fill `docs/perf/netlab-consensus.md` (method drafted at consensus:2dd22b3; TABLE_* placeholders):
-   `python3 bench/netlab/bench.py table $JOBS/<id>/a1/out/result-N.json --job N=<id>`, the
-   machine section, findings and hunt rows (A3); commit, push.
+1. Read the diagnosis: calibration (does excess = 2 x late?), loss rows at 500 vs 5000.
+2. Set the jitter term from the calibration data; rerun the exclusive rows at the fixed head.
+3. Write docs/perf/netlab-consensus.md (A3), push.
 
 ## Blocked on
 
@@ -36,7 +30,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-144146-5b3dfb (green); rows 261120-144148-bb326b (3), 261120-144150-16ef0b (5) pending |
+| A1 | selftest 261120-172057-f95412 pending; rows pending a rerun at the fixed head (2dd22b3 rows failed in table()) |
 | A2 | the same rows' partition-1ms history check, pending |
 | A3 | `docs/perf/netlab-consensus.md` pending |
 
