@@ -532,8 +532,10 @@ void test_open_files_limit() {
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
 		adjust_or_report();
-		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>((minimum - 68) / 7));
-		CHECK_GE(main_opts.max_clients, static_cast<ssize_t>(1));
+		// 3 open descriptors give 78: one database, which leaves (78 - 73) / 2 = 2 clients.
+		const ssize_t pool = (minimum - 68) / 7;
+		CHECK_EQ(main_opts.database_pool_size, pool);
+		CHECK_EQ(main_opts.max_clients, (minimum - (57 + (pool + 1) * 7 + 2)) / 2);
 		main_opts.max_files = minimum - 1;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
