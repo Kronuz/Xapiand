@@ -10483,6 +10483,19 @@
       "risk": "high",
       "status": "active",
       "tasks": {
+        "install": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/group-heal--install",
+          "files": [
+            "include/strata/group/install*",
+            "src/group/install*",
+            "test/group/install*",
+            "docs/mechanisms/replication-group.md",
+            "docs/mechanisms/group-install.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--install",
+          "worktree": "../strata-wt/xapiand/group-heal--install"
+        },
         "sim-port": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "branch": "quest/xapiand/group-heal--sim-port",
@@ -10496,7 +10509,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T17:43:01",
+      "updated": "2026-11-20T17:43:08",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
