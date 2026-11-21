@@ -1915,6 +1915,25 @@
         ]
       },
       "text": "faultlab-strata-gaps landed: unlocks frees CMakeLists.txt, test/sector_test.cc, test/fixtures/**, README.md, docs/** for faultlab-journal-oracle"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T08:29:42",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T08:29:42",
+      "by": "campaign detent",
+      "closed": "asked Detent to order journal-tail-second-sector after xapiand:journal-turn-buffers (ours lands next, jobs queued at journal:a5bfa3e)",
+      "id": "msg-198",
+      "settles": {
+        "ours": [
+          "journal-turn-buffers",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-tail-second-sector"
+      },
+      "text": "detent:journal-tail-second-sector started and may change files your journal-turn-buffers changes (order them with --after detent:journal-tail-second-sector, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
