@@ -19222,7 +19222,12 @@
         "CMakeLists.txt",
         "CHANGELOG.md",
         "include/consensus/transport/links.h",
-        "include/consensus/transport/host_transport.h"
+        "include/consensus/transport/host_transport.h",
+        "include/consensus/transport/connection.h",
+        "src/transport/connection*",
+        "test/transport/connection_test.cc",
+        "test/transport/links_test.cc",
+        "docs/mechanisms/host-connection.md"
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
       "landed": [],
@@ -19238,7 +19243,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T10:55:07",
+      "updated": "2026-11-20T17:45:16",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
