@@ -1127,6 +1127,7 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 	query_field.commit = true;
 	std::optional<DocIndexer> indexer;
 	std::exception_ptr error;
+	size_t total = 0;
 	try {
 		while (true) {
 			auto manager = XapiandManager::manager();
@@ -1140,6 +1141,7 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 			if (bytes < 0) THROW(Error, "Cannot read from file [{}]", fd);
 			sha256.add(unpacker.buffer(), bytes);
 			unpacker.buffer_consumed(bytes);
+			total += bytes;
 
 			std::vector<MsgPack> batch;
 			msgpack::object_handle result;
@@ -1171,6 +1173,10 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 			}
 
 			if (!bytes) {
+				// The stream ended inside an object: the dump is cut (a cut between objects is not detectable).
+				if (auto cut = unpacker.nonparsed_size()) {
+					THROW(ClientError, "Restore dump is truncated at byte {} (the last object is cut after {} bytes)", total - cut, cut);
+				}
 				break;
 			}
 		}
