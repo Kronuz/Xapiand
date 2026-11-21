@@ -25146,7 +25146,8 @@
         "tests/test_engine_callbacks*",
         "tests/engine_callbacks/**",
         "tests/CMakeLists.txt",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "docs/dev/test-layout.md"
       ],
       "landed": [],
       "lenses": [],
@@ -25157,7 +25158,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Xapiand's free large tests split under 1,000 lines, same test names",
-      "updated": "2026-11-21T11:38:52"
+      "updated": "2026-11-21T11:39:32"
     },
     "stash-claim-hint-d64": {
       "accepted": {},
