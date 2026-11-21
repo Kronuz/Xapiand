@@ -30102,12 +30102,13 @@
             "test/test_merge*",
             "test/merge_policy_test.cc"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--merge-runs",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--merge-runs"
+          "journal": "",
+          "merged": "1d50e0ab72b550db26a7ae3fcc421e8a81c783f6",
+          "worktree": ""
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T17:37:02",
+      "updated": "2026-11-20T17:37:08",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
