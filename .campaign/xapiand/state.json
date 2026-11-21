@@ -3454,7 +3454,68 @@
       "worktree": ""
     },
     "cjk-words": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T19:22:31",
+          "base": "c8472852369dbe8a3b62e5a68b9cac435a55f3ae",
+          "blobs": {
+            "CMakeLists.txt": "100644:ec226ded45c399686e8bdedc92f9d4cc86bcd83c",
+            "docs/mechanisms/cjk-words.md": "100644:dd8b21109c09db408e45c4d569f2c08b469c3275",
+            "docs/src/content/docs/reference-guide/schemas/field-types/text-type.md": "100644:ee7454d1e591d775483d05eacca71f340a52e293",
+            "src/database/schema.cc": "100644:69f12f81290f06d8869e0eca38d1c4b535455f21",
+            "src/database/schema.h": "100644:91fc9b3c11c71410544370cf75145ccb8766b330",
+            "src/engine/text.cc": "100644:28ea0fccd232571b97f50ea0486cd084d5a4d7c7",
+            "src/engine/text.h": "100644:1c8ac8b1330a08b0d143db426f80bec12df51b7d",
+            "src/multivalue/generate_terms.cc": "100644:d8345bc737302544d196cbccb5f89b0f679bc430",
+            "src/multivalue/generate_terms.h": "100644:5b3d5aa9c8570bc56864210498c876a92429bdb9",
+            "src/query_dsl.cc": "100644:293ee2766b69742b0fe3ff02d74479429b8f0e16",
+            "src/reserved/schema.h": "100644:af4b203cabd1822389041247fac9e6e8d53262db",
+            "tests/test_cjk_words.cc": "100644:057081b378e622f80e3b9489816539c78f681df6",
+            "tests/test_cjk_words_oracle.sh": "100755:65dc72376dba59ad194bc42f6f7ddd5810c6cbe3"
+          },
+          "by": "review",
+          "commit": "234d834c4efcec52cc590033957952b285343a1d",
+          "criteria": "8e018b26a75afa8b",
+          "diffs": {
+            "CMakeLists.txt": "c6e079ea3372ae33",
+            "docs/mechanisms/cjk-words.md": "ad17aa474d08e3aa",
+            "docs/src/content/docs/reference-guide/schemas/field-types/text-type.md": "aaf46d6a101348b0",
+            "src/database/schema.cc": "c7885cb0a327db41",
+            "src/database/schema.h": "14af5f37d2dfd206",
+            "src/engine/text.cc": "3be405a6882cf93c",
+            "src/engine/text.h": "28d55875bda912ed",
+            "src/multivalue/generate_terms.cc": "0d2739b0e8ac938d",
+            "src/multivalue/generate_terms.h": "c17e95fedd1625a2",
+            "src/query_dsl.cc": "61f623180c093377",
+            "src/reserved/schema.h": "64f9b9c22a33a730",
+            "tests/test_cjk_words.cc": "0bf7a1cc75bef798",
+            "tests/test_cjk_words_oracle.sh": "22f2ee5bed5b9b30"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "bash -c 'cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand xapiand_test_cjk_words && build/bin/xapiand_test_cjk_words'",
+                  "commit": "0505cd7cdb3f7114142a8a4e7626be41c15c0447",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261120-182340-d04e6e",
+                  "level": "light",
+                  "seconds": 766.4,
+                  "state": "done",
+                  "what": "build xapiand and test_cjk_words at 0505cd7cd, run test_cjk_words"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "388a60b27efbb58f699bb95f415b459179ef1b6b",
+          "reviewed": "02e8901234c359da0982f00700eb78cb9ecd9f06",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [],
       "base": "c8472852369dbe8a3b62e5a68b9cac435a55f3ae",
       "branch": "quest/xapiand/cjk-words",
@@ -3622,7 +3683,9 @@
         }
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "Phase 5",
       "needs": [
         "cjk-segmenter"
@@ -3632,7 +3695,7 @@
       "risk": "normal",
       "status": "review",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T18:21:17",
+      "updated": "2026-11-20T19:22:31",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
