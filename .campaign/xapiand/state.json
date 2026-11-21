@@ -26709,9 +26709,9 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-20T23:47:52",
+      "updated": "2026-11-21T00:24:43",
       "worktree": "../task-wt/xapiand/task-timers-followups"
     },
     "termdict-forward-seek": {
