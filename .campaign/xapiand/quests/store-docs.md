@@ -5,32 +5,26 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+The schema docs have a page (or a section of `meta-data.md`) for `_store`: a field indexed and searchable whose value is not kept in the stored document, how it inherits (a child stores only if its parent does: `Schema::feed_store`, src/database/schema.cc), and what a search and a GET return for such a field. Its examples are E2E blocks the docs suite runs (hunt row H6, issue #25; D47: every served feature has a page and tests).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 [ci] The docs E2E blocks for `_store` pass in CI's Functional E2E (docs), each asserting values: the field matches a search, the GET body lacks it, a child under `_store: false` stays unstored
+- A2 [artifact] The page names the inheritance rule and links from the schemas index: the page's path and a quote of the rule
+- A3 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: documents existing behavior. A docs block that disagrees with the code is a finding for the lead (hunt list), never a code change here.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+Lead: document the behavior as it is on master; any surprise goes to the hunt list.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None (one landing).
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+One documentation contributor (Sonnet, medium).
