@@ -40,12 +40,9 @@ voters_test only, after the plain).
 
 ## Blocked on
 
-1. Lead: CMakeLists.txt (not in this task's files) must pin consensus at the landed
-   consensus-driver-install commit and register `group_install_test`. Until then CI builds
-   group.hh against b8de3b8, which lacks SendTransfer/ValidateImage/ActivateImage: CI's group
-   targets fail to compile on this branch. Local proof uses `install_suite.sh` with
-   `--ref CONSENSUS=...@887a88b`. Blocked on 1 of the previous session (the Driver surface) is
-   answered by the quest's Contracts (msg-187; consensus-driver-install).
+Nothing. 1 (the pin and test registration) done by the lead at strata:95bdaa2e: consensus pinned at
+driver-install's landing (consensus:8780e44, no install API change since 887a88b), and
+`group_install` registered in ctest beside `group_voters`.
 
 ## Evidence
 
