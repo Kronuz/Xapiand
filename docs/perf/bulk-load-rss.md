@@ -106,7 +106,7 @@ pairs of jobs (7.65 s against 11.21 and 9.66; 10.21 against 13.43 and 11.25). On
 master's in this pair (9.19 s against 8.47, 8% more, and 7.98 for the A/A) and below it in the first (9.59 against
 9.79); a job's master and its A/A differ by up to 16% (11.21 against 9.66 on shakespeare) and a round's time by up to 40%, so a gap of
 that size is inside the spread but is not shown to be absent. The times are about twice the explorer's (4.9 and 5.6 s)
-on a busier host. `bulk_rss_probe.py --identity` checks that restoring each dump as its array and as the same objects
+on a busier host. An exclusive run on logs settles the direction there (261121-040146-c8fed8, five interleaved rounds at Xapiand:5842f9ef3): master 5.05 s (4.91-6.33), the change 5.16 s (4.98-5.19), the A/A 4.96 s (4.80-5.02), so the change is 2% slower, inside the 2% between master and its A/A: no measurable time cost, with peak RSS 1,311 MB against 336 MB (74% smaller). `bulk_rss_probe.py --identity` checks that restoring each dump as its array and as the same objects
 streamed without it leaves the same documents (261121-034214-a0dea9: shakespeare's ids and documents exactly; logs
 carries no `_id`, so its documents are compared without the ids each restore generates).
 
