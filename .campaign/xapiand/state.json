@@ -13223,6 +13223,33 @@
       "updated": "2026-11-20T00:12:29",
       "worktree": ""
     },
+    "keyword-open-range": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/multivalue/range.cc",
+        "tests/test_coverage_multivalue_range.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "Lower-bound-only keyword and text ranges match",
+      "updated": "2026-11-21T04:53:04"
+    },
     "kv-scan": {
       "accepted": {},
       "after": [],
