@@ -17616,7 +17616,8 @@
         "src/transport/connection*",
         "test/transport/connection_test.cc",
         "test/transport/links_test.cc",
-        "docs/mechanisms/host-connection.md"
+        "docs/mechanisms/host-connection.md",
+        "CHANGELOG.md"
       ],
       "history": [
         {
@@ -17768,7 +17769,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T13:25:50",
+      "updated": "2026-11-21T14:41:53",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
