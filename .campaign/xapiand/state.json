@@ -2950,17 +2950,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T07:35:37",
+          "commit": "84c065c0966aae963ffc8f4fc38da85bd7be9b92",
+          "criteria": {
+            "A1": "261121-045951-930034 (passed at fb9e134af022; only 1 merge from main since, none touching its files), 261121-045952-e9a764 (passed at fb9e134af022; only 1 merge from main since, none touching its files)",
+            "A2": "`docs/perf/bulk-load-rerun.md`: \"Today it loads faster than Elasticsearch on every\""
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "4ef1e97a76756a05f929d64c22071470bfd2595c",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "ef4980491b2313bf98ba8dadc2ee4c6719f97582",
+          "reason": "",
+          "tested": "4ef1e97a76756a05f929d64c22071470bfd2595c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
-      "updated": "2026-11-20T18:21:14",
-      "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
+      "updated": "2026-11-21T07:35:38",
+      "worktree": ""
     },
     "catalog-post-lifetime": {
       "accepted": {
