@@ -2146,6 +2146,65 @@
       "closed": "lead reset queryparser's local main to origin/main (64c9a97; its 2 extra commits were patch-equal) and added CI's quest/** trigger (queryparser:a4ffbeb)",
       "id": "msg-212",
       "text": "split-queryparser: queryparser's local main (40743e3) is stale: it is 11a6365 plus two commits patch-equivalent to origin/main's top two (git cherry shows both as '-'); origin/main is 64c9a97, 20 commits further, where queryparser.cc has 1,400 lines (603 at 40743e3). The quest base 40743e3 is that stale main. I rebased the empty quest branch onto origin/main (64c9a97, nothing lost). The landing check and the split check (--base main) compare against local main, so they see 20 unrelated commits until main is reset: suggested fix, since main is checked out nowhere: git -C /Users/kronuz/code/Kronuz/queryparser branch -f main origin/main. The other split quests may have the same stale-main shape in their repos."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:25:09",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:25:09",
+      "by": "campaign detent",
+      "closed": "answered Detent's lead; node-admission narrowed; CMakeLists.txt only shared file",
+      "id": "msg-215",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-peers-wake"
+      },
+      "text": "detent:consensus-peers-wake started and may change files your node-admission changes (order them with --after detent:consensus-peers-wake, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:31:56",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:31:56",
+      "by": "campaign detent",
+      "closed": "consensus-quiesce-election-stall fixes an election in core.h under Timing::quiesce (seed 1080 after a leaving member's removal); no rpc-lane or snapshot-channel shape change. cluster and group-heal take it at their next consensus pin; no ordering needed.",
+      "id": "msg-216",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-quiesce-election-stall"
+      },
+      "text": "detent:consensus-quiesce-election-stall started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:32:24",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:32:24",
+      "by": "campaign detent",
+      "closed": "Overlap with node-admission is test/transport/connection_test.cc, links_test.cc (node-admission edits both) and CMakeLists.txt. node-admission lands first (high review accepted; its one red CI job is rpc_host_fetch under TSan, which test-flakes owns and Detent says fails on main too); test-flakes merges main after. No --after.",
+      "id": "msg-217",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-transport-test-flakes"
+      },
+      "text": "detent:consensus-transport-test-flakes started and may change files your node-admission changes (order them with --after detent:consensus-transport-test-flakes, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
@@ -12021,14 +12080,7 @@
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "branch": "quest/xapiand/group-heal--install",
           "files": [
-            "include/strata/group/install*",
-            "src/group/install*",
-            "test/group/install*",
-            "docs/mechanisms/replication-group.md",
-            "docs/mechanisms/group-install.md",
-            "include/strata/group/group.hh",
-            "test/group/voters_test.cc",
-            "test/group/mutants.py"
+            "CMakeLists.txt"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--install",
           "worktree": "../strata-wt/xapiand/group-heal--install"
@@ -12047,7 +12099,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T06:08:32",
+      "updated": "2026-11-21T13:38:17",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -13780,11 +13832,49 @@
         "docs/mechanisms/turn-seal.md",
         "include/journal/turn_driver.h"
       ],
-      "journal": "../Xapiand-wt/xapiand/journal-turn-buffers",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T13:48:42",
+          "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+          "criteria": {
+            "A1": "261121-122521-cc207c",
+            "A2": "261121-122539-a8551b; fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-201744-3bc198, 261120-201746-56b121, 261120-204136-c5ea74, 261120-204136-0cdfe6, 261121-054412-bfce5b, 261121-054414-82b503, 261121-113000-0950f8, 261121-113002-fb2cfa, 261121-122544-1ac36e, 261121-122545-5e6990",
+            "A3": "261121-122540-b2f8c5; fails without: 261120-201152-614139, 261120-201748-82c5c4, 261120-204136-c0795f, 261121-054417-3194fe, 261121-113004-e6c020, 261121-122523-7fa359, 261121-122547-b7aeb3",
+            "A4": "261121-122542-b704ea",
+            "A5": "manual: Detent's lead re-reviewed journal:60ab864 and APPROVED (cross-session message to the lead, 2026-11-21): differential probe 261121-124532-0dc107 (evict rename) gives IDENTICAL TurnLog output at the branch and at journal main 335b1b5, covering recovered and evicted records, a reopen and every flipped byte; recycler probe passed under ASan+UBSan (261121-121414-237c59 at journal:87af246; rerun at the head as 261121-122550-138135); park_count 0.565 B per parked group against main's 0.448 B (measured by 261121-121340-140534; the same job at the head is 261121-122537-1d2438) accepted. Earlier round: journal:b88565f APPROVE (msg-185).",
+            "A6": "261121-122543-16d8b1, 261121-122537-1d2438; fails without: 261120-204028-be128e, 261121-054419-ff7741, 261121-113006-d7b0ff, 261121-113432-44c9c7, 261121-121342-18a35f, 261121-122548-1c2e38"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+              "state": "done"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
+          "reason": "",
+          "tested": "60ab864407fe4eb2ac05fa354f504916ae55c6e6"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -13792,10 +13882,10 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-21T12:52:25",
-      "worktree": "../journal-wt/xapiand/journal-turn-buffers"
+      "updated": "2026-11-21T13:48:47",
+      "worktree": ""
     },
     "key-field": {
       "accepted": {},
@@ -17050,6 +17140,40 @@
       "updated": "2026-11-20T18:29:10",
       "worktree": ""
     },
+    "nan-range-bound": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/multivalue/range.cc",
+        "src/multivalue/range.h",
+        "src/aggregations/bucket.h",
+        "tests/test_coverage_multivalue_range.cc",
+        "tests/test_nan_range*",
+        "docs/src/content/docs/reference/query-dsl*"
+      ],
+      "hunt": "query-dsl-fixes review F5",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "split-xapiand-src"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "A NaN range bound is one behavior on every field type",
+      "updated": "2026-11-21T13:23:10"
+    },
     "netlab-consensus": {
       "accepted": {},
       "after": [
@@ -17454,17 +17578,13 @@
       ],
       "consumes": [],
       "files": [
-        "include/consensus/transport/peers*",
         "include/consensus/transport/node_pins*",
         "include/consensus/transport/admission*",
-        "src/transport/peers*",
         "src/transport/node_pins*",
         "src/transport/admission*",
         "test/transport/admission*",
-        "test/transport/peers*",
         "docs/mechanisms/admission.md",
         "CMakeLists.txt",
-        "CHANGELOG.md",
         "include/consensus/transport/links.h",
         "include/consensus/transport/host_transport.h",
         "include/consensus/transport/connection.h",
@@ -17623,7 +17743,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T11:41:56",
+      "updated": "2026-11-21T13:25:50",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
@@ -21177,18 +21297,46 @@
         "CMakeLists.txt",
         "docs/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/prospect-check-fields",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T13:54:22",
+          "commit": "abfeedab48eb0509169358c5d0f8142f6978093f",
+          "criteria": {
+            "A1": "261121-124804-4fdb96",
+            "A2": "261121-114518-396743 (the build-test check); build-test job 261121-114518-396743",
+            "A3": "CI green at abfeedab48eb"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "abfeedab48eb0509169358c5d0f8142f6978093f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-114518-396743",
+              "level": "light",
+              "seconds": 1146.7,
+              "state": "done",
+              "what": "prospect-check-fields check build-test at abfeedab48eb"
+            }
+          ],
+          "final": true,
+          "from": "0448b8774e7b2c485ac8e5afd25893068b377a8b",
+          "reason": "",
+          "tested": "abfeedab48eb0509169358c5d0f8142f6978093f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's inverted reader forwards check_fields",
-      "updated": "2026-11-21T11:44:26",
-      "worktree": "../prospect-wt/xapiand/prospect-check-fields"
+      "updated": "2026-11-21T13:54:32",
+      "worktree": ""
     },
     "prospect-completion-opens": {
       "accepted": {},
@@ -24498,6 +24646,39 @@
       "title": "Publish and reclaim guarded reader views",
       "updated": "2026-11-08T15:39:29"
     },
+    "single-flight-budget": {
+      "accepted": {},
+      "after": [],
+      "base": "4e7be674c0d2a6b912e1c6ea5f8f900bbf294772",
+      "branch": "quest/xapiand/single-flight-budget",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/single_flight.h",
+        "tests/test_single_flight*",
+        "tests/CMakeLists.txt",
+        "docs/mechanisms/cancellation.md",
+        "src/database/schemas_lru.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "A request joining a schema load leaves when its client does",
+      "updated": "2026-11-21T13:36:51",
+      "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
+    },
     "sort-cast-not-wrap": {
       "accepted": {},
       "after": [],
@@ -26257,7 +26438,9 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-workpool",
       "landed": [],
@@ -26269,7 +26452,7 @@
       "risk": "low",
       "status": "active",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:45",
+      "updated": "2026-11-21T13:17:24",
       "worktree": "../workpool-wt/xapiand/split-workpool"
     },
     "split-xapiand-core": {
@@ -26855,17 +27038,40 @@
         "docs/src/content/docs/reference-guide/schemas.md",
         "docs/src/lib/sidebar.mjs"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T13:57:14",
+          "commit": "b639d349edd9ab6876b1082fb686b636a32e8442",
+          "criteria": {
+            "A1": "CI green at 34270cfcba8b",
+            "A2": "docs/src/content/docs/reference-guide/schemas/store.md: \"a field is stored when its own `_store` is `true` **and** its parent is stored\"; linked from indexing-mode.md (\"see [Storing Mode](store)\"); schemas.md link pending the file-set widening",
+            "A3": "CI green at 34270cfcba8b"
+          },
+          "evidence": [
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "34270cfcba8b4de5dbe17004f51d26f4af3e93b7",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "0bb158699ee572beb117f3811259835fb3cd389b",
+          "reason": "",
+          "tested": "34270cfcba8b4de5dbe17004f51d26f4af3e93b7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Document _store (index without keeping the value) with E2E blocks",
-      "updated": "2026-11-21T03:30:08",
-      "worktree": "../Xapiand-wt/xapiand/store-docs"
+      "updated": "2026-11-21T13:57:15",
+      "worktree": ""
     },
     "stored-check-cache": {
       "accepted": {
@@ -30772,8 +30978,9 @@
             "test/*crash*",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--large-tx",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--large-tx"
+          "journal": "",
+          "merged": "39b28f25225a88ce79fefd80b83b3cf4f95d19cb",
+          "worktree": ""
         },
         "merge-runs": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
@@ -30831,7 +31038,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T10:28:27",
+      "updated": "2026-11-21T13:16:50",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
