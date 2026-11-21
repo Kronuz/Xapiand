@@ -1683,6 +1683,26 @@
         "quest": "detent:journal-loop-handoff"
       },
       "text": "detent:journal-loop-handoff started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:51:40",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:51:39",
+      "by": "campaign detent",
+      "closed": "consensus-full-window-stall is Detent's fix for our netlab finding (msg-177 to Detent). Overlap with node-admission is shared repository files (CMakeLists.txt, CHANGELOG.md); no ordering: whichever lands second merges main. rpc-lane and snapshot-channel consumers (cluster, group-heal) pick the fix up at the next consensus pin.",
+      "id": "msg-184",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-full-window-stall"
+      },
+      "text": "detent:consensus-full-window-stall started and may change files your node-admission changes (order them with --after detent:consensus-full-window-stall, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
