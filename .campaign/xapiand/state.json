@@ -9978,19 +9978,47 @@
         "src/main.cc",
         "tests/test_executable_path*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T20:11:03",
+          "commit": "0fd8e11915beebc10fe704c646e86a5adafd5da8",
+          "criteria": {
+            "A1": "261119-151950-269667 (passed at 72cc2d0babf1; only 29 merges from main since, none touching its files)",
+            "A2": "noted: workaround lives only on quest/xapiand/coverage-core-main, outside this file set (Rulings)",
+            "A3": "261119-151953-11ac9b (passed at 72cc2d0babf1; only 29 merges from main since, none touching its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "53b31611627d2775afbcbb3a7bed9eaa82de8dc6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261119-151953-11ac9b",
+              "level": "light",
+              "seconds": 636.3,
+              "state": "done",
+              "what": "freebsd-exe-path check suite at 53b31611627d"
+            }
+          ],
+          "final": true,
+          "from": "f3b3a1a7ea64d25effe28785fd8ab5e46eb87b96",
+          "reason": "",
+          "tested": "93df80213e84e2492ce80027e318e032a3bbeca7"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "FreeBSD: get_executable_path finds the executable",
-      "updated": "2026-11-19T22:11:55",
-      "worktree": "../Xapiand-wt/xapiand/freebsd-exe-path"
+      "updated": "2026-11-20T20:11:12",
+      "worktree": ""
     },
     "fuzz-cpu-hour": {
       "accepted": {},
