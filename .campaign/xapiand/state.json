@@ -9047,7 +9047,9 @@
         "bench/**",
         "CMakeLists.txt",
         "AGENTS.md",
-        "README.md"
+        "README.md",
+        "docs/STATUS.md",
+        "docs/book/OUTLINE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-adopt-strata",
       "landed": [],
@@ -9055,12 +9057,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: real overlap is CMakeLists.txt (placement, turn-log-parity) and turn-log-parity's bench/kv/kv_strata.hh and test/standalone_turn_log_test.cc, whose faultfs use changes by an include and namespace rename; the lead resolves that mechanical merge when either lands",
       "repo": "../strata",
       "risk": "low",
       "status": "active",
       "title": "strata's crash tests run on faultlab's faultfs (step 3)",
-      "updated": "2026-11-21T03:59:13",
+      "updated": "2026-11-21T04:04:43",
       "worktree": "../strata-wt/xapiand/faultlab-adopt-strata"
     },
     "faultlab-adopt-xapiand": {
