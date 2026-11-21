@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: working
+State: waiting on jobs 261120-201735-dfb864 261120-201737-6e4864 261120-201739-07500d 261120-201741-5c74c1 261120-201744-3bc198 261120-201746-56b121 261120-201748-82c5c4
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First cut at journal:b7501df (code, tests, mutants) and journal:a210537 (mechanism notes), pushed.
-Focused build job 261120-200225-e0b203 (turn_buffers, framing, turn_log, crc_fixture tests).
+Code done at journal:28c0caa (pushed): journal:b7501df framing in place, journal:e2183f9 manifest
+reserve, journal:37e371a probe, journal:a210537 and journal:28c0caa notes. Evidence jobs re-run at
+journal:28c0caa (State); the same commands passed at journal:e2183f9 (A1 261120-201127-452692,
+A2 261120-201129-d86bd2, A3 261120-201131-d1901f, A4 261120-201132-a0e17e; mutants killed:
+seal-copy 261120-201148-86ff12, stage-copy 261120-201150-edcde6, forward-string 261120-201152-614139).
 
 ## Next
 
-1. Fix what the focused build reports; then evidence jobs: A1 (`bytes`, `turns`, crc_fixture,
-   framing), A2 (`warm`, `seal` + `--fails-without` at `seal-copy` and `stage-copy`), A3 (`forward`
-   + `--fails-without` at `forward-string`), A4 (`power`, turn_log_power, turn_seal).
-2. CI (macos-arm64, asan, tsan) green on the pushed branch.
-3. Write "ready for Detent's review" with the commit and tests (A5).
+1. Paste `campaign brief`'s table once the jobs at journal:28c0caa finish.
+2. CI (macos-arm64, linux-asan-ubsan, linux-tsan) green at journal:28c0caa.
+3. Then: ready for Detent's review (A5), with the commit and tests below.
 
 ## Blocked on
 
@@ -43,7 +44,28 @@ strata log_state that hands over its body by move allocates a new body each turn
 
 ## Result
 
-<pending>
+journal's turn path copies each logged byte once (strata rocksdb-parity D3, journal's half).
+- `framing::Emitter` frames a record from pieces straight into fragments: `record(head, body)`
+  and `record(head, size, fill)`; it writes into a caller's buffer and hands it back; a
+  measuring emitter lays a turn out without writing. `framing::RecordReader` reads a record back
+  in order into the caller's buffer (`read_record` uses it). Manifest groups are a flat array.
+- `TurnLog::stage` frames each record's stack header and payload into the turn buffer; a forward
+  copy streams its original into the copy's fragments, checking its header and size; the turn's
+  bytes, notes, manifest and map nodes pass to the next turn.
+- Bytes on disk unchanged: main's emitter, kept in the test, writes the same bytes over 4,608
+  records and 400 turns with 49 segment rollovers; crc and framing fixtures pass.
+- Measured (probe job 261120-201407-998e89, strict, main vs branch, same source): a warm turn of
+  32 records, 384,800 body bytes: 122.5 allocations and 1.91 MB allocated before, 0 now;
+  stage()+completed() 155-170 us before, 58-61 us now (2.6 times less).
+- Notes: journal `docs/mechanisms/turn-seal.md` ("The turn's buffers"), `docs/mechanisms/framing.md`.
+- Open: the driver frees a sealed payload at completion; returning it to the sealer is outside
+  this file set ("Blocked on").
+
+For Detent's review (A5), once CI is green: diff `main..quest/xapiand/journal-turn-buffers` at
+journal:28c0caa; tests: `journal_turn_buffers_{bytes,turns,warm,seal,forward,power}`, unchanged
+`journal_turn_log_power`, `journal_turn_seal_*`, `journal_turn_bound_*`, `journal_framing`,
+`journal_crc_fixture`, then the authority suite. Mutants: `sh test/turn_seal_mutants.sh
+seal-copy|stage-copy|forward-string`.
 
 ## Rulings I made
 
