@@ -18710,9 +18710,7 @@
           ],
           "final": true,
           "from": "5d746f878d4d91184153f3f80158debca1b2ba42",
-          "later": [
-            "261120-160142-a97666"
-          ],
+          "later": [],
           "reason": "",
           "tested": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14"
         }
@@ -18730,7 +18728,7 @@
       "risk": "normal",
       "status": "landed",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T18:29:11",
+      "updated": "2026-11-20T21:19:27",
       "worktree": ""
     },
     "pins-2026-11": {
