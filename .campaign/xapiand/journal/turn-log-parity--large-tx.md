@@ -1,6 +1,6 @@
 # turn-log-parity--large-tx: journal
 
-State: waiting on jobs 261121-104110-491873 261121-104113-4f8cbb 261121-104116-816fc6 261121-104119-d0dd11 261121-104122-87c06b 261121-104124-6f93ff 261121-104127-764b43
+State: waiting on jobs 261121-104119-d0dd11 261121-104122-87c06b 261121-104124-6f93ff 261121-104127-764b43
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,9 +25,17 @@ Locally (targeted, under light holds): codec, t8, t9o, kv_strata_batch_test, the
 replay, admit (66 MiB in 67 chunk records) and visible pass; sweep and big were not timed locally
 (the host was full), so the A3 job sizes them.
 
+Results so far:
+
+- 261121-104110-491873 passed: admit (66 MiB in 67 chunk records; both refuse past the unlogged
+  cap); sweep 558 cases over 61 mutations (26 records), 531 runs cut, all whole prefixes; big 147
+  cases at 49 of 503 mutations (74 records), 105 runs cut; visible 0 exposed early.
+- 261121-104113-4f8cbb (limit) failed as required: admit refuses the 66 MiB transaction.
+- 261121-104116-816fc6 (per-chunk) failed as required: "no whole prefix matches" from cut 8.
+
 ## Next
 
-1. Read each job; a failure is fixed with its test, as a job.
+1. Read the four pending jobs; a failure is fixed with its test, as a job.
 2. Fill Evidence from `campaign brief`, write Result, State "ready to merge".
 
 ## Blocked on
@@ -44,7 +52,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A3 | 261121-104110-491873 (test_large_tx, passed); mutants 261121-104113-4f8cbb (limit), 261121-104116-816fc6 (per-chunk) failed as required; pending: 261121-104119-d0dd11 (early-v), 261121-104122-87c06b (keep-applied), 261121-104124-6f93ff (fuzz_command with kind 3), 261121-104127-764b43 (suite) |
 
 ## Result
 
