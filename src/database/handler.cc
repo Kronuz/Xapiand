@@ -1128,6 +1128,7 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 	std::optional<DocIndexer> indexer;
 	std::exception_ptr error;
 	size_t total = 0;
+	size_t whole = 0;   // bytes up to the end of the last whole object
 	try {
 		while (true) {
 			auto manager = XapiandManager::manager();
@@ -1147,6 +1148,7 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 			msgpack::object_handle result;
 			while (unpacker.next(result)) {
 				batch.emplace_back(result.get());
+				whole = total - unpacker.nonparsed_size();
 			}
 			for (auto& obj : batch) {   // a dump holds maps (or arrays of them): anything else is not a dump
 				if (obj.is_array()) {
@@ -1174,8 +1176,8 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 
 			if (!bytes) {
 				// The stream ended inside an object: the dump is cut (a cut between objects is not detectable).
-				if (auto cut = unpacker.nonparsed_size()) {
-					THROW(ClientError, "Restore dump is truncated at byte {} (the last object is cut after {} bytes)", total - cut, cut);
+				if (whole < total) {
+					THROW(ClientError, "Restore dump is truncated at byte {} (the last object is cut after {} bytes)", whole, total - whole);
 				}
 				break;
 			}

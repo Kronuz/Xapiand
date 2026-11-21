@@ -83,7 +83,7 @@ strip "$D/cut.log" | grep -q 'truncated.*byte [0-9]' && echo "ok   and names whe
 printf '\x81\xa3_id\x01\xde\x00' >"$D/hdr.mp"
 run "$D/hdr.log" -D "$D/n6" --restore hdr --in "$D/hdr.mp"
 check "--restore of a dump cut mid-header is EX_DATAERR" $RC 65
-strip "$D/hdr.log" | grep -q 'truncated at byte 6' && echo "ok   and names byte 6" || { echo "FAIL the log does not name byte 5"; fails=$((fails + 1)); }
+strip "$D/hdr.log" | grep -q 'truncated at byte 6' && echo "ok   and names byte 6" || { echo "FAIL the log does not name byte 6"; fails=$((fails + 1)); }
 printf '\x81\xa3_id\x01\x81\xa3_id\x02' >"$D/between.mp"
 run "$D/between.log" -D "$D/n7" --restore between --in "$D/between.mp"
 check "--restore of two whole objects ends with status 0" $RC 0
