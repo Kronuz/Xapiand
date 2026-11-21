@@ -1301,4 +1301,15 @@ const std::vector<Pin> pins = {
 	{204, ""},  // PUT /sc7/1
 	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"_id\":{\"_type\":\"integer\",\"_slot\":0,\"_prefix\":\"Q\"},\"a\":{\"_prefix\":\"a.\","},  // GET /sc7/
 	{200, "{\"a\":\"2020-01-01T00:00:00\",\"b\":\"1\",\"c\":\"true\",\"d\":\"550e8400-e29b-41d4-a716-446655440000\",\"e\":\"10:00:00\",\"f\":\"+01:00:00\",\"g\":\"x y z\",\"h\":\"POINT(1 2)\",\"i\":\"2020-01-01T10:00:00\",\"_id\":1,\"_version\":1}"},  // GET /sc7/1
+	{204, ""},  // PUT /dl/1
+	{204, ""},  // PUT /dl/sub/1
+	{204, ""},  // DELETE /dl/
+	{404, "{\"status\":404,\"type\":\"Not Found\""},  // GET /dl/1
+	{200, "{\"b\":2,\"_id\":1,\"_version\":1}"},  // GET /dl/sub/1
+	{404, "{\"status\":404,\"type\":\"Not Found\""},  // DELETE /dl/
+	{204, ""},  // PUT /dl/sub/2
+	{204, ""},  // DELETE /dl/sub/
+	{404, "{\"status\":404,\"type\":\"Not Found\""},  // GET /dl/sub/1
+	{204, ""},  // PUT /dl/1
+	{200, "{\"a\":3,\"_id\":1,\"_version\":1}"},  // GET /dl/1
 };

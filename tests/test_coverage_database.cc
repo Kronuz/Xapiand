@@ -378,6 +378,19 @@ std::vector<Req> requests() {
 	add("PUT", "/sc7/1", R"j({"a":"2020-01-01","b":"1","c":"true","d":"550e8400-e29b-41d4-a716-446655440000","e":"10:00:00","f":"+01:00:00","g":"x y z","h":"POINT(1 2)","i":"2020-01-01T10:00:00"})j");
 	add("GET", "/sc7/");
 	add("GET", "/sc7/1");
+
+	// DELETE of an index: it removes the index and leaves a nested one (`dl/sub`) intact and openable.
+	add("PUT", "/dl/1", R"({"a":1})");
+	add("PUT", "/dl/sub/1", R"({"b":2})");
+	add("DELETE", "/dl/");
+	add("GET", "/dl/1");
+	add("GET", "/dl/sub/1");
+	add("DELETE", "/dl/");
+	add("PUT", "/dl/sub/2", R"({"b":3})");
+	add("DELETE", "/dl/sub/");
+	add("GET", "/dl/sub/1");
+	add("PUT", "/dl/1", R"({"a":3})");
+	add("GET", "/dl/1");
 	return reqs;
 }
 
