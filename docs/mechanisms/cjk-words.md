@@ -13,8 +13,10 @@ setting both is a client error.
 `engine::text::cjk_words` (`src/engine/text.cc`) walks the text and sends each maximal run of
 CJK word characters (`analysis::is_ngram_char`) to `analysis::cjk::segmenter`, which splits it
 as ICU 78.3's word break iterator does. The words of the run are joined by single spaces, and a
-space also goes where a CJK run meets another word (`abc中文` becomes `abc 中文`). Everything
-else is copied unchanged.
+space also goes where a CJK run meets another word (`abc中文` becomes `abc 中文`). A letter infix
+(`&`, `'`, U+2019, U+00B7, U+2027 and the rest of `analysis::detail::infix_of`) beside a CJK
+character gets a space on each side, because the term generator joins words across it: `乔治·华盛顿`
+becomes `乔治 · 华盛顿`, while `AT&T` and `O'Neil` keep theirs. Everything else is copied unchanged.
 
 Both sides call it, so they read the same words:
 
@@ -24,7 +26,13 @@ Both sides call it, so they read the same words:
    phrase of CJK words is a phrase of terms.
 
 Hangul is not divided: ICU has no Korean dictionary, so a Korean word is a run between spaces.
-The property is stored with the schema (`_cjk_words`) and cannot change once set.
+The property is stored with the schema (`_cjk_words`) and cannot change once set; switching an
+existing field needs a new index.
+
+A query is segmented on its own and a document in its context, so a word search is as good as the
+dictionary: `京都` does not match `東京都`, which the segmenter reads as `東京 都` (Elasticsearch's
+dictionary analyzers behave the same). The dictionary (2.09 MB, analysis's
+`docs/cjk-segmenter.md`) is linked into every binary, whether or not a field sets `_cjk_words`.
 
 ## Differences from ICU
 

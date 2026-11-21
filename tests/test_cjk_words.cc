@@ -26,12 +26,16 @@
 #include "test_harness.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "analysis.hh"
+#include "database/schema.h"
 #include "engine/document.h"
 #include "engine/text.h"
+#include "msgpack.h"
 #include "multivalue/generate_terms.h"
+#include "xapiand_exception.h"
 
 namespace {
 
@@ -92,6 +96,79 @@ test_queries_split_words()
 	}
 }
 
+// The letter infixes the term generator joins words across, beside CJK words, in Chinese,
+// Japanese and Korean: each reads as the same words as the text with a space in its place.
+void
+test_infix_splits_cjk_words()
+{
+	const std::vector<std::string> infixes = { "·", "‧", "&", "'", "’" };
+	const std::vector<std::pair<std::string, std::string>> pairs = {
+		{ "乔治", "华盛顿" },      // Chinese
+		{ "中文", "英文" },        // Chinese
+		{ "東京", "大阪" },        // Japanese kanji
+		{ "ジョン", "スミス" },    // Japanese katakana
+		{ "가나다", "라마" },      // Korean
+		{ "中文", "abc" },         // CJK then Latin
+		{ "abc", "中文" },         // Latin then CJK
+	};
+	engine::TextConfig c;
+	c.field = "t";
+	c.flags = text::CJK_WORDS;
+	for (const auto& [left, right] : pairs) {
+		const auto spaced = left + " " + right;
+		engine::Document expected;
+		GenerateTerms::text(expected, "t", spaced, true, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none, true);
+		std::string expected_query;
+		engine::parse_text(spaced, c, &expected_query);
+		for (const auto& infix : infixes) {
+			const auto joined = left + infix + right;
+			engine::Document doc;
+			GenerateTerms::text(doc, "t", joined, true, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none, true);
+			CHECK_EQ(doc.serialize(), expected.serialize());
+			std::string query;
+			engine::parse_text(joined, c, &query);
+			CHECK_EQ(query, expected_query);
+		}
+	}
+	// The katakana middle dot (U+30FB) is not an infix and splits as before.
+	CHECK_EQ(text::cjk_words("ジョン・スミス"), text::cjk_words("ジョン") + "・" + text::cjk_words("スミス"));
+	engine::Document dot, space;
+	GenerateTerms::text(dot, "t", "ジョン・スミス", true, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none, true);
+	GenerateTerms::text(space, "t", "ジョン スミス", true, 1, false, "", "", analysis::stop_strategy::none, analysis::stem_strategy::none, true);
+	CHECK_EQ(dot.serialize(), space.serialize());
+	// Between Latin letters an infix stays where it is and still joins.
+	for (const char* latin : { "AT&T", "O'Neil", "O’Neil", "col·lecció", "AT&T 中文", "rock'n'roll" }) {
+		CHECK_EQ(text::cjk_words(latin), std::string(latin));
+	}
+}
+
+// The schema refuses _cjk_words with _cjk_ngram, and keeps the stored property.
+void
+test_schema_property()
+{
+	{
+		Schema schema(Schema::get_initial_schema(), nullptr, "");
+		bool refused = false;
+		try {
+			schema.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", true}, {"_cjk_ngram", true}})}}));
+		} catch (const ClientError&) {
+			refused = true;
+		}
+		CHECK(refused);
+	}
+	Schema schema(Schema::get_initial_schema(), nullptr, "");
+	schema.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", true}})}}));
+	const auto stored = [&] { return schema.get_schema().at("body").at("_cjk_words").boolean(); };
+	CHECK(stored());
+	CHECK_EQ(schema.get_schema().at("body").at("_cjk_ngram").boolean(), false);
+	// Once set, the property does not change: the write is refused or leaves it as it was.
+	try {
+		schema.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", false}})}}));
+	} catch (const ClientError&) {
+	}
+	CHECK(stored());
+}
+
 }  // namespace
 
-TEST_MAIN(test_words_are_the_segmenters, test_indexing_splits_words, test_queries_split_words)
+TEST_MAIN(test_words_are_the_segmenters, test_indexing_splits_words, test_queries_split_words, test_infix_splits_cjk_words, test_schema_property)

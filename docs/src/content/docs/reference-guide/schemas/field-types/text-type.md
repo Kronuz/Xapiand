@@ -136,6 +136,42 @@ pm.test("The word finds the document", function() {
 ```
 e2e:end -->
 
+Words joined by a middle dot, an apostrophe or an ampersand are still words of their own:
+
+```rest
+PUT /cjk/words/name
+
+{
+  "body": "乔治·华盛顿"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+SEARCH /cjk/words/
+```
+
+<!-- e2e:begin
+---
+params: query=body:%E5%8D%8E%E7%9B%9B%E9%A1%BF
+---
+
+```js
+pm.test("One word of the name finds the document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(1);
+  pm.expect(jsonData.hits[0]['_id']).to.equal('name');
+});
+```
+e2e:end -->
+
 ## Parameters
 
 The following parameters are accepted by _Text_ fields:

@@ -299,6 +299,20 @@ text::cjk_words(std::string_view text)
 		const bool word = analysis::is_word_char(c);
 		const bool cjk = word && analysis::is_ngram_char(c);
 		if (!cjk) {
+			// A letter infix ('&', '\'', U+00B7, ...) beside CJK text is set apart, so the term
+			// generator does not join the CJK word to its neighbor across it.
+			if (!word && analysis::detail::infix_of(c).kind == analysis::detail::infix::letter) {
+				const char* r = q;
+				const auto next = r < end ? unicode::next_utf8(r, end) : char32_t(0);
+				if (prev_cjk || (r > q && analysis::is_word_char(next) && analysis::is_ngram_char(next))) {
+					result += ' ';
+					result.append(p, q);
+					result += ' ';
+					prev_word = prev_cjk = false;
+					p = q;
+					continue;
+				}
+			}
 			// A word of another script right after CJK text starts a new word.
 			if (word && prev_cjk) { result += ' '; }
 			result.append(p, q);

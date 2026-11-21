@@ -1,25 +1,32 @@
 # cjk-words: journal
 
-State: ready for review (oracle rerun from the repository: job 261120-173321-093c44)
+State: review round 1 (correctness, CHANGES at 02e890123): fixing F1, F2, F5, F6; jobs next
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
 
-Segmenter choice settled (analysis:cjk-segmenter, pin moved to analysis d72eb65). Written, not built:
-`_cjk_words` property (schema.cc/.h, reserved/schema.h; exclusive with `_cjk_ngram`),
-`engine::text::cjk_words` (text.cc) feeding both `GenerateTerms::text` (trailing `cjk_words`
-param) and `parse_text` (`text::CJK_WORDS`, set in query_dsl.cc), tests/test_cjk_words.cc,
-docs/mechanisms/cjk-words.md, text-type.md. The helper alone compiled and ran in scratch against
-analysis's lib (zh/ja/ko/mixed samples give the expected splits).
+Review round 1 (`.campaign/xapiand/reviews/cjk-words-correctness.md`):
+
+- F1 (blocking): `text::cjk_words` sets a letter infix (`analysis::detail::infix_of`, kind letter:
+  `&`, `'`, U+2019, U+201B, U+00B7, U+05F4, U+2027, U+00AD) beside a CJK character apart with a
+  space on each side. Test `test_infix_splits_cjk_words` (zh, ja, ko, CJK/Latin both ways; U+30FB
+  and Latin controls); docs example searches `body:华盛顿` in `乔治·华盛顿`.
+- F2: `test_schema_property` (both flags refused; stored; does not change).
+- F3: not mine (upgrade.md, changelog.md outside the file set); see Blocked on.
+- F4: left (as the review allows).
+- F5: `fst` pinned at analysis's commit in CMakeLists.txt; dictionary size in the note.
+- F6: the note says a word search is as good as the dictionary; mark handling left.
 
 ## Next
 
-1. Read the three jobs; fix build or test failures.
-2. Fill the Differences section of docs/mechanisms/cjk-words.md from the oracle job log.
+1. Jobs at the fix commit: build-test and e2e (`campaign verify`), probe2.sh rerun (F1
+   confirmation), revert check of the new test (`--fails-without`).
 
 ## Blocked on
 
-Nothing. The link line was added with the lead's leave.
+F3 is outside my file set: `docs/src/content/docs/upgrade.md:80` and `changelog.md:316` still say
+`_cjk_words` is gone. Recommendation: the lead adds them to the file set, or edits them at landing
+(it is back, on analysis's segmenter, no ICU; new text fields store `_cjk_words: false`).
 
 ## Evidence
 
@@ -34,3 +41,6 @@ Nothing. The link line was added with the lead's leave.
 - Both modes exclusive: setting `_cjk_words` and `_cjk_ngram` together is a ClientError.
 - Query side splits the text before queryparser (no queryparser change; its pin is not mine).
 - `GenerateTerms::text` takes `cjk_words` as a trailing default so existing callers stand.
+- F1 fix uses `analysis::detail::infix_of` rather than a copied list, so the set stays analysis's
+  one definition; numeric infixes join only digits and never CJK, so they are left alone.
+  Ignorables (ZWJ, U+2060, ...) beside CJK are not spaced: not in the review's set, rare.
