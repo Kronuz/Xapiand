@@ -44,6 +44,7 @@ checked what), and answer each message by its id (msg-N).
 | A1 | build-test 261120-202700-a1e84b at 91d4c3e62 (23/23, test_text_parser); include guard 261120-202710-3443a6, failing at bb04f6d63 261120-202717-edd5aa (its dep file names /usr/local/include/xapian.h) |
 | A2 | build-test 261120-202700-a1e84b (id_zero_check in ctest, 9.3 s); fails-without 261120-202653-9ebd4f at 5c4c0ce2d: "RESTORE answered 200 with item 0 {"_id": 43}", "indexed 1000" |
 | A3 | build-test 261120-202700-a1e84b |
+| A4 | `docs/src/content/docs/changelog.md`: "Some numbers are stored in a lossy sortable form." |
 
 ## Result
 
