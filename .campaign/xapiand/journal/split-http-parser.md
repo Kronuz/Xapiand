@@ -1,6 +1,6 @@
 # split-http-parser: journal
 
-State: waiting on jobs 261121-121452-92646b (build-test) 261121-121453-cb7868 (mutants) 261121-121501-c2f765 (A6) 261121-121503-33e747 (A3 head); split fails until split-check lands
+State: waiting on jobs 261121-145054-4defec (split, fixed checker at a3180d7); main merged (origin/main 6bc8182, ci.yml only)
 Quest: .campaign/xapiand/quests/split-http-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Pushed http-parser db201cd: mutants.py, bench.cc, README/ARCHITECTURE/AGENTS fol
 
 ## Next
 
-1. Read the jobs in State; the mutants job (one mutant in http_parser.cc: url-no-budget, one in http_parser_internal.h: harden-http10-te-close) must report KILLED for both.
+1. Read the split job; warnings answered under Rulings. Earlier: the mutants job (one mutant in http_parser.cc: url-no-budget, one in http_parser_internal.h: harden-http10-te-close) must report KILLED for both.
 2. After split-check lands, `campaign verify split-http-parser`; fill Evidence; ready for review.
 
 ## Blocked on
@@ -24,12 +24,13 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-115212-41a5fe |
-| A2 | split 261121-115212-e66e17 |
-| A3 | ctest -N at head 261121-115215-a5e4a8; at base acb0aff to come |
+| A1 | build-test 261121-121452-92646b, mutants 261121-121453-cb7868 (db201cd) |
+| A2 | split 261121-145054-4defec (fixed checker, a3180d7); older 261121-123002-909142 failed on the old checker |
+| A3 | ctest -N 261121-121503-33e747 (db201cd), base 261121-121135-172d36 |
 | A4 | docs/source-layout.md lists each new file |
 | A5 | CI on the pushed branch |
-| A6 | selfcontained job 261121-115551-b79709 (the two new .h files; the .inc files are not headers, see Rulings) |
+| A6 | selfcontained 261121-121501-c2f765 (db201cd) |
+| A7 | lead's [manual] read |
 
 ## Result
 
