@@ -25,6 +25,7 @@
 // its own, forked before this process has threads.
 
 #include "test_harness.h"
+#include "utils_node.h"
 
 #include <atomic>
 #include <chrono>
@@ -36,8 +37,6 @@
 #include <thread>
 #include <vector>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -79,20 +78,6 @@ bool same(const std::string& got, const std::string& want, const char* what) {
 		std::fprintf(stderr, "  %s: got %s, want %s\n", what, got.c_str(), want.c_str());
 	}
 	return got == want;
-}
-
-int free_port() {
-	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	socklen_t len = sizeof(addr);
-	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-		std::fprintf(stderr, "FAIL: no free port\n");
-		std::exit(1);
-	}
-	::close(fd);
-	return ntohs(addr.sin_port);
 }
 
 // A node in this process, in the data directory `name` (emptied unless `keep`), started with `extra` options.
@@ -150,23 +135,6 @@ private:
 	std::atomic<bool> exited_{false};
 };
 
-// The node reports ready a moment before its listener accepts: connect again for up to 5 s.
-int connect_to(int port) {
-	for (int attempt = 0; attempt < 100; ++attempt) {
-		const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-		sockaddr_in addr{};
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(static_cast<uint16_t>(port));
-		::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-		if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
-			return fd;
-		}
-		::close(fd);
-		std::this_thread::sleep_for(50ms);
-	}
-	return -1;
-}
-
 struct Reply {
 	int status = 0;
 	MsgPack body;
@@ -175,7 +143,7 @@ struct Reply {
 // One request on a connection of its own: its status and its JSON body (undefined when it has none).
 Reply call(int port, const std::string& method, const std::string& path, const std::string& body = "") {
 	Reply reply;
-	const int fd = connect_to(port);
+	const int fd = test_utils::connect_to(port);
 	if (fd < 0) {
 		return reply;
 	}
@@ -311,7 +279,8 @@ void check_layout(bool partition) {
 // A node in `--uuid` mode `uuid` creates, writes to, flushes and searches the UUID-named indexes; restarted, it finds
 // them by every spelling, writes to them again, and after a second restart finds both documents.
 void a_node_reaches_its_uuid_named_indexes(const char* dir, const std::vector<std::string>& uuid, bool partition) {
-	const int port = free_port();
+	const test_utils::ReservedPort reserved;
+	const int port = reserved.port();
 	auto write = [&](int id) {
 		for (const auto& n : named()) {
 			CHECK_EQ(call(port, "PUT", "/" + n.name + "/" + std::to_string(id), "{\"n\":" + std::to_string(id) + "}").status / 100, 2);

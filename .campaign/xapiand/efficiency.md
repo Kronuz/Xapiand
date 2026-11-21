@@ -602,3 +602,28 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Cost: landing loops re-merge master on every code push (cjk-words, strata-pin-catalog restarted CI at 00:50); GitHub runner queue ~26 min behind master's dry runs. Batch master code pushes.
 - Launched: explorer bulk-load peak RSS (Opus, explore/ branch).
 - Quota 60% weekly, 0.48%/h, reset in 44 h. Load 10-15. Disk 299 GiB free.
+
+## 2026-11-21 02h
+- Landed: task-timers-followups (task:dc2be96; Detent's pin-wave takes it).
+- Agents finished (Opus): bulk-load RSS explorer 196k (cause: one top-level MessagePack array is one batch; prototype 1,329 to 339 MB on logs, 1,824 to 396 MB on shakespeare, times unchanged) -> quest restore-stream; restore-stream contributor 254k (change Xapiand:a131ad2b2, 8 jobs queued; three master answers were silent 200s -> D162); track-c-gates write-up 124k + fix round 148k; Track C architect review 233k (C2 and C4 APPROVE WITH CONDITIONS; F1 -> D161, consensus half filed by Detent as consensus-driver-flow; journal seed-order test bug sent to Detent); placement repair jobs green (10 mutants on value checks).
+- Found: test_lua's method case (script-method) is flaky: 3 red runs on 11-21 at master's code (Linux on 2 branches, FreeBSD on a docs-only branch); every `_method` call fails in a run of ~30 s, matching MethodNode's 30 s READY wait. Quest lua-method-flake (Opus). Failed jobs rerun for cjk-words, strata-pin-catalog, bulk-load-rerun.
+- Release: alpha.11 Release and FreeBSD dry runs green at Xapiand:d2fa3e15d (RapidJSON backport); master's first dry run (Release, FreeBSD) green at Xapiand:79f86b9ef; both Bottles runs wait for macOS runners.
+- Host: exclusive drains ~25 min/h beside Detent's 4 h light holds; turn-log-parity's trials 3 of 10 in ~6 h.
+- Quota 61% weekly, 0.49%/h, reset in 43 h. Load 17-20. Disk 298 GiB free.
+
+## 2026-11-21 03h
+- Landed: track-c-gates (strata:560e8851; C2 and C4 open on their hunt-list conditions), faultlab-strata-gaps (faultlab:b5640d7; sat ~4 h on an A5 row the tool did not parse: an [artifact] row is only `path`: "quote", no extra backticked names).
+- Release: alpha.11 A4/A5 met. `xapiand` fast-forwarded to Xapiand:cfc2a5b80 (changelog names the Clang 19 build fix); CI green (build, E2E, ASan+UBSan, TSan) and Release, FreeBSD, Bottles dry runs green from `xapiand` (Intel cell red). A6 is the owner's.
+- Lead miss: zsh read `$HS:refs` as a modifier, the push failed and three chained dry runs went to the old branch head; cancelled, nothing published (memory updated). A chained Edit failure left Xapiand:2a757ffaa with only the journal row; follow-up commit says so.
+- Agents finished: lua-method-flake 187k (Sonnet; Xapiand:2e2a2307e READY after the listener accepts; one tests/utils_node.h for six node tests, -54 lines; first-connection test fails without). Fresh-deps test_lua at strata-pin-catalog's head: 1,014 checks pass (cause confirmed as the READY race, not the branch).
+- Started: faultlab-journal-oracle (Sonnet). catalog-stress-cap: jobs had finished hours ago with the journal still "waiting"; rows filled, main merged, A2's passing run tagged; lands on CI.
+- Messages: Detent orders detent-multicast-seeds after node-admission (seed records unchanged).
+- Quota 62% weekly, 0.49%/h, reset in 42 h. Load 13-18. Disk 297 GiB free.
+
+## 2026-11-21 04h
+- Landed: faultlab-journal-oracle (faultlab:e3fcfe3; A2 amended by the lead: the opt-in generator includes MemoryIO's header by design, so A2 checks the default configure), catalog-stress-cap (strata:753bc62c; its jobs had sat done for hours with the journal "waiting"). Detent told: journal's memory_io.h deletion unblocked once its pin wave reaches faultlab:e3fcfe3.
+- Agents finished (Sonnet): store-docs 89k (page and five asserting blocks; lead added the index and sidebar links, file set widened), newman-pin 84k + 95k resume (one pin for three workflows and two scripts; lead fixed a top-level `return` that let a failed install pass the FreeBSD step: exits 0 before, 1 after), faultlab-journal-oracle 90k + 103k, faultlab-adopt-strata 147k (49 callers migrated, no shim; lead pointed STATUS and the book outline at faultlab). Opus: restore-stream resume 155k (A3's failure was the probe: es-logs has 0 `_id` keys, shakespeare 111,396, checked by the lead).
+- restore-stream reruns: peak logs 1,357 -> 344 MB, shakespeare 1,860 -> 405 MB; time shakespeare 11.21 -> 7.65 s, logs 8.47 -> 9.19 s (A/A 7.98) under strict: exclusive logs A/B queued. Security review (Opus) running.
+- Started: faultlab-adopt-strata (forced: CMakeLists.txt and two turn-log-parity files, an include rename), explorers keyword-open-range and geo-global-prefix-order (Sonnet; explore/ branches beside cjk-words). Hunt: sort cast-word row stale (Xapiand:570afc7a7).
+- Host: light slots 46% used; exclusive jobs queued up to 300 min (turn-log-parity trials, bulk-load dry runs, restore-stream A/B) behind drains. C2 condition 2's CPU-hours wait on Detent's fix and a per-decoder pin.
+- Quota 63% weekly, 0.49%/h, reset in 41 h. Load 5-7. Disk 295 GiB free.

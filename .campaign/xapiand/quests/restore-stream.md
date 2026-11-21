@@ -24,12 +24,15 @@ accepted or rejected differently, and the remaining peak is stated.
   slowdown past the A/A's spread is a failure, stated with numbers
 - A3 Identity: after restoring each dump as one array and as the same objects streamed without the
   array, both databases hold the same documents (ids and full contents): a test or job with values
-- A4 The declared count holds: an array whose header promises more elements than the body holds
-  fails as an incomplete body, as it does today; one with more elements than declared fails; a
-  test per case, each failing with the change reverted to the prototype (`--fails-without`)
+- A4 The declared count holds: an array whose header promises more elements than the body holds,
+  and an array followed by more data, each answer an error naming it, never a 200; elements applied
+  before the error stay as the NDJSON stream leaves them after a bad line (or the journal states
+  the difference): a test per case, each failing at the prototype b60d09d64 (`--fails-without`)
 - A5 Nothing else changes: a nested array element, a non-map element, an empty array, a header
   split across chunks (every split point of the 1, 3 and 5 byte headers), a single document
-  RESTORE and the NDJSON stream answer as they do on master: tests with the responses' values
+  RESTORE and the NDJSON stream answer as they do on master, except where master answers 200
+  while dropping input (a too-deep or malformed element): that answers an error (D162). Tests with
+  the responses' values, master's captured first
 - A6 The decoder is fuzzed: the stream feed (header skip and count) under ASan+UBSan for at
   least 30 CPU-minutes, no crash, leak or timeout, recorded with the executed-unit count
 - A7 [artifact] `docs/perf/bulk-load-rss.md`: the breakdown, before and after with job ids, and
@@ -45,6 +48,9 @@ None: RESTORE's accepted inputs and responses do not change (A5).
 - Lead, 2026-11-21: the explorer's note lands with this quest, not separately (an explore merge
   lands only its note, and landing it on master alone would restart every landing queue's CI).
   The prototype expands a nested array element instead of rejecting it; that change is not taken.
+- Lead, 2026-11-21 (D162): where master answers 200 while indexing nothing or dropping part of the
+  body (a short array, trailing data after the array, a malformed or too-deep element), the
+  stream answers an error instead: errors never pass silently. CHANGELOG names it.
 
 ## May land early
 
