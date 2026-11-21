@@ -1945,6 +1945,8 @@
       "after": [
         "ninja-only"
       ],
+      "base": "dcfd06fe6d5ba8b04bb20ade93d8996dcc81fe0e",
+      "branch": "quest/xapiand/agents-md",
       "checks": [
         {
           "cmd": "test $(wc -l < AGENTS.md) -le 80",
@@ -1964,11 +1966,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: ninja-only changes one line of AGENTS.md (the configure command); this rewrite keeps -G Ninja and lands after it (after=ninja-only)",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "AGENTS.md says how Xapiand is built and worked on today",
-      "updated": "2026-11-21T09:47:09"
+      "updated": "2026-11-21T09:47:14",
+      "worktree": "../Xapiand-wt/xapiand/agents-md"
     },
     "agg-shard-parity": {
       "accepted": {
