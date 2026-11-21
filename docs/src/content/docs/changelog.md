@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## [Unreleased]
 
+## [1.0.0-alpha.11] - 2026-11-20
+
 ### Changed
 - **Base conversion is faster.** The `base-x` and `uinteger_t` libraries are pinned at their
   latest versions, with a small-vector integer container and faster conversion between
