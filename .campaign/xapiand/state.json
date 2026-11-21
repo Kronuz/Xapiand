@@ -19048,6 +19048,18 @@
       "risk": "high",
       "status": "active",
       "tasks": {
+        "repair": {
+          "base": "debadea4dcd9f9cef03c8463a52d79b78126ec5f",
+          "branch": "quest/xapiand/placement--repair",
+          "files": [
+            "src/placement/repair*",
+            "include/strata/placement/repair*",
+            "test/placement/repair*",
+            "docs/mechanisms/placement-repair.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/placement--repair",
+          "worktree": "../strata-wt/xapiand/placement--repair"
+        },
         "root": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "branch": "quest/xapiand/placement--root",
@@ -19080,7 +19092,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T19:33:13",
+      "updated": "2026-11-20T23:22:57",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
