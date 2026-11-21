@@ -652,3 +652,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Mistake: a refused `campaign start` left an empty worktree path; `git -C ""` merged the explorer branch into master and pushed. Reverted forward (Xapiand:8a1bd3943).
 - Agents finished: ryw 182k (Opus; strata already met A1, test added, 4 jobs queued), ninja sweep 102k.
 - Quota 67%+ weekly, reset in ~36 h. Light slots 78% used last hour; 32 jobs queued.
+
+## 2026-11-21 11h
+- Owner: "double the burn ... you are moving so slowly". Launched 13 agents in one round: 3 Opus high (journal-replaces-wal, turn-log-parity tolerant-open and group-commit), 10 Sonnet (9 explorers from the audited hunt list, agents-md).
+- Hunt list was stale: 5 of the 10h batch's 6 explorers found fixed targets (~410k tokens). Audit (Sonnet, 169k) closed 12 more rows (Xapiand:15df796d1); the 11h batch's 9 targets were all live, 7 with fixes and tests on explore branches within ~2 min each (65-122k each). agent-campaign:b34fef9: a quest made from a hunt row closes it on landing.
+- Critical-path deadlock: cluster (active, lands after journal-replaces-wal) held journal-replaces-wal's files, untouched on its branch for 20 commits, so the cluster gate's main prerequisite could never start. Narrowed cluster and xapiand-final-release (lands on the xapiand branch, never master); journal-replaces-wal started. agent-campaign:6f0b679 refuses and reports such holds.
+- Landed: faultlab-adopt-strata (strata:efa5214b). restore-stream security re-accepted (only src/manager.cc's READY reorder changed since review). node-admission, netlab-consensus, ninja-only-strata and placement merged main and pushed; their evidence reruns are queued.
+- tolerant-open measured a journal limit (recover loses every group a damaged block names, turn_log.h:605-611): new quest journal-lost-bound, after Detent's journal-tail-second-sector at its lead's request.
+- Host: light slots 99% used; ~40 jobs queued. Quota 68% weekly at 10h.
