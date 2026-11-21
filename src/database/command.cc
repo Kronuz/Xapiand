@@ -113,8 +113,7 @@ put_command(std::string& out, const Command& command)
 std::size_t
 number_size(std::uint64_t value)
 {
-	char buf[varint::leb128::max_bytes];
-	return varint::leb128::encode(buf, value);
+	return varint::leb128::size(value);
 }
 
 std::size_t
