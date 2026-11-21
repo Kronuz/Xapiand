@@ -1602,6 +1602,114 @@
       "closed": "Harness bug fixed at consensus:85ed0e6; track-c-gates reruns the Driver seed rows at consensus main",
       "id": "msg-178",
       "text": "Seed 399 (msg-162) is the simulation harness, not the Driver, and it's already fixed on consensus main by consensus:85ed0e6 (2026-11-18), which keeps 399 as a regression seed. You pin consensus:5923b6c, which is older. Seed 727 from your f50b1e sweep is the same bug: at 5923b6c both fail (job f7bb46), and 5923b6c plus 85ed0e6's heal-loop change passes (d71c0d). The heal entry at index 126, term 6, is dropped by the term-8 leader, and the loop never proposes again. Node 3 applying 0 is expected: it's a witness on odd seeds. Fix: repin consensus past 85ed0e6."
+    },
+    {
+      "at": "2026-11-20T08:55:08",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-168",
+      "items": {
+        "cluster": "cluster",
+        "multicast-seeds": "multicast-seeds",
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5"
+      },
+      "settles": {
+        "start": [
+          "cluster",
+          "multicast-seeds",
+          "phase5"
+        ]
+      },
+      "text": "consensus-rpc-lane landed: unlocks cluster; multicast-seeds; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T15:51:45",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-179",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "xapiand-final-release": "frees tests/test_xapiand_final_release*, docs/release/xapiand-final* for xapiand-final-release"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "xapiand-final-release"
+        ]
+      },
+      "text": "set xapiand-final-release: unlocks frees tests/test_xapiand_final_release*, docs/release/xapiand-final* for xapiand-final-release; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T16:22:17",
+      "by": "lead",
+      "closed": "Noted D141. Nothing in xapiand relies on consensus admitting two application-image formats: strata's checkpoint bundle (cluster-release.md, contract strata:checkpoint-bundle) is one versioned format, and no quest consumes the withdrawn admission.",
+      "id": "msg-181",
+      "text": "D141 (owner): Detent drops online capacity increases and raises capacity at a coordinated restart. The October 23 agreement for consensus old/new application-image admission (Detent docs/SHARED_LIBRARY_DECISIONS.md, 'Online capacity snapshot admission') is withdrawn: consensus needs no two-format admission for Detent."
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:25:16",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:25:16",
+      "by": "campaign detent",
+      "closed": "consensus-faultfs is a test-only migration (MemoryIO to faultfs), so rpc-lane and driver keep their API. It shares test/transport/peers_test.cc and CMakeLists.txt with node-admission, which is going back to a contributor (Linux SIGPIPE on refused links) before review. No ordering: whichever lands second merges main (no rebase), and the peers_test changes are disjoint test cases.",
+      "id": "msg-182",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-core",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-faultfs"
+      },
+      "text": "detent:consensus-faultfs started and may change files your node-admission changes (order them with --after detent:consensus-faultfs, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:25:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:25:22",
+      "by": "campaign detent",
+      "closed": "Expected: journal-loop-handoff is the owner handoff Detent agreed for msg-168. When it lands, strata's turn sealer calls it and group-core's t6w test workaround (strata:6421d4b3, close on the first thread) is dropped; hunt row filed.",
+      "id": "msg-183",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-loop-handoff"
+      },
+      "text": "detent:journal-loop-handoff started and changes contract journal:driver, which your group-core consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:51:40",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:51:39",
+      "by": "campaign detent",
+      "closed": "consensus-full-window-stall is Detent's fix for our netlab finding (msg-177 to Detent). Overlap with node-admission is shared repository files (CMakeLists.txt, CHANGELOG.md); no ordering: whichever lands second merges main. rpc-lane and snapshot-channel consumers (cluster, group-heal) pick the fix up at the next consensus pin.",
+      "id": "msg-184",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-full-window-stall"
+      },
+      "text": "detent:consensus-full-window-stall started and may change files your node-admission changes (order them with --after detent:consensus-full-window-stall, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "at": "2026-11-20T09:59:28",
+      "by": "cluster",
+      "closed": "B1: CMakeLists.txt is in cluster's file set; B2: node-admission quest (in review); B3: owner decided D149-D151",
+      "id": "msg-174",
+      "text": "cluster blocked on three calls (journal Blocked on B1-B3). B1: CMakeLists.txt outside the file set; Xapiand pins no consensus (needs journal 5bbeedc->9e11713 and task 18eb516->95798a0 bumps); rpc builds standalone from tests/cluster/CMakeLists.txt meanwhile. B2: consensus HostTransport/Links/NodePins fix every node's address and pin at construction, so --join and multicast seeds cannot add a node; recommend a consensus quest node-admission (admit/forget a node at runtime, dial a seed by address). B3 (owner): joiner pin model; recommend (b) cluster CA as trust anchor, pin recorded at first join."
     }
   ],
   "quests": {
@@ -2581,7 +2689,7 @@
       "branch": "quest/xapiand/bulk-load-rerun",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 30,
           "name": "suite"
@@ -2592,6 +2700,34 @@
         "docs/perf/bulk-load-rerun.md",
         "harness/bench/bulk_load*"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:14",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -2601,7 +2737,7 @@
       "risk": "low",
       "status": "active",
       "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
-      "updated": "2026-11-20T14:48:40",
+      "updated": "2026-11-20T18:21:14",
       "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
     },
     "catalog-post-lifetime": {
@@ -3217,17 +3353,17 @@
     "cjk-words": {
       "accepted": {},
       "after": [],
-      "base": "45a5ed56dbd568aaa832efa5f367fbd63d0a1a4d",
+      "base": "c8472852369dbe8a3b62e5a68b9cac435a55f3ae",
       "branch": "quest/xapiand/cjk-words",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -3237,10 +3373,17 @@
         "analysis:cjk-segmenter"
       ],
       "files": [
-        "src/**",
-        "harness/**",
+        "src/database/schema.cc",
+        "src/database/schema.h",
+        "src/reserved/schema.h",
+        "src/engine/text.cc",
+        "src/engine/text.h",
+        "src/multivalue/generate_terms.cc",
+        "src/multivalue/generate_terms.h",
+        "src/query_dsl.cc",
+        "CMakeLists.txt",
         "docs/mechanisms/cjk-words.md",
-        "docs/src/content/docs/**",
+        "docs/src/content/docs/reference-guide/schemas/field-types/text-type.md",
         "tests/test_cjk_words*"
       ],
       "history": [
@@ -3334,6 +3477,45 @@
           "weakened": [
             "lens correctness removed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:17",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -3345,9 +3527,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "review",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T05:25:54",
+      "updated": "2026-11-20T18:21:17",
       "worktree": "../Xapiand-wt/xapiand/cjk-words"
     },
     "cli-restore-records": {
@@ -3489,13 +3671,13 @@
       "branch": "quest/xapiand/cluster",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -3646,6 +3828,93 @@
           "reason": "",
           "voided": [],
           "weakened": []
+        },
+        {
+          "at": "2026-11-20T18:21:20",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -3667,7 +3936,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T12:43:02",
+      "updated": "2026-11-20T18:21:20",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -3742,13 +4011,13 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -3769,6 +4038,59 @@
         "docs/gates/cluster-release.md",
         "harness/cluster/gate*"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:23",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [
         "correctness",
@@ -3787,7 +4109,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The release's cluster gate",
-      "updated": "2026-11-20T05:30:10"
+      "updated": "2026-11-20T18:21:23"
     },
     "cluster-harness": {
       "accepted": {
@@ -8220,9 +8542,11 @@
     "faultlab-adopt-prospect": {
       "accepted": {},
       "after": [],
+      "base": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+      "branch": "quest/xapiand/faultlab-adopt-prospect",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 60,
           "name": "build-test"
@@ -8249,10 +8573,41 @@
         "test/reorder_test.cc",
         "test/shards_test.cc",
         "test/values_test.cc",
+        "test/phrase_expansion_fixture.hh",
         "tools/parity_terms.cc",
         "CMakeLists.txt",
+        "AGENTS.md",
         "docs/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:25",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-prospect",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -8262,9 +8617,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T13:29:43"
+      "updated": "2026-11-20T18:21:25",
+      "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
@@ -9188,7 +9544,7 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -9297,6 +9653,58 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:28",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "landed": [],
@@ -9312,7 +9720,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The freeze-readiness review before the first release",
-      "updated": "2026-11-15T23:05:52"
+      "updated": "2026-11-20T18:21:28"
     },
     "format13": {
       "accepted": {},
@@ -10046,10 +10454,10 @@
     "group-core": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-20T13:14:41",
-          "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "at": "2026-11-20T16:35:49",
+          "base": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5",
           "blobs": {
-            "CMakeLists.txt": "100644:bdb333ef206f9ae3fbbbea307ee54260ffd510b9",
+            "CMakeLists.txt": "100644:8e9b353e4f943aeec6f894d56d8c5da4a6edd0b0",
             "docs/REPLICATION.md": "100644:ea9fff54272994ec1002cdc738223f3906b9f985",
             "docs/mechanisms/replication-group.md": "100644:de9b128ca20d9702ce999b8da3e02eac348c6dd1",
             "include/strata/core/index.hh": "100644:a48152e51fe98f49238a1cfa68b54f8423eb2b2a",
@@ -10062,20 +10470,20 @@
             "test/group/blob_app.hh": "100644:54ef05a2dcc3cb1f208904574856f43045edcd3e",
             "test/group/file_set_test.cc": "100644:9004de77ba3facae66999e0f7c7fc8a7cbf76ae4",
             "test/group/footprint_owners.py": "100644:e84945ee3e34b1929fa96d2f64cca940e1f2e92c",
-            "test/group/footprint_test.cc": "100644:a0f9cafab2f9cd5a5534290d92c48849513c0a64",
+            "test/group/footprint_test.cc": "100644:12d3853120fe07418b305b07f02ac228414ba36e",
             "test/group/host_io.hh": "100644:104defb81e9a0cca1109c433818b8b96b9e2aa56",
             "test/group/lifetime_test.cc": "100644:f9969730ae2b6bdf4c2d96b548f264e61cf83c7e",
             "test/group/lone_voter_test.cc": "100644:197de40abae61c791583edb7a5b5c4efd7be45d8",
             "test/group/mutants.py": "100644:cd18ab0b9837450c2d302c424b9fafece07d1755",
             "test/group/oracle.hh": "100644:7164be650051138e48b67da21a3185beaf4db388",
-            "test/group/voters_test.cc": "100644:7d0905bd61730b288798a87a078c3638e6dda7fa",
-            "test/standalone_turn_log_test.cc": "100644:1624a6bb05e3484fe94e7d99dea3b2f672d83bc6"
+            "test/group/voters_test.cc": "100644:6a4779e58bfa5c53ebf5df32487a1970cab9bc2f",
+            "test/standalone_turn_log_test.cc": "100644:0f90dc39a49b24f90ffb5b573b3d60d32a70acdc"
           },
           "by": "review",
-          "commit": "ffab229eeb897ae0631113cd002a00e701f0fed2",
+          "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "criteria": "8382fed6c73acdd9",
           "diffs": {
-            "CMakeLists.txt": "0f8c110696e5408f",
+            "CMakeLists.txt": "c3fc4ed4e3669f32",
             "docs/REPLICATION.md": "a1787a06ad4f25ca",
             "docs/mechanisms/replication-group.md": "e2789a294be7ee27",
             "include/strata/core/index.hh": "b6abb6eb3d380cdc",
@@ -10088,19 +10496,19 @@
             "test/group/blob_app.hh": "eaf2b4af166c3557",
             "test/group/file_set_test.cc": "68989ed2e172a0b9",
             "test/group/footprint_owners.py": "b27391a12ff84dbe",
-            "test/group/footprint_test.cc": "e57e4d7155139907",
+            "test/group/footprint_test.cc": "c1e87840df741624",
             "test/group/host_io.hh": "385683552ac6a76c",
             "test/group/lifetime_test.cc": "3a6804b436fb3216",
             "test/group/lone_voter_test.cc": "1170ef84bb8e1e88",
             "test/group/mutants.py": "496bfc8559f9d1b1",
             "test/group/oracle.hh": "06ea06b2977f3d05",
-            "test/group/voters_test.cc": "fd044bab90252acb",
-            "test/standalone_turn_log_test.cc": "3987c3ccb0421eef"
+            "test/group/voters_test.cc": "aa1901b5cead41b9",
+            "test/standalone_turn_log_test.cc": "708b022940cd2725"
           },
           "findings": {},
           "note": "",
-          "review": "55eb1257bac2ee5ed6d47c9df8b7b5c08865b8ca",
-          "reviewed": "ffab229eeb897ae0631113cd002a00e701f0fed2",
+          "review": "2a6ef6b1536dc63de2cd8e98826a6b77a8a91c20",
+          "reviewed": "6421d4b3852390e3062a31d0f9427f685142af36",
           "verdict": "APPROVE"
         },
         "design": {
@@ -10259,7 +10667,64 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/group-core",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T17:41:31",
+          "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "criteria": {
+            "A1": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-041329-e493ed, 261117-041335-5055d0, 261117-041341-82b222, 261117-041346-d08891, 261117-041351-01ad6c, 261117-041356-b72595, 261117-041401-a4bc5e, 261117-041406-4aaf54, 261117-041412-e13f97, 261117-041417-101200, 261117-151125-7ccde6, 261117-151147-f41da5, 261117-151150-e05468, 261117-151154-9b1fbc, 261120-090021-8a66ab, 261120-090036-a032b9, 261120-121551-0fb5d1",
+            "A10": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-134435-94dd84, 261117-134505-949822",
+            "A2": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085651-94cdb1, 261117-085659-d135d4, 261117-112707-8d20d3, 261117-112710-55af69, 261117-151158-264d61, 261117-151202-2b5482, 261120-090029-d472af, 261120-143842-94692c, 261120-143852-9d288c",
+            "A3": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085705-587d4d, 261117-085711-59939a, 261117-112642-eee4a9, 261117-112645-377e63, 261117-112648-9a2926, 261117-112650-2e5ea4, 261117-112653-d75991, 261117-112656-b5bed0, 261117-112659-a0922c, 261117-112702-5fc7d8, 261120-092539-50196a, 261120-092541-cd604b, 261120-092544-0e1fd2, 261120-092546-475273, 261120-092548-bda1ed, 261120-121542-01253e, 261120-121544-aeb1f7",
+            "A4": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-085718-358fc4, 261117-112704-eaa423, 261120-090043-0b4a03, 261120-121549-49be3a",
+            "A5": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143835-d4f803 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143838-68581e (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-132517-62b8d5, 261117-134421-e77835, 261117-134428-8708d8, 261120-121545-005bf5, 261120-121547-534c19",
+            "A6": "261120-143826-fc1ff1 (passed at 6421d4b38523; only 1 merge from main since, none touching its files), 261120-143827-809109 (passed at 6421d4b38523; only 1 merge from main since, none touching its files); fails without: 261117-151125-7ccde6, 261117-151128-1d419f, 261117-151132-fc01a3, 261117-151136-c0239c, 261117-151139-b815a7, 261117-151143-991952, 261117-174734-de0aa7, 261117-220123-40de8b",
+            "A7": "261120-163605-68024d",
+            "A8": "[decision] D113 (owner, 2026-11-17): cluster-release Q2 (a), document mode with `quorum` and `none`",
+            "A9": "strata `docs/mechanisms/replication-group.md` at strata:466dbece: lone voter, close and lifetime, the admission bound, the voters proof"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6421d4b3852390e3062a31d0f9427f685142af36",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-143826-fc1ff1",
+              "level": "light",
+              "seconds": 253.2,
+              "state": "done",
+              "what": "group-core check build-test at 6421d4b38523"
+            },
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4 -R group_crash",
+              "commit": "6421d4b3852390e3062a31d0f9427f685142af36",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-143827-809109",
+              "level": "light",
+              "seconds": 184.5,
+              "state": "done",
+              "what": "group-core check crash at 6421d4b38523"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+              "state": "done"
+            },
+            {
+              "check": "tsan",
+              "ci": "ci:linux-tsan",
+              "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5",
+          "reason": "",
+          "tested": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7"
+        }
+      ],
       "lenses": [
         "correctness",
         "design"
@@ -10272,17 +10737,19 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T13:14:41",
+      "updated": "2026-11-20T17:41:31",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
       "accepted": {},
       "after": [],
+      "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+      "branch": "quest/xapiand/group-heal",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -10314,6 +10781,59 @@
         "docs/mechanisms/simulator.md",
         "docs/gates/phase-3r.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:30",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/group-heal",
       "landed": [],
       "lenses": [
         "durability"
@@ -10327,9 +10847,36 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
+      "tasks": {
+        "install": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/group-heal--install",
+          "files": [
+            "include/strata/group/install*",
+            "src/group/install*",
+            "test/group/install*",
+            "docs/mechanisms/replication-group.md",
+            "docs/mechanisms/group-install.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--install",
+          "worktree": "../strata-wt/xapiand/group-heal--install"
+        },
+        "sim-port": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/group-heal--sim-port",
+          "files": [
+            "sim/**",
+            "docs/mechanisms/simulator.md",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--sim-port",
+          "worktree": "../strata-wt/xapiand/group-heal--sim-port"
+        }
+      },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T05:21:51"
+      "updated": "2026-11-20T18:21:30",
+      "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
       "accepted": {},
@@ -11478,13 +12025,13 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -11574,6 +12121,93 @@
             "lens correctness removed",
             "lens design removed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:32",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -11596,7 +12230,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-20T05:24:06"
+      "updated": "2026-11-20T18:21:32"
     },
     "journal-seal-repeat": {
       "accepted": {
@@ -18052,16 +18686,18 @@
     },
     "more-like-this": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "cjk-words"
+      ],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -18069,8 +18705,14 @@
       ],
       "consumes": [],
       "files": [
-        "src/**",
-        "harness/**",
+        "src/more_like_this.*",
+        "src/query_dsl.cc",
+        "src/reserved/query_dsl.h",
+        "src/engine/query.cc",
+        "src/engine/text.cc",
+        "src/engine/text.h",
+        "src/server/search_views.cc",
+        "src/server/info_views.*",
         "docs/mechanisms/more-like-this.md",
         "docs/src/content/docs/**",
         "tests/test_more_like_this*"
@@ -18180,6 +18822,45 @@
             "lens correctness removed",
             "lens security removed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:34",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -18191,7 +18872,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "?nearest, ?fuzzy and document terms, back on strata",
-      "updated": "2026-11-20T05:25:19"
+      "updated": "2026-11-20T18:21:34"
     },
     "msgpack-unpacker-limits": {
       "accepted": {},
@@ -19013,10 +19694,22 @@
       "branch": "quest/xapiand/node-admission",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 60,
           "name": "suite"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
         }
       ],
       "consumes": [],
@@ -19033,7 +19726,148 @@
         "CMakeLists.txt",
         "CHANGELOG.md",
         "include/consensus/transport/links.h",
-        "include/consensus/transport/host_transport.h"
+        "include/consensus/transport/host_transport.h",
+        "include/consensus/transport/connection.h",
+        "src/transport/connection*",
+        "test/transport/connection_test.cc",
+        "test/transport/links_test.cc",
+        "docs/mechanisms/host-connection.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-20T18:16:35",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        },
+        {
+          "at": "2026-11-20T18:16:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        },
+        {
+          "at": "2026-11-20T18:21:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
       "landed": [],
@@ -19047,9 +19881,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T10:55:07",
+      "updated": "2026-11-20T18:21:37",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
@@ -20071,7 +20905,7 @@
       "branch": "quest/xapiand/phase4-gate",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -20187,6 +21021,58 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:39",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/phase4-gate",
@@ -20206,7 +21092,7 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:28:18",
+      "updated": "2026-11-20T18:21:39",
       "worktree": "../prospect-wt/xapiand/phase4-gate"
     },
     "phase5": {
@@ -20216,7 +21102,7 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -20342,6 +21228,58 @@
           "weakened": [
             "risk high -> normal"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:41",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "landed": [],
@@ -20360,20 +21298,20 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:27:53"
+      "updated": "2026-11-20T18:21:41"
     },
     "phase6": {
       "accepted": {},
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -20462,6 +21400,45 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:44",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -20479,7 +21456,7 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:27:59"
+      "updated": "2026-11-20T18:21:44"
     },
     "phase7b": {
       "accepted": {},
@@ -21130,7 +22107,7 @@
     "phrase-expansion": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-20T14:28:47",
+          "at": "2026-11-20T15:15:42",
           "base": "5d746f878d4d91184153f3f80158debca1b2ba42",
           "blobs": {
             "CMakeLists.txt": "100644:63a2c9c5d0a095debe7e17e23a52c540ba481599",
@@ -21165,54 +22142,54 @@
             "test/phrase_expansion_fixture.hh": "100644:8cd0541eb261e1d0a026212cc9387e4aa7aceeac",
             "test/phrase_expansion_mutants.py": "100755:f0c53f1eae5c6c661164d078740b4291e1ab792e",
             "test/phrase_expansion_test.cc": "100644:2a5a0102b38ecff8c0dacc2e583c4272c0cd6f1e",
-            "test/scorer_budget_test.cc": "100644:e8945fc3a039ed84cf26bd36c1c8fbc793b8254c"
+            "test/scorer_budget_test.cc": "100644:ccbc0303c89bd95f6aea13058f953ea49df7a818"
           },
           "by": "review",
-          "commit": "15d2830eea3425a773628233fbc982fad852352a",
+          "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
           "criteria": "de191e8d1df19bb7",
           "diffs": {
             "": "3f6345fbb4f16f60",
             "CMakeLists.txt": "b97ef5d6992be816",
-            "docs/mechanisms/phrase-expansion.md": "10826173327f3a32",
-            "fuzz/corpus/phrase/r00": "735bec96b0468e01",
-            "fuzz/corpus/phrase/r01": "acf5b2347375ee12",
-            "fuzz/corpus/phrase/r02": "5faff7f2aa3db81f",
-            "fuzz/corpus/phrase/r03": "ff7b1bcebc30b66a",
-            "fuzz/corpus/phrase/r04": "acc54c9944c2a2c0",
-            "fuzz/corpus/phrase/r05": "b0049a49f5678951",
-            "fuzz/corpus/phrase/r06": "5721cc04f5a356ae",
-            "fuzz/corpus/phrase/r07": "4480453685b96b3e",
-            "fuzz/corpus/phrase/r08": "82800b507e4f3ad9",
-            "fuzz/corpus/phrase/r09": "00265c4b9ac3538f",
-            "fuzz/corpus/phrase/r10": "ef4e86ede6c54991",
-            "fuzz/corpus/phrase/r11": "8c14442c85d2dd2f",
-            "fuzz/corpus/phrase/r12": "9fca11dc9077b2d9",
-            "fuzz/corpus/phrase/r13": "d302d7e94acb8b70",
-            "fuzz/corpus/phrase/r14": "17553405593833ba",
-            "fuzz/corpus/phrase/r15": "d649e1f1a645b9ba",
-            "fuzz/corpus/phrase/r16": "578bd4e17fe6f425",
-            "fuzz/corpus/phrase/r17": "21b942729e21184c",
+            "docs/mechanisms/phrase-expansion.md": "4ac76d0555467620",
+            "fuzz/corpus/phrase/r00": "b54e3d291e9edbbb",
+            "fuzz/corpus/phrase/r01": "70fa4a4fd8122569",
+            "fuzz/corpus/phrase/r02": "52ac2edc56cf4669",
+            "fuzz/corpus/phrase/r03": "0c36f18aca003c61",
+            "fuzz/corpus/phrase/r04": "10b72da9e1af8d7f",
+            "fuzz/corpus/phrase/r05": "f6efa7ee91237f73",
+            "fuzz/corpus/phrase/r06": "4c5724b2c30afe71",
+            "fuzz/corpus/phrase/r07": "46987e61fa1a2423",
+            "fuzz/corpus/phrase/r08": "6c5e520236af6156",
+            "fuzz/corpus/phrase/r09": "33757f4be43133cf",
+            "fuzz/corpus/phrase/r10": "83308356d2e17c03",
+            "fuzz/corpus/phrase/r11": "4b79221a09cca837",
+            "fuzz/corpus/phrase/r12": "22b7d99f94bd2583",
+            "fuzz/corpus/phrase/r13": "f8c07dfbe42ffc13",
+            "fuzz/corpus/phrase/r14": "1019fbf8ff608bfc",
+            "fuzz/corpus/phrase/r15": "47f67369ca8ca383",
+            "fuzz/corpus/phrase/r16": "e23b820b8f53aeb4",
+            "fuzz/corpus/phrase/r17": "b803f6e790b54660",
             "fuzz/fuzz_phrase.cc": "c66dfaed44594fee",
             "include/prospect/phrase_expand.hh": "d024d09bf217423d",
             "test/expansion_bounds_test.cc": "e810e2fa4c41772c",
             "test/phrase_expansion_fixture.hh": "e965029b1fd5ac06",
             "test/phrase_expansion_mutants.py": "7992e69b1c182a22",
             "test/phrase_expansion_test.cc": "6705eccee2c5d6b0",
-            "test/scorer_budget_test.cc": "aaf16b28470feb7e"
+            "test/scorer_budget_test.cc": "96a9a011823d4bf7"
           },
           "findings": {
             "F1": {
               "jobs": [
                 {
                   "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
-                  "commit": "15d2830eea3425a773628233fbc982fad852352a",
+                  "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261120-134019-bd8050",
+                  "job": "261120-145150-ba6eac",
                   "level": "light",
-                  "seconds": 192.8,
+                  "seconds": 260.5,
                   "state": "done",
-                  "what": "phrase-expansion check build-test at 15d2830eea34"
+                  "what": "phrase-expansion check build-test at dea0ffb3781b"
                 }
               ],
               "kind": "gap",
@@ -21223,7 +22200,7 @@
             "paths": [
               "test/scorer_budget_test.cc"
             ],
-            "reason": "test/scorer_budget_test.cc is F1's regression test (the scorer charge against the measured heap); it adds no mechanism"
+            "reason": "prospect:dea0ffb changes only scorer_budget_test: under a sanitizer it leaves the allocator alone (ASan delete mismatch, TSan duplicate operator new)"
           },
           "note": "",
           "review": "2b0c4ff77988db3d37de33a5694a7ec38aee9b07",
@@ -21382,10 +22359,47 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/phrase-expansion",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T16:01:41",
+          "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+          "criteria": {
+            "A1": "261120-145150-ba6eac (the build-test check), 261120-145150-ba6eac",
+            "A2": "261120-145150-ba6eac (the build-test check), 261120-145150-ba6eac, 261120-145151-fb3e16, 261120-145153-531c56",
+            "A3": "`docs/mechanisms/phrase-expansion.md` (states what the byte budget covers)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-145150-ba6eac",
+              "level": "light",
+              "seconds": 260.5,
+              "state": "done",
+              "what": "phrase-expansion check build-test at dea0ffb3781b"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "later": [
+            "261120-160142-a97666"
+          ],
+          "reason": "",
+          "tested": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "automata"
@@ -21393,10 +22407,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T14:28:47",
-      "worktree": "../prospect-wt/xapiand/phrase-expansion"
+      "updated": "2026-11-20T16:01:44",
+      "worktree": ""
     },
     "pins-2026-11": {
       "accepted": {},
@@ -21434,9 +22448,11 @@
       "after": [
         "group-heal"
       ],
+      "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+      "branch": "quest/xapiand/placement",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -21464,8 +22480,62 @@
         "test/placement/**",
         "bench/placement/**",
         "docs/mechanisms/placement-root.md",
-        "docs/mechanisms/placement-repair.md"
+        "docs/mechanisms/placement-repair.md",
+        "CMakeLists.txt"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:47",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
+      "journal": "../Xapiand-wt/xapiand/placement",
       "landed": [],
       "lenses": [
         "correctness"
@@ -21480,9 +22550,40 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
+      "tasks": {
+        "root": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/placement--root",
+          "files": [
+            "include/strata/placement/root*",
+            "include/strata/placement/records*",
+            "include/strata/placement/placement*",
+            "src/placement/root*",
+            "src/placement/records*",
+            "src/placement/placement*",
+            "test/placement/root*",
+            "bench/placement/**",
+            "docs/mechanisms/placement-root.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/placement--root",
+          "worktree": "../strata-wt/xapiand/placement--root"
+        },
+        "scan": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/placement--scan",
+          "files": [
+            "src/placement/scan*",
+            "include/strata/placement/scan*",
+            "test/placement/scan*"
+          ],
+          "journal": "../Xapiand-wt/xapiand/placement--scan",
+          "worktree": "../strata-wt/xapiand/placement--scan"
+        }
+      },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T05:21:55"
+      "updated": "2026-11-20T18:21:47",
+      "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
       "accepted": {},
@@ -23400,7 +24501,7 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -23512,6 +24613,58 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:50",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "landed": [],
@@ -23530,7 +24683,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-20T05:28:34"
+      "updated": "2026-11-20T18:21:50"
     },
     "release": {
       "accepted": {},
@@ -23549,13 +24702,13 @@
       ],
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 150,
           "name": "build-test"
         },
         {
-          "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+          "cmd": "ci:Functional E2E (docs)",
           "level": "light",
           "minutes": 120,
           "name": "e2e"
@@ -23642,6 +24795,45 @@
           "weakened": [
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:52",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "export PATH=\"$HOME/.scratch/newman6/node_modules/.bin:$PATH\" RUN_ALL_STRICT=1 && cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh smoke e2e tls",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed",
+            "gate check e2e changed"
+          ]
         }
       ],
       "landed": [],
@@ -23660,7 +24852,7 @@
       "until": [
         "owner"
       ],
-      "updated": "2026-11-20T05:30:14"
+      "updated": "2026-11-20T18:21:52"
     },
     "release-rows": {
       "accepted": {
@@ -29160,7 +30352,7 @@
       "branch": "quest/xapiand/track-c",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -29199,6 +30391,32 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:54",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/track-c",
@@ -29214,7 +30432,7 @@
       "risk": "high",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-20T05:31:21",
+      "updated": "2026-11-20T18:21:54",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
@@ -29350,7 +30568,7 @@
       "branch": "quest/xapiand/track-c-gates",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -29363,6 +30581,34 @@
         "docs/reviews/track-c-c2*.md",
         "docs/reviews/track-c-c4*.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:57",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/track-c-gates",
       "landed": [],
       "lenses": [],
@@ -29373,7 +30619,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-20T05:31:24",
+      "updated": "2026-11-20T18:21:57",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
@@ -29381,7 +30627,7 @@
       "after": [],
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -29492,6 +30738,58 @@
           "weakened": [
             "gate check asan changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:21:59",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
         }
       ],
       "landed": [],
@@ -29510,7 +30808,7 @@
       "until": [
         "release"
       ],
-      "updated": "2026-11-20T05:28:42"
+      "updated": "2026-11-20T18:21:59"
     },
     "track-p": {
       "accepted": {
@@ -29951,22 +31249,39 @@
             "test/test_barrier*",
             "test/test_turn*"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--cohort-wait",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--cohort-wait"
+          "journal": "",
+          "merged": "2f5f103366ddce071afc4c182ed1e9823767841d",
+          "worktree": ""
+        },
+        "journal-pin": {
+          "base": "db214892159e0102e17f5b390e1a37b299546031",
+          "branch": "quest/xapiand/turn-log-parity--journal-pin",
+          "files": [
+            "CMakeLists.txt",
+            "include/strata/core/index.hh",
+            "include/strata/core/turn_seal.hh",
+            "test/standalone_turn_log_test.cc",
+            "test/test_barrier*",
+            "test/test_turn*"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--journal-pin",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--journal-pin"
         },
         "merge-runs": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
           "branch": "quest/xapiand/turn-log-parity--merge-runs",
           "files": [
             "include/strata/core/merge_policy.hh",
-            "test/test_merge*"
+            "test/test_merge*",
+            "test/merge_policy_test.cc"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--merge-runs",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--merge-runs"
+          "journal": "",
+          "merged": "1d50e0ab72b550db26a7ae3fcc421e8a81c783f6",
+          "worktree": ""
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T14:32:43",
+      "updated": "2026-11-20T17:44:11",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
@@ -33276,6 +34591,8 @@
     "xapiand-final-release": {
       "accepted": {},
       "after": [],
+      "base": "bedae4b68e0dad03e7f47fe5e7ff27c212cc5864",
+      "branch": "quest/xapiand/xapiand-final-release",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -33286,10 +34603,8 @@
       ],
       "consumes": [],
       "files": [
-        "src/**",
-        "docs/**",
-        "cmake/**",
-        "tests/test_xapiand_final_release*"
+        "tests/test_xapiand_final_release*",
+        "docs/release/xapiand-final*"
       ],
       "history": [
         {
@@ -33352,9 +34667,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T05:25:57"
+      "updated": "2026-11-20T15:52:25",
+      "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
       "accepted": {},
