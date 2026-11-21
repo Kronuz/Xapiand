@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on detent:consensus-full-window-stall (D165), then the lead reruns A1/A2 at the merged head; ready for review at consensus:c1a2138. A1/A2 jobs are red only on the loss row's stall checks (Finding 1, Detent's fix); every other check passed. Narrowing jobs cancelled (msg-185).
+State: waiting on jobs 261121-103053-c94e37 261121-095306-97bf49 261121-103053-6192c5 261121-095307-869fee (A1/A2 reruns at consensus:d81ac11); build fixed.
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -114,3 +114,6 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
   pin a3b71d1; only README and CI changed since.
 - Role changes reset per shape (Bench.start). The partition row's isolated-leader term had read
   earlier shapes' clusters ("term 11/8"); the selftest now fails without the reset.
+
+## Build fix at the merged head
+Cause: bench/netlab/node.cc:244 called transport->store(group,id,open), but main's HostTransport (host_transport.h:450) takes (group, incarnation) and requires options.open_of. Fix: node.cc sets options.open_of to the fixed open; vm.sh build prints the guest's error lines on failure. Local build job 261121-102327-625fe0 passed. Reruns: 261121-103053-c94e37: 261121-095306-97bf49 at d81ac115464c 261121-103053-6192c5: 261121-095307-869fee at d81ac115464c
