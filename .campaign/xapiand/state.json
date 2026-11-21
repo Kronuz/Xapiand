@@ -30561,7 +30561,7 @@
       "branch": "quest/xapiand/track-c-gates",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -30574,6 +30574,34 @@
         "docs/reviews/track-c-c2*.md",
         "docs/reviews/track-c-c4*.md"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:57",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/track-c-gates",
       "landed": [],
       "lenses": [],
@@ -30584,7 +30612,7 @@
       "risk": "normal",
       "status": "active",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-20T05:31:24",
+      "updated": "2026-11-20T18:21:57",
       "worktree": "../strata-wt/xapiand/track-c-gates"
     },
     "track-d": {
