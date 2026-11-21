@@ -19687,7 +19687,7 @@
       "branch": "quest/xapiand/node-admission",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 60,
           "name": "suite"
@@ -19810,6 +19810,56 @@
           "reason": "",
           "voided": [],
           "weakened": []
+        },
+        {
+          "at": "2026-11-20T18:21:37",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null && ninja -C build && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 60,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/node-admission",
@@ -19826,7 +19876,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T18:16:54",
+      "updated": "2026-11-20T18:21:37",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
