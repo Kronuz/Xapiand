@@ -25292,6 +25292,39 @@
       "updated": "2026-11-21T12:29:17",
       "worktree": ""
     },
+    "split-check-sources": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+          "level": "light",
+          "minutes": 10,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py'",
+          "level": "light",
+          "minutes": 10,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "split_check compares only C and C++ sources",
+      "updated": "2026-11-21T12:38:29"
+    },
     "split-completion": {
       "accepted": {},
       "after": [
