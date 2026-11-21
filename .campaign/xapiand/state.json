@@ -25859,6 +25859,8 @@
       "after": [
         "split-check"
       ],
+      "base": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+      "branch": "quest/xapiand/split-task",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25889,6 +25891,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-task",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25896,9 +25899,10 @@
       "provides": [],
       "repo": "../task",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "task's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:10"
+      "updated": "2026-11-21T12:21:39",
+      "worktree": "../task-wt/xapiand/split-task"
     },
     "split-traceback": {
       "accepted": {},
