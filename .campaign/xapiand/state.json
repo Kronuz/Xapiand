@@ -1882,6 +1882,18 @@
       "closed": "cluster uses HostTransport and the rpc lane only, never decodes Driver messages; tag 9 needs no change",
       "id": "msg-195",
       "text": "Heads-up, consensus wire change (consensus-quiescence, consensus:3b20d96, in re-review, not landed): new Driver message Gone{term}, wire tag 9. When a group fences on a live node, its Driver tells the group's other members, and a follower in that term treats it as LeaderGone, so resting groups elect instead of waiting forever. If your cluster decodes consensus Driver messages itself (rpc-lane), it needs tag 9."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T01:45:17",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T01:45:17",
+      "by": "lead",
+      "closed": "fix passes all 5 group cases (Detent job 261121-012106-ce07f5); no probe pin, repin when it lands",
+      "id": "msg-196",
+      "text": "msg-189 progress: consensus-leaving-removal's fix (consensus:9a2476d, review APPROVED, not landed) passes all five strata placement--repair group cases at seed 1 (replace, replicas, waits, defer, drain) on consensus:20198fc = your pin b8de3b8 plus the fix (job 261121-012106-ce07f5). It lands after consensus-quiescence; if you want to unblock placement now, pin 20198fc temporarily (local probe branch probe/leaving-removal-on-b8de3b8, ask and I'll push it)."
     }
   ],
   "quests": {
