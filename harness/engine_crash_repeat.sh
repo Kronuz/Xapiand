@@ -25,16 +25,16 @@ set -u
 K=$1; N=$2; BIN=$PWD/build-$K/bin/xapiand; OUT=$HOME/.scratch/xapiand/crash-wrong-row/$K; mkdir -p "$OUT" "$PWD/.scratch/cwr"
 . harness/env.sh
 export ASAN_OPTIONS=detect_leaks=0
-sed 's/for i in $(seq 0 39); do curl -s -m15 -o \/dev\/null -XDELETE/for i in $(seq 1 39); do curl -s -m15 -o \/dev\/null -XDELETE/' harness/engine_crash_check.sh > .scratch/cwr/mutant.sh
+sed 's/-XDELETE "localhost:\$PORT\/\$1\/poke\$i"/-XDELETE "localhost:$PORT\/$1\/poke$((i + 1))"/' harness/engine_crash_check.sh > .scratch/cwr/mutant.sh
 cmp -s harness/engine_crash_check.sh .scratch/cwr/mutant.sh && { echo "mutant: sed did not apply"; exit 3; }
 R=$PWD/.scratch/cwr/$K-mutant; RUNDIR=$R BIN=$BIN PORT=$(free_port) bash .scratch/cwr/mutant.sh --only D > "$R.log" 2>&1; rc=$?
-echo "mutant rc=$rc"; grep -E "wrong row|writer .* n |FAIL" "$R.log"
+echo "mutant rc=$rc"; grep -E "wrong row|writer .* n |poke:|FAIL" "$R.log"
 [ $rc != 0 ] && grep -q "D wrong row.*'poke0 None'.*GET 200" "$R.log" || { echo "mutant: the wrong row did not print"; exit 4; }
 f=0
 for i in $(seq "$N"); do
 	R=$PWD/.scratch/cwr/$K-$i
 	KEEP_RUNDIR=1 RUNDIR=$R BIN=$BIN PORT=$(free_port) bash harness/engine_crash_check.sh --only D > "$R.log" 2>&1; rc=$?
-	echo "$K $i rc=$rc $(grep -E "FAIL|wrong row|writer .* n |writers, [0-9]+ documents" "$R.log" | sed 's/;.*//' | tr '\n' ' ' | cut -c1-400)"
+	echo "$K $i rc=$rc $(grep -E "FAIL|wrong row|writer .* n |poke:|writers, [0-9]+ documents" "$R.log" | sed 's/;.*//' | tr '\n' ' ' | cut -c1-400)"
 	if [ $rc != 0 ]; then f=$((f + 1)); cp -R "$R" "$R.log" "$OUT/"; fi
 	rm -rf "$R"
 done

@@ -71,11 +71,18 @@ start_node() {  # start_node ENGINE LOG
 	return 1
 }
 crash() { kill -9 "$PID" 2>/dev/null; wait "$PID" 2>/dev/null; PID=""; }
-poke() {  # a write to every shard, then delete the pokes
-	local i
-	for i in $(seq 0 39); do curl -s -m15 -o /dev/null -XPUT "localhost:$PORT/$1/poke$i" -H 'Content-Type: application/json' -d '{"poke":true}'; done
-	for i in $(seq 0 39); do curl -s -m15 -o /dev/null -XDELETE "localhost:$PORT/$1/poke$i"; done
-	curl -s -m60 -o /dev/null -XPOST "localhost:$PORT/$1/:commit"   # replayed writes show in a search after a commit
+poke() {  # a write to every shard, then delete the pokes; a request that does not succeed prints its status
+	local i s
+	for i in $(seq 0 39); do
+		s=$(curl -s -m15 -o /dev/null -w '%{http_code}' -XPUT "localhost:$PORT/$1/poke$i" -H 'Content-Type: application/json' -d '{"poke":true}')
+		[[ $s == 2?? ]] || echo "  poke: PUT $1/poke$i answered $s"
+	done
+	for i in $(seq 0 39); do
+		s=$(curl -s -m15 -o /dev/null -w '%{http_code}' -XDELETE "localhost:$PORT/$1/poke$i")
+		[[ $s == 2?? ]] || echo "  poke: DELETE $1/poke$i answered $s"
+	done
+	s=$(curl -s -m60 -o /dev/null -w '%{http_code}' -XPOST "localhost:$PORT/$1/:commit")   # replayed writes show in a search after a commit
+	[[ $s == 2?? ]] || echo "  poke: commit $1 answered $s"
 }
 list_set() {  # list_set INDEX OUT: "_id n" lines, sorted, of every document (pages of 1000)
 	python3 -I - "$PORT" "$1" "$2" <<'PY'
