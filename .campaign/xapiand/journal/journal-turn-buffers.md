@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261120-204135-6afdb1 261120-204136-5db313 261120-204136-b4641b 261120-204136-af907d 261120-204136-c5ea74 261120-204136-0cdfe6 261120-204136-c0795f (A1-A4 reruns at journal:b88565f; 261120-204136-5db313 A2 passed) and CI run 44867354936 at journal:b88565f (run 44865338424 at journal:28c0caa was cancelled by the push)
+State: waiting on jobs 261121-054400-6b0c28 261121-054403-30cfba 261121-054405-8a3d65 261121-054407-4638ad 261121-054409-97d867 261121-054412-bfce5b 261121-054414-82b503 261121-054417-3194fe 261121-054419-ff7741 261121-054429-b6be64 (A1-A6 and the four mutants at journal:a5bfa3e, and a local TSan build) and CI run 44910292621 at journal:a5bfa3e
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,11 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-A6 at journal:b88565f (pushed): journal:fa404a4 the hook, journal:15ca23b, journal:ab2014f and
-journal:b88565f its test. A6 passed (261120-204027-99b762), its mutant killed
-(261120-204028-be128e). A1-A4 evidence rerunning at journal:b88565f (State).
+Fixing CI's linux-tsan at journal:5ace07e (run 44869209179): the build failed to link
+journal_turn_buffers_test and _probe, "multiple definition of operator new": TSan's static
+runtime defines it. journal:d7564f2 leaves the counting allocator out under TSan, as
+journal_test does: the test skips its allocation checks and prints so; the probe exits 2.
+journal:a5bfa3e merges main (idle groups: park renamed evict; conflicts in turn_log.h only,
+resolved to this branch's code under main's names). A1-A6 and the mutants rerun at
+journal:a5bfa3e (State). The "3 failed" of the b88565f reruns were the three mutant jobs,
+which exit 1 by design (--fails-without); nothing failed there.
 
-Before A6:
+Earlier, A6 at journal:b88565f:
+
 
 Code done at journal:28c0caa (pushed): journal:b7501df framing in place, journal:e2183f9 manifest
 reserve, journal:37e371a probe, journal:a210537 and journal:28c0caa notes. Evidence jobs re-run at
@@ -23,8 +29,10 @@ seal-copy 261120-201148-86ff12, stage-copy 261120-201150-edcde6, forward-string 
 
 ## Next
 
-1. A1-A4 reruns and CI (macos-arm64, linux-asan-ubsan, linux-tsan) green at journal:b88565f.
-2. Then: ready for Detent's review (A5), with the commit and tests below.
+1. A1-A6 reruns and CI (all platforms, linux-tsan included) green at journal:a5bfa3e; then
+   update the Evidence table and set State to ready for review.
+2. A5 stands at journal:b88565f; since then only the TSan guard (test-only) and the merge of
+   main. Tell Detent's lead if the lead wants the merge re-read.
 
 ## Blocked on
 
@@ -74,6 +82,9 @@ journal:28c0caa; tests: `journal_turn_buffers_{bytes,turns,warm,seal,forward,pow
 seal-copy|stage-copy|forward-string`.
 
 ## Rulings I made
+
+- R9 Under TSan the turn buffers' allocation checks are skipped and say so, as journal_test's
+  heap cases do; their other checks still run. Allocation evidence comes from non-TSan builds.
 
 - R6 The recycler is an optional fourth `seal()` argument, after `owner`, not an overload: a
   `seal(g, fn, nullptr)` stays unambiguous, and every existing call compiles unchanged. It is
