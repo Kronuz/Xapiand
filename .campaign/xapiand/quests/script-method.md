@@ -19,8 +19,7 @@ member of `DatabaseHandler` (handler.h). Scripts are reached only from `Schema::
 - A2 Paths that index without a request (replication, restore from a dump, internal reindex) pass a
   defined method and are listed in the journal with the value each gets: the test covers one of them
 - A3 The suite passes and CI is green: `ci:Build + unit + smoke`, `ci:Functional E2E (docs)`
-- A4 [artifact] The script docs name `_method` and its values: the docs page that lists script
-  variables
+- A4 [artifact] The script docs name `_method` and its values: `docs/src/content/docs/reference-guide/documents/scripting.md`
 
 ## Decisions
 
