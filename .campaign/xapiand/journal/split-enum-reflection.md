@@ -1,6 +1,6 @@
 # split-enum-reflection: journal
 
-State: waiting on jobs 261121-130303-a6714d 261121-131435-def0ec 261121-130315-050173 261121-130318-1c55be
+State: ready for review (main merged at enum-reflection:0c7f34f; A2 split_check 261121-131435-def0ec passed with the fixed checker, reused at the merged head; CI at the new head pending)
 Quest: .campaign/xapiand/quests/split-enum-reflection.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,12 +25,12 @@ Nothing. The owner may still choose the one split the layout note describes (see
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130303-a6714d (pending) |
-| A2 | 261121-131435-def0ec (pending): split_check from the split-check-sources worktree. Gate job 261121-130303-02426f failed: the landed tool reads `docs/source-layout.md` as C++ (all 11 errors and 19 warnings are its lines; the only other line is the over-1,000 note on `enum.h`), the gap split-check-sources fixes; the lead reruns the gate once it lands |
-| A3 | 261121-130315-050173 (pending): `ctest -N` at main and at head, diffed |
+| A1 | build-test 261121-130303-a6714d (done, exit 0) |
+| A2 | 261121-131435-def0ec (done, exit 0, reused at the merged head): split_check from the split-check-sources worktree. Gate job 261121-130303-02426f failed: the landed tool reads `docs/source-layout.md` as C++ (all 11 errors and 19 warnings are its lines; the only other line is the over-1,000 note on `enum.h`), the gap split-check-sources fixes; the lead reruns the gate once it lands |
+| A3 | 261121-130315-050173 (done): `ctest -N` at main and at head, diffed |
 | A4 | `docs/source-layout.md` at enum-reflection:6227a07: lists `enum.h`, kept whole, with its sections and why |
 | A5 | CI at enum-reflection:6227a07 (pushed) |
-| A6 | 261121-130318-1c55be (pending): headers at main and at head compared; the quest creates none, so none to check alone |
+| A6 | 261121-130318-1c55be (done): headers at main and at head compared; the quest creates none, so none to check alone |
 | A7 | the lead's read |
 
 ## Result
@@ -49,8 +49,7 @@ Docs written: `docs/source-layout.md`.
 
 ## Rulings I made
 
-- main moved `.github/workflows/ci.yml` after this branch started; `campaign brief` asks for
-  `campaign land --merge-main`, the lead's step.
+- Merged main into the branch (only ci.yml changed): enum-reflection:0c7f34f. No warnings or errors from the fixed checker.
 
 - No split, by the single-header contract (lead's context: "A library whose contract is a single
   header stays single-file unless the owner decides otherwise"). The owner's alternative, if he
