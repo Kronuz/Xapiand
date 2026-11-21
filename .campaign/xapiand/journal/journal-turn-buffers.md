@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261120-204135-6afdb1 261120-204136-5db313 261120-204136-b4641b 261120-204136-af907d 261120-204136-c5ea74 261120-204136-0cdfe6 261120-204136-c0795f (A1-A4 reruns at journal:b88565f) and CI at journal:b88565f
+State: waiting on jobs 261120-204135-6afdb1 261120-204136-5db313 261120-204136-b4641b 261120-204136-af907d 261120-204136-c5ea74 261120-204136-0cdfe6 261120-204136-c0795f (A1-A4 reruns at journal:b88565f; 261120-204136-5db313 A2 passed) and CI run 44867354936 at journal:b88565f (run 44865338424 at journal:28c0caa was cancelled by the push)
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
