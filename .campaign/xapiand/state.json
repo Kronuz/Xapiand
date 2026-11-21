@@ -27991,6 +27991,37 @@
       "title": "One pool: WorkPool only, ThreadPool family deleted",
       "updated": "2026-11-08T15:40:27"
     },
+    "tls-watch-cancel": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "test/tls_watch_test.cc",
+        "CMakeLists.txt",
+        "docs/perf/watch-peek.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "high",
+      "status": "planned",
+      "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
+      "updated": "2026-11-21T10:33:17"
+    },
     "track-c": {
       "accepted": {},
       "after": [
