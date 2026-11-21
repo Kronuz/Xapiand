@@ -14747,7 +14747,13 @@
       "files": [
         "tests/test_lua.cc",
         "tests/test_lua_*.h",
-        "tests/utils*"
+        "tests/utils*",
+        "src/manager.cc",
+        "tests/test_coverage_database.cc",
+        "tests/test_endpoint_uuid.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_node.cc",
+        "tests/test_stopword_search.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -14758,7 +14764,7 @@
       "risk": "low",
       "status": "active",
       "title": "test_lua's method case passes every run, under load and beside parallel tests",
-      "updated": "2026-11-21T02:23:30",
+      "updated": "2026-11-21T02:38:29",
       "worktree": "../Xapiand-wt/xapiand/lua-method-flake"
     },
     "lua-name-miss": {
