@@ -12691,6 +12691,8 @@
     "http-log-logger-pin": {
       "accepted": {},
       "after": [],
+      "base": "5e3df31e359336cd36b1949e2895c0951b356b31",
+      "branch": "quest/xapiand/http-log-logger-pin",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -12703,6 +12705,7 @@
       "files": [
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/http-log-logger-pin",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -12710,9 +12713,10 @@
       "provides": [],
       "repo": "../http-log",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "http-log pins a logger without the scheduler",
-      "updated": "2026-11-21T12:11:31"
+      "updated": "2026-11-21T12:11:37",
+      "worktree": "../http-log-wt/xapiand/http-log-logger-pin"
     },
     "http-phase7c-l3": {
       "accepted": {},
