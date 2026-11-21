@@ -25,6 +25,7 @@
 
 #include "config.h"                         // for XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
+#include <algorithm>                        // for std::min
 #include <cassert>                          // for assert
 #include <charconv>                         // for std::from_chars (indent param)
 #include <errno.h>                          // for errno
@@ -2986,6 +2987,17 @@ Request::append(const char* at, size_t length)
 		case Mode::STREAM_MSGPACK:
 			assert(has_content_length);
 
+			// A body that is one top-level array streams as the objects it holds: its header is skipped.
+			if (length && array_header == SIZE_MAX) {
+				const auto b = static_cast<unsigned char>(*at);
+				array_header = (b & 0xf0) == 0x90 ? 1 : b == 0xdc ? 3 : b == 0xdd ? 5 : 0;
+			}
+			if (length && array_header != SIZE_MAX && array_header != 0) {
+				const auto skip = std::min(array_header, length);
+				at += skip;
+				length -= skip;
+				array_header -= skip;
+			}
 			if (length) {
 				unpacker.reserve_buffer(length);
 				memcpy(unpacker.buffer(), at, length);

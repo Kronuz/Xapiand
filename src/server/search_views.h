@@ -27,6 +27,7 @@
 
 #include <chrono>                           // for std::chrono, std::chrono::steady_clock, std::chrono::time_point
 #include <condition_variable>               // for std::condition_variable
+#include <cstdint>                          // for SIZE_MAX
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
 #include <optional>                         // for std::optional
@@ -162,6 +163,7 @@ public:
 	engine::Chores* parse_chores = nullptr;
 	bool body_ended = false;
 	msgpack::unpacker unpacker = make_msgpack_unpacker();  // msgpack unpacker, depth-limited
+	std::size_t array_header = SIZE_MAX;  // the top-level array header's bytes left to skip; SIZE_MAX: not seen yet
 
 	ct_type_t ct_type;
 
