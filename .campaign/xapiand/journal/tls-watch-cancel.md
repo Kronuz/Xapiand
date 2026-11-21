@@ -24,10 +24,10 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | Job 261121-102716-4e6b27 at http:445f1b2 (test only): `tls_watch` fails, and only on its check "a cancel between the wake and the stream's continuation ends the read with operation_aborted" (the earlier checks pass, the wait queued before the watch's read woke; exit 0 means it failed on that check). Job 261121-102751-26bc30 at http:e4ad5b9: `tls_watch`, `tls_asio`, `limits`, `readahead` all pass (exit 0, 93.7 s). The window is reached without a sleep: a `wait_read` queued before the watch's read runs first in the pass that completes the read with 3 bytes of a 23-byte record. Rerun at the landed code: check build-test 261121-103400-803d9e runs all ctest. |
+| A1 | Job 261121-112242-c328ec at http:e4ad5b9 passes `tls_watch`. Without the fix, at http:445f1b2 (test only, the earlier job 102716-4e6b27): `tls_watch` fails, and only on its check "a cancel between the wake and the stream's continuation ends the read with operation_aborted" (the earlier checks pass, the wait queued before the watch's read woke; exit 0 means it failed on that check). Job 261121-102751-26bc30 at http:e4ad5b9: `tls_watch`, `tls_asio`, `limits`, `readahead` all pass (exit 0, 93.7 s). The window is reached without a sleep: a `wait_read` queued before the watch's read runs first in the pass that completes the read with 3 bytes of a 23-byte record. Rerun at the landed code: check build-test 261121-103400-803d9e runs all ctest. |
 | A2 | CI run 44936222272 at http:e4ad5b9, job linux-tsan (pending when written; the lead reads it). Not run locally. |
 | A3 | check build-test 261121-103400-803d9e at http:e4ad5b9 (queued when written). |
-| A4 | [artifact] `docs/perf/watch-peek.md` step 2 names the TLS cancellation slot (http:e4ad5b9); the same commit corrects the three range ends from aa_ratio.py over job 261109-150350-f39012's runs (1.37-1.97, 0.82-1.12, 0.90-1.03). |
+| A4 | [artifact] `docs/perf/watch-peek.md` step 2 names the TLS cancellation slot (http:e4ad5b9); the same commit corrects the three range ends from aa_ratio.py over perf-watch-peek's A/B runs (1.37-1.97, 0.82-1.12, 0.90-1.03). |
 
 ## Result
 
