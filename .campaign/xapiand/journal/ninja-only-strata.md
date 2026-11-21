@@ -1,6 +1,6 @@
 # ninja-only-strata: journal
 
-State: waiting on jobs 261121-095327-0995a3 261121-091847-30861e 261121-095312-4789e2
+State: ready to land. CI green at strata:cc30217fc2fe: run 44950558785 (workflow_dispatch, all 9 jobs pass). The earlier red run 44932359761 at the same commit was the branch's guard tripping on the shared cpp-libraries cmake.yml@main, which then configured without -G Ninja ("Ninja only: configure with -G Ninja (not Unix Makefiles)"); the shared workflow now passes -G Ninja, so no branch fix is needed. strata main has not moved (merge base efa5214b = origin/main); no push needed.
 Quest: .campaign/xapiand/quests/ninja-only-strata.md (the lead's; never edit it)
 
 ## Doing
@@ -10,7 +10,7 @@ Jobs queued at that commit.
 
 ## Next
 
-1. When the jobs finish: fill the Evidence rows from `campaign brief`, set State to ready for review.
+1. Lead lands; CI evidence is run 44950558785.
 
 ## Blocked on
 
