@@ -9482,6 +9482,40 @@
       "updated": "2026-11-18T00:06:34",
       "worktree": ""
     },
+    "faultlab-strata-gaps": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/faultlab/faultfs.h",
+        "test/**",
+        "docs/**",
+        "README.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "faultlab:faultfs"
+      ],
+      "repo": "../faultlab",
+      "risk": "normal",
+      "status": "planned",
+      "title": "faultlab's faultfs covers every call strata makes",
+      "updated": "2026-11-20T23:04:28"
+    },
     "field-table": {
       "accepted": {},
       "after": [],
