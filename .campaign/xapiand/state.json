@@ -12471,6 +12471,62 @@
       "title": "Reopen installed segments from target files",
       "updated": "2026-11-08T15:39:30"
     },
+    "journal-group-delete": {
+      "accepted": {},
+      "after": [
+        "detent:journal-idle-groups",
+        "detent:journal-loop-handoff",
+        "detent:journal-power-silent-loss"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/host.h",
+        "src/host*",
+        "src/turn_log*",
+        "test/host_delete_test.cc",
+        "docs/mechanisms/host-delete.md",
+        "CHANGELOG.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [
+        "detent:journal-idle-groups",
+        "detent:journal-loop-handoff",
+        "detent:journal-power-silent-loss"
+      ],
+      "provides": [
+        "journal:host"
+      ],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "a host deletes a left group's journal, so the node can rejoin it",
+      "updated": "2026-11-21T00:04:19"
+    },
     "journal-replaces-wal": {
       "accepted": {},
       "after": [],
