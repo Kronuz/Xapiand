@@ -1621,6 +1621,23 @@
         ]
       },
       "text": "consensus-rpc-lane landed: unlocks cluster; multicast-seeds; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T15:51:45",
+      "by": "campaign",
+      "closed": "superseded",
+      "id": "msg-179",
+      "items": {
+        "phase5": "frees include/**, test/**, bench/**, docs/perf/** for phase5",
+        "xapiand-final-release": "frees tests/test_xapiand_final_release*, docs/release/xapiand-final* for xapiand-final-release"
+      },
+      "settles": {
+        "start": [
+          "phase5",
+          "xapiand-final-release"
+        ]
+      },
+      "text": "set xapiand-final-release: unlocks frees tests/test_xapiand_final_release*, docs/release/xapiand-final* for xapiand-final-release; frees include/**, test/**, bench/**, docs/perf/** for phase5"
     }
   ],
   "quests": {
@@ -21417,10 +21434,47 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/phrase-expansion",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T16:01:41",
+          "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+          "criteria": {
+            "A1": "261120-145150-ba6eac (the build-test check), 261120-145150-ba6eac",
+            "A2": "261120-145150-ba6eac (the build-test check), 261120-145150-ba6eac, 261120-145151-fb3e16, 261120-145153-531c56",
+            "A3": "`docs/mechanisms/phrase-expansion.md` (states what the byte budget covers)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-145150-ba6eac",
+              "level": "light",
+              "seconds": 260.5,
+              "state": "done",
+              "what": "phrase-expansion check build-test at dea0ffb3781b"
+            },
+            {
+              "check": "asan",
+              "ci": "ci:linux-asan-ubsan",
+              "commit": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "5d746f878d4d91184153f3f80158debca1b2ba42",
+          "later": [
+            "261120-160142-a97666"
+          ],
+          "reason": "",
+          "tested": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "automata"
@@ -21428,10 +21482,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "Wildcards, prefixes and fuzzy words inside phrases and NEAR",
-      "updated": "2026-11-20T15:15:42",
-      "worktree": "../prospect-wt/xapiand/phrase-expansion"
+      "updated": "2026-11-20T16:01:44",
+      "worktree": ""
     },
     "pins-2026-11": {
       "accepted": {},
