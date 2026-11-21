@@ -1,6 +1,6 @@
 # split-http-parser: journal
 
-State: waiting on jobs 261121-115212-41a5fe 261121-115212-e66e17 261121-115215-a5e4a8
+State: waiting on jobs 261121-115542-b293ac 261121-115606-c93564 (then submit the base ctest -N at acb0aff)
 Quest: .campaign/xapiand/quests/split-http-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code done in the http-parser worktree (3 commits: 7f3b7fd, 799b36e, 738d611). Jobs submitted: build-test 261121-115212-41a5fe, split 261121-115212-e66e17, ctest -N at head 261121-115215-a5e4a8. Baseline ctest -N at acb0aff still to submit (a --quest job supersedes the queued one, so submit it after the head job ends), then diff the two listings.
+Code done and pushed at http-parser a45cda3 (commits 7f3b7fd, 799b36e, 738d611, a45cda3). Jobs at a45cda3: build-test 261121-115542-b293ac (A1), ctest -N 261121-115606-c93564 (A3 head), selfcontained 261121-115551-b79709 (A6, passed: http_parser_chars.h and http_parser_internal.h ok). Split check 261121-115543-836a81 failed: tools/split_check.py is missing (split-check not landed); resubmit with `campaign verify split-http-parser` after it lands. An earlier ctest -N at 738d611 (261121-115215-a5e4a8) listed 4 tests.
 
 ## Next
 
-1. Submit the ctest -N job at acb0aff (--commit acb0aff --for A3) once 261121-115215-a5e4a8 finishes; diff the listings.
-2. Record the evidence table; push the branch.
+1. When 261121-115606-c93564 ends, submit the base listing: `campaign job submit --quest split-http-parser --for A3 --level light --minutes 10 --commit acb0aff -- sh -c 'cmake -G Ninja -S . -B build-n >/dev/null && ctest -N --test-dir build-n'`; diff the `Test #` lines.
+2. After split-check lands: `campaign verify split-http-parser`; answer its warnings.
+3. Fill the Evidence table.
 
 ## Blocked on
 
@@ -29,6 +30,7 @@ Nothing.
 | A3 | ctest -N at head 261121-115215-a5e4a8; at base acb0aff to come |
 | A4 | docs/source-layout.md lists each new file |
 | A5 | CI on the pushed branch |
+| A6 | selfcontained job 261121-115551-b79709 (the two new .h files; the .inc files are not headers, see Rulings) |
 
 ## Result
 
@@ -42,3 +44,4 @@ http_parser.cc (2,850) is 164 lines plus pieces, none over 675: execute states i
 - test/diff.cc: the shared anonymous-namespace state (counters, impls) means a second translation unit would need extern declarations, so its sections are `.inc` files in one TU.
 - Order of file-scope statics in the loop's TU changed slightly (tables after the shared header); no semantic effect.
 - Left alone, outside my file set, and now stale: `tools/mutants.py` (reads and compiles only http_parser.cc; mutates scan code now in .inc files), the build line in bench/bench.cc, and prose in README.md, ARCHITECTURE.md, AGENTS.md naming http_parser.cc as the single source. For the lead.
+- A6: the new real headers are http_parser_internal.h and http_parser_chars.h (the latter includes the former: a45cda3). The `.inc` files are textual pieces of one function (loop states, macros, tables, scans) and of main() in test/diff.cc: they cannot compile alone, by design, and are not headers; selfcontained.sh covers *.h only. Lead: if A6 is meant to cover them, the parse loop cannot be split without rewriting it.
