@@ -1,6 +1,6 @@
 # journal-lost-bound: journal
 
-State: waiting on jobs 261121-105355-e0cfd0 261121-105358-5bfdac 261121-105412-c88261 261121-105413-504c72 261121-105415-3c8f01 and CI at journal:ebd3038
+State: waiting on jobs 261121-105413-504c72 261121-105415-3c8f01 and CI at journal:ebd3038
 Quest: .campaign/xapiand/quests/journal-lost-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -45,7 +45,7 @@ Not in the set and not touched: `src/host*` does not exist (host.h is header-onl
 
 | Criterion | Evidence |
 |---|---|
-| A1 | At journal:ebd3038: 261121-105412-c88261 (`lost_bound_test bounds`), 261121-105355-e0cfd0 (host_test whole); `--fails-without` at the mutant journal:63494f8 (every named group lost): 261121-105415-3c8f01 (bounds), 261121-105358-5bfdac (idle_damage). At journal:1e3505a: 5d2ded passed, e1fed8 failed at the mutant journal:1d773a5 as required |
+| A1 | At journal:ebd3038: 261121-105412-c88261 passed (`lost_bound_test bounds`), 261121-105355-e0cfd0 passed (host_test whole); `--fails-without` at the mutant journal:63494f8 (every named group lost): 261121-105415-3c8f01 (bounds), 261121-105358-5bfdac failed as required (idle_damage). At journal:1e3505a: 5d2ded passed, e1fed8 failed at the mutant journal:1d773a5 as required |
 | A2 | At journal:ebd3038: 261121-105413-504c72: `lost_bound_test crash second retention`, turn_log_test (double damage), turn_log_power_test, placement damage cases and all 8 remap shards (passed at journal:1e3505a as c450ec) |
 | A3 | `docs/mechanisms/lost-bound.md` at journal:2a0ff36 |
 
