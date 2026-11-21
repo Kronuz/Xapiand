@@ -525,9 +525,6 @@ public:
 		  _capped(capped),
 		  _shard_size(_conf_shard_size())
 	{
-		// Each bucket builds its sub-aggregations lazily at match time; build them once now so a bad
-		// tree is refused with a 400 before the search runs, an empty index included.
-		Aggregation validate(_context, _schema);
 	}
 
 	MsgPack get_result() const override {
