@@ -13663,37 +13663,39 @@
     "journal-turn-buffers": {
       "accepted": {
         "durability": {
-          "at": "2026-11-20T21:07:02",
-          "base": "178030b38f5617337486407e6cc35d70881a0841",
+          "at": "2026-11-21T12:52:25",
+          "base": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
           "blobs": {
-            "CMakeLists.txt": "100644:20def4d16515562652667df4623b1ccb652f5a13",
-            "docs/mechanisms/framing.md": "100644:e7351bcfe36fe92cc2db54efe1c46695cf0578c3",
-            "docs/mechanisms/turn-seal.md": "100644:1de68db8eb37b81b30753415531fc17307d48482",
-            "include/journal/framing.h": "100644:6a237fbd75af72908dc1a5baa9c1b2f364dc6005",
-            "include/journal/turn_driver.h": "100644:f8950bf0bca960fce55420eae978d3e6fd2bcf7e",
-            "include/journal/turn_log.h": "100644:b611c7abea69b35e726275512bd0175fc1e8aca5",
-            "test/turn_buffers_probe.cc": "100644:1d5a9470f2062094ef33558420030391c2e92ea6",
-            "test/turn_buffers_test.cc": "100644:d567d4af82bd7ac640285dd1bd2251e20eec7e01",
-            "test/turn_seal_mutants.sh": "100644:8ccf95f2b109ad87ff18fc8ecf927829c04c3848"
+            "CMakeLists.txt": "100644:eb330ce775fc6ed23188161c2f8a3a632ee91be6",
+            "docs/mechanisms/framing.md": "100644:757b2400be4ed24d0bddfaf64f8678b94849b44f",
+            "docs/mechanisms/turn-seal.md": "100644:21aa7717280151a6a2103ece5052ad2105b30a5d",
+            "include/journal/framing.h": "100644:2b0d9160a96d87133174f4a56d6512fa44c950e7",
+            "include/journal/turn_driver.h": "100644:06dd34013e398844ed56bff9afcb13b11cb2ad3b",
+            "include/journal/turn_log.h": "100644:5a22c95cfd6834d6b4ebec6b20731690f377c3db",
+            "test/framing_test.cc": "100644:01e0cca8369780122f2a49c1c325446dd3422e21",
+            "test/turn_buffers_probe.cc": "100644:ea0fd344b48bc4d1aa0e0011d1007537194ee5dc",
+            "test/turn_buffers_test.cc": "100644:9f460570b71930a667ff46bf4c7b3c04810cccb8",
+            "test/turn_seal_mutants.sh": "100644:a7b4f4a6bdc08108671ed9b173d8a5883107de2d"
           },
           "by": "review",
-          "commit": "5ace07ee9e1f2833e5adeec27a40ccb9ed2a443c",
+          "commit": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
           "criteria": "832f225897cde40f",
           "diffs": {
             "CMakeLists.txt": "581c236fed872990",
-            "docs/mechanisms/framing.md": "ad00bcdb9281c5b7",
-            "docs/mechanisms/turn-seal.md": "f4838cc97e5b3e60",
-            "include/journal/framing.h": "b12703f9c4290164",
-            "include/journal/turn_driver.h": "514b6da551afa285",
-            "include/journal/turn_log.h": "180896b2b0cf86a5",
-            "test/turn_buffers_probe.cc": "762daef20ec16c36",
-            "test/turn_buffers_test.cc": "c1c4eee0b72f4328",
-            "test/turn_seal_mutants.sh": "50c650714bc574c5"
+            "docs/mechanisms/framing.md": "b10de0f8c9d4449a",
+            "docs/mechanisms/turn-seal.md": "2ebe562bbac21dbe",
+            "include/journal/framing.h": "b55aecb3218fe381",
+            "include/journal/turn_driver.h": "ca861b89ba629b54",
+            "include/journal/turn_log.h": "34933c539eb8f002",
+            "test/framing_test.cc": "950282bf18ca5ce8",
+            "test/turn_buffers_probe.cc": "aff69183dfa6678c",
+            "test/turn_buffers_test.cc": "64defacea1def1a8",
+            "test/turn_seal_mutants.sh": "644ffb50fdca2613"
           },
           "findings": {},
           "note": "",
-          "review": "5db34a6b78a9d0143c02854b2fd5721517784403",
-          "reviewed": "b88565f0a276c4ea392a171861d8044edd2f1964",
+          "review": "87abb92b14efddc257fb11846ccd0b475ee51724",
+          "reviewed": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
           "verdict": "APPROVE"
         }
       },
@@ -13750,7 +13752,7 @@
       "risk": "high",
       "status": "active",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-20T21:07:02",
+      "updated": "2026-11-21T12:52:25",
       "worktree": "../journal-wt/xapiand/journal-turn-buffers"
     },
     "key-field": {
