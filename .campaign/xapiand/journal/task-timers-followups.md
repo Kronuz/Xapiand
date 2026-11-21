@@ -24,30 +24,8 @@ Fix at task:2012f28, pushed (CI runs on quest/xapiand/task-timers-followups). Jo
 
 ## Blocked on
 
-Docs outside the file set (docs/API.md, docs/mechanisms/lifecycle.md) still state N3 as the
-contract ("a later touch may fire a taken key on the loop meanwhile"); they need the lead to
-apply or widen the file set. Exact change:
-
-- docs/API.md:116-118, replace "after the fires in
-  progress on the loop at the call end; called from a fire of the same debounce, it asserts
-  (Debug). Before a stop, a later touch may fire a taken key on the loop meanwhile." with "after
-  the fires in progress at the call end; a touch of a taken key meanwhile fires on the loop after
-  it, never at once; called from a fire of the same debounce, it asserts (Debug)."
-- docs/mechanisms/lifecycle.md:48-49, "waits for the fires in progress on the loop at the call to
-  end" becomes "holds them, waits for the fires in progress at the call to end (the loop's and
-  earlier calls')".
-- lifecycle.md:52, "Each loop fire links a node from its watcher's frame into a list" becomes
-  "Each fire in progress, the loop's (a node in its watcher's frame) or a `fire_pending()`
-  call's, links a node into a list".
-- lifecycle.md:59-64, the "The contract, for a call before the stop: ..." paragraph becomes: "A
-  taken entry stays in the map as held: its generation becomes 0, so its watcher ends, and a
-  holder count records the calls firing it. A touch meanwhile marks it pending but spawns no
-  watcher; when the last holder's fires end, the hand-off that serves a throwing fire gives a
-  pending entry a new watcher and erases any other. So no key fires on the loop while a call
-  fires it, and two calls taking the same key fire it in ticket order. A fire must not call
-  `fire_pending()` of its own debounce, the loop's or a call's: it would wait for its own fire.
-  Each fire also pushes its node on a thread-local chain, and `fire_pending()` asserts (Debug)
-  that no node on the calling thread's chain is its own; another debounce's fire may call it."
+Nothing. msg (lead, docs unblocked): applied at task:340746a with the deadlock rule; jobs above are at
+task:2012f28 (docs-only change since).
 
 ## Evidence
 
@@ -72,6 +50,8 @@ N3 was only documented there. This quest fixes N3 (task:2012f28):
   the same key waits for the first; a `fire_pending()` inside its own fire hits the Debug assert
   instead of waiting for itself.
 - Tests: debounce-held, debounce-held-twice, debounce-reentry's second case.
+- Docs (task:340746a): docs/API.md, docs/mechanisms/lifecycle.md "periodic and debounce", with
+  the rule: never call `fire_pending()` on the loop thread while another call's fire waits for the loop.
 
 ## Rulings I made
 
