@@ -9,15 +9,25 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Design and first code of A3 (strata worktree ../strata-wt/xapiand/turn-log-parity--large-tx):
+a transaction whose command passes `command_bytes` streams as part records (first, middle, last)
+of a new payload kind; applied and V move only at the last part; replay buffers a run and
+abandons one a later record or the log's end interrupts, moving applied past it.
 
 ## Next
 
-1. <step>
+1. index.hh: `log_state::join` takes a part; `join_log` streams parts; `replay_log` runs; the
+   `command_bytes` refusal goes (functions changed: `apply`, `log_state::join`, `join_log`,
+   `replay_log`).
+2. test/test_large_tx.cc: admission (logged admits what unlogged admits, past 64 MiB), the crash
+   sweep over a multi-part transaction and a kv-shaped batch past 1 MiB, V held to the last part.
+3. Mutants: limit kept, apply per chunk, V at a non-last part, abandoned run leaves applied.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+lead: msg-202, the file set lacks command.hh (the part payload), standalone_turn_log_test.cc
+(T8 asserts the refusal A3 removes), the command fixtures and fuzzer, kv_strata.hh with its
+batch test (the 1 MiB split), and docs/mechanisms/. Work in index.hh and test_large_tx goes on.
 
 ## Evidence
 
