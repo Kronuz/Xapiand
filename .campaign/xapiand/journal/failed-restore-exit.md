@@ -1,6 +1,6 @@
 # failed-restore-exit: journal
 
-State: waiting on jobs 261121-084644-7a6921 (A1 at the fix), 261121-084646-2a8d62 (A1 at Xapiand:586374bf7, must fail), 261121-084647-b4addc (suite, A2) and CI; normal risk: one correctness review, or a waiver if the evidence holds
+State: waiting on jobs 261121-084644-7a6921 (A1 at the fix), 261121-084646-2a8d62 (A1 at Xapiand:586374bf7, must fail), 261121-092117-7ae0d8 (suite, A2) and CI; normal risk: one correctness review, or a waiver if the evidence holds
 Quest: .campaign/xapiand/quests/failed-restore-exit.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | 261121-084644-7a6921 (the fix); 261121-084646-2a8d62 (the script alone, must fail) |
-| A2 | 261121-084647-b4addc |
+| A2 | 261121-092117-7ae0d8 |
 
 ## Result
 
