@@ -26,7 +26,7 @@ durable before any index opens:
 
 1. `TurnLog::recover` (turn_log.h:555-745) puts every group the damaged block's manifest names
    (`gap_damage`, :605-611; the manifest holds each group's highest sequence in the block,
-   framing.h:89) into `TurnRecovery::lost` and drops its records. Its only spare is
+   framing.h:90) into `TurnRecovery::lost` and drops its records. Its only spare is
    `superseded(group, seq)`, seq <= `TurnLogGroups::base`, which `Host::known` fills for closed
    groups only (host.h:554).
 2. `Host::open` then `mark_lost`s those ids durably and removes their artifacts (host.h:607-629),
