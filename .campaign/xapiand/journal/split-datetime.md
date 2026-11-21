@@ -1,6 +1,6 @@
 # split-datetime: journal
 
-State: waiting on jobs 261121-122624-6b5417 261121-122624-03379d 261121-122624-e89922 261121-122626-0ba83a 261121-122627-8f659b 261121-122628-2ad214 261121-122640-21e252 261121-122646-ec8c05
+State: waiting on jobs 261121-122646-ec8c05 (bench base) 261121-123009-72a6f6 (bench base A/A) 261121-122640-21e252 (bench split, at c6d6ff7); older jobs at c6d6ff7 are superseded by the next push
 Quest: .campaign/xapiand/quests/split-datetime.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ datetime.cc split (datetime-wt c6d6ff7) into datetime.cc (parse), datetime_math.
 
 ## Next
 
-1. Read bench base vs head (old/new ratio per row); if a hot row regresses, move calendar back into datetime.cc and rerun.
+1. Read bench base, base A/A and head: if a hot row regresses beyond the A/A band, move datetime_calendar.cc back into datetime.cc (and its row in source-layout.md). Then push once and resubmit A1, A6, A2, A3-head and the benches at the pushed head (359745b or later). Old: read bench base vs head (old/new ratio per row); if a hot row regresses, move calendar back into datetime.cc and rerun.
 2. Finish docs/source-layout.md (written, uncommitted), commit, push, fill Evidence.
 3. Report: AGENTS.md and ARCHITECTURE.md (outside file set) say 'one .cc / single TU' and need the lead's edit.
 
@@ -41,4 +41,5 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 - test/diff_test.cc (1,182 lines) kept whole: one seeded stream + recorded digest + shared file-scope counters + class header; reasons in docs/source-layout.md.
-- Helpers shared across pieces stay global-scope `static` in datetime_detail.h, not a `detail` namespace (that would rename call sites, a non-move). Consequence: unused static non-inline helpers (parse_fsec_long, parse_dotted_fsec) in pieces that include it; only matters under GCC -Wunused-function, not enabled in CI.
+- Shared helpers in datetime_detail.h are `inline` (lead's instruction), at global scope, no namespace (a namespace would rename call sites). Dropped `static` on each, so split_check prints a warning for: floor_div, days_from_civil, days_from_civil_pos, civil_from_days, civil_from_secs, set_from_secs, secs_of, apply_tz, parse_fsec_long, parse_fsec, parse_dotted_fsec (functions) and MIN_YEAR1_SECS, MAX_FRACTION_DIGITS, MAX_TERM_CHARS (constants, now `inline constexpr`). Reason: one copy and one address of each, no per-TU copies, no -Wunused-function. `datetime.cc` keeps its own `static` helpers.
+- AGENTS.md/ARCHITECTURE.md: one line each fixed (repo map line for datetime.cc, 'single TU' line).
