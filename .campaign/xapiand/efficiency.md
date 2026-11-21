@@ -536,3 +536,20 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:36ab19e (message delivery: no lead-record takeover, retries, owner notice). Xapiand:af65bd9f2 (FreeBSD workflow cancels superseded branch builds).
 - Queue: 61 jobs queued, mostly Detent's (dense-distribution-build 12, loop-idle-waits 17, journal-idle-groups 8). Cancelled one superseded faultlab build of ours.
 - Quota 46% weekly, 0.40%/h. Load 35-42. Disk 298 GiB free.
+
+## 2026-11-20 18h
+- Landed: faultlab-adopt-prospect (prospect:0448b87). Four Xapiand quests (coverage-server, control-plane-wallclock, freebsd-exe-path, strata-pin-catalog) merged master and wait on CI; a loop lands them as CI turns green.
+- D57 cleanup (owner asked): 20 quests' suite and e2e gates now cite CI jobs; 20 quests' local macOS ASan/TSan deferred checks removed; 13 queued or running local jobs cancelled (suites, e2e, sanitizers, an asserts build, a Linux-VM ctest at a CI-tested commit, 3 netlab narrowing runs). Detent converted 23 quests and cancelled 3 suites (msg-178).
+- Tool: agent-campaign:0ce399c (an empty --later clears deferred checks); pending in suite: landed quests drop runs of removed deferred checks. Found: task merge counts cancelled jobs and deliberate other-commit jobs as gaps (journal-pin cannot merge).
+- Agents: cjk-words fix 140k (Opus; F1 fixed, CI caught a wrong test at test_cjk_words.cc:169 on arm64 and FreeBSD, fixed); group-heal sim-port 181k (Opus; simulator ported, determinism and planted-fault jobs pass); group-heal install 327k (Opus; transfer built, 720 crash runs recover; blocked on a consensus Driver install surface, asked Detent msg-179).
+- Findings: netlab's stall is election churn (Detent msg-185): 2 MiB appends hold the Control connection ~4 s under 1% loss, heartbeats queue, CheckQuorum steps down.
+- Bottleneck: GitHub Actions concurrency. strata 9 runs queued, 0 running; Xapiand 9 queued, 5 running.
+- Quota 49% weekly, 0.42%/h, reset in 50 h. Load 14-26 (down from 35-95). Disk 293 GiB free.
+
+## 2026-11-20 19h
+- No landings: GitHub CI started no strata run after 02:40Z (9 queued, 0 running; account-wide 5 running, 21 queued; githubstatus says operational). Pushed Xapiand:bb04f6d63 to the `xapiand` branch (final release head, no tag). journal-pin merged into turn-log-parity (all 3 tasks in).
+- Reviews: node-admission accepted at consensus:803442f (3 blocking fixed, each with a fails-without mutant; lands after detent:consensus-transport); cjk-words accepted at Xapiand:234d834 (lands on CI).
+- Agents: node-admission fix 196k (Opus); placement-root fix 109k (Opus; wrong test + overlong varint accepted, found by fuzz in 1,785 runs); turn-log-parity closer launched (Opus).
+- Tool: agent-campaign:ac6331c, 3706f16, 90ad2fc (dotfiles:b87e7c0); merged-task journals fix in suite. Root fix for placement: strata varint pin bump (fix/varint-pin, strata:b4694757) instead of a second overlong check.
+- Bench: bulk-load dry runs, 1 trial: Xapiand 1.45-6.9x faster than ES 9.5.4, 5.2-154x less peak RSS; 12 exclusive 5-trial jobs queued.
+- Quota 51% weekly, 0.43%/h, reset in 50 h. Load 11-13. Disk 297 GiB free.
