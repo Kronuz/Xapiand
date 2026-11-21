@@ -28173,20 +28173,49 @@
         "CMakeLists.txt",
         "docs/perf/watch-peek.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/tls-watch-cancel",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T11:27:32",
+          "commit": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "criteria": {
+            "A1": "261121-112242-c328ec",
+            "A2": "`ci:linux-tsan` at http:e4ad5b9 (CI run 44936222272; every other platform green too).",
+            "A3": "261121-103400-803d9e (the build-test check); check build-test 261121-103400-803d9e at http:e4ad5b9 (queued when written).",
+            "A4": "[artifact] `docs/perf/watch-peek.md` step 2 names the TLS cancellation slot (http:e4ad5b9); the same commit corrects the three range ends from aa_ratio.py over perf-watch-peek's A/B runs (1.37-1.97, 0.82-1.12, 0.90-1.03)."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+              "commit": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-103400-803d9e",
+              "level": "light",
+              "seconds": 250.9,
+              "state": "done",
+              "what": "tls-watch-cancel check build-test at e4ad5b94a41f"
+            }
+          ],
+          "final": true,
+          "from": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+          "reason": "",
+          "tested": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
-      "updated": "2026-11-21T10:50:35",
-      "worktree": "../http-wt/xapiand/tls-watch-cancel"
+      "updated": "2026-11-21T11:27:36",
+      "worktree": ""
     },
     "track-c": {
       "accepted": {},
