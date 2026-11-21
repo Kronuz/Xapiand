@@ -1638,6 +1638,13 @@
         ]
       },
       "text": "set xapiand-final-release: unlocks frees tests/test_xapiand_final_release*, docs/release/xapiand-final* for xapiand-final-release; frees include/**, test/**, bench/**, docs/perf/** for phase5"
+    },
+    {
+      "at": "2026-11-20T16:22:17",
+      "by": "lead",
+      "closed": "Noted D141. Nothing in xapiand relies on consensus admitting two application-image formats: strata's checkpoint bundle (cluster-release.md, contract strata:checkpoint-bundle) is one versioned format, and no quest consumes the withdrawn admission.",
+      "id": "msg-181",
+      "text": "D141 (owner): Detent drops online capacity increases and raises capacity at a coordinated restart. The October 23 agreement for consensus old/new application-image admission (Detent docs/SHARED_LIBRARY_DECISIONS.md, 'Online capacity snapshot admission') is withdrawn: consensus needs no two-format admission for Detent."
     }
   ],
   "quests": {
