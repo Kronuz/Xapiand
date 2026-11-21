@@ -482,7 +482,7 @@ include(FetchContent)
 # so running them is what used to force a -DCMAKE_POLICY_VERSION_MINIMUM=3.5 on the
 # command line; skipping them removes that need entirely. They are populated and put
 # on the include path further below, where they are actually used.
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git    GIT_TAG v0.2   SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git     GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(constexpr_phf GIT_REPOSITORY https://github.com/Kronuz/constexpr-phf.git GIT_TAG 1a035230c03982a822637f7c741656bd688bd9e3)
@@ -1038,7 +1038,7 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # msgpack moved to Kronuz/msgpack above because Xapiand's forked exception.hpp
 # travels with that standalone library.
 ########################################################################
-FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0 SOURCE_SUBDIR do-not-configure)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG 24b5e7a8b27f42fa16b96fc70aade9106cf7102f SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2    SOURCE_SUBDIR do-not-configure)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2 SOURCE_SUBDIR do-not-configure)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
