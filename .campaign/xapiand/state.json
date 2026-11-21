@@ -21297,18 +21297,46 @@
         "CMakeLists.txt",
         "docs/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/prospect-check-fields",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T13:54:22",
+          "commit": "abfeedab48eb0509169358c5d0f8142f6978093f",
+          "criteria": {
+            "A1": "261121-124804-4fdb96",
+            "A2": "261121-114518-396743 (the build-test check); build-test job 261121-114518-396743",
+            "A3": "CI green at abfeedab48eb"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "abfeedab48eb0509169358c5d0f8142f6978093f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-114518-396743",
+              "level": "light",
+              "seconds": 1146.7,
+              "state": "done",
+              "what": "prospect-check-fields check build-test at abfeedab48eb"
+            }
+          ],
+          "final": true,
+          "from": "0448b8774e7b2c485ac8e5afd25893068b377a8b",
+          "reason": "",
+          "tested": "abfeedab48eb0509169358c5d0f8142f6978093f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's inverted reader forwards check_fields",
-      "updated": "2026-11-21T11:44:26",
-      "worktree": "../prospect-wt/xapiand/prospect-check-fields"
+      "updated": "2026-11-21T13:54:32",
+      "worktree": ""
     },
     "prospect-completion-opens": {
       "accepted": {},
