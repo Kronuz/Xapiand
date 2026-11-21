@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs 261121-062150-a1f919 261121-062150-717a6c 261121-062150-1ef5dd 261121-062151-49e6e9 261121-062151-12a02d 261121-062151-c8d423 261121-062152-b66750 261121-062152-cc45be 261121-062203-ed682b; CI at consensus:2374e2c
+State: waiting on jobs 261121-084542-caa3bb 261121-084542-5d6e7b 261121-084542-1a47bc 261121-084543-0d22ac 261121-084543-3e2e91 261121-084543-9810bb 261121-084552-dda508 261121-084553-56b4a8 261121-062203-ed682b; CI at consensus:9e66e5b
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,15 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Fix after the merge, consensus:9e66e5b, pushed. At 2374e2c every case building a HostTransport
+aborted: main's constructor throws "member_of and open_of are required" and the admission hosts set
+only member_of (epoch, save and policy build none, so they passed). The hosts now give a fixed,
+non-empty open_of (they store no group). Unrelated to the served-slot fix or hold().
+- Reruns at 9e66e5b: every case 261121-084542-caa3bb, issue 261121-084542-5d6e7b, refused_pins
+  261121-084542-1a47bc, refused_ca 261121-084543-0d22ac, remove_ca 261121-084543-3e2e91, TSan
+  261121-084543-9810bb, epoch 261121-084552-dda508, save 261121-084553-56b4a8. Transport set
+  261121-062203-ed682b passed at 2374e2c (the test file is not its input).
 
 Merge of main (detent:consensus-transport, consensus:9bbd632) at consensus:2374e2c, pushed.
 - Conflict: connection_test.cc's case table; kept main's `dead_extends` and this branch's `peer_gone`.
