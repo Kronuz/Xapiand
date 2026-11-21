@@ -9520,6 +9520,8 @@
     "faultlab-strata-gaps": {
       "accepted": {},
       "after": [],
+      "base": "b64102f2c95ad0ab49fc34189f3be8cda0507145",
+      "branch": "quest/xapiand/faultlab-strata-gaps",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9536,6 +9538,7 @@
         "README.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-strata-gaps",
       "landed": [],
       "lenses": [
         "correctness"
@@ -9547,9 +9550,10 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "faultlab's faultfs covers every call strata makes",
-      "updated": "2026-11-20T23:04:28"
+      "updated": "2026-11-20T23:04:56",
+      "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-table": {
       "accepted": {},
