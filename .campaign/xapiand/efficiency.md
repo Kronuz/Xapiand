@@ -610,3 +610,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Release: alpha.11 Release and FreeBSD dry runs green at Xapiand:d2fa3e15d (RapidJSON backport); master's first dry run (Release, FreeBSD) green at Xapiand:79f86b9ef; both Bottles runs wait for macOS runners.
 - Host: exclusive drains ~25 min/h beside Detent's 4 h light holds; turn-log-parity's trials 3 of 10 in ~6 h.
 - Quota 61% weekly, 0.49%/h, reset in 43 h. Load 17-20. Disk 298 GiB free.
+
+## 2026-11-21 03h
+- Landed: track-c-gates (strata:560e8851; C2 and C4 open on their hunt-list conditions), faultlab-strata-gaps (faultlab:b5640d7; sat ~4 h on an A5 row the tool did not parse: an [artifact] row is only `path`: "quote", no extra backticked names).
+- Release: alpha.11 A4/A5 met. `xapiand` fast-forwarded to Xapiand:cfc2a5b80 (changelog names the Clang 19 build fix); CI green (build, E2E, ASan+UBSan, TSan) and Release, FreeBSD, Bottles dry runs green from `xapiand` (Intel cell red). A6 is the owner's.
+- Lead miss: zsh read `$HS:refs` as a modifier, the push failed and three chained dry runs went to the old branch head; cancelled, nothing published (memory updated). A chained Edit failure left Xapiand:2a757ffaa with only the journal row; follow-up commit says so.
+- Agents finished: lua-method-flake 187k (Sonnet; Xapiand:2e2a2307e READY after the listener accepts; one tests/utils_node.h for six node tests, -54 lines; first-connection test fails without). Fresh-deps test_lua at strata-pin-catalog's head: 1,014 checks pass (cause confirmed as the READY race, not the branch).
+- Started: faultlab-journal-oracle (Sonnet). catalog-stress-cap: jobs had finished hours ago with the journal still "waiting"; rows filled, main merged, A2's passing run tagged; lands on CI.
+- Messages: Detent orders detent-multicast-seeds after node-admission (seed records unchanged).
+- Quota 62% weekly, 0.49%/h, reset in 42 h. Load 13-18. Disk 297 GiB free.
