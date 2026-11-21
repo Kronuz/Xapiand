@@ -4,12 +4,12 @@ name: Bottles
 # the tap so `brew install Kronuz/tap/xapiand` serves a pre-built binary.
 #
 # Structure:
-#   - `bottle`       builds the arm64 cells (sonoma, sequoia). These are required
+#   - `bottle`       builds the arm64 cells (sequoia, tahoe). These are required
 #                    and gate the tap merge.
-#   - `bottle-intel` builds the x86_64 (Intel) cell on GitHub's deprecated,
-#                    heavily-oversubscribed macos-13 runners. It is best-effort:
-#                    it attaches its bottle to the release and uploads its JSON,
-#                    but it never gates the arm64 bottles or the tap merge.
+#   - `bottle-intel` builds the x86_64 (Intel) cell under Rosetta 2 on an arm64
+#                    macos-15 runner. It is best-effort: it attaches its bottle to
+#                    the release and uploads its JSON, but a failure never blocks
+#                    the arm64 bottles or the tap merge.
 #   - `publish`      merges every bottle JSON that is available into the formula's
 #                    `bottle do` block and pushes it to Kronuz/homebrew-tap. It
 #                    depends only on `bottle`, so the tap updates in ~minutes; a
@@ -57,9 +57,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # arm64 (Apple Silicon): macos-14 = Sonoma, macos-15 = Sequoia. These are
-        # required and gate the tap merge below.
-        os: [macos-14, macos-15]
+        # arm64 (Apple Silicon): macos-15 = Sequoia, macos-26 = Tahoe (GitHub retired
+        # macos-14). These are required and gate the tap merge below.
+        os: [macos-15, macos-26]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,14 +72,14 @@ jobs:
           os: ${{ matrix.os }}
 
   bottle-intel:
-    name: Bottle (x86_64 via Rosetta on macos-14)
-    runs-on: macos-14
+    name: Bottle (x86_64 via Rosetta on macos-15)
+    runs-on: macos-15
     # GitHub's real x86_64 runners (macos-13) are deprecated and can queue for many
     # hours, so build the x86_64 bottle on an arm64 runner under Rosetta 2 instead: a
     # second, x86_64 Homebrew at /usr/local pulls x86_64 dependency bottles and builds
-    # xapiand emulated (~30 min). The bottle targets Sonoma (macOS 14, the oldest arm64
-    # runner GitHub offers), not Ventura -- x86_64 users on macOS 14+ get it, older
-    # ones build from source. publish WAITS for this cell so the tap carries the x86_64
+    # xapiand emulated (~30 min). The bottle targets Sequoia (macOS 15, the oldest arm64
+    # runner GitHub offers) -- x86_64 users on macOS 15+ get it, older ones build
+    # from source. publish WAITS for this cell so the tap carries the x86_64
     # bottle; it stays continue-on-error so a Rosetta/emulation hiccup degrades the
     # release to arm64-only bottles (the cell shows as failed but the run stays green)
     # instead of blocking it, and timeout-minutes bounds how long publish can wait on a
@@ -105,7 +105,7 @@ jobs:
           publish: ${{ env.PUBLISH }}
           tag: ${{ env.TAG }}
           repository: ${{ github.repository }}
-          os: macos-14-x86_64
+          os: macos-15-x86_64
           brew: arch -x86_64 /usr/local/bin/brew
 
   publish:
