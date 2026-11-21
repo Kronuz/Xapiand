@@ -67,6 +67,14 @@ at journal:b6a7697 or later; this branch pins journal:178030b, and b6a7697 is on
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
 
+## Rulings I made (closing pass)
+
+- The probe H and G reruns carry no `--for A3`: they check models of the design, and A3 asks for a
+  power-cut sweep over the built split.
+- A6's merge_policy test was resubmitted, not rerun: `job rerun` failed on the removed
+  `turn-log-parity--merge-runs` worktree.
+- No A6 exclusive rows yet: measuring before tasks 2-6 would only restate document-gate's gaps.
+
 ## Result (design round 2)
 
 strata:e287a47b holds probes H-K and probe G's row 6. strata:5185790f and strata:68e1c6a8 hold the
