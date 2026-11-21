@@ -1,6 +1,6 @@
 # keyword-open-range: journal
 
-State: working
+State: waiting on job 261121-045338-baa3ca (A1 --fails-without at Xapiand:0703f2b27) and CI at the head; then lands (review waived: query-only fix with a failing-then-passing test)
 Quest: .campaign/xapiand/quests/keyword-open-range.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,7 +27,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261121-045337-0a227e (test_coverage_multivalue_range at the fix); 261121-045338-baa3ca (the same test at Xapiand:0703f2b27, the test commit alone, must fail) |
+| A2 | 261121-045340-5b4053 |
 
 ## Result
 
