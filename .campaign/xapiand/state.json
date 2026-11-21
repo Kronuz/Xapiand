@@ -25718,16 +25718,57 @@
         "docs/SPLITTING.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-sources",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T15:50:19",
+          "commit": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+          "criteria": {
+            "A1": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (the test check: test_layout_note_and_cmake_lines_are_not_code, test_line_moved_into_an_inc_fragment_is_lost)",
+            "A2": "261121-124545-96b4e5 (lint: ruff check and format), 261121-133755-41bf52 (test: 44 pass); both reused at 7fb030488886, whose tools/ equals d1bca4032097",
+            "A3": "CI green at 7fb030488886",
+            "A4": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (test_include_guards_are_allowed, test_a_new_macro_is_not_a_guard)",
+            "A5": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (static-to-inline, added inline, namespace-scope detail using as warnings; using inside a function and `using namespace std;` fail)"
+          },
+          "evidence": [
+            {
+              "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+              "commit": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-133755-41bf52",
+              "level": "light",
+              "seconds": 29.8,
+              "state": "done",
+              "what": "split-check-sources check test at 7fb030488886"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py'",
+              "commit": "d1bca4032097999d37718c2d531ee22ee1116d7a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-124545-96b4e5",
+              "level": "light",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "split-check-sources check lint at d1bca4032097"
+            }
+          ],
+          "final": true,
+          "from": "12bae98c2a12c4a1339f4072cb952cea29b34f32",
+          "reason": "",
+          "tested": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check compares only C and C++ sources",
-      "updated": "2026-11-21T12:39:08",
+      "updated": "2026-11-21T15:50:20",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-sources"
     },
     "split-completion": {
