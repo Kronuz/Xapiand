@@ -1703,6 +1703,13 @@
         "quest": "detent:consensus-full-window-stall"
       },
       "text": "detent:consensus-full-window-stall started and may change files your node-admission changes (order them with --after detent:consensus-full-window-stall, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "at": "2026-11-20T09:59:28",
+      "by": "cluster",
+      "closed": "B1: CMakeLists.txt is in cluster's file set; B2: node-admission quest (in review); B3: owner decided D149-D151",
+      "id": "msg-174",
+      "text": "cluster blocked on three calls (journal Blocked on B1-B3). B1: CMakeLists.txt outside the file set; Xapiand pins no consensus (needs journal 5bbeedc->9e11713 and task 18eb516->95798a0 bumps); rpc builds standalone from tests/cluster/CMakeLists.txt meanwhile. B2: consensus HostTransport/Links/NodePins fix every node's address and pin at construction, so --join and multicast seeds cannot add a node; recommend a consensus quest node-admission (admit/forget a node at runtime, dial a seed by address). B3 (owner): joiner pin model; recommend (b) cluster CA as trust anchor, pin recorded at first join."
     }
   ],
   "quests": {
