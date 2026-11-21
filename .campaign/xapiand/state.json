@@ -25009,6 +25009,70 @@
       "title": "http's large header and tests split under 1,000 lines",
       "updated": "2026-11-21T11:38:53"
     },
+    "split-xapiand-core": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 40,
+          "name": "suite"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src tests",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/handler*",
+        "src/database/handler/**",
+        "src/server/search_views*",
+        "src/server/search_views/**",
+        "src/database/shard.*",
+        "src/database/shard/**",
+        "src/engine/strata/shard*",
+        "src/engine/strata/shard/**",
+        "src/manager*",
+        "src/manager/**",
+        "src/database/pool*",
+        "src/database/pool/**",
+        "src/main.cc",
+        "src/main/**",
+        "src/query_dsl*",
+        "src/query_dsl/**",
+        "tests/test_node*",
+        "tests/node/**",
+        "tests/test_pool*",
+        "tests/pool/**",
+        "tests/test_loop_yield*",
+        "tests/loop_yield/**",
+        "tests/test_engine_strata*",
+        "tests/engine_strata/**",
+        "tests/test_index_pattern*",
+        "tests/index_pattern/**",
+        "tests/CMakeLists.txt",
+        "CMakeLists.txt",
+        "docs/dev/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "journal-replaces-wal"
+      ],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand's request and database sources split under 1,000 lines",
+      "updated": "2026-11-21T11:38:55"
+    },
     "split-xapiand-src": {
       "accepted": {},
       "after": [
