@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: blocked on lead: push `xapiand` to the quest head (both CI fixes green locally)
+State: waiting on jobs 261120-212409-97aad5 (build-test of the release commit); then blocked on lead: push `xapiand`, dispatch the three workflows with publish=false
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,6 +17,7 @@ CI on `xapiand` at bb04f6d63 failed twice (lead's log ~/.scratch/xapiand/lead/xa
 
 ## Next
 
+0. Release prep at fc7142e3a: 1114106db adds `publish`/`ref` dispatch inputs to release.yml, freebsd.yml, bottles.yml (and the build-bottle action); fc7142e3a is `Release 1.0.0-alpha.11` (CMakeLists.txt PACKAGE_VERSION and the changelog header, the alpha.10 commit's two files). Dispatch for A5: `gh workflow run <wf> -f tag=v1.0.0-alpha.11 -f publish=false -f ref=<xapiand sha>` (the sha must be on GitHub; bottles builds from its archive).
 1. Lead: fast-forward `xapiand` to the quest head and push. Then, then fast-forward `xapiand` to it and push (CI there: build-test, asan, e2e, Release/FreeBSD/Bottles dispatch).
 2. A5: read CI and the three workflows at the final commit; report to the lead. No tag.
 
@@ -43,6 +44,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+
+- A5 no-publish: `ref` applies only when publish=false (a release always builds from its tag); step guards use `env.PUBLISH`, the docker-manifest job a job-level `if`. The bottle tap merge still runs locally in a no-publish run (sha archive url plus explicit version) and only the commit/push step is guarded; this proves the merge before tagging.
 
 - Tool flow: the quest branch already sits on `xapiand` (worktree base fits); `campaign land` lands on main, so landing is `--record` after the tag, as the quest says. `campaign brief` flags "master changed 1485 files" and out-of-file-set changes: expected, this branch is not master's.
 - A1: the adapter was opt-in (XAPIAND_QUERYPARSER=1); made default, =0 selects Xapian. test_text_parser pins =0 as its reference.
