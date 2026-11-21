@@ -6527,8 +6527,36 @@
         "tests/test_coverage_server*",
         "harness/coverage_e2e_server*"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T22:40:49",
+          "commit": "b8c7404de544d6b73f600aae3f82334bd2272f76",
+          "criteria": {
+            "A1": "261120-121254-2ad180 (passed at 762b516843a7; only 21 merges from main since, none touching its files)",
+            "A2": "261120-121254-2ad180 (the driver run, every check passing): harness/coverage_e2e_server.py group `verbs`: every request asserts status and body or header values (verb_answer); no bug was fixed, so no fails-without row; the two odd answers are PIN checks with hunt rows",
+            "A3": "check suite 261120-121305-9dbdb6; CI at the merged head"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "92cdf379d273f098c5048a490b22548baf58c613",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-121305-9dbdb6",
+              "level": "light",
+              "seconds": 1134.4,
+              "state": "done",
+              "what": "coverage-server check suite at 92cdf379d273"
+            }
+          ],
+          "final": true,
+          "from": "dfba0836129eb354695419524ca2794335c16f92",
+          "reason": "",
+          "tested": "b6909a56ef2222cf07e285f34e5285515c013eae"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "coverage-areas"
@@ -6536,10 +6564,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "server (search_views) reaches T13 coverage through E2E drivers",
-      "updated": "2026-11-19T00:46:34",
-      "worktree": "../Xapiand-wt/xapiand/coverage-server"
+      "updated": "2026-11-20T22:40:59",
+      "worktree": ""
     },
     "cr1-fix": {
       "accepted": {},
