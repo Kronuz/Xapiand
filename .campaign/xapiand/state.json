@@ -25505,8 +25505,8 @@
       "repo": "../http",
       "risk": "low",
       "status": "active",
-      "title": "http's large header and tests split under 1,000 lines",
-      "updated": "2026-11-21T11:44:47",
+      "title": "http's large header and tests split where it helps maintenance",
+      "updated": "2026-11-21T12:04:47",
       "worktree": "../http-wt/xapiand/split-http"
     },
     "split-http-parser": {
