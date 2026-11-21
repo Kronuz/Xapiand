@@ -5,32 +5,33 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A keyword or text range with only a lower bound (`{"_from": "b"}`) matches every value at or above
+it. Before, the missing end serialized as "" and sorted below the start, so `getStringQuery`
+(src/multivalue/range.cc) returned the empty query. Numeric, date, time and timedelta ranges
+already compared only the ends given. Hunt-list row M2, from the coverage-multivalue job
+261119-035511-e1d.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A lower-bound-only keyword range and text range return the values at or above the bound:
+  test_coverage_multivalue_range, failing at the test commit alone (job 261121-042222-ac72f6 at
+  Xapiand:0703f2b27, exit 1) and passing at the fix (`--fails-without`)
+- A2 The suite passes at the landed code: a job
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: query results change only for a range that returned nothing.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Query-only fix; no indexed term changes, so no reindex. The owner decides whether it is
+  backported into alpha.11 (posted 2026-11-21, default: yes).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: the fix and its test are Xapiand:0703f2b27 and Xapiand:fd33f492a on
+explore/xapiand/keyword-open-range.
