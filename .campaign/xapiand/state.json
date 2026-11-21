@@ -16236,6 +16236,37 @@
       "updated": "2026-11-20T20:20:36",
       "worktree": "../consensus-wt/xapiand/netlab-consensus"
     },
+    "newman-pin": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 30,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/engine_e2e.sh",
+        "harness/run_all.sh",
+        "harness/newman*",
+        "harness/package*.json",
+        ".github/workflows/ci.yml",
+        "TESTING.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Pin newman for the docs E2E in one place",
+      "updated": "2026-11-21T03:26:36"
+    },
     "nightly-retry": {
       "accepted": {},
       "after": [],
