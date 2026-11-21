@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-224303-06ff11 261120-224305-d28d20 261120-224312-d563d4 261120-224314-a61796 (VM builds before/after df3ff48b8)
+State: waiting on jobs 261120-224303-06ff11 261120-224651-baca46 261120-224312-d563d4 261120-224652-8177ce (VM builds before/after df3ff48b8)
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -18,7 +18,7 @@ CI on `xapiand` at bb04f6d63 failed twice (lead's log ~/.scratch/xapiand/lead/xa
 No-publish dry runs at 30815d91f (Release 44871494230, FreeBSD 44871496282; CI green) failed on two causes, both fixed in df3ff48b8:
 1. Docker/RPM (gcc, no system lz4): storage@671eaacb declares compressors at ed590c8 before Xapiand's own declaration, and FetchContent keeps the first, so 27191e0ff's pin of 816bc82 (9d2a87c using-declarations) never applied. compressors fetches lz4 1.10.0, hashes.hh inlines its xxhash.c, and ed590c8's `using namespace` makes PRIME32_* ambiguous. Fix: declare compressors before storage (master does the same, line 458).
 2. FreeBSD (clang -Werror): config.h.in `#define XXH_STATIC_LINKING_ONLY 1` vs /usr/local/include/xxhash.h's empty definition. Fix: empty define, master's b078d5a18 line.
-VM jobs (~/.scratch/xapiand/final-release-build/vmbuild.sh: Linux VM 18782 runs the Dockerfile builder stage in docker.io; FreeBSD VM 18784 runs freebsd.yml's steps plus pkg xxhash): fails-without at 30815d91f 261120-224303-06ff11 (linux), 261120-224305-d28d20 (freebsd); at df3ff48b8 261120-224312-d563d4 (linux), 261120-224314-a61796 (freebsd).
+VM jobs (~/.scratch/xapiand/final-release-build/vmbuild.sh: Linux VM 18782 runs the Dockerfile builder stage in docker.io; FreeBSD VM 18784 runs freebsd.yml's steps plus pkg xxhash): fails-without at 30815d91f 261120-224303-06ff11 (linux), 261120-224651-baca46 (freebsd); at df3ff48b8 261120-224312-d563d4 (linux), 261120-224652-8177ce (freebsd).
 
 ## Next
 
