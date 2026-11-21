@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261120-201735-dfb864 261120-201737-6e4864 261120-201739-07500d 261120-201741-5c74c1 261120-201744-3bc198 261120-201746-56b121 261120-201748-82c5c4
+State: waiting on jobs: CI run 44865338424 at journal:28c0caa (freebsd-x86_64 green; linux-asan-ubsan, linux-tsan, macos-arm64 pending)
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,9 +17,8 @@ seal-copy 261120-201148-86ff12, stage-copy 261120-201150-edcde6, forward-string 
 
 ## Next
 
-1. Paste `campaign brief`'s table once the jobs at journal:28c0caa finish.
-2. CI (macos-arm64, linux-asan-ubsan, linux-tsan) green at journal:28c0caa.
-3. Then: ready for Detent's review (A5), with the commit and tests below.
+1. CI (macos-arm64, linux-asan-ubsan, linux-tsan) green at journal:28c0caa.
+2. Then: ready for Detent's review (A5), with the commit and tests below.
 
 ## Blocked on
 
