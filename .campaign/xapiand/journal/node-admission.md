@@ -50,7 +50,7 @@ CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
 - Jobs at 803442f: plain epoch 261120-190018-0294af, issue 261120-190020-fe207b, save
   261120-190022-ac8ca2; fails-without: links-no-epoch consensus:b58171c -> 261120-190024-386b01,
   join-unchained-issuer consensus:f8c0177 -> 261120-190026-ce7445, save-chmod-after
-  consensus:1e2ab13 -> 261120-190027-3570be. Reruns at head: refused_pins 261120-190056-da1cf9,
+  consensus:1e2ab13 -> 261120-190027-3570be. Reruns at head: refused_pins 261121-095250-9bef70,
   refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072; every admission case
   261120-190110-1990be. TSan and the suite: CI at 803442f (the local TSan rerun cancelled: CI's).
 - Non-blocking, left for follow-up: N1 (issued-certificate check untested), N2 (remove_node's
@@ -84,7 +84,7 @@ alone"), as intended.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | refused_pins 261120-190056-da1cf9, refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072, issue 261120-190020-fe207b, every case 261120-190110-1990be; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
+| A1 | refused_pins 261121-095250-9bef70, refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072, issue 261120-190020-fe207b, every case 261120-190110-1990be; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
 | A2 | remove_ca 261120-190056-bc6072, epoch 261120-190018-0294af; TSan: CI 44858867076 linux-tsan (remove_*, epoch_* pass); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-185145-6600d3 and at 803442f 261120-190024-386b01, 261120-105033-4b9fdb |
 | A3 | every admission case under both policies (`_ca`, `_pins`) 261120-190110-1990be |
 | A4 | `docs/mechanisms/admission.md` (consensus:674bb21) |
