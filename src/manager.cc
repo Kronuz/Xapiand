@@ -920,7 +920,7 @@ XapiandManager::make_servers()
 	// The search HTTP API, served over the Asio transport: N reactors
 	// (num_http_servers) share the listen port via SO_REUSEPORT. A request is a task on the
 	// scheduler of the reactor that accepted it. The service binds + starts later, when the
-	// node is ready (like http->start).
+	// node is set up, just before READY (set_ready_impl).
 	{
 		std::size_t reactors = opts.num_http_servers > 0 ? static_cast<std::size_t>(opts.num_http_servers) : 1;
 		#ifdef XAPIAND_TLS
@@ -993,11 +993,12 @@ XapiandManager::set_ready_impl()
 	auto local_node = Node::get_local_node();
 	assert(local_node->is_active());
 
-	exchange_state(state.load(), State::READY);
-
+	// READY means the listener accepts: start() returns once every reactor's acceptor listens.
 	if (http_service) {
 		http_service->start(static_cast<unsigned short>(http_port));
 	}
+
+	exchange_state(state.load(), State::READY);
 
 	L(-LOG_NOTICE, SEA_GREEN, "Node {}{}" + SEA_GREEN + " is Ready to Rock!", local_node->col().ansi(), local_node->to_string());
 }
