@@ -45,3 +45,9 @@ Done: 17 tests + tools/parity_terms.cc include faultlab/faultfs.h, `namespace fa
 Next: diff the two counts outputs (must be identical; a moved seed is a finding).
 Rulings I made: test/phrase_expansion_fixture.hh (outside file set) changed, A2 needs it; AGENTS.md line on the env var left stale (outside file set). faultlab linked on the prospect interface target.
 Blocked on: lead to add the fixture and AGENTS.md to the file set.
+
+## Lead rulings applied (new head, pushed)
+Lead decisions: completion pin d8b538c kept (descends from strata's 7731315); fixture and AGENTS.md in the file set; faultlab not on prospect's interface target.
+Done: tests/tools link prospect::testing (prospect + faultlab); ctest `interface_clean` fails if faultlab is in INTERFACE_LINK_LIBRARIES; AGENTS.md names FAULTLAB_MAP.
+State: waiting on jobs build-test 261120-160718-9b0668, counts at branch 261120-160718-d41d00, A2 261120-160720-9ea5ec, interface check 261120-160721-a2e94d. Main counts stay 261120-160403-a0ffdf.
+Next: diff branch counts against main counts.
