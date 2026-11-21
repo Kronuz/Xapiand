@@ -1,6 +1,6 @@
 # split-xapiand-src: journal
 
-State: waiting on jobs 261121-114550-5706de (suite), 261121-114550-041735 (split), 261121-114627-30abac, 261121-114629-a6153b, 261121-114635-b0e829 (A3); split check's tool lands with split-check (not landed at 2026-11-21: the split job may fail for that)
+State: waiting on jobs 261121-115601-758a68 (A6), 261121-114550-5706de (suite), 261121-114550-041735 (split), 261121-114627-30abac, 261121-114629-a6153b, 261121-114635-b0e829 (A3); split check's tool lands with split-check (not landed at 2026-11-21: the split job may fail for that)
 Quest: .campaign/xapiand/quests/split-xapiand-src.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -15,6 +15,8 @@ All four splits and the layout note are committed (one commit per file). Waiting
 
 1. When the jobs finish: read the suite (A1), the split check (A2, once split-check has landed: `campaign status split-check`; rerun with `campaign job rerun`) and the A3 diff; list each A3 symbol-size difference under Result.
 2. Push the branch (CI, A5) once, answer any warnings of the split check below.
+
+A6 (lead's message): no include edits made yet. Job 261121-115601-758a68 compiles the 10 new headers (serialize_detail.h, metrics_*.h, bucket_*.h, processor_detail.h) twice-included at C++20 with the build's flags (script ~/.scratch/xapiand/split-src/selfcontained_new.sh, flags from compile_commands.json after a configure). If a header fails, add the missing include to that piece and rerun.
 
 ## Blocked on
 
