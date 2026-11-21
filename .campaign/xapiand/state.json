@@ -25348,6 +25348,8 @@
       "after": [
         "split-check"
       ],
+      "base": "b5d46a8796a80169f71c0535602a5a9a8714e688",
+      "branch": "quest/xapiand/split-datetime",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25375,6 +25377,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-datetime",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25382,9 +25385,10 @@
       "provides": [],
       "repo": "../datetime",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:27"
+      "updated": "2026-11-21T12:21:45",
+      "worktree": "../datetime-wt/xapiand/split-datetime"
     },
     "split-docset": {
       "accepted": {},
