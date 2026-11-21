@@ -25976,8 +25976,8 @@
       "repo": "../workpool",
       "risk": "low",
       "status": "planned",
-      "title": "workpool's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:25"
+      "title": "workpool's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:05:26"
     },
     "split-xapiand-core": {
       "accepted": {},
