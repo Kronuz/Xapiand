@@ -1,76 +1,55 @@
 # turn-log-parity--tolerant-open: journal
 
-State: blocked on lead: A2 needs a journal change (Detent's lead reviews it)
+State: waiting on jobs 261121-104705-3d9542 261121-104707-bd7691 261121-104711-fedf27 261121-104713-c37dd2 and CI at strata:a16d117c
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing: stopped at the journal step, as the assignment says.
+strata:a16d117c pushed (quest/xapiand/turn-log-parity--tolerant-open); jobs queued, built against
+journal-lost-bound (journal:1e3505a, `--ref journal=...`, `-DFETCHCONTENT_SOURCE_DIR_JOURNAL`).
 
 ## Next
 
-1. Lead rules on the options under "Blocked on" and routes the journal change (a journal task,
-   or this task drafting it on a journal quest branch for Detent's lead).
-2. Once journal reports bounds: strata `attach_log` (index.hh, `GroupStatus` switch near :3365)
-   opens a bounded group when bound <= `cur_.applied.index`, replaying the records after the head,
-   and otherwise marks it lost and throws `log_lost`.
-3. Test `test/test_tolerant_open.cc` (rocksdb-parity A2): one log, groups C (head past the damaged
-   block), U (bound above its head), W (no bound source); damage one block with faultfs. C opens with
-   every record, U and W fail `log_lost`. `--fails-without` at a mutant that opens every bounded
-   group (fails U) and at the base (today's rule fails C).
+1. Read the jobs; paste `campaign brief`'s table under Evidence.
+2. Landing needs journal-lost-bound landed first, then strata's journal pin bumped to it (the
+   strata CI builds today's pin, which lacks `GroupStatus::bounded`, until then).
 
 ## Blocked on
 
-A2 cannot be done strata-side. At journal 178030b (strata's pin) the loss is decided and made
-durable before any index opens:
-
-1. `TurnLog::recover` (turn_log.h:555-745) puts every group the damaged block's manifest names
-   (`gap_damage`, :605-611; the manifest holds each group's highest sequence in the block,
-   framing.h:90) into `TurnRecovery::lost` and drops its records. Its only spare is
-   `superseded(group, seq)`, seq <= `TurnLogGroups::base`, which `Host::known` fills for closed
-   groups only (host.h:554).
-2. `Host::open` then `mark_lost`s those ids durably and removes their artifacts (host.h:607-629),
-   so the index's own files go before strata can compare its head. strata's attach only sees
-   `GroupStatus::lost` (index.hh:3365).
-
-So C (head covers every damaged record) fails `log_lost` today, and no strata change can spare it.
-journal main (335b1b5) is the same: `TurnRecovery` has no bound.
-
-Options (who decides: lead, with Detent's lead reviewing the journal diff):
-
-1. **Recommended: recovery reports a bound (rocksdb-parity A2 items 1-2).** Journal: a group the
-   damaged block's manifest names gets `TurnRecovery::bounded[group] = highest sequence the damage
-   could hold` instead of `lost`; its records after the bound are kept (contiguous from bound + 1
-   or from a later checkpoint, no need to start at 1), and its next sequence is at least the bound.
-   Host: `GroupEntry` stores the bound durably at open (beside `mark_lost`, without removing
-   artifacts), so it survives reclamation of the damaged segment and re-partition until the index
-   attaches; `status()` reports it (a new `GroupStatus::bounded`, or `stored` plus `bound(group)`);
-   `clear_bound(group)` after the index proves coverage, `mark_lost(group)` when it does not.
-   Exempt bounded groups from the "damaged, open, nothing kept" rule (turn_log.h:741). Unknown
-   damage (no manifest) keeps losing every group until task 3's copy flag or task 14's roster give
-   a bound. Journal size: about 60 lines plus its tests; strata: about 30 lines plus the test.
-2. **A per-open-group base in the table.** strata reports each installed head's covered sequence
-   (`Host::advance_base`, a durable table write per checkpoint); `known()` passes it for open
-   groups and the existing `superseded` check spares C. Costs a second durable write per
-   checkpoint per index (millions of indexes per host), changes `base`'s meaning for open groups,
-   and has no path to the copy-flag bound. Not recommended.
-3. Keep `log_lost` for all (D103 option 1 as it stands). Contradicts the quest's outcome.
+Nothing in this task. It depends on quest journal-lost-bound (the option 1 chosen from the
+earlier Blocked on), which carries its own file-set request and reviews.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A2 | <none: blocked on the journal change above> |
+| A2 | 261121-104705-3d9542: `test_tolerant_open` at strata:a16d117c, journal:1e3505a. `--fails-without`: 261121-104707-bd7691 at the strata mutant strata:62f31fc7 (refs/scratch/tolerant-open/opens-every: attach opens every bounded index; fails U and W); 261121-104711-fedf27 at journal:1d773a5 (every named group lost: today's rule; fails C and D). 261121-104713-c37dd2: standalone_turn_log_test against the journal branch |
 
-No jobs run: the cause is in code (journal 178030b turn_log.h:605-611, :741; host.h:554,
-:607-629; strata index.hh:3365), not a hypothesis to measure.
+Local (RelWithDebInfo, quiet light): tolerant open 0 failures.
 
 ## Result
 
-Nothing changed yet in strata. Diagnosis above.
+strata:a16d117c.
+
+- `attach_log` (include/strata/core/index.hh): a `GroupStatus::bounded` group opens when the head's
+  `cur_.applied.index` reaches `Host::bound`, replaying the log's records after the head as for a
+  stored group; otherwise `Host::lose` and `log_lost`. `turn_sealer` forwards `bound`/`lose`
+  (include/strata/core/turn_seal.hh).
+- `test/test_tolerant_open.cc`: one damaged 4 KiB block holds C's, U's and W's 600-byte batches
+  (sequence 4 each), the start of U's 8 KiB filler (5) and D's commit checkpoint (3). Bounds
+  asserted exactly: C 4, U 5, W 4, D 3. C (committed through c2) opens with k0, c1, c2 and writes
+  c3; D opens with k0, d1; U and W fail `log_lost` and report lost, also after a host reopen,
+  where C's later checkpoint has cleared its bound. Damaging the next block's header too (the
+  manifest) leaves no bound: C, U and W all fail `log_lost`.
+- Mechanism note: journal `docs/mechanisms/lost-bound.md` (who may replay past a bound: strata's
+  index, whose head records its last applied sequence).
 
 ## Rulings I made
 
-- Did not reproduce with a job: the failing rule is a direct code path (journal marks the group
-  lost and removes its artifacts at host open), and a reproduction test needs the journal API
-  that option 1 adds; it becomes A2's test once that lands.
+- Coverage test is bound <= head's applied index: a commit installs the head only after the head's
+  records are sealed under the lease, so every record at or below the head's index is in the head.
+- W (bound, no later write) and U (later write) both lose: neither head covers its bound.
+- Damage to the manifest too loses every index (no bound source); a known limit until a copy
+  flag or per-segment roster gives a bound, as the journal note's Limits say.
+- Did not reproduce today's failure with a job earlier: it is a direct code path; the
+  `--fails-without` at journal:1d773a5 is that reproduction now.
