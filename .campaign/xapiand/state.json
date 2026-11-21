@@ -16712,6 +16712,41 @@
       "title": "Xapiand builds with CMake and Ninja only",
       "updated": "2026-11-21T09:13:59"
     },
+    "ninja-only-strata": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "README.md",
+        "bench/catalog_tiers/**",
+        "bench/hybrid/CMakeLists.txt",
+        "bench/idle_index/k6.sh",
+        "bench/open_sync/**",
+        "docs/design/standalone-turn-log.md",
+        "test/vm_repeat.sh",
+        "test/ninja_only_check.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "M2",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "strata builds with CMake and Ninja only",
+      "updated": "2026-11-21T09:14:01"
+    },
     "no-stalls": {
       "accepted": {},
       "after": [],
