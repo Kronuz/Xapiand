@@ -24996,7 +24996,8 @@
         "test/readahead_test*",
         "test/readahead/**",
         "CMakeLists.txt",
-        "test/CMakeLists.txt"
+        "test/CMakeLists.txt",
+        "docs/source-layout.md"
       ],
       "landed": [],
       "lenses": [],
@@ -25007,7 +25008,7 @@
       "risk": "low",
       "status": "planned",
       "title": "http's large header and tests split under 1,000 lines",
-      "updated": "2026-11-21T11:38:53"
+      "updated": "2026-11-21T11:39:33"
     },
     "split-xapiand-core": {
       "accepted": {},
