@@ -1,6 +1,6 @@
 # newman-pin: journal
 
-State: waiting on jobs 261121-050004-fa263e (A1), 261121-050012-2e49bc (A2); A3 on CI (test_lua red is the lua-method-flake quest's)
+State: waiting on jobs 261121-105123-f5b150 (A1), 261121-105123-e0bfaf (A2); A3 on CI (test_lua red is the lua-method-flake quest's)
 Quest: .campaign/xapiand/quests/newman-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -27,8 +27,8 @@ Nothing. The lead widened the file set; arm64.yml, freebsd.yml, e2e_capture.sh a
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-050004-fa263e |
-| A2 | job 261121-050012-2e49bc (the quest's full grep); one place = harness/package.json |
+| A1 | job 261121-105123-f5b150 |
+| A2 | job 261121-105123-e0bfaf (the quest's full grep); one place = harness/package.json |
 | A3 | CI after push |
 
 ## Result
