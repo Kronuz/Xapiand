@@ -12476,7 +12476,8 @@
       "after": [
         "detent:journal-idle-groups",
         "detent:journal-loop-handoff",
-        "detent:journal-power-silent-loss"
+        "detent:journal-power-silent-loss",
+        "detent:journal-tail-second-sector"
       ],
       "checks": [
         {
@@ -12516,7 +12517,8 @@
       "needs": [
         "detent:journal-idle-groups",
         "detent:journal-loop-handoff",
-        "detent:journal-power-silent-loss"
+        "detent:journal-power-silent-loss",
+        "detent:journal-tail-second-sector"
       ],
       "provides": [
         "journal:host"
@@ -12525,7 +12527,7 @@
       "risk": "high",
       "status": "planned",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-21T00:04:19"
+      "updated": "2026-11-21T00:05:24"
     },
     "journal-replaces-wal": {
       "accepted": {},
