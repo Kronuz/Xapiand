@@ -2,7 +2,9 @@
 
 Exploration targets for the next batch: review follow-ups, non-blocking findings, benchmark losing
 rows, small bugs. One row per target with its evidence and where to start; a row leaves when its
-quest starts (name it) or is dropped with a reason.
+quest starts (name it) or is dropped with a reason. Before a row becomes a quest, check the
+repository's log and code for its fix (`git log -S` on the named line): rows go stale when another
+quest fixes them (2 of 5 on 11-20).
 
 | Target | Evidence | Start in | Repo | Status |
 |---|---|---|---|---|
