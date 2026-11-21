@@ -1,6 +1,6 @@
 # Crash scenario D's wrong row (FreeBSD t3_crash_asan at Xapiand:a465288dc)
 
-State: not reproduced so far; the repeat jobs below are queued.
+State: waiting on the repeat jobs below; no wrong row in any finished trial so far.
 
 ## Target
 
@@ -36,6 +36,14 @@ before the listing). So the row is one of:
   CI's `freebsd.yml` builds and run as `nobody` as CI's rows run.
 
 ## Evidence
+
+The mutant proves the printing (job 261120-203705-507e50, macOS Release): with the DELETEs
+shifted by one id the check fails with `poke: DELETE multi/poke39 answered 404` and
+`D wrong row 1: 'poke0 None' hit {"_id": "poke0", "_version": 1, "poke": true} GET 200
+b'{"poke":true,"_id":"poke0","_version":1}'`. A hit's `_id` and `n` both come from the
+document's stored data, which is written whole, so case 2 needs a document whose data itself is
+wrong. WAL lines carry a footer checksum (`WalBinFooter`), so a torn line fails replay rather
+than applying half a document.
 
 GitHub CI, `freebsd.yml`, every run since a465288dc (187 runs that finished, through
 2026-11-21 04:00Z): 153 more `t3_crash_asan` and 154 more `t3_crash` rows passed, so 307 scenario D
