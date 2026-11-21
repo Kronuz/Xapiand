@@ -66,9 +66,10 @@ void test_unary() {
 void test_streams() {
 	constexpr std::uint64_t size = 32u << 20;
 	Pair p;
-	std::atomic<std::uint64_t> server_mismatched{0};
+	std::atomic<std::uint64_t> server_mismatched{0}, server_total{0};
+	// Handlers run on a loop thread: they record, and the main thread checks.
 	p.service->serve(rpc::Method::forward_write, [&](std::shared_ptr<rpc::ServerCall> call) {
-		CHECK_EQ(call->payload_total(), size);
+		server_total = call->payload_total();
 		auto got = std::make_shared<std::uint64_t>(0);
 		call->payload([&, call, got](std::string_view bytes, bool end) {
 			for (std::size_t i = 0; i != bytes.size(); ++i)
@@ -113,6 +114,7 @@ void test_streams() {
 	REQUIRE(up->wait(30s));
 	CHECK(!up->failure);
 	CHECK(up->reply.envelope == std::to_string(size));
+	CHECK_EQ(server_total.load(), size);
 	CHECK_EQ(server_mismatched.load(), 0u);
 
 	auto down = std::make_shared<Outcome>();
