@@ -561,3 +561,20 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Findings: journal 178030b loses acknowledged records under damage at 256 B/512 B/2 KiB blocks (5 seeds of 200, macOS and FreeBSD; passed at d90797c) -> Detent's journal-power-silent-loss. xapiand branch CI: test_text_parser built locally only via Homebrew's xapian.h; id-0 refusal drops documents on RESTORE (222 of 999).
 - Tool: agent-campaign:bf732aa (merged task journals), 82d3916 (ordered cross-campaign overlaps; mutant runs no longer hide task evidence); dotfiles:ebc987a, 64ac75f.
 - Quota 53% weekly, 0.44%/h, reset in 49 h. Load 13.4. Disk 300 GiB free. GitHub CI moving again, slowly.
+
+## 2026-11-20 21h
+- Landed: control-plane-wallclock (Xapiand:118f9fa43). xapiand branch CI green at Xapiand:7c394d73c after the CI-fix contributor (176k, Opus: vendored xapian.h include; numeric id 0 refused, which had dropped documents on RESTORE).
+- journal-turn-buffers: hand-back hook (A6) 158k (Opus); Detent's lead reviewed and approved (imported as the durability review, accepted at journal:5ace07e). Warm 385 KB turn: 122.5 allocations / 1.91 MB, 155-170 us -> 0 allocations, 58-61 us.
+- turn-log-parity task 4: mechanism built (strata:1e42abcd), 285k (Opus); 12 jobs queued behind exclusive holds.
+- crash-wrong-row explorer 209k (Opus): not reproduced in 427 trials; harness now prints the whole row (explore/crash-wrong-row).
+- Started: script-method (Opus), final-release no-publish workflows + release commit (Sonnet).
+- Tool: agent-campaign:0ad311f (cancelled CI is not failed), dotfiles:de01876. Stale deferred job pruned on phrase-expansion; campaign check clean.
+- Owner: cancelled the 2 Nov-11 strata runs -> GitHub refuses both cancel and force-cancel (ghost records, 0 jobs); left in place by default.
+- Quota 54% weekly, 0.45%/h, reset in 48 h. Load 3.4-5. Disk 300 GiB free.
+
+## 2026-11-20 22h
+- Agents finished: xapiand-final-release no-publish workflows + release commit 97k (Sonnet; Xapiand:1114106db, Xapiand:fc7142e3a); script-method 185k (Opus; Xapiand:dafc92de3, mutant fails on `_method` "", suite green).
+- Release dry runs dispatched at Xapiand:30815d91f (publish=false): Bottles found the tap untappable (kronuz/tap xapian.rb and nginx.rb use DSL current Homebrew removed); fix homebrew-tap:8fac0ef validated locally in CI's trust-bypass mode, push denied, waits on the owner. macos-14 and Rosetta bottle cells cancelled (logs gone). Release, FreeBSD, CI queued on runners.
+- crash-wrong-row: 510 more macOS trials (300 Release, 210 ASan+UBSan), 0 wrong rows; 937 total. FreeBSD build lost its VM to a poweroff; one self-contained job requeued (600acb).
+- netlab-consensus: 3 nodes 43/45 (the known loss/reorder stall, Detent's fix); 5 nodes running.
+- Quota 55% weekly, 0.45%/h, reset in 47 h. Load 3.3-3.8. Disk 299 GiB free.
