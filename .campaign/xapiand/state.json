@@ -13648,17 +13648,44 @@
         "tests/test_coverage_multivalue_range.cc",
         "docs/dev/keyword-open-range.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T10:50:05",
+          "commit": "170ab58b2f98ca65802066a69d9f3b3ce094c2dd",
+          "criteria": {
+            "A1": "261121-045337-0a227e (passed at 2957f2077703; only 3 merges from main since, none touching its files); fails without: 261121-045338-baa3ca",
+            "A2": "261121-045340-5b4053"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "2957f2077703727615f348f8268a5ca0122672dc",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-045340-5b4053",
+              "level": "light",
+              "seconds": 646.0,
+              "state": "done",
+              "what": "keyword-open-range check suite at 2957f2077703"
+            }
+          ],
+          "final": true,
+          "from": "7ee2a2253f63128359d450ed57f469afd2b317a7",
+          "reason": "",
+          "tested": "f65b671c958b71bd2614fc7930df29e1f369e90c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "Lower-bound-only keyword and text ranges match",
-      "updated": "2026-11-21T06:10:02",
-      "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
+      "updated": "2026-11-21T10:50:11",
+      "worktree": ""
     },
     "kv-scan": {
       "accepted": {},
