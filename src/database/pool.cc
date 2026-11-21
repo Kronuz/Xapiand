@@ -531,6 +531,20 @@ create_index_directory(const std::string& dir, const std::string& path)
 	}
 }
 
+// Removes the index's own files: its `strata` directory, then the index's directory when nothing nested is left
+// in it. A nested index lives in `<path>/<name>/strata`, so it is not touched.
+void
+remove_index_files(const std::string& path)
+{
+	namespace fs = std::filesystem;
+	std::error_code ec;
+	fs::remove_all(fs::path(path) / "strata", ec);
+	if (ec) {
+		throw std::system_error(ec, "Cannot remove the index files of " + path);
+	}
+	fs::remove(fs::path(path), ec);   // fails, and stays, while a nested index is in it
+}
+
 // A pin's failure as the engine's error: an absent index is not_found, a closed catalog not_available, and
 // strata's own failures are translated; anything else (the WAL replay's) leaves as it is.
 [[noreturn]] void
@@ -575,6 +589,13 @@ DatabasePool::make_host(std::size_t soft_open, const IndexSweep& sweep)
 	h.resolve = [this](const IndexCatalog::opening& op) -> std::unique_ptr<kronuz::journal::IO> {
 		namespace fs = std::filesystem;
 		const std::string path(op.key);
+		const bool doomed = [&] {
+			std::lock_guard lock(doomed_mutex_);
+			return doomed_.erase(path) != 0;
+		}();
+		if (doomed) {
+			remove_index_files(path);   // the old index is closed: what follows is a miss, or a create's fresh index
+		}
 		if (index_io_) {
 			return strata::counted_io::make(op.counts, [&] { return index_io_(path); });
 		}
@@ -847,6 +868,48 @@ DatabasePool::pin(const Endpoint& endpoint, int flags, task::cancel_token cancel
 	} catch (...) {
 		rethrow_pin_failure(key);
 	}
+}
+
+
+task::task<bool>
+DatabasePool::delete_index(const Endpoint& endpoint, task::cancel_token cancel)
+{
+	L_CALL("DatabasePool::delete_index({})", repr(endpoint.to_string()));
+
+	const std::string key = endpoint.path;
+	IndexPin held;
+	try {
+		held = co_await pin(endpoint, DB_OPEN, cancel);
+	} catch (const engine::Error& error) {
+		if (error.kind == engine::errc::not_found) {
+			co_return false;
+		}
+		throw;
+	}
+	{
+		std::lock_guard lock(doomed_mutex_);
+		doomed_.insert(key);
+	}
+	held.reopen();   // closes once the other holders let go; the open that follows removes the files
+	try {
+		(void)co_await pin(endpoint, DB_OPEN, std::move(cancel));
+	} catch (const engine::Error& error) {
+		if (error.kind != engine::errc::not_found) {
+			std::lock_guard lock(doomed_mutex_);
+			doomed_.erase(key);
+			throw;
+		}
+		co_return true;
+	} catch (...) {
+		std::lock_guard lock(doomed_mutex_);
+		doomed_.erase(key);
+		throw;
+	}
+	std::lock_guard lock(doomed_mutex_);
+	if (doomed_.erase(key) == 0) {
+		co_return true;   // another request's create opened the fresh index after the removal
+	}
+	throw engine::Error(engine::errc::busy, "The index is in use: " + key);
 }
 
 

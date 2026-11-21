@@ -47,6 +47,7 @@
 #include "engine/error.h"                   // for engine::Error
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
+#include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/schema.h"                // for Schema
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
@@ -1550,7 +1551,20 @@ delete_database_view(Request& request)
 		co_return;
 	}
 
-	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	if (request.endpoints.size() != 1) {
+		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		co_return;
+	}
+
+	auto* manager = XapiandManager::manager(true);
+	const auto& endpoint = request.endpoints[0];
+	const bool deleted = co_await manager->database_pool->delete_index(endpoint, request.http_req != nullptr ? request.http_req->cancel_token() : task::cancel_token{});
+	if (!deleted) {
+		write_status_response(request, HTTP_STATUS_NOT_FOUND, "No such database");
+		co_return;
+	}
+	manager->schemas->forget(endpoint.path);
+	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 }
 
 

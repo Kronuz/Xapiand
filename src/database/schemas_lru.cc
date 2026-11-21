@@ -906,6 +906,21 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 
 void
+SchemasLRU::forget(const std::string& endpoints_path)
+{
+	L_CALL("SchemasLRU::forget({})", repr(endpoints_path));
+
+	const auto local_schema_path = endpoints_path + "/";
+	{
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		schemas.erase(local_schema_path);
+	}
+	std::lock_guard<std::mutex> lk(versions_mtx);
+	versions.erase(local_schema_path);
+}
+
+
+void
 SchemasLRU::updated(const std::string& uri, engine::rev version)
 {
 	L_CALL("SchemasLRU::updated({}, {})", repr(uri), version);

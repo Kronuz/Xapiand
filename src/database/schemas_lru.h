@@ -95,6 +95,9 @@ public:
 
 	void updated(const std::string& uri, engine::rev version);
 
+	// Drops the cached schema of an index that was deleted, and the version noted for it.
+	void forget(const std::string& endpoints_path);
+
 	void cleanup();
 
 	// Reads of schemas started (metadata and foreign), calls that awaited a read in flight, and the ones

@@ -1274,7 +1274,7 @@ const std::vector<Pin> pins = {
 	{404, "{\"status\":404,\"type\":\"Not Found\",\"message\":\"Not Found: Document not found\"}"},  // GET /id/1
 	{200, ""},  // HEAD /id/2
 	{409, "{\"status\":409,\"type\":\"Conflict\",\"message\":\"Conflict: Version mismatch: the current version is 1\",\"_version\":1}"},  // DELETE /id/2?version=9
-	{501, "{\"status\":501,\"type\":\"Not Implemented\"}"},  // DELETE /id/
+	{204, ""},  // DELETE /id/
 	{204, ""},  // PUT /sc/  HUNT H3
 	{200, "{\"_settings\":{\"number_of_replicas\":0,\"shards\":[\"loopyield\"]},\"_schema\":{\"a\":{\"_prefix\":\"a.\","},  // GET /sc/
 	{400, "{\"status\":400,\"type\":\"Bad Request\",\"message\":\"Bad Request: Field 'a' expects a value of type integer, got \\\"x\\\"\"}"},  // PUT /sc/1

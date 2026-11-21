@@ -40,6 +40,7 @@
 #include <memory>               // for std::shared_ptr
 #include <optional>             // for std::optional
 #include <mutex>                // for std::mutex
+#include <set>
 #include <string>               // for std::string
 #include <utility>              // for std::pair
 #include <vector>               // for std::vector
@@ -459,6 +460,9 @@ class DatabasePool {
 	// One catalog per pool partition (cheap-reopen D1, strata cold-tier D4): each runs its transitions in a lane of
 	// its own, so opens and closes of different partitions run at once. A key's partition is a hash of the key.
 	std::vector<std::unique_ptr<IndexCatalog>> catalogs_;
+	// The indexes whose files the next open of their key removes (delete_index).
+	std::mutex doomed_mutex_;
+	std::set<std::string> doomed_;
 
 	IndexCatalog::host make_host(std::size_t soft_open, const IndexSweep& sweep);
 
@@ -563,6 +567,12 @@ public:
 	// empty pin (one that closed was committed by its close), as does one whose open failed (C25). A requested
 	// `cancel` ends the wait with task::cancelled.
 	task::task<IndexPin> pin_chore(const Endpoint& endpoint, task::cancel_token cancel = {});
+
+	// Deletes the index of this path: false when there is none. The index's files go at the open that follows the
+	// close the catalog makes once the other holders let go (the wait is the request's `cancel`); a nested index
+	// below it keeps its own. Raises errc::busy when the index was not replaced (a holder kept it, or its open was
+	// under way) and nothing was deleted.
+	task::task<bool> delete_index(const Endpoint& endpoint, task::cancel_token cancel = {});
 
 	// The indexes something still holds (a pin, a transition), one line each. For the shutdown's report of what
 	// it abandoned.
