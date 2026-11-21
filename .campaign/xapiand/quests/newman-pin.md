@@ -19,7 +19,7 @@ None.
 
 ## Decisions
 
-Lead: pin an exact release (6.x current at the quest's start), with npm's lockfile when installed locally; no global install.
+Lead: pin an exact release (6.x current at the quest's start), with npm's lockfile when installed locally; no global install. Every workflow (ci, arm64, freebsd) and harness script (e2e_capture.sh, coverage.sh) uses the one pin (lead, 11-21); freebsd.yml overlaps xapiand-final-release by glob only, which lands on the release branch.
 
 ## May land early
 
