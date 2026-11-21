@@ -19241,9 +19241,9 @@
       ],
       "repo": "../consensus",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-20T17:45:16",
+      "updated": "2026-11-20T17:45:47",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
