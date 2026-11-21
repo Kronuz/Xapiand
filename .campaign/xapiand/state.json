@@ -12954,8 +12954,6 @@
         "src/xapiand_storage_io.h",
         "src/manager.*",
         "src/opts.*",
-        "src/server/search_views.cc",
-        "CMakeLists.txt",
         "tests/test_wal_replay.cc",
         "tests/test_pool.cc",
         "tests/test_engine_error.cc",
@@ -13108,7 +13106,7 @@
       "risk": "high",
       "status": "planned",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-20T18:21:32"
+      "updated": "2026-11-21T09:42:49"
     },
     "journal-seal-repeat": {
       "accepted": {
