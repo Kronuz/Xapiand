@@ -192,14 +192,14 @@ expect_eq "an open-files limit below the minimum is EX_OSFILE" "$RC" 72
 expect_log "and says so" "$W/r5.log" "is not enough for the server to start"
 
 echo "== [7] open-files limits (main: adjustOpenFilesLimit)"
-# 300 descriptors cannot hold the default pool and clients: the pool is cut to (300 - 57) / 7 = 34 databases,
-# yet the start is refused because the computed minimum (1471) is above the limit.
-run_to "$W/l1.log" 30 "$BIN" --port "$(free_port)" --bind-address 127.0.0.1 -D "$W/lim1" --max-files 300 --database-pool-size 200 --max-clients 1000 -v
-expect_eq "a limit of 300 with the default pool is EX_OSFILE" "$RC" 72
-expect_log "it asks for at least 1471" "$W/l1.log" "open files limit of 300 is not enough for the server to start.*at least 1471"
-expect_log "the pool is cut to what 300 descriptors hold" "$W/l1.log" "database_pool_size has been reduced to 34 to compensate for low limit"
-# A process limit of 128 (soft and hard) that cannot be raised.
-bash -c 'ulimit -n 128; exec "$0" "$@"' "$BIN" --port "$(free_port)" --bind-address 127.0.0.1 -D "$W/lim2" -v --database-pool-size 200 --max-clients 1000 --name l2 >"$W/l2.log" 2>&1
+# 300 descriptors cannot hold the configured pool and clients: the pool is cut to (300 - 68) / 7 = 33 databases, which leave
+# room for one client, and the node starts.
+start_node "$W/l1.log" "$W/lim1" --max-files 300 --database-pool-size 200 --max-clients 1000 -v
+expect_log "the pool is cut to what 300 descriptors hold" "$W/l1.log" "database_pool_size has been reduced to 33 to compensate for low limit"
+stop_node TERM 20
+expect_eq "the node ends with status 0" "$RC" 0
+# A process limit of 64 (soft and hard) that cannot be raised holds no database and client at all.
+bash -c 'ulimit -n 64; exec "$0" "$@"' "$BIN" --port "$(free_port)" --bind-address 127.0.0.1 -D "$W/lim2" -v --database-pool-size 200 --max-clients 1000 --name l2 >"$W/l2.log" 2>&1
 expect_eq "a process limit that cannot be raised is EX_OSFILE" "$?" 72
 expect_log "the failed raise is reported" "$W/l2.log" "can't set maximum open files to .* EPERM"
 expect_log "and the limit is not enough" "$W/l2.log" "is not enough for the server to start"
