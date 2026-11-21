@@ -96,12 +96,12 @@ added A6; done.)
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261120-204135-6afdb1 (bytes: 4,608 records; turns: 400 turns, 49 rollovers; framing and crc fixtures) |
-| A2 | 261120-204136-5db313 (warm: 0 allocations in stage() and completed(), rounds 4-7; seal: 704 bytes for four 128 KiB bodies); fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-204136-c5ea74, 261120-204136-0cdfe6 |
-| A3 | 261120-204136-b4641b (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-204136-c0795f |
-| A4 | 261120-204136-af907d (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
-| A6 | 261120-204027-99b762 (4 sealers' 128 KiB bodies: warm begin() and completed() 0 allocations, turns 4-7; 28 of 28 later bodies encoded into the returned buffer; 32 returns cleared with capacity, all after the turn is durable; unsealed-in-flight gets nothing; a throwing recycler fails the driver after its turn); fails without: 261120-204028-be128e (drop-recycled: begin() 4 allocations, 524,320 bytes) |
-| A5 | manual: Detent's lead re-reviewed journal:60ab864 and APPROVED (cross-session message to the lead, 2026-11-21): differential probe 261121-124532-0dc107 (evict rename) gives IDENTICAL TurnLog output at the branch and at journal main 335b1b5, covering recovered and evicted records, a reopen and every flipped byte; recycler probe 261121-121414-237c59 passed under ASan+UBSan at journal:87af246, and nothing after it touches the recycler; park_count 0.565 B per parked group against main's 0.448 B (261121-121340-140534) accepted. Earlier round: journal:b88565f APPROVE (msg-185). |
+| A1 | 261121-122521-cc207c |
+| A2 | 261121-122539-a8551b; fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-201744-3bc198, 261120-201746-56b121, 261121-054412-bfce5b, 261121-054414-82b503, 261121-113000-0950f8, 261121-113002-fb2cfa, 261121-122544-1ac36e, 261121-122545-5e6990 |
+| A3 | 261121-122540-b2f8c5; fails without: 261120-201152-614139, 261120-201748-82c5c4, 261121-054417-3194fe, 261121-113004-e6c020, 261121-122523-7fa359, 261121-122547-b7aeb3 |
+| A4 | 261121-122542-b704ea |
+| A6 | 261121-122543-16d8b1, 261121-122537-1d2438; fails without: 261121-054419-ff7741, 261121-113006-d7b0ff, 261121-113432-44c9c7, 261121-121342-18a35f, 261121-122548-1c2e38 |
+| A5 | manual: Detent's lead re-reviewed journal:60ab864 and APPROVED (cross-session message to the lead, 2026-11-21): differential probe 261121-124532-0dc107 (evict rename) gives IDENTICAL TurnLog output at the branch and at journal main 335b1b5, covering recovered and evicted records, a reopen and every flipped byte; recycler probe passed under ASan+UBSan (261121-121414-237c59 at journal:87af246; rerun at the head as 261121-122550-138135); park_count 0.565 B per parked group against main's 0.448 B (measured by 261121-121340-140534; the same job at the head is 261121-122537-1d2438) accepted. Earlier round: journal:b88565f APPROVE (msg-185). |
 
 Job 261121-122656-ebc979 (A5 differential probe) failed on an unset JOB_REF_BASE: it was submitted without `--ref base=`, so it never compared. Detent's 261121-124532-0dc107 is that probe run correctly.
 
