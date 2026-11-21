@@ -1940,6 +1940,40 @@
     }
   ],
   "quests": {
+    "agents-md": {
+      "accepted": {},
+      "after": [
+        "ninja-only"
+      ],
+      "base": "dcfd06fe6d5ba8b04bb20ade93d8996dcc81fe0e",
+      "branch": "quest/xapiand/agents-md",
+      "checks": [
+        {
+          "cmd": "test $(wc -l < AGENTS.md) -le 80",
+          "level": "light",
+          "minutes": 30,
+          "name": "lines"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "AGENTS.md",
+        "docs/dev/agent-*.md",
+        "docs/dev/contributing.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: ninja-only changes one line of AGENTS.md (the configure command); this rewrite keeps -G Ninja and lands after it (after=ninja-only)",
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "AGENTS.md says how Xapiand is built and worked on today",
+      "updated": "2026-11-21T09:47:14",
+      "worktree": "../Xapiand-wt/xapiand/agents-md"
+    },
     "agg-shard-parity": {
       "accepted": {
         "correctness": {
@@ -11333,6 +11367,45 @@
       "updated": "2026-11-18T13:04:31",
       "worktree": ""
     },
+    "group-catalog": {
+      "accepted": {},
+      "after": [],
+      "base": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+      "branch": "quest/xapiand/group-catalog",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/group/group.hh",
+        "include/strata/core/catalog.hh",
+        "test/group/group_catalog*",
+        "docs/mechanisms/group-catalog.md",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/group-catalog",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "strata:group"
+      ],
+      "reason": "started by force: group-heal's install task edits group.hh's install path and waits on detent:consensus-driver-install; this changes group::config and the close/recover ownership; ninja-only-strata and turn-log-parity tasks append to CMakeLists in other places; the lead merges",
+      "repo": "../strata",
+      "risk": "high",
+      "status": "active",
+      "title": "a replication group runs on its catalog slot's index",
+      "updated": "2026-11-21T10:01:00",
+      "worktree": "../strata-wt/xapiand/group-catalog"
+    },
     "group-core": {
       "accepted": {},
       "after": [
@@ -12898,9 +12971,66 @@
       "title": "a host deletes a left group's journal, so the node can rejoin it",
       "updated": "2026-11-21T00:05:24"
     },
+    "journal-lost-bound": {
+      "accepted": {},
+      "after": [
+        "detent:journal-tail-second-sector"
+      ],
+      "base": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
+      "branch": "quest/xapiand/journal-lost-bound",
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/host.h",
+        "src/host*",
+        "include/journal/turn_log.h",
+        "test/lost_bound*",
+        "docs/mechanisms/lost-bound.md",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:recovery"
+      ],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "active",
+      "title": "damage bounds a group's loss instead of losing the group",
+      "updated": "2026-11-21T09:55:19",
+      "worktree": "../journal-wt/xapiand/journal-lost-bound"
+    },
     "journal-replaces-wal": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "group-catalog"
+      ],
+      "base": "ce5e4df02373983150ccacc74c230b0e6d9c6062",
+      "branch": "quest/xapiand/journal-replaces-wal",
       "checks": [
         {
           "cmd": "ci:Build + unit + smoke",
@@ -12972,7 +13102,19 @@
         "harness/async_check.py",
         "harness/removed_options_check.sh",
         "harness/test_gate_tools.py",
-        "docs/mechanisms/journal-durability.md"
+        "docs/mechanisms/journal-durability.md",
+        "CMakeLists.txt",
+        "src/engine/strata/shard.*",
+        "src/engine/shard.h",
+        "src/database/command.*",
+        "src/database/shard_group.*",
+        "tests/test_cheap_reopen.cc",
+        "tests/test_endpoint_uuid.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_node.cc",
+        "src/server/search_views.cc",
+        "tests/test_command*",
+        "tests/test_shard_group*"
       ],
       "history": [
         {
@@ -13104,9 +13246,10 @@
       ],
       "repo": ".",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T09:42:49"
+      "updated": "2026-11-21T10:01:04",
+      "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
       "accepted": {
@@ -22727,10 +22870,10 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T04:33:54",
-          "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+          "at": "2026-11-21T09:51:10",
+          "base": "9d0d2703aeee6a0db8d70448274f90b704cff2e1",
           "blobs": {
-            "docs/perf/bulk-load-rss.md": "100644:9c3c42f86ad2d3979040702dce845553bf9705d8",
+            "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
             "src/server/search_views.cc": "100644:7da59d340be662732180a457db271b430ae4adf4",
             "src/server/search_views.h": "100644:eb6a60f3be8a26417775a17117e9657507de66ca",
@@ -22738,10 +22881,10 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "c5b2c0689ce51c7293cafe5ed909b2fa50299a46",
+          "commit": "06a6f8bc003b6ccbd01ec1b552ad2acded02c64e",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
-            "docs/perf/bulk-load-rss.md": "55616a000938f1cb",
+            "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
             "harness/bench/bulk_rss_probe.py": "e19856f1df42ee22",
             "src/server/search_views.cc": "ffa03e257f52da3b",
             "src/server/search_views.h": "85b01300a82774b2",
@@ -22749,7 +22892,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "",
+          "note": "re-read main's code changes since the review (e1be368395a1..9d0d2703aeee): only src/manager.cc reorders READY after http_service->start; no change to RESTORE parsing or streaming",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -22798,7 +22941,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T04:33:54",
+      "updated": "2026-11-21T09:51:10",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -28753,6 +28896,19 @@
           "merged": "2f5f103366ddce071afc4c182ed1e9823767841d",
           "worktree": ""
         },
+        "group-commit": {
+          "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
+          "branch": "quest/xapiand/turn-log-parity--group-commit",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/turn_seal.hh",
+            "test/test_barrier*",
+            "test/test_group_commit*",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--group-commit",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--group-commit"
+        },
         "journal-pin": {
           "base": "db214892159e0102e17f5b390e1a37b299546031",
           "branch": "quest/xapiand/turn-log-parity--journal-pin",
@@ -28805,10 +28961,25 @@
           ],
           "journal": "../Xapiand-wt/xapiand/turn-log-parity--ryw",
           "worktree": "../strata-wt/xapiand/turn-log-parity--ryw"
+        },
+        "tolerant-open": {
+          "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
+          "branch": "quest/xapiand/turn-log-parity--tolerant-open",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/manifest_log.hh",
+            "include/strata/core/catalog.hh",
+            "test/test_tolerant_open*",
+            "test/*open*_test.cc",
+            "fuzz/**",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--tolerant-open",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--tolerant-open"
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T08:53:04",
+      "updated": "2026-11-21T09:46:36",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
