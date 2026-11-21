@@ -9246,18 +9246,41 @@
         "docs/STATUS.md",
         "docs/book/OUTLINE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-strata",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T09:39:15",
+          "commit": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+          "criteria": {
+            "A1": "261121-050042-88219e, 261121-050043-dd30d3",
+            "A2": "261121-085221-7f63bf",
+            "A3": "CI green at efa5214bacd3"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "753bc62c4c32210535e10b31f8156f448d560549",
+          "reason": "",
+          "tested": "efa5214bacd3a0c7ecc4870071ee0bb611968799"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strata's crash tests run on faultlab's faultfs (step 3)",
-      "updated": "2026-11-21T04:04:43",
-      "worktree": "../strata-wt/xapiand/faultlab-adopt-strata"
+      "updated": "2026-11-21T09:39:21",
+      "worktree": ""
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
