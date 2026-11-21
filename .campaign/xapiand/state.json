@@ -25190,15 +25190,14 @@
       ],
       "consumes": [],
       "files": [
-        "tests/test_lua*",
-        "tests/lua/**",
-        "tests/test_engine_search_strata*",
-        "tests/engine_search_strata/**",
-        "tests/test_engine_query*",
-        "tests/engine_query/**",
-        "tests/test_engine_callbacks*",
-        "tests/engine_callbacks/**",
-        "tests/CMakeLists.txt",
+        "tests/test_lua.cc",
+        "tests/test_lua/**",
+        "tests/test_engine_search_strata.cc",
+        "tests/test_engine_search_strata/**",
+        "tests/test_engine_query.cc",
+        "tests/test_engine_query/**",
+        "tests/test_engine_callbacks.cc",
+        "tests/test_engine_callbacks/**",
         "CMakeLists.txt",
         "docs/dev/test-layout.md"
       ],
@@ -25211,7 +25210,7 @@
       "risk": "low",
       "status": "planned",
       "title": "Xapiand's free large tests split under 1,000 lines, same test names",
-      "updated": "2026-11-21T11:39:32"
+      "updated": "2026-11-21T11:40:41"
     },
     "stash-claim-hint-d64": {
       "accepted": {},
