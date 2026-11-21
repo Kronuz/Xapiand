@@ -1,6 +1,6 @@
 # turn-log-parity--checkpoint-window: journal
 
-State: blocked on lead: the writer count needs include/strata/core/turn_seal.hh (step 2); steps 1 and 3 proceed
+State: waiting on jobs 261120-203524-f04edf 261120-203525-596222 261120-203526-571372 261120-203528-39f83c 261120-203529-f27b3b 261120-203531-139852 261120-203532-aa7a48 261120-203534-aebc54; blocked on lead: the writer count needs include/strata/core/turn_seal.hh (step 2)
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,16 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1, the floor probe: `bench/kv/probes/rocksdb-parity/checkpoint-floor.cc` and `.sh`, 10k logged
-indexes on one turn log, Zipf 0.99 writes; trigger set through today's `checkpoint_log_bytes`.
+Floor table: eight exclusive jobs queued at strata:14b476d1, interleaved, two trials of triggers
+64 MiB (today's default), 4 MiB, 1 MiB, 256 KiB (ids in State). Each: checkpoint-floor.sh, 10k
+logged indexes created under nosync.c then reopened, 8M puts of 100 B, Zipf 0.99, 4 threads.
 
 ## Next
 
-1. Floor table: smoke (light), then exclusive runs at 64 MiB (today's default), 4 MiB, 1 MiB, 256 KiB.
-2. `test/test_checkpoint_window.cc`: D2's test with values, what holds today (writer checkpoint set
-   to the window by option); mutant without the forward copy (`--fails-without`).
-3. When unblocked: the window mechanism in `index.hh` + `turn_seal.hh`; the test's default case;
-   the mutant at `command::max_bytes`.
+1. Read the eight jobs; fill the floor table below; pick the floor (default 1 MiB).
+2. When unblocked: the window in `index.hh` (and `turn_seal.hh`), the floor as the option's
+   default; register `test_checkpoint_window` in default mode; the window mutant (`log_due` at
+   `command::max_bytes`) on `mutant/turn-log-parity--checkpoint-window-window`, `--fails-without`;
+   one probe run at the mechanism commit with the chosen floor, to show it equals the fixed row.
 
 ## Blocked on
 
@@ -39,13 +40,20 @@ Options:
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A6 (D2's test) | 261120-202804-e233bb: explicit mode passes at strata:14b476d1, at most 5 segment files (bound 6) over segments 1..41, 24 records forwarded (115 KB) for 39.9 MB of commands, 12 writer checkpoints at a 3 MiB window |
+| A6, fails without the forward copy | 261120-203457-3324d7 at strata:71d3a338 (`mutant/turn-log-parity--checkpoint-window-forward`, journal's `forward_slice` patched to return nothing): 25 segment files, 0 forwarded, exit 1 |
+| A6, fails without the window | 261120-202805-29d178: default mode at today's trigger (`command::max_bytes`, the window mutant's behavior): 7 segment files (bound 6), 30.0 MB forwarded for 5.1 MB of commands, 0 writer checkpoints, exit 1 |
+
+Floor table (pending the eight jobs): 10k indexes, 8M puts.
+
+| Trigger | puts/s | checkpoints | checkpoints/s | log written | log zero-fill | forwarded | index written |
+|---|---|---|---|---|---|---|---|
+
+Smoke (light, not evidence), 261120-202808-b1442b: 10k indexes, 1M puts at a 1 MiB trigger: setup
+7.3 s under nosync, reopen 0.3 s, run 4.5 s at 220k puts/s, 20 checkpoints (4.4/s); run bytes:
+log records 131.6 MiB, log zero-fill 124.0 MiB, index 5.0 MiB; 60.2 MB forwarded.
 
 ## Result
 
@@ -55,4 +63,23 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The floor rows run at today's code with the trigger fixed by `checkpoint_log_bytes`: at 10k
+  writers D2's share is the window over 10k (12 MiB / 10k = 1.2 KiB with kv's 4 MiB segments), so
+  the trigger after D2 item 2 is the floor exactly. The "before" row is today's 64 MiB default.
+- The probe's buffer share is 256 MiB, so the trigger, not the buffer, ends a record run. With
+  kv_strata's share (budget / indexes, at least 64 KiB) every index flushes at 64 KiB at 10k
+  indexes, and no floor of 256 KiB or more is ever reached: the floor binds only where an index's
+  buffer share exceeds it.
+- Uniform writes over 10k indexes reach no floor in a 10-minute run (each index logs ~100 KiB per
+  1M puts), so the probe writes by Zipf 0.99, each of 4 threads over its own 2.5k indexes, after one
+  put to each index so all 10k are writing groups.
+- Setup creates under nosync.c and exits with the groups open; the measured process reopens them.
+  With real syncs 2000 creates took 135 s (one group create at a time in the host).
+- Checkpoints are counted where an apply's flush emptied the buffer; merge commits are not.
+- D2's test mutant for item 3 patches journal through FetchContent's PATCH_COMMAND
+  (`cmake/mutant-no-forward.cmake`, on the mutant branch only), in its own build directory.
+- The test asserts, beyond the segment bound: the log advanced 10 x retain_segments segments,
+  something was forwarded, forwarded bytes at most a tenth of the commands, writer checkpoints
+  within one of commands / window, and the idle index reads its write.
+- The test registers its explicit mode only (`checkpoint_window_explicit`): the default mode
+  fails until D2 item 2 lands.
