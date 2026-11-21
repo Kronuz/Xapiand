@@ -692,3 +692,19 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Stale Makefiles trees cost two tolerant-open jobs; 7 removed by the sweep; runner fix forwarded to campaign-v3.
 - Started split-task, split-logger, split-datetime and split-storage (Sonnet).
 - Host: light slots 59% used last hour, 82 queued and 4 running, load 13-23, 299 GiB free. Quota 76% weekly, reset in ~33 h.
+
+### 2026-11-21 15h (hourly)
+
+- Landed: split-check (cpp-libraries:920d1b2), so split quests have the shared moves-only check. cpp-libraries:12bae98 makes the shared CI configure with Ninja; ninja-only-strata's guard had failed every strata CI job on Makefiles.
+- split-check-sources (lead, ~30 lines of tool plus 9 tests): the landed check read every split's layout note and CMake lines as code, and failed on include guards, `static` becoming `inline`, a `using` of a detail namespace and dropped section comments. Those now pass as warnings the journal answers. 44 tests pass at cpp-libraries:d1bca40; it lands on CI.
+- 11 library splits launched (one Opus contributor each, 78-151k tokens so far):
+  - Split: completion (posix.h 1,212 to 504 plus 4 pieces), faultlab (faultfs.h 1,480 to a 46-line umbrella), workpool (work_pool.hh 1,535 to 1,039 plus 3), queryparser (the 140-line describe printer moved out).
+  - Kept whole: docset (single-header contract), traceback and url-parser (consumers compile the one .cc; url-parser's code layout affects speed), htm (lead's A7 ruling: Xapiand compiles htm.cc by path).
+- journal-turn-buffers: Detent's lead approved A5 and re-checked durability at journal:60ab864 (differential probe vs main identical); re-accepted, and it lands on journal's CI.
+- journal-replaces-wal restore task: its first job did not compile (leb128::encode returns a pointer). Lead fixed it at Xapiand:fcd06fe and requeued its 3 mutant jobs at the fix.
+- Lead pass over the 18 quests waiting on the lead (relayed from the owner):
+  - Merged main into 8 and set a landing loop; re-accepted restore-stream's security review; launched group-catalog's durability reviewer (Opus).
+  - Detent reviews journal-lost-bound; merged turn-log-parity's large-tx task; reran stale jobs under group-heal, placement and node-admission.
+  - `land --merge-main` re-pushed 7 branches on campaign-only master commits and cancelled their CI. The loop now merges only on code changes; campaign-v3 is building the fix (merge-main-when-needed).
+- Nine library repos' local main lagged origin by 1-20 commits (queryparser's carried a stale cut); fast-forwarded, and queryparser gained CI's quest/** trigger (queryparser:a4ffbeb).
+- Host: two exclusive measurements (Detent's netlab-consensus and reader-s6) hold the machine; 82 queued, 3 running, load 30 falling to 5, 302 GiB free. Quota 80% weekly, reset in ~32 h.
