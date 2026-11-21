@@ -1665,6 +1665,24 @@
         "quest": "detent:consensus-faultfs"
       },
       "text": "detent:consensus-faultfs started and may change files your node-admission changes (order them with --after detent:consensus-faultfs, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:driver, which your group-core consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T17:25:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T17:25:22",
+      "by": "campaign detent",
+      "closed": "Expected: journal-loop-handoff is the owner handoff Detent agreed for msg-168. When it lands, strata's turn sealer calls it and group-core's t6w test workaround (strata:6421d4b3, close on the first thread) is dropped; hunt row filed.",
+      "id": "msg-183",
+      "settles": {
+        "ours": [
+          "group-core"
+        ],
+        "quest": "detent:journal-loop-handoff"
+      },
+      "text": "detent:journal-loop-handoff started and changes contract journal:driver, which your group-core consumes"
     }
   ],
   "quests": {
