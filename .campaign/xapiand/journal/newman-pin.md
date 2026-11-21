@@ -1,6 +1,6 @@
 # newman-pin: journal
 
-State: working (jobs pending, see Doing)
+State: waiting on jobs 261121-032949-19a6ee (A1), 261121-032951-b7522b (A2); A3 on CI after push
 Quest: .campaign/xapiand/quests/newman-pin.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,8 +28,8 @@ harness, ci.yml, TESTING.md.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job pending |
-| A2 | job pending; one place = harness/package.json |
+| A1 | job 261121-032949-19a6ee |
+| A2 | job 261121-032951-b7522b (scoped, excludes e2e_capture.sh); one place = harness/package.json |
 | A3 | CI after push |
 
 ## Result
