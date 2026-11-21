@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261121-103053-c94e37 261121-095306-97bf49 261121-103053-6192c5 261121-095307-869fee (A1/A2 reruns at consensus:d81ac11); build fixed.
+State: waiting on jobs 261121-155538-b542e7 261121-155541-b33da6 261121-155544-5ff2fd 261121-155547-b1b79f (selftest, its fails-without, 3- and 5-node VM rows at consensus:4e98c8c).
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -46,11 +46,26 @@ applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised 
   entries). Stall at 31 and not at 64 x 32 KiB points to bytes; stall at both 32 and 64 x 32 KiB
   points to the 2 MiB batch, not the entry count.
 
+## Round 2026-11-21 (resumed)
+
+- 5-node 261121-103053-6192c5 failed only "1ms: round trip": node 2 3.225 ms, nodes 3-5 2.51-2.64,
+  against 2 + 0.601 ± 0.494. Not a shaping fault: the same link at the same delay read 2.69 ms in
+  that run's partition-1ms row (others 2.655-2.695). The floor was stale: lateness was sampled once
+  after all four pings (~0.6 s after node 2's), and that row's events reached the harness up to
+  27 ms late (a guest stall). Fix consensus:d531f22: each peer's floor is 30 sleeps right after its
+  own ping; rows keep per-peer ping median and late p50/p90 (`pings`). selftest: the clean model
+  passes a 0.3 ms/wake stall during node 2's 1ms ping and its samples (fails at the old check:
+  job 261121-155541-b33da6), and mutant link-off (one peer 1.5x) fails round trip. Doc
+  consensus:4e98c8c (method, Calibration 5, selftest).
+- CI at a2324305b4dd failed linux-tsan consensus_transport_rpc_host_fetch (timed out), not this
+  quest's code: main's run 44930858682 at consensus:5a114dd fails the same test on linux-tsan.
+- Merged consensus main (15 files, install surface) clean: consensus:db5a3b0. node.cc's Sink has a
+  catch-all, so ActivateImage needs nothing.
+
 ## Next
 
-1. Lead: decide whether A1/A2 stand on the logs' passing round-trip, majority-only and partition
-   checks (the two exclusive jobs exit 1 on the loss row alone), or wait for Detent's
-   consensus-full-window-stall and rerun both rows to turn them green.
+1. Read the four jobs; A1/A2 cite the VM rows at 4e98c8c once green. If a round trip fails again,
+   its row's `pings` names the peer and whether its lateness rose with it.
 2. Hunt rows for the lead: docs/perf/netlab-consensus.md Findings 1 (stall), 2 (reorder doubles a
    64 KiB commit to 2 round trips), 3 (loss: 4 round trips), 7 (3-node election 3.5 s at 80 ms).
 
@@ -62,8 +77,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-172057-f95412 (green, a447b7d). Rows at consensus:e12ee46: 3 nodes 261120-174938-19c0ac (43 of 45 checks), 5 nodes 261120-174941-0e6ee9 (44 of 45). Every shape's round trip and majority-only check is `ok` in both logs (ping medians within 1.1 ms of set + floor); the failures are loss1%-20ms large_throughput (both) and its 3-node election 6,276 ms, the stall. Calibration 261120-174928-5e07e0. |
-| A2 | partition-1ms in the same two jobs: elects 1,395 ms (3) and 1,455 ms (5) against a 2,304 ms bound, rejoin 1,423 and 1,480 ms, 0 violations in 2,411 and 3,968 operations |
+| A1 | selftest 261121-112209-2d8347 (green, a2324305b4dd); at consensus:4e98c8c selftest 261121-155538-b542e7, fails-without 261121-155541-b33da6. Rows: 3 nodes 261121-103053-c94e37 (all checks, d81ac11); 5 nodes 261121-103053-6192c5 (43 of 44; "1ms: round trip", the stale floor fixed in d531f22). Reruns at 4e98c8c: 3 nodes 261121-155544-5ff2fd, 5 nodes 261121-155547-b1b79f. Calibration 261120-174928-5e07e0. |
+| A2 | partition-1ms in 261121-103053-c94e37 and 261121-103053-6192c5: 5 nodes elects 1,471 ms against a 2,304 ms bound, rejoin 407 ms, no cut-leader ack, 3,621 operations, 0 violations; reruns at 4e98c8c 261121-155544-5ff2fd and 261121-155547-b1b79f |
 | A3 | `docs/perf/netlab-consensus.md` at consensus:c1a2138: tables per node count with job ids, calibration, hunt rows, 8 findings |
 
 ## Result
@@ -74,6 +89,9 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
 `vm.sh` (build and run in one guest of Xapiand's VM tier).
 
 ## Rulings I made
+- 11-21: the per-peer floor is sampled right after each ping, not concurrently with it: sequential
+  keeps the selftest deterministic and the gap to ~0 s; the rows' `pings` field says whether a
+  failure is the link (lateness normal) or the host (lateness up).
 - msg-185 (lead, 11-20): the full-window stall is election churn. A Driver group's Core sends up to
   rpc_bytes (2 MiB) per append; at ~0.5 MB/s under 1% loss or 5% reorder it holds the Control
   connection ~4 s, heartbeats and votes queue behind it, and CheckQuorum steps the leader down;
