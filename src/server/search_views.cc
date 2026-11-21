@@ -539,6 +539,21 @@ method_token(enum http_method method)
 }
 
 
+// The method as a request spells it ("PUT"): what a script reads in `_method`.
+static std::string_view
+method_name(enum http_method method)
+{
+	switch (method) {
+		#define OPTION(name, str) \
+		case HTTP_##name: return #name;
+		METHODS_OPTIONS()
+		#undef OPTION
+		default:
+			return {};
+	}
+}
+
+
 // Classify a request's URL shape into a route key. This is the whole of Xapiand's
 // URL grammar the router needs: PathParser has already tokenized the ":command" and
 // ".selector" sub-syntax (which the views read directly), leaving three structural
@@ -968,6 +983,7 @@ write_document_view(Request& request)
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
+	db_handler.method = method_name(request.method);
 	bool stored = is_stored_type(request.ct_type);
 	auto ct_type = request.ct_type.empty() ? mime_type(selector) : request.ct_type;
 	auto indexed = streamed
@@ -1065,6 +1081,7 @@ update_document_view(Request& request)
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
+	db_handler.method = method_name(request.method);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = co_await db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
@@ -1483,6 +1500,7 @@ write_database_view(Request& request)
 	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	task::budget script_budget(REQUEST_SLICE, {}, REQUEST_LIGHT_SLICES);   // a script yields its reactor between slices; an admitted write is not cancelled
 	db_handler.budget = &script_budget;
+	db_handler.method = method_name(request.method);
 
 	if (decoded_body.is_map()) {
 		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
