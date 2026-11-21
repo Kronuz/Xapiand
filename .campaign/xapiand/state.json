@@ -27115,7 +27115,9 @@
         "bench/kv/**",
         "docs/design/rocksdb-parity.md",
         "docs/perf/**",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "test/merge_policy_test.cc",
+        "test/standalone_turn_log_test.cc"
       ],
       "history": [
         {
@@ -27189,7 +27191,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T19:18:50",
+      "updated": "2026-11-20T19:24:21",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
