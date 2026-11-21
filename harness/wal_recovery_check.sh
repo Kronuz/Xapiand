@@ -19,26 +19,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# wal_recovery_check.sh -- verify write-ahead-log crash recovery on a single node.
+# wal_recovery_check.sh -- every acknowledged write survives kill -9 on a single node.
 #
-# The contract: every write is appended to the per-database WAL as it happens,
-# before the debounced glass commit (the timed committer only forces at ~8-10s,
-# or the count threshold at 100000). So if the node dies uncleanly -- kill -9,
-# power loss -- after some *uncommitted* writes, restarting on the same data dir
-# must REPLAY the WAL and recover every one of them.
-#
-# This is the modern, real-architecture equivalent of the retired
-# oldtests/test_wal.cc, which drove the 2019 DatabaseQueue/Database API by hand.
-# Here we exercise the actual end-to-end path (HTTP index -> WAL -> crash ->
-# open-time replay) instead of the long-gone internal classes.
+# A shard is a lone-voter group (docs/mechanisms/journal-durability.md): a PUT answers once its
+# command is in the journal at the request's `ack` level, so a node killed right after the last
+# answer recovers every acknowledged write on restart, from the checkpoint and the journal, with
+# no commit in between.
 #
 # Steps (exit non-zero on any failed assertion):
 #   1. Start a node on a fresh data dir.
-#   2. PUT N docs WITHOUT ?commit=true  -> they live in the WAL, not yet in glass.
-#   3. kill -9 the node within ~1s (well before the ~8s timed committer) -> crash.
-#   4. Restart on the SAME data dir     -> WAL replay recovers the writes.
+#   2. PUT N docs, no ?commit.
+#   3. kill -9 the node SETTLE seconds after the last answer (default 0: at once).
+#   4. Restart on the SAME data dir.
 #   5. SEARCH -> assert the recovered count == N.
-#   6. Assert the restart log shows the replay ("Read and execute operations WAL").
 set -u
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -46,6 +39,7 @@ BIN="${BIN:-$REPO/build/bin/xapiand}"
 . "$REPO/harness/env.sh"
 PORT="${PORT:-$(free_port)}"
 NDOCS="${NDOCS:-50}"
+SETTLE="${SETTLE:-0}"
 IDX="walrec"
 RUNDIR="${RUNDIR:-$REPO/.scratch/xwalrec_$$}"
 mkdir -p "$RUNDIR"
@@ -69,7 +63,6 @@ wait_ready() {
 }
 
 start_node() {  # $1 = log file name under RUNDIR
-	# --verbosity 3 so the WAL replay line (an L_INFO) is captured for step 6.
 	"$BIN" --port "$PORT" --name walrecnode --verbosity 3 -D "$RUNDIR/n" >>"$RUNDIR/$1" 2>&1 &
 	PID=$!
 	wait_ready
@@ -87,42 +80,34 @@ except Exception:
     print("?")'
 }
 
-echo "== [wal-recovery] crash after uncommitted writes -> restart replays WAL =="
+echo "== [wal-recovery] kill -9 after acknowledged writes -> restart recovers them =="
 
-# 1 + 2: start, then index N docs WITHOUT commit (they go to the WAL only).
+# 1 + 2: start, then index N docs without a commit; each answer is an acknowledgement.
 start_node node1.log || { fail "node1 startup"; exit 1; }
+acked=0
 for i in $(seq 1 "$NDOCS"); do
-	curl -s -m5 -o /dev/null -XPUT "localhost:$PORT/$IDX/$i" \
-		-H 'Content-Type: application/json' -d "{\"n\":$i,\"txt\":\"doc number $i\"}"
+	code="$(curl -s -m5 -o /dev/null -w '%{http_code}' -XPUT "localhost:$PORT/$IDX/$i" \
+		-H 'Content-Type: application/json' -d "{\"n\":$i,\"txt\":\"doc number $i\"}")"
+	case "$code" in 2*) acked=$((acked + 1)) ;; esac
 done
-sleep 1   # let the async WAL writer persist; still far under the ~8s committer
+[ "$acked" = "$NDOCS" ] && pass "$acked/$NDOCS writes acknowledged" || fail "$acked/$NDOCS writes acknowledged"
+sleep "$SETTLE"
 
-# 3: crash the node (kill -9) before any timed commit could flush glass.
+# 3: crash the node.
 kill -9 "$PID" 2>/dev/null
 wait "$PID" 2>/dev/null
 PID=""
 
-# 4: restart on the same data dir -> open-time WAL replay.
+# 4: restart on the same data dir: recovery from the checkpoint and the journal.
 start_node node2.log || { fail "node2 (restart) startup"; exit 1; }
-sleep 1
 
-# 5: every uncommitted write must have survived via the WAL. Replay applies the
-# ops to the reopened database; a commit makes them visible to search (normal
-# read-your-writes -- without the WAL there would be nothing to commit).
+# 5: every acknowledged write survived; the commit only refreshes what search sees.
 curl -s -m8 -o /dev/null -XPOST "localhost:$PORT/$IDX/:commit"
 got="$(search_total)"
-if [ "$got" = "$NDOCS" ]; then
-	pass "recovered $got/$NDOCS docs after crash"
+if [ "$got" = "$acked" ]; then
+	pass "recovered $got/$acked acknowledged docs after kill -9"
 else
-	fail "recovered $got docs, expected $NDOCS (WAL replay lost writes)"
-fi
-
-# 6: positive proof the recovery went through the WAL (not a lucky early commit).
-if grep -qiE 'Read and execute operations WAL' "$RUNDIR/node2.log"; then
-	pass "restart log shows WAL replay"
-else
-	echo "  note: no explicit WAL-replay log line (log level may hide L_INFO);" \
-		"relying on the count assertion above"
+	fail "recovered $got docs, expected $acked (acknowledged writes lost)"
 fi
 
 if [ "$fails" = 0 ]; then
