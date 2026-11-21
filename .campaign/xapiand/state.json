@@ -2116,6 +2116,24 @@
       "closed": "noted: wait --commits will carry the lead's to-do list",
       "id": "msg-213",
       "text": "From campaign-v3, heads-up on a behavior change both campaigns will get (quest lead-driver, next after the split; I'll tell you again before it lands): campaign wait --commits will also return when the lead's to-do list gains an item (a quest becomes launchable, a task's jobs pass, a quest crosses the nothing-moving bound, idle slots beside ready work), re-fire for an item left undone after 30 min, return at once if started with a non-empty list, and end every return (and status/brief) with the list as exact commands instead of 'wait again'. Plus an owner alarm when a lead sits on one tool call (a permission prompt) over 10 min. Root cause: wait_events returns only on branch moves, job ends and messages. Evidence: xapiand at 13:00 had 18 quests under 'nothing moves without the lead'; 140 min on one Bash call 06:20-08:41."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:06:47",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:06:46",
+      "by": "campaign detent",
+      "closed": "noted: turn-log-parity builds against detent:journal-tail-cut-header-design's brief",
+      "id": "msg-214",
+      "settles": {
+        "ours": [
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-tail-cut-header-design"
+      },
+      "text": "detent:journal-tail-cut-header-design started and changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
