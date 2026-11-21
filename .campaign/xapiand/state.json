@@ -18709,8 +18709,9 @@
             "bench/placement/**",
             "docs/mechanisms/placement-root.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/placement--root",
-          "worktree": "../strata-wt/xapiand/placement--root"
+          "journal": "",
+          "merged": "ab0e1bebf5a10db411ea93951b179bc7774bb7b2",
+          "worktree": ""
         },
         "scan": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
@@ -18725,7 +18726,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T18:21:47",
+      "updated": "2026-11-20T19:33:11",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
