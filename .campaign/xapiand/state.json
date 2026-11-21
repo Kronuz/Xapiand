@@ -12430,6 +12430,57 @@
       "updated": "2026-11-17T12:09:23",
       "worktree": ""
     },
+    "journal-turn-buffers": {
+      "accepted": {},
+      "after": [
+        "detent:journal-idle-groups"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/framing.h",
+        "include/journal/turn_log.h",
+        "test/framing_test.cc",
+        "test/turn_log_test.cc",
+        "test/turn_buffers*",
+        "test/turn_seal_mutants.sh",
+        "CMakeLists.txt",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:turn-buffers"
+      ],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "journal's half of D3: the turn path owns its buffers",
+      "updated": "2026-11-20T19:36:00"
+    },
     "key-field": {
       "accepted": {},
       "after": [],
