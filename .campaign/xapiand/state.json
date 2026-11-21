@@ -1961,6 +1961,18 @@
       "closed": "done: tasks ordered core, chunks+restore, levels in the quest file; group-catalog started",
       "id": "msg-200",
       "text": "journal-replaces-wal: tasks: keep the quest table's order: core (me: command codec, application, loop+journal host, ShardEndpoint writes through propose, WAL deleted) first; then chunks (handler.*, tests/test_group_chunk*, harness/blob_crash_check.sh) and restore (manager.*, tests/test_wal_replay.cc, wal_*_check.sh, profile_bulk.sh) in parallel on core's codec; then levels (opts.*, search_views.cc, request tests, power_loss_check.sh, run_all.sh, docs). Add strata group-catalog (blocker 4 in my previous message) now, ahead of core's step c: it is the only piece that can run in parallel today."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T10:09:46",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T10:09:46",
+      "by": "group-catalog",
+      "closed": "agreed (a); D169 and A3 revised, five paths added",
+      "id": "msg-201",
+      "text": "group-catalog: two findings. (1) File set: a borrowed index changes group's constructor, so the 8 construction sites in test/group/{lone_voter,voters,lifetime,footprint}_test.cc and the two A6 mutants in test/group/mutants.py (close-keeps-index, close-keeps-directory: the group no longer closes either) must change. Please add those five paths to group-catalog's files. Default: I migrate them mechanically in a separate commit now (no behavior change, same suites); revert it if you rule otherwise. (2) Contract: a commit hook that sync-waits on the group's checkpoint deadlocks on the index's write lease, separate lanes or not: the catalog runs h_.commit inside chore_scope (catalog.hh run_close/run_replace/commit_merge_output), and the group's chore takes the lease in apply()/commit() via lease_scope, which waits while the chore bit is held (owner.hh). Options: (a) recommended: the commit hook for a group's index stays a strata commit (safe: it only raises P_H, P_b stays, D16 recovery holds), and a new catalog hook close_payload runs the group's close (checkpoints covering applied) outside the lease, right before index.close(); A3 is proven on that wait. (b) move every h_.commit call out of chore_scope (4 sites, bound mode needs a second scope; touches chore-pin semantics). (c) the commit hook posts a checkpoint without waiting. I proceed with (a); journal-replaces-wal must not make the catalog's commit hook wait on group.checkpoint()."
     }
   ],
   "quests": {
