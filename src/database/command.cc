@@ -110,6 +110,25 @@ put_command(std::string& out, const Command& command)
 	}
 }
 
+std::size_t
+number_size(std::uint64_t value)
+{
+	char buf[varint::leb128::max_bytes];
+	return varint::leb128::encode(buf, value);
+}
+
+std::size_t
+string_size(std::size_t length)
+{
+	return number_size(length) + length;
+}
+
+std::size_t
+bytes_size(const CommandBytes& bytes)
+{
+	return 1 + (bytes.staged ? 1 + number_size(bytes.offset) + number_size(bytes.length) : string_size(bytes.bytes.size()));
+}
+
 [[noreturn]] void
 corrupt(const char* what)
 {
@@ -238,6 +257,21 @@ check_limit(const std::string& entry, std::size_t limit)
 }
 
 }  // namespace
+
+
+std::size_t
+encoded_size(const CommandWrite& write)
+{
+	// As put_command writes it: op, flags, did, key, [expected], document, blob count, blobs.
+	std::size_t size = 2 + number_size(write.did) + string_size(write.key.size()) + bytes_size(write.document) + number_size(write.blobs.size());
+	if (write.expected) {
+		size += number_size(*write.expected);
+	}
+	for (const auto& blob : write.blobs) {
+		size += string_size(blob.ct_type.size()) + bytes_size(blob.record);
+	}
+	return size;
+}
 
 
 std::string
