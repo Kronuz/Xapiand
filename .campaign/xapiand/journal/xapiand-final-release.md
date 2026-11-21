@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: A1-A5 met at cfc2a5b80 (`xapiand` is there); A6 waits on the owner's approval of the tag.
+State: blocked on lead: the tool reads this release line as a master feature branch (base, file set, A5's evidence kind); A1-A3 rerun at head queued. A6 waits on the owner.
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,7 +31,25 @@ Results: fails-without at 30815d91f reproduce both causes: 261120-225040-bec8a6 
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Lead (2026-11-21, resumed): shape. This is a release line, not a master feature branch. The quest's Outcome cuts the release "from the official `xapiand` branch (created from v1.0.0-alpha.10, Xapiand:3fe13a2fb)" and its Decisions put Xapian-only fixes on `xapiand`, "merged into master too", with landing by `--record` after the tag. The quest branch starts at the `xapiand` tip Xapiand:e692a64b1 and `xapiand` is already at Xapiand:cfc2a5b80 (head minus journal commits). Merging master (strata, 1,502 files) would put the engine rewrite into the Xapian-only release and break the contract (alpha.10's HTTP API and formats). I did not merge.
+
+What the tool needs from the lead (options; recommendation 1):
+1. Recommended: give the quest `xapiand` as its base (or record it now as a release-line quest) so `master changed 1502 files` and the out-of-set diff are measured from Xapiand:e692a64b1, not master's merge-base Xapiand:bedae4b68; set its file set to the paths below; land with `campaign land xapiand-final-release --record cfc2a5b80 --reason ...` once the owner tags.
+2. Leave the tool's gaps as known-false and record the landing by hand; the three gaps then stay on `campaign status` until then.
+
+Out-of-set paths, against the `xapiand` base Xapiand:e692a64b1 (the placeholder set `tests/test_xapiand_final_release*`, `docs/release/xapiand-final*` matches no file; every change is below):
+- .github/actions/build-bottle/action.yml, .github/workflows/freebsd.yml, .github/workflows/release.yml: Xapiand:1114106db, `publish`/`ref` dispatch inputs so A5's Release/FreeBSD/Bottles dry runs build a sha without publishing.
+- .github/workflows/bottles.yml: Xapiand:1114106db (same) and Xapiand:a4ca8aedf (GitHub retired macos-14; arm64 on macos-15/macos-26).
+- CMakeLists.txt: A1 adapter and A/B build (Xapiand:4b9ee717e, 8ab6b2b26, 0463bc916); vendored xapian.h first for test_text_parser and the id-0 check in ctest (Xapiand:5c4c0ce2d); version 1.0.0-alpha.11 (Xapiand:fc7142e3a); compressors declared before storage for the gcc Docker build (Xapiand:df3ff48b8); RapidJSON pinned at master's commit for clang 19 (Xapiand:d2fa3e15d).
+- config.h.in: empty XXH_STATIC_LINKING_ONLY define, FreeBSD clang -Werror (Xapiand:df3ff48b8).
+- docs/src/content/docs/changelog.md: A4 and the alpha.11 notes (Xapiand:72ebbfa83, fc7142e3a, cfc2a5b80).
+- harness/id_zero_check.py, harness/run_all.sh: A2's check (Xapiand:d0c9a5733, 52cbbaab3, 5c4c0ce2d).
+- src/database/handler.cc, src/database/schema.cc: A2 refusal of numeric id 0 (Xapiand:971f90559, 91d4c3e62).
+- src/engine/xapian/query.cc, src/engine/xapian/text_parser.cc, src/engine/xapian/text_parser.h, tests/test_text_parser.cc: A1 queryparser adapter and its test (Xapiand:4b9ee717e, 8ab6b2b26, 0463bc916, 2060debe2).
+- src/multivalue/range.cc, src/serialise.cc, tests/test_generate_terms.cc: A3 (Xapiand:fdb32df96, ad037e7b1).
+- Not this quest's: docs/dev/agg-blowup.md, harness/agg_buckets_check.py, src/aggregations/{aggregations.cc,aggregations.h,bucket.h}, tests/test_engine_sort.cc and part of CMakeLists.txt are on `xapiand` before the quest (Xapiand:387efb944, 0f9e9e590 and the pins, Xapiand:bedae4b68..e692a64b1); the tool lists them only because it diffs from master's merge-base.
+
+Evidence (problem 3): A1-A3's build-test ran at Xapiand:91d4c3e62 and Xapiand:d2fa3e15d; the code to tag (Xapiand:cfc2a5b80) differs from d2fa3e15d by the changelog only. Rerun at head queued (Next). A5's evidence is GitHub's, not a local job: CI, Release, FreeBSD and Bottles all `success` at Xapiand:cfc2a5b80 on `xapiand`; a job reading those four runs and checking their sha's tree equals head's (journal aside) is queued so the tool can count it. The VM jobs (Docker, FreeBSD) were diagnostics for the build fixes and need no rerun.
 
 ## Evidence
 
