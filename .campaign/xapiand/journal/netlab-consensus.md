@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-174938-19c0ac 261120-174941-0e6ee9 261120-174928-5e07e0 (exclusive, e12ee46); narrowing 261120-180108-07a97a 261120-180110-7ec9f4 261120-180112-b951fd (light, e1144c2)
+State: ready for review at consensus:c1a2138. A1/A2 jobs are red only on the loss row's stall checks (Finding 1, Detent's fix); every other check passed. Narrowing jobs cancelled (msg-185).
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -48,12 +48,11 @@ applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised 
 
 ## Next
 
-1. When the rows finish: `python3 bench/netlab/bench.py table <result-3> <result-5> --job 3=<id>
-   --job 5=<id>`. The loss row's large_throughput is expected to read "error: no answer in 32 s"
-   (the finding above).
-2. Write docs/perf/netlab-consensus.md (A3): where it ran, the calibration table, the results
-   table, the findings (stall, the timer floor, term-11 was a bench bug, rejoin 218 to 1,334 ms is
-   TCP retransmission backoff on the cut link (hypothesis, unmeasured)). Commit and push.
+1. Lead: decide whether A1/A2 stand on the logs' passing round-trip, majority-only and partition
+   checks (the two exclusive jobs exit 1 on the loss row alone), or wait for Detent's
+   consensus-full-window-stall and rerun both rows to turn them green.
+2. Hunt rows for the lead: docs/perf/netlab-consensus.md Findings 1 (stall), 2 (reorder doubles a
+   64 KiB commit to 2 round trips), 3 (loss: 4 round trips), 7 (3-node election 3.5 s at 80 ms).
 
 ## Blocked on
 
@@ -63,9 +62,9 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | selftest 261120-172057-f95412 (green, a447b7d); rows 261120-174938-19c0ac (3), 261120-174941-0e6ee9 (5) pending |
-| A2 | rows 261120-174938-19c0ac, 261120-174941-0e6ee9 partition-1ms history check, pending |
-| A3 | `docs/perf/netlab-consensus.md` pending |
+| A1 | selftest 261120-172057-f95412 (green, a447b7d). Rows at consensus:e12ee46: 3 nodes 261120-174938-19c0ac (43 of 45 checks), 5 nodes 261120-174941-0e6ee9 (44 of 45). Every shape's round trip and majority-only check is `ok` in both logs (ping medians within 1.1 ms of set + floor); the failures are loss1%-20ms large_throughput (both) and its 3-node election 6,276 ms, the stall. Calibration 261120-174928-5e07e0. |
+| A2 | partition-1ms in the same two jobs: elects 1,395 ms (3) and 1,455 ms (5) against a 2,304 ms bound, rejoin 1,423 and 1,480 ms, 0 violations in 2,411 and 3,968 operations |
+| A3 | `docs/perf/netlab-consensus.md` at consensus:c1a2138: tables per node count with job ids, calibration, hunt rows, 8 findings |
 
 ## Result
 
