@@ -26540,9 +26540,7 @@
     },
     "task-timers-followups": {
       "accepted": {},
-      "after": [
-        "task-inbox-starvation"
-      ],
+      "after": [],
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -26559,7 +26557,7 @@
       ],
       "consumes": [],
       "files": [
-        "include/task/task_timers.hh",
+        "task_timers.hh",
         "test/timers_test.cc"
       ],
       "landed": [],
@@ -26575,7 +26573,7 @@
       "risk": "high",
       "status": "planned",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-20T23:34:32"
+      "updated": "2026-11-20T23:34:55"
     },
     "termdict-forward-seek": {
       "accepted": {},
