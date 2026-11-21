@@ -1,6 +1,6 @@
 # agents-md: journal
 
-State: working
+State: ready for review
 Quest: .campaign/xapiand/quests/agents-md.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,33 +9,39 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Done.
 
 ## Next
 
-1. <step>
+1. Lead review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | `AGENTS.md` is 55 lines; rules present: GPL paths, identity, no attribution, Ninja-only build, campaign skill authoritative, docs locations. |
+| A2 | Removed sections, one line each, below. |
+
+A2, removed sections:
+- Build & toggles: `cmake .. && make` stale (D168); replaced by CI's Ninja commands; toggles are in docs/dev/testing.md.
+- Verifying changes (docs-as-E2E): `docs_to_postman.py | newman` stale; CI runs `harness/run_all.sh e2e tls`, kept; detail in docs/dev/testing.md.
+- First, the big split: folded into the intro; the Xapian-fork and de-vendor history dropped (history).
+- Where things live (code map table): moved to docs/dev/agent-codebase.md, linked.
+- Conventions you'll see everywhere (L_* macros, reactor, MsgPack, perfect hash, serialization order, banner font): moved to docs/dev/agent-codebase.md.
+- Load-bearing invariants: moved to docs/dev/agent-codebase.md.
+- Traps: moved to docs/dev/agent-codebase.md.
+- Making changes well: moved to docs/dev/agent-codebase.md.
+- Releasing & changelog ("same PR" rule, tag steps): stale, replaced by the release quests; only the changelog location is kept.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+AGENTS.md rewritten to 55 lines in Detent's shape; added the Hard rules and machine-sharing sections. Moved code map, conventions, invariants, traps, change tips to docs/dev/agent-codebase.md. Ninja form written as `-GNinja` per CI.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- The copyright-line rule is kept in Hard rules (owner's standing rule).
+- Release/changelog procedure dropped rather than moved: stale per the quest.
