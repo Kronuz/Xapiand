@@ -38,3 +38,10 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 ## Rulings I made
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
+
+## Contributor update
+State: waiting on jobs build-test 261120-160356-152fa6, A2 261120-160358-45a507, counts at branch 261120-160400-a4d76b, counts at main 261120-160403-a0ffdf. Branch pushed (d4a4022 + AGENTS.md revert).
+Done: 17 tests + tools/parity_terms.cc include faultlab/faultfs.h, `namespace faultlab = kronuz::faultlab`; faultfs:: -> faultlab::. CMake: faultlab pinned b64102f, completion pinned d8b538c ahead of strata's (faultlab needs its seam), STRATA_FAULTFS_MAP -> FAULTLAB_MAP.
+Next: diff the two counts outputs (must be identical; a moved seed is a finding).
+Rulings I made: test/phrase_expansion_fixture.hh (outside file set) changed, A2 needs it; AGENTS.md line on the env var left stale (outside file set). faultlab linked on the prospect interface target.
+Blocked on: lead to add the fixture and AGENTS.md to the file set.
