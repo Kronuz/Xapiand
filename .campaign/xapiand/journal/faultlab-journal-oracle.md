@@ -1,6 +1,6 @@
 # faultlab-journal-oracle: journal
 
-State: waiting on jobs 261121-034036-778aff (A1 regenerate+diff), 261121-034038-7fec0f (A2 grep), 261121-034039-bc66b3 (suite) at faultlab:e3fcfe3
+State: waiting on jobs 261121-034036-778aff (A1 regenerate-and-diff), 261121-034118-d9974d (A2 as amended: default configure, grep without test/fixtures; lead), 261121-034039-bc66b3 (suite); A3 CI.
 Quest: .campaign/xapiand/quests/faultlab-journal-oracle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
