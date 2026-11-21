@@ -1,6 +1,6 @@
 # cjk-words: journal
 
-State: waiting on jobs 261120-155852-224613 (build-test), 261120-155853-9d2286 (e2e), 261120-155914-5a93cf (ICU oracle)
+State: waiting on jobs ORACLE (oracle rerun from the repository)
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
@@ -25,9 +25,9 @@ Nothing. The link line was added with the lead's leave.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | none yet (needs the link line, then build-test, e2e) |
-| A2 | none yet (tests/test_cjk_words.cc, build-test) |
-| A3 | docs/mechanisms/cjk-words.md |
+| A1 | build-test 261120-155852-224613 (79 of 79), e2e 261120-155853-9d2286 |
+| A2 | build-test 261120-155852-224613 (tests/test_cjk_words.cc); ICU oracle 261120-155914-5a93cf: 0 differences on zh, ja, ko |
+| A3 | docs/mechanisms/cjk-words.md (Differences filled from the oracle) |
 
 ## Rulings I made
 

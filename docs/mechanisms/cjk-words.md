@@ -28,7 +28,15 @@ The property is stored with the schema (`_cjk_words`) and cannot change once set
 
 ## Differences from ICU
 
-The segmenter's own vectors replay ICU's segments on Chinese, Japanese and Korean corpora in
-its ctest (`analysis:docs/cjk-segmenter.md`); the words here are those segments, minus the ones
-that are spaces or punctuation. No difference is known. The Xapiand-side comparison against
-ICU's iterator (the pre-landing job) is recorded here when it has run.
+`tests/test_cjk_words_oracle.sh` runs ICU 78.3's word break iterator and the segmenter on the three
+corpora of `analysis` (pinned commit) and lists every boundary or kind that differs. The words
+Xapiand indexes are the segmenter's segments that are not spaces or punctuation, so equal
+boundaries mean equal words.
+
+| Corpus | Characters | ICU boundaries (words) | Ours | Differences |
+|---|---|---|---|---|
+| Chinese | 109,863 | 76,814 (54,208) | 76,814 | 0 |
+| Japanese | 110,165 | 74,329 (65,531) | 74,329 | 0 |
+| Korean | 110,015 | 60,909 (27,803) | 60,909 | 0 |
+
+No difference was found. Korean agrees because both leave Hangul undivided.
