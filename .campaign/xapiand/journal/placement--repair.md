@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: waiting on jobs 261120-234442-a0ef19
+State: waiting on jobs 261121-000231-24e66d
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-First build of the plan and group tests (job 261120-234442-a0ef19, strata
-quest/xapiand/placement--repair at 3a83bf2e; CI also runs on the pushed branch). Nothing has
+First build of the plan and group tests (job 261121-000231-24e66d, strata
+quest/xapiand/placement--repair at 990d5e80; CI also runs on the pushed branch). Nothing has
 compiled yet: fix what the build reports, then the tests.
 
 ## Next
@@ -42,7 +42,7 @@ compiled yet: fix what the build reports, then the tests.
 
 | Criterion | Evidence |
 |---|---|
-| A3 | pending: job 261120-234442-a0ef19 (build), then plan, group and mutant jobs |
+| A3 | pending: job 261121-000231-24e66d (build), then plan, group and mutant jobs |
 | A4 | pending: group test `defer` and mutant `transfer-anyway` |
 | A5 | `docs/mechanisms/placement-repair.md` (repair's half) |
 
