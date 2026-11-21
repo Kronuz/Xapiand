@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: blocked on lead: the tool reads this release line as a master feature branch (base, file set, A5's evidence kind); A1-A3 rerun at head queued. A6 waits on the owner.
+State: waiting on jobs 261121-145254-58eeb6 (A1-A3 build-test at head); blocked on lead: base and file set for a release line (Blocked on); A6 waits on the owner.
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
