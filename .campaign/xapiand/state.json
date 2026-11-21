@@ -8539,7 +8539,7 @@
       "branch": "quest/xapiand/faultlab-adopt-prospect",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 60,
           "name": "build-test"
@@ -8572,6 +8572,34 @@
         "AGENTS.md",
         "docs/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:25",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 60,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/faultlab-adopt-prospect",
       "landed": [],
       "lenses": [],
@@ -8584,7 +8612,7 @@
       "risk": "low",
       "status": "active",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T16:06:50",
+      "updated": "2026-11-20T18:21:25",
       "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
     },
     "faultlab-adopt-xapiand": {
