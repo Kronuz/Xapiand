@@ -23405,9 +23405,9 @@
       ],
       "checks": [
         {
-          "cmd": "/usr/local/bin/python3 harness/split_check.py --before 7d185f626 src/database/schema.cc src/database/schema",
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src/database",
           "level": "light",
-          "minutes": 30,
+          "minutes": 10,
           "name": "split"
         }
       ],
@@ -23418,6 +23418,34 @@
         "src/database/schema/**",
         "harness/split_check.py",
         "docs/dev/schema-layout.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-21T11:39:44",
+          "checks": [
+            [
+              {
+                "cmd": "/usr/local/bin/python3 harness/split_check.py --before 7d185f626 src/database/schema.cc src/database/schema",
+                "level": "light",
+                "minutes": 30,
+                "name": "split"
+              }
+            ],
+            [
+              {
+                "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src/database",
+                "level": "light",
+                "minutes": 10,
+                "name": "split"
+              }
+            ]
+          ],
+          "reason": "the split check moves to cpp-libraries' shared split_check.py (quest split-check); schema-split no longer writes its own",
+          "voided": [],
+          "weakened": [
+            "gate check split changed"
+          ]
+        }
       ],
       "landed": [],
       "lenses": [],
@@ -23430,7 +23458,7 @@
       "risk": "low",
       "status": "planned",
       "title": "schema.cc becomes a set of files under 1,000 lines each",
-      "updated": "2026-11-21T11:39:35"
+      "updated": "2026-11-21T11:39:44"
     },
     "script-method": {
       "accepted": {},
