@@ -63,7 +63,7 @@ checked what), and answer each message by its id (msg-N).
 | A2 | build-test 261120-202700-a1e84b (id_zero_check in ctest, 9.3 s); fails-without 261120-202653-9ebd4f at 5c4c0ce2d: "RESTORE answered 200 with item 0 {"_id": 43}", "indexed 1000" |
 | A3 | build-test 261120-202700-a1e84b |
 | A4 | `docs/src/content/docs/changelog.md`: "Some numbers are stored in a lossy sortable form." |
-| A5 | on `xapiand` at cfc2a5b80 (11-21): CI 44895581156 green (build + unit + smoke, E2E, ASan+UBSan, TSan); dry runs publish=false from `xapiand`: Release 44895581852, FreeBSD 44895584092, Bottles 44895586318 (arm64 macos-15 and macos-26 green; the best-effort Intel cell fails: Homebrew's installer refuses x86_64) |
+| A5 | 261121-145240-4ff3db at 68a091f38: CI 44895581156, Release 44895581852, FreeBSD 44895584092, Bottles 44895586318 all success on `xapiand` at cfc2a5b80, whose tree is head's minus .campaign (the Bottles Intel Rosetta cell fails, best effort, run still success) |
 
 ## Result
 
