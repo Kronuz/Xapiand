@@ -31,7 +31,7 @@ TASK="$PWD/.deps-light-share/task-$(basename "$DIR")"
 git -C "$TASK" checkout -q -f "$PIN"
 [ "$PATCH" = none ] || git -C "$TASK" apply "$PWD/$PATCH"
 echo "task $PIN + $PATCH"
-cmake -S . -B "$DIR" -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF \
+cmake -G Ninja -S . -B "$DIR" -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF \
 	-DCMAKE_CXX_FLAGS=-fno-omit-frame-pointer -DFETCHCONTENT_SOURCE_DIR_TASK="$TASK" > "$DIR.cmake.log" 2>&1 || { tail -30 "$DIR.cmake.log"; exit 3; }
 cmake --build "$DIR" -j4 --target xapiand > "$DIR.build.log" 2>&1 || { grep -m20 -B2 -A8 "error" "$DIR.build.log"; exit 3; }
 echo "built $DIR/bin/xapiand at $(git rev-parse --short HEAD)"

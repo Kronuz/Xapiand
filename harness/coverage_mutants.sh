@@ -42,7 +42,7 @@ case $mutant in
 esac
 
 DEPS=${COVERAGE_DEPS:-$ROOT/.deps}
-cmake -S . -B build-mutant -DFETCHCONTENT_BASE_DIR="$DEPS" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+cmake -G Ninja -S . -B build-mutant -DFETCHCONTENT_BASE_DIR="$DEPS" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
 	-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache >build-mutant.log 2>&1 &&
 	cmake --build build-mutant -j"${JOBS:-4}" --target "xapiand_test_coverage_$target" >>build-mutant.log 2>&1 ||
 	{ tail -20 build-mutant.log; echo "MUTANT DID NOT BUILD: $mutant"; exit 126; }

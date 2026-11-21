@@ -11,7 +11,7 @@ for p in ${LLVM:-} /usr/local/opt/llvm@22 /usr/local/opt/llvm /opt/homebrew/opt/
 done
 F="-fprofile-instr-generate -fcoverage-mapping -fno-omit-frame-pointer"
 mkdir -p sdkinc; for f in zlib.h zconf.h uuid; do ln -sfn "$(xcrun --show-sdk-path)/usr/include/$f" sdkinc/$f; done
-cmake -S . -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+cmake -G Ninja -S . -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
 	-DCMAKE_C_COMPILER=$LLVM/bin/clang -DCMAKE_CXX_COMPILER=$LLVM/bin/clang++ "-DCMAKE_C_FLAGS=$F" "-DCMAKE_CXX_FLAGS=$F" \
 	"-DCMAKE_EXE_LINKER_FLAGS=$F -L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++" -DLIBCPP_LIBRARIES=$LLVM/lib/c++/libc++.dylib \
 	-DLIBCPPABI_LIBRARIES=$LLVM/lib/c++/libc++abi.dylib -DZLIB_INCLUDE_DIR="$ROOT/sdkinc" -DUUID_INCLUDE_DIR="$ROOT/sdkinc" >"$BUILD.log" 2>&1 || { tail -20 "$BUILD.log"; exit 1; }

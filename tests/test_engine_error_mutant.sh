@@ -15,7 +15,7 @@ if t.count(old) != 1:
     sys.exit("mutation site not found")
 p.write_text(t.replace(old, "catch (const ::strata::corrupt_segment& exc) {\n\t\tthrow Error(errc::database, exc.what());"))
 PY
-cmake -S . -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null || exit 2
+cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR="$PWD/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >/dev/null || exit 2
 cmake --build build -j4 --target xapiand_test_engine_error || exit 2
 out=$(cd build && ./bin/xapiand_test_engine_error 2>&1)
 status=$?
