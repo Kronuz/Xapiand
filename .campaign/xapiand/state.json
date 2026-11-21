@@ -21987,9 +21987,8 @@
         "src/database/handler.cc",
         "src/server/search_views.cc",
         "src/database/schema.cc",
-        "tests/test_script_method*",
-        "CMakeLists.txt",
-        "docs/src/content/docs/**"
+        "tests/test_lua.cc",
+        "docs/src/content/docs/reference-guide/documents/scripting.md"
       ],
       "landed": [],
       "lenses": [],
@@ -22000,7 +21999,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "a script sees the request's method in _method",
-      "updated": "2026-11-20T21:23:12"
+      "updated": "2026-11-20T21:23:32"
     },
     "seam-census": {
       "accepted": {},
