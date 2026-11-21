@@ -24512,6 +24512,32 @@
       "title": "Streamed record write (L6)",
       "updated": "2026-11-08T15:40:25"
     },
+    "store-docs": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 30,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/src/content/docs/reference-guide/schemas/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Document _store (index without keeping the value) with E2E blocks",
+      "updated": "2026-11-21T03:26:37"
+    },
     "stored-check-cache": {
       "accepted": {
         "correctness": {
