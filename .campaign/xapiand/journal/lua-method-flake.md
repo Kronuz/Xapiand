@@ -1,6 +1,6 @@
 # lua-method-flake: journal
 
-State: waiting on jobs 261121-023345-2ed0fe 261121-023348-4964f7 261121-023351-5378d5 261121-023355-74e637
+State: waiting on jobs 261121-023345-2ed0fe 261121-024310-c2672c 261121-024311-504e9e 261121-024312-003829 261121-024314-671378 261121-024354-89c85f
 Quest: .campaign/xapiand/quests/lua-method-flake.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fix committed (Xapiand:03b4e6f9c); A1/A2 jobs and a master load probe queued; branch pushed for A3.
+Lead ruling (fix the cause, A3-A5) done: Xapiand:2e2a2307e (manager), Xapiand:2906afb92 (tests on utils_node.h,
+the A3 test). Jobs queued; branch pushed for A5.
 
 ## Next
 
-1. Read the four jobs: A1 master job must fail with the CI signature (test_lua.cc:1673 ...); fix job passes; A2 50/50.
-2. A3: CI green on every platform at the branch head.
+1. Read the jobs: 2ed0fe (master) and 504e9e (mutant) must fail at the expected check; the rest pass.
+2. A5: CI green on every platform at the head.
 
 ## Blocked on
 
@@ -34,24 +35,27 @@ three runs. Repro: `delay_listen.c` (~/.scratch/xapiand/lua-method-flake/, DYLD-
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-023345-2ed0fe (master, --fails-without, listen delayed), 261121-023348-4964f7 (fix, same job) |
-| A2 | 261121-023351-5378d5 (50 runs, 8 at once, --cpus 4, at the fix) |
-| A3 | CI at the branch head (pushed) |
-
-Probe (not evidence): 261121-023355-74e637, the A2 load at master, to see whether load alone reproduces it on macOS.
+| A1 | 261121-023345-2ed0fe (master, --fails-without, listen() delayed 500 ms), 261121-024310-c2672c (head, same job) |
+| A2 | 261121-024314-671378 (50 runs, 8 at once, --cpus 4, at head) |
+| A3 | 261121-024311-504e9e (mutant 2906afb92 = head without the manager fix, --fails-without), 261121-024312-003829 (head); test_node's test_a_ready_node_accepts_its_first_connection under the shim |
+| A4 | 261121-024354-89c85f (grep: no free_port/connect_to/::connect copy in tests/*.cc; the six node tests pass, ctest -j4) |
+| A5 | CI at the head (pushed) |
 
 ## Result
 
-tests/utils_node.h (new): `test_utils::ReservedPort` (a bind(0) port kept bound with SO_REUSEPORT beside the
-node's listener on Linux/FreeBSD, released at once on macOS where the node binds without it) and
-`test_utils::connect_to` (connect retried up to 5 s, the mechanism test_node.cc and test_endpoint_uuid.cc use).
-tests/test_lua.cc MethodNode: ready only when a connect succeeds; every call connects through connect_to; port from
-ReservedPort.
+- src/manager.cc `set_ready_impl`: `http_service->start()` before `exchange_state(READY)`. start() returns once
+  every reactor's acceptor listens (reactor.h waits on each AcceptControl), so READY implies the listener accepts;
+  a bind failure ends setup before READY. Nothing in src reads READY to gate requests.
+- tests/utils_node.h: `test_utils::ReservedPort` (bind(0) port held with SO_REUSEPORT beside the node's listener on
+  Linux/FreeBSD; released at once on macOS, where the node binds without it) and `test_utils::connect_to` (one
+  attempt). Used by test_coverage_database, test_endpoint_uuid, test_loop_yield, test_lua, test_node,
+  test_stopword_search; their copies and connect retries are deleted.
+- test_node: `test_a_ready_node_accepts_its_first_connection`, first case after the process's node is READY.
 
 ## Rulings I made
 
-- Test fix, not node fix: READY before the listener is outside this quest's file set (src/manager.cc); other
-  tests already work around it with connect_to. Recommendation for the lead: a follow-up to set READY after
-  `http_service->start()`, or migrate the other copies of free_port/connect_to (test_node, test_endpoint_uuid,
-  test_loop_yield, test_coverage_database, test_stopword_search) to tests/utils_node.h. Out of my file set.
-- macOS keeps a small port window (release, then the node binds); a clash there fails the node's bind loudly.
+- connect_to keeps no retry anywhere: every connect in the six tests targets a node already READY (in-process or in
+  its own forked child); no test connects to a node it is starting or stopping.
+- test_node's taken-port test binds its own listener on a bind(0) port instead of a free_port: a held reservation
+  (SO_REUSEPORT) would block its plain bind.
+- macOS keeps a small port window (released, then the node binds); a clash there fails the node's bind loudly.
