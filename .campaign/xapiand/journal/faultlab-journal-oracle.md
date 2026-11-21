@@ -1,6 +1,6 @@
 # faultlab-journal-oracle: journal
 
-State: working
+State: waiting on jobs 261121-032543-4b16fb (first fixture generation at faultlab:f58b47d)
 Quest: .campaign/xapiand/quests/faultlab-journal-oracle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+faultlab worktree /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-journal-oracle, commit f58b47d: test/fixtures/{sector_sequences.h, memory_io_gen.cc}, sector_test reads test/fixtures/memory_io_states.txt, CMake fetches journal only with -DFAULTLAB_REGENERATE_MEMORY_IO=ON. Job 261121-032543-4b16fb runs the generator and writes the fixture to the scratchpad (memory_io_states.txt); the fixture is not committed yet.
 
 ## Next
 
-1. <step>
+1. Copy the generated memory_io_states.txt to test/fixtures/, commit, push.
+2. Submit: suite (`campaign verify faultlab-journal-oracle --for A1`), regenerate-and-diff job (gen.sh to a scratch path, diff against test/fixtures/memory_io_states.txt) --for A1, and the A2 grep --for A2; also `--fails-without` is not needed.
+3. Push the branch; A3 is CI.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
