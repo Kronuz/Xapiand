@@ -26040,8 +26040,8 @@
       "repo": ".",
       "risk": "low",
       "status": "planned",
-      "title": "Xapiand's request and database sources split under 1,000 lines",
-      "updated": "2026-11-21T11:38:55"
+      "title": "Xapiand's request and database sources split where it helps maintenance",
+      "updated": "2026-11-21T12:05:30"
     },
     "split-xapiand-src": {
       "accepted": {},
