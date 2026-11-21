@@ -1,6 +1,6 @@
 # split-xapiand-tests: journal
 
-State: working (code done and committed; verify and A3 jobs next)
+State: waiting on jobs 261121-114927-809003 (suite), 261121-114939-1e141a (A3 head ctest -N), 261121-114945-35c995 (A3 base ctest -N at e5f7765d1); split check 261121-114927-58c8e2 waits on split-check landing
 Quest: .campaign/xapiand/quests/split-xapiand-tests.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,11 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | suite job 261121-114927-809003 |
+| A2 | split check 261121-114927-58c8e2 (split-check not landed; queued) |
+| A3 | head 261121-114939-1e141a, base 261121-114945-35c995: diff their ctest -N output |
+| A4 | docs/dev/test-layout.md |
+| A5 | CI on the pushed branch |
 
 ## Result
 
