@@ -25404,7 +25404,9 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-datetime",
       "landed": [],
@@ -25416,7 +25418,7 @@
       "risk": "low",
       "status": "active",
       "title": "datetime's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:21:45",
+      "updated": "2026-11-21T12:29:42",
       "worktree": "../datetime-wt/xapiand/split-datetime"
     },
     "split-docset": {
