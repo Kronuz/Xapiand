@@ -25763,8 +25763,8 @@
       "repo": "../strict-stox",
       "risk": "low",
       "status": "planned",
-      "title": "strict-stox's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:24"
+      "title": "strict-stox's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:05:06"
     },
     "split-task": {
       "accepted": {},
