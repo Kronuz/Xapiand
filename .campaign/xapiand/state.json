@@ -21725,6 +21725,8 @@
     "racing-put-409": {
       "accepted": {},
       "after": [],
+      "base": "1e7eb86b9a346096e078320c33a7a8de1c970ab5",
+      "branch": "quest/xapiand/racing-put-409",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
@@ -21744,11 +21746,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: five lines in shard.cc and two tests that journal-replaces-wal rewrites; it merges them with master, and its contributor is told",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A replace that lost a delete-and-recreate race is a version conflict, not a 500",
-      "updated": "2026-11-21T10:35:38"
+      "updated": "2026-11-21T10:35:48",
+      "worktree": "../Xapiand-wt/xapiand/racing-put-409"
     },
     "reactor-open-files": {
       "accepted": {},
