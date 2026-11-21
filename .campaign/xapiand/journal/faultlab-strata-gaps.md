@@ -27,7 +27,7 @@ Nothing.
 | A2 | 261120-231216-b15c65 (model_test: strata's 16 cases) |
 | A3 | 261120-231216-b15c65; fails without: 261120-231240-34dc25 (sync mutant, faultlab:7d38b8d), 261120-231241-145756 (reclaim mutant, faultlab:e25e663) |
 | A4 | 261120-231216-b15c65 (seeds_test: the F3 table, unchanged, passes) |
-| A5 | `docs/api.md`: "Calls of one kind so far, failed ones included" (rows `power_on()`, `operations(op)`, `sync_latency(d)` at b5640d7) |
+| A5 | `docs/api.md`: "Ends the cut as a process crash" (rows `power_on()`, `operations(op)`, `sync_latency(d)` at b5640d7) |
 | A6 | CI run 44879138800 at faultlab:b5640d7 (running) |
 
 The mutants are local branches `mutant/faultlab-strata-gaps-sync` and
