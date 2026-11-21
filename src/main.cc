@@ -887,7 +887,7 @@ void restore_documents() {
 			std::string sha256;
 			try {
 				sha256 = engine::sync_wait(DatabaseHandler::restore_documents(endpoint, fd));
-			} catch (const ClientError& exc) {   // the file is not a dump
+			} catch (const ClientError& exc) {   // the file is not a dump, or is cut
 				L_CRIT("{}", exc.get_message());
 				throw SystemExit(EX_DATAERR);
 			}
