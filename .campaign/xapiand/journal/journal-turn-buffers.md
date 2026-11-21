@@ -35,10 +35,10 @@ added A6; done.)
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261120-201735-dfb864 (bytes: 4,608 records; turns: 400 turns, 49 rollovers; framing and crc fixtures) |
-| A2 | 261120-201737-6e4864 (warm: 0 allocations in stage() and completed(), rounds 4-7; seal: 704 bytes for four 128 KiB bodies); fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-201744-3bc198, 261120-201746-56b121 |
-| A3 | 261120-201739-07500d (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-201748-82c5c4 |
-| A4 | 261120-201741-5c74c1 (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
+| A1 | 261120-204135-6afdb1 (bytes: 4,608 records; turns: 400 turns, 49 rollovers; framing and crc fixtures) |
+| A2 | 261120-204136-5db313 (warm: 0 allocations in stage() and completed(), rounds 4-7; seal: 704 bytes for four 128 KiB bodies); fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-204136-c5ea74, 261120-204136-0cdfe6 |
+| A3 | 261120-204136-b4641b (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-204136-c0795f |
+| A4 | 261120-204136-af907d (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
 | A6 | 261120-204027-99b762 (4 sealers' 128 KiB bodies: warm begin() and completed() 0 allocations, turns 4-7; 28 of 28 later bodies encoded into the returned buffer; 32 returns cleared with capacity, all after the turn is durable; unsealed-in-flight gets nothing; a throwing recycler fails the driver after its turn); fails without: 261120-204028-be128e (drop-recycled: begin() 4 allocations, 524,320 bytes) |
 | A5 | manual: Detent's lead reviewed journal:b88565f and ran its probes; APPROVE, no blocking findings (reply to msg-185, 11-20; review in Detent's .scratch/detent/review-journal-turn-buffers/review.md; ASan+UBSan probe 261120-210314-994981, byte-identity probe 261120-210107-0bdf51). F2 documented in docs/mechanisms/turn-seal.md; F1 is Detent's pin wave |
 
