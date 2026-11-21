@@ -25430,7 +25430,10 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "docs/mechanisms/barriers.md",
+        "docs/mechanisms/commit-barriers.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-completion",
       "landed": [],
@@ -25442,7 +25445,7 @@
       "risk": "low",
       "status": "active",
       "title": "completion's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:36",
+      "updated": "2026-11-21T13:13:39",
       "worktree": "../completion-wt/xapiand/split-completion"
     },
     "split-constexpr-phf": {
