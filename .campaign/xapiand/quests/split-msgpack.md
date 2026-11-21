@@ -1,36 +1,46 @@
 # split-msgpack: msgpack's large files split under 1,000 lines
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status split-msgpack`.
+Risk: low. The lead writes this quest; contributors read it and never edit it. Its
+machine state is in `state.json`: `campaign status split-msgpack`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Owner, 2026-11-21: "Big files is generally unacceptable." A split moves code and changes none:
+bodies, names, order inside a function and behavior stay as they were. Files (sizes at the quest's
+filing):
+
+- `msgpack.h` (3,575 lines)
+- `test/diff_test.cc` (1,026 lines)
+
+Not split: generated code, vendored third-party code, and frozen reference copies kept for
+differential tests (`*_old.*`, `test/old/`, `frozen_*`): they are never edited by hand.
+
+## How to split
+
+- By responsibility, not line count: each new file holds one thing and opens with a one-line
+  comment saying what. Aim for 200 to 600 lines; never over 1,000.
+- A header keeps its path as the include its users name (Xapiand, Detent and the other libraries):
+  it includes its pieces, so no user changes. Installed headers stay installed (CMake install rules
+  and the package's include directory list the pieces).
+- Test pieces join their existing test target: `ctest -N` lists the same tests before and after.
+- A helper several pieces share moves to an internal header in a `detail` namespace; a
+  namespace-scope object with a dynamic initializer stays with what it depends on. Each such
+  non-move goes under the journal's "Rulings I made".
+- One commit per split file.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The library's tests pass at the split code: the `build-test` check
+- A2 Every moved line moved unchanged and no file in the quest's set exceeds 1,000 lines: the `split`
+  check (cpp-libraries' `tools/split_check.py`), its warnings answered in the journal
+- A3 `ctest -N` lists the same tests before and after: a job at each commit, diffed
+- A4 [artifact] `docs/source-layout.md` lists each new file and what it holds
+- A5 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None: the include paths and everything users see stay the same.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
