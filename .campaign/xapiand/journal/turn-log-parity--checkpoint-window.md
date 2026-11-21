@@ -1,6 +1,6 @@
 # turn-log-parity--checkpoint-window: journal
 
-State: waiting on jobs 261120-203524-f04edf 261120-203525-596222 261120-203526-571372 261120-203528-39f83c 261120-203529-f27b3b 261120-203531-139852 261120-203532-aa7a48 261120-203534-aebc54; blocked on lead: the writer count needs include/strata/core/turn_seal.hh (step 2)
+State: waiting on jobs 261120-204250-36020e 261120-204252-7f2e9c 261120-204253-47f1cc 261120-204255-044c67 261120-203524-f04edf 261120-203525-596222 261120-203526-571372 261120-203528-39f83c 261120-203529-f27b3b 261120-203531-139852 261120-203532-aa7a48 261120-203534-aebc54
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,34 +9,30 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Floor table: eight exclusive jobs queued at strata:14b476d1, interleaved, two trials of triggers
-64 MiB (today's default), 4 MiB, 1 MiB, 256 KiB (ids in State). Each: checkpoint-floor.sh, 10k
-logged indexes created under nosync.c then reopened, 8M puts of 100 B, Zipf 0.99, 4 threads.
+D2 item 2 built (strata:1e42abcd): the sealer keeps the window ((retain_segments - 1) x
+segment_bytes) and an atomic writer count; an index counts in at its first join after a
+checkpoint, out at the checkpoint and at detach; `log_due` is `logged_bytes >= max(floor,
+window / writers)`. `checkpoint_floor_bytes` (default 1 MiB) replaces `checkpoint_log_bytes`.
+Jobs queued (all behind a VM hold until about 23:20):
+- 261120-204250-36020e: D2's test at the real trigger, plus the turn-log tests (ctest -R).
+- 261120-204252-7f2e9c: the window mutant (strata:5c7222de, `log_due` at `command::max_bytes`), must fail.
+- 261120-204253-47f1cc: the forward-copy mutant rebased (strata:810411b8), must fail.
+- 261120-204255-044c67: the probe at strata:1e42abcd with the default floor, to match the 1 MiB row.
+- The eight floor jobs at strata:14b476d1 (first one started, waiting for its exclusive hold).
 
 ## Next
 
-1. Read the eight jobs; fill the floor table below; pick the floor (default 1 MiB).
-2. When unblocked: the window in `index.hh` (and `turn_seal.hh`), the floor as the option's
-   default; register `test_checkpoint_window` in default mode; the window mutant (`log_due` at
-   `command::max_bytes`) on `mutant/turn-log-parity--checkpoint-window-window`, `--fails-without`;
-   one probe run at the mechanism commit with the chosen floor, to show it equals the fixed row.
+1. Read the jobs; fill the floor table; pick the floor (default 1 MiB); if not 1 MiB, change the
+   default in `index.hh`.
+2. Ready for review once the floor is recorded and the evidence is green.
 
 ## Blocked on
 
-Lead: D2 item 2 divides the window among the groups writing on the log since their checkpoint.
-That count, and the window ((retain_segments - 1) x segment_bytes, from the log's geometry), are
-per-log state; `index.hh` cannot see either. The sealer (`turn_seal.hh`) is the per-log object and
-holds the geometry at construction, but it is outside this task's file set (an edit was refused).
-Options:
-1. Add `include/strata/core/turn_seal.hh` to the task: the sealer keeps `window_` from its geometry
-   and an atomic writer count; `index.hh` counts its group in at its first join after a checkpoint,
-   out at the checkpoint and at detach; `log_due` is `logged_bytes >= max(floor, window / writers)`.
-   About 10 lines in the sealer. Recommended.
-2. Same, but the sealer exposes the log's bytes written instead, and an index checkpoints once the
-   log advanced a window since its checkpoint and it logged at least the floor: exact under skew
-   (one hot group among 10k cold checkpoints every window, not every floor). A design change to D2.
-3. `index.hh` only: a new option, a per-log `checkpoint_window` object every host builds from its
-   geometry and passes beside `log` (migrates kv_strata, the tests, Xapiand). More callers, same state.
+Nothing. msg (lead ruling, step 2): option 1 taken, as D2 is written; turn_seal.hh added to the
+file set. Option 2 (checkpoint once the log moved a window past the group's checkpoint, with the
+floor) stays an alternative, measured only if the floor table or a skewed workload shows option 1
+checkpointing far more than the log's movement needs: under Zipf, one hot group among 10k cold
+ones checkpoints every floor under option 1, every window under option 2.
 
 ## Evidence
 
@@ -81,5 +77,8 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - The test asserts, beyond the segment bound: the log advanced 10 x retain_segments segments,
   something was forwarded, forwarded bytes at most a tenth of the commands, writer checkpoints
   within one of commands / window, and the idle index reads its write.
-- The test registers its explicit mode only (`checkpoint_window_explicit`): the default mode
-  fails until D2 item 2 lands.
+- The test runs at the real trigger only (`checkpoint_window`); its explicit mode went with
+  `checkpoint_log_bytes`. The window mutant is a commit on `mutant/...-window`, the forward-copy
+  mutant one on `mutant/...-forward` (both local branches).
+- The writer count lives in the sealer as a relaxed atomic: `log_due` reads it per apply, the
+  index changes it only at a group's first join after a checkpoint, at the checkpoint and at detach.
