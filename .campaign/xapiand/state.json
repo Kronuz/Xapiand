@@ -9028,6 +9028,8 @@
       "after": [
         "faultlab-strata-gaps"
       ],
+      "base": "753bc62c4c32210535e10b31f8156f448d560549",
+      "branch": "quest/xapiand/faultlab-adopt-strata",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -9047,16 +9049,19 @@
         "AGENTS.md",
         "README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-strata",
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: real overlap is CMakeLists.txt (placement, turn-log-parity) and turn-log-parity's bench/kv/kv_strata.hh and test/standalone_turn_log_test.cc, whose faultfs use changes by an include and namespace rename; the lead resolves that mechanical merge when either lands",
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "strata's crash tests run on faultlab's faultfs (step 3)",
-      "updated": "2026-11-20T23:04:34"
+      "updated": "2026-11-21T03:59:13",
+      "worktree": "../strata-wt/xapiand/faultlab-adopt-strata"
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
