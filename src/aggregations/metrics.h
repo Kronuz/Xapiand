@@ -733,7 +733,8 @@ public:
 
 	void update() override {
 		MetricAvg::update();
-		_variance = (_sq_sum - _count * _avg * _avg) / (_count - 1);
+		// Population variance (Elasticsearch's `variance`): 0 for no value and for one; rounding never takes it below 0.
+		_variance = _count > 1 ? std::max<long double>(0, (_sq_sum - _count * _avg * _avg) / _count) : 0;
 	}
 };
 
