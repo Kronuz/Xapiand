@@ -1997,6 +1997,18 @@
       "closed": "chunks and restore tasks started at cf65ae78b with the named files; contributors build against command.h and shard_group.h",
       "id": "msg-203",
       "text": "journal-replaces-wal: chunks and restore can start at Xapiand:cf65ae78b, files: chunks = src/database/handler.*, tests/test_group_chunk*.cc, harness/blob_crash_check.sh; restore = src/manager.*, tests/test_wal_replay.cc, harness/{wal_recovery_check,wal_replay_check,wal_replay_agg_check}.sh, harness/profile_bulk.sh. Interface: src/database/command.h (D3 command with batch writes, D12 chunk/final entries, split_command at 1 MiB with header) and src/database/shard_group.h (ShardApplication: chunk effects into stage-ID or an upload's own vol-N, lower-term retirement, blob placement). Not yet there: ShardEndpoint's propose path (core step d) and the group over the slot's index (step c, waits on group-catalog's group(loop, config, IO&, index&, app, chore)); both tasks build against the codec and application now and wire to propose when step d lands. Also: task pin bumped to strata's 95798a02 (strata::group's journal/consensus need blocking_scheduler)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T11:01:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T11:01:57",
+      "by": "journal-replaces-wal--restore",
+      "closed": "ruled (a); quest file Decisions at master",
+      "id": "msg-204",
+      "text": "journal-replaces-wal restore task, file set (needs the lead): RESTORE's batching (D17) has no home in my set. src/manager.* holds no RESTORE code: the RESTORE view and --restore run through handler.cc's DocIndexer (chunks' file) and shard.cc's Shard::apply_slice (core's). Options: (a, recommended) add new files src/database/restore_batch.{h,cc} and tests/test_restore_batch.cc to my task, plus one function in command.h, encoded_size(const CommandWrite&), so packing measures each write once instead of encoding it twice; the batcher packs a shard's prepared writes in input order into commands within COMMAND_ENTRY_BYTES (a write alone over it goes through split_command), pipelines proposes through one marked seam that step d fills with ShardEndpoint's propose, and maps a batch's verdict (op, docids, versions) back to per-object results, re-preparing a refused op on a leader-chosen conflict up to max_placements. Wiring it into DocIndexer::apply_shards and deleting apply_slice happens at step d, in handler.cc/shard.cc, by whoever holds them then. (b) the same inside src/database/command.* (core's, quiet during c/d). Also renames, since the WAL goes: tests/test_wal_replay.cc -> tests/test_journal_replay.cc; wal_replay_check.sh -> harness/journal_replay_check.sh, with wal_replay_agg_check.sh folded into it (its assertions are a subset); wal_recovery_check.sh deleted (levels' power_loss_check.sh replaces it, per the quest). Grant the new names, or I rewrite in place under the old ones. And manager.*: core's step c wants it for the group loop and journal::Host setup; I can cede it. Meanwhile I do profile_bulk.sh (--put/--ack for T11, a journal layer row) and rewrite the WAL test and scripts in place."
     }
   ],
   "quests": {
