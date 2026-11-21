@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: ready for review (jobs 261120-105027-66afcc 261120-105029-49a29d 261120-105031-bebe74 261120-105033-4b9fdb 261120-105035-bb5634 261120-105037-0d1c5a 261120-105039-f1c116 261120-105056-d0fc2d 261120-105058-5f6fec 261120-105100-ee6113 pending)
+State: waiting on jobs 261120-173336-84c9cf 261120-173338-bff111 261120-173341-5fae97 261120-173345-1b7fb0 261120-173348-7a0880 261120-173414-fedae6 261120-173352-e73591 261120-173354-32d648 261120-173357-a2fd86 261120-173400-6f1195 261120-173403-838770 261120-173405-0da59f; CI run 44850841777
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,22 +9,23 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Evidence jobs at consensus:64dbb06 (probe 4, 261120-104658-5f4562, passed every admission case:
-remove 132,010 calls between nodes 1 and 2 with 0 lost; each removal ended node 3's calls in 5-6 ms).
-- suite (verify, A1,A2,A3,A5): 261120-105027-66afcc
-- mutants (`--fails-without`, commits from `admission_mutants.py 64dbb06 <name>`):
-  no-pin-check consensus:8b21cf6 -> refused_pins 261120-105029-49a29d (A1);
-  no-repin-check consensus:e58d892 -> refused_ca 261120-105031-bebe74 (A1);
-  remove-keeps-links consensus:9f7686f -> remove_ca 261120-105033-4b9fdb (A2);
-  any-token consensus:b8c3bba -> issue 261120-105035-bb5634 (A5)
-- plain at head: refused_pins 261120-105037-0d1c5a, refused_ca 261120-105039-f1c116 (A1),
-  remove_ca 261120-105056-d0fc2d (A2), issue 261120-105058-5f6fec (A5)
-- TSan, every admission case: 261120-105100-ee6113 (A2,A3,A5)
+Round 2 (fresh contributor) at consensus:50446f8, main merged (consensus:6976aa0).
+Round 1's reds: only 261120-105029-49a29d was a real red (no-pin-check survived refused_pins); the
+other mutant jobs exit 8 = caught. CI 44797280480: refused_*/remove_* died of SIGPIPE on Linux.
+- consensus:c669067 SIGPIPE fixed in the transport (R11); consensus:50446f8 no-pin-check fix (R12).
+- suite (verify, A1,A2,A3,A5): 261120-173336-84c9cf
+- mutants (`admission_mutants.py 50446f8 <name>`): no-pin-check consensus:7ea3a3a -> refused_pins
+  261120-173338-bff111 (A1); no-repin-check consensus:49d4f5b -> refused_ca 261120-173341-5fae97
+  (A1); remove-keeps-links consensus:be59279 -> remove_ca 261120-173345-1b7fb0 (A2); any-token
+  consensus:9fd3607 -> issue 261120-173348-7a0880 (A5); send-signals consensus:d38487b ->
+  connection_test peer_gone 261120-173414-fedae6 (A1,A2: the Linux SIGPIPE)
+- plain at head: refused_pins 261120-173352-e73591, refused_ca 261120-173354-32d648 (A1),
+  remove_ca 261120-173357-a2fd86 (A2), issue 261120-173400-6f1195 (A5), peer_gone 261120-173403-838770
+- TSan, admission cases + connection_test: 261120-173405-0da59f (A2,A3,A5)
 
 ## Next
 
-1. Read the jobs; fold in any red; then State: ready for review.
-2. Branch not pushed (the lead's instruction): CI has not run on it.
+1. Read the jobs and CI 44850841777 (Linux must be green); fill Evidence; then State: ready for review.
 
 ## Blocked on
 
@@ -95,6 +96,16 @@ serving the join exchange on the transport's own port (R8).
   longer apply at the quest's base e1f249d: pre-existing, outside this quest, left alone.
 - R9: HostTransport's members are `admit_node`/`remove_node`: a member `admit` hides the
   namespace's per-frame `admit()` inside the class.
+- R11 (lead's direction, round 2): the Linux SIGPIPE was the transport's: OpenSSL's socket BIO
+  writes with write(). `Connection` now gives OpenSSL its own write BIO (`send(..., MSG_NOSIGNAL)`,
+  `BIO_sock_should_retry`), reads stay on the socket BIO; `SO_NOSIGPIPE` goes (one mechanism on
+  every platform). Outside the quest's file set, as the lead asked: connection.h,
+  connection_test.cc (case `peer_gone`; no SIGPIPE ignore; its raw test writes use MSG_NOSIGNAL),
+  links_test.cc (its ignore removed), host-connection.md. Not touched: main's seeds test still
+  ignores SIGPIPE (consensus:8801b99) and seeds.md calls it the host's duty: now redundant, the
+  lead's follow-up; rpc/tls/peers tests keep their ignores (tls_test's pipes need it).
+- R12 (A1): `pre_approved_pins()` is an empty TrustPolicy, not a policy answering node 0; the
+  unpinned refusal in `authenticate` is then the check it runs, and no-pin-check bites.
 - Open, not in A1-A5: a seed dial by address that returns the authenticated node (`Seeds::on_dial`
   hands an address). With the CA default the joiner can learn a seed's node from its certificate;
   a follow-up quest (`Links::identify(address)`) is the recommendation.
