@@ -75,6 +75,11 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
 `vm.sh` (build and run in one guest of Xapiand's VM tier).
 
 ## Rulings I made
+- msg-185 (lead, 11-20): the full-window stall is election churn. A Driver group's Core sends up to
+  rpc_bytes (2 MiB) per append; at ~0.5 MB/s under 1% loss or 5% reorder it holds the Control
+  connection ~4 s, heartbeats and votes queue behind it, and CheckQuorum steps the leader down;
+  31 x 64 KiB stalls the same way. Narrowing jobs 07a97a, 7ec9f4, b951fd cancelled. Detent's
+  consensus-full-window-stall adds per-peer append pacing and reruns this bench at e12ee46.
 
 - One namespace per node in one guest (`cluster.sh up --nodes 1 --cpus 8`), not one guest per node:
   netlab's veths and netem act in one kernel with no relay on the path (the guests' L2 goes through
