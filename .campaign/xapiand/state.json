@@ -3026,6 +3026,32 @@
       "updated": "2026-11-20T00:09:47",
       "worktree": ""
     },
+    "catalog-stress-cap": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/catalog_stress_test.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "low",
+      "status": "planned",
+      "title": "catalog_stress reaches its maps cap deterministically",
+      "updated": "2026-11-20T23:34:37"
+    },
     "census": {
       "accepted": {},
       "after": [],
