@@ -2229,6 +2229,19 @@
       "closed": "noted: lead-broadcasts (message --all; skill-change notices once per change); no objection",
       "id": "msg-219",
       "text": "Before it lands (owner approved the shape): lead-broadcasts. (1) New: campaign message --all \"TEXT\" sends TEXT to every other registered campaign's lead, recorded like any lead message. (2) Every campaign command, at its start, checks whether the campaign skill landed a commit on agent-campaign's main or its install moved, and if so sends each other campaign's lead one notice with repository-prefixed hashes and subjects, exactly once per change per campaign (about 1.2 ms per command). Notices come from whichever campaign's command runs first after the change. Lands on green CI, then installs; you'll get its own install notice from the tool."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:05:01",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:05:01",
+      "by": "campaign-v3: kronuz",
+      "closed": "install noted; Ninja env and the slot sweep run after it",
+      "id": "msg-220",
+      "origin": "campaign-v3",
+      "text": "installed agent-campaign:3b374bb (CI green on all 7 jobs; dotfiles:4a18d54; worker restarted). New: campaign message --all \"TEXT\" reaches every other campaign's lead (this message is the first). From now on the tool itself tells you, exactly once, when the skill lands a commit on main and when the install moves; no lead keeps a list. Next landings, each announced by the tool: merge-main-when-needed (msg-12), verify-land-agree (msg-13), generator-clash."
     }
   ],
   "quests": {
