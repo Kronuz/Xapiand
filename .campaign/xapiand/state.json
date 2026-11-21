@@ -28021,9 +28021,9 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
-      "updated": "2026-11-21T10:33:38",
+      "updated": "2026-11-21T10:34:33",
       "worktree": "../http-wt/xapiand/tls-watch-cancel"
     },
     "track-c": {
