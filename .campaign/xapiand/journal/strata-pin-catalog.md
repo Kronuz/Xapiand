@@ -1,6 +1,6 @@
 # strata-pin-catalog: journal
 
-State: waiting on jobs 261121-084451-14e9ce (A2 head, must pass) and 261121-084453-eff488 (A2 fails-without at old strata pin 397c02d5, must fail); both at 8980315ab1ef.
+State: waiting on jobs 261121-084807-0ed3b0 (A2 head, must pass) and 261121-084810-78fdfc (A2 fails-without at old strata pin 397c02d5, must fail); both at de687295b.
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
 ## Doing
@@ -25,7 +25,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261120-015212-3d9e92 |
-| A2 | head (pass): 261121-084451-14e9ce; fails-without (head's test, strata pinned back to 397c02d5 via STRATA_PIN; the pre-pin commit has no reproducer): 261121-084453-eff488; script harness/pool_asan_repro.sh builds at the job's commit with ci.yml's ASan flags and exits 126 on a build break; the superseded 261121-045943-2b0229 (asan_run.sh) is not evidence |
+| A2 | head (pass): 261121-084807-0ed3b0; fails-without (head's test, strata pinned back to 397c02d5 via STRATA_PIN; the pre-pin commit has no reproducer): 261121-084810-78fdfc; script harness/pool_asan_repro.sh builds at the job's commit with ci.yml's ASan flags and exits 126 on a build break (default CMake generator: the shared .deps sub-builds are Unix Makefiles); the superseded 261121-045943-2b0229 (asan_run.sh) is not evidence |
 | A3 | 261120-024602-994d61 (build-test) + `ci:Functional E2E (docs)` at the head; CI red only from test_lua (known flake) |
 
 ## Rulings I made
