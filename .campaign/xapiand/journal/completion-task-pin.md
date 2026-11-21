@@ -1,40 +1,35 @@
 # completion-task-pin: journal
 
-State: working
+State: waiting on jobs 261120-231816-526106
 Quest: .campaign/xapiand/quests/completion-task-pin.md (the lead's; never edit it)
-
-Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
-status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
-ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Lead-done: completion:714186e moves completion's task pin from 18eb516 to 95798a0, the commit
+journal and consensus pin. The top-level build turns COMPLETION_TASK on, so the build-test job
+fetches and builds the new pin.
 
 ## Next
 
-1. <step>
+1. Land on the build-test job and CI; then tell Detent's lead (msg-193) and file the journal and
+   consensus repins to this commit after journal-turn-buffers and node-admission land.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261120-231816-526106 at completion:714186e |
+| A2 | CI at completion:714186e |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+completion pins task 95798a0 (from 18eb516): blocking_scheduler, inline post_call, the
+settle-behind-cancel fix and notes come in; completion's API is unchanged.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+None.
