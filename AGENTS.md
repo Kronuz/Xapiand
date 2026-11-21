@@ -32,6 +32,10 @@ ctest --test-dir build --output-on-failure
 BIN="$PWD/build/bin/xapiand" harness/run_all.sh e2e tls   # docs-as-E2E, needs newman
 ```
 
+One test: `ninja -C build xapiand_test_NAME` builds `tests/test_NAME.cc` (the target carries the
+`xapiand_` prefix), and `ctest --test-dir build -R '^test_NAME$'` runs it. A test that must fail without a
+fix is built and run at the code without it, never assumed to fail.
+
 Sanitizers (`-DASAN=ON -DUBSAN=ON`, `-DTSAN=ON`) are CI's job: push the branch. Toggles, test layers and
 the harness are in [docs/dev/testing.md](docs/dev/testing.md).
 
