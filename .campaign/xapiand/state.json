@@ -30772,8 +30772,9 @@
             "test/*crash*",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--large-tx",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--large-tx"
+          "journal": "",
+          "merged": "39b28f25225a88ce79fefd80b83b3cf4f95d19cb",
+          "worktree": ""
         },
         "merge-runs": {
           "base": "b112db883a873cd9ff31c34f71c43e7d81471a2e",
@@ -30831,7 +30832,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T10:28:27",
+      "updated": "2026-11-21T13:16:50",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
