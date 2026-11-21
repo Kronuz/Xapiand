@@ -5,32 +5,36 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Every key of an aggregation is read. It must hold exactly one type, with comments (`#...`) and
+sub-aggregations (`_aggs`) around it. Otherwise the request is a 400 naming the aggregation or the
+key. That covers an empty aggregation, one with only comments or `_aggs`, one with two types, and
+one with an unknown key after its type. Before, master answered `{"_aggs":{"x":{}}}` with a 500. It
+also stopped at the first type, so a key after it (`_bogus`, a second type) was ignored and the
+result silently changed. Valid aggregations, including comments and `_aggs` before or after the
+type, dispatch as before. Decision D167; from the serialize-validation explorer.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 `test_serialize_validation_aggregation_types` refuses each shape in
+  `test_typeless_and_multi_type_aggregations_are_refused` with a 400 naming it and accepts the
+  comment and `_aggs` placements: passing at the fix and failing at Xapiand:6720a2f5c (master's
+  aggregations.cc with the new test, `--fails-without`)
+- A2 The suite passes at the landed code: a job
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+The aggregation DSL accepts less: what D167 lists is now a 400. No other request changes.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D167: refuse, as the unknown-type refusal already does (owner, 2026-11-21).
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+None.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: the fix and its test are Xapiand:96d4664ad on explore/xapiand/empty-aggregation (explorer jobs
+261121-052406-912df2, passing at the fix, and 261121-052406-933ff7, the test failing at
+Xapiand:6720a2f5c).
