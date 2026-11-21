@@ -16668,6 +16668,50 @@
       "updated": "2026-11-19T15:32:58",
       "worktree": ""
     },
+    "ninja-only": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "AGENTS.md",
+        "README.md",
+        "cmake/ccache_build.sh",
+        "docs/dev/testing.md",
+        "docs/src/content/docs/benchmarks.md",
+        "harness/coverage.sh",
+        "harness/coverage_mutants.sh",
+        "harness/coverage_one.sh",
+        "harness/light_share_build.sh",
+        "harness/lua_mem.sh",
+        "harness/restore_stall_build.sh",
+        "harness/run_all.sh",
+        "harness/ninja_only_check.sh",
+        "tests/exact_id_mutants.sh",
+        "tests/lua_fetch.sh",
+        "tests/name_index_mutants.sh",
+        "tests/one_id_mutants.sh",
+        "tests/test_engine_error_mutant.sh"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "M2",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand builds with CMake and Ninja only",
+      "updated": "2026-11-21T09:13:59"
+    },
     "no-stalls": {
       "accepted": {},
       "after": [],
