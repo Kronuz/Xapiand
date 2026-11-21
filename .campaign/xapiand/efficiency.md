@@ -602,3 +602,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Cost: landing loops re-merge master on every code push (cjk-words, strata-pin-catalog restarted CI at 00:50); GitHub runner queue ~26 min behind master's dry runs. Batch master code pushes.
 - Launched: explorer bulk-load peak RSS (Opus, explore/ branch).
 - Quota 60% weekly, 0.48%/h, reset in 44 h. Load 10-15. Disk 299 GiB free.
+
+## 2026-11-21 02h
+- Landed: task-timers-followups (task:dc2be96; Detent's pin-wave takes it).
+- Agents finished (Opus): bulk-load RSS explorer 196k (cause: one top-level MessagePack array is one batch; prototype 1,329 to 339 MB on logs, 1,824 to 396 MB on shakespeare, times unchanged) -> quest restore-stream; restore-stream contributor 254k (change Xapiand:a131ad2b2, 8 jobs queued; three master answers were silent 200s -> D162); track-c-gates write-up 124k + fix round 148k; Track C architect review 233k (C2 and C4 APPROVE WITH CONDITIONS; F1 -> D161, consensus half filed by Detent as consensus-driver-flow; journal seed-order test bug sent to Detent); placement repair jobs green (10 mutants on value checks).
+- Found: test_lua's method case (script-method) is flaky: 3 red runs on 11-21 at master's code (Linux on 2 branches, FreeBSD on a docs-only branch); every `_method` call fails in a run of ~30 s, matching MethodNode's 30 s READY wait. Quest lua-method-flake (Opus). Failed jobs rerun for cjk-words, strata-pin-catalog, bulk-load-rerun.
+- Release: alpha.11 Release and FreeBSD dry runs green at Xapiand:d2fa3e15d (RapidJSON backport); master's first dry run (Release, FreeBSD) green at Xapiand:79f86b9ef; both Bottles runs wait for macOS runners.
+- Host: exclusive drains ~25 min/h beside Detent's 4 h light holds; turn-log-parity's trials 3 of 10 in ~6 h.
+- Quota 61% weekly, 0.49%/h, reset in 43 h. Load 17-20. Disk 298 GiB free.
