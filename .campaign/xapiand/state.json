@@ -25138,6 +25138,8 @@
       "after": [
         "split-check"
       ],
+      "base": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+      "branch": "quest/xapiand/split-http",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
@@ -25164,6 +25166,7 @@
         "test/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-http",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25171,9 +25174,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "http's large header and tests split under 1,000 lines",
-      "updated": "2026-11-21T11:39:33"
+      "updated": "2026-11-21T11:44:47",
+      "worktree": "../http-wt/xapiand/split-http"
     },
     "split-xapiand-core": {
       "accepted": {},
