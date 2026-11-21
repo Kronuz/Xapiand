@@ -14733,6 +14733,8 @@
     "lua-method-flake": {
       "accepted": {},
       "after": [],
+      "base": "41bb630233e3acd2cee1e1109c7f966ee042fc5d",
+      "branch": "quest/xapiand/lua-method-flake",
       "checks": [
         {
           "cmd": "ci:Build + unit + smoke",
@@ -14754,9 +14756,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "test_lua's method case passes every run, under load and beside parallel tests",
-      "updated": "2026-11-21T02:23:25"
+      "updated": "2026-11-21T02:23:30",
+      "worktree": "../Xapiand-wt/xapiand/lua-method-flake"
     },
     "lua-name-miss": {
       "accepted": {
