@@ -1,6 +1,6 @@
 # split-http-parser: journal
 
-State: waiting on jobs 261121-115542-b293ac 261121-115606-c93564 (then submit the base ctest -N at acb0aff)
+State: waiting on jobs 261121-121127-15cda8 (A1) 261121-121127-057585 (split) 261121-121129-b6b2a3 (A6) 261121-121132-8993a2 (A3 head) 261121-121135-172d36 (A3 base)
 Quest: .campaign/xapiand/quests/split-http-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,13 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code done and pushed at http-parser a45cda3 (commits 7f3b7fd, 799b36e, 738d611, a45cda3). Jobs at a45cda3: build-test 261121-115542-b293ac (A1), ctest -N 261121-115606-c93564 (A3 head), selfcontained 261121-115551-b79709 (A6, passed: http_parser_chars.h and http_parser_internal.h ok). Split check 261121-115543-836a81 failed: tools/split_check.py is missing (split-check not landed); resubmit with `campaign verify split-http-parser` after it lands. An earlier ctest -N at 738d611 (261121-115215-a5e4a8) listed 4 tests.
+Reworked per the lead's ruling (SPLITTING.md), pushed at http-parser 743f2a4. Jobs at 743f2a4 listed in State. When they end: diff the `Test #` lines of the A3 head and base logs; record the Evidence table; answer split_check warnings (tools/split_check.py was missing at the last try).
 
 ## Next
 
-1. When 261121-115606-c93564 ends, submit the base listing: `campaign job submit --quest split-http-parser --for A3 --level light --minutes 10 --commit acb0aff -- sh -c 'cmake -G Ninja -S . -B build-n >/dev/null && ctest -N --test-dir build-n'`; diff the `Test #` lines.
-2. After split-check lands: `campaign verify split-http-parser`; answer its warnings.
-3. Fill the Evidence table.
+1. Read the finished jobs; fill Evidence; set State to ready for review.
+2. Tell the lead which tools are stale (see Rulings, last item).
 
 ## Blocked on
 
@@ -38,10 +37,11 @@ http_parser.cc (2,850) is 164 lines plus pieces, none over 675: execute states i
 
 ## Rulings I made
 
-- The parse loop `execute<lenient>()` is one 1,600-line function with `goto` between states, so no .cc split can keep it unchanged under 1,000 lines. Its states (and its macros, tables and bulk scans) are `.inc` files included inside the function in http_parser.cc, one translation unit as before: identical text to the compiler, so inlining (find_crlf, skip_url_chars, parse_url_char, message_needs_eof) and speed cannot change.
-- Shared helpers in two headers (`static`, so each .cc has its own copy, as before for execute): `http_parser_internal.h` (method_strings, message_needs_eof, should_keep_alive, SIMD selection) and `http_parser_chars.h` (char classes, normal_url_char, parse_url_char; used by the loop and by http_parser_url.cc). No dynamic initializer moved; `header_char` (constexpr) stays with the loop.
-- http_parser_api.cc and http_parser_url.cc join the `http_parser` target; the url and api code do not call the hot loop.
-- test/diff.cc: the shared anonymous-namespace state (counters, impls) means a second translation unit would need extern declarations, so its sections are `.inc` files in one TU.
-- Order of file-scope statics in the loop's TU changed slightly (tables after the shared header); no semantic effect.
-- Left alone, outside my file set, and now stale: `tools/mutants.py` (reads and compiles only http_parser.cc; mutates scan code now in .inc files), the build line in bench/bench.cc, and prose in README.md, ARCHITECTURE.md, AGENTS.md naming http_parser.cc as the single source. For the lead.
-- A6: the new real headers are http_parser_internal.h and http_parser_chars.h (the latter includes the former: a45cda3). The `.inc` files are textual pieces of one function (loop states, macros, tables, scans) and of main() in test/diff.cc: they cannot compile alone, by design, and are not headers; selfcontained.sh covers *.h only. Lead: if A6 is meant to cover them, the parse loop cannot be split without rewriting it.
+- Parse loop whole: `execute<lenient>()` and the macros, chunk-extension grammar and bulk scans only it uses are in http_parser.cc, verbatim and in place (about 2,000 lines; docs/source-layout.md says why). No `.inc` file remains.
+- http_parser_tables.h (token, hex and header-char tables, special header names): a header a maintainer opens alone, self-contained (includes http_parser.h and http_parser_chars.h); only http_parser.cc includes it.
+- http_parser_chars.h (char classes, normal_url_char, parse_url_char) and http_parser_internal.h (SIMD selection, method_strings, message_needs_eof, should_keep_alive): shared by the loop and the api/url units, `static`, so every includer has its own copy as before; no function lost `static`, no dynamic initializer moved (header_char is constexpr and moved with the tables to the one TU that uses it).
+- http_parser_api.cc and http_parser_url.cc kept as units; neither is hot.
+- test/diff.cc kept whole (1,004 lines, byte-identical to base): one differential test of one subject sharing an anonymous namespace's state.
+- File-scope statics in the loop's TU keep their order except the tables, now ahead of the macros.
+- History: the branch holds the first split (.inc pieces), then the commits that undo it; the final tree is what counts.
+- Stale outside my file set: `tools/mutants.py` still compiles http_parser.cc alone: it needs http_parser_api.cc and http_parser_url.cc added to its `base` objects (loop in main(), lines ~201-206), and its two mutants `harden-http10-te-close` and `harden-http10-te-close-version` mutate should_keep_alive, now in http_parser_internal.h, so run_mutant must read that header for them. The other 96 snippets still match http_parser.cc once. bench/bench.cc (build line in its header comment) and the prose in README.md ("compiles one source file"), ARCHITECTURE.md and AGENTS.md (http_parser.cc as the single source) are stale too.
