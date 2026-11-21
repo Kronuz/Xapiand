@@ -1,6 +1,6 @@
 # empty-aggregation: journal
 
-State: working
+State: waiting on jobs 261121-090800-a9013e (A1 at the fix; ran at Xapiand:ee5bbdaae, same code), 261121-090803-0ef0af (A1 at Xapiand:6720a2f5c, must fail), the suite job and CI; normal risk: one correctness review, or a waiver if the evidence holds
 Quest: .campaign/xapiand/quests/empty-aggregation.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -28,7 +28,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261121-090800-a9013e (the fix); 261121-090803-0ef0af (master's code with the test, must fail) |
+| A2 | the suite job |
 
 ## Result
 
