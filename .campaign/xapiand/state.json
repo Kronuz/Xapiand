@@ -5369,6 +5369,8 @@
     "completion-task-pin": {
       "accepted": {},
       "after": [],
+      "base": "d8b538c6778f0a1b969e42c8428995d1d29d4731",
+      "branch": "quest/xapiand/completion-task-pin",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -5383,6 +5385,7 @@
       "files": [
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/completion-task-pin",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -5390,9 +5393,10 @@
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "completion pins the task commit journal and consensus pin",
-      "updated": "2026-11-20T23:17:09"
+      "updated": "2026-11-20T23:17:27",
+      "worktree": "../completion-wt/xapiand/completion-task-pin"
     },
     "consensus-c3-rows": {
       "accepted": {},
