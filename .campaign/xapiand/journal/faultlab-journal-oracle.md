@@ -1,6 +1,6 @@
 # faultlab-journal-oracle: journal
 
-State: waiting on jobs 261121-032543-4b16fb (first fixture generation at faultlab:f58b47d)
+State: waiting on jobs 261121-034036-778aff (A1 regenerate+diff), 261121-034038-7fec0f (A2 grep), 261121-034039-bc66b3 (suite) at faultlab:e3fcfe3
 Quest: .campaign/xapiand/quests/faultlab-journal-oracle.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,16 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-faultlab worktree /Users/kronuz/code/Kronuz/faultlab-wt/xapiand/faultlab-journal-oracle, commit f58b47d: test/fixtures/{sector_sequences.h, memory_io_gen.cc}, sector_test reads test/fixtures/memory_io_states.txt, CMake fetches journal only with -DFAULTLAB_REGENERATE_MEMORY_IO=ON. Job 261121-032543-4b16fb runs the generator and writes the fixture to the scratchpad (memory_io_states.txt); the fixture is not committed yet.
+faultlab:e3fcfe3 pushed: fixture and test/fixtures/regenerate_memory_io.sh committed. Waiting on the three jobs above.
 
 ## Next
 
-1. Copy the generated memory_io_states.txt to test/fixtures/, commit, push.
-2. Submit: suite (`campaign verify faultlab-journal-oracle --for A1`), regenerate-and-diff job (gen.sh to a scratch path, diff against test/fixtures/memory_io_states.txt) --for A1, and the A2 grep --for A2; also `--fails-without` is not needed.
-3. Push the branch; A3 is CI.
+1. When the jobs pass: State "ready for review"; A3 is CI on the pushed branch.
+2. A2 is expected to FAIL on the quest's grep: the generator's `#include "journal/memory_io.h"` (test/fixtures/memory_io_gen.cc:9) matches `journal/memory_io`. Default build fetches nothing from journal (CMake only with FAULTLAB_REGENERATE_MEMORY_IO=ON).
 
 ## Blocked on
 
-Nothing.
+Lead: A2's grep conflicts with the generator the quest asks for. Options: (a) narrow the grep to `':!docs/reviews' ':!test/fixtures'` (recommended); (b) pass the header path to the generator as a CMake define (dodges the literal check, not recommended). Everything else in the grep is already renamed.
 
 ## Evidence
 
