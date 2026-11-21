@@ -8563,9 +8563,32 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-prospect",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T18:35:14",
+          "commit": "0448b8774e7b2c485ac8e5afd25893068b377a8b",
+          "criteria": {
+            "A1": "261120-160718-9b0668, 261120-160718-d41d00",
+            "A2": "261120-160720-9ea5ec",
+            "A3": "CI green at 0448b8774e7b"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "0448b8774e7b2c485ac8e5afd25893068b377a8b",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+          "reason": "",
+          "tested": "0448b8774e7b2c485ac8e5afd25893068b377a8b"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "phrase-expansion"
@@ -8573,10 +8596,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T18:35:00",
-      "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
+      "updated": "2026-11-20T18:35:59",
+      "worktree": ""
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
