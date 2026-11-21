@@ -592,6 +592,9 @@ add_compile_definitions(TRACEBACK_HOOKS=1)
 # xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
 # thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
 # handed to the WAL at construction; the data store stays on synchronous fsync.
+# Declared before storage, which fetches compressors too: the first declaration wins, so this pin
+# (XXH32's using-declarations, 9d2a87c) is the one built. compressors is made available below.
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
 FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG 671eaacb924402be6ff65c2ddca1d2b9d03a96de)
 FetchContent_MakeAvailable(storage)
 include_directories("${storage_SOURCE_DIR}")
@@ -999,7 +1002,6 @@ include_directories("${htm_SOURCE_DIR}")
 # located-exception trick). lz4.h comes from the lz4 FetchContent already on the
 # path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
 # those two .cc compile into XAPIAND_OBJ.
-FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG 816bc82ca9e41bd6fc54831d172ede45b3fc6eaa)
 FetchContent_MakeAvailable(compressors)
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_exception.h")

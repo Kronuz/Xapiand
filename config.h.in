@@ -286,7 +286,7 @@
 #define XAPIAND_REPLICATION_SERVERPORT 7880            /* Replication Protocol TCP port */
 
 /* Enable xxh static linking structures */
-#define XXH_STATIC_LINKING_ONLY 1
+#define XXH_STATIC_LINKING_ONLY  /* empty, as xxhash.c defines it, so both can */
 
 /* TCP listen backlog */
 #if !defined(_WIN32) && \
