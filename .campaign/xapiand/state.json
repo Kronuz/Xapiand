@@ -10726,7 +10726,8 @@
         "docs/mechanisms/replication-group.md",
         "docs/mechanisms/group-install.md",
         "docs/mechanisms/simulator.md",
-        "docs/gates/phase-3r.md"
+        "docs/gates/phase-3r.md",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -10825,7 +10826,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T18:37:14",
+      "updated": "2026-11-20T18:37:21",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
