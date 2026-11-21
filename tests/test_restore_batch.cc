@@ -117,7 +117,7 @@ CommandWrite prepared(const std::string& key, engine::rev seen, std::size_t body
 std::uint64_t stored_version(Replica& r, const std::string& key) {
 	const auto stored = r.index->get(key);
 	CHECK(stored.has_value());
-	return stored ? Data(*stored).get_obj()[VERSION_FIELD_NAME].u64() : 0;
+	return stored ? Data(std::string(*stored)).get_obj()[VERSION_FIELD_NAME].u64() : 0;
 }
 
 std::vector<Command> batch_all(std::vector<CommandWrite> writes, std::size_t limit, std::uint64_t schema = 1) {
