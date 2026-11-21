@@ -9594,7 +9594,36 @@
       "worktree": ""
     },
     "faultlab-strata-gaps": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-20T23:32:58",
+          "base": "b64102f2c95ad0ab49fc34189f3be8cda0507145",
+          "blobs": {
+            "CMakeLists.txt": "100644:844fea6f09973dc49c8f6f64f9ca602d8b8045c8",
+            "README.md": "100644:1fb98fff30d4fba9e9b768f4d2fc3d544fff1c21",
+            "docs/api.md": "100644:7fbe2b48dfcc029e2df6eea61c6b77211e99289d",
+            "include/faultlab/faultfs.h": "100644:988d18e210e7f9ad0cda6529598251d833d98018",
+            "test/faultfs_test.cc": "100644:84b2d4f65c81069b8039d7cf5fb5c00bb21dd233",
+            "test/model_test.cc": "100644:9d82cd6d1e4d00ad797eddb191e0cfb9bd1caaac"
+          },
+          "by": "review",
+          "commit": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "criteria": "4f652041ab784b59",
+          "diffs": {
+            "CMakeLists.txt": "e6a3261020bb7961",
+            "README.md": "c837e915506126b3",
+            "docs/api.md": "0e53b8738e4af4e8",
+            "include/faultlab/faultfs.h": "668353b2b165565e",
+            "test/faultfs_test.cc": "c0ab723d17c4e7b2",
+            "test/model_test.cc": "cb876f6124502a55"
+          },
+          "findings": {},
+          "note": "",
+          "review": "9bf8701b9989de9ca9d5023e113121aab0862afa",
+          "reviewed": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "b64102f2c95ad0ab49fc34189f3be8cda0507145",
       "branch": "quest/xapiand/faultlab-strata-gaps",
@@ -9628,7 +9657,7 @@
       "risk": "normal",
       "status": "review",
       "title": "faultlab's faultfs covers every call strata makes",
-      "updated": "2026-11-20T23:16:00",
+      "updated": "2026-11-20T23:32:58",
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-table": {
