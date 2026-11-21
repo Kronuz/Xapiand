@@ -1,6 +1,6 @@
 # placement--scan: journal
 
-State: working
+State: waiting on jobs 261120-175303-728838 261120-180334-1d28be 261120-180336-fe974f
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,14 +9,18 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Scan at strata:5494733b (include/strata/placement/scan.hh, test/placement/scan_{glob.hh,test.cc,mutants.py}).
-First job 261120-175303-728838 builds and runs placement_scan_test (cases, model, bound).
+Scan at strata:5494733b (include/strata/placement/scan.hh, test/placement/scan_{glob.hh,test.cc,mutants.py}),
+pushed to origin quest/xapiand/placement--scan. Jobs queued, none run yet (the host was busy):
+- 261120-175303-728838 (A2): build placement_scan_test, run cases + model + bound (20000 seeds).
+- 261120-180334-1d28be (A2, --fails-without): `bound` mode at mutant no-seek-past (leave() reads
+  on with next() instead of seek/skip); it must fail.
+- 261120-180336-fe974f (A2): the whole build-test suite on the task branch.
 
 ## Next
 
-1. Fix whatever the first job shows; then the A2 jobs: the full suite gate, `bound` at the
-   no-seek-past mutant with --fails-without.
-2. Push quest/xapiand/placement--scan.
+1. Read the three jobs. A compile or test failure in the first: fix, commit, resubmit all three.
+2. Once green: paste `campaign brief`'s A2 row in Evidence; send root the scan's section text for
+   docs/mechanisms/placement-root.md ("The seekable scan"; scan.hh cites it).
 
 ## Blocked on
 
@@ -30,7 +34,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A2 | jobs 261120-175303-728838, 261120-180334-1d28be (mutant), 261120-180336-fe974f: pending |
+| msg-1 | Mine (scan -> root, key order). Open until root answers in its journal; my side assumes path order (Rulings). |
 
 ## Result
 
