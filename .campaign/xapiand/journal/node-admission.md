@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs 261120-173336-84c9cf 261120-173338-bff111 261120-173341-5fae97 261120-173345-1b7fb0 261120-173348-7a0880 261120-173414-fedae6 261120-173352-e73591 261120-173354-32d648 261120-173357-a2fd86 261120-173400-6f1195 261120-173403-838770 261120-173405-0da59f; CI run 44850841777
+State: waiting on jobs 261120-190018-0294af 261120-190020-fe207b 261120-190022-ac8ca2 261120-190024-386b01 261120-190026-ce7445 261120-190027-3570be 261120-190056-da1cf9 261120-190056-312f97 261120-190056-bc6072 261120-190110-1990be; CI at consensus:803442f
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,23 +9,41 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 2 (fresh contributor) at consensus:50446f8, main merged (consensus:6976aa0).
-Round 1's reds: only 261120-105029-49a29d was a real red (no-pin-check survived refused_pins); the
-other mutant jobs exit 8 = caught. CI 44797280480: refused_*/remove_* died of SIGPIPE on Linux.
-- consensus:c669067 SIGPIPE fixed in the transport (R11); consensus:50446f8 no-pin-check fix (R12).
-- suite (verify, A1,A2,A3,A5): 261120-173336-84c9cf
-- mutants (`admission_mutants.py 50446f8 <name>`): no-pin-check consensus:7ea3a3a -> refused_pins
-  261120-173338-bff111 (A1); no-repin-check consensus:49d4f5b -> refused_ca 261120-173341-5fae97
-  (A1); remove-keeps-links consensus:be59279 -> remove_ca 261120-173345-1b7fb0 (A2); any-token
-  consensus:9fd3607 -> issue 261120-173348-7a0880 (A5); send-signals consensus:d38487b ->
-  connection_test peer_gone 261120-173414-fedae6 (A1,A2: the Linux SIGPIPE)
-- plain at head: refused_pins 261120-173352-e73591, refused_ca 261120-173354-32d648 (A1),
-  remove_ca 261120-173357-a2fd86 (A2), issue 261120-173400-6f1195 (A5), peer_gone 261120-173403-838770
-- TSan, admission cases + connection_test: 261120-173405-0da59f (A2,A3,A5)
+Fix round 1 of the correctness review (.campaign/xapiand/reviews/node-admission-correctness.md,
+CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
+- F1 (consensus:0dce2e1, 803442f): case `epoch` (ca, pins) on loops the test steps: node 1's dial
+  finishes TLS (`Links::connect`), node 3 is removed, then `offer`; and node 1 accepts on loop a,
+  the move to its owner loop b is posted (b's `drained()` turns false), node 3 is removed, then b
+  reads the hello. Neither becomes a link. Mutant `links-no-epoch` (the reviewer's: `Links::current`
+  returns true). 803442f runs `stop()`/`remove()` on their loops: with the mutant's live link,
+  `stop()` off the loop asserted in `asio_scheduler::cancel` and hid the accept half.
+- F2 (consensus:0dce2e1): `issue` adds an impostor with rogue3's leaf replaying the token's CA
+  certificate: the joiner refuses (`ca`), the impostor receives 0 bytes. Mutant
+  `join-unchained-issuer`; at 0dce2e1 it failed `issue` with the impostor receiving 252 bytes.
+- F3 (consensus:0dce2e1): `Joined::save` writes each file to `<name>.new` with
+  open(O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC), the key 0600, checks every write (EINTR retried),
+  fsync, close and rename, then fsyncs the directory; failures throw `std::system_error` naming
+  the file and remove the staged file. Case `save`: modes under umask 022 (600/644/644); a forked
+  child stopped by SIGXFSZ (RLIMIT_FSIZE 1024) at the key's write leaves only owner-only key bytes;
+  EFBIG with SIGXFSZ ignored throws naming node.key and leaves none; an unwritable directory throws
+  naming node.pem (skipped as root). Mutant `save-chmod-after` (the old ofstream + chmod writer);
+  at 0dce2e1 it failed the mode check (node.key 644), the write check and the directory check.
+- Jobs at 803442f: plain epoch 261120-190018-0294af, issue 261120-190020-fe207b, save
+  261120-190022-ac8ca2; fails-without: links-no-epoch consensus:b58171c -> 261120-190024-386b01,
+  join-unchained-issuer consensus:f8c0177 -> 261120-190026-ce7445, save-chmod-after
+  consensus:1e2ab13 -> 261120-190027-3570be. Reruns at head: refused_pins 261120-190056-da1cf9,
+  refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072; every admission case
+  261120-190110-1990be. TSan and the suite: CI at 803442f (the local TSan rerun cancelled: CI's).
+- Non-blocking, left for follow-up: N1 (issued-certificate check untested), N2 (remove_node's
+  pending `not_connected` untested), N3 (first_join `removed` untested), N4 (send-signals mutant
+  only meaningful on Linux: CI 44797280480), N5 (admission.md: every member can read a token's
+  secret), N6 (document `assign` never reissues an id), N7 (`admit_node(local)` should throw),
+  N8 (Issuer hooks thread-safety comment).
 
 ## Next
 
-1. Read the jobs and CI 44850841777 (Linux must be green); fill Evidence; then State: ready for review.
+1. Read the jobs above and CI at consensus:803442f (macos-arm64, linux-asan-ubsan, linux-tsan); fill
+   Evidence; then State: ready for review (the lead confirms F1-F3).
 
 ## Blocked on
 
