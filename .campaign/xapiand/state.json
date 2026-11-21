@@ -21970,6 +21970,38 @@
       "updated": "2026-11-13T02:49:54",
       "worktree": ""
     },
+    "script-method": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/handler.h",
+        "src/database/handler.cc",
+        "src/server/search_views.cc",
+        "src/database/schema.cc",
+        "tests/test_script_method*",
+        "CMakeLists.txt",
+        "docs/src/content/docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "normal",
+      "status": "planned",
+      "title": "a script sees the request's method in _method",
+      "updated": "2026-11-20T21:23:12"
+    },
     "seam-census": {
       "accepted": {},
       "after": [],
