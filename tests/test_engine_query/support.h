@@ -72,12 +72,32 @@ struct Lcg {
 };
 
 // The ids a query finds in a shard (at most 20), in rank order.
-std::vector<engine::docid> ranked(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr);
+inline std::vector<engine::docid> ranked(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr) {
+	testsupport::Find find;
+	find.maxitems = 20;
+	find.check_at_least = 20;
+	find.sorter = sorter;
+	find.spy = spy;
+	return testsupport::hit_ids(shard, query, find);
+}
 
-std::set<engine::docid> run(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr);
+inline std::set<engine::docid> run(engine::Shard& shard, const Query& query, const engine::KeyMaker* sorter = nullptr, engine::MatchSpy* spy = nullptr) {
+	const auto dids = ranked(shard, query, sorter, spy);
+	return std::set<engine::docid>(dids.begin(), dids.end());
+}
 
 // One document per term, in the field "f".
-std::unique_ptr<engine::Shard> terms_db(const char* name, std::initializer_list<const char*> terms);
+inline std::unique_ptr<engine::Shard> terms_db(const char* name, std::initializer_list<const char*> terms) {
+	auto shard = testsupport::scratch_shard(name);
+	int n = 0;
+	for (auto term : terms) {
+		engine::Document doc;
+		doc.add_term(doc.field("f"), term);
+		testsupport::add_keyed(*shard, doc, "K" + std::to_string(++n));
+	}
+	engine::sync_wait(shard->commit(engine::Transaction::none));
+	return shard;
+}
 
 // shape.cc
 void test_leaves_and_ops();
