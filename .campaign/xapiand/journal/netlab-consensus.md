@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261120-174938-19c0ac (3 nodes) 261120-174941-0e6ee9 (5 nodes) 261120-174928-5e07e0 (calibrate), all exclusive at consensus:e12ee46
+State: waiting on jobs 261120-174938-19c0ac 261120-174941-0e6ee9 261120-174928-5e07e0 (exclusive, e12ee46); narrowing 261120-180108-07a97a 261120-180110-7ec9f4 261120-180112-b951fd (light, e1144c2)
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -38,8 +38,13 @@ applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised 
   hint) with `retry_after = deadline(rpc_timeout)` (core.h:1021), and the batch bound at
   core.h:1183-1187. Not pinned down; it needs a consensus-side trace of the stuck flight's
   responses.
-- Next bench-side experiment (not run): the same shape with 31 in flight, so a batch stays below
-  rpc_bytes. If that does not stall, the bound is the trigger.
+- Narrowing (sent to Detent by the lead; consensus unchanged): consensus:e1144c2 adds
+  --large-bytes/--large-inflight and an append trace in node.cc's status (appends sent with
+  entries, their entries/bytes and largest batch; answers ok/fail and the last fail's next_hint).
+  Light jobs, 3 nodes, loss1% and reorder5% at 20 ms, --diag: 31 x 64 KiB 261120-180108-07a97a,
+  32 x 64 KiB 261120-180110-7ec9f4, 64 x 32 KiB 261120-180112-b951fd (same 2 MiB, twice the
+  entries). Stall at 31 and not at 64 x 32 KiB points to bytes; stall at both 32 and 64 x 32 KiB
+  points to the 2 MiB batch, not the entry count.
 
 ## Next
 
