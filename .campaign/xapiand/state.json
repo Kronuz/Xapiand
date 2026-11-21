@@ -25933,7 +25933,8 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-task",
       "landed": [],
@@ -25945,7 +25946,7 @@
       "risk": "low",
       "status": "active",
       "title": "task's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:21:39",
+      "updated": "2026-11-21T12:30:50",
       "worktree": "../task-wt/xapiand/split-task"
     },
     "split-traceback": {
