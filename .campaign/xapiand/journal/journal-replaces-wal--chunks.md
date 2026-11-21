@@ -1,6 +1,6 @@
 # journal-replaces-wal--chunks: journal
 
-State: working
+State: waiting on jobs 261121-115251-e9ce8c 261121-115253-91bb79 261121-115255-30ad58 261121-115257-10469a
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -30,10 +30,16 @@ worktree's build/_deps (strata efa5214b); jobs fetch their own.
 
 ## Next
 
-1. Build and run test_group_chunk, test_group_chunk_group locally (light holds); fix.
-2. Jobs: plain tests (A2, A3); mutants --fails-without: truncation (A2, blob_crash_check.sh --mutant truncation),
-   whole-command proposal in propose_command (A3).
-3. Push; record job ids.
+1. Read the four jobs (at Xapiand:b376970a5): A3 plain 261121-115251-e9ce8c (test_group_chunk, test_group_chunk_group,
+   test_shard_group, test_group_command); A2 plain 261121-115253-91bb79 (blob_crash_check.sh, every crash point);
+   A2 mutant 261121-115255-30ad58 (--mutant truncation, --fails-without); A3 mutant 261121-115257-10469a
+   (propose_command proposes the command whole, --fails-without). Paste `campaign brief`'s table.
+2. Merge master once failed-restore-exit lands (handler.cc); never rebase.
+3. With the lead's answer on Blocked-on 1: add the later-term chunk test beside the fix.
+
+Local runs (light holds, build-chunks): test_group_chunk 92 checks OK; test_group_chunk_group OK at all 153 crash
+points (4 min 23 s); the truncation mutant at stride 5 fails only D16's postcondition (vol-1 2190341 bytes on disk
+where the bundle names 615424, and the like), never a read-back: ruling 1 measured.
 
 ## Blocked on
 
