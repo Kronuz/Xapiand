@@ -25174,6 +25174,8 @@
       "after": [
         "split-check"
       ],
+      "base": "e5f7765d11d466f9a7faf3e720b64a32d0ee5adc",
+      "branch": "quest/xapiand/split-xapiand-tests",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -25206,11 +25208,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: overlap is CMakeLists.txt only: one generic rule adding tests/test_NAME/*.cc to test NAME's executable, in the tests block no other quest edits",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand's free large tests split under 1,000 lines, same test names",
-      "updated": "2026-11-21T11:40:41"
+      "updated": "2026-11-21T11:40:43",
+      "worktree": "../Xapiand-wt/xapiand/split-xapiand-tests"
     },
     "stash-claim-hint-d64": {
       "accepted": {},
