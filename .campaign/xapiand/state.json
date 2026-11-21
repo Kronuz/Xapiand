@@ -8532,7 +8532,8 @@
         "tools/parity_terms.cc",
         "CMakeLists.txt",
         "AGENTS.md",
-        "docs/**"
+        "docs/**",
+        "test/interface_clean.cmake"
       ],
       "history": [
         {
@@ -8574,7 +8575,7 @@
       "risk": "low",
       "status": "active",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T18:21:25",
+      "updated": "2026-11-20T18:35:00",
       "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
     },
     "faultlab-adopt-xapiand": {
