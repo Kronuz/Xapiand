@@ -27038,17 +27038,40 @@
         "docs/src/content/docs/reference-guide/schemas.md",
         "docs/src/lib/sidebar.mjs"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T13:57:14",
+          "commit": "b639d349edd9ab6876b1082fb686b636a32e8442",
+          "criteria": {
+            "A1": "CI green at 34270cfcba8b",
+            "A2": "docs/src/content/docs/reference-guide/schemas/store.md: \"a field is stored when its own `_store` is `true` **and** its parent is stored\"; linked from indexing-mode.md (\"see [Storing Mode](store)\"); schemas.md link pending the file-set widening",
+            "A3": "CI green at 34270cfcba8b"
+          },
+          "evidence": [
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "34270cfcba8b4de5dbe17004f51d26f4af3e93b7",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "0bb158699ee572beb117f3811259835fb3cd389b",
+          "reason": "",
+          "tested": "34270cfcba8b4de5dbe17004f51d26f4af3e93b7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Document _store (index without keeping the value) with E2E blocks",
-      "updated": "2026-11-21T03:30:08",
-      "worktree": "../Xapiand-wt/xapiand/store-docs"
+      "updated": "2026-11-21T13:57:15",
+      "worktree": ""
     },
     "stored-check-cache": {
       "accepted": {
