@@ -25600,6 +25600,8 @@
       "after": [
         "split-check"
       ],
+      "base": "1e9aaaf4ac5bfefa97c51d6f5884c1f3b61f80a5",
+      "branch": "quest/xapiand/split-msgpack",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25627,6 +25629,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-msgpack",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25634,9 +25637,10 @@
       "provides": [],
       "repo": "../msgpack",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "msgpack's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:39"
+      "updated": "2026-11-21T11:48:05",
+      "worktree": "../msgpack-wt/xapiand/split-msgpack"
     },
     "split-queryparser": {
       "accepted": {},
