@@ -35,7 +35,7 @@
 #include "engine/xapian/query.h"   // for to_xapian
 #include "queryparser.hh"          // for queryparser::parse
 #include "snowball.hh"             // for snowball::stemmer
-#include "stopper.h"               // for getStopWords
+#include <stopper.h>               // for getStopWords (src/stopper.h, not this directory's)
 
 
 namespace engine::xapian {
