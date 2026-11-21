@@ -21,7 +21,7 @@
  * THE SOFTWARE.
  */
 
-// Serialize's per-type value serializers: datetime, time, timedelta, numbers, uuid and boolean.
+// Serialize's per-type value serializers: datetime, time, timedelta, numbers, uuid, boolean and geospatial.
 
 #include "serialize.h"
 #include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
@@ -309,3 +309,92 @@ Serialize::boolean(std::string_view field_value)
 	THROW(SerializationError, "Boolean format is not valid: {}", repr(field_value));
 }
 
+
+
+std::string
+Serialize::ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
+{
+	std::vector<std::string> data = { RangeList::serialize(ranges.begin(), ranges.end()), CartesianList::serialize(centroids.begin(), centroids.end()) };
+	return StringList::serialize(data.begin(), data.end());
+}
+
+
+std::string
+Serialize::ranges(const std::vector<range_t>& ranges)
+{
+	return RangeList::serialize(ranges.begin(), ranges.end());
+}
+
+
+std::string
+Serialize::centroids(const std::vector<Cartesian>& centroids)
+{
+	std::vector<std::string> data = { "", CartesianList::serialize(centroids.begin(), centroids.end()) };
+	return StringList::serialize(data.begin(), data.end());
+}
+
+
+// The first 16 bytes of SHA-256 over the ranges' fixed-width encodings: n distinct range lists collide with
+// probability at most n(n-1)/2^129, and the term's 16 bytes never equal an older 1 to 10 byte length-prefixed hash.
+std::string
+Serialize::ranges_hash(const std::vector<range_t>& ranges)
+{
+	kronuz::sha256::hasher hasher;
+	for (const auto& r : ranges) {
+		hasher.update(range(r));
+	}
+	const auto digest = hasher.final();
+	return std::string(reinterpret_cast<const char*>(digest.data()), SERIALIZED_LENGTH_RANGES_HASH);
+}
+
+
+std::string
+Serialize::geospatial(const class MsgPack& field_value)
+{
+	GeoSpatial geo(field_value);
+	return Serialize::ranges_hash(geo.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+}
+
+
+std::string
+Serialize::geospatial(std::string_view field_value)
+{
+	EWKT ewkt(field_value);
+	return Serialize::ranges_hash(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+}
+
+
+std::string
+Serialize::cartesian(const Cartesian& norm_cartesian)
+{
+	uint32_t x = htobe32((uint32_t)((long long)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t y = htobe32((uint32_t)((long long)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t z = htobe32((uint32_t)((long long)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
+	const char serialized[] = { (char)(x & 0xFF), (char)((x >> 8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
+								(char)(y & 0xFF), (char)((y >> 8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
+								(char)(z & 0xFF), (char)((z >> 8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
+	return std::string(serialized, SERIALIZED_LENGTH_CARTESIAN);
+}
+
+
+std::string
+Serialize::trixel_id(uint64_t id)
+{
+	id = htobe56(id);
+	const char serialized[] = { (char)(id & 0xFF), (char)((id >> 8) & 0xFF), (char)((id >> 16) & 0xFF), (char)((id >> 24) & 0xFF),
+								(char)((id >> 32) & 0xFF), (char)((id >> 40) & 0xFF), (char)((id >> 48) & 0xFF) };
+	return std::string(serialized, HTM_BYTES_ID);
+}
+
+
+std::string
+Serialize::range(const range_t& range)
+{
+	uint64_t start = htobe56(range.start);
+	uint64_t end = htobe56(range.end);
+	const char serialized[] = { (char)(start & 0xFF), (char)((start >> 8) & 0xFF), (char)((start >> 16) & 0xFF), (char)((start >> 24) & 0xFF),
+								(char)((start >> 32) & 0xFF), (char)((start >> 40) & 0xFF), (char)((start >> 48) & 0xFF),
+								(char)(end & 0xFF), (char)((end >> 8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
+								(char)((end >> 32) & 0xFF), (char)((end >> 40) & 0xFF), (char)((end >> 48) & 0xFF) };
+	return std::string(serialized, SERIALIZED_LENGTH_RANGE);
+}

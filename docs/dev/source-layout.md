@@ -12,8 +12,7 @@ one include callers name; it includes its pieces.
 | File | Holds |
 |---|---|
 | `src/serialize.cc` | `Serialize::MsgPack`, `object`, `serialize` and `string`: the dispatch by a field spec's type |
-| `src/serialize_scalar.cc` | the per-type serializers: datetime, time, timedelta, floating, integer, positive, boolean, uuid |
-| `src/serialize_geo.cc` | geospatial: ranges, centroids, trixel ids and ranges |
+| `src/serialize_scalar.cc` | the per-type serializers: datetime, time, timedelta, floating, integer, positive, boolean, uuid, and geospatial (ranges, centroids, trixel ids and ranges) |
 | `src/serialize_exact.cc` | `Serialize::exact` and its number helpers; defines `serialize_detail::positive_of` |
 | `src/serialize_guess.cc` | `isText`, `possiblyUUID`, `isUUID`, `guess_type`, ids, `guess_serialize` |
 | `src/serialize_unserialize.cc` | `Unserialize::*` and `get_field_type` |
