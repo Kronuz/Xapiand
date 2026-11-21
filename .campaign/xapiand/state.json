@@ -25638,7 +25638,8 @@
         "docs/source-layout.md",
         "AGENTS.md",
         "docs/mechanisms/barriers.md",
-        "docs/mechanisms/commit-barriers.md"
+        "docs/mechanisms/commit-barriers.md",
+        "tools/mutants.py"
       ],
       "journal": "../Xapiand-wt/xapiand/split-completion",
       "landed": [],
@@ -25650,7 +25651,7 @@
       "risk": "low",
       "status": "active",
       "title": "completion's large files split where it helps maintenance",
-      "updated": "2026-11-21T13:13:39",
+      "updated": "2026-11-21T14:24:30",
       "worktree": "../completion-wt/xapiand/split-completion"
     },
     "split-constexpr-phf": {
