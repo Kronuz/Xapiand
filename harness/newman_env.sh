@@ -25,7 +25,7 @@ _nm_dir="${HARNESS_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 _nm_want="$(sed -n 's/.*"newman": *"\([^"]*\)".*/\1/p' "$_nm_dir/package.json")"
 if [ "$("$_nm_dir/node_modules/.bin/newman" --version 2>/dev/null)" != "$_nm_want" ]; then
 	npm ci --prefix "$_nm_dir" --no-audit --no-fund --loglevel=error >&2 \
-		&& echo '*' > "$_nm_dir/node_modules/.gitignore" || { echo "cannot install newman $_nm_want (npm ci --prefix $_nm_dir)" >&2; return 1; }
+		&& echo '*' > "$_nm_dir/node_modules/.gitignore" || { echo "cannot install newman $_nm_want (npm ci --prefix $_nm_dir)" >&2; return 1 2>/dev/null || exit 1; }
 fi
 PATH="$_nm_dir/node_modules/.bin:$PATH"
 echo "newman $(newman --version) (pinned in harness/package.json)"
