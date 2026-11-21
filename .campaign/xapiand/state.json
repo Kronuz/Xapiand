@@ -28940,7 +28940,19 @@
         "test/test_checkpoint_window*",
         "bench/kv/probes/rocksdb-parity/**",
         "test/*ryw*",
-        "test/fixtures/**"
+        "test/fixtures/**",
+        "include/strata/core/writer.hh",
+        "include/strata/core/write_buffer.hh",
+        "test/test_large_tx*",
+        "test/test_tx*",
+        "test/*crash*",
+        "include/strata/core/command.hh",
+        "test/fixtures/command/**",
+        "fuzz/fuzz_command.cc",
+        "fuzz/corpus/command/**",
+        "bench/kv/kv_strata.hh",
+        "test/kv_strata_batch_test.cc",
+        "docs/mechanisms/large-transactions.md"
       ],
       "history": [
         {
@@ -29098,7 +29110,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T10:18:06",
+      "updated": "2026-11-21T10:28:27",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
