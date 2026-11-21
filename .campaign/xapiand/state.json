@@ -20839,8 +20839,10 @@
       "consumes": [],
       "files": [
         "reactor.h",
+        "reactor_tls.h",
         "test/limits_test.cc",
         "test/test.cc",
+        "test/tls_test.cc",
         "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/reactor-open-files",
@@ -20855,7 +20857,7 @@
       "risk": "low",
       "status": "active",
       "title": "raise_open_files clamps; its untested paths get tests",
-      "updated": "2026-11-20T23:35:16",
+      "updated": "2026-11-20T23:44:26",
       "worktree": "../reactor-wt/xapiand/reactor-open-files"
     },
     "reactor-server-composition": {
