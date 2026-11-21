@@ -439,6 +439,7 @@ Trial run_child(const fs::path& root, std::uint64_t at) {
 	}
 	if (pid == 0) {
 		::close(fds[0]);
+		events = 0;
 		crash_at = at;
 		try {
 			script(root, fds[1]);
