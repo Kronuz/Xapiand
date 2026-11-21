@@ -1,6 +1,6 @@
 # cluster: journal
 
-State: waiting on jobs 261121-054409-e6cd96 (A5 under TSan, x3) 261121-054412-d9be07 (A5 plain) at Xapiand:4fa179c7c; CI on the push
+State: waiting on jobs 261121-085756-35e5b9 (A5 under TSan x3, own build dir; e6cd96 never built: build-cluster-tsan was configured from tests/cluster) 261121-054412-d9be07 (A5 plain) at Xapiand:4fa179c7c; CI on the push
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
