@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-212409-97aad5 (build-test of the release commit); then blocked on lead: push `xapiand`, dispatch the three workflows with publish=false
+State: waiting on jobs 261120-224303-06ff11 261120-224305-d28d20 261120-224312-d563d4 261120-224314-a61796 (VM builds before/after df3ff48b8)
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,6 +14,11 @@ Backports on the quest branch (based on the `xapiand` tip e692a64b1, so the tool
 CI on `xapiand` at bb04f6d63 failed twice (lead's log ~/.scratch/xapiand/lead/xapiand-branch-ci.log):
 1. test_text_parser.cc's `#include "xapian.h"` resolved only through Homebrew's /usr/local/include (Xapian 2.1.0) locally; Linux has none. Fix 5c4c0ce2d: src/engine/xapian (the vendored umbrella) first on that target's include path. Guard job 261120-202710-3443a6 (dep file names the vendored header, never /usr/local/include); 261120-202717-edd5aa is the same check failing at bb04f6d63.
 2. smoke-id0 under ASan/TSan (222 and 452 of 999 kept). Cause: Schema::index tested `!document_id`, and MsgPack's bool of 0 is false, so a body's `"_id": 0` counted as no id (the URL-id refusal in get_prefixed_term_id never ran on RESTORE). On a new index doc 0 then set the id type to uuid while the others prepared beside it; when the numeric type won instead, id 0 became the new-id request and id 1 overwrote it, which is why the plain macOS run passed (job 261120-202217-a29843). Fix 91d4c3e62: any number is an explicit id; numeric id 0 throws ClientError. The harness now also requires RESTORE's item 0 to be 400 and `indexed` 999, and ctest runs it (5c4c0ce2d), so the local build-test catches it. Fails-without: 261120-202653-9ebd4f at 5c4c0ce2d; build-test at the fix: 261120-202700-a1e84b.
+
+No-publish dry runs at 30815d91f (Release 44871494230, FreeBSD 44871496282; CI green) failed on two causes, both fixed in df3ff48b8:
+1. Docker/RPM (gcc, no system lz4): storage@671eaacb declares compressors at ed590c8 before Xapiand's own declaration, and FetchContent keeps the first, so 27191e0ff's pin of 816bc82 (9d2a87c using-declarations) never applied. compressors fetches lz4 1.10.0, hashes.hh inlines its xxhash.c, and ed590c8's `using namespace` makes PRIME32_* ambiguous. Fix: declare compressors before storage (master does the same, line 458).
+2. FreeBSD (clang -Werror): config.h.in `#define XXH_STATIC_LINKING_ONLY 1` vs /usr/local/include/xxhash.h's empty definition. Fix: empty define, master's b078d5a18 line.
+VM jobs (~/.scratch/xapiand/final-release-build/vmbuild.sh: Linux VM 18782 runs the Dockerfile builder stage in docker.io; FreeBSD VM 18784 runs freebsd.yml's steps plus pkg xxhash): fails-without at 30815d91f 261120-224303-06ff11 (linux), 261120-224305-d28d20 (freebsd); at df3ff48b8 261120-224312-d563d4 (linux), 261120-224314-a61796 (freebsd).
 
 ## Next
 
@@ -53,3 +58,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - A2 fix lives in src/database/schema.cc, outside the listed file set: the lead assigned the restore-path fix. Explicit `_id` of false, null or "" still asks for a new id (unchanged); only numbers became explicit, so `"_id": 0` on a uuid-id index is now a cast error instead of a random uuid.
 - A3 float bounds: lower bound ceil, upper bound floor, saturating, in range.cc integer_bound.
 - test_generate_terms failure (job 261120-172811-fc88f8) was mine: a non-negative int can carry the NEGATIVE_INTEGER tag, so integer_bound emptied positive ranges; passes at base (job 261120-174741-3e4b95). Fixed by reading the sign from the value, regression checks added; build-test 261120-181401-b5cc95.
+- A5 build fixes: config.h.in is outside the file set; the lead assigned the FreeBSD build fix there. The FreeBSD VM job installs pkg xxhash beyond freebsd.yml's list because the GitHub FreeBSD image has /usr/local/include/xxhash.h (the dry-run's note names it).
