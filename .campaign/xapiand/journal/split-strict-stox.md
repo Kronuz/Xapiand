@@ -1,12 +1,21 @@
 # split-strict-stox: journal
 
-State: waiting on jobs 261121-130207-7a60bd 261121-130208-b3f0bb 261121-130225-309d93 261121-130228-8f04e7
+State: waiting on jobs 261121-130207-7a60bd 261121-131328-fe03fb 261121-131329-c50931
 Quest: .campaign/xapiand/quests/split-strict-stox.md (the lead's; never edit it)
 
 ## Doing
 
-Jobs at strict-stox:5a7e44b: build-test (A1) 261121-130207-7a60bd, split (A2) 261121-130208-b3f0bb,
-ctest -N diff vs d3eaf32 (A3) 261121-130225-309d93, new-header self-containment (A6) 261121-130228-8f04e7.
+Queued at strict-stox:5a7e44b: build-test (A1) 261121-130207-7a60bd; split_check from the
+split-check-sources worktree (A2) 261121-131328-fe03fb; ctest -N diff vs d3eaf32, test lines only
+(A3) 261121-131329-c50931.
+
+Failed, superseded:
+- 261121-130208-b3f0bb (split check, landed tool): 18 errors, all lines of docs/source-layout.md,
+  which the landed split_check reads as code; 0 warnings, 1 note (strict_stox.hh over 1,000 lines,
+  kept whole by R1). Context item 4: the split-check-sources tool ignores non-C/C++ files; the lead
+  reruns the check with the landed tool once it lands.
+- 261121-130225-309d93 (ctest -N): the diff was only the build-tree paths (ctn-base vs ctn-head) in
+  the output lines; resubmitted comparing the `Test #` and `Total Tests` lines only.
 
 ## Next
 
@@ -20,12 +29,12 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending 261121-130207-7a60bd |
-| A2 | pending 261121-130208-b3f0bb |
-| A3 | pending 261121-130225-309d93 |
+| A1 | queued 261121-130207-7a60bd |
+| A2 | queued 261121-131328-fe03fb (130208-b3f0bb failed on the note only, see Doing) |
+| A3 | queued 261121-131329-c50931 (130225-309d93 failed on build-dir paths only) |
 | A4 | `docs/source-layout.md` at strict-stox:5a7e44b |
-| A5 | CI on the pushed branch |
-| A6 | pending 261121-130228-8f04e7 (no new headers: the job lists headers added since d3eaf32 and runs selfcontained.sh on them if any) |
+| A5 | CI at 5a7e44b running; main has a newer .github/workflows/ci.yml (merge-main is the lead's) |
+| A6 | 261121-130228-8f04e7 passed: "headers new since d3eaf32: none" (no new headers: the job lists headers added since d3eaf32 and runs selfcontained.sh on them if any) |
 | A7 | lead's read |
 
 ## Result
