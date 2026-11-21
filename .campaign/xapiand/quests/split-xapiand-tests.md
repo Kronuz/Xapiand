@@ -1,9 +1,13 @@
-# split-xapiand-tests: Xapiand's free large tests split under 1,000 lines, same test names
+# split-xapiand-tests: Xapiand's free large tests split where it helps maintenance, same test names
 
 Risk: low. The lead writes this quest; contributors read it and never edit it. Its
 machine state is in `state.json`: `campaign status split-xapiand-tests`.
 
 ## Outcome
+
+Owner, 2026-11-21, later: "The split must make sense and improve maintainability. Let's not
+split for the sake of splitting. For example, a 10K file might be ok if it makes complete sense to
+keep it that way." The sizes below flag a file for a look; they are not the reason to split it.
 
 Owner, 2026-11-21: "Any 6K file is just unmaintainable at that size. Source code files should be
 much smaller and well organized." A split moves code and changes none: bodies, names, order inside
@@ -15,26 +19,27 @@ holds them. `tests/test_coverage_geospatial.cc` waits for the geo-ring explorer'
 
 ## How to split
 
-- Split by responsibility (what the code does), not by line count: each new file holds one thing and
-  opens with a one-line comment saying what. Aim for 200 to 600 lines; never over 1,000.
-- A header keeps its path as the one include for its callers (it includes its pieces), so no caller
-  changes. A test file keeps its build target and its ctest names: its pieces are added to the same
-  target, so `ctest -N` lists the same tests before and after.
-- A helper that several pieces now share moves to an internal header in a `detail` namespace; that
-  linkage change is listed in the journal. A namespace-scope object with a dynamic initializer stays
-  in the translation unit that defines what it depends on, or becomes a function-local static, so
-  static initialization order cannot change.
-- One commit per split file, so a conflict with another branch is found per file.
+- Follow cpp-libraries' `docs/SPLITTING.md` (cpp-libraries:7cab8ec): when to split, where to cut,
+  what stays whole, moves only, and what lands a split.
+
+Each test's pieces go in `tests/test_NAME/` and join test NAME's executable through one generic
+rule in CMakeLists.txt (`tests/test_NAME/*.cc` added to `xapiand_test_NAME`): the only build change.
+The glob of `tests/test_*.cc` must not pick pieces up as tests of their own.
 
 ## Acceptance criteria
 
 - A1 The suite passes at the split code: the suite check
-- A2 Every moved line moved unchanged and no file in the quest's set exceeds 1,000 lines: the `split`
+- A2 Every moved line moved unchanged: the `split`
   check (cpp-libraries' `tools/split_check.py`), with its warnings answered in the journal
 - A3 `ctest -N` lists the same tests before and after: a job at each commit, diffed
 - A4 [artifact] the layout note (`docs/dev/test-layout.md`) lists each
   new file and what it holds
 - A5 [ci] CI is green on every platform
+- A6 Every header this quest creates compiles alone, checked the way cpp-libraries'
+  `tools/selfcontained.sh` checks one (a translation unit that only includes it twice,
+  `-fsyntax-only`), over the new headers only: a job at the head
+- A7 [manual] The lead read the split: each piece is a unit a maintainer opens alone, and the
+  layout note names each file kept whole over 1,000 lines and why
 
 ## Contracts
 

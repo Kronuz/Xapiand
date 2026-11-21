@@ -110,7 +110,8 @@ each with a test that fails without it.
   p50 40 ms against 21 ms, job 261117-034940-b2b9c3).
 
 - Lead, 2026-11-21 (owner's size rule): `include/strata/core/index.hh` (6,139 lines) and
-  `manifest_log.hh` (1,303) are split under 1,000 lines each by a task `split`, which the lead starts
+  `manifest_log.hh` (1,303) are split where it helps maintenance (owner, later the same day: "Let's
+  not split for the sake of splitting"; a file that is one coherent unit stays whole) by a task `split`, which the lead starts
   right after tasks group-commit and large-tx merge into this branch and before tolerant-open edits
   them; moves only, proved by cpp-libraries' `tools/split_check.py` (quest split-check), with
   `index.hh` kept as the include its callers name.

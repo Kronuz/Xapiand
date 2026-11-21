@@ -2348,7 +2348,7 @@ static void test_a_replace_that_must_exist_writes_only_where_the_key_is() {
 	const auto did = engine::sync_wait(use.written_key(x.term));
 	CHECK(did != 0);
 	CHECK(replace(did + 1, true) == engine::errc::doc_not_found);
-	CHECK(replace(did + 1, false) == engine::errc::invalid);   // without it: the key belongs to another document
+	CHECK(replace(did + 1, false) == engine::errc::version_conflict);   // without it: the key belongs to another document, a stale id
 	CHECK(replace(did, true) == std::nullopt);
 	CHECK_EQ(engine::sync_wait(use.written_key(x.term)), did);
 	x.erase(x.off);
