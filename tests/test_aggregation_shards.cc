@@ -55,7 +55,7 @@
 
 namespace {
 
-constexpr engine::valueno AGE = 1001, SCORE = 1002, CAT = 1003, UNIQ = 1004;
+constexpr engine::valueno AGE = 1001, SCORE = 1002, CAT = 1003, UNIQ = 1004, STAMP = 1005, FLAG = 1006, POS = 1007;
 
 struct Lcg {
 	std::uint64_t state;
@@ -66,17 +66,21 @@ struct Lcg {
 };
 
 // One document: age (integer, several values or none), score (floating, one value or none, a multiple of
-// 0.25 so sums are exact in any order), cat (keyword, one to three values) and uniq (keyword).
+// 0.25 so sums are exact in any order), cat (keyword, one to three values) and uniq (keyword); stamp (date,
+// whole days), flag (boolean) and pos (positive integer), each with several values or none.
 struct Row {
 	std::vector<std::int64_t> ages;
 	std::vector<double> scores;
 	std::vector<std::string> cats;
 	std::string uniq;
+	std::vector<double> stamps;
+	std::vector<int> flags;
+	std::vector<std::uint64_t> poss;
 };
 
 std::vector<Row> main_rows() {
 	std::vector<Row> rows;
-	Lcg rng{11};
+	Lcg rng{11}, more{23};  // `more` draws the later fields, so the first four stay as they were
 	for (int i = 0; i < 240; ++i) {
 		Row row;
 		if (i % 7 != 0) {
@@ -94,6 +98,22 @@ std::vector<Row> main_rows() {
 		}
 		std::sort(row.cats.begin(), row.cats.end());
 		row.cats.erase(std::unique(row.cats.begin(), row.cats.end()), row.cats.end());
+		if (i % 8 != 1) {
+			for (auto n = 1 + more.next(3); n > 0; --n) {
+				row.stamps.push_back(1600000000.0 + 86400.0 * more.next(40));
+				row.poss.push_back(more.next(31));
+			}
+			std::sort(row.stamps.begin(), row.stamps.end());
+			row.stamps.erase(std::unique(row.stamps.begin(), row.stamps.end()), row.stamps.end());
+			std::sort(row.poss.begin(), row.poss.end());
+			row.poss.erase(std::unique(row.poss.begin(), row.poss.end()), row.poss.end());
+		}
+		if (i % 6 != 5) {
+			row.flags.push_back(static_cast<int>(more.next(2)));
+			if (more.next(4) == 0) {
+				row.flags.push_back(1 - row.flags.front());
+			}
+		}
 		rows.push_back(std::move(row));
 	}
 	return rows;
@@ -128,6 +148,9 @@ std::shared_ptr<Schema> make_schema() {
 	props["score"] = MsgPack({ { "_type", "floating" }, { "_slot", 1002 } });
 	props["cat"] = MsgPack({ { "_type", "keyword" }, { "_slot", 1003 }, { "_index", "field_values" } });
 	props["uniq"] = MsgPack({ { "_type", "keyword" }, { "_slot", 1004 }, { "_index", "field_values" } });
+	props["stamp"] = MsgPack({ { "_type", "date" }, { "_slot", 1005 } });
+	props["flag"] = MsgPack({ { "_type", "boolean" }, { "_slot", 1006 } });
+	props["pos"] = MsgPack({ { "_type", "positive" }, { "_slot", 1007 } });
 	return std::make_shared<Schema>(std::make_shared<const MsgPack>(std::move(props)), nullptr, "");
 }
 
@@ -157,6 +180,27 @@ engine::Document make_document(const Row& row) {
 	}
 	if (!row.uniq.empty()) {
 		doc.add_value(UNIQ, multi({ row.uniq }));
+	}
+	if (!row.stamps.empty()) {
+		std::vector<std::string> values;
+		for (auto t : row.stamps) {
+			values.push_back(Serialize::timestamp(t));
+		}
+		doc.add_value(STAMP, multi(values));
+	}
+	if (!row.flags.empty()) {
+		std::vector<std::string> values;
+		for (auto f : row.flags) {
+			values.push_back(Serialize::boolean(f != 0));
+		}
+		doc.add_value(FLAG, multi(values));
+	}
+	if (!row.poss.empty()) {
+		std::vector<std::string> values;
+		for (auto n : row.poss) {
+			values.push_back(Serialize::positive(n));
+		}
+		doc.add_value(POS, multi(values));
 	}
 	doc.set_data("d");
 	return doc;
@@ -282,8 +326,8 @@ void compare(const MsgPack& a, const MsgPack& b, const std::string& path, Diff& 
 		const double x = a.as_f64(), y = b.as_f64();
 		const double scale = std::max({ 1.0, std::fabs(x), std::fabs(y) });
 		const double rel = std::fabs(x - y) / scale;
-		if (rel != 0) { ++diff.inexact; diff.worst = std::max(diff.worst, rel); }
-		if (rel > 1e-9) { diff.paths.push_back(path + " " + a.to_string() + " vs " + b.to_string()); }
+		if (rel != 0 && !std::isnan(rel)) { ++diff.inexact; diff.worst = std::max(diff.worst, rel); }
+		if (rel > 1e-9 || std::isnan(x) != std::isnan(y)) { diff.paths.push_back(path + " " + a.to_string() + " vs " + b.to_string()); }
 	} else if (a.to_string() != b.to_string()) {
 		diff.paths.push_back(path + " " + a.to_string() + " vs " + b.to_string());
 	}
@@ -395,6 +439,62 @@ std::vector<Spec> specs() {
 	add("_filter cat > terms age > variance", with(filter_by("cat", MsgPack("c5")), {
 		{ "t", with(kind("_terms", "age", limit), { { "v", kind("_variance", "score") } }) },
 	}));
+
+	// A non-default `_sort`, and a `_limit` below the bucket count (`_shard_size` raised so no count is approximate).
+	const std::vector<std::pair<const char*, MsgPack>> big = { { "_shard_size", all } };
+	auto opts = [&](std::vector<std::pair<const char*, MsgPack>> o) {
+		o.insert(o.end(), big.begin(), big.end());
+		return o;
+	};
+	auto order = [](const char* key, const char* dir) { return MsgPack({ { key, dir } }); };
+	for (const char* field : { "age", "score", "cat" }) {
+		const std::string f = field;
+		for (const char* bucket : { "_terms", "_values" }) {
+			const std::string b = bucket;
+			add(b + " " + f + " sort key asc", kind(bucket, field, opts({ { "_sort", MsgPack("_key") }, { "_limit", all } })));
+			add(b + " " + f + " sort key desc", kind(bucket, field, opts({ { "_sort", order("_key", "desc") }, { "_limit", all } })));
+			add(b + " " + f + " sort count asc", kind(bucket, field, opts({ { "_sort", order("_doc_count", "asc") }, { "_limit", all } })));
+			add(b + " " + f + " sort count asc limit", kind(bucket, field, opts({ { "_sort", order("_doc_count", "asc") }, { "_limit", MsgPack(7) } })));
+			add(b + " " + f + " sort key desc limit", kind(bucket, field, opts({ { "_sort", order("_key", "desc") }, { "_limit", MsgPack(5) } })));
+			add(b + " " + f + " limit", kind(bucket, field, opts({ { "_limit", MsgPack(4) } })));
+		}
+	}
+	add("_terms cat sort key, order object", kind("_terms", "cat", opts({ { "_sort", MsgPack({ { "_key", MsgPack({ { "_order", "desc" } }) } }) }, { "_limit", MsgPack(6) } })));
+	add("_terms cat sort by avg score", with(kind("_terms", "cat", opts({ { "_sort", order("s._avg", "desc") }, { "_limit", MsgPack(5) } })), { { "s", kind("_stats", "score") } }));
+	add("_values age sort by count", with(kind("_values", "age", opts({ { "_sort", order("n._count", "asc") }, { "_limit", MsgPack(9) } })), { { "n", kind("_count", "score") } }));
+	add("_histogram age limit", kind("_histogram", "age", opts({ { "_interval", MsgPack(2) }, { "_limit", MsgPack(5) } })));
+	add("_histogram age sort key desc limit", kind("_histogram", "age", opts({ { "_interval", MsgPack(2) }, { "_sort", order("_key", "desc") }, { "_limit", MsgPack(5) } })));
+	add("_histogram score sort count desc limit", kind("_histogram", "score", opts({ { "_interval", MsgPack(1.5) }, { "_sort", order("_doc_count", "desc") }, { "_limit", MsgPack(6) } })));
+	add("_terms age limit > stats", with(kind("_terms", "age", opts({ { "_sort", order("_key", "desc") }, { "_limit", MsgPack(6) } })), { { "s", kind("_stats", "score") }, { "c", kind("_terms", "cat", opts({ { "_limit", MsgPack(3) } })) } }));
+
+	// Date, boolean and positive fields.
+	for (const char* metric : { "_count", "_sum", "_avg", "_min", "_max", "_variance", "_median", "_mode", "_stats", "_extended_stats" }) {
+		for (const char* field : { "stamp", "pos" }) {
+			add(std::string(metric) + " " + field, kind(metric, field));
+		}
+	}
+	add("_count flag", kind("_count", "flag"));
+	for (const char* field : { "stamp", "flag", "pos" }) {
+		const std::string f = field;
+		add("_values " + f, kind("_values", field, limit));
+		add("_terms " + f, kind("_terms", field, limit));
+		add("_terms " + f + " sort key desc limit", kind("_terms", field, opts({ { "_sort", order("_key", "desc") }, { "_limit", MsgPack(2) } })));
+		add("_values " + f + " sort count asc limit", kind("_values", field, opts({ { "_sort", order("_doc_count", "asc") }, { "_limit", MsgPack(2) } })));
+	}
+	add("_terms stamp limit", kind("_terms", "stamp", opts({ { "_limit", MsgPack(8) } })));
+	add("_terms pos limit", kind("_terms", "pos", opts({ { "_limit", MsgPack(8) } })));
+	add("_histogram stamp week", kind("_histogram", "stamp", { { "_interval", MsgPack(604800.0) }, { "_limit", all } }));
+	add("_histogram stamp week limit", kind("_histogram", "stamp", opts({ { "_interval", MsgPack(604800.0) }, { "_sort", order("_key", "desc") }, { "_limit", MsgPack(3) } })));
+	add("_histogram pos", kind("_histogram", "pos", { { "_interval", MsgPack(4) }, { "_limit", all } }));
+	add("_histogram pos shift", kind("_histogram", "pos", { { "_interval", MsgPack(4) }, { "_shift", MsgPack(1) }, { "_limit", all } }));
+	add("_histogram pos limit", kind("_histogram", "pos", opts({ { "_interval", MsgPack(3) }, { "_sort", order("_doc_count", "desc") }, { "_limit", MsgPack(4) } })));
+	add("_range pos", kind("_range", "pos", { { "_ranges", list_of({ range_of<int>("lo", std::nullopt, 10), range_of<int>("mid", 10, 20), range_of<int>("hi", 20, std::nullopt) }) } }));
+	add("_range stamp", kind("_range", "stamp", { { "_ranges", list_of({ range_of<double>("early", std::nullopt, 1601000000.0), range_of<double>("late", 1601000000.0, std::nullopt) }) } }));
+	add("_values flag > stats pos, terms stamp", with(kind("_values", "flag", limit), { { "s", kind("_stats", "pos") }, { "t", kind("_terms", "stamp", opts({ { "_limit", MsgPack(4) } })) } }));
+	add("_histogram stamp week > terms flag > max pos", with(kind("_histogram", "stamp", { { "_interval", MsgPack(604800.0) }, { "_limit", all } }), {
+		{ "t", with(kind("_terms", "flag", limit), { { "m", kind("_max", "pos") } }) },
+	}));
+	add("_filter flag > values pos", with(filter_by("flag", MsgPack(true)), { { "v", kind("_values", "pos", opts({ { "_limit", MsgPack(5) } })) }, { "d", kind("_stats", "stamp") } }));
 
 	// Several at once, as a request makes them.
 	MsgPack many = MsgPack::MAP(), aggs = MsgPack::MAP();
