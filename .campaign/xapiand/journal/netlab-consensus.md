@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: ready for review at consensus:c1a2138. A1/A2 jobs are red only on the loss row's stall checks (Finding 1, Detent's fix); every other check passed. Narrowing jobs cancelled (msg-185).
+State: waiting on detent:consensus-full-window-stall (D165), then the lead reruns A1/A2 at the merged head; ready for review at consensus:c1a2138. A1/A2 jobs are red only on the loss row's stall checks (Finding 1, Detent's fix); every other check passed. Narrowing jobs cancelled (msg-185).
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
