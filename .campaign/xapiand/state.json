@@ -13026,7 +13026,9 @@
     },
     "journal-replaces-wal": {
       "accepted": {},
-      "after": [],
+      "after": [
+        "group-catalog"
+      ],
       "base": "ce5e4df02373983150ccacc74c230b0e6d9c6062",
       "branch": "quest/xapiand/journal-replaces-wal",
       "checks": [
@@ -13100,7 +13102,19 @@
         "harness/async_check.py",
         "harness/removed_options_check.sh",
         "harness/test_gate_tools.py",
-        "docs/mechanisms/journal-durability.md"
+        "docs/mechanisms/journal-durability.md",
+        "CMakeLists.txt",
+        "src/engine/strata/shard.*",
+        "src/engine/shard.h",
+        "src/database/command.*",
+        "src/database/shard_group.*",
+        "tests/test_cheap_reopen.cc",
+        "tests/test_endpoint_uuid.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_node.cc",
+        "src/server/search_views.cc",
+        "tests/test_command*",
+        "tests/test_shard_group*"
       ],
       "history": [
         {
@@ -13230,12 +13244,11 @@
         "xapiand:restore-batch",
         "xapiand:ack-read-levels"
       ],
-      "reason": "started by force: critical path to cluster-gate; the four overlapping quests (failed-restore-exit, newman-pin, ninja-only, strata-pin-catalog) are at their last CI and touch a few lines each (handler.cc's restore exit, run_all.sh, test_pool.cc); this quest merges main after each lands",
       "repo": ".",
       "risk": "high",
       "status": "active",
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T09:43:22",
+      "updated": "2026-11-21T10:01:04",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
