@@ -25300,8 +25300,8 @@
       "repo": "../datetime",
       "risk": "low",
       "status": "planned",
-      "title": "datetime's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:20"
+      "title": "datetime's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:27"
     },
     "split-docset": {
       "accepted": {},
