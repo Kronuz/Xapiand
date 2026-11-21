@@ -25176,6 +25176,46 @@
       "updated": "2026-11-21T11:40:02",
       "worktree": "../cpp-libraries-wt/xapiand/split-check"
     },
+    "split-constexpr-phf": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master .",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "phf.hh",
+        "phf_*",
+        "phf/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../constexpr-phf",
+      "risk": "low",
+      "status": "planned",
+      "title": "constexpr-phf's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:27"
+    },
     "split-datetime": {
       "accepted": {},
       "after": [
