@@ -33,13 +33,16 @@
 #   D. (--reactors N, default 2) N writers on N HTTP reactors put sequences into ONE one-shard index; kill -9; restart; poke; list. Every write
 #      acknowledged more than GRACE seconds before the kill is present, and what each writer recovered is a prefix of what it sent:
 #      the WAL's order is the apply order across reactors (phase 7c D5, C6).
-# Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh [--reactors N]
+# Usage: BIN=build/bin/xapiand harness/engine_crash_check.sh [--reactors N] [--only A|B|D...]
+# A wrong row prints whole: its listing line, its hit, the document's raw GET bytes and, in D, its writer's acknowledgement.
 set -u
 REACTORS=2
+ONLY=ABD
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--reactors) REACTORS="$2"; shift 2 ;;
-		*) echo "usage: $0 [--reactors N]"; exit 2 ;;
+		--only) ONLY="$2"; shift 2 ;;   # the scenarios to run, e.g. D (C runs inside each)
+		*) echo "usage: $0 [--reactors N] [--only A|B|D...]"; exit 2 ;;
 	esac
 done
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -78,11 +81,12 @@ list_set() {  # list_set INDEX OUT: "_id n" lines, sorted, of every document (pa
 	python3 -I - "$PORT" "$1" "$2" <<'PY'
 import sys, json, http.client
 port, idx, out = sys.argv[1], sys.argv[2], sys.argv[3]
-rows, off = [], 0
+rows, off, pages = [], 0, []
 while True:
     c = http.client.HTTPConnection('localhost', int(port), timeout=120)
     c.request('POST', f'/{idx}/:search', body=json.dumps({'_query': '*', '_limit': 1000, '_offset': off, '_check_at_least': 100000, '_sort': '_id'}), headers={'Content-Type': 'application/json'})
-    r = c.getresponse(); d = json.loads(r.read() or b'{}')
+    r = c.getresponse(); body = r.read(); d = json.loads(body or b'{}')
+    pages.append(body)
     hits = d.get('hits', [])
     if not hits: break
     rows += [(h['_id'], h.get('n'), json.dumps(h, sort_keys=True)) for h in hits]
@@ -90,8 +94,21 @@ while True:
 rows.sort(key=lambda x: str(x[0]))
 open(out, 'w').write(''.join(f'{i} {n}\n' for i, n, _ in rows))
 open(out + '.raw', 'w').write(''.join(f'{h}\n' for _, _, h in rows))   # each hit as returned, line for line
+open(out + '.pages', 'wb').write(b''.join(b'%d\n%s\n' % (len(p), p) for p in pages))   # each page's body, byte for byte
 PY
 }
+# raw_get.py: a document's GET response, status and body bytes (a wrong row's evidence)
+cat >"$RUNDIR/raw_get.py" <<'PY'
+import http.client, urllib.parse
+def raw_get(port, idx, did):
+    try:
+        c = http.client.HTTPConnection('localhost', int(port), timeout=30)
+        c.request('GET', f'/{idx}/{urllib.parse.quote(str(did), safe="")}', headers={'Accept': 'application/json'})
+        r = c.getresponse()
+        return f'GET {r.status} {r.read()!r}'
+    except Exception as e:
+        return f'GET failed: {e!r}'
+PY
 check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every file's digest) passes on each shard; node stopped
 	local out
 	if [ -x "$CHECK_TOOL" ]; then
@@ -104,6 +121,7 @@ check_digest() {  # check_digest INDEX LABEL: the strata engine's check (every f
 }
 
 for ENG in strata; do
+	if [[ $ONLY == *A* ]]; then
 	echo "== [crash $ENG] A: $NDOCS PUTs without commit, kill -9, restart, replay =="
 	start_node "$ENG" "$ENG.A1.log" || { fail "$ENG startup"; continue; }
 	for i in $(seq 1 "$NDOCS"); do
@@ -121,6 +139,8 @@ for ENG in strata; do
 	grep -q "Read and execute operations WAL" "$RUNDIR/$ENG.A2.log" && pass "$ENG: the restart logged a WAL replay" || fail "$ENG: no WAL replay logged"
 	crash
 	[ "$ENG" != strata ] || check_digest "$IDX" "$ENG after the restart and a second kill (A)"
+	fi
+	if [[ $ONLY == *B* ]]; then
 	echo "== [crash $ENG] B: a writer PUTs documents one after another, kill -9 ${CUT:-4}s in =="
 	start_node "$ENG" "$ENG.B1.log" || { fail "$ENG startup B"; continue; }
 	python3 -I - "$PORT" "$RUNDIR/acked_$ENG" <<'PY' &
@@ -149,14 +169,15 @@ PY
 	list_set bulk "$RUNDIR/B_$ENG"
 	nb=$(wc -l < "$RUNDIR/B_$ENG" | tr -d ' ')
 	na=$(wc -l < "$RUNDIR/acked_$ENG" | tr -d ' ')
-	read -r bad dup lost late <<<"$(python3 -I - "$RUNDIR/B_$ENG" "$RUNDIR/acked_$ENG" "$killed" "${GRACE:-2}" <<'PY'
+	read -r bad dup lost late <<<"$(python3 -I - "$RUNDIR/B_$ENG" "$RUNDIR/acked_$ENG" "$killed" "${GRACE:-2}" "$PORT" "$RUNDIR" <<'PY'
 import sys
+sys.path.insert(0, sys.argv[6]); from raw_get import raw_get
 lines = open(sys.argv[1]).read().splitlines()
 raw = open(sys.argv[1] + '.raw').read().splitlines()
 rec = [l.split() for l in lines]
 wrong = [k for k, r in enumerate(rec) if len(r) != 2 or r[0] != r[1]]
 for k in wrong:
-    print(f'  B wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None}', file=sys.stderr)
+    print(f'  B wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None} {raw_get(sys.argv[5], "bulk", rec[k][0] if rec[k] else "")}', file=sys.stderr)
 ids = [int(r[0]) for r in rec if r[0].isdigit()]; bad = len(wrong)
 acked = [(int(a), float(t)) for a, t in (l.split() for l in open(sys.argv[2]))]
 killed, grace = float(sys.argv[3]), float(sys.argv[4])
@@ -169,7 +190,9 @@ PY
 	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$nb" -le $((na + 1)) ] && pass "$ENG: $na writes acknowledged, $nb recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing ($late newer ones missing), all intact, none duplicated" || fail "$ENG: B acknowledged $na, recovered $nb, $bad wrong, $dup duplicated, $lost old acknowledged writes missing"
 	crash
 	[ "$ENG" != strata ] || check_digest bulk "$ENG after the restart and a second kill (B)"
+	fi
 
+	if [[ $ONLY == *D* ]]; then
 	echo "== [crash $ENG] D: $REACTORS writers on $REACTORS reactors into one index, kill -9 ${CUT:-4}s in =="
 	start_node "$ENG" "$ENG.D1.log" || { fail "$ENG startup D"; continue; }
 	# One shard, so one log: what a crash loses is a suffix of the log's order, which is the order the writes were applied in.
@@ -202,8 +225,9 @@ PY
 	start_node "$ENG" "$ENG.D2.log" || { fail "$ENG restart D"; continue; }
 	poke multi
 	list_set multi "$RUNDIR/D_$ENG"
-	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-2}" "$REACTORS" <<'PY'
+	read -r bad dup lost gaps total <<<"$(python3 -I - "$RUNDIR/D_$ENG" "$RUNDIR" "$killed" "${GRACE:-2}" "$REACTORS" "$PORT" <<'PY'
 import sys, re
+sys.path.insert(0, sys.argv[2]); from raw_get import raw_get
 lines = open(sys.argv[1]).read().splitlines()
 raw = open(sys.argv[1] + '.raw').read().splitlines()
 rows = [l.split() for l in lines]
@@ -213,7 +237,11 @@ dup = bad = 0
 for k, r in enumerate(rows):
     m = re.fullmatch(r'w(\d+)-(\d+)', r[0]) if len(r) == 2 else None
     if not m or r[1] != m.group(2):
-        print(f'  D wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None}', file=sys.stderr)
+        print(f'  D wrong row {k + 1}: {lines[k]!r} hit {raw[k] if k < len(raw) else None} {raw_get(sys.argv[6], "multi", r[0] if r else "")}', file=sys.stderr)
+        a = re.fullmatch(r'w(\d+)-(\d+)', r[0]) if r else None
+        if a:   # the writer's acknowledgement of that id, against the kill
+            t = {int(x): float(y) for x, y in (l.split() for l in open(f'{rundir}/acked_D{a.group(1)}'))}.get(int(a.group(2)))
+            print(f'    writer {a.group(1)} n {a.group(2)}: ' + ('never acknowledged' if t is None else f'acknowledged {killed - t:.3f}s before the kill'), file=sys.stderr)
         bad += 1; continue
     s = got.setdefault(int(m.group(1)), set())
     if int(m.group(2)) in s: dup += 1
@@ -231,6 +259,7 @@ PY
 	[ "$bad" = 0 ] && [ "$dup" = 0 ] && [ "$lost" = 0 ] && [ "$gaps" = 0 ] && [ "$total" -gt 0 ] && pass "$ENG: $REACTORS writers, $total documents recovered; none acknowledged more than ${GRACE:-2}s before the kill is missing, each writer's set is a prefix of its sequence (WAL order = apply order)" || fail "$ENG: D recovered $total, $bad wrong, $dup duplicated, $lost old acknowledged writes missing, $gaps gaps below a writer's highest id"
 	crash
 	[ "$ENG" != strata ] || check_digest multi "$ENG after the restart and a second kill (D)"
+	fi
 done
 if [ "$fails" = 0 ]; then echo "PASS"; else echo "FAIL ($fails)"; fi
 [ "$fails" = 0 ]
