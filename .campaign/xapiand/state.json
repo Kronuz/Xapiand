@@ -4103,14 +4103,8 @@
         "tests/cluster/**",
         "harness/cluster/**",
         "src/index_resolver_lru.*",
-        "src/database/pool.*",
-        "src/database/shard.*",
-        "src/database/handler.*",
-        "src/opts.*",
-        "src/manager.*",
         "src/engine/search.*",
         "src/engine/strata/search.*",
-        "src/server/search_views.cc",
         "src/index_pattern.*",
         "src/walk_gate.h",
         "tests/test_index_pattern.cc",
@@ -4405,7 +4399,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-21T05:54:07",
+      "updated": "2026-11-21T09:42:43",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
