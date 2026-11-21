@@ -9047,6 +9047,8 @@
     "failed-restore-exit": {
       "accepted": {},
       "after": [],
+      "base": "d15ff5bd5b4d16d9db01bc18b5d642fefa469c1a",
+      "branch": "quest/xapiand/failed-restore-exit",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -9067,11 +9069,13 @@
       "milestone": "M2",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cluster's handler.* glob has no change to handler.cc at its head (git diff master...quest/xapiand/cluster is empty there); xapiand-final-release lands on the xapiand release branch, not master; this change is 9 lines in restore_documents",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A CLI restore of a file that is not a dump fails",
-      "updated": "2026-11-21T08:45:45"
+      "updated": "2026-11-21T08:46:30",
+      "worktree": "../Xapiand-wt/xapiand/failed-restore-exit"
     },
     "faultlab-adopt-prospect": {
       "accepted": {},
