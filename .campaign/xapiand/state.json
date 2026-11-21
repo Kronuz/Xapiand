@@ -9550,9 +9550,9 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "faultlab's faultfs covers every call strata makes",
-      "updated": "2026-11-20T23:04:56",
+      "updated": "2026-11-20T23:16:00",
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-table": {
