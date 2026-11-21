@@ -20997,6 +20997,35 @@
       "title": "Instrument fetched libraries with sanitizers",
       "updated": "2026-11-08T13:25:11"
     },
+    "prospect-check-fields": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/**",
+        "test/**",
+        "CMakeLists.txt",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "prospect's inverted reader forwards check_fields",
+      "updated": "2026-11-21T11:43:40"
+    },
     "prospect-completion-opens": {
       "accepted": {},
       "after": [
