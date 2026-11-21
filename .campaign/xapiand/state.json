@@ -8295,8 +8295,10 @@
         "test/reorder_test.cc",
         "test/shards_test.cc",
         "test/values_test.cc",
+        "test/phrase_expansion_fixture.hh",
         "tools/parity_terms.cc",
         "CMakeLists.txt",
+        "AGENTS.md",
         "docs/**"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-adopt-prospect",
@@ -8311,7 +8313,7 @@
       "risk": "low",
       "status": "active",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T16:02:22",
+      "updated": "2026-11-20T16:06:50",
       "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
     },
     "faultlab-adopt-xapiand": {
