@@ -1,6 +1,6 @@
 # split-btree: journal
 
-State: waiting on jobs 261121-121304-c1d1ff 261121-121305-cee137 261121-121259-79bc8a 261121-121302-5dc03c 261121-115051-03e1ff (split-check not landed)
+State: waiting on jobs 261121-145037-38dcba (A2, fixed checker at merged HEAD f6d0fc6)
 Quest: .campaign/xapiand/quests/split-btree.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,6 +13,7 @@ Reassessed against cpp-libraries docs/SPLITTING.md (owner refinement). Pushed at
 
 ## Next
 
+0. Read 261121-145037-38dcba; answer each warning here (using-declaration of detail helper, dropped static, new prototype); fix any error with moves only.
 1. Read A1, A3 (head 261121-121302-5dc03c vs base 261121-115051-03e1ff logs), A6.
 2. When split-check lands, rerun `campaign verify split-btree`, answer split_check warnings.
 
@@ -25,7 +26,7 @@ Nothing (A2 waits on split-check landing).
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-121304-c1d1ff at 553ed60 |
-| A2 | split 261121-121305-cee137 queued at 553ed60; tool not landed. Self-check: multiset of moved body lines equals the original (3,114 non-blank lines); node_layout.cc byte-identical to the original |
+| A2 | split 261121-145037-38dcba (split-check-sources checker, merged HEAD f6d0fc6); 261121-123001-f68c62 (old checker) failed on include guards, which the new one allows; replaces cee137. Self-check: multiset of moved body lines equals the original (3,114 non-blank lines); node_layout.cc byte-identical to the original |
 | A3 | base 8b65a55: 261121-115051-03e1ff (intentionally at base); head 553ed60: 261121-121302-5dc03c |
 | A4 | docs/source-layout.md lists every new file and the files kept whole, with why |
 | A5 | CI on pushed branch |
