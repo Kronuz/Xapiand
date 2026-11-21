@@ -1,6 +1,6 @@
 # split-xapiand-src: journal
 
-State: waiting on jobs 261121-115601-758a68 (A6), 261121-114550-5706de (suite), 261121-114550-041735 (split), 261121-114627-30abac, 261121-114629-a6153b, 261121-114635-b0e829 (A3); split check's tool lands with split-check (not landed at 2026-11-21: the split job may fail for that)
+State: waiting on jobs 261121-121055-04ff19 (suite), 261121-121055-ba2719 (split: needs split_check.py from split-check, absent at 2026-11-21: the old run failed exit 2 on that), 261121-114627-30abac + 261121-121104-e6ee83 + 261121-121123-22c397 (A3), 261121-121111-6d8976 (A6; the run at the previous head, 261121-115601-758a68, passed all 10 headers)
 Quest: .campaign/xapiand/quests/split-xapiand-src.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
