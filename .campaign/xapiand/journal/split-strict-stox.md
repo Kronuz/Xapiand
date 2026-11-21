@@ -1,6 +1,6 @@
 # split-strict-stox: journal
 
-State: waiting on jobs 261121-130207-7a60bd 261121-131328-fe03fb 261121-131329-c50931
+State: waiting on jobs 261121-145044-387ce1 (split_check, fixed tool, at merged HEAD ff3286d) 261121-145047-63724b (rerun of superseded ctest -N job; c50931 is the cited A3)
 Quest: .campaign/xapiand/quests/split-strict-stox.md (the lead's; never edit it)
 
 ## Doing
@@ -19,6 +19,8 @@ Failed, superseded:
 
 ## Next
 
+0. Main merged (ff3286d). Check 387ce1 for warnings and answer them here; none expected (no moved code).
+
 1. When the jobs pass, paste `campaign brief`'s Evidence table and set State to ready for review.
 
 ## Blocked on
@@ -29,11 +31,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | queued 261121-130207-7a60bd |
-| A2 | queued 261121-131328-fe03fb (130208-b3f0bb failed on the note only, see Doing) |
-| A3 | queued 261121-131329-c50931 (130225-309d93 failed on build-dir paths only) |
+| A1 | 261121-130207-7a60bd (passed) |
+| A2 | 261121-131328-fe03fb (passed), 261121-145044-387ce1 (fixed checker at merged HEAD, pending) |
+| A3 | 261121-131329-c50931 (passed) |
 | A4 | `docs/source-layout.md` at strict-stox:5a7e44b |
-| A5 | CI at 5a7e44b running; main has a newer .github/workflows/ci.yml (merge-main is the lead's) |
+| A5 | CI at 5a7e44b; main merged into branch at ff3286d (ci.yml only), push pending CI |
 | A6 | 261121-130228-8f04e7 passed: "headers new since d3eaf32: none" (no new headers: the job lists headers added since d3eaf32 and runs selfcontained.sh on them if any) |
 | A7 | lead's read |
 
