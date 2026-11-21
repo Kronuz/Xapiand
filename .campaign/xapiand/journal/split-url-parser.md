@@ -1,6 +1,6 @@
 # split-url-parser: journal
 
-State: waiting on jobs 261121-130327-f7cc1a 261121-130327-ed58df 261121-130335-4deca1 261121-130338-635787
+State: waiting on jobs 261121-130327-f7cc1a 261121-130732-91be46 261121-130734-9ce653
 Quest: .campaign/xapiand/quests/split-url-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -23,9 +23,14 @@ Nothing.
 
 Jobs (all at url-parser:e3dfd07):
 - A1 build-test 261121-130327-f7cc1a
-- A2 split 261121-130327-ed58df
-- A3 261121-130335-4deca1: configures 166bad2365da and HEAD, diffs `ctest -N`
-- A6 261121-130338-635787: no header added since 166bad2365da; selfcontained.sh -x url_parser.h finds none
+- A2 split 261121-130327-ed58df failed: the landed split_check.py treats docs/source-layout.md as
+  C++ (8 errors, all on the note's lines; the known gap split-check-sources fixes). Rerun with that
+  quest's tool per the lead's context: 261121-130734-9ce653. The lead reruns the gate check once it lands.
+- A3 261121-130335-4deca1 failed: my command; unbuilt `ctest -N` prints "Could not find executable"
+  lines naming each build dir, so the raw diff differs. Rerun filtered to `Test #` and `Total Tests`
+  lines: 261121-130732-91be46.
+- A6 261121-130338-635787 passed: no header added since 166bad2365da; selfcontained.sh -x url_parser.h
+  finds no new header.
 
 | Criterion | Evidence |
 |---|---|
