@@ -99,6 +99,12 @@ Provides (bytes, reviewed by `format-freeze`): `xapiand:command` (D3), `xapiand:
   journal host (step c). Wiring the batcher into `DocIndexer::apply_shards` and deleting
   `Shard::apply_slice` is core's step d.
 
+- Lead, 2026-11-21 (restore task): at `ack=none` a RESTORE waits for no verdict, so its per-object
+  results carry no docid or version, the same as any write at `ack=none`; the response says the
+  objects were accepted, and the docs of the ack levels say so. Task restore also owns
+  `src/database/command.cc` (for `encoded_size`), `harness/run_all.sh` and the tests coverage page,
+  where the deleted WAL scripts are still named.
+
 ## When done
 
 Runs once, when the feature is complete and before it lands; findings are fixed on the quest branch,
