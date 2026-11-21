@@ -48,6 +48,11 @@ changes a durability mechanism: "Direct path first"), `no-wal` and CI (`asan`, `
   2026-11-21, so stash and scheduler can be archived): CMakeLists.txt has no `FetchContent_Declare(scheduler`
   block, `src/manager.h` no `debouncer.h` include, `src/xapiand_scheduler_trace.h` is deleted and
   `src/logger_fwd.h` keeps no scheduler or stash stubs; the suite check at that code builds without them
+- A9 Chunked commands are safe across leader changes (the chunks task's findings, 2026-11-21, in
+  `src/database/shard_group.cc`, fixed in step d after both tasks merge): a chunk or final whose
+  `chunked_term(id)` differs from its entry's term applies nothing; an abort (an empty final)
+  retires the upload volume, so its space is freed; and at the ready point the leader proposes an
+  abort for each id still open. A test for each, at rf > 1 where it applies, that fails without its fix
 
 ## Tasks
 
