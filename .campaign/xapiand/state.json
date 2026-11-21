@@ -26578,7 +26578,9 @@
       "consumes": [],
       "files": [
         "task_timers.hh",
-        "test/timers_test.cc"
+        "test/timers_test.cc",
+        "docs/API.md",
+        "docs/mechanisms/lifecycle.md"
       ],
       "journal": "../Xapiand-wt/xapiand/task-timers-followups",
       "landed": [],
@@ -26594,7 +26596,7 @@
       "risk": "high",
       "status": "active",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-20T23:35:13",
+      "updated": "2026-11-20T23:47:52",
       "worktree": "../task-wt/xapiand/task-timers-followups"
     },
     "termdict-forward-seek": {
