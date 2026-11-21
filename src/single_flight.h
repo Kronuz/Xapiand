@@ -23,8 +23,8 @@
 #pragma once
 
 // One load per key at a time (docs/design/phase7c.md D11): the first caller of run(key, load) runs the
-// load, the others await its result. The map's lock guards an O(1) lookup or erase and is never held
-// across the load or a wait.
+// load, the others await its result, each under its own cancel token. The map's lock guards a lookup, an
+// erase or a flight's list of joiners, and is never held across the load or a wait.
 //
 // A caller that missed its cache and then found no flight may have missed a flight that ended in between.
 // So a leader first asks the caller's probe whether the cache holds the value now, and a load publishes
@@ -38,8 +38,9 @@
 #include <optional>                // for std::optional
 #include <unordered_map>           // for std::unordered_map
 #include <utility>                 // for std::move
+#include <vector>                  // for std::vector
 
-#include "task.hh"                 // for task::task, task::event
+#include "task.hh"                 // for task::task, task::event, task::cancel_callback
 
 
 template <typename Key, typename Value>
@@ -48,8 +49,10 @@ class SingleFlight {
 		const char* what() const noexcept override { return "the load this call joined was abandoned"; }
 	};
 
+	// A joiner awaits its own wake, which the flight's end or the joiner's token sets, whichever comes first.
 	struct Flight {
-		task::event done;
+		std::vector<std::shared_ptr<task::event>> wakes;   // the joiners waiting, under the map's lock
+		bool ended = false;                                // set under the map's lock, after value or error
 		std::optional<Value> value;
 		std::exception_ptr error;
 	};
@@ -60,19 +63,22 @@ class SingleFlight {
 		SingleFlight& owner;
 		const Key& key;
 		std::shared_ptr<Flight> flight;
-		bool ended = false;
 
 		void end() noexcept {
-			if (ended) { return; }
-			ended = true;
+			if (flight->ended) { return; }
+			std::vector<std::shared_ptr<task::event>> wakes;
 			{
 				std::lock_guard<std::mutex> lk(owner.mtx_);
 				owner.flights_.erase(key);
+				flight->ended = true;
+				wakes.swap(flight->wakes);
 			}
-			flight->done.set();
+			for (auto& wake : wakes) {
+				wake->set();
+			}
 		}
 		~Lead() {
-			if (!ended && !flight->value && !flight->error) {
+			if (!flight->ended && !flight->value && !flight->error) {
 				flight->error = std::make_exception_ptr(Abandoned{});
 			}
 			end();
@@ -89,25 +95,28 @@ public:
 		return run(std::move(key), std::move(load), [] { return std::optional<Value>(); });
 	}
 
-	// The same, where a leader takes probe()'s value, when it has one, instead of loading (not a load).
+	// The same, where a leader takes probe()'s value, when it has one, instead of loading (not a load), and a
+	// joiner whose `token` is requested stops waiting and throws task::cancelled while the load and the other
+	// waiters go on. A leader's load ends by its own token, which load() carries.
 	template <typename Load, typename Probe>
 	task::task<Value> run(Key key, Load load, Probe probe, task::cancel_token token = {})
 	{
-		(void)token;
 		for (;;) {
 			std::shared_ptr<Flight> flight;
-			bool leader = false;
+			std::shared_ptr<task::event> wake;
 			{
 				std::lock_guard<std::mutex> lk(mtx_);
 				auto [it, inserted] = flights_.try_emplace(key);
 				if (inserted) {
 					it->second = std::make_shared<Flight>();
-					leader = true;
+				} else {
+					wake = std::make_shared<task::event>();
+					it->second->wakes.push_back(wake);
 				}
 				flight = it->second;
 			}
 
-			if (leader) {
+			if (!wake) {
 				Lead lead{*this, key, flight};
 				try {
 					flight->value = probe();
@@ -127,8 +136,22 @@ public:
 
 			joined_.fetch_add(1, std::memory_order_relaxed);
 			waiting_.fetch_add(1, std::memory_order_relaxed);
-			co_await flight->done;
+			{
+				task::cancel_callback leave(token, [w = wake.get()] { w->set(); });
+				co_await *wake;
+			}
 			waiting_.fetch_sub(1, std::memory_order_relaxed);
+			bool left = false;
+			{
+				std::lock_guard<std::mutex> lk(mtx_);
+				if (!flight->ended) {   // the token woke this call first: it leaves the flight
+					std::erase(flight->wakes, wake);
+					left = true;
+				}
+			}
+			if (left) {
+				throw task::cancelled{};
+			}
 			if (!flight->error) {
 				co_return *flight->value;
 			}
@@ -137,6 +160,9 @@ public:
 			} catch (const Abandoned&) {
 			} catch (const task::cancelled&) {
 				// the leader's own cancellation says nothing about this call: load again
+			}
+			if (token.requested()) {
+				throw task::cancelled{};
 			}
 		}
 	}
