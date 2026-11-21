@@ -10431,6 +10431,8 @@
     "group-heal": {
       "accepted": {},
       "after": [],
+      "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+      "branch": "quest/xapiand/group-heal",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -10465,6 +10467,7 @@
         "docs/mechanisms/simulator.md",
         "docs/gates/phase-3r.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/group-heal",
       "landed": [],
       "lenses": [
         "durability"
@@ -10478,9 +10481,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T05:21:51"
+      "updated": "2026-11-20T17:42:35",
+      "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
       "accepted": {},
