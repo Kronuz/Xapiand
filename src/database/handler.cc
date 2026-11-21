@@ -453,8 +453,6 @@ task::task<std::unique_ptr<MsgPack>>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_LUA
-	std::string method;  // TODO: Fill vriable "method" to pass to script
-
 	auto doc = std::make_unique<MsgPack>(object);
 
 	MsgPack old_doc;
@@ -1195,6 +1193,17 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 
 	const auto document_id = document_id_of(body);
 	const auto op_type = take_op_type(body);
+
+	// A line's `_op_type` is the method its script sees ("PATCH"); an `index` line keeps the handler's.
+	struct LineMethod {
+		std::string& slot;
+		std::string saved;
+		~LineMethod() { slot = std::move(saved); }
+	} line_method{method, method};
+	if (op_type != "index") {
+		method = op_type;
+		std::transform(method.begin(), method.end(), method.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+	}
 
 	if (op_type == "index") {
 		Data data;
@@ -2407,6 +2416,7 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 	db_handler(endpoints, flags)
 {
 	db_handler.budget = budget;
+	db_handler.method = "RESTORE";   // a restore's lines, from a request or the command line
 }
 
 
