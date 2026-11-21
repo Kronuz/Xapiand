@@ -25419,6 +25419,46 @@
       "title": "faultlab's large files split under 1,000 lines",
       "updated": "2026-11-21T11:47:28"
     },
+    "split-htm": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "htm.cc",
+        "htm_*",
+        "htm/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt",
+        "tests/CMakeLists.txt",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../htm",
+      "risk": "low",
+      "status": "planned",
+      "title": "htm's large files split under 1,000 lines",
+      "updated": "2026-11-21T11:47:37"
+    },
     "split-http": {
       "accepted": {},
       "after": [
