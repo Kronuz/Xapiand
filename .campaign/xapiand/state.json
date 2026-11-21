@@ -1826,6 +1826,18 @@
         "quest": "detent:journal-power-silent-loss"
       },
       "text": "detent:journal-power-silent-loss started and may change files your journal-turn-buffers changes (order them with --after detent:journal-power-silent-loss, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T20:21:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T20:21:18",
+      "by": "lead",
+      "closed": "filed in hunt.md: at journal-power-silent-loss landing, move strata's pin on turn-log-parity and rerun T9 for track-c-gates' C2 row",
+      "id": "msg-192",
+      "text": "msg-183 diagnosis (journal-power-silent-loss, journal:dbab658, not landed): not a double-damage regression: 178030b's test fails at d90797c's code too, with many more failures; d90797c's test never ran 'both'/'last'. Two causes, neither the review's F2/F3: (1) damage at a segment's last blocks merged into its tail and was charged nothing (seeds 91, 140: a whole group could vanish unreported; seed 122: group 6 kept 2 of 3 records), fixed in journal:e77d17b; (2) a flipped length byte read as a torn fragment (seeds 145, 199: the acknowledged last turn dropped unreported), fixed in journal:dbab658 by trying lengths that fit the sector against the checksum. All five seeds and the 200-seed macOS row pass (1,036,264 checks, 0 failures); FreeBSD row and CI pending. strata's pin should move past it when it lands."
     }
   ],
   "quests": {
