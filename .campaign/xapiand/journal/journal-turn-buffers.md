@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261121-054400-6b0c28 261121-054403-30cfba 261121-054405-8a3d65 261121-054407-4638ad 261121-054409-97d867 261121-054412-bfce5b 261121-054414-82b503 261121-054417-3194fe 261121-054419-ff7741 261121-054429-b6be64 (A1-A6 and the four mutants at journal:a5bfa3e, and a local TSan build) and CI run 44910292621 at journal:a5bfa3e
+State: waiting on jobs 261121-112935-470d0a 261121-112938-b90e6c 261121-112940-8f72c2 261121-112943-a14c94 261121-112945-a24d08 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b 261121-113018-351103 261121-113020-69fb20 (park_count with and without the fix, A1-A6 and the four mutants, TSan, Detent's two review probes, all at journal:5a5972d or the fix's parent) and CI at journal:5a5972d
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,30 +9,41 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fixing CI's linux-tsan at journal:5ace07e (run 44869209179): the build failed to link
-journal_turn_buffers_test and _probe, "multiple definition of operator new": TSan's static
-runtime defines it. journal:d7564f2 leaves the counting allocator out under TSan, as
-journal_test does: the test skips its allocation checks and prints so; the probe exits 2.
-journal:a5bfa3e merges main (idle groups: park renamed evict; conflicts in turn_log.h only,
-resolved to this branch's code under main's names). A1-A6 and the mutants rerun at
-journal:a5bfa3e (State). The "3 failed" of the b88565f reruns were the three mutant jobs,
-which exit 1 by design (--fails-without); nothing failed there.
+Fixing CI at journal:6cdd923 (run 44927231788): main's park_count failed on every platform,
+"a parked group costs the host no heap: 137.0 B per group" (Linux), 129.0 (macOS, FreeBSD).
+Cause (from the run's numbers): the driver rotated flight_ with spare_flight_, two in-flight
+vectors; park_count's second 10,000-group batch grew the second one. The heap grew 1,370,177 B
+(Linux) and 1,290,152 B (macOS): 10,003 Pending entries of 136 and 128 B (std::string is 32
+and 24 B there; 80,025 B apart, 8 B each) plus about 9.8 KB. journal:5a5972d keeps one in-flight
+vector: completed() moves flight_ out and hands it back cleared, unless a turn begun meanwhile
+took one. Nothing per group: what the driver keeps is sized by its largest turn, once.
 
-Earlier, A6 at journal:b88565f:
+Jobs: park_count at journal:5a5972d 261121-112935-470d0a; --fails-without at journal:6cdd923
+261121-112938-b90e6c. Every rerun configures with -G Ninja into build-ninja (the slot's build
+is Makefiles); Detent's probes run with CMAKE_GENERATOR=Ninja, the differential one against
+main journal:335b1b5 (was journal:178030b).
 
-
-Code done at journal:28c0caa (pushed): journal:b7501df framing in place, journal:e2183f9 manifest
-reserve, journal:37e371a probe, journal:a210537 and journal:28c0caa notes. Evidence jobs re-run at
-journal:28c0caa (State); the same commands passed at journal:e2183f9 (A1 261120-201127-452692,
-A2 261120-201129-d86bd2, A3 261120-201131-d1901f, A4 261120-201132-a0e17e; mutants killed:
-seal-copy 261120-201148-86ff12, stage-copy 261120-201150-edcde6, forward-string 261120-201152-614139).
+For the lead, since the durability review accepted journal:5ace07e:
+1. journal:d7564f2: test only. turn_buffers_test skips its allocation checks under TSan and
+   says so; turn_buffers_probe exits 2 there (TSan's runtime defines operator new).
+2. journal:a5bfa3e merges main (idle groups). turn_log.h: three conflicts, resolved to this
+   branch's code under main's names (parked_ -> evicted_, Parked -> Evicted); the copy-replace
+   path keeps `Live{..., n.bytes}`. The rest of turn_log.h's change since journal:5ace07e is
+   main's own (evict/peek/idle, forward_scanned, damaged_fragment's length check).
+3. journal:6cdd923 merges main again: no conflicts; no change to turn_log.h, turn_driver.h or the
+   turn_buffers tests.
+4. journal:5a5972d (this fix): turn_driver.h completed() and the member list only; turn_log.h
+   and the turn_buffers tests unchanged. turn-seal.md "The driver's own buffers" updated.
+Confirm by job: `git -C <journal> diff 5ace07e 5a5972d -- include/journal/turn_driver.h`
+(6 lines of the fix plus main's), park_count 261121-112935-470d0a and 261121-112938-b90e6c,
+A6 261121-112949-d67fc2 and its mutant 261121-113006-d7b0ff.
 
 ## Next
 
-1. A1-A6 reruns and CI (all platforms, linux-tsan included) green at journal:a5bfa3e; then
-   update the Evidence table and set State to ready for review.
-2. A5 stands at journal:b88565f; since then only the TSan guard (test-only) and the merge of
-   main. Tell Detent's lead if the lead wants the merge re-read.
+1. When the jobs and CI at journal:5a5972d pass: update the Evidence table with them and set
+   State to ready for review. If park_count still fails, the ~9.8 KB remainder is next.
+2. A5: Detent's probes rerun at the head (261121-113018-351103, 261121-113020-69fb20); the
+   lead decides whether Detent's lead re-reads the merge and the fix.
 
 ## Blocked on
 
@@ -82,6 +93,10 @@ journal:28c0caa; tests: `journal_turn_buffers_{bytes,turns,warm,seal,forward,pow
 seal-copy|stage-copy|forward-string`.
 
 ## Rulings I made
+
+- R10 The driver keeps one in-flight vector, not a rotating pair: a pair keeps two buffers of the
+  largest turn, and which one a turn grows depends on the parity of the turns before it. A turn
+  begun during completed() (a waiter's) takes a fresh one; this turn's is then freed.
 
 - R9 Under TSan the turn buffers' allocation checks are skipped and say so, as journal_test's
   heap cases do; their other checks still run. Allocation evidence comes from non-TSan builds.
