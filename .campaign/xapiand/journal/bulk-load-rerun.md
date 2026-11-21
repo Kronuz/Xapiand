@@ -1,6 +1,6 @@
 # bulk-load-rerun: journal
 
-State: waiting on jobs 261120-145520-d4210e 261120-145942-747a60 261120-145950-daf23a 261120-145951-7b4aef
+State: waiting on jobs 261120-190932-efa931 261120-190934-5e5b1b 261120-190936-9f9465 261120-190938-506908 261120-190940-a549e5 261120-190942-2c3d9d 261120-190944-c56cfa 261120-190945-47638c 261120-190947-713aad 261120-190948-e382e6 261120-190950-a4cd57 261120-190951-0ac3cc
 Quest: .campaign/xapiand/quests/bulk-load-rerun.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Harness written (harness/bench/bulk_load.sh|py; ES 9.5.4 darwin-x86_64 pinned by
 
 ## Next
 
-1. Fix dry-run problems; then exclusive jobs, 5 trials, one per arm with --out JSON (xapiand, xapiand-full, es, es-chunked), each under 10 min.
+1. Dry runs passed (xapiand daf23a, es 7b4aef; lead, 11-20). Exclusive jobs, 5 trials, one per arm and dataset (exclusive jobs last at most 10 min), JSON in ~/.scratch/xapiand/bulk-load-rerun/ARM-DATASET.json: the ids in State.
 2. Write docs/perf/bulk-load-rerun.md (table, job ids, 2018 column, one paragraph on what moved).
 3. Push the branch.
 
