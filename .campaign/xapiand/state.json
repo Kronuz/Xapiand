@@ -2166,6 +2166,25 @@
         "quest": "detent:consensus-peers-wake"
       },
       "text": "detent:consensus-peers-wake started and may change files your node-admission changes (order them with --after detent:consensus-peers-wake, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T13:31:56",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T13:31:56",
+      "by": "campaign detent",
+      "closed": "consensus-quiesce-election-stall fixes an election in core.h under Timing::quiesce (seed 1080 after a leaving member's removal); no rpc-lane or snapshot-channel shape change. cluster and group-heal take it at their next consensus pin; no ordering needed.",
+      "id": "msg-216",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-quiesce-election-stall"
+      },
+      "text": "detent:consensus-quiesce-election-stall started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
