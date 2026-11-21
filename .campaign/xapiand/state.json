@@ -6032,8 +6032,35 @@
       "files": [
         "tests/test_control_plane.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T21:18:41",
+          "commit": "118f9fa43ec80df6ccd6d0b48c5ae5653cf3bb44",
+          "criteria": {
+            "A1": "261120-014220-5b29fc (passed at dac04c877e87; only 30 merges from main since, none touching its files); fails without: 261120-014220-5e1906",
+            "A2": "[manual] lead read the diff (2026-11-20 02h): the p99 assertion is gone; lag percentiles are printed only; wakes are compared over equal 400 ms windows with a 4x margin; fired and running counts are exact"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "653e4a8454cc60cb24317fa1966bcafbb562b665",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-014220-5b29fc",
+              "level": "light",
+              "seconds": 1030.7,
+              "state": "done",
+              "what": "control-plane-wallclock check suite at 653e4a8454cc"
+            }
+          ],
+          "final": true,
+          "from": "02e69e7102490d9bfd716562b7229c16908694c7",
+          "reason": "",
+          "tested": "12e3be08ab40c53f064bc8bd6df5b17c52731520"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "stopword-lists"
@@ -6041,9 +6068,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-20T02:09:17",
+      "updated": "2026-11-20T21:18:49",
       "worktree": "../Xapiand-wt/xapiand/control-plane-wallclock"
     },
     "core-lifecycle-tests": {
