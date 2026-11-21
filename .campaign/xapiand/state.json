@@ -28995,8 +28995,9 @@
             "test/fixtures/**",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--ryw",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--ryw"
+          "journal": "",
+          "merged": "d16abf5a0f2df6edfca68756f46ae4d116ce8023",
+          "worktree": ""
         },
         "tolerant-open": {
           "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
@@ -29015,7 +29016,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T09:46:36",
+      "updated": "2026-11-21T10:17:50",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
