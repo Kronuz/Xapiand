@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs 261120-190018-0294af 261120-190020-fe207b 261120-190022-ac8ca2 261120-190024-386b01 261120-190026-ce7445 261120-190027-3570be 261120-190056-da1cf9 261120-190056-312f97 261120-190056-bc6072 261120-190110-1990be; CI at consensus:803442f
+State: ready for review
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Fix round 1 of the correctness review (.campaign/xapiand/reviews/node-admission-correctness.md,
+Done: fix round 1 of the correctness review (.campaign/xapiand/reviews/node-admission-correctness.md,
 CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
 - F1 (consensus:0dce2e1, 803442f): case `epoch` (ca, pins) on loops the test steps: node 1's dial
   finishes TLS (`Links::connect`), node 3 is removed, then `offer`; and node 1 accepts on loop a,
@@ -42,8 +42,8 @@ CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
 
 ## Next
 
-1. Read the jobs above and CI at consensus:803442f (macos-arm64, linux-asan-ubsan, linux-tsan); fill
-   Evidence; then State: ready for review (the lead confirms F1-F3).
+1. Lead: confirm F1-F3 against the evidence below; land after detent:consensus-transport, merging
+   main first (main changed 12 files since the branch point, e.g. CMakeLists.txt).
 
 ## Blocked on
 
@@ -56,13 +56,20 @@ CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
 
 ## Evidence
 
+All at consensus:803442f unless noted. CI 44858867076 green at 803442f on every platform
+(macos-arm64/x86_64, linux gcc/clang/arm64, asan-ubsan, tsan, freebsd); linux-tsan ran all 11
+admission_nodes cases, 103/103 passed. The three exit-8 jobs at 803442f are the mutants failing
+their cases (epoch_ca/epoch_pins: "removed before its hellos, it becomes no link"; issue: "an
+impostor replaying the CA certificate is refused"; save: "the key's bytes on disk are its owner's
+alone"), as intended.
+
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
+| A1 | refused_pins 261120-190056-da1cf9, refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072, issue 261120-190020-fe207b, every case 261120-190110-1990be; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
+| A2 | remove_ca 261120-190056-bc6072, epoch 261120-190018-0294af; TSan: CI 44858867076 linux-tsan (remove_*, epoch_* pass); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-185145-6600d3 and at 803442f 261120-190024-386b01, 261120-105033-4b9fdb |
+| A3 | every admission case under both policies (`_ca`, `_pins`) 261120-190110-1990be |
 | A4 | `docs/mechanisms/admission.md` (consensus:674bb21) |
-| A5 | pending |
+| A5 | issue 261120-190020-fe207b, save 261120-190022-ac8ca2; fails without: any-token 261120-173348-7a0880, join-unchained-issuer 261120-185148-3c31ce and at 803442f 261120-190026-ce7445, save-chmod-after 261120-185150-a20006 and at 803442f 261120-190027-3570be, 261120-105035-bb5634 |
 
 Messages: the coordinator's D149 (default policy is the cluster CA): done in consensus:4bf833f —
 `NodePins(local, pins, context)` builds `ClusterCa(context, local)`; `pre_approved_pins()` is the
@@ -74,7 +81,7 @@ certificate under the CA policy's prefix), `JoinFault`; `issue` test case; mutan
 
 ## Result
 
-consensus:64dbb06 on quest/xapiand/node-admission (not pushed). `NodePins` is a shared,
+consensus:803442f on quest/xapiand/node-admission (pushed; CI 44858867076 green). `NodePins` is a shared,
 thread-safe directory with runtime `admit`/`remove`, a removal epoch and named refusals
 (`PinFault`); the trust policy defaults to the cluster CA (D149, pin recorded at first join), with
 `pre_approved_pins()` as the alternative; `HostTransport::admit_node`/`remove_node` route and drop
