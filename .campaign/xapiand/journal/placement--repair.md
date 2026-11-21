@@ -1,6 +1,6 @@
 # placement--repair: journal
 
-State: waiting on jobs 261121-002711-934d7a 261121-002713-263466 261121-002714-15af3d 261121-002715-dd5206 261121-002716-c5a379 261121-002718-eb8f05
+State: waiting on jobs 261121-004526-522f59 261121-004906-0a1389 261121-004909-30fad7 261121-002719-b7c57d 261121-002720-cd7f2d 261121-002752-d9cb1d 261121-002723-86ef33 261121-002724-b25808 261121-002725-07f209 261121-002726-d6fee4 261121-002727-19a20a 261121-002729-8d49af
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -20,25 +20,28 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
   whatever the target; the learner joins only when that promotion would be valid (checked on the
   membership with it added), so none joins to be removed. Value case `shrink_past_lost`, mutant
   `no-window-replace`.
-- Group test, `replace`: the root leader fences on D3's removal of the leaving voter (a
-  consensus bug, Blocked on). `drain` failed by construction (idx is placed on nodes 1-3, the root's): it now
-  drains a node off the root that leads a shard (sub's leader). The other cases (`replace`,
-  `replicas` at rf 3, `waits` record read, `defer`'s hand transfer) are not diagnosed yet: the
-  test now dumps each group's last plan, its last change/transfer answer and every replica's
-  membership when a repair does not converge; diagnosis jobs below, one case at seed 1 each.
+- Group test, seed 1 each at strata `c40ca8aa`: `replace` 261121-003512-50dacf, `replicas`
+  261121-003514-940aa0, `waits` 261121-003517-dd0df9, `drain` 261121-003522-a43d42 all stop at
+  one consensus bug (Blocked on): the leader fences on D3's removal of the leaving member, in
+  the root (replace, waits) and in shards (replicas' leaving witness, drain's leaving leader).
+  `drain` also failed by construction before (idx is placed on the root's nodes 1-3): it now
+  drains a node off the root that leads a shard. `defer` chose incarnation 0 for its hand
+  transfer: a range-for over `state()->membership.members` read a destroyed temporary (`state()`
+  returns an optional by value); fixed in `30c3d26b`, `defer` seed 1 passes (261121-004525-2c425b).
 
 ## Next
 
-1. Read the diagnosis jobs (261121-002713-263466 replace, 261121-002714-15af3d drain,
-   261121-002715-dd5206 replicas, 261121-002716-c5a379 waits, 261121-002718-eb8f05 defer); fix.
-2. Plan test 261121-002711-934d7a (`--for A3`); plan mutants `--fails-without`: 261121-002719-b7c57d
-   setting-ignored, 261121-002720-cd7f2d drain-ignored, 261121-002752-d9cb1d no-leaving,
-   261121-002723-86ef33 no-quorum-guard, 261121-002724-b25808 record-ignored, 261121-002725-07f209
-   leader-not-first, 261121-002726-d6fee4 shrink-order, 261121-002727-19a20a no-window-replace (A3),
-   261121-002729-8d49af transfer-anyway-plan (A4).
-3. Once the group cases pass: group test per case `--for A3,A4` and the group mutants
-   `transfer-anyway` (A4), `replace-now` (A3) as `--fails-without` jobs; rerun all at the head.
-4. Integrate against group-heal with `--ref` once its install binds (see Blocked on).
+1. Read 261121-004526-522f59 (all group cases, seed 1, on the consensus probe): what fails past
+   the removal bug. Fix what is repair's.
+2. Evidence: plan 261121-002711-934d7a passed (A3); plan mutants `--fails-without` queued:
+   261121-002719-b7c57d setting-ignored, 261121-002720-cd7f2d drain-ignored, 261121-002752-d9cb1d
+   no-leaving, 261121-002723-86ef33 no-quorum-guard, 261121-002724-b25808 record-ignored,
+   261121-002725-07f209 leader-not-first, 261121-002726-d6fee4 shrink-order, 261121-002727-19a20a
+   no-window-replace (A3), 261121-002729-8d49af transfer-anyway-plan (A4); group `defer` 3 seeds
+   261121-004906-0a1389 (A4), mutant transfer-anyway 261121-004909-30fad7 (A4).
+3. Once consensus funds the removal (Blocked on): group `replace`, `drain`, `replicas`, `waits`
+   with `--ref` at its fix, `--for A3`, and mutant `replace-now`; then rerun all at the head.
+4. Integrate against group-heal with `--ref` once its install binds.
 
 ## Blocked on
 
@@ -56,7 +59,7 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
   `leaving` (not possible for 2 + witness, D9's windows need it). Recommend (a), sized by the
   membership's encoded bound, with a Driver-level replacement test in consensus. Probe: local
   branch consensus `probe/xapiand/repair-leaving-tick` (fd8d977, worktree
-  ~/.scratch/xapiand/placement--repair/consensus-probe, not pushed); job 261121-004202-a699c8 runs
+  ~/.scratch/xapiand/placement--repair/consensus-probe, not pushed); job 261121-004526-522f59 runs
   the group cases on it.
 - group-heal (its install binding, itself on Detent's `consensus-driver-install`). These A3 steps
   wait on it; every other step is tested here by log catch-up (no checkpoint truncates a log in
@@ -83,8 +86,8 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
 
 | Criterion | Evidence |
 |---|---|
-| A3 | pending: plan 261121-002711-934d7a, plan mutants above, group cases after diagnosis |
-| A4 | pending: mutant transfer-anyway-plan 261121-002729-8d49af; group `defer` and mutant `transfer-anyway` |
+| A3 | plan 261121-002711-934d7a passed (3,000 seeds); plan mutants pending (Next 2); group cases blocked on consensus |
+| A4 | `defer` seed 1 passed 261121-004525-2c425b; pending: `defer` 3 seeds 261121-004906-0a1389, mutants 261121-004909-30fad7, 261121-002729-8d49af |
 | A5 | `docs/mechanisms/placement-repair.md` (repair's half) |
 
 ## Result
