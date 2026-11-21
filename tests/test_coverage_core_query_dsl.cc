@@ -310,11 +310,10 @@ static void test_compound_clauses() {
 	// A list under a field repeats the field for each value.
 	SEE(fx.got(obj({ { "k", obj({ { "_or", list({ "a", "b" }) } }) } })), std::string("(k/a OR k/b)"));
 	SEE(fx.got(obj({ { "k", obj({ { "_and", list({ "a", "b" }) } }) } })), std::string("(k/a AND k/b)"));
-	// An operator of a list takes a list; the scale, wildcard and edit-distance operators over one are refused.
-	CHECK_THROW(fx.got(obj({ { "_scale_weight", list({ a, 2 }) } })), std::exception);
+	// A wildcard over a list is refused; `_scale_weight` and `_edit_distance` are no operators, in any form.
 	CHECK_THROW(fx.got(obj({ { "_wildcard", list({ "a" }) } })), std::exception);
-	CHECK_THROW(fx.got(obj({ { "_edit_distance", list({ "a" }) } })), std::exception);
-	// The words of a single value that are not modifiers: no scale or edit-distance modifier exists.
+	CHECK_THROWS_WITH(fx.got(obj({ { "_scale_weight", list({ a, 2 }) } })), QueryDslError, "Invalid operator: _scale_weight");
+	CHECK_THROWS_WITH(fx.got(obj({ { "_edit_distance", list({ "a" }) } })), QueryDslError, "Invalid operator: _edit_distance");
 	CHECK_THROWS_WITH(fx.got(obj({ { "k", obj({ { "_scale_weight", "a" } }) } })), QueryDslError, "Invalid operator: _scale_weight");
 	CHECK_THROWS_WITH(fx.got(obj({ { "k", obj({ { "_edit_distance", "a" } }) } })), QueryDslError, "Invalid operator: _edit_distance");
 }
@@ -386,9 +385,8 @@ static void test_accuracy_terms() {
 	CHECK_THROWS_WITH(fx.got(obj({ { "k._10", "a" } })), std::exception, "expects a value of type integer");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._x", 1 } })), ClientError, "not valid");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._tsecond", 1 } })), std::exception, "");
-	// Product bug (acc-zero): an integer accuracy of 0 reaches modulus(value, 0), which throws std::invalid_argument
-	// (a 500), not a QueryDslError (a 400).
-	CHECK_THROWS_WITH(fx.got(obj({ { "n._0", 1 } })), std::invalid_argument, "Modulus must be positive");
+	// An integer accuracy of 0 is no accuracy: a QueryDslError (a 400), not the modulus's std::invalid_argument (a 500).
+	CHECK_THROWS_WITH(fx.got(obj({ { "n._0", 1 } })), QueryDslError, "Invalid field name: n._0");
 }
 
 static void test_in_ranges() {
@@ -535,9 +533,9 @@ static void test_sorters() {
 	CHECK_TRUE(sorted_key(flt, SLOT_F, Serialize::floating(1.0)) < sorted_key(flt, SLOT_F, Serialize::floating(3.0)));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "p", obj({ { "_value", 7 } }) } })), "PositiveKey"));
 	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "d", obj({ { "_value", "2021-03-04" } }) } })), "DateKey"));
-	// Product bug (sort-boolean-key): a boolean reference value is a DateKey; BoolKey exists and is unused.
-	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "DateKey"));
-	CHECK_FALSE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "BoolKey"));
+	// A boolean reference value is a BoolKey.
+	CHECK_TRUE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "BoolKey"));
+	CHECK_FALSE(has_key(fx.dsl.get_sorter(obj({ { "b", obj({ { "_value", true } }) } })), "DateKey"));
 	// A string reference value has a metric: its name, and the reference text (a phonetic metric keeps its code instead).
 	struct Metric { const char* word; const char* name; };
 	for (const auto& m : { Metric{ "levenshtein", "Levenshtein" }, Metric{ "leven", "Levenshtein" }, Metric{ "jarowinkler", "Jaro_Winkler" },
