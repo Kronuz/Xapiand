@@ -1,6 +1,6 @@
 # split-workpool: journal
 
-State: working
+State: waiting on jobs 261121-130515-92a210 261121-130515-ab5a4c 261121-130517-25263e 261121-130520-f98c9e 261121-130523-77f795 261121-130449-723d31
 Quest: .campaign/xapiand/quests/split-workpool.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,33 +9,62 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Jobs at workpool:22acbb0 (branch pushed; CI runs on quest/**).
 
 ## Next
 
-1. <step>
+1. Read the jobs; paste `campaign brief`'s table below; State "ready for review".
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), name every job you examined, failures included (`campaign brief` lists failed
-jobs no journal names), and answer each message by its id (msg-N).
-
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261121-130515-92a210 at workpool:22acbb0 (pending) |
+| A2 | split_check from cpp-libraries-wt split-check-sources: 261121-130517-25263e at 22acbb0 (pending); a local run at 7d93de5 gave 0 errors, 0 warnings, 1 note (work_pool.hh 1,039 lines). The landed tool's `split` check (261121-130515-ab5a4c) reads docs/source-layout.md as source and fails on it, as at d958170 (261121-130433-254720, failed: 5 errors, 16 warnings, all in the .md); the lead reruns A2 once split-check-sources lands |
+| A3 | `ctest -N`: before 261121-130449-723d31 at workpool:406d2f3 (main), after 261121-130520-f98c9e at 22acbb0; diff below |
+| A4 | docs/source-layout.md (workpool:22acbb0) |
+| A5 | CI on quest/xapiand/split-workpool at 22acbb0 |
+| A6 | selfcontained.sh over the three new headers: 261121-130523-77f795 at 22acbb0 (pending); at d958170 (same headers) 261121-130440-45a7f8 passed, 3 ok |
+| A7 | the lead's read |
+
+Other jobs: 261121-130434-7c3da2 cancelled (superseded by the head job with the same command;
+resubmitted with SIDE=before as 723d31); 261121-130437-47f635 (ctest -N at d958170, 6 tests,
+done); 261121-130433-9a29f1 build-test at d958170 cancelled (doc amended).
+
+split_check warnings: none at the head with the split-check-sources tool, so none to answer.
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+`work_pool.hh` (1,535 lines) became an umbrella of 1,039 lines that keeps the scheduler
+(`WorkClass`, `WorkItem`, `WorkIdle`, `BoxedItem`, `Lane`, `GroupState`, `Frame`, `Here`,
+`WorkPoolWorker`, `WorkPool`, `WorkGroup`) and includes three pieces, moved unchanged:
+
+- `work_pool_sync.hh` (200): the per-OS futex block and functions, `cpu_relax`, `ticks`,
+  `ticks_per_ns`, `SpinLock` (old lines 54-75, 113-254).
+- `work_pool_idle.hh` (180): `Parker`, `Idle`, `backoff` (old 256-394).
+- `work_pool_ready_ring.hh` (234): `ReadyRing` (old 472-664).
+
+Layout note: workpool docs/source-layout.md, naming work_pool.hh kept whole at 1,039 lines and
+why. No include path, target or test changed.
 
 ## Rulings I made
 
-<Decisions inside the quest's scope, so the reviewer can check them.>
+- Flat `work_pool_*.hh` names beside the umbrella, not a `work_pool/` directory: the repo is
+  flat and every header sits at its root.
+- WorkPool and WorkGroup stay together in work_pool.hh: friends both ways, WorkGroup runs the
+  pool's turn/helpable/waiters_due/take_idle/fire_idle on the shared GroupState under its lock,
+  and the out-of-line state_of/sleep_until need both classes. The group-state types stay with
+  them as their shared data.
+- Added lines only: the license comment and a one-line description per piece, `#pragma once`,
+  standard includes and `#include "work_pool_sync.hh"`, `namespace workpool_detail` braces,
+  `struct GroupState;` forward declaration in the ring piece, and a provenance comment (Tokio,
+  Vyukov) per piece; the umbrella's own provenance comment stays.
+- `backoff` has no caller in the repo; moved unchanged with Idle (a removal is not a move).
+- Out of my file set, for the lead: AGENTS.md's repo map and ARCHITECTURE.md's "references point
+  at work_pool.hh" could name the three pieces.
+- Both open workpool branches with commits ahead of main checked: only explore/fairness-load
+  (3 commits, test/load_fairness.sh only); none edits work_pool.hh.
