@@ -5366,6 +5366,34 @@
       "title": "One owner-lock API (CL-2)",
       "updated": "2026-11-08T15:41:22"
     },
+    "completion-task-pin": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "task"
+      ],
+      "files": [
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../completion",
+      "risk": "low",
+      "status": "planned",
+      "title": "completion pins the task commit journal and consensus pin",
+      "updated": "2026-11-20T23:17:09"
+    },
     "consensus-c3-rows": {
       "accepted": {},
       "after": [],
