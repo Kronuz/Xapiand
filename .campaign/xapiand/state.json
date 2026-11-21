@@ -10103,10 +10103,10 @@
     "group-core": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-20T13:14:41",
-          "base": "d956c0f413f058d6c0e1bdc0f1e3993f62a34ba1",
+          "at": "2026-11-20T16:35:49",
+          "base": "e4561f6850c2dc7abe8c7a1073c2a54c97d249d5",
           "blobs": {
-            "CMakeLists.txt": "100644:bdb333ef206f9ae3fbbbea307ee54260ffd510b9",
+            "CMakeLists.txt": "100644:8e9b353e4f943aeec6f894d56d8c5da4a6edd0b0",
             "docs/REPLICATION.md": "100644:ea9fff54272994ec1002cdc738223f3906b9f985",
             "docs/mechanisms/replication-group.md": "100644:de9b128ca20d9702ce999b8da3e02eac348c6dd1",
             "include/strata/core/index.hh": "100644:a48152e51fe98f49238a1cfa68b54f8423eb2b2a",
@@ -10119,20 +10119,20 @@
             "test/group/blob_app.hh": "100644:54ef05a2dcc3cb1f208904574856f43045edcd3e",
             "test/group/file_set_test.cc": "100644:9004de77ba3facae66999e0f7c7fc8a7cbf76ae4",
             "test/group/footprint_owners.py": "100644:e84945ee3e34b1929fa96d2f64cca940e1f2e92c",
-            "test/group/footprint_test.cc": "100644:a0f9cafab2f9cd5a5534290d92c48849513c0a64",
+            "test/group/footprint_test.cc": "100644:12d3853120fe07418b305b07f02ac228414ba36e",
             "test/group/host_io.hh": "100644:104defb81e9a0cca1109c433818b8b96b9e2aa56",
             "test/group/lifetime_test.cc": "100644:f9969730ae2b6bdf4c2d96b548f264e61cf83c7e",
             "test/group/lone_voter_test.cc": "100644:197de40abae61c791583edb7a5b5c4efd7be45d8",
             "test/group/mutants.py": "100644:cd18ab0b9837450c2d302c424b9fafece07d1755",
             "test/group/oracle.hh": "100644:7164be650051138e48b67da21a3185beaf4db388",
-            "test/group/voters_test.cc": "100644:7d0905bd61730b288798a87a078c3638e6dda7fa",
-            "test/standalone_turn_log_test.cc": "100644:1624a6bb05e3484fe94e7d99dea3b2f672d83bc6"
+            "test/group/voters_test.cc": "100644:6a4779e58bfa5c53ebf5df32487a1970cab9bc2f",
+            "test/standalone_turn_log_test.cc": "100644:0f90dc39a49b24f90ffb5b573b3d60d32a70acdc"
           },
           "by": "review",
-          "commit": "ffab229eeb897ae0631113cd002a00e701f0fed2",
+          "commit": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "criteria": "8382fed6c73acdd9",
           "diffs": {
-            "CMakeLists.txt": "0f8c110696e5408f",
+            "CMakeLists.txt": "c3fc4ed4e3669f32",
             "docs/REPLICATION.md": "a1787a06ad4f25ca",
             "docs/mechanisms/replication-group.md": "e2789a294be7ee27",
             "include/strata/core/index.hh": "b6abb6eb3d380cdc",
@@ -10145,19 +10145,19 @@
             "test/group/blob_app.hh": "eaf2b4af166c3557",
             "test/group/file_set_test.cc": "68989ed2e172a0b9",
             "test/group/footprint_owners.py": "b27391a12ff84dbe",
-            "test/group/footprint_test.cc": "e57e4d7155139907",
+            "test/group/footprint_test.cc": "c1e87840df741624",
             "test/group/host_io.hh": "385683552ac6a76c",
             "test/group/lifetime_test.cc": "3a6804b436fb3216",
             "test/group/lone_voter_test.cc": "1170ef84bb8e1e88",
             "test/group/mutants.py": "496bfc8559f9d1b1",
             "test/group/oracle.hh": "06ea06b2977f3d05",
-            "test/group/voters_test.cc": "fd044bab90252acb",
-            "test/standalone_turn_log_test.cc": "3987c3ccb0421eef"
+            "test/group/voters_test.cc": "aa1901b5cead41b9",
+            "test/standalone_turn_log_test.cc": "708b022940cd2725"
           },
           "findings": {},
           "note": "",
-          "review": "55eb1257bac2ee5ed6d47c9df8b7b5c08865b8ca",
-          "reviewed": "ffab229eeb897ae0631113cd002a00e701f0fed2",
+          "review": "2a6ef6b1536dc63de2cd8e98826a6b77a8a91c20",
+          "reviewed": "6421d4b3852390e3062a31d0f9427f685142af36",
           "verdict": "APPROVE"
         },
         "design": {
@@ -10331,7 +10331,7 @@
       "risk": "high",
       "status": "review",
       "title": "strata::group: propose, apply, checkpoint with a file set, read, close, recover",
-      "updated": "2026-11-20T13:14:41",
+      "updated": "2026-11-20T16:35:49",
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
