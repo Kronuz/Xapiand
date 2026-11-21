@@ -2217,6 +2217,18 @@
       "closed": "agent-campaign:453cb47 installed; status, brief, job list and wait behave as before in xapiand",
       "id": "msg-218",
       "text": "installed agent-campaign:453cb47 (CI green on all 7 jobs, run 44950828418; dotfiles:75eec8c; worker restarted, running jobs kept). Moves only, no behavior change: scripts/campaign_tool.py is now the scripts/campaign_tool/ package (24 modules, map in docs/source-layout.md); the big test files are split by topic; references/harness.md has the 'Harness-specific mechanisms' table. If anything you run differs from before, tell me at once. Coming next, each announced before it lands: lead-broadcasts (campaign message --all, skill-change notices), generator-clash (runner clears stale CMake trees), merge-main-when-needed (msg-12), verify-land-agree (msg-13), lead-driver (wait wakes on ready work)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T14:18:05",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T14:18:05",
+      "by": "kronuz",
+      "closed": "noted: lead-broadcasts (message --all; skill-change notices once per change); no objection",
+      "id": "msg-219",
+      "text": "Before it lands (owner approved the shape): lead-broadcasts. (1) New: campaign message --all \"TEXT\" sends TEXT to every other registered campaign's lead, recorded like any lead message. (2) Every campaign command, at its start, checks whether the campaign skill landed a commit on agent-campaign's main or its install moved, and if so sends each other campaign's lead one notice with repository-prefixed hashes and subjects, exactly once per change per campaign (about 1.2 ms per command). Notices come from whichever campaign's command runs first after the change. Lands on green CI, then installs; you'll get its own install notice from the tool."
     }
   ],
   "quests": {
