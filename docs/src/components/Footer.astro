@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Override of Starlight's page Footer: keep the default footer parts (last-updated and the
-// prev/next pager -- the edit link is moved to the page-title line by our EditLink override),
-// and add a site-wide copyright line so it shows on every page, the way the blog does.
+// Keep the edit link, last-updated time, and pager in the footer.
+// Add a site-wide copyright line on docs pages.
 import LastUpdated from 'virtual:starlight/components/LastUpdated';
+import EditLink from 'virtual:starlight/components/EditLink';
 import Pagination from 'virtual:starlight/components/Pagination';
 
 // The splash/landing page (index.mdx) ships its own full-bleed footer with the
@@ -36,6 +36,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 <footer class="sl-flex kz-footer">
 	<div class="meta sl-flex">
+		<EditLink />
 		<LastUpdated />
 	</div>
 	<Pagination />

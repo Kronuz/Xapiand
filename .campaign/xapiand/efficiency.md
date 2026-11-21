@@ -708,3 +708,14 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
   - `land --merge-main` re-pushed 7 branches on campaign-only master commits and cancelled their CI. The loop now merges only on code changes; campaign-v3 is building the fix (merge-main-when-needed).
 - Nine library repos' local main lagged origin by 1-20 commits (queryparser's carried a stale cut); fast-forwarded, and queryparser gained CI's quest/** trigger (queryparser:a4ffbeb).
 - Host: two exclusive measurements (Detent's netlab-consensus and reader-s6) hold the machine; 82 queued, 3 running, load 30 falling to 5, 302 GiB free. Quota 80% weekly, reset in ~32 h.
+
+### 2026-11-21 16h (hourly)
+
+- Landed: journal-turn-buffers (journal:60ab864; a parked group's host heap back to main's slope, 0.565 B vs main's 0.448 B), prospect-check-fields (prospect:abfeeda), store-docs (Xapiand:34270cf). Detent landed consensus-driver-install (consensus:8780e44), which 11 of ours waited on.
+- Agent runs (Opus): group-catalog fixes R1-R4 288k; durability review of group-catalog 198k (CHANGES, 4 blocking from code reading; its TSan probe never ran before the verdict); split-xapiand-tests fix round 176k; single-flight-budget explorer 148k (cause found, fixed, wired into both schemas_lru callers); split-htm 139k (reverted to whole by ruling); enum-reflection 120k, constexpr-phf 103k, strict-stox 91k (all kept whole: single-header contracts).
+- Splits, 11 of 11 reported: 4 split (completion, faultlab, workpool, queryparser), 7 kept whole. Lead fixes this hour: completion's mutants s1, s2, s6 pointed at posix_sync.h (completion:02ab67f); two A3 test-list diffs resubmitted comparing only test lines (ctest's build-dir paths differ, 4 quests hit it); one mutant set cancelled at a commit that did not compile, where it would have "failed" for the wrong reason.
+- group-heal install: lead pinned consensus at 8780e44 and registered its test (strata:95bdaa2); its mutant rebuilt on the new pin (strata:89f2f50).
+- journal-lost-bound: Detent's review CHANGES, F1 blocking (a gap spanning blocks reads one manifest, so group 1 reports bounded at 2 with acknowledged 3 gone; main loses the group loudly). Fix round launched; F2 pre-existing on main (11 of 17 power cuts forget rule-5 damage) filed.
+- Tool: --merge-main re-pushed branches on campaign-only commits (fix building as merge-main-when-needed); verify's reuse and land's gate disagree (verify-land-agree); slot checkouts fail on commits the slot clone lacks (twice; fetch-and-retry queued). agent-campaign:453cb47 installed (the tool split into 24 modules, no behavior change).
+- Each Xapiand landing restarts every waiting quest's CI: store-docs' landing re-merged 7 branches.
+- Host: load 37-61 on 16 CPUs (cmux at 183% CPU, this lead session at 99%), 146 queued and 7 running, 300 GiB free. Quota 83% weekly, burn 0.60%/h, reset in ~31 h.

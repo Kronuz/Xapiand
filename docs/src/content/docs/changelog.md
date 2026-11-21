@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Docs reading controls:** An Aa button enlarges reading text and opens the reading column; desktop images and diagrams zoom when they fit larger.
 - **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
   ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
   orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
