@@ -13395,7 +13395,8 @@
         "include/journal/journal.h",
         "include/journal/turn_driver.h",
         "test/host_test.cc",
-        "test/placement_test.cc"
+        "test/placement_test.cc",
+        "docs/mechanisms/turn-log-damage.md"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
       "landed": [],
@@ -13411,7 +13412,7 @@
       "risk": "high",
       "status": "active",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T11:02:16",
+      "updated": "2026-11-21T14:35:05",
       "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
