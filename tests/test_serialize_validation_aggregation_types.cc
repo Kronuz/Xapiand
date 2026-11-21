@@ -125,6 +125,12 @@ void test_typeless_and_multi_type_aggregations_are_refused() {
 	refused(R"({"_aggs":{"x":{"_terms":{"_field":"age"},"_aggs":{"inner_agg":{}}}}})", "inner_agg");
 }
 
+// `_missing` is not an aggregation type: it is refused like any unknown one, not as "reserved". As a key inside a bucket body it is an unknown key, ignored like the others.
+void test_missing_is_an_unknown_type() {
+	refused(R"({"_aggs":{"m":{"_missing":{"_field":"age"}}}})", "is not valid for");
+	accepted(R"({"_aggs":{"m":{"_terms":{"_field":"age","_missing":"N/A"}}}})");
+}
+
 }  // namespace
 
-TEST_MAIN(test_unknown_types_are_refused, test_nested_unknown_types_are_refused_before_any_bucket_forms, test_known_types_still_dispatch, test_typeless_and_multi_type_aggregations_are_refused)
+TEST_MAIN(test_unknown_types_are_refused, test_nested_unknown_types_are_refused_before_any_bucket_forms, test_known_types_still_dispatch, test_typeless_and_multi_type_aggregations_are_refused, test_missing_is_an_unknown_type)
