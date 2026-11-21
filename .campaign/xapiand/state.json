@@ -20931,9 +20931,38 @@
         "test/tls_test.cc",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/reactor-open-files",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T00:27:07",
+          "commit": "01db032ab007196f306090b8593385e7baa46c38",
+          "criteria": {
+            "A1": "261120-234540-8adc88; fails without: 261120-233945-e2d203",
+            "A2": "261120-234540-8adc88",
+            "A3": "261120-234531-7c2c9a",
+            "A4": "CI green at 01db032ab007"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "01db032ab007196f306090b8593385e7baa46c38",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-234534-1ad044",
+              "level": "light",
+              "seconds": 16.5,
+              "state": "done",
+              "what": "reactor-open-files check suite at 01db032ab007"
+            }
+          ],
+          "final": true,
+          "from": "c8930edee3400c846d0e5575f77adad0bcf9309a",
+          "reason": "",
+          "tested": "01db032ab007196f306090b8593385e7baa46c38"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -20941,10 +20970,10 @@
       ],
       "repo": "../reactor",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "raise_open_files clamps; its untested paths get tests",
-      "updated": "2026-11-20T23:44:26",
-      "worktree": "../reactor-wt/xapiand/reactor-open-files"
+      "updated": "2026-11-21T00:27:11",
+      "worktree": ""
     },
     "reactor-server-composition": {
       "accepted": {
@@ -26709,9 +26738,9 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-20T23:47:52",
+      "updated": "2026-11-21T00:24:43",
       "worktree": "../task-wt/xapiand/task-timers-followups"
     },
     "termdict-forward-seek": {
