@@ -1,12 +1,12 @@
 # split-constexpr-phf: journal
 
-State: waiting on jobs 261121-130253-74ad7d 261121-130253-14506d 261121-130255-fe1094 261121-130258-05145f 261121-130301-172ca6
+State: waiting on jobs 261121-130253-74ad7d 261121-131354-2a6f84
 Quest: .campaign/xapiand/quests/split-constexpr-phf.md (the lead's; never edit it)
 
 ## Doing
 
-Result is "no split": `phf.hh` stays whole. Layout note committed at constexpr-phf:c5efe76.
-Evidence jobs queued (ids in State).
+Result is "no split": `phf.hh` stays whole. Layout note committed at constexpr-phf:c5efe76, branch
+pushed. Waiting on build-test (A1) and the corrected A3 job; both queued behind a busy machine.
 
 ## Next
 
@@ -14,18 +14,29 @@ Evidence jobs queued (ids in State).
 
 ## Blocked on
 
-Nothing.
+Nothing. master changed `.github/workflows/ci.yml` since the branch: the lead's `--merge-main` at landing.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130253-74ad7d (pending) |
-| A2 | split (landed tool) 261121-130253-14506d; split-check-sources tool 261121-130255-fe1094 (pending) |
-| A3 | 261121-130258-05145f: configures base constexpr-phf:6f97931 and head, diffs `ctest -N` (pending) |
+| A1 | build-test 261121-130253-74ad7d (queued) |
+| A2 | 261121-130255-fe1094: split-check-sources tool, 0 errors, 0 warnings, 2 notes (the two files over 1,000 lines) |
+| A3 | 261121-131354-2a6f84 (queued): diffs `ctest -N` test lines at base constexpr-phf:6f97931 and head |
 | A4 | `docs/source-layout.md` at constexpr-phf:c5efe76: no new files; names `phf.hh` (1,484 lines) kept whole and why, and the gperf output in bench/ as generated |
-| A6 | No new headers. 261121-130301-172ca6 runs selfcontained.sh over the repo's headers (`phf.hh`) at head (pending) |
+| A5 | CI at c5efe76: running |
+| A6 | 261121-130301-172ca6: no new headers; selfcontained.sh over `phf.hh` at head, 1 ok, 0 failed (c++17) |
 | A7 | the lead's read |
+
+Jobs examined:
+- 261121-130253-14506d (split gate, landed cpp-libraries tool) failed. All 10 errors and 12
+  warnings are lines of `docs/source-layout.md`, a Markdown file that the landed tool reads as
+  C++. No C/C++ file changed. The split-check-sources tool (fe1094) skips non-C/C++ files and
+  passes. The lead reruns the gate once split-check-sources lands. `campaign verify --for A1`
+  tagged this job A1 too, which is why the brief lists it under A1.
+- 261121-130258-05145f (A3, first try) failed on my own command. ctest's "could not find
+  executable" warnings carry each build directory's path, so the diff never isolated the test
+  names. 2a6f84 replaces it and diffs only the `Test #` and `Total Tests` lines.
 
 ## Result
 
