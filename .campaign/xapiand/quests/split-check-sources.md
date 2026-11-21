@@ -1,36 +1,27 @@
 # split-check-sources: split_check compares only C and C++ sources
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status split-check-sources`.
+Risk: low. The lead writes this quest; contributors read it and never edit it. Its
+machine state is in `state.json`: `campaign status split-check-sources`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Every split adds its layout note (`docs/source-layout.md`) and often a CMake line, and
+`tools/split_check.py` judged those as code: split-storage's check failed on its layout note's
+lines (job 261121-122326-a913a0). The moves-only checks now look only at C and C++ sources (the
+suffixes the size note already uses); a line moved into any other file, an `.inc` fragment
+included, still counts as lost.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A split that adds a Markdown layout note and a CMake source line passes, and a line moved
+  from a `.cc` into an `.inc` fails as lost: the `test` check
+- A2 ruff check, ruff format and the existing tests pass: the `lint` and `test` checks
+- A3 [ci] CI is green
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
