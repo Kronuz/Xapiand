@@ -523,3 +523,41 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Agents: group-core CI fix 144k (Opus; cause: a test closing on a second thread under journal's new debug assert, plus an unordered draw on gcc); netlab-consensus 338k (Opus; harness, selftest, light rows; exclusive rows queued); bulk-load-rerun 115k so far (Sonnet); track-c-gates resumed (Opus) after 15 of 19 gate jobs passed.
 - Disk: 299 GiB free (old Xapian folder removed by the owner; 484 MiB of datasets kept in ~/Development/Kronuz/datasets).
 - Quota: 44% weekly, 0.38%/h. Load 24-43 (two Detent suites over their light share). 51 jobs queued.
+
+## 2026-11-20 16h
+- Landed: phrase-expansion (prospect:dea0ffb). Started: cjk-words, xapiand-final-release, faultlab-adopt-prospect (held for days by placeholder globs the lead never narrowed; owner had to ask).
+- Agents: cjk-words 132k (Sonnet; impl, jobs queued); xapiand-final-release 121k (Sonnet; 4 backports, job queued); faultlab-adopt-prospect 96k (Sonnet; migration plus interface_clean check); track-c-gates 194k (Opus; 3 failures explained, 27 jobs requeued); group-core re-check reviewer launched (Sonnet).
+- Tool: agent-campaign:4979989 (sidebar only from the home). Message delivery fix (lead record takeover, retries, owner notice) in its suite. Detent never received msg-171/172 for an hour; a Nov 15 message to Detent sat in xapiand's own cmux inbox.
+- Bottleneck: GitHub Actions. Xapiand 9 runs queued, Detent 13, strata 4; Xapiand CI takes ~2 h (TSan). Four quests wait only on CI.
+- Quota 46% weekly, 0.40%/h. Load 57-95 (a Detent ASan test at 7.7 cores on a light slot). Disk 299 GiB free.
+
+## 2026-11-20 17h
+- No landings. group-core re-check reviewer 72k (Sonnet; APPROVE at strata:6421d4b, test-only diff); accepted, main merged, A7 rerun passed; lands on CI. netlab-consensus: both exclusive rows measured, then crashed in the results table; fresh Opus contributor took over (the first was at 338k).
+- Tool: agent-campaign:36ab19e (message delivery: no lead-record takeover, retries, owner notice). Xapiand:af65bd9f2 (FreeBSD workflow cancels superseded branch builds).
+- Queue: 61 jobs queued, mostly Detent's (dense-distribution-build 12, loop-idle-waits 17, journal-idle-groups 8). Cancelled one superseded faultlab build of ours.
+- Quota 46% weekly, 0.40%/h. Load 35-42. Disk 298 GiB free.
+
+## 2026-11-20 18h
+- Landed: faultlab-adopt-prospect (prospect:0448b87). Four Xapiand quests (coverage-server, control-plane-wallclock, freebsd-exe-path, strata-pin-catalog) merged master and wait on CI; a loop lands them as CI turns green.
+- D57 cleanup (owner asked): 20 quests' suite and e2e gates now cite CI jobs; 20 quests' local macOS ASan/TSan deferred checks removed; 13 queued or running local jobs cancelled (suites, e2e, sanitizers, an asserts build, a Linux-VM ctest at a CI-tested commit, 3 netlab narrowing runs). Detent converted 23 quests and cancelled 3 suites (msg-178).
+- Tool: agent-campaign:0ce399c (an empty --later clears deferred checks); pending in suite: landed quests drop runs of removed deferred checks. Found: task merge counts cancelled jobs and deliberate other-commit jobs as gaps (journal-pin cannot merge).
+- Agents: cjk-words fix 140k (Opus; F1 fixed, CI caught a wrong test at test_cjk_words.cc:169 on arm64 and FreeBSD, fixed); group-heal sim-port 181k (Opus; simulator ported, determinism and planted-fault jobs pass); group-heal install 327k (Opus; transfer built, 720 crash runs recover; blocked on a consensus Driver install surface, asked Detent msg-179).
+- Findings: netlab's stall is election churn (Detent msg-185): 2 MiB appends hold the Control connection ~4 s under 1% loss, heartbeats queue, CheckQuorum steps down.
+- Bottleneck: GitHub Actions concurrency. strata 9 runs queued, 0 running; Xapiand 9 queued, 5 running.
+- Quota 49% weekly, 0.42%/h, reset in 50 h. Load 14-26 (down from 35-95). Disk 293 GiB free.
+
+## 2026-11-20 19h
+- No landings: GitHub CI started no strata run after 02:40Z (9 queued, 0 running; account-wide 5 running, 21 queued; githubstatus says operational). Pushed Xapiand:bb04f6d63 to the `xapiand` branch (final release head, no tag). journal-pin merged into turn-log-parity (all 3 tasks in).
+- Reviews: node-admission accepted at consensus:803442f (3 blocking fixed, each with a fails-without mutant; lands after detent:consensus-transport); cjk-words accepted at Xapiand:234d834 (lands on CI).
+- Agents: node-admission fix 196k (Opus); placement-root fix 109k (Opus; wrong test + overlong varint accepted, found by fuzz in 1,785 runs); turn-log-parity closer launched (Opus).
+- Tool: agent-campaign:ac6331c, 3706f16, 90ad2fc (dotfiles:b87e7c0); merged-task journals fix in suite. Root fix for placement: strata varint pin bump (fix/varint-pin, strata:b4694757) instead of a second overlong check.
+- Bench: bulk-load dry runs, 1 trial: Xapiand 1.45-6.9x faster than ES 9.5.4, 5.2-154x less peak RSS; 12 exclusive 5-trial jobs queued.
+- Quota 51% weekly, 0.43%/h, reset in 50 h. Load 11-13. Disk 297 GiB free.
+
+## 2026-11-20 20h
+- Landed: freebsd-exe-path (Xapiand:0fd8e1191). Merged: turn-log-parity task reopen-loops (strata:566730d6). Track-c re-planned as a roll-up (risk high to low on the record, D123/D125).
+- Agents finished (Opus): turn-log-parity evidence 102k (found 14 unbuilt tasks; my "3 of 3 tasks" misread); reopen-loops 186k (test + mutant, 268 cut cases); track-c-gates fill 149k (4 red rows: journal T9 silent loss at 178030b, T7c 3.18x vs 4x, R19 59 ms vs 15.1 ms at 0 ms, T8 49/60 CPU-min).
+- Started: journal-turn-buffers (journal half of D3, after Detent's journal-idle-groups and journal-power-silent-loss), checkpoint-window (parity task 4), xapiand-final-release CI fixes, crash-wrong-row explorer.
+- Findings: journal 178030b loses acknowledged records under damage at 256 B/512 B/2 KiB blocks (5 seeds of 200, macOS and FreeBSD; passed at d90797c) -> Detent's journal-power-silent-loss. xapiand branch CI: test_text_parser built locally only via Homebrew's xapian.h; id-0 refusal drops documents on RESTORE (222 of 999).
+- Tool: agent-campaign:bf732aa (merged task journals), 82d3916 (ordered cross-campaign overlaps; mutant runs no longer hide task evidence); dotfiles:ebc987a, 64ac75f.
+- Quota 53% weekly, 0.44%/h, reset in 49 h. Load 13.4. Disk 300 GiB free. GitHub CI moving again, slowly.

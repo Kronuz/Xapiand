@@ -17,6 +17,10 @@ on:
       - 'v[0-9]+.*'
     paths-ignore: ['.campaign/**']
 
+concurrency:  # a newer push to the same branch replaces a queued or running build
+  group: freebsd-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
+
 permissions:
   contents: write
 
