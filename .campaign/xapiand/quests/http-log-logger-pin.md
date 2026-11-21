@@ -1,36 +1,25 @@
 # http-log-logger-pin: http-log pins a logger without the scheduler
 
-Risk: low. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status http-log-logger-pin`.
+Risk: low. The lead writes this quest; contributors read it and never edit it. Its
+machine state is in `state.json`: `campaign status http-log-logger-pin`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+http-log's logger pin (f61d8df) predates logger:b121f2e, which dropped the scheduler, so a
+standalone http-log build still fetches scheduler. Detent's lead asked for it (2026-11-21) so stash
+and scheduler can be archived. The pin moves to logger 455cad0, the commit Xapiand pins.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 http-log builds and its tests pass at the new pin: the `build-test` check
+- A2 A standalone configure fetches no scheduler: a job at the head that configures into a fresh
+  build directory and finds no `_deps/scheduler-src`
+- A3 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
-
-## Decisions
-
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+None.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
