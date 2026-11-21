@@ -28757,6 +28757,19 @@
           "merged": "2f5f103366ddce071afc4c182ed1e9823767841d",
           "worktree": ""
         },
+        "group-commit": {
+          "base": "330bfd419d9d5359c39f0729aefa69ab1d243de3",
+          "branch": "quest/xapiand/turn-log-parity--group-commit",
+          "files": [
+            "include/strata/core/index.hh",
+            "include/strata/core/turn_seal.hh",
+            "test/test_barrier*",
+            "test/test_group_commit*",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/turn-log-parity--group-commit",
+          "worktree": "../strata-wt/xapiand/turn-log-parity--group-commit"
+        },
         "journal-pin": {
           "base": "db214892159e0102e17f5b390e1a37b299546031",
           "branch": "quest/xapiand/turn-log-parity--journal-pin",
@@ -28827,7 +28840,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T09:46:30",
+      "updated": "2026-11-21T09:46:36",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
