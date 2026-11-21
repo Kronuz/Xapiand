@@ -16239,6 +16239,8 @@
     "newman-pin": {
       "accepted": {},
       "after": [],
+      "base": "686e6b9eb7e9e369dd48cf2d94233c5d63f99a00",
+      "branch": "quest/xapiand/newman-pin",
       "checks": [
         {
           "cmd": "ci:Functional E2E (docs)",
@@ -16261,11 +16263,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: xapiand-final-release lands on the xapiand release branch, never master: its .github files do not meet this quest's on master",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Pin newman for the docs E2E in one place",
-      "updated": "2026-11-21T03:26:36"
+      "updated": "2026-11-21T03:27:36",
+      "worktree": "../Xapiand-wt/xapiand/newman-pin"
     },
     "nightly-retry": {
       "accepted": {},
