@@ -670,3 +670,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Explorer batch of 4 from hunt.md: eager-open cost (Opus, performance), RESTORE schema fault point, TLS held-read cancel, geo ring hole (Sonnet).
 - CI is the queue: agent-campaign:b34fef9 has waited ~1 h for a runner; Xapiand 5 queued and 3 running, strata 4 and 1.
 - Host: light slots 86% used last hour, 27 jobs queued, load 29-40 on 16 CPUs, 305 GiB free. Quota 70% weekly, reset in ~35 h.
+
+### 2026-11-21 13h (hourly)
+
+- campaign-v3 prepared for its own lead (campaign-v3:93670a4): it owns agent-campaign from today; first jobs are v2's red CI (a stale `env=` test expectation), the waiting installs, then splitting the 9,905-line campaign_tool.py. Four tool rows moved out of hunt.md (Xapiand:b29ab1f92).
+- large-tx (Opus, 276k tokens): the keep-applied mutant survived on a test gap (the sweep wrote before checking recovery); closing and reopening after recovery catches it from cut 18. All four mutants fail at strata:39b28f25; fuzz of the chunk decoder 10.6M executions, clean; suite pending.
+- journal-replaces-wal restore task (Opus, 262k): msg-204/205 ruled (own batcher files, RESTORE writes carry no expected version so batches pipeline); batcher, codec size helper and apply-time version stamping built; 5 jobs queued.
+- journal-turn-buffers: CI red on every platform at journal:6cdd923, one main test (a parked group costs the host 129-137 B, not 0); main passes it, so the quest's buffers are the cause. Opus contributor launched.
+- Detent: consensus-leaving-removal landed (consensus:a73c6e3); journal-group-delete's delete_group shape agreed with Detent's lead, plus criterion A7 (callable on the group's own loop after close_group).
+- Lead: merged main into failed-restore-exit, restore-stream, netlab-consensus, empty-aggregation and node-admission; their evidence reruns are queued behind 37 jobs.
+- Host: light slots 82% used last hour, 37 queued and 9 running, load 10-13, 303 GiB free. Quota 73% weekly, reset in ~34 h.
