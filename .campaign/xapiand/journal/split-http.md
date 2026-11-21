@@ -1,6 +1,6 @@
 # split-http: journal
 
-State: working (waiting on jobs; see Doing)
+State: waiting on jobs 261121-114840-f75201 261121-115542-54b74a 261121-115533-838bff
 Quest: .campaign/xapiand/quests/split-http.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
