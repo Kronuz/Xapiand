@@ -24531,19 +24531,20 @@
       ],
       "consumes": [],
       "files": [
-        "docs/src/content/docs/reference-guide/schemas/*.md"
+        "docs/src/content/docs/reference-guide/schemas/*.md",
+        "docs/src/content/docs/reference-guide/schemas.md",
+        "docs/src/lib/sidebar.mjs"
       ],
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: globs only: cjk-words changes schemas/field-types/text-type.md and cluster nothing under schemas; this quest's set is schemas/*.md",
       "repo": ".",
       "risk": "low",
       "status": "active",
       "title": "Document _store (index without keeping the value) with E2E blocks",
-      "updated": "2026-11-21T03:27:50",
+      "updated": "2026-11-21T03:30:08",
       "worktree": "../Xapiand-wt/xapiand/store-docs"
     },
     "stored-check-cache": {
