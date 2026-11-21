@@ -25340,8 +25340,8 @@
       "repo": "../docset",
       "risk": "low",
       "status": "planned",
-      "title": "docset's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:30"
+      "title": "docset's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:30"
     },
     "split-enum-reflection": {
       "accepted": {},
