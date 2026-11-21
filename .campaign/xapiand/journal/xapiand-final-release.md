@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-202653-9ebd4f 261120-202700-a1e84b 261120-202710-3443a6 261120-202717-edd5aa
+State: blocked on lead: push `xapiand` to the quest head (both CI fixes green locally)
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,7 @@ CI on `xapiand` at bb04f6d63 failed twice (lead's log ~/.scratch/xapiand/lead/xa
 
 ## Next
 
-1. Read the four jobs above; on green, report to the lead (the lead pushes `xapiand`). Then: push the quest branch, then fast-forward `xapiand` to it and push (CI there: build-test, asan, e2e, Release/FreeBSD/Bottles dispatch).
+1. Lead: fast-forward `xapiand` to the quest head and push. Then, then fast-forward `xapiand` to it and push (CI there: build-test, asan, e2e, Release/FreeBSD/Bottles dispatch).
 2. A5: read CI and the three workflows at the final commit; report to the lead. No tag.
 
 ## Blocked on
@@ -32,7 +32,9 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | build-test 261120-202700-a1e84b at 91d4c3e62 (23/23, test_text_parser); include guard 261120-202710-3443a6, failing at bb04f6d63 261120-202717-edd5aa (its dep file names /usr/local/include/xapian.h) |
+| A2 | build-test 261120-202700-a1e84b (id_zero_check in ctest, 9.3 s); fails-without 261120-202653-9ebd4f at 5c4c0ce2d: "RESTORE answered 200 with item 0 {"_id": 43}", "indexed 1000" |
+| A3 | build-test 261120-202700-a1e84b |
 
 ## Result
 
