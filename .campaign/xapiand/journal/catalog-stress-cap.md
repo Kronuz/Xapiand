@@ -1,6 +1,6 @@
 # catalog-stress-cap: journal
 
-State: waiting on jobs 261120-234052-36bc35 261120-234054-b30f9c 261120-234057-859dd5 261120-234100-691f38
+State: ready to land (lead, 11-21: all four jobs done as required; CI rerun after merging main; the FreeBSD red was the VM's rsync).
 Quest: .campaign/xapiand/quests/catalog-stress-cap.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,9 +24,9 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | plain 50 runs: 261120-234052-36bc35, 261120-234054-b30f9c; slowed (1 ms sleep per two-catalog op): 261120-234057-859dd5 (pending) |
-| A2 | mutant (budget lets maps reach hard+1), `--fails-without`: 261120-234100-691f38 (pending) |
-| A3 | CI on quest/xapiand/catalog-stress-cap (pending) |
+| A1 | plain 50 runs: 261120-234052-36bc35, 261120-234054-b30f9c; slowed (1 ms sleep per two-catalog op): 261120-234057-859dd5 |
+| A2 | mutant (budget lets maps reach hard+1), `--fails-without`: 261120-234100-691f38 |
+| A3 | ci:CI |
 
 ## Result
 
