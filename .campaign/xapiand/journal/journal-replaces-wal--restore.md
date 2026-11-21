@@ -1,45 +1,58 @@
 # journal-replaces-wal--restore: journal
 
-State: blocked on the lead: the batcher's file set (msg-204); in-set work continues
+State: waiting on jobs 261121-111705-d17ab8 261121-111707-386655 261121-111709-7c5bad 261121-111711-87b492 261121-111719-e638cd
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
 
-Session 1 (2026-11-21), base Xapiand:cf65ae78b (core steps 1-3 and b). In-set work while msg-204 is open:
+Session 1 (2026-11-21), base Xapiand:cf65ae78b (core steps 1-3 and b). Built, each its own commit:
 
-1. harness/profile_bulk.sh: `--put` (one PUT per document, T11), `--ack`/`--query` passed on each
-   request, a journal layer row (strata::group, consensus, journal) beside the WAL's.
-2. tests/test_wal_replay.cc rewritten onto the journal: the WAL test's two properties (an erase of
-   a missing document is a no-op; a log applied twice ends in the primary's state) against
-   ShardApplication, plus recovery's rule (file effects rerun from P_b, strata skips to P_H).
-3. harness/wal_replay_check.sh, wal_replay_agg_check.sh, wal_recovery_check.sh: assertions on
-   outcomes only (acknowledged writes after kill -9, identical state after a second crash, a failed
-   recovery serves nothing), no WAL log lines or `:wal` endpoint.
+1. `src/database/restore_batch.{h,cc}`: RestoreBatcher packs a shard's prepared writes in input order
+   into commands within COMMAND_ENTRY_BYTES (one over it alone, for split_command), closes on a schema
+   change, drops each write's expectation; `restore_results` reads docid/version per op from the
+   verdict; `RestorePropose` is the marked seam for core step d. Test tests/test_restore_batch.cc.
+2. `command.{h,cc}`: `encoded_size(const CommandWrite&)` only (Xapiand:3ceda7d87).
+3. `shard_group.cc` `transaction()` only (Xapiand:371726159): a replace by key is stamped with the
+   version it lands at (expected+1, else the key's version after the command's earlier writes or in
+   the index, +1) when that differs from the document's: stamp, version slot, data `_version`.
+4. tests/test_journal_replay.cc (was test_wal_replay.cc): erase of a missing doc is a no-op; replica
+   from empty equals the primary; recovery from the capture after every entry (file_set::recover,
+   state from bundle bytes, effects rerun, strata skipped) rebuilds files, state and locators, twice.
+5. harness/journal_replay_check.sh (was wal_replay_check.sh, agg check folded in), outcome
+   assertions only; wal_recovery_check.sh and wal_replay_agg_check.sh deleted.
+6. harness/profile_bulk.sh: `--put`, `--clients`, `--query`, wall ms/doc, a window covering the smoke,
+   a journal layer row.
 
 ## Next
 
-1. On msg-204's answer: the RESTORE batcher (D17) in the granted files: pack a shard's prepared
-   writes in input order within COMMAND_ENTRY_BYTES, oversized alone through split_command, the
-   propose seam for step d, per-object results from the batch verdict; tests with values and a
-   mutant (`--fails-without`).
-2. Jobs: test_wal_replay (plain, mutant), the harness scripts at the build, profile_bulk on master's
-   binary and the branch's.
+1. Read the five jobs; fix and rerun what fails. Then push the branch once.
+2. At core step d: DocIndexer::apply_shards (handler.cc) feeds RestoreBatcher and proposes through
+   RestorePropose, each command once the previous is placed; Shard::apply_slice and SliceWrite go.
+   journal_replay_check.sh and profile_bulk's journal row get their evidence on that build
+   (SETTLE=0; T11/T12 are the lead's measurements).
 
 ## Blocked on
 
-msg-204 (lead): where RESTORE's batcher lives. My set (src/manager.*, the WAL test and scripts,
-profile_bulk.sh) holds none of RESTORE's code (handler.cc DocIndexer, shard.cc apply_slice).
-Recommended (a): new src/database/restore_batch.{h,cc} + tests/test_restore_batch.cc, and
-`encoded_size(const CommandWrite&)` in command.h. (b): inside command.*. Also asked: the renames
-(test_journal_replay.cc, journal_replay_check.sh with the agg check folded in, wal_recovery_check.sh
-deleted for levels' power_loss_check.sh), and ceding manager.* to core's step c.
+Nothing. msg-204 and msg-205 answered by the lead (option (a) on both).
+
+## Messages
+
+- msg-204 (file set, renames, manager.*): answered by the lead, option (a). Done: restore_batch.*,
+  test_restore_batch.cc, encoded_size in command.*, the renames, wal_recovery_check.sh and
+  wal_replay_agg_check.sh deleted; manager.* untouched, ceded to core for step c.
+- msg-205 (pipelined prepare): answered by the lead, option (a). Done: the batcher strips the
+  expectation, results come from verdict.docids[i]/versions[i], transaction() stamps the landing
+  version; the pipelining test with its mutant is 261121-111705-d17ab8 / 261121-111707-386655.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | none yet |
-| A5 | none yet |
+| A1 | 261121-111705-d17ab8 (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-111711-87b492 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
+| A5 | 261121-111705-d17ab8 (test_restore_batch); 261121-111707-386655 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-111709-7c5bad (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
+| probe | 261121-111719-e638cd: journal_replay_check.sh and profile_bulk --put on the pre-journal build, mechanics only, not evidence |
+
+Cancelled, superseded by the renames: 261121-110941-17b096, 261121-110943-f67445, 261121-110959-9c6a80.
 
 ## Result
 
@@ -47,4 +60,26 @@ deleted for levels' power_loss_check.sh), and ceding manager.* to core's step c.
 
 ## Rulings I made
 
-<none yet>
+1. A refused batch fails every write of it with the refusal (the seam raises it): under (a) a
+   RESTORE batch carries no expectation and no expected schema, so only `invalid`, `no_space` and
+   the like refuse it, none of which a resubmit fixes; isolating the op and resubmitting the rest
+   would reorder it behind later in-flight batches of the same keys.
+2. The landing version is computed only for a write without an expectation; with one it is
+   `expected + 1`, which prepare already stamped, so a PUT pays no key lookup and no restamp.
+   Only replace_key (and erase_key, for a later write of the key in the same command) is tracked:
+   RESTORE writes nothing else.
+3. Batches are ordered by placement, not by apply: the seam's `placed` lets step d propose command
+   k+1 once k is placed, so log order is input order with batches in flight. No window cap is
+   set here; step d sets it with the propose path's admission.
+4. journal_replay_check.sh and wal_recovery_check's successor kill -9 at once (SETTLE=0): an
+   acknowledged write is durable at its answer, so a settle delay would hide a loss. The probe runs
+   SETTLE=1 on the pre-journal build only to check the scripts' mechanics.
+5. `Replica` (the test's index + file set + application) is copied into each test file rather than
+   shared: a shared test header is outside every task's file set. Core may hoist it at step e.
+
+## Open, for the lead
+
+- `ack=none` answers at placement with no verdict, so a RESTORE at `none` has no docid or version
+  for `_version`/`_xdocid` in its results (levels task, D4).
+- docs/src/content/docs/tests/coverage.md:39 and harness/run_all.sh:191 still name the deleted WAL
+  scripts (levels' files: run_all.sh gets power_loss_check.sh).
