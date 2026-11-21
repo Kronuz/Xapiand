@@ -1,6 +1,6 @@
 # split-msgpack: journal
 
-State: waiting on jobs 261121-120214-36ce9b (build-test) 261121-120214-867ec4 (split: fails until split-check lands)
+State: waiting on jobs 261121-121111-83ac3c (build-test) 261121-121108-797630 (A6) 261121-121113-c6cb73 (A3) 261121-121111-c110b0 (split: fails until split-check lands)
 Quest: .campaign/xapiand/quests/split-msgpack.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Code done and pushed (msgpack:f107dd3). msgpack.h into 15 self-contained msgpack_*.h pieces (adaptor added so msgpack_ctor.h compiles alone), test/diff_test.cc into diff_test_{gen,run,check}.h plus a 121-line diff_test.cc, docs/source-layout.md. Nonblank lines of the originals equal the pieces in order (checked before the include and adaptor edits).
+Reassessed against cpp-libraries docs/SPLITTING.md; pushed at msgpack:a43dc0f. msgpack.h is now an umbrella over ten self-contained pieces (82 to 848 lines): types, class (class, Iterator, Body, adaptors), ctor, init, modify (find/erase/put/fill and the public modifiers), access, hash, convert, arithmetic, serialize. test/diff_test.cc is kept whole again (the earlier split is reverted). docs/source-layout.md lists the pieces and why diff_test.cc stays whole.
 
 ## Next
 
-1. Read build-test 261121-120214-36ce9b.
-2. Rerun `campaign verify split-msgpack` for split once split-check has landed (job 261121-120214-867ec4 fails exit 2 until tools/split_check.py exists); answer its warnings.
+1. Read the jobs below.
+2. Rerun `campaign verify split-msgpack` for split once split-check has landed; answer its warnings.
 
 ## Blocked on
 
@@ -24,12 +24,13 @@ Nothing (split waits on split-check landing).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test job 261121-120214-36ce9b (superseded 261121-115108-d73489) |
-| A2 | split job 261121-120214-867ec4 failed exit 2 earlier (tool not landed); rerun after split-check |
-| A3 | ctest -N before 261121-115120-acd826 (1e9aaaf4ac5b) and after 261121-115625-2186ed (edfd97b): 13 tests, names identical; rerun at head 261121-120216-d9be17 |
-| A4 | docs/source-layout.md lists every new file and what it holds |
+| A1 | build-test job 261121-121111-83ac3c |
+| A2 | split job 261121-121111-c110b0 fails exit 2 until split-check lands; rerun after |
+| A3 | ctest -N before 261121-115120-acd826 (1e9aaaf4ac5b), after 261121-121113-c6cb73 at a43dc0f (the earlier after-run at edfd97b listed the same 13 tests) |
+| A4 | docs/source-layout.md |
 | A5 | CI on the pushed branch |
-| A6 | selfcontained.sh job 261121-120211-04c861 at f107dd3: 16 ok, 0 failed (new headers and msgpack.h, c++20). Earlier 261121-115616-071a12 failed on msgpack_ctor.h, fixed by msgpack_adaptor.h |
+| A6 | selfcontained.sh job 261121-121108-797630 at a43dc0f (earlier runs: 261121-115616-071a12 failed on msgpack_ctor.h, 261121-120211-04c861 passed on the 16-header layout) |
+| A7 | the lead reads the split: see Rulings |
 
 ## Result
 
@@ -37,9 +38,9 @@ Pending the jobs.
 
 ## Rulings I made
 
-- Pieces are self-contained: the external includes move (unchanged) from msgpack.h to msgpack_types.h, the base every piece includes; msgpack.h only includes the pieces in the original order.
-- The msgpack adaptor specializations (convert/pack/object of MsgPack) moved, unchanged, from the end of msgpack_serialize.h to a new msgpack_adaptor.h included by msgpack_ctor.h and msgpack.h: msgpack_ctor.h instantiates msgpack::object for MsgPack and failed alone without them. They now precede the constructors instead of following everything.
-- Each piece opens with the license, a one-line comment and `#pragma once`: the only added lines. Blank runs between pieces are dropped.
-- `static const char* undefined = "\0";` moved with the constants into msgpack_types.h: a constant-initialized object, no dynamic initializer; it stays one per translation unit as before.
-- test/diff_test.cc includes its three pieces inside its one `namespace { }`, so the pieces hold only code and no namespace lines. No shared helper was introduced.
-- No CMake change: the msgpack_diff_test target still builds the single test/diff_test.cc; ctest names are unchanged.
+- Ten pieces, merged by what a maintainer works on together: the class declaration with its nested Iterator and Body and its msgpack adaptors (one type and its adaptors); the internal find/erase/put/fill with the public modifiers (one family); the rest stay by responsibility (ctor, init, access, hash, convert, arithmetic, serialize, all over 100 lines). msgpack_types.h (82 lines) stays as the base every piece includes. msgpack_exception.h (35 lines) is a pre-existing file, not touched.
+- Pieces are self-contained: the external includes move (unchanged) from msgpack.h to msgpack_types.h; every other piece includes msgpack_class.h and the standard headers it uses. msgpack.h only includes the pieces.
+- The msgpack adaptor specializations moved, unchanged, from the end of the file to msgpack_class.h, ahead of the constructors: msgpack_ctor.h instantiates msgpack::object for MsgPack and failed alone without them. Their position in the file order is the one non-move.
+- `static const char* undefined = "\0";` moved with the constants into msgpack_types.h: a constant-initialized object, no dynamic initializer.
+- test/diff_test.cc kept whole (1,026 lines): one differential test whose generator, runner and checks share one anonymous namespace in one translation unit; the three-header split put fragments inside it, so it was reverted rather than turned into separate translation units (that needs a linkage change for no gain). Earlier commits e64b234 and its revert 84bbc99 are in the branch history.
+- No CMake change: no install rules or header list exist (include directory only); ctest names unchanged.
