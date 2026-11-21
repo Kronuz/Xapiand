@@ -680,3 +680,15 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Detent: consensus-leaving-removal landed (consensus:a73c6e3); journal-group-delete's delete_group shape agreed with Detent's lead, plus criterion A7 (callable on the group's own loop after close_group).
 - Lead: merged main into failed-restore-exit, restore-stream, netlab-consensus, empty-aggregation and node-admission; their evidence reruns are queued behind 37 jobs.
 - Host: light slots 82% used last hour, 37 queued and 9 running, load 10-13, 303 GiB free. Quota 73% weekly, reset in ~34 h.
+
+### 2026-11-21 14h (hourly)
+
+- Landed: tls-watch-cancel (http:e4ad5b9), racing-put-409 (Xapiand:2bb043111). store-docs and cjk-words merged master after it and wait on CI; the watcher had skipped them on a briefly dirty home checkout.
+- Owner refined the big-file rule: split only where it helps maintenance, never for size. Rules now live on one page, cpp-libraries' docs/SPLITTING.md (cpp-libraries:7cab8ec), which all 24 split quests and Detent's three point at; a [manual] criterion has the lead read each split. CI size ratchet withdrawn.
+- Split rework (Sonnet, ~140-190k each): http-parser's parse loop and uinteger_t's class body back whole (both had been cut into .inc fragments); Lua processor, btree's node_layout test, msgpack's diff test and uinteger_t's header kept whole; btree 9 pieces to 6, msgpack 14 to 10. msgpack's rework left five superseded headers tracked (A6 caught the duplicate definitions; fixed at msgpack:68e45d8).
+- split-check (Sonnet, 172k): moves-only rule tightened from a line set to ordered top-level slices; size is now a note. Tests and lint pass at cpp-libraries:dc0ecfe; lands on CI.
+- journal-turn-buffers: the one-vector fix took a parked group from 129-137 B to 1.028 B of host heap (limit under 1); contributor measuring main's slope and the remaining growth.
+- journal-replaces-wal: chunks task (Opus, 340k) found three apply-path gaps in shard_group.cc at rf > 1, filed as A9 for step d; A8 added at Detent's request (remove the scheduler so stash and scheduler can be archived). http-log-logger-pin (lead edit) builds without the scheduler.
+- Stale Makefiles trees cost two tolerant-open jobs; 7 removed by the sweep; runner fix forwarded to campaign-v3.
+- Started split-task, split-logger, split-datetime and split-storage (Sonnet).
+- Host: light slots 59% used last hour, 82 queued and 4 running, load 13-23, 299 GiB free. Quota 76% weekly, reset in ~33 h.
