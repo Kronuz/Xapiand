@@ -12874,18 +12874,46 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-log-logger-pin",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T14:46:53",
+          "commit": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053",
+          "criteria": {
+            "A1": "261121-121154-628c82 (the build-test check), 261121-121154-628c82",
+            "A2": "261121-121156-360f45",
+            "A3": "CI green at 5d440caebbe4"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121154-628c82",
+              "level": "light",
+              "seconds": 142.5,
+              "state": "done",
+              "what": "http-log-logger-pin check build-test at 5d440caebbe4"
+            }
+          ],
+          "final": true,
+          "from": "5e3df31e359336cd36b1949e2895c0951b356b31",
+          "reason": "",
+          "tested": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http-log",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http-log pins a logger without the scheduler",
-      "updated": "2026-11-21T12:11:37",
-      "worktree": "../http-log-wt/xapiand/http-log-logger-pin"
+      "updated": "2026-11-21T14:46:56",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
