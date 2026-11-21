@@ -24,6 +24,13 @@ Waiting on jobs at strata ab0e1beb: root tests 261120-184051-b7da1d, 10-minute f
 
 ## Next
 
+0. Lead's change (overlong check belongs in varint: varint:333384e; strata's pin bump on
+   fix/varint-pin, strata:b4694757). Once the lead says it landed and is merged into
+   quest/xapiand/placement: merge that into this branch; remove `codec::reader::number`'s
+   shortest-form check; keep the crash bytes in `rules()`, the corpus file and the three-byte
+   case (they then prove varint's check); drop the `shortest-form` mutant and cancel
+   261120-184104-36c5cc if unrun; rerun root tests and fuzz at the new head. Until then, the
+   jobs at ab0e1beb stand.
 1. Read 261120-184051-b7da1d, 261120-184051-22343f and the 20 mutants; fix any failure with a job.
 2. Full suite (`build-test`) on the task branch once those pass (CI runs on push).
 
@@ -79,7 +86,8 @@ Not ready. Files: `include/strata/placement/{records,placement,root}.hh`,
 - The leader is members[0] (a preferred leader, not a hint; D5's "no leader hints" holds).
 - Node records keep id out of the value (it is the key); Xapiand's M1 fields go in `attributes`.
 - Name uniqueness among unretired nodes (M1) is left to Xapiand's join command.
-- Shortest-form integers are checked in `codec::reader`, not in `varint` (another library,
-  outside this file set); a varint-level check would be for its owner.
+- Shortest-form integers: checked in `codec::reader` at ab0e1beb as a stopgap; superseded by the
+  lead (varint is ours and refuses overlong LEB128 since varint:333384e; strata pinned ac6003e),
+  so the reader's check goes once the pin bump lands (Next 0).
 - Bench (`bench/placement/**`) not started: the 10^6-record measurements are the quest's
   "When done" jobs.
