@@ -25711,7 +25711,8 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "docs/exit-lifetime.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-logger",
       "landed": [],
@@ -25723,7 +25724,7 @@
       "risk": "low",
       "status": "active",
       "title": "logger's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:21:42",
+      "updated": "2026-11-21T12:30:32",
       "worktree": "../logger-wt/xapiand/split-logger"
     },
     "split-msgpack": {
