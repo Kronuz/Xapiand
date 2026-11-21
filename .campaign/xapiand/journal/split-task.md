@@ -1,6 +1,6 @@
 # split-task: journal
 
-State: waiting on jobs 261121-122744-c21719 (A1) 261121-122744-09cab8 (A2) 261121-122752-7d2bfd 261121-122757-6d4caf (A3) 261121-122809-473c08 261121-122803-c360df (A6)
+State: waiting on jobs 261121-145058-0690ee (A2, fixed checker at task:3179d8508a5f); A1/A3/A6 jobs finished green at 259f0cb
 Quest: .campaign/xapiand/quests/split-task.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,6 +13,8 @@ Split pushed at task:259f0cb6d73f (quest/xapiand/split-task): task.hh, test/asio
 one commit each, plus docs/source-layout.md. Jobs queued; none has run.
 
 ## Next
+
+0. Resume: main merged (already up to date); AGENTS.md now points at docs/source-layout.md (task:3179d8508a5f; only AGENTS.md changed since 259f0cb, so A1/A3/A6 stand). Read 261121-145058-0690ee and answer its warnings under Rulings; fix any error with moves only.
 
 1. Read each job's result; fix a build error or a self-containment failure if one shows.
 2. A3: diff the two `ctest -N` logs (base 261121-122757-6d4caf, head 261121-122752-7d2bfd).
@@ -27,10 +29,10 @@ Nothing. A2 waits for split-check.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-122744-c21719 (queued) |
-| A2 | split 261121-122744-09cab8 (queued; exit 2 until tools/split_check.py lands) |
+| A2 | 261121-145058-0690ee (split_check, split-check-sources version; replaces failed 261121-122744-09cab8) |
 | A3 | ctest -N: base 261121-122757-6d4caf, head 261121-122752-7d2bfd (queued; 261121-122751-bf620d was superseded by the head job despite its own --slot, resubmitted) |
 | A4 | docs/source-layout.md at task:259f0cb6d73f |
-| A5 | CI on quest/xapiand/split-task (pushed) |
+| A5 | CI at task:3179d8508a5f (pushed) |
 | A6 | selfcontained over task/*.hh plus the two test support headers: 261121-122809-473c08 (261121-122803-c360df is the same command run by `sh`, redundant) |
 | A7 | lead's reading |
 
