@@ -22765,10 +22765,10 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T04:33:54",
-          "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+          "at": "2026-11-21T09:51:10",
+          "base": "9d0d2703aeee6a0db8d70448274f90b704cff2e1",
           "blobs": {
-            "docs/perf/bulk-load-rss.md": "100644:9c3c42f86ad2d3979040702dce845553bf9705d8",
+            "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
             "src/server/search_views.cc": "100644:7da59d340be662732180a457db271b430ae4adf4",
             "src/server/search_views.h": "100644:eb6a60f3be8a26417775a17117e9657507de66ca",
@@ -22776,10 +22776,10 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "c5b2c0689ce51c7293cafe5ed909b2fa50299a46",
+          "commit": "06a6f8bc003b6ccbd01ec1b552ad2acded02c64e",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
-            "docs/perf/bulk-load-rss.md": "55616a000938f1cb",
+            "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
             "harness/bench/bulk_rss_probe.py": "e19856f1df42ee22",
             "src/server/search_views.cc": "ffa03e257f52da3b",
             "src/server/search_views.h": "85b01300a82774b2",
@@ -22787,7 +22787,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "",
+          "note": "re-read main's code changes since the review (e1be368395a1..9d0d2703aeee): only src/manager.cc reorders READY after http_service->start; no change to RESTORE parsing or streaming",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -22836,7 +22836,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T04:33:54",
+      "updated": "2026-11-21T09:51:10",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
