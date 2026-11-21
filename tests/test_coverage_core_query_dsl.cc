@@ -385,8 +385,8 @@ static void test_accuracy_terms() {
 	CHECK_THROWS_WITH(fx.got(obj({ { "k._10", "a" } })), std::exception, "expects a value of type integer");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._x", 1 } })), ClientError, "not valid");
 	CHECK_THROWS_WITH(fx.got(obj({ { "n._tsecond", 1 } })), std::exception, "");
-	// An integer accuracy of 0 is no accuracy: a QueryDslError (a 400), not the modulus's std::invalid_argument (a 500).
-	CHECK_THROWS_WITH(fx.got(obj({ { "n._0", 1 } })), QueryDslError, "Invalid field name: n._0");
+	// An integer accuracy of 0 is no accuracy: a QueryDslError (a 400) naming the accuracy component like the other refusals, not the modulus's std::invalid_argument (a 500).
+	CHECK_THROWS_WITH(fx.got(obj({ { "n._0", 1 } })), QueryDslError, "Invalid field name: _0");
 }
 
 static void test_in_ranges() {
