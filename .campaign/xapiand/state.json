@@ -1,6 +1,7 @@
 {
   "campaign": "xapiand",
   "ci": "github",
+  "ci_later": [],
   "messages": [
     {
       "at": "2026-11-08T21:28:09",
@@ -2950,17 +2951,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T07:35:37",
+          "commit": "84c065c0966aae963ffc8f4fc38da85bd7be9b92",
+          "criteria": {
+            "A1": "261121-045951-930034 (passed at fb9e134af022; only 1 merge from main since, none touching its files), 261121-045952-e9a764 (passed at fb9e134af022; only 1 merge from main since, none touching its files)",
+            "A2": "`docs/perf/bulk-load-rerun.md`: \"Today it loads faster than Elasticsearch on every\""
+          },
+          "evidence": [
+            {
+              "check": "suite",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "4ef1e97a76756a05f929d64c22071470bfd2595c",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "ef4980491b2313bf98ba8dadc2ee4c6719f97582",
+          "reason": "",
+          "tested": "4ef1e97a76756a05f929d64c22071470bfd2595c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
-      "updated": "2026-11-20T18:21:14",
-      "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
+      "updated": "2026-11-21T07:35:38",
+      "worktree": ""
     },
     "catalog-post-lifetime": {
       "accepted": {
@@ -4021,7 +4044,7 @@
           "name": "e2e"
         },
         {
-          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+          "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 3 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 5",
           "level": "light",
           "minutes": 90,
           "name": "cluster"
@@ -4253,6 +4276,92 @@
             "gate check build-test changed",
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-21T05:54:07",
+          "checks": [
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/run_all.sh cluster",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build-e2e -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLTO=OFF && cmake --build build-e2e -j4 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 3 && BIN=\"$PWD/build-e2e/bin/xapiand\" harness/cluster/run.sh check --nodes 5",
+                "level": "light",
+                "minutes": 90,
+                "name": "cluster"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n \"expand(Endpoint::cwd\" -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-walk"
+              }
+            ]
+          ],
+          "reason": "the old command ran `harness/run_all.sh cluster`, a layer run_all.sh does not have (exit 2, 'unknown layer'); it now runs the cluster checklist on 3 and 5 nodes, which is stricter; no review was accepted yet",
+          "voided": [],
+          "weakened": [
+            "gate check cluster changed"
+          ]
         }
       ],
       "landed": [],
@@ -4274,7 +4383,7 @@
       "risk": "high",
       "status": "active",
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-20T18:21:20",
+      "updated": "2026-11-21T05:54:07",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -11448,6 +11557,7 @@
       "provides": [
         "strata:group-install"
       ],
+      "reason": "install task built against detent:consensus-driver-install at consensus:887a88b; CMakeLists.txt's consensus pin moves when that lands",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
@@ -11482,7 +11592,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T23:34:59",
+      "updated": "2026-11-21T06:08:32",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -13239,19 +13349,19 @@
       "consumes": [],
       "files": [
         "src/multivalue/range.cc",
-        "tests/test_coverage_multivalue_range.cc"
+        "tests/test_coverage_multivalue_range.cc",
+        "docs/dev/keyword-open-range.md"
       ],
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: xapiand-final-release writes the xapiand release branch; this writes master, and a backport is its own cherry-pick",
       "repo": ".",
       "risk": "normal",
       "status": "active",
       "title": "Lower-bound-only keyword and text ranges match",
-      "updated": "2026-11-21T04:53:25",
+      "updated": "2026-11-21T06:10:02",
       "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
     },
     "kv-scan": {
@@ -27540,11 +27650,15 @@
       "milestone": "Track C",
       "needs": [],
       "provides": [],
+      "reason": "SYS-8 (ratify the shared turn log) and SYS-2/SYS-3 (the landed host transport is the design) wait on the owner; posted 2026-11-21 05h with recommendation (a) for both",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "blocked",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-20T19:59:35",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T05:22:26",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
