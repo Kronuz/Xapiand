@@ -465,10 +465,10 @@ void test_geo_terms_and_query() {
 	CHECK(wide.count(2) == 1);
 	CHECK(wide.count(3) == 1);
 	CHECK(wide.count(4) == 0);
-	// M3: the global prefixes are indexed in accuracy order but looked up in the reverse of it, so only the reversed
-	// list finds the document that gave them.
-	CHECK(find(1000, global).empty());
-	CHECK(find(1000, std::vector<std::string>(global.rbegin(), global.rend())) == Docs({ 2 }));
+	// The global prefixes are indexed and looked up in the same accuracy order, as the field's own are: the list that
+	// indexed the document finds it, the reversed list does not.
+	CHECK(find(1000, global) == Docs({ 2 }));
+	CHECK(find(1000, std::vector<std::string>(global.rbegin(), global.rend())).empty());
 
 	// Nothing to cover is no query; no accuracy prefix at all is every document.
 	CHECK(GenerateTerms::geo({}, accuracy, prefix).empty());
