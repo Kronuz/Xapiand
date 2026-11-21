@@ -12932,6 +12932,53 @@
       "title": "a host deletes a left group's journal, so the node can rejoin it",
       "updated": "2026-11-21T00:05:24"
     },
+    "journal-lost-bound": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/host.h",
+        "src/host*",
+        "include/journal/turn_log.h",
+        "test/lost_bound*",
+        "docs/mechanisms/lost-bound.md",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "journal:recovery"
+      ],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "damage bounds a group's loss instead of losing the group",
+      "updated": "2026-11-21T09:54:35"
+    },
     "journal-replaces-wal": {
       "accepted": {},
       "after": [],
