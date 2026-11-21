@@ -1870,6 +1870,50 @@
         "quest": "detent:consensus-leaving-removal"
       },
       "text": "detent:consensus-leaving-removal started and may change files your node-admission changes (order them with --after detent:consensus-leaving-removal, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T01:34:45",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T01:34:45",
+      "by": "lead",
+      "closed": "cluster uses HostTransport and the rpc lane only, never decodes Driver messages; tag 9 needs no change",
+      "id": "msg-195",
+      "text": "Heads-up, consensus wire change (consensus-quiescence, consensus:3b20d96, in re-review, not landed): new Driver message Gone{term}, wire tag 9. When a group fences on a live node, its Driver tells the group's other members, and a follower in that term treats it as LeaderGone, so resting groups elect instead of waiting forever. If your cluster decodes consensus Driver messages itself (rpc-lane), it needs tag 9."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T01:45:17",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T01:45:17",
+      "by": "lead",
+      "closed": "fix passes all 5 group cases (Detent job 261121-012106-ce07f5); no probe pin, repin when it lands",
+      "id": "msg-196",
+      "text": "msg-189 progress: consensus-leaving-removal's fix (consensus:9a2476d, review APPROVED, not landed) passes all five strata placement--repair group cases at seed 1 (replace, replicas, waits, defer, drain) on consensus:20198fc = your pin b8de3b8 plus the fix (job 261121-012106-ce07f5). It lands after consensus-quiescence; if you want to unblock placement now, pin 20198fc temporarily (local probe branch probe/leaving-removal-on-b8de3b8, ask and I'll push it)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T03:22:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T03:22:37",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-197",
+      "items": {
+        "faultlab-journal-oracle": "frees CMakeLists.txt, test/sector_test.cc, test/fixtures/**, README.md, docs/** for faultlab-journal-oracle"
+      },
+      "settles": {
+        "start": [
+          "faultlab-journal-oracle"
+        ]
+      },
+      "text": "faultlab-strata-gaps landed: unlocks frees CMakeLists.txt, test/sector_test.cc, test/fixtures/**, README.md, docs/** for faultlab-journal-oracle"
     }
   ],
   "quests": {
@@ -3063,18 +3107,41 @@
       "files": [
         "test/catalog_stress_test.cc"
       ],
-      "journal": "../Xapiand-wt/xapiand/catalog-stress-cap",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T03:52:59",
+          "commit": "753bc62c4c32210535e10b31f8156f448d560549",
+          "criteria": {
+            "A1": "261120-234052-36bc35 (passed at 0da17cad23de; only 1 merge from main since, none touching its files), 261120-234054-b30f9c (passed at 0da17cad23de; only 1 merge from main since, none touching its files), 261120-234057-859dd5 (passed at 0da17cad23de; only 1 merge from main since, none touching its files)",
+            "A2": "261120-234052-36bc35 (passed at 0da17cad23de; only 1 merge from main since, none touching its files); fails without: 261120-234100-691f38",
+            "A3": "CI green at 753bc62c4c32"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "753bc62c4c32210535e10b31f8156f448d560549",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "560e8851ddbced7458f2d98442397471d5f1dee2",
+          "reason": "",
+          "tested": "753bc62c4c32210535e10b31f8156f448d560549"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "catalog_stress reaches its maps cap deterministically",
-      "updated": "2026-11-20T23:35:10",
-      "worktree": "../strata-wt/xapiand/catalog-stress-cap"
+      "updated": "2026-11-21T03:53:05",
+      "worktree": ""
     },
     "census": {
       "accepted": {},
@@ -8961,6 +9028,8 @@
       "after": [
         "faultlab-strata-gaps"
       ],
+      "base": "753bc62c4c32210535e10b31f8156f448d560549",
+      "branch": "quest/xapiand/faultlab-adopt-strata",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -8978,8 +9047,11 @@
         "bench/**",
         "CMakeLists.txt",
         "AGENTS.md",
-        "README.md"
+        "README.md",
+        "docs/STATUS.md",
+        "docs/book/OUTLINE.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-strata",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -8987,9 +9059,10 @@
       "provides": [],
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "strata's crash tests run on faultlab's faultfs (step 3)",
-      "updated": "2026-11-20T23:04:34"
+      "updated": "2026-11-21T04:04:43",
+      "worktree": "../strata-wt/xapiand/faultlab-adopt-strata"
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
@@ -9434,6 +9507,8 @@
       "after": [
         "faultlab-strata-gaps"
       ],
+      "base": "b5640d71303b74de041aef039a2c9ff8d9861405",
+      "branch": "quest/xapiand/faultlab-journal-oracle",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9450,16 +9525,46 @@
         "README.md",
         "docs/**"
       ],
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T03:46:41",
+          "commit": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+          "criteria": {
+            "A1": "261121-034036-778aff, 261121-034039-bc66b3",
+            "A2": "261121-034118-d9974d",
+            "A3": "CI green at e3fcfe3ca197"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-034039-bc66b3",
+              "level": "light",
+              "seconds": 18.3,
+              "state": "done",
+              "what": "faultlab-journal-oracle check build-test at e3fcfe3ca197"
+            }
+          ],
+          "final": true,
+          "from": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "reason": "",
+          "tested": "e3fcfe3ca197d40e53371dffee1497708fc438b5"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "planned",
+      "status": "landed",
       "title": "faultlab's sector test stops fetching journal's memory_io.h",
-      "updated": "2026-11-20T23:17:06"
+      "updated": "2026-11-21T03:46:43",
+      "worktree": ""
     },
     "faultlab-netlab": {
       "accepted": {},
@@ -9721,10 +9826,41 @@
         "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/faultlab-strata-gaps",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T03:22:34",
+          "commit": "b5640d71303b74de041aef039a2c9ff8d9861405",
+          "criteria": {
+            "A1": "261120-231216-b15c65",
+            "A2": "261120-231216-b15c65",
+            "A3": "261120-231216-b15c65; fails without: 261120-231240-34dc25, 261120-231241-145756",
+            "A4": "261120-231216-b15c65",
+            "A5": "`docs/api.md`: \"Ends the cut as a process crash\"",
+            "A6": "CI green at b5640d71303b"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b5640d71303b74de041aef039a2c9ff8d9861405",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-231216-b15c65",
+              "level": "light",
+              "seconds": 39.9,
+              "state": "done",
+              "what": "faultlab-strata-gaps check build-test at b5640d71303b"
+            }
+          ],
+          "final": true,
+          "from": "b64102f2c95ad0ab49fc34189f3be8cda0507145",
+          "reason": "",
+          "tested": "b5640d71303b74de041aef039a2c9ff8d9861405"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -9732,9 +9868,9 @@
       ],
       "repo": "../faultlab",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "faultlab's faultfs covers every call strata makes",
-      "updated": "2026-11-20T23:32:58",
+      "updated": "2026-11-21T03:22:37",
       "worktree": "../faultlab-wt/xapiand/faultlab-strata-gaps"
     },
     "field-table": {
@@ -13087,6 +13223,37 @@
       "updated": "2026-11-20T00:12:29",
       "worktree": ""
     },
+    "keyword-open-range": {
+      "accepted": {},
+      "after": [],
+      "base": "de5ea84117a0a41650df12f719d23610d9100aed",
+      "branch": "quest/xapiand/keyword-open-range",
+      "checks": [
+        {
+          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/multivalue/range.cc",
+        "tests/test_coverage_multivalue_range.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "started by force: xapiand-final-release writes the xapiand release branch; this writes master, and a backport is its own cherry-pick",
+      "repo": ".",
+      "risk": "normal",
+      "status": "active",
+      "title": "Lower-bound-only keyword and text ranges match",
+      "updated": "2026-11-21T04:53:25",
+      "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
+    },
     "kv-scan": {
       "accepted": {},
       "after": [],
@@ -14706,6 +14873,67 @@
       "updated": "2026-11-16T15:58:01",
       "worktree": ""
     },
+    "lua-method-flake": {
+      "accepted": {},
+      "after": [],
+      "base": "41bb630233e3acd2cee1e1109c7f966ee042fc5d",
+      "branch": "quest/xapiand/lua-method-flake",
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_lua.cc",
+        "tests/test_lua_*.h",
+        "tests/utils*",
+        "src/manager.cc",
+        "tests/test_coverage_database.cc",
+        "tests/test_endpoint_uuid.cc",
+        "tests/test_loop_yield.cc",
+        "tests/test_node.cc",
+        "tests/test_stopword_search.cc"
+      ],
+      "landed": [
+        {
+          "at": "2026-11-21T05:16:10",
+          "commit": "eb954a6672307a735bc7f91041febee192fdb250",
+          "criteria": {
+            "A1": "D163",
+            "A2": "261121-024314-671378",
+            "A3": "D163",
+            "A4": "261121-024354-89c85f",
+            "A5": "CI green at 574d3fd1624f"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "574d3fd1624f2f22c82fee14fbaccb881d435668",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "a9561086f8c3016cadbb765cece6c37f8d820519",
+          "reason": "",
+          "tested": "574d3fd1624f2f22c82fee14fbaccb881d435668"
+        }
+      ],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "landed",
+      "title": "test_lua's method case passes every run, under load and beside parallel tests",
+      "updated": "2026-11-21T05:16:10",
+      "worktree": "../Xapiand-wt/xapiand/lua-method-flake"
+    },
     "lua-name-miss": {
       "accepted": {
         "correctness": {
@@ -16119,6 +16347,44 @@
       "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
       "updated": "2026-11-20T20:20:36",
       "worktree": "../consensus-wt/xapiand/netlab-consensus"
+    },
+    "newman-pin": {
+      "accepted": {},
+      "after": [],
+      "base": "686e6b9eb7e9e369dd48cf2d94233c5d63f99a00",
+      "branch": "quest/xapiand/newman-pin",
+      "checks": [
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 30,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "harness/engine_e2e.sh",
+        "harness/run_all.sh",
+        "harness/newman*",
+        "harness/package*.json",
+        "harness/e2e_capture.sh",
+        "harness/coverage.sh",
+        ".github/workflows/ci.yml",
+        ".github/workflows/arm64.yml",
+        ".github/workflows/freebsd.yml",
+        "TESTING.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Pin newman for the docs E2E in one place",
+      "updated": "2026-11-21T03:30:26",
+      "worktree": "../Xapiand-wt/xapiand/newman-pin"
     },
     "nightly-retry": {
       "accepted": {},
@@ -22159,6 +22425,83 @@
       "updated": "2026-11-12T09:00:45",
       "worktree": ""
     },
+    "restore-stream": {
+      "accepted": {
+        "security": {
+          "at": "2026-11-21T04:33:54",
+          "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+          "blobs": {
+            "docs/perf/bulk-load-rss.md": "100644:9c3c42f86ad2d3979040702dce845553bf9705d8",
+            "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
+            "src/server/search_views.cc": "100644:7da59d340be662732180a457db271b430ae4adf4",
+            "src/server/search_views.h": "100644:eb6a60f3be8a26417775a17117e9657507de66ca",
+            "tests/test_restore_stream.cc": "100644:710551eb9d89e593abd329fb73e07f373ae08522",
+            "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
+          },
+          "by": "review",
+          "commit": "c5b2c0689ce51c7293cafe5ed909b2fa50299a46",
+          "criteria": "fd024766c8bfafd1",
+          "diffs": {
+            "docs/perf/bulk-load-rss.md": "55616a000938f1cb",
+            "harness/bench/bulk_rss_probe.py": "e19856f1df42ee22",
+            "src/server/search_views.cc": "ffa03e257f52da3b",
+            "src/server/search_views.h": "85b01300a82774b2",
+            "tests/test_restore_stream.cc": "0086dbd0a80ec82d",
+            "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
+          },
+          "findings": {},
+          "note": "",
+          "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
+          "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
+          "verdict": "APPROVE"
+        }
+      },
+      "after": [],
+      "base": "e1be368395a15e778ff0942c4bcba18e195cc782",
+      "branch": "quest/xapiand/restore-stream",
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 120,
+          "name": "e2e"
+        },
+        {
+          "cmd": "ci:AddressSanitizer + UBSan",
+          "level": "light",
+          "minutes": 150,
+          "name": "asan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/server/search_views.cc",
+        "src/server/search_views.h",
+        "tests/test_restore_stream*",
+        "tests/restore_cli_check.sh",
+        "harness/bench/bulk_rss_probe.py",
+        "docs/perf/bulk-load-rss.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "high",
+      "status": "review",
+      "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
+      "updated": "2026-11-21T04:33:54",
+      "worktree": "../Xapiand-wt/xapiand/restore-stream"
+    },
     "retention": {
       "accepted": {},
       "after": [],
@@ -24315,6 +24658,37 @@
       "status": "landed",
       "title": "Streamed record write (L6)",
       "updated": "2026-11-08T15:40:25"
+    },
+    "store-docs": {
+      "accepted": {},
+      "after": [],
+      "base": "e2b0a86ee94ccc918fb73d44616740576ec3e525",
+      "branch": "quest/xapiand/store-docs",
+      "checks": [
+        {
+          "cmd": "ci:Functional E2E (docs)",
+          "level": "light",
+          "minutes": 30,
+          "name": "e2e"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "docs/src/content/docs/reference-guide/schemas/*.md",
+        "docs/src/content/docs/reference-guide/schemas.md",
+        "docs/src/lib/sidebar.mjs"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Document _store (index without keeping the value) with E2E blocks",
+      "updated": "2026-11-21T03:30:08",
+      "worktree": "../Xapiand-wt/xapiand/store-docs"
     },
     "stored-check-cache": {
       "accepted": {
@@ -26791,11 +27165,52 @@
         "docs/API.md",
         "docs/mechanisms/lifecycle.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/task-timers-followups",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T01:56:25",
+          "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+          "criteria": {
+            "A1": "261121-004731-d3f93a; fails without: 261120-234620-0cc4fe, 261121-004736-a76f3d",
+            "A2": "261121-004731-d3f93a, 261121-004754-b167fb, 261121-004756-0173e0, 261121-004757-b2ddf1; fails without: 261120-234623-f45356, 261120-234625-726b55, 261120-234627-d28a8b, 261121-004739-df20cc, 261121-004741-f7a445, 261121-004744-3c233d, 261121-004747-973743, 261121-004749-c4fc38",
+            "A3": "261121-004752-269b3f",
+            "A4": "261121-004734-c4ee7e, 261121-004734-b8ec84, 261121-004754-b167fb, 261121-004757-b2ddf1",
+            "A5": "CI green at dc2be963fbb5"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-004734-c4ee7e",
+              "level": "light",
+              "seconds": 27.4,
+              "state": "done",
+              "what": "task-timers-followups check suite at dc2be963fbb5"
+            },
+            {
+              "cmd": "cmake -B build-tsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-fsanitize=thread && cmake --build build-tsan -j4 && ctest --test-dir build-tsan --output-on-failure -j4",
+              "commit": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-004734-b8ec84",
+              "level": "light",
+              "seconds": 15.3,
+              "state": "done",
+              "what": "task-timers-followups check tsan at dc2be963fbb5"
+            }
+          ],
+          "final": true,
+          "from": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
+          "reason": "",
+          "tested": "dc2be963fbb5638c605bcae30c43aacb0286655c"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -26803,10 +27218,10 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "fire_pending's hang, starvation and double fire",
-      "updated": "2026-11-21T01:00:17",
-      "worktree": "../task-wt/xapiand/task-timers-followups"
+      "updated": "2026-11-21T01:56:28",
+      "worktree": ""
     },
     "termdict-forward-seek": {
       "accepted": {},
@@ -27306,18 +27721,41 @@
           ]
         }
       ],
-      "journal": "../Xapiand-wt/xapiand/track-c-gates",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T02:45:49",
+          "commit": "560e8851ddbced7458f2d98442397471d5f1dee2",
+          "criteria": {
+            "A1": "docs/gates/track-c-c2.md (artifact), strata:45b0ab43: every row at consensus 8801b99 / journal 178030b filled with its job: macOS 4592f2 86e99e 18b807 83dd88 75f543 b711ce 2b2fc3 369f91 c43dad 4175b8 b0da39; Linux VM 124538 2096f8; FreeBSD VM dd591f d74166. **T9 jpower 200 fails at journal 178030b** (18b807 macOS, d74166 FreeBSD: 7 failures, seeds 91 140 145 199 122), passed at d90797c (e136e7); Detent msg-183",
+            "A2": "docs/gates/track-c-c4.md, strata:560e8851: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 273aa8 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 fd5a96 4e57e4 ce0b7a 743b1d fa2caa b7499c; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x); R19 256 KiB Control past at 0 ms in 1 of 2 runs (59.0/15.1, then 7.8/11.5), gaps under bound + idle floor; T7e and D18 not runnable (group-heal)",
+            "A3": "docs/reviews/track-c-c2.md and track-c-c4.md (strata:ea2652b1): both APPROVE WITH CONDITIONS; C4 conditions 1-2 folded in at strata:560e8851; open conditions listed as each report's residuals"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "560e8851ddbced7458f2d98442397471d5f1dee2",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "b469475736ebacbfdf8676f93a47f2bf2e7204b2",
+          "reason": "",
+          "tested": "560e8851ddbced7458f2d98442397471d5f1dee2"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "C2 report completed and C4 report written at consensus and journal main",
-      "updated": "2026-11-20T18:21:57",
-      "worktree": "../strata-wt/xapiand/track-c-gates"
+      "updated": "2026-11-21T02:45:54",
+      "worktree": ""
     },
     "track-d": {
       "accepted": {},

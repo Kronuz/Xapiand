@@ -26,6 +26,7 @@
 // creates `aa`, then searches them.
 
 #include "test_harness.h"
+#include "utils_node.h"
 
 #include <atomic>
 #include <chrono>
@@ -39,8 +40,6 @@
 #include <thread>
 #include <vector>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -64,22 +63,6 @@ namespace fs = std::filesystem;
 
 namespace {
 
-int
-free_port()
-{
-	const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-	sockaddr_in addr{};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	socklen_t len = sizeof(addr);
-	if (fd < 0 || ::bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
-		std::fprintf(stderr, "FAIL: no free port\n");
-		std::exit(1);
-	}
-	::close(fd);
-	return ntohs(addr.sin_port);
-}
-
 // The node of this process: a manager whose control loop runs on a thread of its own, in `name` under the
 // working directory (kept when `keep`).
 class RunningNode {
@@ -100,7 +83,7 @@ public:
 		fs::current_path(root);
 		Endpoint::cwd = root.string() + "/";
 
-		std::vector<std::string> args = {"xapiand", "--port", std::to_string(free_port()), "--name", "nodetest", "-D", root.string(), "--shards", "1", "--processors", "1"};
+		std::vector<std::string> args = {"xapiand", "--port", std::to_string(port_.port()), "--name", "nodetest", "-D", root.string(), "--shards", "1", "--processors", "1"};
 		args.insert(args.end(), extra.begin(), extra.end());
 		std::vector<char*> argv;
 		for (auto& arg : args) {
@@ -136,6 +119,7 @@ public:
 	bool ready() const { return ready_; }
 
 private:
+	test_utils::ReservedPort port_;   // held while the node lives
 	std::thread thread_;
 	bool ready_ = false;
 	std::atomic<bool> exited_{false};
