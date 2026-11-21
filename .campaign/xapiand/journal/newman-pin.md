@@ -20,16 +20,15 @@ TESTING.md: new "Docs E2E" section. A1 job runs harness/newman_pin_check.sh (4.5
 
 ## Blocked on
 
-Not blocking: .github/workflows/arm64.yml (line 60) and freebsd.yml (line 63) still `npm install -g newman@6`; outside my
-file set. The lead should widen it (replace with setup-node/npm and the harness pin) or accept. A2 is run over
-harness, ci.yml, TESTING.md.
+Nothing. The lead widened the file set; arm64.yml, freebsd.yml, e2e_capture.sh and coverage.sh now use the same pin
+(e2e_capture.sh sources newman_env.sh; FreeBSD runs `bash harness/newman_env.sh` as root in the VM before the suite runs as nobody).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | job 261121-032949-19a6ee |
-| A2 | job 261121-032951-b7522b (scoped, excludes e2e_capture.sh); one place = harness/package.json |
+| A2 | job 261121-032951-b7522b (the quest's full grep); one place = harness/package.json |
 | A3 | CI after push |
 
 ## Result
@@ -40,5 +39,5 @@ harness, ci.yml, TESTING.md.
 
 1. Pin in harness/package.json (not npx): lockfile gives integrity hashes; npm ci installs locally, no global.
 2. harness/node_modules self-ignores via a `*` .gitignore the install writes (.gitignore is outside the file set).
-3. e2e_capture.sh (outside the file set) is untouched: it finds the pinned newman via the PATH its callers set; its major>=6 check stays.
-4. harness/coverage.sh (outside file set) still gates its e2e on `command -v newman`; a lead follow-up.
+3. The major>=6 check in e2e_capture.sh is gone: the pin replaces it.
+4. e2e_capture.sh is now the one place every caller (gate7c_rows, coverage, run_all) gets the pin; engine_e2e.sh and run_all.sh also source newman_env.sh to print the version / skip early (idempotent).
