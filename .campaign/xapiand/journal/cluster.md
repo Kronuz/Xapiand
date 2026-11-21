@@ -1,41 +1,33 @@
 # cluster: journal
 
-State: waiting on jobs 261120-104100-17872a 261120-104101-6fec3b 261120-104101-0779b2 261120-104101-65db6c (suite), 261120-104107-5a4591 (A5 tests), 261120-104118-187dc4 then 261120-104125-6ca616 261120-104127-4d45de 261120-104128-564b3a (fuzz); 261120-095830-2935c9 261120-095833-f98de7 (A5 TSan, ASan at Xapiand:37f0c5a5f)
+State: waiting on jobs 261121-054409-e6cd96 (A5 under TSan, x3) 261121-054412-d9be07 (A5 plain) at Xapiand:4fa179c7c; CI on the push
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
 
-B1 answered (lead: `CMakeLists.txt` and `cmake/**` are in the file set). At Xapiand:f49d0e0f7:
-consensus is pinned at consensus:e1f249d8d (main, the RPC lane), task 18eb516 to 95798a02f, journal
-5bbeedc to 9e11713ed and completion e49f288 to d8b538c67 (the commits consensus pins; consensus's
-reactor pin ab69cf2 is older than Xapiand's 886131b, kept). `tests/cluster/` is no longer a
-standalone project: the top-level build adds it under `BUILD_TESTS` with TLS on, and
-`consensus` is made available only then. Configure and the three cluster binaries build clean
-locally (macOS x86_64, scratch build; `codec` and `malformed` pass). The RPC decoders' libFuzzer
-target `fuzz_rpc_methods` is under `-DFUZZ=ON` beside the other five (`fuzz_rpc_seed DIR` writes
-the seed corpus). Task `rpc` (A5) otherwise as before: `src/cluster/rpc*`,
-`tests/cluster/test_rpc*`, `docs/mechanisms/shard-rpc.md`.
+2026-11-21: read the 2026-11-20 jobs and CI at Xapiand:44c2ba5e4; fixed this quest's one red,
+merged master (clean, Xapiand:4fa179c7c), pushed. Membership design is at revision 3
+(`docs/design/cluster-membership.md`), waiting on the lead's design round; nothing of it is built.
 
-Jobs at Xapiand:f49d0e0f7:
-- suite (`campaign verify cluster`): build-test 261120-104100-17872a (now runs tests/cluster too),
-  e2e 261120-104101-6fec3b, cluster 261120-104101-0779b2, no-walk 261120-104101-65db6c;
-- A5's tests: 261120-104107-5a4591 (the 12 `cluster_rpc*` cases through the top-level build);
-- fuzz, one hour as four jobs: smoke 261120-104118-187dc4 (60 s, builds `build-fuzz` with Homebrew
-  clang 23 and proves the target runs), then three 30-minute jobs, `-max_total_time=1500` each
-  (75 minutes in all), seeds 1, 2 and 3, each in its own corpus dir from `fuzz_rpc_seed`, `--after`
-  the smoke: 261120-104125-6ca616 (seed 1), 261120-104127-4d45de (seed 2), 261120-104128-564b3a
-  (seed 3). They all run on the quest's one slot, so one at a time.
-- still pending from before: A5 TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 at
-  Xapiand:37f0c5a5f (the RPC sources are unchanged since; the test build moved).
+Failures and whose they are:
+
+| Failure | Cause | Owner |
+|---|---|---|
+| TSan `cluster_rpc_streams`: 261120-095830-2935c9 (exit 8), CI "Unit tests under TSan" | `test_streams`' forward_write handler ran `CHECK_EQ` on the loop thread, racing `testh::checks` | this quest; fixed at Xapiand:a2470c24a (the handler records an atomic, the main thread checks) |
+| build-test 261120-104100-17872a (exit 1; ctest 89/89 green), CI "Blocking calls on reactor paths", arm64 and FreeBSD rows `t1_strict_owed` and `gate_tools` | `async_check --strict`: `async_allowlist.tsv:37` `src/engine/strata/shard.cc` 6 hits for 5 allowed, `pool.cc` row stale; files this branch never touched | master at the merge base Xapiand:b9de2ed42; fixed on master by Xapiand:bf593a759 and Xapiand:7290c10d8, in this branch by the merge |
+| cluster 261120-104101-0779b2 (exit 2) | `harness/run_all.sh cluster`: "unknown layer: cluster"; run_all.sh has no `cluster` layer (the tier-1 entry is `harness/cluster/run.sh check`) and `run_all.sh` is outside this file set | the lead's check definition (or `cluster-harness`): point the check at `harness/cluster/run.sh check --nodes 3` / `--nodes 5`, or add the layer |
+| no-walk 261120-104101-65db6c (exit 1) | `expand(Endpoint::cwd` is still in `src`: removing it is task `search` (A3), not built | expected red until `search` |
+
+Passed and standing: e2e 261120-104101-6fec3b; A5 tests 261120-104107-5a4591; fuzz smoke
+261120-104118-187dc4 and seeds 1-3 261120-104125-6ca616, 261120-104127-4d45de,
+261120-104128-564b3a (75 min, no crash); ASan+UBSan 261120-095833-f98de7.
 
 ## Next
 
-1. Read the jobs above; fold in any red. If the smoke fails to build with clang 23, the fuzz jobs
-   never start: fix the build, resubmit. The A5 control (a mutant that must fail) is still the one at
-   37f0c5a5f (mutant/xapiand/cluster-version, Xapiand:7d7a90722): rebuild it on the new build if the
-   lead wants the control at this head.
-2. `membership` once B2 and B3 are answered: node identity, `--join`, keepalives, `suspect`/`down`
-   over the `keepalive` method, the directory behind an interface the root fills (placement).
+1. Read 261121-054409-e6cd96 and 261121-054412-d9be07 and CI at the pushed head; the A5 control
+   (mutant/xapiand/cluster-version) is still at Xapiand:37f0c5a5f.
+2. `membership` once B2 and B3 are answered and the design round passes: node identity, `--join`,
+   keepalives, `suspect`/`down` over the `keepalive` method, the directory behind an interface the root fills (placement).
 3. `shard-map`, `search`, `migration`, `api`: after `group-core`, `journal-replaces-wal` and
    `placement` publish their contracts (none is built yet; see Dependencies).
 4. Multicast wiring (`--discovery-*` onto consensus `Seeds`) last, after `multicast-seeds` lands.
@@ -85,7 +77,7 @@ Jobs at Xapiand:f49d0e0f7:
 | A2 | none yet |
 | A3 | none yet |
 | A4 | none yet |
-| A5 | at Xapiand:f49d0e0f7: tests 261120-104107-5a4591, fuzz 261120-104118-187dc4 (smoke) and 261120-104125-6ca616, 261120-104127-4d45de, 261120-104128-564b3a (seeds 1-3, 25 min each); earlier, at Xapiand:37f0c5a5f: 261120-095828-2b5e4d green (12 cases at Xapiand:37f0c5a5f); control 261120-095855-16a31d fails as required (exit 8 at the range-check mutant); TSan 261120-095830-2935c9 and ASan+UBSan 261120-095833-f98de7 pending. |
+| A5 | at Xapiand:f49d0e0f7: tests 261120-104107-5a4591, fuzz 261120-104118-187dc4 (smoke) and 261120-104125-6ca616, 261120-104127-4d45de, 261120-104128-564b3a (seeds 1-3, 25 min each, no crash); at Xapiand:37f0c5a5f: ASan+UBSan 261120-095833-f98de7 green, TSan 261120-095830-2935c9 red (test race, fixed at Xapiand:a2470c24a); control 261120-095855-16a31d fails as required; at Xapiand:4fa179c7c: TSan x3 261121-054409-e6cd96, plain 261121-054412-d9be07 pending. |
 | A6 | none yet |
 
 ## Tasks for other agents
@@ -99,6 +91,10 @@ two worth their own agents; `migration` and `api` follow. `membership` waits on 
 Not yet.
 
 ## Rulings I made
+
+- R11: the cluster-check and no-walk reds are not this quest's code to fix now (the first is the
+  check's command, outside the file set; the second is task `search`); the master merge is a plain
+  `git merge master`, not `campaign land --merge-main`, which may land.
 
 - R3: application failures ride the lane's `Error` frame (code 256 + Status, text), never a
   response body, so a stream that fails midway and one refused up front look the same to the
