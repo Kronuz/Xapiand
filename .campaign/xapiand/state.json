@@ -9308,6 +9308,38 @@
       "updated": "2026-11-18T07:37:41",
       "worktree": ""
     },
+    "faultlab-journal-oracle": {
+      "accepted": {},
+      "after": [
+        "faultlab-strata-gaps"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "CMakeLists.txt",
+        "test/sector_test.cc",
+        "test/fixtures/**",
+        "README.md",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "planned",
+      "title": "faultlab's sector test stops fetching journal's memory_io.h",
+      "updated": "2026-11-20T23:17:06"
+    },
     "faultlab-netlab": {
       "accepted": {},
       "after": [],
