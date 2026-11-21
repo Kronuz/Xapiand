@@ -156,17 +156,20 @@ test_schema_property()
 		}
 		CHECK(refused);
 	}
-	Schema schema(Schema::get_initial_schema(), nullptr, "");
-	schema.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", true}})}}));
-	const auto stored = [&] { return schema.get_schema().at("body").at("_cjk_words").boolean(); };
-	CHECK(stored());
-	CHECK_EQ(schema.get_schema().at("body").at("_cjk_ngram").boolean(), false);
-	// Once set, the property does not change: the write is refused or leaves it as it was.
+	Schema written(Schema::get_initial_schema(), nullptr, "");
+	written.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", true}})}}));
+	CHECK(written.get_schema().at("body").at("_cjk_words").boolean());
+	CHECK_EQ(written.get_schema().at("body").at("_cjk_ngram").boolean(), false);
+	// An update of the stored schema (write replaces it whole) refuses to change the property.
+	Schema stored(written.get_modified_schema(), nullptr, "");
+	std::string refusal;
 	try {
-		schema.write(MsgPack({{"body", MsgPack({{"_type", "text"}, {"_cjk_words", false}})}}));
-	} catch (const ClientError&) {
+		stored.update(MsgPack({{"body", MsgPack({{"_cjk_words", false}})}}));
+	} catch (const ClientError& exc) {
+		refusal = exc.what();
 	}
-	CHECK(stored());
+	CHECK(refusal.find("_cjk_words") != std::string::npos);
+	CHECK(stored.get_schema().at("body").at("_cjk_words").boolean());
 }
 
 }  // namespace
