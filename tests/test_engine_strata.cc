@@ -391,19 +391,9 @@ void strata_only() {
 	auto other = make("Ktwo", "t");
 	CHECK_EQ(engine::sync_wait(shard.add(other, plain)).did, 2u);
 
-	// A key that belongs to another document cannot be replaced by id.
+	// A key that belongs to another document cannot be replaced by id: the id is stale, a retryable conflict.
 	auto clash = make("Kone", "c");
-	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.replace(2, clash, plain)); }) == engine::errc::invalid);
-	{
-		// The shard says why itself; the index would refuse the write too, with its own words.
-		std::string why;
-		try {
-			engine::sync_wait(shard.replace(2, clash, plain));
-		} catch (const engine::Error& error) {
-			why = error.description();
-		}
-		CHECK_TRUE(why.find("key belongs to another document") != std::string::npos);
-	}
+	CHECK_TRUE(error_kind([&] { engine::sync_wait(shard.replace(2, clash, plain)); }) == engine::errc::version_conflict);
 	CHECK_EQ(engine::sync_wait(shard.get(1))->data(), "d");  // neither document changed
 	CHECK_EQ(engine::sync_wait(shard.get(2))->data(), "t");
 	CHECK_EQ(engine::sync_wait(shard.get(1))->version(), 1u);
