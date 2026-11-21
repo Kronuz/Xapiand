@@ -26013,11 +26013,12 @@
       "provides": [
         "task:scheduler"
       ],
+      "reason": "satisfied by task-inbox-first (task:b7e2449, an ancestor of main a4ba197): R1, R2, R4 and N8 already fixed; the hunt row was stale; its re-verification jobs cancelled on a loaded host",
       "repo": "../task",
       "risk": "high",
-      "status": "active",
+      "status": "dropped",
       "title": "a self-reposting loop cannot starve a cross-thread post",
-      "updated": "2026-11-20T23:35:05",
+      "updated": "2026-11-20T23:46:04",
       "worktree": "../task-wt/xapiand/task-inbox-starvation"
     },
     "task-lanes": {
