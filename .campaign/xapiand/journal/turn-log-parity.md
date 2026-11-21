@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: ready for review
+State: blocked on lead: A1-A3, A5 and A6 have no built mechanism (tasks ryw, tolerant-open, large-tx, design-note, parity 2-6 and 8-14 not run); jobs 261120-192604-6f5291 261120-192604-94fa59 261120-192606-891335 261120-192628-0cc5e8 pending
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,28 +9,54 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Task design-fixes, round 2 (design assignment): strata `docs/design/rocksdb-parity.md` revised for
-the design review's round 2 (`.campaign/xapiand/reviews/turn-log-parity-design.md`, CHANGES at
-strata:e5721fd6), F8-F14 and N8-N14, on `quest/xapiand/turn-log-parity` in
-`~/code/Kronuz/strata-wt/xapiand/turn-log-parity`.
+Closing pass at strata:962e6c74 (tasks cohort-wait, merge-runs and journal-pin merged). Built on
+the quest branch: parity task 0 (journal pin, now 178030b), task 1 (D5 cohort wait, A4) and task 7
+(D9 sorted runs). Not built: A1 read-your-writes, A2 tolerant open, A3 large transactions, the
+design note's Q3-Q5 closure (A5), and parity tasks 2-6 and 8-14 that A6's rows need
+(`docs/design/rocksdb-parity.md`, "Tasks for turn-log-parity" and "A1-A3").
 
 ## Next
 
-1. Lead: close the design review's round 2 on strata:68e1c6a8 from the probe jobs below (F8-F14,
-   N8-N14); no text round is left.
-2. Lead: send the journal changes in the note's task list (tasks 3, 6, 10, 13, 14 and
-   `tolerant-open`, each with its journal test) to Detent's lead, and Q5 to the owner.
-3. Lead: the quest file predates round 2. Task 13 now keeps forward copies and indexes live records
-   by segment. The journal tasks are 2, 3, 6, 9, 10, 13, 14 and `tolerant-open`, and task 0 moves
-   the pin. The note's directory `docs/design/rocksdb-parity/` is outside the file set (see
-   Rulings).
+1. Lead: the quest cannot close on its three tasks. Launch the tasks the criteria need: `ryw` (A1),
+   `tolerant-open` (A2, needs parity task 6's `covers` and task 3's copy flag), `large-tx` (A3),
+   parity tasks 2-6 and 8-14 (A6), then `design-note` (A5) once A1-A3 are built.
+2. Read jobs 261120-192604-6f5291, 261120-192604-94fa59 (probe reruns), 261120-192606-891335
+   (build-test) and 261120-192628-0cc5e8 (A6 merge_policy test) into the table below.
 
 ## Blocked on
 
-Nothing for this step. The owner holds Q5, read-your-writes off the owner's thread; the default is
-(a), routing reads to the owner, with no new public API.
+Lead: tasks for A1-A3, A5 and A6 (above). No job can prove a mechanism that is not built; the
+smallest step per criterion is its task, each with the test and mutant its row names.
 
 ## Evidence
+
+At strata:962e6c74 unless stated.
+
+| Criterion | Evidence |
+|---|---|
+| A1 | none: not built. Proof once task `ryw` lands: its faultfs test (owner get sees the held-barrier `ack=none` write, a view does not) `--for A1`, and `--fails-without` at the mutant whose owner read is cut at V (rocksdb-parity.md "A1") |
+| A2 | none: not built. Proof once task `tolerant-open` lands: the C/U/W damaged-block test `--for A2`, `--fails-without` at the mutant that opens every damaged group (rocksdb-parity.md "A2") |
+| A3 | design models only, not the built path: probe H rerun 261120-192604-6f5291 (pending; at e287a47b 261120-133243-d4f975 passed, 0 torn states), probe G rerun 261120-192604-94fa59 (pending; at e287a47b 261120-133248-df88a3 passed, row 6 seals within 2 turns). The criterion's power-cut sweep over the built split, with its three mutants, comes with task `large-tx` |
+| A4 | test_barrier_cohort K=4: 261120-192604-5eca03 passed at 962e6c74 (rerun of 261120-082445-11a61b); `--fails-without` 261120-082448-f562c7 at the mutant strata:0ceb74fb (no wait in `serve()`), failed as required |
+| A5 | none: `docs/design/standalone-turn-log.md` still reads "Q3 to Q5 are ruled (D103)" and each Q says "quest `turn-log-parity` closes the gap after `document-gate` lands", so it records them open. Closing them in the note before A1-A3 are built would be false |
+| A6 | partial, no gate rows: task 7's merge_policy test 261120-192628-0cc5e8 (pending; rerun of 261120-081226-1f9736, whose worktree is gone), `--fails-without` 261120-081225-8f09de at the mutant ignoring runs. No document-gate row has been measured at this head: the exclusive rows (host, Linux VM, FreeBSD VM; at most 10 minutes each) wait for tasks 2-6 and 8-12, since rows 2-6 move disk, bytes written, peak memory, p99.99 and CPU |
+| build-test | 261120-192606-891335 (pending) |
+| journal pin | t5d 261120-174858-0afc2a passed at strata:37197958; mutant at 9e11713 261120-174913-536451 exited 1 as required; suite 261120-174901-9520ed passed |
+
+Smallest jobs, once built (each a `campaign job submit --quest turn-log-parity`):
+
+- A1: `--for A1 -- build/<ryw test>`, and the same at the cut-at-V mutant with `--fails-without`.
+- A2: `--for A2 -- build/<tolerant-open test>`, and at the open-everything mutant `--fails-without`.
+- A3: `--for A3 -- build/<large-tx power-cut sweep>` with `chunk_bytes` 4 KiB, and three
+  `--fails-without` runs (apply per chunk, freeze leaves the record open, limit at `command_bytes`).
+- A6: `--level exclusive --minutes 10` per row set of document-gate's gate report, host first, a
+  seconds-long smoke before each.
+
+Hunt item "journal park contract" (Detent msg-188): not applied. Its two strata items wait for a pin
+at journal:b6a7697 or later; this branch pins journal:178030b, and b6a7697 is only on
+`quest/detent/journal-idle-groups`, not an ancestor of 178030b.
+
+### Design round 2 probes (models of the design, not of built code)
 
 | Item | Evidence |
 |---|---|
@@ -41,7 +67,7 @@ Nothing for this step. The owner holds Q5, read-your-writes off the owner's thre
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
 
-## Result
+## Result (design round 2)
 
 strata:e287a47b holds probes H-K and probe G's row 6. strata:5185790f and strata:68e1c6a8 hold the
 note, revised for round 2. Sections changed:
@@ -58,7 +84,7 @@ note, revised for round 2. Sections changed:
 The note is 860 lines, 726 at e5721fd6. The growth is A1-A3 and the F8-F13 mechanisms; the rest was
 condensed.
 
-## Rulings I made
+## Rulings I made (design round 2)
 
 Round 2:
 
