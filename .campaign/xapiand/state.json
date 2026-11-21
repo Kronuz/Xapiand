@@ -11370,6 +11370,8 @@
     "group-catalog": {
       "accepted": {},
       "after": [],
+      "base": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+      "branch": "quest/xapiand/group-catalog",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -11386,6 +11388,7 @@
         "docs/mechanisms/group-catalog.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/group-catalog",
       "landed": [],
       "lenses": [
         "durability"
@@ -11395,11 +11398,13 @@
       "provides": [
         "strata:group"
       ],
+      "reason": "started by force: group-heal's install task edits group.hh's install path and waits on detent:consensus-driver-install; this changes group::config and the close/recover ownership; ninja-only-strata and turn-log-parity tasks append to CMakeLists in other places; the lead merges",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "a replication group runs on its catalog slot's index",
-      "updated": "2026-11-21T10:00:54"
+      "updated": "2026-11-21T10:01:00",
+      "worktree": "../strata-wt/xapiand/group-catalog"
     },
     "group-core": {
       "accepted": {},
