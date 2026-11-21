@@ -26356,22 +26356,40 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-20T19:59:35",
+          "lenses": [
+            [
+              "correctness",
+              "security"
+            ],
+            []
+          ],
+          "reason": "roll-up after the reconciliation (D123, D125): every owed item landed in its own reviewed quest; this branch changes only strata's track documents",
+          "risk": [
+            "high",
+            "low"
+          ],
+          "voided": [],
+          "weakened": [
+            "risk high -> low",
+            "lens correctness removed",
+            "lens security removed"
+          ]
         }
       ],
       "journal": "../Xapiand-wt/xapiand/track-c",
       "landed": [],
-      "lenses": [
-        "correctness",
-        "security"
-      ],
+      "lenses": [],
       "milestone": "Track C",
       "needs": [],
       "provides": [],
       "repo": "../strata",
-      "risk": "high",
+      "risk": "low",
       "status": "active",
       "title": "Track C, the consensus gaps after C1",
-      "updated": "2026-11-20T18:21:54",
+      "updated": "2026-11-20T19:59:35",
       "worktree": "../strata-wt/xapiand/track-c"
     },
     "track-c-c1": {
