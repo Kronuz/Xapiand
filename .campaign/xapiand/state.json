@@ -1742,6 +1742,18 @@
         "quest": "detent:consensus-driver-install"
       },
       "text": "detent:consensus-driver-install started and may change files your node-admission changes (order them with --after detent:consensus-driver-install, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T18:42:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T18:42:49",
+      "by": "consensus-driver-install",
+      "closed": "contract recorded in group-heal's quest file (Contracts); the install task binds once consensus-driver-install's code lands",
+      "id": "msg-187",
+      "text": "consensus-driver-install contract (msg-179 option a) is at consensus:2c598fb, docs/DRIVER.md section 'Install' on branch quest/detent/consensus-driver-install. Summary: GroupOptions::snapshots set => the Driver owns the group's SnapshotChannel. Sink gets three new notices: SendTransfer{NodeId peer; std::string frame} (one RFTXFR01 frame; host sends it with transport::send_transfer(transport, loop, group, local, node, frame), a data frame on Bulk); ValidateImage{Token token; LogBoundary boundary; NodeId source; journal::ArtifactReader& image} once per transfer, after the chunks are durable and CRC32C-read-back, nothing persisted yet -- stage here, then answer validated(group, token) or validation_failed(group, token) on the loop; ActivateImage{Token token; LogBoundary boundary; journal::ArtifactReader& image} after consensus persisted the install -- answer activated / activation_failed as today. ActivateImage REPLACES the Sink's ActivateInstall notice. image is borrowed for the Sink call only (read_at up to 64 KiB, like recover's Restore reader): decode the bundle there. New plain call transfer(group, source_incarnation, payload) for a received message whose payload transport::is_transfer(received) names; every other one stays receive(). The whole transfer incl. validation must finish within the leader's Timing::snapshot_timeout or the leader cancels (SnapshotReleased TimedOut) and retries; a stale validated/validation_failed is dropped and counted. The image is the leader's latest published checkpoint's application bytes (your bundle); pin at SnapshotNeeded, release at SnapshotReleased. Building it now; will message when it lands."
     }
   ],
   "quests": {
