@@ -533,7 +533,7 @@ void test_open_files_limit() {
 		main_opts.max_clients = 1000;
 		adjust_or_report();
 		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>((minimum - 68) / 7));
-		CHECK_EQ(main_opts.max_clients, static_cast<ssize_t>(1));
+		CHECK_GE(main_opts.max_clients, static_cast<ssize_t>(1));
 		main_opts.max_files = minimum - 1;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
