@@ -1894,6 +1894,26 @@
       "closed": "fix passes all 5 group cases (Detent job 261121-012106-ce07f5); no probe pin, repin when it lands",
       "id": "msg-196",
       "text": "msg-189 progress: consensus-leaving-removal's fix (consensus:9a2476d, review APPROVED, not landed) passes all five strata placement--repair group cases at seed 1 (replace, replicas, waits, defer, drain) on consensus:20198fc = your pin b8de3b8 plus the fix (job 261121-012106-ce07f5). It lands after consensus-quiescence; if you want to unblock placement now, pin 20198fc temporarily (local probe branch probe/leaving-removal-on-b8de3b8, ask and I'll push it)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T03:22:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T03:22:37",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-197",
+      "items": {
+        "faultlab-journal-oracle": "frees CMakeLists.txt, test/sector_test.cc, test/fixtures/**, README.md, docs/** for faultlab-journal-oracle"
+      },
+      "settles": {
+        "start": [
+          "faultlab-journal-oracle"
+        ]
+      },
+      "text": "faultlab-strata-gaps landed: unlocks frees CMakeLists.txt, test/sector_test.cc, test/fixtures/**, README.md, docs/** for faultlab-journal-oracle"
     }
   ],
   "quests": {
@@ -9458,6 +9478,8 @@
       "after": [
         "faultlab-strata-gaps"
       ],
+      "base": "b5640d71303b74de041aef039a2c9ff8d9861405",
+      "branch": "quest/xapiand/faultlab-journal-oracle",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -9474,6 +9496,7 @@
         "README.md",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-journal-oracle",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -9481,9 +9504,10 @@
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "faultlab's sector test stops fetching journal's memory_io.h",
-      "updated": "2026-11-20T23:17:06"
+      "updated": "2026-11-21T03:23:14",
+      "worktree": "../faultlab-wt/xapiand/faultlab-journal-oracle"
     },
     "faultlab-netlab": {
       "accepted": {},
