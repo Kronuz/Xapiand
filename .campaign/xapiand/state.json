@@ -24519,6 +24519,8 @@
     "store-docs": {
       "accepted": {},
       "after": [],
+      "base": "e2b0a86ee94ccc918fb73d44616740576ec3e525",
+      "branch": "quest/xapiand/store-docs",
       "checks": [
         {
           "cmd": "ci:Functional E2E (docs)",
@@ -24536,11 +24538,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: globs only: cjk-words changes schemas/field-types/text-type.md and cluster nothing under schemas; this quest's set is schemas/*.md",
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Document _store (index without keeping the value) with E2E blocks",
-      "updated": "2026-11-21T03:27:28"
+      "updated": "2026-11-21T03:27:50",
+      "worktree": "../Xapiand-wt/xapiand/store-docs"
     },
     "stored-check-cache": {
       "accepted": {
