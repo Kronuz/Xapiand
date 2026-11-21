@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261121-121340-140534 261121-121342-18a35f 261121-121345-18983c 261121-121348-cd08ff 261121-121351-e676c9 261121-121353-d1af6e 261121-121356-2d4517 261121-121359-943339 261121-121401-477826 261121-121404-d05796 261121-121406-cda053 261121-121409-060e7c 261121-121411-10f0d1 261121-121414-237c59 261121-120821-ebdf35 (park_count at journal:87af246 and without the turn-log fix at journal:5a5972d, A1-A6 and five mutants, TSan, Detent's recycler probe, main's phase probe) and CI at journal:87af246
+State: waiting on jobs 261121-122537-1d2438 261121-122521-cc207c 261121-122539-a8551b 261121-122540-b2f8c5 261121-122542-b704ea 261121-122543-16d8b1 261121-122544-1ac36e 261121-122545-5e6990 261121-122547-b7aeb3 261121-122548-1c2e38 261121-122523-7fa359 261121-122549-31782b 261121-122550-138135 (park_count, A1-A4, A6, five mutants, TSan, Detent's recycler probe, all at journal:60ab864) and CI at journal:60ab864
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,7 +25,16 @@ msg (lead, 11-21): park_count at journal:5a5972d still failed, 1.028 B per group
 - New tests: framing_test reader_manifests (64 and 100 groups; a byte changed in the manifest's
   first and last byte, the first read's last byte and the CRC is refused); mutant header-crc.
 - Left from first use, both under 64 B: copies_' first Copy and index_nodes_' first spare slot.
-- Main's phase probe 261121-120821-ebdf35 splits main's 4,480 B by phase (pending).
+- Results: park_count passes at journal:87af246, 0.5648 B per group, 5,648 B
+  (261121-121340-140534); fails without the turn-log fix at journal:5a5972d, 1.028
+  (261121-121342-18a35f, --fails-without). Main on this host: 0.448, 4,480 B.
+- Main by phase (261121-120821-ebdf35): the second batch's parking +5,232 B (the quest's +5,184:
+  the host's own); then main frees 1,152 B at the busy group's first superseding turn, which the
+  quest keeps (its spare map node and similar). So the quest is 1,168 B over main, fixed, not per
+  group: copies_' first Copy (48 B), index_nodes_' first spare (a node of 48 B and its slot), and
+  the rest unattributed. A probe at journal:60ab864 can name them if the lead wants them gone.
+- journal:87af246's framing_test did not compile (one `auto` for a string and a size_t: A1
+  261121-121345-18983c failed); journal:60ab864 fixes it; every job resubmitted at journal:60ab864.
 
 
 Fixing CI at journal:6cdd923 (run 44927231788): main's park_count failed on every platform,
