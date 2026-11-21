@@ -14730,6 +14730,34 @@
       "updated": "2026-11-16T15:58:01",
       "worktree": ""
     },
+    "lua-method-flake": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:Build + unit + smoke",
+          "level": "light",
+          "minutes": 150,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_lua.cc",
+        "tests/test_lua_*.h",
+        "tests/utils*"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "test_lua's method case passes every run, under load and beside parallel tests",
+      "updated": "2026-11-21T02:23:25"
+    },
     "lua-name-miss": {
       "accepted": {
         "correctness": {
