@@ -1,6 +1,6 @@
 # strata-pin-catalog: journal
 
-State: waiting on jobs 261121-142740-221a6b (A2 head x5 at the new pin, must pass) and 261121-145638-e17b92 (A2 fails-without, reproducer test at old pin 397c02d5, must fail); both at or after a5e0669d0.
+State: waiting on jobs 261121-145724-024225 (A2 head x5 at the new pin, must pass) and 261121-145729-0e1c32 (A2 fails-without, reproducer test at old pin 397c02d5, must fail); both at cbbad6dc709a (harness configures with -G Ninja).
 Quest: .campaign/xapiand/quests/strata-pin-catalog.md (the lead's; never edit it)
 
 ## Doing
@@ -25,7 +25,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261120-015212-3d9e92 |
-| A2 | head (pass): 261121-142740-221a6b; fails-without (head's test, strata pinned back to 397c02d5 via STRATA_PIN; the pre-pin commit has no reproducer): 261121-145638-e17b92 (RUNS=1, TEST_FILTER=torn_down_scheduler, RUN_TIMEOUT=300); harness/pool_asan_repro.sh builds at the job's commit with ci.yml's ASan flags, exits 126 on a build break, exits 1 on a run that hangs past RUN_TIMEOUT. Superseded: 261121-084807-0ed3b0, 261121-130758-5861aa (build break), 261121-130809-89d93b (timeout), 261121-045943-2b0229 (asan_run.sh) |
+| A2 | head (pass): 261121-145724-024225; fails-without (head's test, strata pinned back to 397c02d5 via STRATA_PIN; the pre-pin commit has no reproducer): 261121-145729-0e1c32 (RUNS=1, TEST_FILTER=torn_down_scheduler, RUN_TIMEOUT=300); harness/pool_asan_repro.sh builds at the job's commit with ci.yml's ASan flags, exits 126 on a build break, exits 1 on a run that hangs past RUN_TIMEOUT. Superseded: 261121-084807-0ed3b0, 261121-130758-5861aa (build break), 261121-130809-89d93b (timeout), 261121-045943-2b0229 (asan_run.sh) |
 | A3 | 261120-024602-994d61 (build-test) + `ci:Functional E2E (docs)` at the head; CI red only from test_lua (known flake) |
 
 ## Rulings I made
