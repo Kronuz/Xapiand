@@ -26257,7 +26257,9 @@
         "CMakeLists.txt",
         "test/CMakeLists.txt",
         "tests/CMakeLists.txt",
-        "docs/source-layout.md"
+        "docs/source-layout.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-workpool",
       "landed": [],
@@ -26269,7 +26271,7 @@
       "risk": "low",
       "status": "active",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:45",
+      "updated": "2026-11-21T13:17:24",
       "worktree": "../workpool-wt/xapiand/split-workpool"
     },
     "split-xapiand-core": {
