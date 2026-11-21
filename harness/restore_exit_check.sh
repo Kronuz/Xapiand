@@ -20,7 +20,8 @@
 # THE SOFTWARE.
 
 # restore_exit_check.sh [BIN]: the exit status of the CLI --restore. A file that is not a dump (its objects are not
-# maps) ends with EX_DATAERR (65) and says so; a valid dump restores the same documents and ends with status 0.
+# maps) or is cut mid-object ends with EX_DATAERR (65) and says so (what it held stays restored; a cut between two whole
+# objects is undetectable, the format has no trailer or count); a valid dump restores the same documents and ends with status 0.
 # Without BIN it builds build-rx/bin/xapiand from this checkout. Exits 1 when a check fails.
 . "$(dirname "$0")/env.sh"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -72,4 +73,18 @@ strip "$D/bad.log" | grep -q 'unsupported type\|not a map' && echo "ok   and say
 { cat "$D/rt.mp"; printf '\x01'; } >"$D/stray.mp"
 run "$D/stray.log" -D "$D/n4" --restore stray --in "$D/stray.mp"
 check "--restore of a dump with a stray integer after its objects is EX_DATAERR" $RC 65
+
+# A dump cut mid-object (and mid-header): EX_DATAERR naming the byte offset of the cut object. Cut between objects: undetectable.
+sz=$(wc -c <"$D/rt.mp" | tr -d ' ')
+head -c $((sz - 3)) "$D/rt.mp" >"$D/cut.mp"
+run "$D/cut.log" -D "$D/n5" --restore cut --in "$D/cut.mp"
+check "--restore of a dump cut mid-object is EX_DATAERR" $RC 65
+strip "$D/cut.log" | grep -q 'truncated.*byte [0-9]' && echo "ok   and names where it was cut" || { echo "FAIL the log does not name the cut"; fails=$((fails + 1)); }
+printf '\x81\xa3_id\x01\xde\x00' >"$D/hdr.mp"
+run "$D/hdr.log" -D "$D/n6" --restore hdr --in "$D/hdr.mp"
+check "--restore of a dump cut mid-header is EX_DATAERR" $RC 65
+strip "$D/hdr.log" | grep -q 'truncated at byte 5' && echo "ok   and names byte 5" || { echo "FAIL the log does not name byte 5"; fails=$((fails + 1)); }
+printf '\x81\xa3_id\x01\x81\xa3_id\x02' >"$D/between.mp"
+run "$D/between.log" -D "$D/n7" --restore between --in "$D/between.mp"
+check "--restore of two whole objects ends with status 0" $RC 0
 exit $((fails > 0))
