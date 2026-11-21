@@ -489,7 +489,7 @@ GenerateTerms::geo(engine::Document& doc, const std::vector<uint64_t>& accuracy,
 	for (size_t pos = 0; pos < level_terms.size(); ++pos) {
 		const auto& terms = level_terms[pos];
 		const auto& prefix = acc_prefix[last_acc_pos - pos];
-		const auto& gprefix = acc_global_prefix[pos];
+		const auto& gprefix = acc_global_prefix[last_acc_pos - pos];
 		for (const auto& term : terms) {
 			const auto term_s = Serialize::positive(term);
 			doc.add_term(doc_field(doc, prefix, ctype_geo), term_s);
