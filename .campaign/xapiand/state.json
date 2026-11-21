@@ -25967,6 +25967,8 @@
     "task-inbox-starvation": {
       "accepted": {},
       "after": [],
+      "base": "a4ba197b26576d4aeac590ae1582bc4acca3d363",
+      "branch": "quest/xapiand/task-inbox-starvation",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25991,6 +25993,7 @@
         "CMakeLists.txt",
         "docs/design/service-shape.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/task-inbox-starvation",
       "landed": [],
       "lenses": [
         "correctness"
@@ -26002,9 +26005,10 @@
       ],
       "repo": "../task",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "a self-reposting loop cannot starve a cross-thread post",
-      "updated": "2026-11-20T23:34:52"
+      "updated": "2026-11-20T23:35:05",
+      "worktree": "../task-wt/xapiand/task-inbox-starvation"
     },
     "task-lanes": {
       "accepted": {
