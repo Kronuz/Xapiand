@@ -1,6 +1,6 @@
 # split-faultlab: journal
 
-State: waiting on jobs 261121-130439-4b9352 261121-130440-2801d9 261121-130441-7cc706 261121-130444-b53329 261121-130230-a50d5a 261121-130448-3a21ae
+State: waiting on jobs 261121-130439-4b9352 261121-130448-3a21ae
 Quest: .campaign/xapiand/quests/split-faultlab.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,9 +14,9 @@ faultlab:71a617f. Only jobs remain.
 
 ## Next
 
-1. Read the jobs: A1 build-test, A2 split (landed tool and the split-check-sources tool), A3 base
-   vs head `ctest -N` logs diffed, A6 selfcontained over the four new headers.
-2. Answer split_check warnings below; set State to "ready for review".
+1. Read A1 build-test 261121-130439-4b9352 and A6 selfcontained 261121-130448-3a21ae (both
+   queued at faultlab:71a617f); when green, set State to "ready for review".
+2. When split-check-sources lands, the lead reruns A2 with the landed tool.
 
 ## Blocked on
 
@@ -27,8 +27,8 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-130439-4b9352 at faultlab:71a617f (pending) |
-| A2 | split 261121-130440-2801d9 (landed tool); 261121-130441-7cc706 (split-check-sources tool) (pending) |
-| A3 | base faultlab:e3fcfe3 261121-130230-a50d5a; head faultlab:71a617f 261121-130444-b53329 (pending) |
+| A2 | split 261121-130440-2801d9 (landed tool) and 261121-130441-7cc706 (split-check-sources tool): both `0 error(s), 0 warning(s), 0 note(s)`; no warnings to answer |
+| A3 | base faultlab:e3fcfe3 261121-130230-a50d5a; head faultlab:71a617f 261121-130444-b53329: the `Test #N:` and `Total Tests: 18` lines of the two logs are identical (the rest is ctest's "could not find executable" noise naming each build directory) |
 | A4 | `docs/source-layout.md` lists the four pieces, what each holds, and that no file over 1,000 lines remains |
 | A5 | CI on the pushed branch |
 | A6 | selfcontained.sh -s 20 over faultfs/{types,filesystem,file,io}.h: 261121-130448-3a21ae (pending) |
