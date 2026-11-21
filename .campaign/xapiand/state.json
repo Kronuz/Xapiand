@@ -2682,7 +2682,7 @@
       "branch": "quest/xapiand/bulk-load-rerun",
       "checks": [
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "cmd": "ci:Build + unit + smoke",
           "level": "light",
           "minutes": 30,
           "name": "suite"
@@ -2693,6 +2693,34 @@
         "docs/perf/bulk-load-rerun.md",
         "harness/bench/bulk_load*"
       ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:14",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
+        }
+      ],
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -2702,7 +2730,7 @@
       "risk": "low",
       "status": "active",
       "title": "the 2018 bulk loads rerun: Xapiand on strata against Elasticsearch today",
-      "updated": "2026-11-20T14:48:40",
+      "updated": "2026-11-20T18:21:14",
       "worktree": "../Xapiand-wt/xapiand/bulk-load-rerun"
     },
     "catalog-post-lifetime": {
