@@ -13326,19 +13326,19 @@
       "consumes": [],
       "files": [
         "src/multivalue/range.cc",
-        "tests/test_coverage_multivalue_range.cc"
+        "tests/test_coverage_multivalue_range.cc",
+        "docs/dev/keyword-open-range.md"
       ],
       "landed": [],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: xapiand-final-release writes the xapiand release branch; this writes master, and a backport is its own cherry-pick",
       "repo": ".",
       "risk": "normal",
       "status": "active",
       "title": "Lower-bound-only keyword and text ranges match",
-      "updated": "2026-11-21T04:53:25",
+      "updated": "2026-11-21T06:10:02",
       "worktree": "../Xapiand-wt/xapiand/keyword-open-range"
     },
     "kv-scan": {
