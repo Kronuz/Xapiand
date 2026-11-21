@@ -1,6 +1,6 @@
 # split-http-parser: journal
 
-State: waiting on jobs 261121-121127-15cda8 (A1) 261121-121127-057585 (split) 261121-121129-b6b2a3 (A6) 261121-121132-8993a2 (A3 head) 261121-121135-172d36 (A3 base)
+State: waiting on jobs 261121-121452-92646b (build-test) 261121-121453-cb7868 (mutants) 261121-121501-c2f765 (A6) 261121-121503-33e747 (A3 head); split fails until split-check lands
 Quest: .campaign/xapiand/quests/split-http-parser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,12 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Reworked per the lead's ruling (SPLITTING.md), pushed at http-parser 743f2a4. Jobs at 743f2a4 listed in State. When they end: diff the `Test #` lines of the A3 head and base logs; record the Evidence table; answer split_check warnings (tools/split_check.py was missing at the last try).
+Pushed http-parser db201cd: mutants.py, bench.cc, README/ARCHITECTURE/AGENTS follow the split (mutants.py copies the library into each mutant dir, mutates the file holding the snippet among http_parser.cc and the three headers, compiles the three .cc). A3 listings equal at 743f2a4 vs base (4 tests: http_parser, http_parser_diff, http_parser_fuzz, http_parser_conformance; jobs 261121-121132-8993a2 and 261121-121135-172d36); head job at db201cd 261121-121503-33e747 reruns it.
 
 ## Next
 
-1. Read the finished jobs; fill Evidence; set State to ready for review.
-2. Tell the lead which tools are stale (see Rulings, last item).
+1. Read the jobs in State; the mutants job (one mutant in http_parser.cc: url-no-budget, one in http_parser_internal.h: harden-http10-te-close) must report KILLED for both.
+2. After split-check lands, `campaign verify split-http-parser`; fill Evidence; ready for review.
 
 ## Blocked on
 
@@ -44,4 +44,4 @@ http_parser.cc (2,850) is 164 lines plus pieces, none over 675: execute states i
 - test/diff.cc kept whole (1,004 lines, byte-identical to base): one differential test of one subject sharing an anonymous namespace's state.
 - File-scope statics in the loop's TU keep their order except the tables, now ahead of the macros.
 - History: the branch holds the first split (.inc pieces), then the commits that undo it; the final tree is what counts.
-- Stale outside my file set: `tools/mutants.py` still compiles http_parser.cc alone: it needs http_parser_api.cc and http_parser_url.cc added to its `base` objects (loop in main(), lines ~201-206), and its two mutants `harden-http10-te-close` and `harden-http10-te-close-version` mutate should_keep_alive, now in http_parser_internal.h, so run_mutant must read that header for them. The other 96 snippets still match http_parser.cc once. bench/bench.cc (build line in its header comment) and the prose in README.md ("compiles one source file"), ARCHITECTURE.md and AGENTS.md (http_parser.cc as the single source) are stale too.
+- (Fixed in db201cd, now in my file set:) `tools/mutants.py` still compiles http_parser.cc alone: it needs http_parser_api.cc and http_parser_url.cc added to its `base` objects (loop in main(), lines ~201-206), and its two mutants `harden-http10-te-close` and `harden-http10-te-close-version` mutate should_keep_alive, now in http_parser_internal.h, so run_mutant must read that header for them. The other 96 snippets still match http_parser.cc once. bench/bench.cc (build line in its header comment) and the prose in README.md ("compiles one source file"), ARCHITECTURE.md and AGENTS.md (http_parser.cc as the single source) are stale too.
