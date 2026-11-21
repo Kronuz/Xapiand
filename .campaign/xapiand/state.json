@@ -22445,7 +22445,7 @@
       "branch": "quest/xapiand/placement",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "ci:macos-arm64",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -22475,6 +22475,58 @@
         "docs/mechanisms/placement-root.md",
         "docs/mechanisms/placement-repair.md",
         "CMakeLists.txt"
+      ],
+      "history": [
+        {
+          "at": "2026-11-20T18:21:47",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "D57: CI runs this suite at the same commit; a local copy only duplicates it on the shared host (owner, 11-20)",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
       ],
       "journal": "../Xapiand-wt/xapiand/placement",
       "landed": [],
@@ -22523,7 +22575,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T18:11:15",
+      "updated": "2026-11-20T18:21:47",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
