@@ -9,11 +9,11 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Jobs at workpool:22acbb0 (branch pushed; CI runs on quest/**).
+Only build-test 261121-130515-92a210 at workpool:22acbb0 remains (queued behind other light holds after one 600 s wait). Branch pushed; CI run 44949736609 queued on GitHub.
 
 ## Next
 
-1. Read the jobs; paste `campaign brief`'s table below; State "ready for review".
+1. When 92a210 passes and CI is green, State "ready for review". The `split` gate check fails only on docs/source-layout.md (the landed tool reads .md as source); the lead reruns it once split-check-sources lands.
 
 ## Blocked on
 
@@ -23,11 +23,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130515-92a210 at workpool:22acbb0 (pending) |
+| A1 | build-test 261121-130515-92a210 at workpool:22acbb0 (queued). `campaign brief` also lists the gate's split job 261121-130515-ab5a4c under A1: I ran the second `campaign verify` with `--for A1`, which tagged both gate checks; its failure is the .md issue in A2, not a test |
 | A2 | split_check from cpp-libraries-wt split-check-sources: 261121-130517-25263e at 22acbb0 passed, 0 errors, 0 warnings, 1 note (work_pool.hh 1,039 lines); a local run at 7d93de5 gave 0 errors, 0 warnings, 1 note (work_pool.hh 1,039 lines). The landed tool's `split` check (261121-130515-ab5a4c) reads docs/source-layout.md as source and fails on it, failed 4 errors, 17 warnings, all in the .md, as at d958170 (261121-130433-254720); the lead reruns A2 once split-check-sources lands |
 | A3 | `ctest -N`: before 261121-130449-723d31 at workpool:406d2f3 (main), after 261121-130520-f98c9e at 22acbb0, both passed; the `Test #` and `Total Tests` lines diff empty: 6 tests (thread_restart, work_pool, work_group, work_counts, work_scheduling, work_wait) |
 | A4 | docs/source-layout.md (workpool:22acbb0) |
-| A5 | CI on quest/xapiand/split-workpool at 22acbb0 |
+| A5 | CI run 44949736609 at 22acbb0 (queued) |
 | A6 | selfcontained.sh over the three new headers: 261121-130523-77f795 at 22acbb0 passed, 3 ok, 0 failed; at d958170 (same headers) 261121-130440-45a7f8 passed, 3 ok |
 | A7 | the lead's read |
 
