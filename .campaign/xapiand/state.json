@@ -26080,8 +26080,8 @@
       "repo": ".",
       "risk": "low",
       "status": "active",
-      "title": "Xapiand's free large sources split under 1,000 lines",
-      "updated": "2026-11-21T11:40:31",
+      "title": "Xapiand's free large sources split where it helps maintenance",
+      "updated": "2026-11-21T12:05:34",
       "worktree": "../Xapiand-wt/xapiand/split-xapiand-src"
     },
     "split-xapiand-tests": {
