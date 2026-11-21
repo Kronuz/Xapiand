@@ -27994,6 +27994,8 @@
     "tls-watch-cancel": {
       "accepted": {},
       "after": [],
+      "base": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+      "branch": "quest/xapiand/tls-watch-cancel",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
@@ -28009,6 +28011,7 @@
         "CMakeLists.txt",
         "docs/perf/watch-peek.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/tls-watch-cancel",
       "landed": [],
       "lenses": [
         "correctness"
@@ -28018,9 +28021,10 @@
       "provides": [],
       "repo": "../http",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
-      "updated": "2026-11-21T10:33:17"
+      "updated": "2026-11-21T10:33:38",
+      "worktree": "../http-wt/xapiand/tls-watch-cancel"
     },
     "track-c": {
       "accepted": {},
