@@ -12935,6 +12935,8 @@
     "journal-lost-bound": {
       "accepted": {},
       "after": [],
+      "base": "335b1b5f1e71a2b44ac951363938925abf2ef5f3",
+      "branch": "quest/xapiand/journal-lost-bound",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -12964,6 +12966,7 @@
         "docs/mechanisms/lost-bound.md",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
       "landed": [],
       "lenses": [
         "durability"
@@ -12973,11 +12976,13 @@
       "provides": [
         "journal:recovery"
       ],
+      "reason": "started by force: journal-turn-buffers changes turn_log.h's encode and framing path; this changes recover() (turn_log.h:605-611) and host.h's mark_lost; the lead merges, Detent's lead reviews the diff",
       "repo": "../journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T09:54:35"
+      "updated": "2026-11-21T09:54:41",
+      "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
       "accepted": {},
