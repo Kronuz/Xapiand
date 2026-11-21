@@ -1,6 +1,6 @@
 # split-docset: journal
 
-State: waiting on jobs 261121-130438-3642f5 261121-130855-ced313 (split check 261121-130439-48037a fails until split-check-sources lands)
+State: waiting on job 261121-145049-f8836d (A2, fixed checker at docset:3df5985, main merged; A1/A3/A6 reused, passed at 2878b0e, merge touched only ci.yml)
 Quest: .campaign/xapiand/quests/split-docset.md (the lead's; never edit it)
 
 ## Doing
@@ -14,7 +14,7 @@ keeping only the `Test #` and `Total Tests` lines. A6 261121-130443-a0ab12 passe
 
 ## Next
 
-1. When the jobs pass, paste `campaign brief`'s Evidence table and set State to ready for review.
+1. When 261121-145049-f8836d passes (replaces failed 261121-130439-48037a for A2), set State to ready for review; answer any warning.
 
 ## Blocked on
 
@@ -24,11 +24,11 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending 261121-130438-3642f5 |
-| A2 | 261121-130439-48037a failed (pre-split-check-sources tool reads the .md note as source: 23 errors, all docs/source-layout.md lines); local run of split_check.py (split-check-sources worktree) at docset:2878b0e vs 53da120: 0 errors, 0 warnings, 2 notes (docset.hh 1,455 and test/docset_old.hh 1,171 over 1,000, both kept whole) |
-| A3 | pending 261121-130855-ced313 (261121-130440-16e9c6 failed on my diff of build-dir paths, superseded) |
+| A1 | 261121-130438-3642f5 passed (reused at 3df5985) |
+| A2 | 261121-145049-f8836d (split-check-sources checker at 3df5985; pending); replaces 261121-130439-48037a, which failed (pre-split-check-sources tool reads the .md note as source: 23 errors, all docs/source-layout.md lines); local run of split_check.py (split-check-sources worktree) at docset:2878b0e vs 53da120: 0 errors, 0 warnings, 2 notes (docset.hh 1,455 and test/docset_old.hh 1,171 over 1,000, both kept whole) |
+| A3 | 261121-130855-ced313 passed (reused at 3df5985; 261121-130440-16e9c6 superseded) |
 | A4 | [artifact] `docs/source-layout.md` at docset:2878b0e |
-| A5 | CI on the pushed branch |
+| A5 | CI on the pushed branch at 3df5985 |
 | A6 | 261121-130443-a0ab12 passed (no new headers: the job lists headers added since 53da120 and runs selfcontained.sh on them if any) |
 | A7 | the lead's read |
 
