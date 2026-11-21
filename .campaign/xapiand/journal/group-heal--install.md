@@ -1,6 +1,6 @@
 # group-heal--install: journal
 
-State: waiting on jobs 261120-181817-a0cc80 261120-181820-54034f 261120-181823-382ea2 261120-181826-ed7951 261120-181829-f2050f 261120-181832-5929d9 261120-181835-53159e 261120-181838-e03e4e 261120-181842-4fc87c
+State: waiting on jobs 261121-054230-6f2ce0 261121-054233-ce72e0 261121-055544-08fada
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,62 +9,50 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Step 1 done at strata:0e67dcb7 (pushed, quest/xapiand/group-heal--install): the install transfer,
-transport-agnostic, `include/strata/group/install.hh`; tests `test/group/install_test.cc`
-(values, retry, held, damaged, threads, crash); `test/group/install_build.sh` builds it in a
-wrapper project (CMakeLists.txt is not mine); `test/group/install_mutants.py` (8 guards);
-`docs/mechanisms/group-install.md`. Local Release run: all cases ok; crash 720 runs over 71
-operations (565 old, 155 new) plus the activating recovery crashed at each of its 30.
+Step 2 (binding) written at strata:87bc0ebf, against consensus's driver-install branch
+(origin/quest/detent/consensus-driver-install at 887a88b; contract DRIVER.md Install,
+consensus:2c598fb): `group.hh` pins at SnapshotNeeded, serves, stages at ValidateImage, activates
+at ActivateImage through recovery's `adopt`; loop gains `send_transfer` and `fetch`.
+`voters_test.cc`: transfer frames and fetches on the seeded net; install_gap settles by install;
+ungated seeds 8-27 + 101-140 settle (A2); `grow_and_heal` (A1 membership). First build:
+261121-055544-08fada (`test/group/install_suite.sh`, CONSENSUS_DIR from `--ref`). Nothing has
+compiled yet: expect fixes.
 
-Found and fixed while building: activation removed the staged manifest log and its segments in
-one directory epoch; a power loss kept the log and lost a segment, and the repeated activation
-failed ("missing file: seg-1.sx", crash at 56 and activation crash at 15). The log now goes,
-synced, first. Mutant holder-unordered.
+Step 1 (transfer, strata:0e67dcb7): pin-names-unchecked survived (261120-181838-e03e4e): `values`
+only flipped a byte (CRC fails first). Fixed at strata:acca8f77: re-encoded pins naming `../x`,
+`app.vol-1`, `ip` as strata files are refused. Rerun: 261121-054230-6f2ce0, mutant
+261121-054233-ce72e0.
 
 ## Next
 
-1. Jobs (State). Then the binding, once Blocked on clears.
+1. Jobs (State); fix the build and the cases until 261121-055544-08fada's successor passes.
+2. Mutant job: `test/group/mutants.py install-silent` against the ungated schedules
+   (needs CONSENSUS_DIR configure, like install_suite.sh).
+3. Rerun the install_mutants at the head (they ran at 0e67dcb7) with STRATA_CMAKE_ARGS for the
+   consensus override, since install_test includes group.hh through oracle.hh.
 
 ## Blocked on
 
-1. consensus (Detent's lead): the Driver has no install surface. A Driver group runs no
-   SnapshotChannel and its Worker is private (driver.h: `Group::worker`, no accessor; transport's
-   `PeerHost` needs `worker()` and `channel()`, which only a bare Worker host has). Missing, at
-   consensus b8de3b8 and main 8801b99 alike:
-   - the leader's flight: `SnapshotNeeded` -> source ready -> `SnapshotTransmit` reach the Sink,
-     but nothing reads `Worker::source_chunk` or frames the transfer (RFTXFR01) for a Driver
-     group; the host transport carries no transfer frames to or from a Driver group;
-   - the receiver's frames (`reserve_snapshot`, `offer_snapshot_chunk`) and, needed here, the
-     application's semantic validation (`validation_chunk`, `consume_validation`,
-     `validation_succeeded`, `reject_snapshot_validation`): install stages its whole transfer
-     there, before consensus persists the install, which is what makes a crash leave the old
-     replica or the complete new one;
-   - the image at activation: `ActivateInstall` carries a token and a boundary, not the bundle.
-   driver_simulation.cc says it outright: "the simulation sends no installs".
-   Asked: a Driver install surface (frames in/out per group, a validation notice with
-   validated/validation_failed calls, the image readable at ActivateInstall), or a ruling that
-   strata binds a SnapshotChannel itself (then the Driver must expose the group's Worker).
-   Until then A1's add-learner/promote/replace/remove after compaction and A2 cannot run.
-2. Lead: files outside this task's set, for the binding: `include/strata/group/group.hh`
-   (dispatch's ActivateInstall and SnapshotNeeded, `resume` first in `recover`, the leader's pin
-   on the chore with `release_pins` at open, `unlink_retired` held below a live pin's P_b, the
-   membership steps), `CMakeLists.txt` (register `group_install_test`; until then
-   `test/group/install_build.sh` builds it in a wrapper project), `test/group/voters_test.cc` and
-   `test/group/mutants.py` (A2's schedules settling by install, the drop-SnapshotNeeded mutant).
+1. Lead: CMakeLists.txt (not in this task's files) must pin consensus at the landed
+   consensus-driver-install commit and register `group_install_test`. Until then CI builds
+   group.hh against b8de3b8, which lacks SendTransfer/ValidateImage/ActivateImage: CI's group
+   targets fail to compile on this branch. Local proof uses `install_suite.sh` with
+   `--ref CONSENSUS=...@887a88b`. Blocked on 1 of the previous session (the Driver surface) is
+   answered by the quest's Contracts (msg-187; consensus-driver-install).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 (transfer half) | 261120-181817-a0cc80 install_test all cases at 0e67dcb7; `--fails-without` mutants: skip-file-set 261120-181820-54034f, keep-unchecked 261120-181823-382ea2, write-past-failure 261120-181826-ed7951, marker-before-sync 261120-181829-f2050f, holder-unordered 261120-181832-5929d9, no-resume 261120-181835-53159e, pin-names-unchecked 261120-181838-e03e4e, serve-past-length 261120-181842-4fc87c |
-| A1 (learner promoted, replace/remove across leader changes) | blocked: Blocked on 1, 2 |
-| A2 | blocked: Blocked on 1, 2 |
-| TSan (`threads`) | CI's linux-tsan runs ctest; group_install_test reaches it only once CMakeLists.txt registers it (Blocked on 2). No local sanitizer job, per the lead. |
+| A1 (transfer half) | 261120-181817-a0cc80 install_test all cases at 0e67dcb7; `--fails-without` mutants: skip-file-set 261120-181820-54034f, keep-unchecked 261120-181823-382ea2, write-past-failure 261120-181826-ed7951, marker-before-sync 261120-181829-f2050f, holder-unordered 261120-181832-5929d9, no-resume 261120-181835-53159e, serve-past-length 261120-181842-4fc87c; pin-names-unchecked survived (261120-181838-e03e4e), fixed at acca8f77: 261121-054230-6f2ce0, mutant 261121-054233-ce72e0 (pending) |
+| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-055544-08fada (voters_test `install_gap`, `grow_and_heal`) |
+| A2 | pending: 261121-055544-08fada (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent not yet submitted |
+| TSan (`threads`) | CI's linux-tsan runs ctest; group_install_test reaches it only once CMakeLists.txt registers it (Blocked on 1). No local sanitizer job, per the lead. |
 
 ## Result
 
-Transfer built and proven in isolation (docs/mechanisms/group-install.md). Not bound to the
-group or consensus: see Blocked on.
+Transfer built and proven in isolation; binding written, unproven (docs/mechanisms/group-install.md,
+The binding). Pin bump and test registration: Blocked on 1.
 
 ## Rulings I made
 
@@ -82,3 +70,21 @@ group or consensus: see Blocked on.
   lacking bytes (checked to the byte in `retry`).
 - msg-175: fetch errors (timed_out, io_error, any other) and not-found all end `install_failed`
   carrying the code; the retry keeps the staged bytes. `retry` drives timed_out and io_error.
+- One pin per bundle position, shared by its flights ((peer, transfer) set): two pins at one
+  P_b would name different generations, and the learner's chunk names must match the pin it
+  fetched. Only the latest bundle is pinned; an older key pins nothing and the flight fails.
+- The stage holds the chore (`installing_`, set by a chore item so it starts between entries):
+  the chore is a work group in production, so a stage beside apply could race the set's files.
+  DRIVER.md already holds checkpoints and repair behind an incoming image.
+- Activation reuses recovery's step (`adopt`, split out of `recover`): strata stays open
+  (`index::install` on the live index), so the group keeps no strata options past open (the
+  footprint test refuses a kept config).
+- `recovered()` now names the replica's latest bundle (restored, installed or published): the
+  leader pins it, and lifetime_test reads it only right after a reopen.
+- `dir_` is a shared_ptr: a pin carries it so a serve racing the teardown reads on.
+- voters_test's oracle checks the log merged from every replica (agreeing where they overlap,
+  no index unapplied) instead of node 1's: an installed replica applies only past its install.
+- mutants.py: `checkpoint-ungated` removed (its premise, that an ungated checkpoint strands a
+  replica, no longer holds); `install-silent` repointed; `publish-before-sync`,
+  `commit-after-publish` repointed at the new unlink line; `destroy-keeps-member` repointed
+  (it no longer applied on main: the destructor gained the hand-off cancel).
