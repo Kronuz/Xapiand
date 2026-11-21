@@ -1,6 +1,6 @@
 # track-c-gates: journal
 
-State: waiting on jobs 261120-200605-743b1d 261120-200606-fa2caa 261120-200607-b7499c 261120-200724-273aa8 261120-200804-fd5a96
+State: ready for review
 Quest: .campaign/xapiand/quests/track-c-gates.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,26 +9,28 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Resumed 2026-11-20 (second time). The 27 jobs at consensus 8801b99 / journal 178030b ended; both
-reports are filled from them (strata:45b0ab43, pushed). Red or short rows:
+Resumed 2026-11-21. The five jobs ended exit 0 and are in docs/gates/track-c-c4.md (strata:605f1dd5,
+pushed): Linux mutants 16/16 (1,900 s, 100-175 s each), FreeBSD ctest 91/91, FreeBSD mutants 16/16
+(1,764 s, 94-140 s), T8 seed 5 (44.6M units, 991.5 CPU-s; 65.8 CPU-min at 8801b99), R19 repeat.
+Per-mutant seconds and a window/data_queue sizing note went to Detent (msg-190).
 
-- C2 T9 `jpower 200` at journal 178030b fails on macOS (18b807) and FreeBSD (d74166): 1,036,264
-  checks, 7 failures, seeds 91 and 140 (512 B both), 145 and 199 (2 KiB last), 122 (256 B both).
-  Passed at d90797c (e136e7). Linux (2096f8) passes but draws other cases. Detent's msg-183; not
-  debugged here. Seed 91 is also in the logs (the lead's note listed four seeds).
-- C4 T7c misses 4x again: 3.18 (modeled), 3.37 (fdatasync) at 8801b99 (0bef2c).
-- C4 R19 at 0 ms: Control 256 KiB max 59.0 ms against the stated 15.1 ms (dd170c, one run); repeat
-  273aa8 queued after the Linux mutants (same VM).
-- C4 T8 at 8801b99: clean, 104.9M units, but 49.3 CPU-minutes; fifth run fd5a96 queued.
-- T7d passes at 8801b99, 4 KiB arm included (the e1f249d 1.56x miss did not repeat).
+R19 at 8801b99, the lead's two questions:
+1. Gap floor: flow_bench gap sends a heartbeat every 10 ms (`next += 10'000`, 500 us poll,
+   flow_bench.cc:788-795), so a gap is >= 10 ms plus poll, VM oversleep and delivery spread; idle
+   gaps 12.0-12.7 ms (repeat). 0 ms loaded gaps 13.1/12.5/15.3 against 12.8/11.5/13.5 bare, i.e.
+   1.0/0.4/3.2 ms over the 12.1 ms idle floor: under bound + floor. Delay max (direct wait): R19's
+   case 256 KiB Control 7.8 against 11.5 ms (first run 59.0: 1 of 2 past); 2 MiB Control past at
+   0 ms in both runs (24.4/12.8, 29.9/14.6). Worst 59.0 ms delay, 53.7 ms gap, against 1,000 ms.
+2. Drops: enqueue's data_queue overflow (host_transport.h:694-695), not send's maximum_frame
+   (4 MiB default, connection.h:31; a 2 MiB frame is 2,097,177 B) nor an unstored route. With the
+   25 B header the 8 MiB queue holds 3 frames, the 4 MiB window 1; top_up over-posts (24 MiB target,
+   counted at post), so a lagging group gets a 5th. Expected overflow (Raft resends); the row
+   measures the control wait with queues at cap. Bench sizing, not a consensus bug.
 
 ## Next
 
-1. When 743b1d (Linux mutants), fa2caa/b7499c (FreeBSD suite, mutants), 273aa8 (R19 repeat) and
-   fd5a96 (T8 seed 5) end, fill their cells in docs/gates/track-c-c4.md ("queued").
-2. Forward the per-mutant seconds (macOS ce0b7a: 81 to 428 s, 2,616 s total; 743b1d, b7499c) to
-   Detent for consensus-mutants-per-test's TIMEOUTs.
-3. Then State "ready for review"; T9's red row stays until Detent's fix is rerun.
+1. The architect's review of both reports (A3, the lead's launch).
+2. T9 `jpower 200`'s red row in C2 stays until Detent's fix (msg-183) is rerun.
 
 ## Blocked on
 
@@ -43,16 +45,21 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | docs/gates/track-c-c2.md (artifact), strata:45b0ab43: every row at consensus 8801b99 / journal 178030b filled with its job: macOS 4592f2 86e99e 18b807 83dd88 75f543 b711ce 2b2fc3 369f91 c43dad 4175b8 b0da39; Linux VM 124538 2096f8; FreeBSD VM dd591f d74166. **T9 jpower 200 fails at journal 178030b** (18b807 macOS, d74166 FreeBSD: 7 failures, seeds 91 140 145 199 122), passed at d90797c (e136e7); Detent msg-183 |
-| A2 | docs/gates/track-c-c4.md, strata:45b0ab43: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 4e57e4 ce0b7a; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x), R19 0 ms miss (one run); pending: 743b1d, fa2caa, b7499c, 273aa8, fd5a96. T7e and D18 not runnable (group-heal) |
+| A2 | docs/gates/track-c-c4.md, strata:605f1dd5: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 273aa8 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 fd5a96 4e57e4 ce0b7a 743b1d fa2caa b7499c; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x); R19 256 KiB Control past at 0 ms in 1 of 2 runs (59.0/15.1, then 7.8/11.5), gaps under bound + idle floor; T7e and D18 not runnable (group-heal) |
 | A3 | architect's review, launched by the lead |
 
 ## Result
 
-<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
-and what it leaves open. Results and how it works go in the docs of the repository it changed
-(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+strata docs/gates/track-c-c2.md and docs/gates/track-c-c4.md (strata:605f1dd5): every C2 and C4
+row at consensus 8801b99 / journal 178030b (and C4 at e1f249d) with its jobs. Open: C2 T9 jpower 200
+fails at journal 178030b (Detent msg-183); C4 T7c misses 4x (3.18x modeled, 3.37x fdatasync); R19's
+0 ms row past in 1 of 2 runs; T7e and D18 wait for group-heal; the architect's review (A3).
 
 ## Rulings I made
+- 11-21: R19's gaps are judged against the stated bound plus the same setting's idle gap (the
+  probe's 10 ms cadence floor); delay max stays the direct measure. The "fatal: not a git
+  repository" line in the VM mutants logs is c4-body.sh asking git inside the archived tree (rig);
+  vm.sh prints the commit before it.
 - 11-20: skipped 5ce427, f54066, 1ec7d9 resubmitted without their failed/cancelled dependency at
   8801b99 (743b1d, fa2caa, b7499c); b7499c runs after fa2caa because both use the FreeBSD VM
   (vm.sh refuses a running VM). R19 repeat 273aa8 (`--force`) waits on 743b1d for the Linux VM.
