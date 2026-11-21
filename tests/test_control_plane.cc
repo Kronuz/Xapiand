@@ -267,35 +267,48 @@ static void test_a_stop_ends_the_waiting_without_running_the_calls() {
 	CHECK_FALSE(autocommit.touch(1));   // the caller commits now
 }
 
-// The loop answers its lag probe while thousands of keys wait and fire: nothing on it waits or scans. The keys arrive
-// in groups of 50 every 20 ms (2.5 per ms) and all 5,000 are pending when the first fires, so the loop's work is paced
-// and a slow or busy host (a sanitizer build, other tests running) measures the loop, not its own CPU: one burst of
-// 5,000 starts and fires keeps the loop busy for as long as the host takes to run them, with no wait or scan in it.
+// Pending keys cost the loop nothing: 5,000 keys parked on 60 s timers leave the loop's lag probe waking as often as
+// with none (a loop that polls or posts per key spends its turns on them and wakes the probe far less), and 5,000 keys
+// that fire are each called exactly once. The probe's wakes are counted over equal windows; the lag percentiles are
+// reported, never asserted.
+static std::uint64_t wakes_over(Loop& loop, std::chrono::milliseconds window) {
+	const auto before = loop.reactor.lag().snapshot();
+	std::this_thread::sleep_for(window);
+	return loop.reactor.lag().snapshot().since(before).wakes;
+}
+
 static void test_pending_keys_cost_the_loop_nothing() {
 	Loop loop;
 	loop.watch_lag();
-	std::atomic<int> fired{0};
-	Autocommit autocommit(loop.host, {2200ms, 2300ms, 2500ms, 2500ms}, [&](const int&) { ++fired; });
-	for (int group = 0; group < 100; ++group) {
-		for (int key = group * 50; key < (group + 1) * 50; ++key) {
+	std::this_thread::sleep_for(200ms);   // the probe settles on its 1 ms interval
+	const auto idle = wakes_over(loop, 400ms);
+	CHECK_GT(idle, 20u);
+
+	std::uint64_t parked = 0;
+	{
+		Autocommit autocommit(loop.host, {60s, 60s, 60s, 60s}, [](const int&) { });
+		for (int key = 0; key < 5000; ++key) {
 			autocommit.touch(key);
 		}
-		std::this_thread::sleep_for(20ms);
+		CHECK(eventually([&] { return autocommit.waiting() == 5000; }, 10s));
+		parked = wakes_over(loop, 400ms);
+		CHECK_EQ(autocommit.tasks().running(), 5000u);
+		CHECK_EQ(autocommit.fired(), 0u);
+		autocommit.stop();
+		CHECK(eventually([&] { return autocommit.tasks().running() == 0; }, 10s));
 	}
-	CHECK_GT(autocommit.pending(), 2500u);   // thousands wait together
-	CHECK(eventually([&] { return fired.load() == 5000; }, 10s));
+	CHECK_GE(parked * 4, idle);   // the same wakes with 5,000 keys waiting, within a factor of four
+
+	std::atomic<int> fired{0};
+	Autocommit autocommit(loop.host, {50ms, 50ms, 100ms, 100ms}, [&](const int&) { ++fired; });
+	for (int key = 0; key < 5000; ++key) {
+		autocommit.touch(key);
+	}
+	CHECK(eventually([&] { return autocommit.fired() == 5000; }, 30s));
+	CHECK(eventually([&] { return autocommit.pending() == 0; }, 10s));
+	CHECK_EQ(fired.load(), 5000);
 	const auto snap = loop.reactor.lag().snapshot();
-	CHECK_GT(snap.wakes, 50u);
-	CHECK_LE(snap.quantile_upper_us(0.99), 16384u);   // p99 under 16 ms with 5,000 watchers started and fired
-	if (snap.quantile_upper_us(0.99) > 16384u) {
-		std::uint64_t late = 0;
-		for (std::size_t i = 0; i < reactor::LagSnapshot::buckets; ++i) {
-			if (reactor::LagSnapshot::upper_us(i) > 16384u) {
-				late += snap.count[i];
-			}
-		}
-		std::fprintf(stderr, "  lag: %llu wakes, %llu over 16 ms, p50 %llu us, p99 %llu us, max %llu us\n", static_cast<unsigned long long>(snap.wakes), static_cast<unsigned long long>(late), static_cast<unsigned long long>(snap.quantile_upper_us(0.5)), static_cast<unsigned long long>(snap.quantile_upper_us(0.99)), static_cast<unsigned long long>(snap.max_us));
-	}
+	std::fprintf(stderr, "  lag: wakes idle %llu, parked %llu (400 ms each); %llu wakes, p50 %llu us, p99 %llu us, max %llu us with 5,000 fired\n", static_cast<unsigned long long>(idle), static_cast<unsigned long long>(parked), static_cast<unsigned long long>(snap.wakes), static_cast<unsigned long long>(snap.quantile_upper_us(0.5)), static_cast<unsigned long long>(snap.quantile_upper_us(0.99)), static_cast<unsigned long long>(snap.max_us));
 }
 
 

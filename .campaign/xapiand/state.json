@@ -1826,6 +1826,18 @@
         "quest": "detent:journal-power-silent-loss"
       },
       "text": "detent:journal-power-silent-loss started and may change files your journal-turn-buffers changes (order them with --after detent:journal-power-silent-loss, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T20:21:19",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T20:21:18",
+      "by": "lead",
+      "closed": "filed in hunt.md: at journal-power-silent-loss landing, move strata's pin on turn-log-parity and rerun T9 for track-c-gates' C2 row",
+      "id": "msg-192",
+      "text": "msg-183 diagnosis (journal-power-silent-loss, journal:dbab658, not landed): not a double-damage regression: 178030b's test fails at d90797c's code too, with many more failures; d90797c's test never ran 'both'/'last'. Two causes, neither the review's F2/F3: (1) damage at a segment's last blocks merged into its tail and was charged nothing (seeds 91, 140: a whole group could vanish unreported; seed 122: group 6 kept 2 of 3 records), fixed in journal:e77d17b; (2) a flipped length byte read as a torn fragment (seeds 145, 199: the acknowledged last turn dropped unreported), fixed in journal:dbab658 by trying lengths that fit the sector against the checksum. All five seeds and the 200-seed macOS row pass (1,036,264 checks, 0 failures); FreeBSD row and CI pending. strata's pin should move past it when it lands."
     }
   ],
   "quests": {
@@ -6020,8 +6032,35 @@
       "files": [
         "tests/test_control_plane.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-20T21:18:41",
+          "commit": "118f9fa43ec80df6ccd6d0b48c5ae5653cf3bb44",
+          "criteria": {
+            "A1": "261120-014220-5b29fc (passed at dac04c877e87; only 30 merges from main since, none touching its files); fails without: 261120-014220-5e1906",
+            "A2": "[manual] lead read the diff (2026-11-20 02h): the p99 assertion is gone; lag percentiles are printed only; wakes are compared over equal 400 ms windows with a 4x margin; fired and running counts are exact"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "653e4a8454cc60cb24317fa1966bcafbb562b665",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-014220-5b29fc",
+              "level": "light",
+              "seconds": 1030.7,
+              "state": "done",
+              "what": "control-plane-wallclock check suite at 653e4a8454cc"
+            }
+          ],
+          "final": true,
+          "from": "02e69e7102490d9bfd716562b7229c16908694c7",
+          "reason": "",
+          "tested": "12e3be08ab40c53f064bc8bd6df5b17c52731520"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "stopword-lists"
@@ -6029,9 +6068,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Replace test_control_plane's wall-clock p99 bound with a deterministic check",
-      "updated": "2026-11-20T02:09:17",
+      "updated": "2026-11-20T21:18:49",
       "worktree": "../Xapiand-wt/xapiand/control-plane-wallclock"
     },
     "core-lifecycle-tests": {
@@ -12478,7 +12517,42 @@
       "worktree": ""
     },
     "journal-turn-buffers": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-20T21:07:02",
+          "base": "178030b38f5617337486407e6cc35d70881a0841",
+          "blobs": {
+            "CMakeLists.txt": "100644:20def4d16515562652667df4623b1ccb652f5a13",
+            "docs/mechanisms/framing.md": "100644:e7351bcfe36fe92cc2db54efe1c46695cf0578c3",
+            "docs/mechanisms/turn-seal.md": "100644:1de68db8eb37b81b30753415531fc17307d48482",
+            "include/journal/framing.h": "100644:6a237fbd75af72908dc1a5baa9c1b2f364dc6005",
+            "include/journal/turn_driver.h": "100644:f8950bf0bca960fce55420eae978d3e6fd2bcf7e",
+            "include/journal/turn_log.h": "100644:b611c7abea69b35e726275512bd0175fc1e8aca5",
+            "test/turn_buffers_probe.cc": "100644:1d5a9470f2062094ef33558420030391c2e92ea6",
+            "test/turn_buffers_test.cc": "100644:d567d4af82bd7ac640285dd1bd2251e20eec7e01",
+            "test/turn_seal_mutants.sh": "100644:8ccf95f2b109ad87ff18fc8ecf927829c04c3848"
+          },
+          "by": "review",
+          "commit": "5ace07ee9e1f2833e5adeec27a40ccb9ed2a443c",
+          "criteria": "832f225897cde40f",
+          "diffs": {
+            "CMakeLists.txt": "581c236fed872990",
+            "docs/mechanisms/framing.md": "ad00bcdb9281c5b7",
+            "docs/mechanisms/turn-seal.md": "f4838cc97e5b3e60",
+            "include/journal/framing.h": "b12703f9c4290164",
+            "include/journal/turn_driver.h": "514b6da551afa285",
+            "include/journal/turn_log.h": "180896b2b0cf86a5",
+            "test/turn_buffers_probe.cc": "762daef20ec16c36",
+            "test/turn_buffers_test.cc": "c1c4eee0b72f4328",
+            "test/turn_seal_mutants.sh": "50c650714bc574c5"
+          },
+          "findings": {},
+          "note": "",
+          "review": "5db34a6b78a9d0143c02854b2fd5721517784403",
+          "reviewed": "b88565f0a276c4ea392a171861d8044edd2f1964",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "detent:journal-idle-groups",
         "detent:journal-power-silent-loss"
@@ -12515,7 +12589,8 @@
         "test/turn_seal_mutants.sh",
         "CMakeLists.txt",
         "docs/mechanisms/framing.md",
-        "docs/mechanisms/turn-seal.md"
+        "docs/mechanisms/turn-seal.md",
+        "include/journal/turn_driver.h"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-turn-buffers",
       "landed": [],
@@ -12531,7 +12606,7 @@
       "risk": "high",
       "status": "active",
       "title": "journal's half of D3: the turn path owns its buffers",
-      "updated": "2026-11-20T20:05:38",
+      "updated": "2026-11-20T21:07:02",
       "worktree": "../journal-wt/xapiand/journal-turn-buffers"
     },
     "key-field": {
@@ -15671,8 +15746,7 @@
     "netlab-consensus": {
       "accepted": {},
       "after": [
-        "detent:consensus-transport",
-        "detent:consensus-quiescence"
+        "detent:consensus-full-window-stall"
       ],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/netlab-consensus",
@@ -15701,7 +15775,7 @@
       "risk": "low",
       "status": "active",
       "title": "consensus measured on a realistic network: netlab delay, loss, reorder and partitions",
-      "updated": "2026-11-20T13:45:17",
+      "updated": "2026-11-20T20:20:36",
       "worktree": "../consensus-wt/xapiand/netlab-consensus"
     },
     "nightly-retry": {
@@ -27295,7 +27369,8 @@
             "include/strata/core/index.hh",
             "test/test_checkpoint_window*",
             "bench/kv/probes/rocksdb-parity/checkpoint-floor*",
-            "CMakeLists.txt"
+            "CMakeLists.txt",
+            "include/strata/core/turn_seal.hh"
           ],
           "journal": "../Xapiand-wt/xapiand/turn-log-parity--checkpoint-window",
           "worktree": "../strata-wt/xapiand/turn-log-parity--checkpoint-window"
@@ -27354,7 +27429,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-20T20:05:58",
+      "updated": "2026-11-20T20:41:14",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
@@ -30548,7 +30623,13 @@
       "consumes": [],
       "files": [
         "tests/test_xapiand_final_release*",
-        "docs/release/xapiand-final*"
+        "docs/release/xapiand-final*",
+        "CMakeLists.txt",
+        "docs/dev/agg-blowup.md",
+        "docs/src/content/docs/changelog.md",
+        "harness/agg_buckets_check.py",
+        "harness/id_zero_check.py",
+        "src/database/schema.cc"
       ],
       "history": [
         {
@@ -30613,7 +30694,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T15:52:25",
+      "updated": "2026-11-20T20:40:47",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
