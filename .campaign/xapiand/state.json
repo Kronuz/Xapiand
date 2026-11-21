@@ -2009,6 +2009,18 @@
       "closed": "ruled (a); quest file Decisions at master",
       "id": "msg-204",
       "text": "journal-replaces-wal restore task, file set (needs the lead): RESTORE's batching (D17) has no home in my set. src/manager.* holds no RESTORE code: the RESTORE view and --restore run through handler.cc's DocIndexer (chunks' file) and shard.cc's Shard::apply_slice (core's). Options: (a, recommended) add new files src/database/restore_batch.{h,cc} and tests/test_restore_batch.cc to my task, plus one function in command.h, encoded_size(const CommandWrite&), so packing measures each write once instead of encoding it twice; the batcher packs a shard's prepared writes in input order into commands within COMMAND_ENTRY_BYTES (a write alone over it goes through split_command), pipelines proposes through one marked seam that step d fills with ShardEndpoint's propose, and maps a batch's verdict (op, docids, versions) back to per-object results, re-preparing a refused op on a leader-chosen conflict up to max_placements. Wiring it into DocIndexer::apply_shards and deleting apply_slice happens at step d, in handler.cc/shard.cc, by whoever holds them then. (b) the same inside src/database/command.* (core's, quiet during c/d). Also renames, since the WAL goes: tests/test_wal_replay.cc -> tests/test_journal_replay.cc; wal_replay_check.sh -> harness/journal_replay_check.sh, with wal_replay_agg_check.sh folded into it (its assertions are a subset); wal_recovery_check.sh deleted (levels' power_loss_check.sh replaces it, per the quest). Grant the new names, or I rewrite in place under the old ones. And manager.*: core's step c wants it for the group loop and journal::Host setup; I can cede it. Meanwhile I do profile_bulk.sh (--put/--ack for T11, a journal layer row) and rewrite the WAL test and scripts in place."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T11:03:15",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T11:03:15",
+      "by": "journal-replaces-wal--restore",
+      "closed": "ruled (a); quest file Decisions at master",
+      "id": "msg-205",
+      "text": "journal-replaces-wal restore task, follow-up to msg-204 (core's step d decides it, so it goes to you): D17 pipelines batches without waiting for each commit, but engine::strata::Shard::prepare reads the live core (prepare_write), never writes proposed and not yet applied, and core's ruling 6 sets the leader's expectation on every replace_key. So batch 2 prepared while batch 1 is in flight carries stale expectations and predicted docids wherever it repeats a term or allocates new ids, and assigned() then throws 'a different id or version than the write expected'. Options: (a, recommended) RESTORE's writes are prepared as replace_key with no expectation (RESTORE overwrites unconditionally today: replace_document_term(..., version=false)), the docid and version assigned at apply and read back per op from the batch verdict's docids/versions, so a batch depends on no earlier batch's apply; (b) keep the expectation and allow one batch in flight per shard (no pipelining: costs T12); (c) a prepare overlay of in-flight writes per shard (a second version map: more code, one more mechanism). (a) needs the application's transaction() to keep a batch write's version from the document and the result mapping to use verdict.docids[i] rather than [0]."
     }
   ],
   "quests": {
