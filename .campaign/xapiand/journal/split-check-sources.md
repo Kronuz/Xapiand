@@ -28,11 +28,11 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-124545-c9ce67 (the test check: test_layout_note_and_cmake_lines_are_not_code, test_line_moved_into_an_inc_fragment_is_lost) |
-| A2 | 261121-124545-96b4e5 (lint: ruff check and format), 261121-124545-c9ce67 (test: 44 pass); both reused at 7fb030488886, whose tools/ equals d1bca4032097 |
-| A3 | CI green at d1bca4032097 (cpp-libraries tools.yml); 7fb030488886 only merges main's cmake.yml, outside tools.yml's paths, so no run fires |
-| A4 | 261121-124545-c9ce67 (test_include_guards_are_allowed, test_a_new_macro_is_not_a_guard) |
-| A5 | 261121-124545-c9ce67 (static-to-inline, added inline, namespace-scope detail using as warnings; using inside a function and `using namespace std;` fail) |
+| A1 | 261121-133755-41bf52 (the test check: test_layout_note_and_cmake_lines_are_not_code, test_line_moved_into_an_inc_fragment_is_lost) |
+| A2 | 261121-124545-96b4e5 (lint: ruff check and format), 261121-133755-41bf52 (test: 44 pass); both reused at 7fb030488886, whose tools/ equals d1bca4032097 |
+| A3 | tools CI run 44959122177 at 7fb030488886 (dispatched by the lead; a push there fires no run, since 7fb030488886 only merges main's cmake.yml, outside tools.yml's paths) |
+| A4 | 261121-133755-41bf52 (test_include_guards_are_allowed, test_a_new_macro_is_not_a_guard) |
+| A5 | 261121-133755-41bf52 (static-to-inline, added inline, namespace-scope detail using as warnings; using inside a function and `using namespace std;` fail) |
 
 ## Result
 
