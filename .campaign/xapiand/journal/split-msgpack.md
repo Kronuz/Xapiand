@@ -1,6 +1,6 @@
 # split-msgpack: journal
 
-State: waiting on jobs 261121-121111-83ac3c (build-test) 261121-121108-797630 (A6) 261121-121113-c6cb73 (A3) 261121-121111-c110b0 (split: fails until split-check lands)
+State: waiting on jobs 261121-121649-8e64c6 (build-test) 261121-121647-167eff (A6) 261121-121651-f87cf4 (A3) 261121-121649-b844e7 (split: fails until split-check lands)
 Quest: .campaign/xapiand/quests/split-msgpack.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Reassessed against cpp-libraries docs/SPLITTING.md; pushed at msgpack:a43dc0f. msgpack.h is now an umbrella over ten self-contained pieces (82 to 848 lines): types, class (class, Iterator, Body, adaptors), ctor, init, modify (find/erase/put/fill and the public modifiers), access, hash, convert, arithmetic, serialize. test/diff_test.cc is kept whole again (the earlier split is reverted). docs/source-layout.md lists the pieces and why diff_test.cc stays whole.
+Reassessed against cpp-libraries docs/SPLITTING.md; pushed at msgpack:68e45d8 (a43dc0f still tracked the five superseded pieces, so A6 261121-121108-797630 failed on redefinitions; 68e45d8 deletes them, and the tree now holds exactly the ten pieces plus msgpack.h). msgpack.h is now an umbrella over ten self-contained pieces (82 to 848 lines): types, class (class, Iterator, Body, adaptors), ctor, init, modify (find/erase/put/fill and the public modifiers), access, hash, convert, arithmetic, serialize. test/diff_test.cc is kept whole again (the earlier split is reverted). docs/source-layout.md lists the pieces and why diff_test.cc stays whole.
 
 ## Next
 
@@ -24,12 +24,12 @@ Nothing (split waits on split-check landing).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test job 261121-121111-83ac3c |
+| A1 | build-test job 261121-121649-8e64c6 |
 | A2 | split job 261121-121111-c110b0 fails exit 2 until split-check lands; rerun after |
-| A3 | ctest -N before 261121-115120-acd826 (1e9aaaf4ac5b), after 261121-121113-c6cb73 at a43dc0f (the earlier after-run at edfd97b listed the same 13 tests) |
+| A3 | ctest -N before 261121-115120-acd826 (1e9aaaf4ac5b), after 261121-121651-f87cf4 at 68e45d8 (the earlier after-run at edfd97b listed the same 13 tests) |
 | A4 | docs/source-layout.md |
 | A5 | CI on the pushed branch |
-| A6 | selfcontained.sh job 261121-121108-797630 at a43dc0f (earlier runs: 261121-115616-071a12 failed on msgpack_ctor.h, 261121-120211-04c861 passed on the 16-header layout) |
+| A6 | selfcontained.sh job 261121-121647-167eff at 68e45d8 (261121-121108-797630 at a43dc0f failed: superseded pieces still tracked) (earlier runs: 261121-115616-071a12 failed on msgpack_ctor.h, 261121-120211-04c861 passed on the 16-header layout) |
 | A7 | the lead reads the split: see Rulings |
 
 ## Result
