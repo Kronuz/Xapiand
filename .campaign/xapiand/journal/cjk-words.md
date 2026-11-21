@@ -1,6 +1,6 @@
 # cjk-words: journal
 
-State: waiting on jobs 261120-180508-3004d5 261120-180509-eba9f4 261120-180518-6b069d 261120-180527-da1cd7 (round 1 fixes at bf63b5546)
+State: waiting on jobs 261120-182340-d04e6e 261120-182351-be88ad 261120-182354-5059f0 and CI at 0505cd7cd
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
@@ -19,9 +19,14 @@ Review round 1 (`.campaign/xapiand/reviews/cjk-words-correctness.md`):
 
 ## Next
 
-1. Read the jobs at bf63b5546: build-test 261120-180508-3004d5, e2e 261120-180509-eba9f4,
-   F1 confirmation (reviewer's probe2.sh rerun, same command) 261120-180518-6b069d, revert check
-   of the new test (`--fails-without`, text.cc at 02e890123) 261120-180527-da1cd7.
+1. Read the jobs at 0505cd7cd: targeted build of `xapiand` and `test_cjk_words` plus its run
+   261120-182340-d04e6e; F1 confirmation (reviewer's probe2.sh, same command, on that binary)
+   261120-182351-be88ad; revert check (`--fails-without`, text.cc at 02e890123)
+   261120-182354-5059f0. The suite is CI's (D57): `ci:Build + unit + smoke`,
+   `ci:Functional E2E (docs)`. Local build-test/e2e at bf63b5546 were cancelled by the lead.
+2. CI at bf63b5546 failed test_cjk_words:169 (arm64, FreeBSD): `Schema::write` replaces the whole
+   schema, so the second write was no change. Fixed in 0505cd7cd (the change goes through
+   `Schema::update` and must throw ClientError naming `_cjk_words`).
 
 ## Blocked on
 
@@ -33,9 +38,10 @@ F3 is outside my file set: `docs/src/content/docs/upgrade.md:80` and `changelog.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261120-155852-224613 (79 of 79), e2e 261120-155853-9d2286 |
-| A2 | build-test 261120-155852-224613 (tests/test_cjk_words.cc); ICU oracle 261120-155914-5a93cf: 0 differences on zh, ja, ko; rerun from tests/test_cjk_words_oracle.sh: 261120-173321-093c44 |
+| A1 | `ci:Build + unit + smoke` and `ci:Functional E2E (docs)` at 0505cd7cd (pending); 261120-182340-d04e6e |
+| A2 | `ci:Build + unit + smoke` (tests/test_cjk_words.cc); 261120-182340-d04e6e; fails without the F1 fix: 261120-182354-5059f0; ICU oracle 261120-173321-093c44: 0 differences on zh, ja, ko |
 | A3 | docs/mechanisms/cjk-words.md (Differences filled from the oracle) |
+| F1 | reviewer's probe2.sh rerun: 261120-182351-be88ad |
 
 ## Rulings I made
 
