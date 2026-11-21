@@ -2591,6 +2591,7 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 
 	// Prepares an object on the loop, reading the stored document as its prepare needs.
 	const auto prepare_inline = [this](Admitted& one) -> task::task<void> {
+		one.error = nullptr;   // a chore's failure in an earlier round is not this prepare's
 		try {
 			one.prepared = co_await db_handler.prepare_document(one.obj, one.idx + 1);
 		} catch (...) {
@@ -2972,7 +2973,12 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 	// Starts a round at `from` on the current schema; false when the schema has a script, whose objects all read
 	// the stored document, or cannot be read: each object's own prepare then reads it, and its failure is the result.
 	const auto fetch = [&](Round& round, std::size_t from) -> task::task<bool> {
-		auto schema = co_await db_handler.get_schema();
+		std::shared_ptr<Schema> schema;
+		try {
+			schema = co_await db_handler.get_schema();
+		} catch (...) {
+			co_return false;
+		}
 		if (!schema->get_data_script().is_undefined()) {
 			co_return false;
 		}
@@ -3030,7 +3036,14 @@ DocIndexer::index(std::vector<MsgPack>& batch)
 		if (first_change < stop) {
 			stop = first_change + 1;
 			auto& one = run[first_change];
-			if (!co_await offer_schema(&db_handler, round.snapshot, one.changed)) {
+			bool offered = false;
+			try {
+				offered = co_await offer_schema(&db_handler, round.snapshot, one.changed);
+			} catch (...) {
+				one.error = std::current_exception();   // the schema's write failure is this object's result
+				offered = true;
+			}
+			if (!offered) {
 				if (++one.offers <= SCHEMA_RETRIES) {
 					stop = first_change;   // prepared again, on the schema that came first
 				} else {
