@@ -21973,6 +21973,8 @@
     "script-method": {
       "accepted": {},
       "after": [],
+      "base": "28cc9f6de9eed316ad55597f090bee1b37c4f671",
+      "branch": "quest/xapiand/script-method",
       "checks": [
         {
           "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -21995,11 +21997,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: cluster's branch has not changed handler.*, search_views.cc or the reference guide (empty diff at its head); cjk-words and xapiand-final-release only share schema.cc (cjk-words lands on CI, final-release targets the xapiand branch); script-method is a few lines and lands long before cluster, which merges master",
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "a script sees the request's method in _method",
-      "updated": "2026-11-20T21:23:32"
+      "updated": "2026-11-20T21:23:54",
+      "worktree": "../Xapiand-wt/xapiand/script-method"
     },
     "seam-census": {
       "accepted": {},
