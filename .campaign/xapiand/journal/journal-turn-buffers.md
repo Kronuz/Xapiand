@@ -1,6 +1,6 @@
 # journal-turn-buffers: journal
 
-State: waiting on jobs 261121-113430-26daa5 261121-113432-44c9c7 261121-112947-e0956c 261121-112949-d67fc2 261121-113000-0950f8 261121-113002-fb2cfa 261121-113004-e6c020 261121-113006-d7b0ff 261121-113008-473d2b (park_count with and without the fix, A4, A6, the four mutants, TSan) and CI at journal:5a5972d
+State: waiting on jobs 261121-121340-140534 261121-121342-18a35f 261121-121345-18983c 261121-121348-cd08ff 261121-121351-e676c9 261121-121353-d1af6e 261121-121356-2d4517 261121-121359-943339 261121-121401-477826 261121-121404-d05796 261121-121406-cda053 261121-121409-060e7c 261121-121411-10f0d1 261121-121414-237c59 261121-120821-ebdf35 (park_count at journal:87af246 and without the turn-log fix at journal:5a5972d, A1-A6 and five mutants, TSan, Detent's recycler probe, main's phase probe) and CI at journal:87af246
 Quest: .campaign/xapiand/quests/journal-turn-buffers.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,25 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+msg (lead, 11-21): park_count at journal:5a5972d still failed, 1.028 B per group (261121-113430-26daa5).
+- Main's own slope on this host: 0.448 B per group, 4,480 B (261121-115651-194383, journal:335b1b5).
+- Probe 261121-115816-fc38cf (park_count with the log's and driver's capacities printed per
+  phase, private access by #define; not evidence): no capacity moved with the second 10,000
+  groups. In the busy group's turns two buffers filled for the first time and stayed: fits()'
+  measuring manifest, reserved to block_groups (161 x 16 = 2,576 B, between busy turns 10 and 50),
+  and the forward reader's header scratch, reserve(block_bytes / 2) (2,055 B, by turn 193, with
+  copies_' first 48 B). Fixed per log, not per group, but kept beside the turn's buffers.
+- journal:87af246 removes both, no reserve moved elsewhere: fits() lays out in a turn manifest not
+  in use (the staged turn's in stage(), the spare's in fitting(), encode()'s own on a rollover);
+  RecordReader checks a block header with header_shape() and names_block() (split out of
+  parse_header, which uses them) on a stack copy of its fixed part and streams its manifest and
+  CRC through a 1 KiB stack buffer, so it takes no scratch. fitting() loses const.
+- New tests: framing_test reader_manifests (64 and 100 groups; a byte changed in the manifest's
+  first and last byte, the first read's last byte and the CRC is refused); mutant header-crc.
+- Left from first use, both under 64 B: copies_' first Copy and index_nodes_' first spare slot.
+- Main's phase probe 261121-120821-ebdf35 splits main's 4,480 B by phase (pending).
+
 
 Fixing CI at journal:6cdd923 (run 44927231788): main's park_count failed on every platform,
 "a parked group costs the host no heap: 137.0 B per group" (Linux), 129.0 (macOS, FreeBSD).
@@ -107,6 +126,10 @@ journal:28c0caa; tests: `journal_turn_buffers_{bytes,turns,warm,seal,forward,pow
 seal-copy|stage-copy|forward-string`.
 
 ## Rulings I made
+
+- R11 The turn log keeps no buffer beside its turn's: measuring uses a turn manifest not in use,
+  and the record reader streams block headers through the stack. Reserving those two at open
+  instead would only move the 4.6 KB out of park_count's window.
 
 - R10 The driver keeps one in-flight vector, not a rotating pair: a pair keeps two buffers of the
   largest turn, and which one a turn grows depends on the parity of the turns before it. A turn
