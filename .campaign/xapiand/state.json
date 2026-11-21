@@ -8264,6 +8264,8 @@
     "faultlab-adopt-prospect": {
       "accepted": {},
       "after": [],
+      "base": "dea0ffb3781b2abb3640d38d531fad3d11ed0b14",
+      "branch": "quest/xapiand/faultlab-adopt-prospect",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -8297,6 +8299,7 @@
         "CMakeLists.txt",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/faultlab-adopt-prospect",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -8306,9 +8309,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's crash tests run on faultlab's faultfs (migration step 2)",
-      "updated": "2026-11-20T13:29:43"
+      "updated": "2026-11-20T16:02:22",
+      "worktree": "../prospect-wt/xapiand/faultlab-adopt-prospect"
     },
     "faultlab-adopt-xapiand": {
       "accepted": {},
