@@ -36,6 +36,12 @@ Provides journal:host (a new delete call; nothing existing changes). Consumed by
   after journal-idle-groups and journal-loop-handoff, which change Host and its range table, and
   after journal-tail-second-sector, which fixes a silent loss of acknowledged turns in src/turn_log.
 
+- Lead, 2026-11-21: shape proposed to Detent's lead, to change only with a reason sent back:
+  `journal::Host::delete_group(std::uint64_t group)`, synchronous like `create_group`; refused with a
+  named error unless `status(group)` is closed and `holding(group)` is false; a table record marks the
+  group deleted before its segments, manifest and artifacts go, and `open()` finishes a recorded
+  delete; a later `create_group(group)` starts empty.
+
 ## May land early
 
 Nothing: one landing.
