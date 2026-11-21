@@ -25,6 +25,9 @@ Files: `src/serialize.cc` (1,696 lines), `src/aggregations/metrics.h` (1,265),
   static initialization order cannot change.
 - One commit per split file, so a conflict with another branch is found per file.
 
+Pieces stay in their file's directory with its name as prefix (`src/serialize_*.cc`,
+`src/aggregations/metrics_*.h`): CMake globs sources per directory, so no build file changes.
+
 ## Acceptance criteria
 
 - A1 The suite passes at the split code: the suite check

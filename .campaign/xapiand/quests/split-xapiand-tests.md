@@ -26,6 +26,10 @@ holds them. `tests/test_coverage_geospatial.cc` waits for the geo-ring explorer'
   static initialization order cannot change.
 - One commit per split file, so a conflict with another branch is found per file.
 
+Each test's pieces go in `tests/test_NAME/` and join test NAME's executable through one generic
+rule in CMakeLists.txt (`tests/test_NAME/*.cc` added to `xapiand_test_NAME`): the only build change.
+The glob of `tests/test_*.cc` must not pick pieces up as tests of their own.
+
 ## Acceptance criteria
 
 - A1 The suite passes at the split code: the suite check
