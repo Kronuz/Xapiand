@@ -25314,7 +25314,8 @@
       "consumes": [],
       "files": [
         "tools/split_check.py",
-        "tools/test_split_check.py"
+        "tools/test_split_check.py",
+        "docs/SPLITTING.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-sources",
       "landed": [],
@@ -25326,7 +25327,7 @@
       "risk": "low",
       "status": "active",
       "title": "split_check compares only C and C++ sources",
-      "updated": "2026-11-21T12:38:32",
+      "updated": "2026-11-21T12:39:08",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-sources"
     },
     "split-completion": {
