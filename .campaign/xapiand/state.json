@@ -9554,13 +9554,6 @@
           "level": "none",
           "minutes": 1,
           "name": "asan"
-        },
-        {
-          "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
-          "later": true,
-          "level": "light",
-          "minutes": 240,
-          "name": "asan-macos"
         }
       ],
       "consumes": [],
@@ -9705,6 +9698,51 @@
           "weakened": [
             "gate check build-test changed"
           ]
+        },
+        {
+          "at": "2026-11-20T18:28:33",
+          "checks": [
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              },
+              {
+                "cmd": "cmake -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \"-DCMAKE_CXX_FLAGS=-O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -D_GLIBCXX_ASSERTIONS\" \"-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined\" && cmake --build build-asan -j4 && ctest --test-dir build-asan --output-on-failure -j4 --timeout 1800",
+                "later": true,
+                "level": "light",
+                "minutes": 240,
+                "name": "asan-macos"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:macos-arm64",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "none",
+                "minutes": 1,
+                "name": "asan"
+              }
+            ]
+          ],
+          "reason": "CI runs ASan/UBSan and TSan on every push (cpp-libraries cmake.yml, Xapiand ci.yml); local macOS sanitizer runs duplicated it (D57)",
+          "voided": [],
+          "weakened": [
+            "deferred check asan-macos removed"
+          ]
         }
       ],
       "landed": [],
@@ -9720,7 +9758,7 @@
       "risk": "critical",
       "status": "planned",
       "title": "The freeze-readiness review before the first release",
-      "updated": "2026-11-20T18:21:28"
+      "updated": "2026-11-20T18:28:33"
     },
     "format13": {
       "accepted": {},
