@@ -29,7 +29,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | 261121-090800-a9013e (the fix); 261121-090803-0ef0af (master's code with the test, must fail) |
-| A2 | the suite job |
+| A2 | 261121-090907-cbe642 (suite, passed at ac6a3f22c988; reused at 4f907d19d724, the merges from master touch none of its files) |
 
 ## Result
 
