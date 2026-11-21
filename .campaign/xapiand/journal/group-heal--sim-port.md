@@ -1,17 +1,17 @@
 # group-heal--sim-port: journal
 
-State: waiting on jobs 261120-182237-28e256
+State: waiting on jobs ci:macos-arm64, ci:linux-asan-ubsan, ci:linux-tsan (strata CI run 44853762979 at strata:6d870c05)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
 
-Waiting on 261120-182237-28e256: the sim suite (`ctest -R '^simulation_'`) in strata's Release
-build at strata:6d870c05, the task head. Branch pushed (CI runs asan/tsan on it).
+Waiting on strata CI run 44853762979 at strata:6d870c05 (the task head, pushed): ci:macos-arm64
+is the build-test gate (D57) and runs the sim suite; the sanitizers run it too.
 
 ## Next
 
-1. When 1bb70e is green, set State to ready for review; if red, fix and rerun.
-2. Check CI on quest/xapiand/group-heal--sim-port (gcc -Werror on the sim targets is new).
+1. CI green on every job: set State to ready for review. Red: fix, push, cite the new run.
+2. Watch gcc: `-Wall -Wextra -Werror` on the sim targets is new to CI (SIM-R25).
 
 ## Blocked on
 
@@ -21,7 +21,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| sim tests at head | 261120-182237-28e256 (pending; 180331-1bb70e was cancelled while queued): sim targets in strata's build, ctest -R '^simulation_' |
+| sim tests at head | ci:macos-arm64 (plus ci:linux-asan-ubsan, ci:linux-tsan), strata CI run 44853762979 at strata:6d870c05, pending. Local suite jobs 1bb70e and 28e256 cancelled per the coordinator's D57 correction: CI runs the same ctest |
 | planted fault rejected | 261120-180342-65db6c done exit 0 at strata:6d870c05: seeds 1-5 linearizable; with --plant lost-write each a violation (keys 5, 1, 6, 5, 13), plain run exits 1 |
 | one seed, one history | 261120-180334-1b82c5 done exit 0: seed 7 twice, sha256 8eacc64c... (132,121 B); seed 11 twice, sha256 75961460... (102,096 B) |
 | sizing | probe 261120-175321-108824: 16 keys/100 ms checks in <0.1 s per seed; 8 keys/200 ms took ~17 s (2.2M nodes) |
@@ -31,6 +31,9 @@ Nothing.
 strata `sim/` (engine, clock, random, network, history, checker, sim_check) ported verbatim from
 `design/simulator` at strata:27cfb303 (strata:7aca130b); wired into strata's build
 (strata:4a26c2dd); `sim_run` end to end, sized at strata:6d870c05; `docs/mechanisms/simulator.md`.
+
+Coordinator's D57 correction (build-test is ci:macos-arm64): applied; the duplicate local suite
+job 261120-182237-28e256 cancelled too.
 
 ## Rulings I made
 
