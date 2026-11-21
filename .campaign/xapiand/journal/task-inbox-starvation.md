@@ -1,6 +1,6 @@
 # task-inbox-starvation: journal
 
-State: waiting on jobs 261120-233748-31a460 261120-233749-515981 261120-233750-f790e5 261120-233753-2f3547 261120-233756-445d50 261120-233759-1389f7
+State: waiting on jobs 261120-233748-31a460 261120-233749-515981 261120-233753-2f3547 261120-233756-445d50 261120-233759-1389f7
 Quest: .campaign/xapiand/quests/task-inbox-starvation.md (the lead's; never edit it)
 
 ## Doing
@@ -27,7 +27,7 @@ Recommendation: 1. No code change is needed or made.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test `deadline_test inbox` at a4ba197: 261120-233750-f790e5; mutant r1 (task:a341688, `mutant/tis-r1`: inbox taken only when ready and demoted are empty) fails-without 261120-233753-2f3547. Bound: a call posted at step 10 runs at step 10 behind a demoted loop and at step 11 behind a ready loop (one repost ahead of it); before the fix, step 10,000 |
+| A1 | test `deadline_test inbox` at a4ba197: 261120-233750-f790e5 (passed); mutant r1 (task:a341688, `mutant/tis-r1`: inbox taken only when ready and demoted are empty) fails-without 261120-233753-2f3547. Bound: a call posted at step 10 runs at step 10 behind a demoted loop and at step 11 behind a ready loop (one repost ahead of it); before the fix, step 10,000 |
 | A2 | test `lifecycle_test flush-inline` at a4ba197 (hook `test_hooks::off_loop_start` throws `std::system_error`): 261120-233756-445d50; mutant r2 (task:1b7eab1, `mutant/tis-r2`: rethrow instead of the inline run) fails-without 261120-233759-1389f7 |
 | A3 | suite 261120-233748-31a460, tsan 261120-233749-515981 at a4ba197 |
 | A4 | [artifact] R4 under "Rulings I made" below; `docs/design/service-shape.md` has no `event::wait` at a4ba197 (step 1, line 296, reads "task: sleeps, D10, D14") |
