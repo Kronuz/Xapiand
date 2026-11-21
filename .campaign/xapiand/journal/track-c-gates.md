@@ -1,6 +1,6 @@
 # track-c-gates: journal
 
-State: waiting on jobs 261120-151854-18b807 261120-151857-83dd88 261120-151859-75f543 261120-151907-369f91 261120-151910-c43dad 261120-151912-4175b8 261120-151915-b0da39 261120-151928-c212a8 261120-151930-aa8e3e 261120-151933-c7a05f 261120-151935-1303bf 261120-151937-91e7a8 261120-151939-4e57e4 261120-151941-ce0b7a 261120-151943-7cef64 261120-151953-846669 261120-152013-0bef2c 261120-152015-3b7ebd 261120-152017-dd170c 261120-152227-124538 261120-152229-2096f8 261120-152231-ab18c1 261120-152233-5ce427 261120-152236-dd591f 261120-152238-d74166 261120-152240-f54066 261120-152243-1ec7d9
+State: waiting on jobs 261120-200605-743b1d 261120-200606-fa2caa 261120-200607-b7499c 261120-200724-273aa8 261120-200804-fd5a96
 Quest: .campaign/xapiand/quests/track-c-gates.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,38 +9,26 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Resumed 2026-11-20 (lead's note ~/.scratch/xapiand/lead/tcg-resume.txt). Of the 19 jobs at consensus
-e1f249d / 5923b6c, 15 passed; their results are in both reports (strata worktree). The others:
+Resumed 2026-11-20 (second time). The 27 jobs at consensus 8801b99 / journal 178030b ended; both
+reports are filled from them (strata:45b0ab43, pushed). Red or short rows:
 
-- C2 Driver budget past 399 (f50b1e): seed 727, the same harness bug as 399 (Detent msg-178, fixed by
-  consensus:85ed0e6; Detent's jobs 261120-124431-f7bb46 fails, 261120-124619-d71c0d passes).
-  Recorded in track-c-c2.md as pre-existing and fixed upstream.
-- C4 suite macOS 22485b and Linux c0320e: `consensus_mutants` hit ctest's TIMEOUT 1800 with 14/16
-  and 9/16 verdicts, each a kill; no mutant hangs (each has its bounded() deadline), the total is too
-  long for 16 mutants. Told Detent (msg-170); ruling under Rulings.
-- C4 FreeBSD suite 94f5e9: skipped because it ran `--after` the failed Linux suite.
-
-Everything is rerun at consensus main 8801b99 (pins journal 9e11713, completion d8b538c: no `--ref`
-override now) and journal main 178030b. Scripts: ~/.scratch/c2-gate/body-v4.sh and vm-v5.sh (C2),
-~/.scratch/xapiand/track-c-gates-main/{body.sh,vm.sh,submit-vm.sh} (C4 and the VM chains). Job ids
-by row are in the reports. The H1 control mutant at 8801b99 is consensus:f066c51.
-
-Results at e1f249d to watch at main: T7c 3.27 times at 10 ms (miss, target 4); T7d's 4 KiB arm at
-10 ms 1.56 times (one run, past 1.5); T7a's 20% clause has no bench figure (open for review);
-T8 65.7 CPU-minutes, 168M units, clean.
+- C2 T9 `jpower 200` at journal 178030b fails on macOS (18b807) and FreeBSD (d74166): 1,036,264
+  checks, 7 failures, seeds 91 and 140 (512 B both), 145 and 199 (2 KiB last), 122 (256 B both).
+  Passed at d90797c (e136e7). Linux (2096f8) passes but draws other cases. Detent's msg-183; not
+  debugged here. Seed 91 is also in the logs (the lead's note listed four seeds).
+- C4 T7c misses 4x again: 3.18 (modeled), 3.37 (fdatasync) at 8801b99 (0bef2c).
+- C4 R19 at 0 ms: Control 256 KiB max 59.0 ms against the stated 15.1 ms (dd170c, one run); repeat
+  273aa8 queued after the Linux mutants (same VM).
+- C4 T8 at 8801b99: clean, 104.9M units, but 49.3 CPU-minutes; fifth run fd5a96 queued.
+- T7d passes at 8801b99, 4 KiB arm included (the e1f249d 1.56x miss did not repeat).
 
 ## Next
 
-1. When the jobs finish, replace each "Queued" cell in docs/gates/track-c-c2.md ("At consensus main"
-   table) and track-c-c4.md from the logs (/Users/kronuz/.scratch/campaign/jobs/ID/a1/log).
-2. VM chains: Linux = 0bef2c a1 -> 3b7ebd a2 -> dd170c a3 -> 124538 C2 consensus -> 2096f8 C2
-   journal -> ab18c1 C4 suite -> 5ce427 mutants; FreeBSD = dd591f -> d74166 -> f54066 -> 1ec7d9.
-   A failure skips the rest of its chain: resubmit with submit-vm.sh (bash; zsh does not split
-   `--env` lists).
-3. CI at consensus 8801b99: run 44829606479 (queued at 15:20).
-4. Forward the per-mutant seconds (ce0b7a, 5ce427, 1ec7d9) to Detent for
-   consensus-mutants-per-test's TIMEOUTs.
-5. When every cell is filled: State "ready for review".
+1. When 743b1d (Linux mutants), fa2caa/b7499c (FreeBSD suite, mutants), 273aa8 (R19 repeat) and
+   fd5a96 (T8 seed 5) end, fill their cells in docs/gates/track-c-c4.md ("queued").
+2. Forward the per-mutant seconds (macOS ce0b7a: 81 to 428 s, 2,616 s total; 743b1d, b7499c) to
+   Detent for consensus-mutants-per-test's TIMEOUTs.
+3. Then State "ready for review"; T9's red row stays until Detent's fix is rerun.
 
 ## Blocked on
 
@@ -54,8 +42,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | docs/gates/track-c-c2.md (artifact): VM rows filled at journal d90797c / consensus 5923b6c; rerun at consensus 8801b99 and journal 178030b queued; pending cells marked; T9 on faultfs job ids: f3b916 dc4a0e e136e7 7b6023 27e504 (macOS), 3261e1 f6e7a6 (VM journal) |
-| A2 | docs/gates/track-c-c4.md: every row with results at consensus e1f249d and its rerun job at 8801b99 (queued); T7e and D18 not runnable (group-heal) |
+| A1 | docs/gates/track-c-c2.md (artifact), strata:45b0ab43: every row at consensus 8801b99 / journal 178030b filled with its job: macOS 4592f2 86e99e 18b807 83dd88 75f543 b711ce 2b2fc3 369f91 c43dad 4175b8 b0da39; Linux VM 124538 2096f8; FreeBSD VM dd591f d74166. **T9 jpower 200 fails at journal 178030b** (18b807 macOS, d74166 FreeBSD: 7 failures, seeds 91 140 145 199 122), passed at d90797c (e136e7); Detent msg-183 |
+| A2 | docs/gates/track-c-c4.md, strata:45b0ab43: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 4e57e4 ce0b7a; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x), R19 0 ms miss (one run); pending: 743b1d, fa2caa, b7499c, 273aa8, fd5a96. T7e and D18 not runnable (group-heal) |
 | A3 | architect's review, launched by the lead |
 
 ## Result
@@ -65,6 +53,11 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 (docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
 
 ## Rulings I made
+- 11-20: skipped 5ce427, f54066, 1ec7d9 resubmitted without their failed/cancelled dependency at
+  8801b99 (743b1d, fa2caa, b7499c); b7499c runs after fa2caa because both use the FreeBSD VM
+  (vm.sh refuses a running VM). R19 repeat 273aa8 (`--force`) waits on 743b1d for the Linux VM.
+- 11-20: T8 at 8801b99 fell short of the CPU-hour on a loaded host (49.3 CPU-min); a fifth 1,000 s
+  run (seed 5, fd5a96) tops it up rather than rerunning all four.
 - C4 Linux suite (lead, 11-20): job 261120-152231-ab18c1 (ctest -E consensus_mutants in the VM at
   consensus 8801b99) is cancelled; consensus CI ran the full suite at 8801b99 on Linux x86_64
   (gcc, clang), arm64, macOS and FreeBSD, plus ASan+UBSan and TSan, all green: cite
