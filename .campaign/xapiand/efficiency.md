@@ -660,3 +660,13 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Landed: faultlab-adopt-strata (strata:efa5214b). restore-stream security re-accepted (only src/manager.cc's READY reorder changed since review). node-admission, netlab-consensus, ninja-only-strata and placement merged main and pushed; their evidence reruns are queued.
 - tolerant-open measured a journal limit (recover loses every group a damaged block names, turn_log.h:605-611): new quest journal-lost-bound, after Detent's journal-tail-second-sector at its lead's request.
 - Host: light slots 99% used; ~40 jobs queued. Quota 68% weekly at 10h.
+
+## 2026-11-21 12h
+- Owner: the sprint went to tool fixes and campaign rules. Recommended the campaign-v3 lead take over agent-campaign (v2) maintenance and migrate it to v3, with this lead only forwarding findings; awaiting his yes. Oversized files measured (schema.cc 10,076 lines, campaign_tool.py 9,905, index.hh 6,139); quest schema-split filed (needs cjk-words), files under 1,000 lines.
+- D169 revised on group-catalog's finding (msg-201): a commit hook waiting on the group's checkpoint deadlocks on the write lease, so close runs the checkpoint through `close_payload`. Caught before any code depended on it.
+- turn-log-parity: task ryw merged (strata:9a452ed2; TSan and 3 mutants as expected); large-tx started (Opus). group-commit found the cohort counted groups, not writers (71 of 168 commits rode a second barrier with 8 writers on 2 indexes; fix measured 40 to 26 barriers locally); its first 3 jobs failed at configure on a Makefiles tree.
+- Ninja sweep ran without waiting for the tool's CI (slot locks were enough): 1,530 Makefiles trees removed from 337 idle slots.
+- netlab-consensus A1/A2 rows failed to build in the guest after merging Detent's fix; a Sonnet contributor is on it.
+- Explorer batch of 4 from hunt.md: eager-open cost (Opus, performance), RESTORE schema fault point, TLS held-read cancel, geo ring hole (Sonnet).
+- CI is the queue: agent-campaign:b34fef9 has waited ~1 h for a runner; Xapiand 5 queued and 3 running, strata 4 and 1.
+- Host: light slots 86% used last hour, 27 jobs queued, load 29-40 on 16 CPUs, 305 GiB free. Quota 70% weekly, reset in ~35 h.
