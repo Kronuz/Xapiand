@@ -1,36 +1,51 @@
 # restore-stream: a whole-database RESTORE streams a top-level MessagePack array element by element
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status restore-stream`.
+Risk: high (a decoder of untrusted input; the review carries the correctness questions too). The
+lead writes this quest; contributors read it and never edit it. Its machine state is in
+`state.json`: `campaign status restore-stream`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A whole-database RESTORE of one MessagePack array (the es-*.msgpack dumps) reaches the indexer as
+one object: the unpacker yields it only after the last byte, and the indexer holds every element's
+prepared state until the commit, so restoring Kibana's logs sample (14,005 docs, 45.6 MB index)
+peaks at 1,329 MB and shakespeare (111,396 docs, 19.4 MB) at 1,824 MB. The explorer's prototype
+(explore/bulk-load-rss, Xapiand:b60d09d64, docs/perf/bulk-load-rss.md there) skips the array's
+header so the body streams as its elements: 339 and 396 MB, times unchanged. This quest builds
+that properly: the array's declared count is enforced, nothing a dump could say before is
+accepted or rejected differently, and the remaining peak is stated.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Restoring logs and shakespeare as one array peaks at most 450 MB, measured as `strict` jobs
+  with the probe (harness/bench/bulk_rss_probe.py from the explore branch), before and after at
+  named commits
+- A2 Load time does not regress: the same `strict` jobs, five trials each, with an A/A; a
+  slowdown past the A/A's spread is a failure, stated with numbers
+- A3 Identity: after restoring each dump as one array and as the same objects streamed without the
+  array, both databases hold the same documents (ids and full contents): a test or job with values
+- A4 The declared count holds: an array whose header promises more elements than the body holds
+  fails as an incomplete body, as it does today; one with more elements than declared fails; a
+  test per case, each failing with the change reverted to the prototype (`--fails-without`)
+- A5 Nothing else changes: a nested array element, a non-map element, an empty array, a header
+  split across chunks (every split point of the 1, 3 and 5 byte headers), a single document
+  RESTORE and the NDJSON stream answer as they do on master: tests with the responses' values
+- A6 The decoder is fuzzed: the stream feed (header skip and count) under ASan+UBSan for at
+  least 30 CPU-minutes, no crash, leak or timeout, recorded with the executed-unit count
+- A7 [artifact] `docs/perf/bulk-load-rss.md`: the breakdown, before and after with job ids, and
+  what holds the remaining peak (strata's write buffer until the one commit)
+- A8 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: RESTORE's accepted inputs and responses do not change (A5).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: the explorer's note lands with this quest, not separately (an explore merge
+  lands only its note, and landing it on master alone would restart every landing queue's CI).
+  The prototype expands a nested array element instead of rejecting it; that change is not taken.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
