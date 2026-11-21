@@ -86,10 +86,10 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
 - Journals on tmpfs (/dev/shm) in an 8 GiB guest: the first dry run (261120-141208-19c21e) put
   them on the guest's disk and loopback commit p50 read 3.0 ms of fdatasync; on tmpfs a shape's
   delta over loopback is the network's. 64 KiB runs stop at 2,048 entries (128 MiB per node).
-- A1 round trip: ping's median from node 1 to each peer within 10% of the set round trip, past the
-  held floor (ping with netem holding each packet 1 us each way: the path plus the guest timer's
-  latency on a hold, measured first), which is also the jitter allowed (at least 0.1 ms). The
-  unshaped round trip is recorded beside it.
+- A1 round trip (replaces the 1 us held floor, which never arms a real timer): expected = set +
+  unshaped + 2 x the median lateness of 30 sleeps of the shape's delay (timer slack 1 ns),
+  measured right after the pings; allowed = 10% of set + max(0.1 ms, 2 x (late p90 - median)).
+  The spread term is measured, not a widened constant; the calibration supports the model.
 - Hunt rows use ping's measured round trip with A1's 10% margin: commit p50 (one in flight) over
   RTT + loopback p99, commit p99 over 2 RTT + loopback p99, RPC p99 over RTT + loopback p99, an
   election over 3 timeouts.
@@ -103,3 +103,5 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
   and the client takes a new name); final linearizable reads of every key on the healed leader.
 - faultlab pinned at faultlab:b64102f (bench/netlab/FAULTLAB_REV): its Python equals Xapiand's
   pin a3b71d1; only README and CI changed since.
+- Role changes reset per shape (Bench.start). The partition row's isolated-leader term had read
+  earlier shapes' clusters ("term 11/8"); the selftest now fails without the reset.
