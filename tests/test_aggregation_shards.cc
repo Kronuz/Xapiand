@@ -522,6 +522,42 @@ static void test_one_shard_matches_the_rows() {
 	CHECK_EQ(cats.size(), std::size_t{12});
 }
 
+// Variance is the population one (Elasticsearch's `variance`): 0 for no value and for one value, never NaN,
+// the same over one shard and over several.
+static void test_variance_of_few_values() {
+	const auto schema = make_schema();
+	const std::vector<std::vector<double>> cases = { {}, { 4.0 }, { 2.0, 4.0 } };
+	const double want_variance[] = { 0.0, 0.0, 1.0 };
+	for (std::size_t c = 0; c < cases.size(); ++c) {
+		std::vector<Row> rows;
+		for (auto x : cases[c]) {
+			Row row;
+			row.scores.push_back(x);
+			rows.push_back(std::move(row));
+		}
+		Row filler;
+		filler.ages.push_back(1);
+		rows.push_back(std::move(filler));
+		for (std::size_t n : { std::size_t{1}, std::size_t{2} }) {
+			const auto layout = build(rows, n, [](std::size_t) { return false; }, "v" + std::to_string(c));
+			auto aggs = MsgPack::MAP();
+			aggs["v"] = kind("_variance", "score");
+			aggs["e"] = kind("_extended_stats", "score");
+			auto config = MsgPack::MAP();
+			config["_aggs"] = aggs;
+			const auto result = by_one_spy(layout, config, schema);
+			const auto& top = result.at("_aggregations");
+			const double variance = top.at("v").at("_variance").as_f64();
+			const double ext_variance = top.at("e").at("_variance").as_f64();
+			const double std_dev = top.at("e").at("_std_deviation").as_f64();
+			CHECK_TRUE(!std::isnan(variance) && !std::isnan(ext_variance) && !std::isnan(std_dev));
+			CHECK_EQ(variance, want_variance[c]);
+			CHECK_EQ(ext_variance, want_variance[c]);
+			CHECK_EQ(std_dev, std::sqrt(want_variance[c]));
+		}
+	}
+}
+
 // Past `_shard_size` the counts of a `_terms` are approximate by design: a value dropped and seen again starts
 // over, so a count falls short of the true one, never above it; the hot values still lead, in order.
 static void test_terms_past_shard_size_are_approximate() {
@@ -569,4 +605,4 @@ static void test_terms_past_shard_size_are_approximate() {
 	CHECK_EQ(checked, std::size_t{3 * 3 * top});
 }
 
-TEST_MAIN(test_every_kind_equal_over_shards, test_one_shard_matches_the_rows, test_terms_past_shard_size_are_approximate)
+TEST_MAIN(test_every_kind_equal_over_shards, test_one_shard_matches_the_rows, test_terms_past_shard_size_are_approximate, test_variance_of_few_values)
