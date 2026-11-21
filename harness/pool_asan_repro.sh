@@ -35,11 +35,11 @@ else
   flags_ld=$flags
   leaks=1
 fi
-cmake -GNinja -S . -B "$build" -DFETCHCONTENT_BASE_DIR="$deps" \
+cmake -S . -B "$build" -DFETCHCONTENT_BASE_DIR="$deps" \
   -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_C_FLAGS=-O1 $flags" "-DCMAKE_CXX_FLAGS=-O1 $flags" \
   "-DCMAKE_EXE_LINKER_FLAGS=$flags_ld" "-DCMAKE_SHARED_LINKER_FLAGS=$flags_ld" \
   -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF ${extra[@]+"${extra[@]}"} || broken
-ninja -C "$build" -j4 xapiand_test_pool || broken
+cmake --build "$build" -j4 --target xapiand_test_pool || broken
 export ASAN_OPTIONS=detect_leaks=$leaks:halt_on_error=1:abort_on_error=1
 export UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 for i in $(seq 1 "$RUNS"); do
