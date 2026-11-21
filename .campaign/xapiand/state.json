@@ -25144,8 +25144,8 @@
       "repo": "../btree",
       "risk": "low",
       "status": "active",
-      "title": "btree's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:48:03",
+      "title": "btree's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:15",
       "worktree": "../cpp-btree-wt/xapiand/split-btree"
     },
     "split-check": {
