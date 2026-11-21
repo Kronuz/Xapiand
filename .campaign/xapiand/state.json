@@ -25596,8 +25596,8 @@
       "repo": "../logger",
       "risk": "low",
       "status": "planned",
-      "title": "logger's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:17"
+      "title": "logger's large files split where it helps maintenance",
+      "updated": "2026-11-21T12:04:51"
     },
     "split-msgpack": {
       "accepted": {},
