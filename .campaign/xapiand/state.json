@@ -28050,7 +28050,32 @@
       "updated": "2026-11-08T15:40:27"
     },
     "tls-watch-cancel": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-21T10:50:35",
+          "base": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
+          "blobs": {
+            "CMakeLists.txt": "100644:616e26f4b6060ae884580c5a47a2a27e2e5db67f",
+            "docs/perf/watch-peek.md": "100644:8a9297dcb1877307037bbf3d71653d187aa24f7f",
+            "http_asio.h": "100644:5446f7594d85a6896cfc30f2e1f403e5fe2ef4d8",
+            "test/tls_watch_test.cc": "100644:1de95557240cd4ecdf9d72e2cc968df090ac3c90"
+          },
+          "by": "review",
+          "commit": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "criteria": "3ac7c0ab4a3aeb17",
+          "diffs": {
+            "CMakeLists.txt": "2516a9379cf9789d",
+            "docs/perf/watch-peek.md": "2fa04df41337473a",
+            "http_asio.h": "b93ef48412ec78f5",
+            "test/tls_watch_test.cc": "c237674e27ad3f39"
+          },
+          "findings": {},
+          "note": "APPROVE at http:e4ad5b9, no blocking findings; probe job 261121-104541-7b84d9",
+          "review": "8713977473d0d26d13c1eedcada03540ffa3d962",
+          "reviewed": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "aed0314dbbf0b236ee5dfd6756e30d88aff90b4f",
       "branch": "quest/xapiand/tls-watch-cancel",
@@ -28081,7 +28106,7 @@
       "risk": "high",
       "status": "review",
       "title": "A cancel reaches a held TLS watch read between its wake and its continuation",
-      "updated": "2026-11-21T10:34:33",
+      "updated": "2026-11-21T10:50:35",
       "worktree": "../http-wt/xapiand/tls-watch-cancel"
     },
     "track-c": {
