@@ -47,12 +47,12 @@ CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
   EFBIG with SIGXFSZ ignored throws naming node.key and leaves none; an unwritable directory throws
   naming node.pem (skipped as root). Mutant `save-chmod-after` (the old ofstream + chmod writer);
   at 0dce2e1 it failed the mode check (node.key 644), the write check and the directory check.
-- Jobs at 803442f: plain epoch 261120-190018-0294af, issue 261120-190020-fe207b, save
-  261120-190022-ac8ca2; fails-without: links-no-epoch consensus:b58171c -> 261120-190024-386b01,
+- Jobs at 803442f: plain epoch 261121-113224-8358a1, issue 261121-113224-3a60bf, save
+  261121-113225-813081; fails-without: links-no-epoch consensus:b58171c -> 261120-190024-386b01,
   join-unchained-issuer consensus:f8c0177 -> 261120-190026-ce7445, save-chmod-after
-  consensus:1e2ab13 -> 261120-190027-3570be. Reruns at head: refused_pins 261121-095250-9bef70,
-  refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072; every admission case
-  261120-190110-1990be. TSan and the suite: CI at 803442f (the local TSan rerun cancelled: CI's).
+  consensus:1e2ab13 -> 261120-190027-3570be. Reruns at head: refused_pins 261121-112337-27fd23,
+  refused_ca 261121-095253-b8cc25, remove_ca 261121-095252-330d78; every admission case
+  261121-131011-10a70a. TSan and the suite: CI at 803442f (the local TSan rerun cancelled: CI's).
 - Non-blocking, left for follow-up: N1 (issued-certificate check untested), N2 (remove_node's
   pending `not_connected` untested), N3 (first_join `removed` untested), N4 (send-signals mutant
   only meaningful on Linux: CI 44797280480), N5 (admission.md: every member can read a token's
@@ -84,11 +84,11 @@ alone"), as intended.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | refused_pins 261121-095250-9bef70, refused_ca 261120-190056-312f97, remove_ca 261120-190056-bc6072, issue 261120-190020-fe207b, every case 261120-190110-1990be; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
-| A2 | remove_ca 261120-190056-bc6072, epoch 261120-190018-0294af; TSan: CI 44858867076 linux-tsan (remove_*, epoch_* pass); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-185145-6600d3 and at 803442f 261120-190024-386b01, 261120-105033-4b9fdb |
-| A3 | every admission case under both policies (`_ca`, `_pins`) 261120-190110-1990be |
+| A1 | refused_pins 261121-112337-27fd23, refused_ca 261121-095253-b8cc25, remove_ca 261121-095252-330d78, issue 261121-113224-3a60bf, every case 261121-131011-10a70a; fails without: no-pin-check 261120-173338-bff111, no-repin-check 261120-173341-5fae97, 261120-105031-bebe74 |
+| A2 | remove_ca 261121-095252-330d78, epoch 261121-113224-8358a1; TSan: CI 44858867076 linux-tsan (remove_*, epoch_* pass); fails without: remove-keeps-links 261120-173345-1b7fb0, links-no-epoch 261120-185145-6600d3 and at 803442f 261120-190024-386b01, 261120-105033-4b9fdb |
+| A3 | every admission case under both policies (`_ca`, `_pins`) 261121-131011-10a70a |
 | A4 | `docs/mechanisms/admission.md` (consensus:674bb21) |
-| A5 | issue 261120-190020-fe207b, save 261120-190022-ac8ca2; fails without: any-token 261120-173348-7a0880, join-unchained-issuer 261120-185148-3c31ce and at 803442f 261120-190026-ce7445, save-chmod-after 261120-185150-a20006 and at 803442f 261120-190027-3570be, 261120-105035-bb5634 |
+| A5 | issue 261121-113224-3a60bf, save 261121-113225-813081; fails without: any-token 261120-173348-7a0880, join-unchained-issuer 261120-185148-3c31ce and at 803442f 261120-190026-ce7445, save-chmod-after 261120-185150-a20006 and at 803442f 261120-190027-3570be, 261120-105035-bb5634 |
 
 Messages: the coordinator's D149 (default policy is the cluster CA): done in consensus:4bf833f —
 `NodePins(local, pins, context)` builds `ClusterCa(context, local)`; `pre_approved_pins()` is the
