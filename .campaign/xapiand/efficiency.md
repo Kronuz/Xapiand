@@ -553,3 +553,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:ac6331c, 3706f16, 90ad2fc (dotfiles:b87e7c0); merged-task journals fix in suite. Root fix for placement: strata varint pin bump (fix/varint-pin, strata:b4694757) instead of a second overlong check.
 - Bench: bulk-load dry runs, 1 trial: Xapiand 1.45-6.9x faster than ES 9.5.4, 5.2-154x less peak RSS; 12 exclusive 5-trial jobs queued.
 - Quota 51% weekly, 0.43%/h, reset in 50 h. Load 11-13. Disk 297 GiB free.
+
+## 2026-11-20 20h
+- Landed: freebsd-exe-path (Xapiand:0fd8e1191). Merged: turn-log-parity task reopen-loops (strata:566730d6). Track-c re-planned as a roll-up (risk high to low on the record, D123/D125).
+- Agents finished (Opus): turn-log-parity evidence 102k (found 14 unbuilt tasks; my "3 of 3 tasks" misread); reopen-loops 186k (test + mutant, 268 cut cases); track-c-gates fill 149k (4 red rows: journal T9 silent loss at 178030b, T7c 3.18x vs 4x, R19 59 ms vs 15.1 ms at 0 ms, T8 49/60 CPU-min).
+- Started: journal-turn-buffers (journal half of D3, after Detent's journal-idle-groups and journal-power-silent-loss), checkpoint-window (parity task 4), xapiand-final-release CI fixes, crash-wrong-row explorer.
+- Findings: journal 178030b loses acknowledged records under damage at 256 B/512 B/2 KiB blocks (5 seeds of 200, macOS and FreeBSD; passed at d90797c) -> Detent's journal-power-silent-loss. xapiand branch CI: test_text_parser built locally only via Homebrew's xapian.h; id-0 refusal drops documents on RESTORE (222 of 999).
+- Tool: agent-campaign:bf732aa (merged task journals), 82d3916 (ordered cross-campaign overlaps; mutant runs no longer hide task evidence); dotfiles:ebc987a, 64ac75f.
+- Quota 53% weekly, 0.44%/h, reset in 49 h. Load 13.4. Disk 300 GiB free. GitHub CI moving again, slowly.
