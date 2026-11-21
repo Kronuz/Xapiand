@@ -571,3 +571,10 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:0ad311f (cancelled CI is not failed), dotfiles:de01876. Stale deferred job pruned on phrase-expansion; campaign check clean.
 - Owner: cancelled the 2 Nov-11 strata runs -> GitHub refuses both cancel and force-cancel (ghost records, 0 jobs); left in place by default.
 - Quota 54% weekly, 0.45%/h, reset in 48 h. Load 3.4-5. Disk 300 GiB free.
+
+## 2026-11-20 22h
+- Agents finished: xapiand-final-release no-publish workflows + release commit 97k (Sonnet; Xapiand:1114106db, Xapiand:fc7142e3a); script-method 185k (Opus; Xapiand:dafc92de3, mutant fails on `_method` "", suite green).
+- Release dry runs dispatched at Xapiand:30815d91f (publish=false): Bottles found the tap untappable (kronuz/tap xapian.rb and nginx.rb use DSL current Homebrew removed); fix homebrew-tap:8fac0ef validated locally in CI's trust-bypass mode, push denied, waits on the owner. macos-14 and Rosetta bottle cells cancelled (logs gone). Release, FreeBSD, CI queued on runners.
+- crash-wrong-row: 510 more macOS trials (300 Release, 210 ASan+UBSan), 0 wrong rows; 937 total. FreeBSD build lost its VM to a poweroff; one self-contained job requeued (600acb).
+- netlab-consensus: 3 nodes 43/45 (the known loss/reorder stall, Detent's fix); 5 nodes running.
+- Quota 55% weekly, 0.45%/h, reset in 47 h. Load 3.3-3.8. Disk 299 GiB free.
