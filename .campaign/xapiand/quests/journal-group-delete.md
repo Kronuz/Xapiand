@@ -21,6 +21,8 @@ contributor sends the delete API's final shape to Detent's lead once it is fixed
   of one, and the other groups intact: the crash model (faultlab's faultfs) at every cut point,
   with a mutant that deletes segments before the manifest record, `--fails-without`
 - A3 Deleting an open group, or one with an outstanding pin, is refused with a named error: a test
+- A3b `delete_group` called on the group's own loop right after `close_group` succeeds with no
+  handoff: a test
 - A4 The suite, ASan+UBSan and TSan pass: the suite job and CI
 - A5 [artifact] `docs/mechanisms/host-delete.md`, and CHANGELOG.md names the new call
 - A6 [ci] CI is green on every platform
@@ -41,6 +43,8 @@ Provides journal:host (a new delete call; nothing existing changes). Consumed by
   named error unless `status(group)` is closed and `holding(group)` is false; a table record marks the
   group deleted before its segments, manifest and artifacts go, and `open()` finishes a recorded
   delete; a later `create_group(group)` starts empty.
+  Detent's lead, same day: callable from the loop thread that owned the group, right after
+  `close_group` on that loop (consensus's Driver runs there), with no handoff; no notification.
 
 ## May land early
 
