@@ -1,6 +1,6 @@
 # ninja-only-strata: journal
 
-State: waiting on jobs 261121-091844-0f7501 261121-091847-30861e 261121-091849-c76b1c
+State: waiting on jobs 261121-095327-0995a3 261121-091847-30861e 261121-095312-4789e2
 Quest: .campaign/xapiand/quests/ninja-only-strata.md (the lead's; never edit it)
 
 ## Doing
@@ -20,9 +20,9 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pass job 261121-091844-0f7501 (check at the head); mutant job 261121-091847-30861e (`--fails-without`: the base CMakeLists.txt has no guard, the check must exit nonzero) |
-| A2 | suite job 261121-091849-c76b1c (`campaign verify ninja-only-strata`, configured with `-G Ninja`) |
-| A3 | `test/ninja_only_check.sh` grep half, run at the head by 261121-091844-0f7501: no configure without `-G Ninja` outside the records |
+| A1 | pass job 261121-095327-0995a3 (check at the head); mutant job 261121-091847-30861e (`--fails-without`: the base CMakeLists.txt has no guard, the check must exit nonzero) |
+| A2 | suite job 261121-095312-4789e2 (`campaign verify ninja-only-strata`, configured with `-G Ninja`) |
+| A3 | `test/ninja_only_check.sh` grep half, run at the head by 261121-095327-0995a3: no configure without `-G Ninja` outside the records |
 
 ## Result
 
