@@ -298,9 +298,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   A search that carries them is an ordinary search now. The `_fuzzy` query (edit distance) is
   unchanged.
 - **The weight cutoffs** (`percent_threshold`, `weight_threshold`), which no request could set.
+- **The `_scale_weight` and `_edit_distance` query operators**, which never built a query (`_fuzzy` is the edit-distance query).
 - **Query shapes that are not valid queries.** A `_synonym` over anything but words (a wildcard, a fuzzy
-  word or a bracketed group in its text) and an operator that cannot take a list (`_scale_weight`,
-  `_wildcard`, `_edit_distance` given an array) answer `400` and say the query is not valid. The Xapian engine
+  word or a bracketed group in its text) and a `_wildcard` given an array answer `400` and say the query is not valid. The Xapian engine
   used to search a `_synonym` over such text. A `_phrase` or `_near` over anything but words (a wildcard, a
   fuzzy word, a bracketed group) says so too, where it used to say that only leaf subqueries are supported
   "currently".

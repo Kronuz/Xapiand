@@ -87,7 +87,7 @@ grouped by what you meet first.
 - **Text query strings follow precedence and refuse malformed input.** `a AND b c` is `(a AND b) OR c`;
   `a NOT`, `a ()` and `(a` answer `400`. A lone `-a` in a field query answers `400`.
 - **Some query shapes answer `400`**: a `_synonym` over a wildcard, a fuzzy word or a group; an array given to
-  `_scale_weight`, `_wildcard` or `_edit_distance`; a `_phrase` or `_near` over anything but words.
+  `_wildcard`; a `_phrase` or `_near` over anything but words.
 - **Sorting by a string metric is corrected.** `Jaro`, `Jaro-Winkler`, `Sorensen-Dice` and weighted `Levenshtein`
   follow their standard definitions; sorting by `soundex` against `DICKSONX` gives `DICKSONX`, `DIXON`, `DWAYNE`.
 - **`collapse_max` above 1 returns the best documents of each group**, where Xapian returned lower-ranked ones.

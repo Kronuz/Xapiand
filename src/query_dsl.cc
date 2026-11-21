@@ -245,11 +245,9 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 						hh(RESERVED_QUERYDSL_FILTER),
 						hh(RESERVED_QUERYDSL_NEAR),
 						hh(RESERVED_QUERYDSL_PHRASE),
-						hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
 						hh(RESERVED_QUERYDSL_SYNONYM),
 						hh(RESERVED_QUERYDSL_MAX),
 						hh(RESERVED_QUERYDSL_WILDCARD),
-						hh(RESERVED_QUERYDSL_EDIT_DISTANCE),
 						// Special queries.
 						hh(RESERVED_QUERYDSL_MATCH_ALL),
 						hh(RESERVED_QUERYDSL_MATCH_NONE),
@@ -310,15 +308,8 @@ QueryDSL::process(engine::Op op, std::string_view path, const MsgPack& obj, engi
 							case _.fhh(RESERVED_QUERYDSL_FILTER):
 								query = process(engine::Op::FILTER, path, o, default_op, wqf, flags, is_leaf);
 								break;
-							case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
-								// engine::Query(OP_SCALE_WEIGHT, subquery, factor)
-								query = process(engine::Op::SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
-								break;
 							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
 								query = process(engine::Op::WILDCARD, path, o, default_op, wqf, flags, is_leaf);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_EDIT_DISTANCE):
-								query = process(engine::Op::EDIT_DISTANCE, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							default:
 								THROW(QueryDslError, "Invalid operator: {}", name);
@@ -588,7 +579,7 @@ QueryDSL::get_acc_num_query(std::string_view path, const required_spc_t& field_s
 
 	int errno_save;
 	auto acc = strict_stoull(&errno_save, field_accuracy.substr(1));
-	if (errno_save != 0) {
+	if (errno_save != 0 || acc == 0) {
 		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 	const auto value = Serialize::exact(path, FieldType::integer, obj).i64();
@@ -848,9 +839,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				case engine::Op::XOR:
 				case engine::Op::AND_MAYBE:
 				case engine::Op::FILTER:
-				case engine::Op::SCALE_WEIGHT:
 				case engine::Op::WILDCARD:
-				case engine::Op::EDIT_DISTANCE:
 				default:
 					if (!field_spc.language.empty()) {
 						config.stop_language = field_spc.language;
@@ -1503,7 +1492,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DatetimeParser(Cast::cast(FieldType::datetime, *value))));
 							break;
 						case FieldType::boolean:
-							sorter->add_date(field_spc.slot, descending, Cast::cast(FieldType::boolean, *value).boolean());
+							sorter->add_bool(field_spc.slot, descending, Cast::cast(FieldType::boolean, *value).boolean());
 							break;
 						case FieldType::uuid:  // FIXME: Should UUID be here?
 						case FieldType::keyword:

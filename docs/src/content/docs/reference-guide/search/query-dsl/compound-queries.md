@@ -17,5 +17,5 @@ alter their behaviour.
 `_max` and `_synonym` are modifiers of a text query, not compound clauses: `"field": {"_max": "a b"}`
 takes the maximum weight of the words instead of their sum, and `_synonym` treats the words as
 synonyms (see [Default Operator](/Xapiand/reference-guide/search/query-dsl/leaf-queries/text-queries/default-operator)).
-Given a list of queries, `_scale_weight` and `_wildcard` answer `400` ("not a valid query").
+Given a list of queries, `_wildcard` answers `400` ("not a valid query").
 Sources: `src/query_dsl.cc:335-340`, `src/engine/query.cc:101-111`.

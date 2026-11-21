@@ -49,11 +49,9 @@ constexpr const char RESERVED_QUERYDSL_AND_MAYBE[]          = RESERVED__ "and_ma
 constexpr const char RESERVED_QUERYDSL_FILTER[]             = RESERVED__ "filter";
 constexpr const char RESERVED_QUERYDSL_NEAR[]               = RESERVED__ "near";
 constexpr const char RESERVED_QUERYDSL_PHRASE[]             = RESERVED__ "phrase";
-constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_weight";
 constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
 constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
 constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
-constexpr const char RESERVED_QUERYDSL_EDIT_DISTANCE[]      = RESERVED__ "edit_distance";
 
 constexpr const char RESERVED_QUERYDSL_MATCH_ALL[]          = RESERVED__ "match_all";
 constexpr const char RESERVED_QUERYDSL_MATCH_NONE[]         = RESERVED__ "match_none";
