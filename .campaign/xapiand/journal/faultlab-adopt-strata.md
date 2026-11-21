@@ -1,6 +1,6 @@
 # faultlab-adopt-strata: journal
 
-State: waiting on jobs 261121-040338-57550f 261121-040340-abd200 261121-040345-ee15e1 261121-040346-ccf43b
+State: waiting on jobs 261121-040338-57550f 261121-040340-abd200 261121-040345-ee15e1 261121-040455-3c1deb (lead: docs at strata:afda6e61 point at faultlab; A2 rerun there)
 Quest: .campaign/xapiand/quests/faultlab-adopt-strata.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -17,7 +17,7 @@ FAULTLAB_MAP (CMakeLists, three tests); AGENTS.md and README.md. bench/kv/kv_str
 comment naming faultfs: no change (turn-log-parity merge is then only standalone_turn_log_test.cc
 and CMakeLists). Jobs: 261121-040338-57550f (A1 counts at head), 261121-040340-abd200 (A1 counts at
 main origin/main 753bc62c, slot adopt-main), 261121-040345-ee15e1 (A1 suite at head),
-261121-040346-ccf43b (A2). The count script is strata test/crash_counts.py (copy at
+261121-040455-3c1deb (A2). The count script is strata test/crash_counts.py (copy at
 ~/.scratch/faultlab-adopt-strata/crash_counts.py, which both count jobs run).
 
 ## Next
@@ -47,7 +47,7 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | jobs above (pending) |
-| A2 | 261121-040346-ccf43b (expected to fail on the four docs hits until Blocked on is answered) |
+| A2 | 261121-040455-3c1deb (expected to fail on the four docs hits until Blocked on is answered) |
 | A3 | CI after the push |
 
 ## Result
