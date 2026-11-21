@@ -20826,6 +20826,8 @@
     "reactor-open-files": {
       "accepted": {},
       "after": [],
+      "base": "c8930edee3400c846d0e5575f77adad0bcf9309a",
+      "branch": "quest/xapiand/reactor-open-files",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -20841,6 +20843,7 @@
         "test/test.cc",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/reactor-open-files",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -20850,9 +20853,10 @@
       ],
       "repo": "../reactor",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "raise_open_files clamps; its untested paths get tests",
-      "updated": "2026-11-20T23:35:01"
+      "updated": "2026-11-20T23:35:16",
+      "worktree": "../reactor-wt/xapiand/reactor-open-files"
     },
     "reactor-server-composition": {
       "accepted": {
