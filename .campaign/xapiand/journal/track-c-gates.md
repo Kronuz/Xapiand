@@ -27,10 +27,16 @@ R19 at 8801b99, the lead's two questions:
    counted at post), so a lagging group gets a 5th. Expected overflow (Raft resends); the row
    measures the control wait with queues at cap. Bench sizing, not a consensus bug.
 
+Architect's reviews (strata:ea2652b1): C2 and C4 APPROVE WITH CONDITIONS. C4 conditions 1-2 (F1, F2,
+F4) folded in at strata:560e8851: Worker's Flow{} stated in "What is built" with D161; 2 MiB Control
+is the deployed case; R19 status states dd170c 0 ms gap 34.4/27.2 and e1f249d 10 ms 52.3/46.3 past
+bound + floor; T7a/T7c 20% clause computed from the jobs' follower rates (878.6, 639.5 MB/s): miss,
+6.2-8.4%, leader-bound. Residuals listed: C4 3-5 (5 = D161), C2 1-2.
+
 ## Next
 
-1. The architect's review of both reports (A3, the lead's launch).
-2. T9 `jpower 200`'s red row in C2 stays until Detent's fix (msg-183) is rerun.
+1. Lead checks the fold-in and lands; C4 residuals 3-5 and C2 residuals 1-2 are owed before the
+   milestones pass, not before landing.
 
 ## Blocked on
 
@@ -45,12 +51,12 @@ checked what), and answer each message by its id (msg-N).
 | Criterion | Evidence |
 |---|---|
 | A1 | docs/gates/track-c-c2.md (artifact), strata:45b0ab43: every row at consensus 8801b99 / journal 178030b filled with its job: macOS 4592f2 86e99e 18b807 83dd88 75f543 b711ce 2b2fc3 369f91 c43dad 4175b8 b0da39; Linux VM 124538 2096f8; FreeBSD VM dd591f d74166. **T9 jpower 200 fails at journal 178030b** (18b807 macOS, d74166 FreeBSD: 7 failures, seeds 91 140 145 199 122), passed at d90797c (e136e7); Detent msg-183 |
-| A2 | docs/gates/track-c-c4.md, strata:605f1dd5: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 273aa8 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 fd5a96 4e57e4 ce0b7a 743b1d fa2caa b7499c; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x); R19 256 KiB Control past at 0 ms in 1 of 2 runs (59.0/15.1, then 7.8/11.5), gaps under bound + idle floor; T7e and D18 not runnable (group-heal) |
-| A3 | architect's review, launched by the lead |
+| A2 | docs/gates/track-c-c4.md, strata:560e8851: every row at e1f249d and 8801b99 with its job: 0bef2c 3b7ebd dd170c 273aa8 846669 7cef64 c212a8 aa8e3e c7a05f 1303bf 91e7a8 fd5a96 4e57e4 ce0b7a 743b1d fa2caa b7499c; Linux suite ci: consensus run 44829606479 (8801b99, all platforms green); T7c miss (3.18x); R19 256 KiB Control past at 0 ms in 1 of 2 runs (59.0/15.1, then 7.8/11.5), gaps under bound + idle floor; T7e and D18 not runnable (group-heal) |
+| A3 | docs/reviews/track-c-c2.md and track-c-c4.md (strata:ea2652b1): both APPROVE WITH CONDITIONS; C4 conditions 1-2 folded in at strata:560e8851; open conditions listed as each report's residuals |
 
 ## Result
 
-strata docs/gates/track-c-c2.md and docs/gates/track-c-c4.md (strata:605f1dd5): every C2 and C4
+strata docs/gates/track-c-c2.md and docs/gates/track-c-c4.md (strata:560e8851): every C2 and C4
 row at consensus 8801b99 / journal 178030b (and C4 at e1f249d) with its jobs. Open: C2 T9 jpower 200
 fails at journal 178030b (Detent msg-183); C4 T7c misses 4x (3.18x modeled, 3.37x fdatasync); R19's
 0 ms row past in 1 of 2 runs; T7e and D18 wait for group-heal; the architect's review (A3).
