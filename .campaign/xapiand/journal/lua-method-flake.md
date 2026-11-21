@@ -1,6 +1,6 @@
 # lua-method-flake: journal
 
-State: waiting on jobs 261121-050057-bd4912
+State: ready for review
 Quest: .campaign/xapiand/quests/lua-method-flake.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -14,10 +14,7 @@ the A3 test). Jobs queued; branch pushed for A5.
 
 ## Next
 
-1. Read probe 261121-050057-bd4912 (master, trace_listen.c: listen() +500 ms, bind/connect traced with times):
-   does the method case's first connect come before the listen, and is it refused? If it is refused yet the test
-   passes, the shim run is not exercising MethodNode; if it connects, something accepts before listen.
-2. Build the --fails-without job from what the trace shows (A1, A3), then CI green (A5).
+1. Lead: land on probable cause (owner's ruling 11-21); proving it with --fails-without jobs is the lead's follow-up.
 
 ## Findings 11-21 (resume)
 
@@ -33,6 +30,10 @@ the A3 test). Jobs queued; branch pushed for A5.
 Nothing.
 
 ## Cause (A1)
+
+Trace 261121-050057-bd4912 (master, trace_listen.c, listen() +500 ms): connect to 56140 refused (errno 61) at
+803.173 ms, listen returns at 1304.997, later connects succeed; the same 9 checks as CI fail. 2ed0fe and 504e9e
+passing under delay_listen.c stays unexplained. Queued follow-up jobs 1c973e, cf37bd, 6c949a cancelled per lead.
 
 `XapiandManager::set_ready_impl` (src/manager.cc) sets READY, then `http_service->start()` binds and listens.
 MethodNode took READY as ready, so its first request (the PUT, test_lua.cc:1673) could be refused (status 0).
