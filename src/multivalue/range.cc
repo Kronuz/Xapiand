@@ -100,7 +100,8 @@ integer_bound(const MsgPack& bound, bool upper)
 		}
 		case MsgPack::Type::NEGATIVE_INTEGER: {
 			const auto value = bound.i64();
-			if (!std::is_signed<T>::value) {
+			// The type tag does not say the sign: a non-negative int can be tagged NEGATIVE_INTEGER.
+			if (!std::is_signed<T>::value && value < 0) {
 				return upper ? std::nullopt : std::optional<T>(lowest);
 			}
 			return static_cast<T>(value);

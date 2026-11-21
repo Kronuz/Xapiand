@@ -409,6 +409,12 @@ static void test_integer_edge_cases() {
 	CHECK(MultipleValueRange::getQuery(spc, range_obj(&huge, nullptr)).empty());
 	CHECK(MultipleValueRange::getQuery(spc, range_obj(nullptr, &tiny)).empty());
 
+	// A negative bound of a positive field: a lower bound starts at 0, an upper bound leaves the range empty.
+	auto unsigned_spc = make_spc(9, FieldType::positive, { 1 });
+	const MsgPack minus(-5), five(5);
+	CHECK_FALSE(MultipleValueRange::getQuery(unsigned_spc, range_obj(&minus, &five)).empty());
+	CHECK(MultipleValueRange::getQuery(unsigned_spc, range_obj(nullptr, &minus)).empty());
+
 	// A uint64 at or above 2^63 does not fit an integer field; it is refused, not wrapped negative.
 	auto field = make_spc(engine::BAD_VALUENO, FieldType::integer, {});
 	const uint64_t big = uint64_t(1) << 63;
