@@ -45,26 +45,9 @@ shards); e9efc6 (TSan: lost_bound whole and host_test whole); 131df7 (suite: cte
 
 ## Blocked on
 
-Lead: the file set lacks four files the mechanism needs; each edit is committed and small:
-
-1. `include/journal/turn_driver.h`: `TurnDriver::keep(group)` (6 lines). The driver owns the
-   recovered records `Host::status` and `records()` read; only it can move a kept group's records
-   in and take it out of `lost`.
-2. `include/journal/journal.h`: a Store's recover loses a bounded group (`Host::lose`) and throws
-   `Corruption` (3 lines). Without it a bounded closed-then-reopened group with no records after
-   its bound takes the table-record path and restores the old base: a silent loss.
-3. `CMakeLists.txt`: registers `lost_bound` in the test list and faultfs tests (2 words).
-4. `test/placement_test.cc`: its damage cases asserted today's rule (victims `lost`); they now
-   check each victim bounded at its bound with exactly its records after it, through every remap
-   crash point, re-partition and retention.
-5. `test/host_test.cc`: idle_damage asserted the old loss (CI 44935872008); it now checks the
-   bounds and the records after them (journal:ebd3038).
-
-6. `docs/mechanisms/turn-log-damage.md` rule 3 says a damaged gap costs "its first block's
-   manifest"; since journal:c851826 it costs every block's from the first through its last that
-   may begin a lost record. One sentence; not in the set, so not touched.
-
-Not in the set and not touched: `src/host*` does not exist (host.h is header-only).
+Nothing. Items 1-5 are in the file set (they were already); item 6, turn-log-damage.md rule 3, is
+widened and edited by the lead at journal:e4b0100. The jobs at 80e58b5 were moved to e4b0100 by
+`campaign job rerun` before any ran.
 
 ## Evidence
 
