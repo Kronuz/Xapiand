@@ -21717,7 +21717,8 @@
         "test/placement/**",
         "bench/placement/**",
         "docs/mechanisms/placement-root.md",
-        "docs/mechanisms/placement-repair.md"
+        "docs/mechanisms/placement-repair.md",
+        "CMakeLists.txt"
       ],
       "journal": "../Xapiand-wt/xapiand/placement",
       "landed": [],
@@ -21767,7 +21768,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T18:04:07",
+      "updated": "2026-11-20T18:11:09",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
