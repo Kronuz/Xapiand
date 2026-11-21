@@ -2752,7 +2752,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		std::string unprefixed_term_id;
 		std::string term_id;
 
-		if (!document_id) {
+		// A numeric id is explicit even when it is 0: only a missing or empty id asks for a new one.
+		if (!document_id && !document_id.is_number()) {
 			switch (id_type) {
 				case FieldType::empty:
 					id_type = FieldType::uuid;
@@ -2907,6 +2908,10 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					break;
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
+			}
+			// Numeric id 0 is the shard's "assign a new id" request, so a user id of 0 would be renumbered and lost.
+			if (spc_id.get_ctype() == 'N' && !document_id) {
+				THROW(ClientError, "Document id 0 is reserved for numeric ids [{}]", repr(document_id.to_string()));
 			}
 			term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
