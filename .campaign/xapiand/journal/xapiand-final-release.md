@@ -1,6 +1,6 @@
 # xapiand-final-release: journal
 
-State: waiting on jobs 261120-174741-3e4b95
+State: waiting on jobs 261120-181401-b5cc95
 Quest: .campaign/xapiand/quests/xapiand-final-release.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -42,3 +42,4 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - A1: the adapter was opt-in (XAPIAND_QUERYPARSER=1); made default, =0 selects Xapian. test_text_parser pins =0 as its reference.
 - A2: the id-0 check was a harness script only; run_all.sh smoke now runs it (build-test runs smoke).
 - A3 float bounds: lower bound ceil, upper bound floor, saturating, in range.cc integer_bound.
+- test_generate_terms failure (job 261120-172811-fc88f8) was mine: a non-negative int can carry the NEGATIVE_INTEGER tag, so integer_bound emptied positive ranges; passes at base (job 261120-174741-3e4b95). Fixed by reading the sign from the value, regression checks added; build-test 261120-181401-b5cc95.
