@@ -20,7 +20,8 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
   whatever the target; the learner joins only when that promotion would be valid (checked on the
   membership with it added), so none joins to be removed. Value case `shrink_past_lost`, mutant
   `no-window-replace`.
-- Group test: `drain` failed by construction (idx is placed on nodes 1-3, the root's): it now
+- Group test, `replace`: the root leader fences on D3's removal of the leaving voter (a
+  consensus bug, Blocked on). `drain` failed by construction (idx is placed on nodes 1-3, the root's): it now
   drains a node off the root that leads a shard (sub's leader). The other cases (`replace`,
   `replicas` at rf 3, `waits` record read, `defer`'s hand transfer) are not diagnosed yet: the
   test now dumps each group's last plan, its last change/transfer answer and every replica's
@@ -41,6 +42,22 @@ from 2 + witness with a lost data voter; the group test failed every case on 3 s
 
 ## Blocked on
 
+- **consensus (Detent's library; lead to route), blocks A3's group cases.** Job
+  261121-003512-50dacf (`replace`, seed 1): the root leader fences with "persistence lacks
+  preowned reservation" on committing the promotion beside the lost voter, when its drive
+  proposes D3's removal of the leaving member. Cause, consensus `b8de3b8` (also `main` bb961b3):
+  `Worker::submit_retained` admits a leader's `Tick` with no append reservation
+  (`if (leader && Tick) plan.count = 0`), but `Core::drive` on that Tick calls
+  `propose_membership` for `committed.leaving` and emits a `Persist`; `ingest` throws. Every
+  replacement window through the Driver hits it: `replace`, `waits` (the root's), `drain`,
+  `replicas` at rf 2 to 3 (the leaving witness). Options: (a) the worker funds one
+  configuration append on a leader Tick when a removal is due (probe below); (b) the core
+  proposes the removal only on an admitted event that carries a reservation; (c) repair avoids
+  `leaving` (not possible for 2 + witness, D9's windows need it). Recommend (a), sized by the
+  membership's encoded bound, with a Driver-level replacement test in consensus. Probe: local
+  branch consensus `probe/xapiand/repair-leaving-tick` (fd8d977, worktree
+  ~/.scratch/xapiand/placement--repair/consensus-probe, not pushed); job 261121-004202-a699c8 runs
+  the group cases on it.
 - group-heal (its install binding, itself on Detent's `consensus-driver-install`). These A3 steps
   wait on it; every other step is tested here by log catch-up (no checkpoint truncates a log in
   the tests):
