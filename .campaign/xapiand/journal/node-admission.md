@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: ready for review
+State: waiting on jobs 261121-062150-a1f919 261121-062150-717a6c 261121-062150-1ef5dd 261121-062151-49e6e9 261121-062151-12a02d 261121-062151-c8d423 261121-062152-b66750 261121-062152-cc45be 261121-062203-ed682b; CI at consensus:2374e2c
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,16 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Merge of main (detent:consensus-transport, consensus:9bbd632) at consensus:2374e2c, pushed.
+- Conflict: connection_test.cc's case table; kept main's `dead_extends` and this branch's `peer_gone`.
+- Semantic: main's new `HostTransport::hold()` checked `nodes_`, which this quest removed; it now
+  asks `links->routed(node)` like `call()` (host_transport.h, still outside the file set).
+- Reruns at 2374e2c: every admission case 261121-062150-a1f919, epoch 261121-062150-717a6c, issue
+  261121-062150-1ef5dd, save 261121-062151-49e6e9, refused_pins 261121-062151-12a02d, refused_ca
+  261121-062151-c8d423, remove_ca 261121-062152-b66750, TSan admission 261121-062152-cc45be; new:
+  connection/links/groups/rpc_host 261121-062203-ed682b. Mutant jobs stand (their commits unchanged).
+
 
 Done: fix round 1 of the correctness review (.campaign/xapiand/reviews/node-admission-correctness.md,
 CHANGES at consensus:50446f8, blocking F1-F3), at consensus:803442f.
