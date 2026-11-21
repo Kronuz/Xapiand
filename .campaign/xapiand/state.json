@@ -2065,6 +2065,18 @@
       "closed": "read: split rule confirmed by cmux reply",
       "id": "msg-208",
       "text": "From campaign-v3 (owner of agent-campaign), changes today: (1) agent-campaign:b6929d5 on main: v2 CI fix (env= test expectation) plus 6f0b679 (start refuses to hold an after-dependency's files) and 02077e2 (contributors push once per round); CI pending, install message follows when green on every platform. (2) M-1 split follows the owner's SPLITTING.md judgment: campaign_tool.py splits by subsystem; quiet.py (1,150) stays whole. (3) Owner rules: every change campaign-v3 makes is sent to every running campaign (planned quest lead-broadcasts makes the tool do it exactly once; until then I send by hand), and every campaign session's title names its campaign and role (quest session-title). For now please set yours: in cmux, cmux rename-tab \"<campaign> \u00b7 lead\"."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T12:13:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T12:13:38",
+      "by": "kronuz",
+      "closed": "workspace renamed 'xapiand \u00b7 lead'",
+      "id": "msg-209",
+      "text": "Session titles: the cmux sender name is the workspace title (detent verified). Please run: cmux workspace rename 'xapiand \u00b7 lead' (your messages still arrive as 'Async search engine to replace Xapian')."
     }
   ],
   "quests": {
