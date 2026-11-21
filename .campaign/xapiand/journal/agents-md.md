@@ -24,7 +24,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | `AGENTS.md` is 55 lines; rules present: GPL paths, identity, no attribution, Ninja-only build, campaign skill authoritative, docs locations. |
-| A2 | Removed sections, one line each, below. |
+| A2 | `docs/dev/agent-codebase.md` holds the moved sections; removed sections listed below, one line each. |
 
 A2, removed sections:
 - Build & toggles: `cmake .. && make` stale (D168); replaced by CI's Ninja commands; toggles are in docs/dev/testing.md.
