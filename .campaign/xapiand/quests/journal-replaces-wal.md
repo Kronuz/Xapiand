@@ -86,6 +86,25 @@ Provides (bytes, reviewed by `format-freeze`): `xapiand:command` (D3), `xapiand:
   `group-core` is on strata's main and pinned (the lead's `campaign pin --push`). Without
   `CMakeLists.txt`: tests are globbed.
 
+- Lead, 2026-11-21 (msg-204, msg-205): RESTORE's batcher (D17) lives in new files
+  `src/database/restore_batch.{h,cc}` (task restore), with `encoded_size(const CommandWrite&)` added
+  to `command.h` so packing encodes each write once. RESTORE's writes are prepared as `replace_key`
+  with no expected version, as RESTORE overwrites today (`replace_document_term(..., version=false)`):
+  docids and versions are assigned at apply and read back per op from the batch verdict
+  (`docids[i]`), so batches pipeline per shard without depending on an earlier batch's apply.
+  The application's `transaction()` keeps a batch write's version from the document. The WAL's
+  names go: `tests/test_journal_replay.cc`, `harness/journal_replay_check.sh` (folding
+  `wal_replay_agg_check.sh`), and `wal_recovery_check.sh` is deleted (levels' power_loss_check.sh
+  replaces it). `src/manager.*` moves from task restore to core, for the group loop and the
+  journal host (step c). Wiring the batcher into `DocIndexer::apply_shards` and deleting
+  `Shard::apply_slice` is core's step d.
+
+- Lead, 2026-11-21 (restore task): at `ack=none` a RESTORE waits for no verdict, so its per-object
+  results carry no docid or version, the same as any write at `ack=none`; the response says the
+  objects were accepted, and the docs of the ack levels say so. Task restore also owns
+  `src/database/command.cc` (for `encoded_size`), `harness/run_all.sh` and the tests coverage page,
+  where the deleted WAL scripts are still named.
+
 ## When done
 
 Runs once, when the feature is complete and before it lands; findings are fixed on the quest branch,
