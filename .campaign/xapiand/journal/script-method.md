@@ -1,6 +1,6 @@
 # script-method: journal
 
-State: waiting on jobs 261120-213043-80c029 261120-213044-76b55a 261120-213045-ab7b83
+State: waiting on jobs 261120-213044-76b55a 261120-213045-ab7b83
 Quest: .campaign/xapiand/quests/script-method.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting on the test job (80c029), the mutant job (76b55a, must fail) and the suite (ab7b83) at
+Test job 80c029 passed (test_lua, 79 s). Waiting on the mutant job (76b55a, must fail) and the suite (ab7b83) at
 Xapiand:dafc92de3; CI runs on the pushed branch.
 
 ## Next
