@@ -25845,6 +25845,8 @@
       "after": [
         "split-check"
       ],
+      "base": "f9dd8e4c03c7dee6d31e4ed13be7f67789f66eef",
+      "branch": "quest/xapiand/split-uinteger-t",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -25872,6 +25874,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-uinteger-t",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -25879,9 +25882,10 @@
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "uinteger_t's large files split under 1,000 lines",
-      "updated": "2026-11-21T11:47:47"
+      "updated": "2026-11-21T11:48:00",
+      "worktree": "../uinteger_t-wt/xapiand/split-uinteger-t"
     },
     "split-url-parser": {
       "accepted": {},
