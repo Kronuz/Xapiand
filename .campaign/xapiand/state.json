@@ -21033,6 +21033,8 @@
     "prospect-check-fields": {
       "accepted": {},
       "after": [],
+      "base": "0448b8774e7b2c485ac8e5afd25893068b377a8b",
+      "branch": "quest/xapiand/prospect-check-fields",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -21048,6 +21050,7 @@
         "CMakeLists.txt",
         "docs/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/prospect-check-fields",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -21055,9 +21058,10 @@
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "prospect's inverted reader forwards check_fields",
-      "updated": "2026-11-21T11:43:40"
+      "updated": "2026-11-21T11:44:26",
+      "worktree": "../prospect-wt/xapiand/prospect-check-fields"
     },
     "prospect-completion-opens": {
       "accepted": {},
