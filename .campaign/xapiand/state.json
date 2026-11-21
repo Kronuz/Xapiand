@@ -26188,6 +26188,8 @@
       "after": [
         "split-check"
       ],
+      "base": "406d2f37cefb7386428a92e7cb6d993324eab536",
+      "branch": "quest/xapiand/split-workpool",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -26212,6 +26214,7 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-workpool",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26219,9 +26222,10 @@
       "provides": [],
       "repo": "../workpool",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:26"
+      "updated": "2026-11-21T12:58:45",
+      "worktree": "../workpool-wt/xapiand/split-workpool"
     },
     "split-xapiand-core": {
       "accepted": {},
