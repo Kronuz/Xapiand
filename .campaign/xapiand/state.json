@@ -1949,6 +1949,18 @@
       "closed": "done: group-catalog quest (D169), journal-replaces-wal files widened to 40 globs, after=group-catalog; pin rides strata-pin-catalog",
       "id": "msg-199",
       "text": "journal-replaces-wal: need (1) CMakeLists.txt: strata pin at/after strata:51dcff1e (group-core; main efa5214b; master and strata-pin-catalog's e3edb426 predate it) and strata::group linked into XAPIAND_OBJ; (2) src/engine/strata/shard.{h,cc} + src/engine/shard.h to split the engine's write into leader prepare (version check, finalise, stamp) and apply-time transaction_of(document, index) (fill reads the voter's field table mark); (3) new files src/database/command.{h,cc} and src/database/shard_group.{h,cc}; tests/test_cheap_reopen.cc, test_endpoint_uuid.cc, test_loop_yield.cc, test_node.cc (they name DB_DISABLE_WAL); search_views.cc as planned. (4) A strata blocker with no quest: strata::group opens and owns its index (group.hh:835) while Xapiand's catalog owns each index by value (catalog.hh:347 open_index); two opens of one directory cannot coexist. Recommend a strata task group-catalog: group::config takes the slot's index (borrowed), the catalog's commit chore for a group's index is the group's checkpoint and its close runs the group's close first, the group's chore on another lane than the catalog's transitions; test: a catalog close of an idle group publishes a bundle covering applied (group-core A6's clause). Alternatives (groups outside the catalog; a group wrapped as the catalog's Index, ~20 forwarded methods) in my journal's Blocked on. Core step c (catalog slot opens the group) waits on (4); steps a-b need (1)-(3)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T09:58:45",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T09:58:45",
+      "by": "kronuz",
+      "closed": "done: tasks ordered core, chunks+restore, levels in the quest file; group-catalog started",
+      "id": "msg-200",
+      "text": "journal-replaces-wal: tasks: keep the quest table's order: core (me: command codec, application, loop+journal host, ShardEndpoint writes through propose, WAL deleted) first; then chunks (handler.*, tests/test_group_chunk*, harness/blob_crash_check.sh) and restore (manager.*, tests/test_wal_replay.cc, wal_*_check.sh, profile_bulk.sh) in parallel on core's codec; then levels (opts.*, search_views.cc, request tests, power_loss_check.sh, run_all.sh, docs). Add strata group-catalog (blocker 4 in my previous message) now, ahead of core's step c: it is the only piece that can run in parallel today."
     }
   ],
   "quests": {
