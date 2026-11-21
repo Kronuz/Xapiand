@@ -846,6 +846,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	assert(db_handler);
 	assert(!db_handler->endpoints.empty());
 
+	if (fail_next_get.load(std::memory_order_relaxed) && fail_next_get.exchange(false)) {
+		THROW(Error, "Schema read failed (test fault)");
+	}
+
 	bool writable = false;
 	const MsgPack* schema_obj = nullptr;
 	if (obj && obj->is_map()) {
@@ -891,6 +895,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	assert(db_handler);
 	assert(!db_handler->endpoints.empty());
+
+	if (fail_next_set.load(std::memory_order_relaxed) && fail_next_set.exchange(false)) {
+		THROW(Error, "Schema write failed (test fault)");
+	}
 
 	bool writable = has_db_writable(db_handler->flags);
 	auto up = co_await _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context, db_handler->budget);

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <atomic>                // for std::atomic
 #include <functional>            // for std::function
 #include <memory>                // for std::shared_ptr
 #include <mutex>                 // for std::mutex
@@ -86,6 +87,9 @@ public:
 	std::function<task::task<void>()> before_metadata_claim;
 	std::function<task::task<void>()> before_foreign_claim;
 	std::function<task::task<void>()> after_metadata_flight;
+	// Test fault points: the next get (or set) throws once, then the flag clears.
+	std::atomic<bool> fail_next_get{false};
+	std::atomic<bool> fail_next_set{false};
 
 	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);
 
