@@ -25896,18 +25896,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-faultlab",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T14:47:19",
+          "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+          "criteria": {
+            "A1": "261121-130439-4b9352 (the build-test check), 261121-130439-4b9352, 261121-130440-2801d9",
+            "A2": "261121-130440-2801d9 (the split check), 261121-130441-7cc706",
+            "A3": "261121-130444-b53329",
+            "A4": "`docs/source-layout.md` lists the four pieces, what each holds, and that no file over 1,000 lines remains",
+            "A5": "CI green at 71a617f03d05",
+            "A6": "261121-130448-3a21ae",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130439-4b9352",
+              "level": "light",
+              "seconds": 63.8,
+              "state": "done",
+              "what": "split-faultlab check build-test at 71a617f03d05"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main include/faultlab",
+              "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130440-2801d9",
+              "level": "light",
+              "seconds": 1.9,
+              "state": "done",
+              "what": "split-faultlab check split at 71a617f03d05"
+            }
+          ],
+          "final": true,
+          "from": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+          "reason": "",
+          "tested": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultlab's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:02",
-      "worktree": "../faultlab-wt/xapiand/split-faultlab"
+      "updated": "2026-11-21T14:47:21",
+      "worktree": ""
     },
     "split-htm": {
       "accepted": {},
