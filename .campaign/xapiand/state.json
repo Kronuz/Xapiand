@@ -10482,8 +10482,34 @@
       "repo": "../strata",
       "risk": "high",
       "status": "active",
+      "tasks": {
+        "install": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/group-heal--install",
+          "files": [
+            "include/strata/group/install*",
+            "src/group/install*",
+            "test/group/install*",
+            "docs/mechanisms/replication-group.md",
+            "docs/mechanisms/group-install.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--install",
+          "worktree": "../strata-wt/xapiand/group-heal--install"
+        },
+        "sim-port": {
+          "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+          "branch": "quest/xapiand/group-heal--sim-port",
+          "files": [
+            "sim/**",
+            "docs/mechanisms/simulator.md",
+            "CMakeLists.txt"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--sim-port",
+          "worktree": "../strata-wt/xapiand/group-heal--sim-port"
+        }
+      },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T17:42:35",
+      "updated": "2026-11-20T17:43:08",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -21634,6 +21660,8 @@
       "after": [
         "group-heal"
       ],
+      "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
+      "branch": "quest/xapiand/placement",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -21666,6 +21694,7 @@
         "docs/mechanisms/placement-root.md",
         "docs/mechanisms/placement-repair.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/placement",
       "landed": [],
       "lenses": [
         "correctness"
@@ -21680,9 +21709,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-20T05:21:55"
+      "updated": "2026-11-20T17:42:41",
+      "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
       "accepted": {},
