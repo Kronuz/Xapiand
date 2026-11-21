@@ -39,7 +39,7 @@ Nothing. Row 9's refusal was not needed: no case reached a current-generation lo
   its created group, the host at the new L; unacknowledged `ack=none` tails absent or whole, then
   stable. Each re-partitioning reopen is cut at every mutation under 2 power-loss seeds
   (`--seeds N`), with an acknowledged batch after it, then recovered, written and cut again.
-- Run time 53 s for build and run in the job (Release).
+- The test runs 53 s in the job (Release, light; the build before it took 67 s).
 
 ## Rulings I made
 
