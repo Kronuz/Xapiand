@@ -11386,7 +11386,12 @@
         "include/strata/core/catalog.hh",
         "test/group/group_catalog*",
         "docs/mechanisms/group-catalog.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "test/group/lone_voter_test.cc",
+        "test/group/voters_test.cc",
+        "test/group/lifetime_test.cc",
+        "test/group/footprint_test.cc",
+        "test/group/mutants.py"
       ],
       "journal": "../Xapiand-wt/xapiand/group-catalog",
       "landed": [],
@@ -11398,12 +11403,11 @@
       "provides": [
         "strata:group"
       ],
-      "reason": "started by force: group-heal's install task edits group.hh's install path and waits on detent:consensus-driver-install; this changes group::config and the close/recover ownership; ninja-only-strata and turn-log-parity tasks append to CMakeLists in other places; the lead merges",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
       "title": "a replication group runs on its catalog slot's index",
-      "updated": "2026-11-21T10:01:00",
+      "updated": "2026-11-21T10:14:06",
       "worktree": "../strata-wt/xapiand/group-catalog"
     },
     "group-core": {
