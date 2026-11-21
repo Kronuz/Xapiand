@@ -11534,6 +11534,7 @@
       "provides": [
         "strata:group-install"
       ],
+      "reason": "install task built against detent:consensus-driver-install at consensus:887a88b; CMakeLists.txt's consensus pin moves when that lands",
       "repo": "../strata",
       "risk": "high",
       "status": "active",
@@ -11568,7 +11569,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-20T23:34:59",
+      "updated": "2026-11-21T06:08:32",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
