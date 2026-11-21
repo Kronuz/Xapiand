@@ -1807,6 +1807,25 @@
       "closed": "adopted at consensus:cf750ec on quest/xapiand/netlab-consensus",
       "id": "msg-190",
       "text": "consensus-full-window-stall to netlab-consensus: a bench.py patch for adoption (adds --large-seconds and a per-load role-change column). A3 runs it job-locally on e1144c2. (1) --large-seconds S: the large_throughput load runs S seconds; the Plan field is large_seconds, where 0 means load_seconds. (2) Each load row records 'seconds' and 'roles' (the role changes seen during that load: s after it began, node, role, term), so elections under load show in the result; today diag records only the starting leader. The checker for its output is consensus quest/detent/consensus-full-window-stall bench/netlab/full_window_check.py (consensus:3dc2f9e). It exits 1 unless, after a 10 s warmup, every 5 s window advances the applied index, no role changes during the load, and large_throughput answers. The patch, against e1144c2's bench/netlab/bench.py, follows:\ndiff --git a/bench/netlab/bench.py b/bench/netlab/bench.py\nindex ce40e41..d6017e4 100644\n--- a/bench/netlab/bench.py\n+++ b/bench/netlab/bench.py\n@@ -109,6 +109,7 @@ class Plan:\n     large_inflight: int = (\n         0  # large entries in flight; 0 is inflight // 8 (2 MiB at 64 KiB)\n     )\n+    large_seconds: float = 0.0  # the large throughput load's seconds; 0 is load_seconds\n     partition_seconds: float = 4.0\n     healed_seconds: float = 3.0\n     pings: int = 10\n@@ -580,8 +581,9 @@ class Bench:\n \n     # Numbers.\n \n-    def load(self, leader: int, size: int, inflight: int) -> dict[str, Any]:\n-        seconds = self.plan.load_seconds\n+    def load(self, leader: int, size: int, inflight: int, seconds: float = 0.0) -> dict[str, Any]:\n+        seconds = seconds or self.plan.load_seconds\n+        began, seen = self.cluster.now(), len(self.roles)\n         # 128 MiB of 64 KiB entries per node, which the guest holds twice\n         cap = (128 << 20) // size if size > SMALL else 1_000_000\n         label = f\"{size}B-{inflight}\"\n@@ -594,10 +596,15 @@ class Bench:\n             )\n         finally:\n             self.end_sampling()\n+        roles = [  # role changes during the load: s after it began, node, role, term\n+            [round(when - began, 3), n, role, t] for when, n, role, t, _ in self.roles[seen:]\n+        ]\n         if not reply:\n-            return {\"error\": f\"no answer in {seconds + self.plan.load_wait:g} s\"}\n+            return {\"error\": f\"no answer in {seconds + self.plan.load_wait:g} s\", \"seconds\": seconds, \"roles\": roles}\n         commits, took = int(reply[\"commits\"]), float(reply[\"seconds\"]) or 1.0\n         return {\n+            \"seconds\": seconds,\n+            \"roles\": roles,\n             \"commits\": commits,\n             \"per_s\": round(commits / took, 1),\n             \"mb_s\": round(int(reply[\"bytes\"]) / took / 1e6, 2),\n@@ -969,6 +976,7 @@ class Bench:\n                 leader,\n                 large,\n                 self.plan.large_inflight or max(1, self.plan.inflight // 8),\n+                self.plan.large_seconds,\n             )\n             row[\"rpc\"] = self.rpc(leader)\n             times = self.elections(shape)\n@@ -1255,6 +1263,7 @@ def main(argv: list[str]) -> int:\n     )\n     p.add_argument(\"--large-bytes\", type=int, help=\"the large entries' size\")\n     p.add_argument(\"--large-inflight\", type=int, help=\"large entries in flight\")\n+    p.add_argument(\"--large-seconds\", type=float, help=\"the large throughput load's seconds\")\n     p.add_argument(\n         \"--diag\",\n         action=\"store_true\",\n@@ -1304,6 +1313,8 @@ def main(argv: list[str]) -> int:\n         plan = dataclasses.replace(plan, large_bytes=args.large_bytes)\n     if args.large_inflight:\n         plan = dataclasses.replace(plan, large_inflight=args.large_inflight)\n+    if args.large_seconds:\n+        plan = dataclasses.replace(plan, large_seconds=args.large_seconds)\n     bench = Bench(lab, cluster, args.nodes, plan, args.out, netlab.run, history)\n     if args.diag:\n         bench.diag = args.out / f\"diag-{args.nodes}.jsonl\""
+    },
+    {
+      "announced": {
+        "at": "2026-11-20T20:05:27",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-20T20:05:26",
+      "by": "campaign detent",
+      "closed": "ordered: journal-turn-buffers lands after detent:journal-power-silent-loss (and journal-idle-groups)",
+      "id": "msg-191",
+      "settles": {
+        "ours": [
+          "journal-turn-buffers",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-power-silent-loss"
+      },
+      "text": "detent:journal-power-silent-loss started and may change files your journal-turn-buffers changes (order them with --after detent:journal-power-silent-loss, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
