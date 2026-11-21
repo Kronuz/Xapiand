@@ -13311,7 +13311,9 @@
         "tests/test_journal_replay.cc",
         "harness/journal_replay_check.sh",
         "src/database/command.h",
-        "docs/src/content/docs/tests/coverage.md"
+        "docs/src/content/docs/tests/coverage.md",
+        "src/xapiand_scheduler_trace.h",
+        "src/logger_fwd.h"
       ],
       "history": [
         {
@@ -13477,7 +13479,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T11:25:33",
+      "updated": "2026-11-21T12:08:57",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
