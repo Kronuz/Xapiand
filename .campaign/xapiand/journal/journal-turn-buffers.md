@@ -36,10 +36,10 @@ strata log_state that hands over its body by move allocates a new body each turn
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <no evidence yet> |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
+| A1 | 261120-201735-dfb864 (bytes: 4,608 records; turns: 400 turns, 49 rollovers; framing and crc fixtures) |
+| A2 | 261120-201737-6e4864 (warm: 0 allocations in stage() and completed(), rounds 4-7; seal: 704 bytes for four 128 KiB bodies); fails without: 261120-201148-86ff12, 261120-201150-edcde6, 261120-201744-3bc198, 261120-201746-56b121 |
+| A3 | 261120-201739-07500d (24 forward copies, 15 warm at 0 allocations, each reads back as its original); fails without: 261120-201152-614139, 261120-201748-82c5c4 |
+| A4 | 261120-201741-5c74c1 (power: 764 crash points; turn_log_power and 23 turn_seal cases pass unchanged) |
 | A5 | <no evidence yet> |
 
 ## Result
