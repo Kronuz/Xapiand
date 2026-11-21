@@ -24968,6 +24968,47 @@
       "title": "split_check.py proves a file split moved code and changed none",
       "updated": "2026-11-21T11:38:49"
     },
+    "split-http": {
+      "accepted": {},
+      "after": [
+        "split-check"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+          "level": "light",
+          "minutes": 60,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+          "level": "light",
+          "minutes": 10,
+          "name": "split"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "http_asio.h",
+        "http_asio/**",
+        "test/coroutine_test*",
+        "test/coroutine/**",
+        "test/readahead_test*",
+        "test/readahead/**",
+        "CMakeLists.txt",
+        "test/CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../http",
+      "risk": "low",
+      "status": "planned",
+      "title": "http's large header and tests split under 1,000 lines",
+      "updated": "2026-11-21T11:38:53"
+    },
     "split-xapiand-src": {
       "accepted": {},
       "after": [
