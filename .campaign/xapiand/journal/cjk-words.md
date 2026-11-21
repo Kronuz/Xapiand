@@ -1,6 +1,6 @@
 # cjk-words: journal
 
-State: waiting on jobs ORACLE (oracle rerun from the repository)
+State: ready for review (oracle rerun from the repository: job 261120-173321-093c44)
 Quest: .campaign/xapiand/quests/cjk-words.md (the lead's)
 
 ## Doing
@@ -26,7 +26,7 @@ Nothing. The link line was added with the lead's leave.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261120-155852-224613 (79 of 79), e2e 261120-155853-9d2286 |
-| A2 | build-test 261120-155852-224613 (tests/test_cjk_words.cc); ICU oracle 261120-155914-5a93cf: 0 differences on zh, ja, ko |
+| A2 | build-test 261120-155852-224613 (tests/test_cjk_words.cc); ICU oracle 261120-155914-5a93cf: 0 differences on zh, ja, ko; rerun from tests/test_cjk_words_oracle.sh: 261120-173321-093c44 |
 | A3 | docs/mechanisms/cjk-words.md (Differences filled from the oracle) |
 
 ## Rulings I made
