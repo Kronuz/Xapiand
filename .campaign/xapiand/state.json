@@ -16719,6 +16719,8 @@
     "ninja-only-strata": {
       "accepted": {},
       "after": [],
+      "base": "753bc62c4c32210535e10b31f8156f448d560549",
+      "branch": "quest/xapiand/ninja-only-strata",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -16740,16 +16742,19 @@
         "test/vm_repeat.sh",
         "test/ninja_only_check.sh"
       ],
+      "journal": "../Xapiand-wt/xapiand/ninja-only-strata",
       "landed": [],
       "lenses": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
+      "reason": "started by force: a 4-line guard after project() and -G Ninja in build commands (D168); the overlapping quests change pins, test registrations and other lines of these files, so merges stay textual",
       "repo": "../strata",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "strata builds with CMake and Ninja only",
-      "updated": "2026-11-21T09:14:01"
+      "updated": "2026-11-21T09:15:04",
+      "worktree": "../strata-wt/xapiand/ninja-only-strata"
     },
     "no-stalls": {
       "accepted": {},
