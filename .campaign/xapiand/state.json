@@ -1940,6 +1940,36 @@
     }
   ],
   "quests": {
+    "agents-md": {
+      "accepted": {},
+      "after": [
+        "ninja-only"
+      ],
+      "checks": [
+        {
+          "cmd": "test $(wc -l < AGENTS.md) -le 80",
+          "level": "light",
+          "minutes": 30,
+          "name": "lines"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "AGENTS.md",
+        "docs/dev/agent-*.md",
+        "docs/dev/contributing.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "AGENTS.md says how Xapiand is built and worked on today",
+      "updated": "2026-11-21T09:47:09"
+    },
     "agg-shard-parity": {
       "accepted": {
         "correctness": {
