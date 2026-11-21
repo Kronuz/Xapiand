@@ -30662,7 +30662,12 @@
         "docs/src/content/docs/changelog.md",
         "harness/agg_buckets_check.py",
         "harness/id_zero_check.py",
-        "src/database/schema.cc"
+        "src/database/schema.cc",
+        ".github/workflows/release.yml",
+        ".github/workflows/freebsd.yml",
+        ".github/workflows/bottles.yml",
+        ".github/actions/build-bottle/action.yml",
+        "harness/run_all.sh"
       ],
       "history": [
         {
@@ -30727,7 +30732,7 @@
       "risk": "normal",
       "status": "active",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-20T20:40:47",
+      "updated": "2026-11-20T22:23:46",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
