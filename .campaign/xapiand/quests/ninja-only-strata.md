@@ -5,32 +5,43 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+strata configures only with a Ninja generator (owner, 2026-11-21: "The rule for these particular
+projects is using CMake and Ninja for builds. Any other way is plain wrong"; decision D168). CI,
+release, FreeBSD and the Homebrew formula already pass `-GNinja`. But the instructions and scripts
+agents copy did not: strata's AGENTS.md and README.md, and the harness, bench and test scripts this
+quest lists. Every configure there omitted `-G`, so CMake chose Unix Makefiles. In a job slot, a
+Makefiles tree and a Ninja tree sharing `.deps` (FETCHCONTENT_BASE_DIR) then break each other at
+configure ("generator : Ninja does not match the generator used previously").
+
+1. **Guard.** The top-level `CMakeLists.txt`, right after `project()`, stops at configure with a one-line
+   message naming `-G Ninja` when `CMAKE_GENERATOR` does not start with `Ninja`. It does this only
+   when strata is the top-level project, so a consumer's FetchContent build is untouched.
+2. **Instructions and scripts.** Every listed file that configures CMake passes `-G Ninja` and builds
+   with `cmake --build` (or `ninja -C`), never `make`. Records of past runs (docs/gates, docs/perf,
+   docs/reviews, docs/status, results) keep the commands that were run and are not edited.
+3. **The rule is written once,** in strata's AGENTS.md build section: "Build with CMake and Ninja
+   only: every configure passes `-G Ninja`; the top-level CMakeLists refuses any other generator."
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 `test/ninja_only_check.sh` configures a fresh tree with `-G "Unix Makefiles"` and its own
+  FETCHCONTENT_BASE_DIR, so it shares no `.deps`, and exits 0 only when configure fails with the
+  guard's message. It runs as a job, passing at the fix and failing without the guard
+  (`--fails-without` at the quest's base)
+- A2 The suite passes at the landed code, configured with `-G Ninja`: a job
+- A3 [artifact] No file in strata outside the records above configures CMake without Ninja:
+  `test/ninja_only_check.sh` also greps for that and lists any it finds, so A1's passing job covers it
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Building strata with Make, Xcode or any non-Ninja generator now fails at configure. The owner decided
+this (D168).
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- D168: Ninja only, enforced at configure; the campaign's jobs default to it through
+  `campaign config env=CMAKE_GENERATOR=Ninja`.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None.
