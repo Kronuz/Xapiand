@@ -1,6 +1,6 @@
 # split-check: journal
 
-State: waiting on jobs 261121-115533-bc4474 (A1 tests), 261121-115537-c54230 (A2 lint) at cpp-libraries 64b3d5b35dfd
+State: waiting on jobs 261121-121041-cfdb7d (A1 tests), 261121-121044-64007d (A2 lint) at cpp-libraries dc0ecfe9ad8d
 Quest: .campaign/xapiand/quests/split-check.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -10,6 +10,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 ## Decisions
 
 - Lead, 2026-11-21 (msg to contributor): (1) namespace-scope function declarations and `extern` variable declarations are allowed added shapes, each listed as a warning next to the `static` ones; (2) a reorder inside a function must fail: moved runs must start and end at a top-level boundary of their base file (namespace braces not counted; strings, chars and comments skipped), whole declarations may reorder; README drops the `git diff --color-moved` advice; (3) size limit on C/C++ files only and the default base order are fine.
+
+- Lead, 2026-11-21: size is never the reason to split; files over --max-lines are `note:` lines that never fail; README points at docs/SPLITTING.md (cpp-libraries:7cab8ec) for the rules; class members count as inside the class (intended).
 
 ## Doing
 
@@ -30,8 +32,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-115533-bc4474 (tests at 64b3d5b35dfd, pending) |
-| A2 | job 261121-115537-c54230 (ruff check, ruff format --check, pyrefly at 64b3d5b35dfd; pending) |
+| A1 | job 261121-121041-cfdb7d (tests at dc0ecfe9ad8d, pending). At 64b3d5b35dfd job 261121-115533-bc4474 failed on one test-expectation miscount (4 warnings, not 5), fixed |
+| A2 | job 261121-121044-64007d (ruff, format, pyrefly at dc0ecfe9ad8d, pending); 261121-115537-c54230 passed at 64b3d5b35dfd |
 | A3 | [artifact] cpp-libraries tools/README.md: names split_check.py and `split_check.py [--base REF] [--max-lines N] PATH...` |
 | A4 | CI after push (pending) |
 
