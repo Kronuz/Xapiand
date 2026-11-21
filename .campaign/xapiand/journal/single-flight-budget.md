@@ -38,7 +38,7 @@ Cause on main (src/single_flight.h at 70ad01dd6): a joiner `co_await flight->don
 | A1 | fails at mutant 16a783020: 261121-133028-a36e8e (pending); passes at 35d03172c: 261121-133137-9c63f2 (pending); TSan 5 runs: 261121-133202-0764e5 (pending) |
 | A2 | not run yet (waits for the call-site wiring) |
 | A3 | blocked: path |
-| A4 | not pushed yet |
+| A4 | not pushed: held so CI runs once, after the call-site wiring (Blocked on) |
 
 Cancelled (mistyped target or command, superseded): 261121-133017-722cfb, 261121-133148-972c79.
 
