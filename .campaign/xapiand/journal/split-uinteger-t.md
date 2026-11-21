@@ -1,6 +1,6 @@
 # split-uinteger-t: journal
 
-State: waiting on jobs 261121-121039-c6d5e2 (build-test), 261121-121040-919d81 (ctest -N after), 261121-115203-b998b3 (ctest -N before), 261121-121044-660a41 (A6); the split check (261121-121039-e7799d) cannot pass until split-check lands
+State: waiting on job 261121-145044-02dfce (A2, split_check from split-check-sources, at 8a6fe9030aab, after merging origin/master)
 Quest: .campaign/xapiand/quests/split-uinteger-t.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,7 +25,7 @@ Nothing. AGENTS.md's repo map line for `test/property.cc` could gain "its checks
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test job 261121-121039-c6d5e2 at 6815126e3170 |
-| A2 | split job 261121-121039-e7799d (the tool had not landed at 5cad82f: exit 2); the size limit is gone |
+| A2 | 261121-145044-02dfce (fixed split_check, 8a6fe9030aab; replaces 261121-123004-c2422b, which read .md as code); the size limit is gone |
 | A3 | ctest -N, sorted and unnumbered: before 261121-115203-b998b3 (f9dd8e4c03c7), after 261121-121040-919d81 (6815126e3170) |
 | A4 | [artifact] docs/source-layout.md: the 8 test pieces, and uinteger_t.hh kept whole with why |
 | A5 | CI on the pushed branch |
