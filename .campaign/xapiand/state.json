@@ -5427,18 +5427,45 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/completion-task-pin",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-20T23:48:46",
+          "commit": "714186eab63d5b1b8001a9f9a1afcfc7602f8766",
+          "criteria": {
+            "A1": "build-test 261120-231816-526106 at completion:714186e",
+            "A2": "CI green at 714186eab63d"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "714186eab63d5b1b8001a9f9a1afcfc7602f8766",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261120-231816-526106",
+              "level": "light",
+              "seconds": 94.4,
+              "state": "done",
+              "what": "completion-task-pin check build-test at 714186eab63d"
+            }
+          ],
+          "final": true,
+          "from": "1461544179b4f8769cb7565cafeaf0c8eaeaec24",
+          "reason": "",
+          "tested": "714186eab63d5b1b8001a9f9a1afcfc7602f8766"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "completion pins the task commit journal and consensus pin",
-      "updated": "2026-11-20T23:17:27",
-      "worktree": "../completion-wt/xapiand/completion-task-pin"
+      "updated": "2026-11-20T23:49:13",
+      "worktree": ""
     },
     "consensus-c3-rows": {
       "accepted": {},
