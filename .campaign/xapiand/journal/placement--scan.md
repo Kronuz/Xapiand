@@ -1,6 +1,6 @@
 # placement--scan: journal
 
-State: waiting on jobs 261120-175303-728838 261120-180334-1d28be 261120-180336-fe974f
+State: waiting on jobs 261120-181209-4c19f8 261120-181211-11c0e5 261120-181214-13639d
 Quest: .campaign/xapiand/quests/placement.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Scan at strata:5494733b (include/strata/placement/scan.hh, test/placement/scan_{glob.hh,test.cc,mutants.py}),
-pushed to origin quest/xapiand/placement--scan. Jobs queued, none run yet (the host was busy):
-- 261120-175303-728838 (A2): build placement_scan_test, run cases + model + bound (20000 seeds).
-- 261120-180334-1d28be (A2, --fails-without): `bound` mode at mutant no-seek-past (leave() reads
+Scan at strata:2620ba75 (include/strata/placement/scan.hh, test/placement/scan_{glob.hh,test.cc,mutants.py,cmake}),
+origin/quest/xapiand/placement merged in (lead's strata::placement target, test/placement/*.cmake glob);
+CMakeLists.txt change dropped. Pushed. Old jobs at 5494733b cancelled. Jobs queued:
+- 261120-181209-4c19f8 (A2): build placement_scan_test, run cases + model + bound (20000 seeds).
+- 261120-181211-11c0e5 (A2, --fails-without): `bound` mode at mutant no-seek-past (leave() reads
   on with next() instead of seek/skip); it must fail.
-- 261120-180336-fe974f (A2): the whole build-test suite on the task branch.
+- 261120-181214-13639d (A2): the whole build-test suite on the task branch.
 
 ## Next
 
@@ -34,8 +35,8 @@ checked what), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A2 | jobs 261120-175303-728838, 261120-180334-1d28be (mutant), 261120-180336-fe974f: pending |
-| msg-1 | Mine (scan -> root, key order). Open until root answers in its journal; my side assumes path order (Rulings). |
+| A2 | jobs 261120-181209-4c19f8, 261120-181211-11c0e5 (mutant), 261120-181214-13639d: pending |
+| msg-1 | Mine (scan -> root, key order). The lead made path order a decision (quest file, Xapiand:8ff0a0f5f: '/' stored as byte 0); root answers it. |
 
 ## Result
 
@@ -57,7 +58,6 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - The reference glob matcher lives in the test (a port of Xapiand's MIT index_pattern::Glob, with
   its item rules: `-p`, `_all`, `.` segments at any depth never listed); the brute-force model is a
   separate recursive matcher, so the automaton is checked too.
-- CMakeLists.txt is outside the quest's file set; I added one 4-line block registering
-  placement_scan_test (the suite must run it). Lead: widen the set or take the block.
+- Test registration lives in test/placement/scan.cmake (lead's ruling: CMakeLists.txt is the lead's).
 - The mechanism note belongs in docs/mechanisms/placement-root.md (root's file); scan.hh points to
   its section "The seekable scan". I send root the text when the scan is green.
