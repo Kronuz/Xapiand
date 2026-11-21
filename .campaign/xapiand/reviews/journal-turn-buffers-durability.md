@@ -1,6 +1,6 @@
 # journal-turn-buffers review: durability (with correctness), for Detent as journal's owner
 
-Commit: journal:b88565f0a276c4ea392a171861d8044edd2f1964 (base journal:178030b38f56)
+Commit: journal:60ab864407fe4eb2ac05fa354f504916ae55c6e6 (first reviewed at journal:b88565f0a276, base journal:178030b38f56)
 Verdict: APPROVE
 Date: 2026-11-20
 
@@ -88,3 +88,20 @@ Answers to the four questions:
   force a build.
 - No TSan run of the recycler/unseal race; probe 2 is a timing-based check under ASan only.
 - Benchmark numbers in turn-seal.md (allocations and times) were not rerun.
+
+## Re-check at journal:60ab864
+
+Verdict: APPROVE at journal:60ab864407fe4eb2ac05fa354f504916ae55c6e6.
+
+Code read since journal:b88565f, the quest's own commits (the rest is main's merges, already reviewed there):
+- journal:5a5972d (turn_driver.h): one in-flight vector, moved out at completed() and handed back cleared unless a turn begun meanwhile took one. No path keeps a pending item past finish(); the spare vector is gone.
+- journal:87af246 (framing.h, turn_log.h): parse_header splits into header_shape() and names_block(), used by parse_header and by RecordReader::enter_block(). enter_block() checks shape, block naming and epoch on the fixed part, then streams manifest and CRC through a 1 KiB stack chunk; the last 4 bytes land in `stored` at the right offsets for every chunk boundary, including one straddling the CRC. fits() lays out in a manifest not in use (the staged turn's, the spare's, or encode()'s own); encode() resets that manifest from filling_ before every use, so fits() clobbering it is harmless. The forward reader no longer shares log scratch.
+- journal:60ab864 (test only).
+
+Evidence at the new code:
+- Differential probe vs journal main (journal:335b1b5), updated for park/evict: IDENTICAL output, job 261121-124532-0dc107 at journal:60ab864.
+- Recycler probe under ASan+UBSan: passed, job 261121-121414-237c59 at journal:87af246; journal:60ab864 changes only test/framing_test.cc.
+- framing_test's 64- and 100-group header reads and the header-crc mutant (the contributor's jobs) cover the streamed CRC.
+- park_count: 0.565 B per parked group against main's 0.448 B, job 261121-121340-140534; accepted.
+
+No new findings.
