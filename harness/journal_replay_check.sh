@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# wal_replay_check.sh -- recovery after kill -9 rebuilds what was acknowledged, on a single node.
+# journal_replay_check.sh -- recovery after kill -9 rebuilds what was acknowledged, on a single node.
 #
 # A shard is a lone-voter group (docs/mechanisms/journal-durability.md): a RESTORE answers once its
 # batches are in the journal, and a restart recovers from the checkpoint and the journal.
@@ -30,7 +30,7 @@
 #            numeric field, a schema change) is there once, on top, and survives one more crash.
 #   failure  a recovery that cannot write (a file-size limit) does not serve: the node stays down
 #            and says why, and the next healthy start recovers everything.
-# Usage: harness/wal_replay_check.sh [main|failure ...]   (default: all)
+# Usage: harness/journal_replay_check.sh [main|failure ...]   (default: all)
 #        BIN=build/bin/xapiand PORT=8908 NDOCS=200 SETTLE=0 (seconds between the last answer and kill -9)
 set -u
 
@@ -39,7 +39,7 @@ BIN="${BIN:-$REPO/build/bin/xapiand}"
 PORT="${PORT:-8908}"
 NDOCS="${NDOCS:-200}"
 SETTLE="${SETTLE:-0}"
-RUNDIR="${RUNDIR:-$REPO/.scratch/xwalreplay_$$}"
+RUNDIR="${RUNDIR:-$REPO/.scratch/xjournalreplay_$$}"
 IDX="replay"
 mkdir -p "$RUNDIR"
 PID=""
@@ -55,7 +55,7 @@ start_node() {
 	(
 		exec > >(cat >>"$log") 2>&1
 		[ -n "$limit" ] && { ulimit -f "$limit"; trap '' XFSZ; }
-		exec "$BIN" --port "$PORT" --name walreplaynode --verbosity 3 -D "$RUNDIR/n"
+		exec "$BIN" --port "$PORT" --name journalreplaynode --verbosity 3 -D "$RUNDIR/n"
 	) &
 	PID=$!
 	for _ in $(seq 80); do
@@ -94,7 +94,7 @@ same_state() { python3 -c "
 a = '$1'.split(); b = '$2'.split()
 import sys; sys.exit(0 if len(a) == 3 and a[0] == b[0] and abs(float(a[1]) - float(b[1])) < 1e-6 and float(a[2]) == float(b[2]) else 1)" 2>/dev/null; }
 scenario_main() {
-	echo "== [wal-replay] crash, recover, crash, recover =="
+	echo "== [journal-replay] crash, recover, crash, recover =="
 	start_node n1.log || { fail "startup"; return; }
 	restore 0 "$NDOCS"
 	crash
@@ -130,7 +130,7 @@ except Exception:
 }
 
 scenario_failure() {
-	echo "== [wal-replay] a recovery that cannot write does not serve =="
+	echo "== [journal-replay] a recovery that cannot write does not serve =="
 	rm -rf "$RUNDIR/n"
 	start_node f1.log || { fail "startup"; return; }
 	restore 0 "$NDOCS"
