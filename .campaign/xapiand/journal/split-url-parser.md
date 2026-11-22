@@ -35,6 +35,7 @@ Jobs (all at url-parser:e3dfd07):
 | Criterion | Evidence |
 |---|---|
 | A4 | `docs/source-layout.md` (url-parser:e3dfd07): each source file, and url_parser.cc kept whole with why |
+| A7 | lead, 2026-11-21: read the split. url_parser.cc (1,400 lines) is kept whole and earns it: both parsers call one decoder engine in an anonymous namespace (a split would give ~700 hot lines external linkage), the byte loops are aligned in one TU, and five tests include the .cc. docs/source-layout.md says so. Agreed. |
 
 ## Result
 
