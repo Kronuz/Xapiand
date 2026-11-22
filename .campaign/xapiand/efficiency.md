@@ -769,3 +769,16 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
   - One datetime bench job without a build step exited 127.
 - Queue: 235 jobs queued and 4 light slots, light 77% used last hour. Most landings wait on the queue or on GitHub's 20 runners, not on agents.
 - Host: load 29 (Detent's reader-s6 ASan job on 10 cores), 296 GiB free. Quota 87% weekly, burn 0.62%/h, reset in 28.7 h.
+
+### 2026-11-21 19h (hourly)
+
+- Landed: failed-restore-exit (Xapiand:bedd54e, 16:29). No other landings: the waiting quests (ninja-only, cjk-words, empty-aggregation, newman-pin) each re-merge master after every landing and rerun CI. campaign-v3's merge-main-when-needed (agent-campaign:bfda0be, not yet installed) removes that churn.
+- Agent runs (Sonnet):
+  - restore-stream landing chores 65k: the master merge voided its security acceptance. The lead read main's change since the review (CLI restore type check only, no change to the HTTP stream) and will re-accept on the reruns.
+  - split-storage A6 64k: exit 125 was a cross-repository slot. The job named slot `sc`, a msgpack worktree, and the storage commit wasn't there. Sent to campaign-v3 (msg-18), folded into its slot-checkout quest.
+  - journal-replaces-wal restore 80k: test_restore_batch's bodies were one repeated byte, which zstd shrank to nothing, so 300 writes fit one entry. The fix is the test's data, plus a per-write encoded_size check.
+- Agent runs (Opus): single-flight-budget correctness review, conditional APPROVE (N1-N3 filed to hunt). Launched at 17:20: group-catalog fix round (R1-R4 job failed: bound close, bare commit's P_H durable), group-heal install (abstract `row` after consensus driver-install), cluster next step (A5 jobs passed).
+- Evidence this hour: journal-lost-bound F1 fails at its mutant and passes at the fix, A2 crash cases pass on faultfs. restore-stream A1/A2 reruns pass at the merge head. split-completion build-test and split pass, and two ctest -N diffs pass.
+- Waste: one A6 job lost to the cross-repository slot (exit 125, empty log).
+- Queue: 202 queued, 4 running; light slots 80% used (383 of 480 slot-minutes); 84 jobs ended, 12 failed, 23 produced nothing (9 cancelled, 14 skipped). No explorer batch: the light slots are the limit.
+- Host: load 33 (Detent's reader-s6 TSan job at 6.2 cores), 295 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 27.7 h.
