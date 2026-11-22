@@ -1,6 +1,6 @@
 # journal-replaces-wal--restore: journal
 
-State: waiting on jobs 261121-171240-f68a69 (tests) and mutants 261121-171257-bf7790 261121-171258-f08c53 261121-171258-da58a8, all at Xapiand:e3e55af98
+State: waiting on jobs 261121-203231-e1086b (tests), mutants 261121-203231-13b0f8 261121-203232-74304e 261121-203232-09b718, all at Xapiand:72efab739; probe 261121-203148-ccf367 at Xapiand:e3e55af98
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -33,9 +33,28 @@ incompressible bodies; the encoded_size check also asserts the body stays > 7000
 write alone with encode_entry's size (the aggregate check already existed). Jobs at e3e55af98: tests
 261121-171240-f68a69, the three mutants rerun there (the cc9f4b258 ones superseded).
 
+## Session 3 (restore fix, round 2)
+
+261121-171240-f68a69 at e3e55af98 failed 1 of 670: :159 `b.document.bytes.size() > 70000u`. noise() drew 90 printable
+characters (~6.5 bits/byte), so zstd still shrank the 70,000-byte body. Probe 261121-203148-ccf367 prints the
+stored sizes at e3e55af98 (pending). Fix, Xapiand:72efab739: noise() takes all 256 byte values (a MsgPack str carries
+any bytes; Data stores a record raw when zstd does not shrink it); each case prints its sizes and checks its limit:
+
+| Case | Limit it crosses | Check | Stored size |
+|---|---|---|---|
+| encoded_size, 70000-byte body | leb128 length past 3 bytes' 2^14, body > 65536 | document > 70000 | pending 261121-203231-e1086b |
+| packing at 4096 | entry limit 4096, several writes per entry | 1 < commands < writes, next write overflows | pending |
+| packing at 65536 | entry limit COMMAND_ENTRY_BYTES/16 | same | pending |
+| 1.5 MiB body | COMMAND_ENTRY_BYTES (1 MiB): a command alone, split_command > 2 chunks | encoded_size > 1 MiB | pending |
+
+Mutants rerun at 72efab739 (the e3e55af98 ones superseded): 261121-203231-13b0f8, 261121-203232-74304e,
+261121-203232-09b718.
+
+msg-1: deferred to the next allowlist edit (this task does not edit harness/async_allowlist.tsv).
+
 ## Next
 
-1. Read the five jobs; fix and rerun what fails. Then push the branch once.
+1. Read the five jobs (fill the stored sizes above from their logs); fix and rerun what fails.
 2. At core step d: DocIndexer::apply_shards (handler.cc) feeds RestoreBatcher and proposes through
    RestorePropose, each command once the previous is placed; Shard::apply_slice and SliceWrite go.
    journal_replay_check.sh and profile_bulk's journal row get their evidence on that build
@@ -46,6 +65,9 @@ write alone with encode_entry's size (the aggregate check already existed). Jobs
 Nothing. msg-204 and msg-205 answered by the lead (option (a) on both).
 
 ## Messages
+
+- msg-1 (async_allowlist single_flight note, O(1) vs the leave's linear erase): deferred to the next allowlist
+  edit; this task does not edit harness/async_allowlist.tsv.
 
 - msg-204 (file set, renames, manager.*): answered by the lead, option (a). Done: restore_batch.*,
   test_restore_batch.cc, encoded_size in command.*, the renames, wal_recovery_check.sh and
@@ -58,8 +80,8 @@ Nothing. msg-204 and msg-205 answered by the lead (option (a) on both).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-171240-f68a69 (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-171258-da58a8 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
-| A5 | 261121-171240-f68a69 (test_restore_batch); 261121-171257-bf7790 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-171258-f08c53 (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
+| A1 | 261121-203231-e1086b (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-203232-09b718 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
+| A5 | 261121-203231-e1086b (test_restore_batch); 261121-203231-13b0f8 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-203232-74304e (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
 | probe | 261121-111719-e638cd: journal_replay_check.sh and profile_bulk --put on the pre-journal build, mechanics only, not evidence |
 
 Cancelled, superseded by the renames: 261121-110941-17b096, 261121-110943-f67445, 261121-110959-9c6a80.
