@@ -23,8 +23,8 @@
 
 // The inline Schema members every walk (index, update, write) shares: restarting and
 // feeding a field's specification, marking objects and arrays, prefixes and dynamic fields,
-// the _id and _version defaults, and Schema::check (a template the constructor and the
-// update and write walks instantiate).
+// the _id and _version defaults and which fields get them, and Schema::check (a template
+// the constructor and the update and write walks instantiate).
 
 #pragma once
 
@@ -384,6 +384,17 @@ Schema::detect_dynamic(std::string_view field_name)
 		specification.meta_name.assign(field_name);
 		specification.flags.uuid_field = false;
 	}
+}
+
+
+inline bool
+has_dispatch_set_default_spc(uint64_t key)
+{
+	constexpr static auto _ = phf::make_phf({
+		hh(ID_FIELD_NAME),
+		hh(VERSION_FIELD_NAME),
+	});
+	return _.count(key) != 0u;
 }
 
 

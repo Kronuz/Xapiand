@@ -22,8 +22,8 @@
  */
 
 // The reserved-property dispatch the walks inline: the entry points, the perfect-hash tables
-// routing a reserved word to its handler, and the handlers inlined into them (concrete-field
-// process_*, consistency_*, and the script's).
+// routing a reserved word to its process, write or feed handler, and the handlers inlined
+// into them (concrete-field process_*, consistency_*, and the script's).
 
 #pragma once
 
@@ -72,6 +72,10 @@
 
 using namespace schema_detail;
 
+
+bool has_dispatch_set_default_spc(uint64_t key);
+bool has_dispatch_process_properties(uint64_t key);
+bool has_dispatch_process_concrete_properties(uint64_t key);
 
 inline void
 Schema::dispatch_process_concrete_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
@@ -298,6 +302,204 @@ Schema::_dispatch_write_properties(uint64_t key, MsgPack& mut_properties, std::s
 
 
 inline bool
+Schema::_dispatch_feed_properties(uint64_t key, const MsgPack& value)
+{
+	L_CALL("Schema::_dispatch_feed_properties({})", value.to_string());
+
+	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
+		hh(RESERVED_WEIGHT),
+		hh(RESERVED_POSITION),
+		hh(RESERVED_SPELLING),
+		hh(RESERVED_POSITIONS),
+		hh(RESERVED_TYPE),
+		hh(RESERVED_PREFIX),
+		hh(RESERVED_SLOT),
+		hh(RESERVED_INDEX),
+		hh(RESERVED_STORE),
+		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
+		hh(RESERVED_DYNAMIC),
+		hh(RESERVED_STRICT),
+		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
+		hh(RESERVED_TIME_DETECTION),
+		hh(RESERVED_TIMEDELTA_DETECTION),
+		hh(RESERVED_NUMERIC_DETECTION),
+		hh(RESERVED_GEO_DETECTION),
+		hh(RESERVED_BOOL_DETECTION),
+		hh(RESERVED_TEXT_DETECTION),
+		hh(RESERVED_UUID_DETECTION),
+		hh(RESERVED_BOOL_TERM),
+		hh(RESERVED_ACCURACY),
+		hh(RESERVED_ACC_PREFIX),
+		hh(RESERVED_NGRAM),
+		hh(RESERVED_CJK_NGRAM),
+		hh(RESERVED_CJK_WORDS),
+		hh(RESERVED_LANGUAGE),
+		hh(RESERVED_STOP_STRATEGY),
+		hh(RESERVED_STEM_STRATEGY),
+		hh(RESERVED_STEM_LANGUAGE),
+		hh(RESERVED_PARTIALS),
+		hh(RESERVED_ERROR),
+		hh(RESERVED_NAMESPACE),
+		hh(RESERVED_PARTIAL_PATHS),
+		hh(RESERVED_INDEX_UUID_FIELD),
+		hh(RESERVED_SCRIPT),
+		hh(RESERVED_FOREIGN),
+	});
+
+	switch (_.find(key)) {
+		case _.fhh(RESERVED_META):
+			return true;
+		case _.fhh(RESERVED_WEIGHT):
+			Schema::feed_weight(value);
+			return true;
+		case _.fhh(RESERVED_POSITION):
+			Schema::feed_position(value);
+			return true;
+		case _.fhh(RESERVED_SPELLING):
+			Schema::feed_spelling(value);
+			return true;
+		case _.fhh(RESERVED_POSITIONS):
+			Schema::feed_positions(value);
+			return true;
+		case _.fhh(RESERVED_TYPE):
+			Schema::feed_type(value);
+			return true;
+		case _.fhh(RESERVED_PREFIX):
+			Schema::feed_prefix(value);
+			return true;
+		case _.fhh(RESERVED_SLOT):
+			Schema::feed_slot(value);
+			return true;
+		case _.fhh(RESERVED_INDEX):
+			Schema::feed_index(value);
+			return true;
+		case _.fhh(RESERVED_STORE):
+			Schema::feed_store(value);
+			return true;
+		case _.fhh(RESERVED_RECURSE):
+			Schema::feed_recurse(value);
+			return true;
+		case _.fhh(RESERVED_IGNORE):
+			Schema::feed_ignore(value);
+			return true;
+		case _.fhh(RESERVED_DYNAMIC):
+			Schema::feed_dynamic(value);
+			return true;
+		case _.fhh(RESERVED_STRICT):
+			Schema::feed_strict(value);
+			return true;
+		case _.fhh(RESERVED_DATE_DETECTION):
+			Schema::feed_date_detection(value);
+			return true;
+		case _.fhh(RESERVED_DATETIME_DETECTION):
+			Schema::feed_datetime_detection(value);
+			return true;
+		case _.fhh(RESERVED_TIME_DETECTION):
+			Schema::feed_time_detection(value);
+			return true;
+		case _.fhh(RESERVED_TIMEDELTA_DETECTION):
+			Schema::feed_timedelta_detection(value);
+			return true;
+		case _.fhh(RESERVED_NUMERIC_DETECTION):
+			Schema::feed_numeric_detection(value);
+			return true;
+		case _.fhh(RESERVED_GEO_DETECTION):
+			Schema::feed_geo_detection(value);
+			return true;
+		case _.fhh(RESERVED_BOOL_DETECTION):
+			Schema::feed_bool_detection(value);
+			return true;
+		case _.fhh(RESERVED_TEXT_DETECTION):
+			Schema::feed_text_detection(value);
+			return true;
+		case _.fhh(RESERVED_UUID_DETECTION):
+			Schema::feed_uuid_detection(value);
+			return true;
+		case _.fhh(RESERVED_BOOL_TERM):
+			Schema::feed_bool_term(value);
+			return true;
+		case _.fhh(RESERVED_ACCURACY):
+			Schema::feed_accuracy(value);
+			return true;
+		case _.fhh(RESERVED_ACC_PREFIX):
+			Schema::feed_acc_prefix(value);
+			return true;
+		case _.fhh(RESERVED_NGRAM):
+			Schema::feed_ngram(value);
+			return true;
+		case _.fhh(RESERVED_CJK_NGRAM):
+			Schema::feed_cjk_ngram(value);
+			return true;
+		case _.fhh(RESERVED_CJK_WORDS):
+			Schema::feed_cjk_words(value);
+			return true;
+		case _.fhh(RESERVED_LANGUAGE):
+			Schema::feed_language(value);
+			return true;
+		case _.fhh(RESERVED_STOP_STRATEGY):
+			Schema::feed_stop_strategy(value);
+			return true;
+		case _.fhh(RESERVED_STEM_STRATEGY):
+			Schema::feed_stem_strategy(value);
+			return true;
+		case _.fhh(RESERVED_STEM_LANGUAGE):
+			Schema::feed_stem_language(value);
+			return true;
+		case _.fhh(RESERVED_PARTIALS):
+			Schema::feed_partials(value);
+			return true;
+		case _.fhh(RESERVED_ERROR):
+			Schema::feed_error(value);
+			return true;
+		case _.fhh(RESERVED_NAMESPACE):
+			Schema::feed_namespace(value);
+			return true;
+		case _.fhh(RESERVED_PARTIAL_PATHS):
+			Schema::feed_partial_paths(value);
+			return true;
+		case _.fhh(RESERVED_INDEX_UUID_FIELD):
+			Schema::feed_index_uuid_field(value);
+			return true;
+		case _.fhh(RESERVED_SCRIPT):
+			Schema::feed_script(value);
+			return true;
+		case _.fhh(RESERVED_FOREIGN):
+			Schema::feed_foreign(value);
+			return true;
+		default:
+			return false;
+	}
+}
+
+
+inline bool
+has_dispatch_process_properties(uint64_t key)
+{
+	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_NGRAM),
+		hh(RESERVED_CJK_NGRAM),
+		hh(RESERVED_CJK_WORDS),
+		hh(RESERVED_LANGUAGE),
+		hh(RESERVED_PREFIX),
+		hh(RESERVED_SLOT),
+		hh(RESERVED_STOP_STRATEGY),
+		hh(RESERVED_STEM_STRATEGY),
+		hh(RESERVED_STEM_LANGUAGE),
+		hh(RESERVED_TYPE),
+		hh(RESERVED_BOOL_TERM),
+		hh(RESERVED_ACCURACY),
+		hh(RESERVED_ACC_PREFIX),
+		hh(RESERVED_PARTIALS),
+		hh(RESERVED_ERROR),
+	});
+
+	return _.count(key) != 0u;
+}
+
+inline bool
 Schema::_dispatch_process_properties(uint64_t key, std::string_view prop_name, const MsgPack& value)
 {
 	L_CALL("Schema::_dispatch_process_properties({})", repr(prop_name));
@@ -369,6 +571,82 @@ Schema::_dispatch_process_properties(uint64_t key, std::string_view prop_name, c
 		default:
 			return false;
 	}
+}
+
+inline bool
+has_dispatch_process_concrete_properties(uint64_t key)
+{
+	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
+		hh(RESERVED_DATA),
+		hh(RESERVED_WEIGHT),
+		hh(RESERVED_POSITION),
+		hh(RESERVED_SPELLING),
+		hh(RESERVED_POSITIONS),
+		hh(RESERVED_INDEX),
+		hh(RESERVED_STORE),
+		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
+		hh(RESERVED_PARTIAL_PATHS),
+		hh(RESERVED_INDEX_UUID_FIELD),
+		hh(RESERVED_VALUE),
+		hh(RESERVED_FOREIGN),
+		hh(RESERVED_SCRIPT),
+		hh(RESERVED_FLOAT),
+		hh(RESERVED_POSITIVE),
+		hh(RESERVED_INTEGER),
+		hh(RESERVED_BOOLEAN),
+		hh(RESERVED_TERM),  // FIXME: remove legacy term
+		hh(RESERVED_KEYWORD),
+		hh(RESERVED_TEXT),
+		hh(RESERVED_STRING),
+		hh(RESERVED_DATE),
+		hh(RESERVED_DATETIME),
+		hh(RESERVED_UUID),
+		hh(RESERVED_EWKT),
+		hh(RESERVED_POINT),
+		hh(RESERVED_CIRCLE),
+		hh(RESERVED_CONVEX),
+		hh(RESERVED_POLYGON),
+		hh(RESERVED_CHULL),
+		hh(RESERVED_MULTIPOINT),
+		hh(RESERVED_MULTICIRCLE),
+		hh(RESERVED_MULTICONVEX),
+		hh(RESERVED_MULTIPOLYGON),
+		hh(RESERVED_MULTICHULL),
+		hh(RESERVED_GEO_COLLECTION),
+		hh(RESERVED_GEO_INTERSECTION),
+		hh(RESERVED_LUA),
+		// Next functions only check the consistency of user provided data.
+		hh(RESERVED_SLOT),
+		hh(RESERVED_NGRAM),
+		hh(RESERVED_CJK_NGRAM),
+		hh(RESERVED_CJK_WORDS),
+		hh(RESERVED_LANGUAGE),
+		hh(RESERVED_STOP_STRATEGY),
+		hh(RESERVED_STEM_STRATEGY),
+		hh(RESERVED_STEM_LANGUAGE),
+		hh(RESERVED_TYPE),
+		hh(RESERVED_BOOL_TERM),
+		hh(RESERVED_ACCURACY),
+		hh(RESERVED_PARTIALS),
+		hh(RESERVED_ERROR),
+		hh(RESERVED_DYNAMIC),
+		hh(RESERVED_STRICT),
+		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
+		hh(RESERVED_TIME_DETECTION),
+		hh(RESERVED_TIMEDELTA_DETECTION),
+		hh(RESERVED_NUMERIC_DETECTION),
+		hh(RESERVED_GEO_DETECTION),
+		hh(RESERVED_BOOL_DETECTION),
+		hh(RESERVED_TEXT_DETECTION),
+		hh(RESERVED_UUID_DETECTION),
+		hh(RESERVED_NAMESPACE),
+		hh(RESERVED_SCHEMA),
+		hh(RESERVED_SETTINGS),
+	});
+	return _.count(key) != 0u;
 }
 
 inline bool

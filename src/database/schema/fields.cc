@@ -65,6 +65,7 @@
 #include "static_string.hh"                       // for static_string
 #include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
 #include "database/schema/reserved.h"
+#include "database/schema/walk.h"
 
 
 using namespace schema_detail;

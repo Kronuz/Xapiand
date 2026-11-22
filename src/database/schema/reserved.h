@@ -22,8 +22,8 @@
  */
 
 // The reserved-word vocabulary the schema pieces share: type-name strings, the parsers and
-// printers of reserved values, the acceptable-value lists and default accuracies
-// (specification.cc defines them), and which reserved words each dispatch table handles.
+// printers of reserved values, and the acceptable-value lists and default accuracies
+// (specification.cc defines them).
 
 #pragma once
 
@@ -1004,118 +1004,3 @@ repr_field(std::string_view name, std::string_view field_name)
 }
 
 }  // namespace schema_detail
-
-
-bool has_dispatch_set_default_spc(uint64_t key);
-bool has_dispatch_process_properties(uint64_t key);
-bool has_dispatch_process_concrete_properties(uint64_t key);
-
-inline bool
-has_dispatch_process_properties(uint64_t key)
-{
-	constexpr static auto _ = phf::make_phf({
-		hh(RESERVED_NGRAM),
-		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
-		hh(RESERVED_LANGUAGE),
-		hh(RESERVED_PREFIX),
-		hh(RESERVED_SLOT),
-		hh(RESERVED_STOP_STRATEGY),
-		hh(RESERVED_STEM_STRATEGY),
-		hh(RESERVED_STEM_LANGUAGE),
-		hh(RESERVED_TYPE),
-		hh(RESERVED_BOOL_TERM),
-		hh(RESERVED_ACCURACY),
-		hh(RESERVED_ACC_PREFIX),
-		hh(RESERVED_PARTIALS),
-		hh(RESERVED_ERROR),
-	});
-
-	return _.count(key) != 0u;
-}
-
-inline bool
-has_dispatch_process_concrete_properties(uint64_t key)
-{
-	constexpr static auto _ = phf::make_phf({
-		hh(RESERVED_META),
-		hh(RESERVED_DATA),
-		hh(RESERVED_WEIGHT),
-		hh(RESERVED_POSITION),
-		hh(RESERVED_SPELLING),
-		hh(RESERVED_POSITIONS),
-		hh(RESERVED_INDEX),
-		hh(RESERVED_STORE),
-		hh(RESERVED_RECURSE),
-		hh(RESERVED_IGNORE),
-		hh(RESERVED_PARTIAL_PATHS),
-		hh(RESERVED_INDEX_UUID_FIELD),
-		hh(RESERVED_VALUE),
-		hh(RESERVED_FOREIGN),
-		hh(RESERVED_SCRIPT),
-		hh(RESERVED_FLOAT),
-		hh(RESERVED_POSITIVE),
-		hh(RESERVED_INTEGER),
-		hh(RESERVED_BOOLEAN),
-		hh(RESERVED_TERM),  // FIXME: remove legacy term
-		hh(RESERVED_KEYWORD),
-		hh(RESERVED_TEXT),
-		hh(RESERVED_STRING),
-		hh(RESERVED_DATE),
-		hh(RESERVED_DATETIME),
-		hh(RESERVED_UUID),
-		hh(RESERVED_EWKT),
-		hh(RESERVED_POINT),
-		hh(RESERVED_CIRCLE),
-		hh(RESERVED_CONVEX),
-		hh(RESERVED_POLYGON),
-		hh(RESERVED_CHULL),
-		hh(RESERVED_MULTIPOINT),
-		hh(RESERVED_MULTICIRCLE),
-		hh(RESERVED_MULTICONVEX),
-		hh(RESERVED_MULTIPOLYGON),
-		hh(RESERVED_MULTICHULL),
-		hh(RESERVED_GEO_COLLECTION),
-		hh(RESERVED_GEO_INTERSECTION),
-		hh(RESERVED_LUA),
-		// Next functions only check the consistency of user provided data.
-		hh(RESERVED_SLOT),
-		hh(RESERVED_NGRAM),
-		hh(RESERVED_CJK_NGRAM),
-		hh(RESERVED_CJK_WORDS),
-		hh(RESERVED_LANGUAGE),
-		hh(RESERVED_STOP_STRATEGY),
-		hh(RESERVED_STEM_STRATEGY),
-		hh(RESERVED_STEM_LANGUAGE),
-		hh(RESERVED_TYPE),
-		hh(RESERVED_BOOL_TERM),
-		hh(RESERVED_ACCURACY),
-		hh(RESERVED_PARTIALS),
-		hh(RESERVED_ERROR),
-		hh(RESERVED_DYNAMIC),
-		hh(RESERVED_STRICT),
-		hh(RESERVED_DATE_DETECTION),
-		hh(RESERVED_DATETIME_DETECTION),
-		hh(RESERVED_TIME_DETECTION),
-		hh(RESERVED_TIMEDELTA_DETECTION),
-		hh(RESERVED_NUMERIC_DETECTION),
-		hh(RESERVED_GEO_DETECTION),
-		hh(RESERVED_BOOL_DETECTION),
-		hh(RESERVED_TEXT_DETECTION),
-		hh(RESERVED_UUID_DETECTION),
-		hh(RESERVED_NAMESPACE),
-		hh(RESERVED_SCHEMA),
-		hh(RESERVED_SETTINGS),
-	});
-	return _.count(key) != 0u;
-}
-
-inline bool
-has_dispatch_set_default_spc(uint64_t key)
-{
-	constexpr static auto _ = phf::make_phf({
-		hh(ID_FIELD_NAME),
-		hh(VERSION_FIELD_NAME),
-	});
-	return _.count(key) != 0u;
-}
