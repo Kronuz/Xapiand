@@ -27493,18 +27493,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-url-parser",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T19:23:10",
+          "commit": "657f7fe09a79b5c5ce3a829adcaeab6994068767",
+          "criteria": {
+            "A1": "261121-130327-f7cc1a (the build-test check), 261121-130327-f7cc1a (passed at e3dfd071a32a; only 1 merge from main since, none touching its files), 261121-155812-1c6f84",
+            "A2": "261121-155812-1c6f84 (the split check), 261121-130327-f7cc1a (passed at e3dfd071a32a; only 1 merge from main since, none touching its files), 261121-155812-1c6f84, 261121-130734-9ce653 (passed at e3dfd071a32a; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130732-91be46 (passed at e3dfd071a32a; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` (url-parser:e3dfd07): each source file, and url_parser.cc kept whole with why",
+            "A5": "CI green at 657f7fe09a79",
+            "A6": "261121-130338-635787 (passed at e3dfd071a32a; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split. url_parser.cc (1,400 lines) is kept whole and earns it: both parsers call one decoder engine in an anonymous namespace (a split would give ~700 hot lines external linkage), the byte loops are aligned in one TU, and five tests include the .cc. docs/source-layout.md says so. Agreed."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "e3dfd071a32a6b16be74369fe9fd62fb09a83bfb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130327-f7cc1a",
+              "level": "light",
+              "seconds": 73.7,
+              "state": "done",
+              "what": "split-url-parser check build-test at e3dfd071a32a"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "657f7fe09a79b5c5ce3a829adcaeab6994068767",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155812-1c6f84",
+              "level": "light",
+              "seconds": 1.5,
+              "state": "done",
+              "what": "split-url-parser check split at 657f7fe09a79"
+            }
+          ],
+          "final": true,
+          "from": "ca768058e15a3708ba2db0c14d2446cc76f9dcad",
+          "reason": "",
+          "tested": "657f7fe09a79b5c5ce3a829adcaeab6994068767"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../url-parser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "url-parser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:38",
-      "worktree": "../url-parser-wt/xapiand/split-url-parser"
+      "updated": "2026-11-21T19:23:12",
+      "worktree": ""
     },
     "split-workpool": {
       "accepted": {},
