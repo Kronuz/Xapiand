@@ -26690,18 +26690,61 @@
         "ARCHITECTURE.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-http-parser",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:20:19",
+          "commit": "a3180d77a619b58abccf963aeaf27a98b25d3c8f",
+          "criteria": {
+            "A1": "261121-121452-92646b (the build-test check), 261121-121452-92646b (passed at db201cd892ab; only 1 merge from main since, none touching its files), 261121-155757-47db35, 261121-121453-cb7868 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A2": "261121-155757-47db35 (the split check), 261121-121452-92646b (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A3": "261121-121503-33e747 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A4": "docs/source-layout.md lists each new file",
+            "A5": "CI green at a3180d77a619",
+            "A6": "261121-121501-c2f765 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; the parse switch stays whole in http_parser.cc; api, url, chars, tables and internal pieces each open with what they hold"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "db201cd892ab82cefd371c438738c8081a52cd04",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121452-92646b",
+              "level": "light",
+              "seconds": 172.3,
+              "state": "done",
+              "what": "split-http-parser check build-test at db201cd892ab"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "a3180d77a619b58abccf963aeaf27a98b25d3c8f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155757-47db35",
+              "level": "light",
+              "seconds": 2.8,
+              "state": "done",
+              "what": "split-http-parser check split at a3180d77a619"
+            }
+          ],
+          "final": true,
+          "from": "6bc81824c2661961d41e0a4e32f31d085a2cf85f",
+          "reason": "",
+          "tested": "a3180d77a619b58abccf963aeaf27a98b25d3c8f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http-parser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http-parser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:14:13",
-      "worktree": "../http-parser-wt/xapiand/split-http-parser"
+      "updated": "2026-11-21T18:20:21",
+      "worktree": ""
     },
     "split-logger": {
       "accepted": {},
