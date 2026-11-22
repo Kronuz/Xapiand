@@ -26212,6 +26212,8 @@
     "split-check-anchor": {
       "accepted": {},
       "after": [],
+      "base": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+      "branch": "quest/xapiand/split-check-anchor",
       "checks": [
         {
           "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
@@ -26232,6 +26234,7 @@
         "tools/test_split_check.py",
         "tools/testdata/**"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-check-anchor",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26239,9 +26242,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "split_check matches repeated lines by their unique anchors",
-      "updated": "2026-11-21T20:43:42"
+      "updated": "2026-11-21T20:43:56",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-anchor"
     },
     "split-check-sources": {
       "accepted": {},
