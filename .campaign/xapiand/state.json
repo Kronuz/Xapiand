@@ -26728,16 +26728,55 @@
         "tools/testdata/**"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-anchor",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:01:20",
+          "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+          "criteria": {
+            "A1": "261121-220731-d77242 (the test check); fails without: 261121-204458-816e97",
+            "A2": "the `lint` check at fe8491f: 261121-220731-795185; tool tests: 261121-220731-d77242 (passed)",
+            "A3": "261122-000012-53c86b"
+          },
+          "evidence": [
+            {
+              "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+              "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-220731-d77242",
+              "level": "light",
+              "seconds": 79.5,
+              "state": "done",
+              "what": "split-check-anchor check test at fe8491fb9884"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+              "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-220731-795185",
+              "level": "light",
+              "seconds": 1.6,
+              "state": "done",
+              "what": "split-check-anchor check lint at fe8491fb9884"
+            }
+          ],
+          "final": true,
+          "from": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+          "reason": "",
+          "tested": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check matches repeated lines by their unique anchors",
-      "updated": "2026-11-21T20:43:56",
+      "updated": "2026-11-22T00:01:21",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-anchor"
     },
     "split-check-members": {
