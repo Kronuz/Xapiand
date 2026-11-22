@@ -26245,18 +26245,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-docset",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:18:56",
+          "commit": "3df598536e72fe04d38afd70942956abb87ea18c",
+          "criteria": {
+            "A1": "261121-130438-3642f5 (the build-test check), 261121-130438-3642f5 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files), 261121-155752-1e40d2",
+            "A2": "261121-155752-1e40d2 (the split check), 261121-130438-3642f5 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files), 261121-155752-1e40d2",
+            "A3": "261121-130855-ced313 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] `docs/source-layout.md` at docset:2878b0e",
+            "A5": "CI green at 3df598536e72",
+            "A6": "261121-130443-a0ab12 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2878b0e975f0ec22df563cfb2ab68ea1b65285b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130438-3642f5",
+              "level": "light",
+              "seconds": 41.9,
+              "state": "done",
+              "what": "split-docset check build-test at 2878b0e975f0"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "3df598536e72fe04d38afd70942956abb87ea18c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155752-1e40d2",
+              "level": "light",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "split-docset check split at 3df598536e72"
+            }
+          ],
+          "final": true,
+          "from": "cee813528aa9808fe918ae9a1a5eb7ef056663c5",
+          "reason": "",
+          "tested": "3df598536e72fe04d38afd70942956abb87ea18c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../docset",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "docset's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:49",
-      "worktree": "../docset-wt/xapiand/split-docset"
+      "updated": "2026-11-21T18:18:57",
+      "worktree": ""
     },
     "split-enum-reflection": {
       "accepted": {},
