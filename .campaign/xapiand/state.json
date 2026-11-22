@@ -6299,6 +6299,76 @@
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
       "updated": "2026-11-20T05:27:03"
     },
+    "consensus-join-v2": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 60,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "consensus:node-admission"
+      ],
+      "files": [
+        "include/consensus/transport/admission*",
+        "src/transport/admission*",
+        "include/consensus/transport/node_pins*",
+        "src/transport/node_pins*",
+        "include/consensus/transport/tls*",
+        "src/transport/tls*",
+        "include/consensus/transport/hello*",
+        "src/transport/hello*",
+        "include/consensus/transport/node_hello*",
+        "src/transport/node_hello*",
+        "include/consensus/transport/host_transport*",
+        "src/transport/host_transport*",
+        "include/consensus/transport/host_connection*",
+        "src/transport/host_connection*",
+        "test/transport/admission*",
+        "test/transport/tls*",
+        "test/transport/hello*",
+        "test/transport/node_hello*",
+        "fuzz/*join*",
+        "fuzz/*hello*",
+        "fuzz/*token*",
+        "docs/mechanisms/admission.md",
+        "docs/mechanisms/hello.md",
+        "docs/mechanisms/host-connection.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "",
+      "needs": [
+        "node-admission"
+      ],
+      "provides": [
+        "consensus:join-protocol"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
+      "updated": "2026-11-21T17:35:42"
+    },
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
