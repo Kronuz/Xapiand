@@ -24440,8 +24440,8 @@
         "src/database/schema.cc",
         "src/database/schema.h",
         "src/database/schema/**",
-        "harness/split_check.py",
-        "docs/dev/schema-layout.md"
+        "docs/dev/schema-layout.md",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -24482,7 +24482,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T20:02:55",
+      "updated": "2026-11-21T20:43:18",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
