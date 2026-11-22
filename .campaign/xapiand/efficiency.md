@@ -782,3 +782,22 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Waste: one A6 job lost to the cross-repository slot (exit 125, empty log).
 - Queue: 202 queued, 4 running; light slots 80% used (383 of 480 slot-minutes); 84 jobs ended, 12 failed, 23 produced nothing (9 cancelled, 14 skipped). No explorer batch: the light slots are the limit.
 - Host: load 33 (Detent's reader-s6 TSan job at 6.2 cores), 295 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 27.7 h.
+
+### 2026-11-21 20h (hourly)
+
+- Landed (split landing loop, 18:18-18:19): split-constexpr-phf (constexpr-phf:58653a7), split-docset (docset:3df5985), split-enum-reflection (enum-reflection:0c7f34f). A lone landing-record interruption on enum-reflection cleared on the next state write.
+- Agent runs (Opus, high):
+  - group-heal install 136k: the compile break was a test row still overriding the old hook. The install-silent fails-without at 133923-ba5a0d was a false kill: the build failed and its regex matched no test. The suite script now exits 127 on a failed build or zero tests. Main merged by hand (a faultlab conflict).
+  - cluster 152k: A5 recorded (TSan x3, plain, CI green). Membership's admission rule and liveness table built as pure code with a 4,000-history model test. A4 needed consensus additions no quest held, now quest consensus-join-v2 (planned, needs node-admission).
+  - group-catalog fix round 2, 173k so far: "P_H durable 6" was the test's arithmetic; a TSan race in group::blocking() fixed. A Debug-only owner_break abort and a never-succeeding bound close are still in diagnosis.
+- Accepted: journal-lost-bound durability at journal:e4b0100 (F1 by the reviewer's probe and the suite; fails at mutant 6d1502c).
+- Findings:
+  - consensus main went red at 8780e44 because cpp-libraries:12bae98 (shared CI on Ninja) turned on consensus_mutants, which CMake adds only under Ninja. It times out at 1800 s and needs bash, absent on FreeBSD. I first blamed driver-install, wrongly; Detent corrected me and fixes forward (consensus-mutants-per-test).
+  - traceback main has been red on FreeBSD since 11-19 (traceback_hooks aborts). Hunt row filed, and split-traceback lands with --no-ci.
+- Tool gaps to campaign-v3:
+  - fails-without counts a build failure as a kill (msg-19; quest fails-without-honest).
+  - land --merge-main pushes without --push (msg-21; ci-reuse-disjoint-merge, and contributors now merge with git).
+  - verify reuses a gate check that land refuses (msg-22).
+- Rules: quota never decides quality (msg-226), and the pace-down line was removed (msg-229). No slowdown.
+- Queue: 148 queued, 5 running; light slots 92% used (442 of 480 slot-minutes); 82 ended, 7 failed, 5 produced nothing. No explorer batch: the light slots are full.
+- Host: load 4 now (27 over 15 min), 294 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 26.7 h.
