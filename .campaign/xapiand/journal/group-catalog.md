@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204714-4950b9 and 261121-204738-b610c4 (N4 fix and mutant at strata:51a46c47)
+State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204931-3120eb and 261121-204935-bd15d9 (N4 fix and mutant at strata:be285bec)
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -35,9 +35,10 @@ Round 2 findings (diagnosis 261121-172749-984db7, CI at strata:7d57b2a0: every p
 assertions; all fail replace and bare-commit-crash on owner_break and bound):
 - owner_break is CT-R15's "a catalog index was called with no pin held": a reopen whose bundle is
   below the log (replace, bare-commit-crash; borrow and sweep reopen at their bundle) replays on the
-  group's chore after open_payload returns, slot {0, open}, no pin. Fixed in strata:51a46c47
-  (`strata::payload_work`, ruling 10). Jobs: 261121-204714-4950b9 (pin-check, replace,
-  bare-commit-crash in Debug), mutant payload-unmarked 261121-204738-b610c4 (must fail pin-check).
+  group's chore after open_payload returns, slot {0, open}, no pin. Fixed in strata:be285bec
+  (`strata::payload_work` around each group chore item, ruling 10 amended). Jobs:
+  261121-204931-3120eb (pin-check, replace, bare-commit-crash in Debug), mutant payload-unmarked
+  261121-204935-bd15d9 (the group's mark dropped; must fail pin-check).
 - bound: the journal's hypothesis is refuted (0 maps, probe 0). The slot ends `free` (Linux ASan,
   TSan) or `failed` with failures 8 (FreeBSD, macOS, gcc): it was closed and reopened, and the
   reopens failed on EMFILE, so begin_bound_close (owed only) never holds. Who closed it is open:
@@ -59,6 +60,10 @@ group_catalog cases failed-open, attach, sweep and bare-commit-crash; not rerun.
 Nothing.
 
 ## Messages
+
+- Lead's ruling on ruling 10 (host side): done in strata:be285bec. The mark moved from the
+  test's chore thread into the group's drain around each item; the mutant now drops that mark.
+  No chore work outside a strata item calls the index (every `ix_` call in group.hh is in one).
 
 - msg-201 (mine to the lead, answered by the lead): (1) file set widened to the four group tests
   and mutants.py; their migration is its own commit (construction sites, the footprint's host-side
@@ -145,12 +150,14 @@ exemption, N5 (whether the sweep commits a group's uncommitted applies: the owne
 
 ## Rulings I made
 
-10. (Round 2) N4 made real: `strata::payload_work` (catalog.hh) marks a thread as running a slot
-   payload's work, and CT-R15's pin_held passes it as a pin. Sound because H holds the slot until
-   close_payload and its calls take the write lease that demotion, wake and close chores need. The
-   host wraps H's chore in it (the test's chore thread; Xapiand's journal-replaces-wal must do the
-   same: a host-side addition to this quest's own hook contract, for the lead to confirm). A real
-   chore pin per group item would need a group::config hook: not taken.
+10. (Round 2, amended on the lead's ruling) N4 made real: `strata::payload_work` (catalog.hh)
+   marks a thread as running a slot payload's work, and CT-R15's pin_held passes it as a pin. The
+   group's drain holds it around each item it runs (`w->run()`, group.hh drain), strata:be285bec,
+   so it covers apply, the replay, capture, commit, recovery and reads exactly; no host wraps
+   anything (strata:51a46c47's test-thread mark is gone). Sound because H holds the slot until
+   close_payload and its calls take the write lease the catalog's demotion, wake and close chores
+   need. Every `ix_` call in group.hh runs inside a chore item; the host's direct index calls (the
+   test's bare_commit, pin-check's refresh) stay outside the mark and are checked as before.
 7. (Durability round) A failed open sets `closing_` and tears down fully, so a later close()
    returns at once rather than throwing `group_fenced`; no test relied on the throw.
 8. R1's and R2's deterministic tests check the loop's table on the loop from open_payload (and
