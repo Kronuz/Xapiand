@@ -26332,18 +26332,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-enum-reflection",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:16",
+          "commit": "0c7f34f01c3c8af53211d338dd20a59f45d905fe",
+          "criteria": {
+            "A1": "261121-130303-a6714d (the build-test check), 261121-130303-a6714d (passed at 6227a072b2f1; only 1 merge from main since, none touching its files), 261121-155753-e9b229",
+            "A2": "261121-155753-e9b229 (the split check), 261121-131435-def0ec (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130315-050173 (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at enum-reflection:6227a07: lists `enum.h`, kept whole, with its sections and why",
+            "A5": "CI green at 0c7f34f01c3c",
+            "A6": "261121-130318-1c55be (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6227a072b2f114136c91d0a43108b1b0409474b6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130303-a6714d",
+              "level": "light",
+              "seconds": 59.8,
+              "state": "done",
+              "what": "split-enum-reflection check build-test at 6227a072b2f1"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "0c7f34f01c3c8af53211d338dd20a59f45d905fe",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155753-e9b229",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-enum-reflection check split at 0c7f34f01c3c"
+            }
+          ],
+          "final": true,
+          "from": "36284254e37340ffca9fd642b986682f19cee785",
+          "reason": "",
+          "tested": "0c7f34f01c3c8af53211d338dd20a59f45d905fe"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../enum-reflection",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "enum-reflection's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:55",
-      "worktree": "../enum-reflection-wt/xapiand/split-enum-reflection"
+      "updated": "2026-11-21T18:19:18",
+      "worktree": ""
     },
     "split-faultlab": {
       "accepted": {},
