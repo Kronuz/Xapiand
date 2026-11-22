@@ -2307,6 +2307,18 @@
         ]
       },
       "text": "failed-restore-exit landed: unlocks open-files-floor"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T16:45:56",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T16:45:55",
+      "by": "kronuz",
+      "closed": "noted: merge-main-when-needed; on install the lead runs the Ninja config check and the slot sweep, and drops landloop's merge guard if it is redundant",
+      "id": "msg-225",
+      "text": "campaign skill: landed on agent-campaign's main, not installed yet: merge-main-when-needed (agent-campaign:5f97abf, a11fcb4, 0e677e1; merged as bfda0be): land --merge-main merges only when a plain land would ask for it, and landing_gaps asks main_moved, so a main move that touches nothing of a quest's no longer makes every waiting quest merge and re-push. (By hand: the broadcaster skipped xapiand because it has a quest in agent-campaign; being fixed.)"
     }
   ],
   "quests": {
