@@ -835,3 +835,17 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:d8e4eea is installed (verify-land-agree, merge-main-when-needed). Ninja sweep: 0 Makefiles trees in 393 slots.
 - Queue: 110 queued, 6 running; light slots 71% used (339 of 480 slot-minutes); 44 ended, 1 failed, 6 cancelled.
 - Host: load 19 (it was 45), 289 GiB free. Quota 91% weekly, burn 0.63%/h, reset in 24.7 h (run-out projected about 10 h before it).
+
+### 2026-11-21 23h (hourly)
+
+- Landed: split-traceback (traceback:a6690d9, record Xapiand:181ef3c), without CI. FreeBSD's traceback_hooks abort predates the split, and hunt row 404 is now the quest hunt-traceback-freebsd.
+- Agent runs:
+  - schema-split contributor, Opus high, 121k. The glob line is its own commit, Xapiand:8d85af0; the suite, ctest -N, headers-alone and fnsizes jobs are queued.
+  - group-catalog fix round 2, Opus high, 220k. pin-check is fixed by strata marking its own chore work (ruling 10 amended: no host wraps anything; strata:be285be). bound is still open: a slot is closed by something unknown, then reopens fail on EMFILE. Its diagnosis job is queued.
+  - group-heal install fix, Opus high, 196k. The cause was the test, not install. group_voters had never compiled before, and its network reordered snapshot frames, which the snapshot channel's ordered-transport contract (consensus snapshot_channel.h:33) forbids. Its 60 s snapshot_timeout also outlasted the 20 s settle. Fixed as test-only at strata:cd2a4a4; the plain run and 9 mutants are rerunning.
+  - hunt-traceback-freebsd, Opus high, 123k. dump_callstacks compared frames past the recorded count (traceback.cc:848), reading uninitialized locals, so FreeBSD's short main stack read as idle. Fixed at traceback:ee5debb, with a poisoned-stack test meant to fail without the fix on macOS.
+- Lead fixes: split-xapiand-src failed to compile at Xapiand:8d73561 (serialize_scalar.cc:289, strings::lower). Xapiand:f32e6e6 had dropped query_dsl.h, which brought strings:: in transitively. Xapiand:c0adc7f includes xapiand_strings.hh in both pieces that use it. open-files-floor's coverage job timed out at 30 min while still compiling and was rerun at 90.
+- Mutant and fails-without checked by log: open-files-floor's master main.cc fails 3 of 97 named checks (test_coverage_main.cc:525, 543, 575).
+- Tool: lead-driver (agent-campaign:f958fe7) lands; it installs after its CI. msg-234 was closed.
+- Queue: 101 queued, 6 running; light slots 82% used (396 of 480 slot-minutes); 102 ended, 10 failed, 28 produced nothing (17 cancelled, 10 skipped, 1 timeout). No explorer batch: no idle slots.
+- Host: load 19, 287 GiB free. Quota 93% weekly, burn 0.64%/h, reset in 23.7 h (run-out projected about 13 h before it).
