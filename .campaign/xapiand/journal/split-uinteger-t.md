@@ -30,7 +30,7 @@ Nothing. AGENTS.md's repo map line for `test/property.cc` could gain "its checks
 | A4 | [artifact] docs/source-layout.md: the 8 test pieces, and uinteger_t.hh kept whole with why |
 | A5 | CI on the pushed branch |
 | A6 | job 261121-121044-660a41 at 6815126e3170: the eight test/property/*.hh each included twice, `c++ -std=c++17 -fsyntax-only -I. -Itest` (tools/selfcontained.sh skips test/ by default, so the loop is the job command); earlier job 261121-115721-e5c431 passed at 5cad82f |
-| A7 | the lead's read |
+| A7 | lead, 2026-11-21: read the split; property.cc split by topic into self-contained headers kept in one TU (static linkage kept, two CTest targets build property.cc; reason in docs/source-layout.md); accepted |
 
 ## Result
 
