@@ -33045,6 +33045,50 @@
       "updated": "2026-11-17T02:52:51",
       "worktree": "../journal-wt/xapiand/turn-seal"
     },
+    "uinteger-restructure": {
+      "accepted": {},
+      "after": [
+        "split-check-members"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base master uinteger_t.hh uinteger_t",
+          "level": "light",
+          "minutes": 10,
+          "name": "members"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "uinteger_t.hh",
+        "uinteger_t/**",
+        "docs/**",
+        "ARCHITECTURE.md",
+        "README.md",
+        "CHANGELOG.md",
+        "AGENTS.md",
+        "bench/ab.sh",
+        "bench/common.sh",
+        "CMakeLists.txt",
+        "test/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../uinteger_t",
+      "risk": "normal",
+      "status": "planned",
+      "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
+      "updated": "2026-11-21T22:05:44"
+    },
     "unpin-after-kick": {
       "accepted": {
         "correctness": {
