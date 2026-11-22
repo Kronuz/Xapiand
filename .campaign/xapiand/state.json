@@ -27671,18 +27671,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-storage",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T22:17:30",
+          "commit": "35a0c15ee678e24eeff6e6d29a552032f18dd69d",
+          "criteria": {
+            "A1": "261121-122326-e5a752 (the build-test check); 261121-122326-e5a752 (the build-test check); job 261121-122326-e5a752 (build-test)",
+            "A2": "261121-155804-60211a (the split check), 261121-122326-e5a752 (passed at 53d325543622; only 1 merge from main since, none touching its files), 261121-155804-60211a (passed at 53d325543622; only 1 merge from main since, none touching its files)",
+            "A3": "261121-122336-a5af06 (passed at 53d325543622; only 1 merge from main since, none touching its files)",
+            "A4": "docs/source-layout.md at storage:53d3255",
+            "A5": "CI green at 35a0c15ee678",
+            "A6": "261121-170219-d2f630 (passed at 53d325543622; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; storage_defs.h holds the hooks and definitions Storage<> builds on; opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "53d325543622292962c5fbf256f63348f5eae825",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-122326-e5a752",
+              "level": "light",
+              "seconds": 68.5,
+              "state": "done",
+              "what": "split-storage check build-test at 53d325543622"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "53d325543622292962c5fbf256f63348f5eae825",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155804-60211a",
+              "level": "light",
+              "seconds": 1.9,
+              "state": "done",
+              "what": "split-storage check split at 53d325543622"
+            }
+          ],
+          "final": true,
+          "from": "a582157db465f54c19b719ef2671528063beaf18",
+          "reason": "",
+          "tested": "35a0c15ee678e24eeff6e6d29a552032f18dd69d"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../storage",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "storage's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:21:49",
-      "worktree": "../storage-wt/xapiand/split-storage"
+      "updated": "2026-11-21T22:17:32",
+      "worktree": ""
     },
     "split-strict-stox": {
       "accepted": {},
