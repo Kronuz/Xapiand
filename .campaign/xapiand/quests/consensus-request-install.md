@@ -5,32 +5,49 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+A replica whose state is damaged or lost gets it back through install's existing path. A follower
+asks its leader for an install with a Driver call, the leader treats it as below its base, and the
+snapshot channel ships an image that becomes the follower's new base. `Driver::repair(b)` rewinds
+only within [own base, own commit], so it can't recover lost files; this closes that gap with no new
+wire beside the request itself. The Driver also exposes `Core::witness_bound()` (core.h:265), so a
+witness can compact its log (D9). group-heal's `repair` task (strata) builds on both (ruling in
+.campaign/xapiand/quests/group-heal.md, Decisions).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 A follower's install request, from a follower whose log or state is behind or damaged, makes
+  its leader ship one install through the snapshot channel, and the follower ends at the image's
+  base with its delivered ranges intact: tests in test/driver_install_request_test.cc (the `suite`
+  check)
+- A2 A request from a voter that is current (its log matches the leader's at its commit) is
+  refused, or answered as a no-op, and never makes the leader ship an image: a test that sends the
+  request repeatedly from a current voter and counts zero transfers, plus a mutant without the check
+  that a named test kills (Detent's lead, msg-235: no full-image loop from a confused follower)
+- A3 The request survives leader change and races: a leader that loses leadership mid-install, a
+  second request while one install is in flight (one install), and a request to a non-leader
+  (refused with a redirect or a named error): tests in the `suite` check
+- A4 `Driver::witness_bound()` returns Core's bound, and a witness that truncates through it keeps
+  every record it must hold: a test, plus a mutant truncating one past the bound that a named test
+  kills
+- A5 [artifact] `docs/mechanisms/install-request.md` describes the request, the current-voter
+  refusal, the races and the cost (one image per real need)
+- A6 The `asan` and `tsan` checks pass, and CI is green on every platform: [ci]
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+- Provides `consensus:install-request`: the Driver call, its refusal reasons and the request's
+  frame, plus `witness_bound()`. Bytes may change until the first release (formats open until
+  release).
+- Detent consumes the Driver. Its lead reviews the API (the header diff) before the body is written
+  (msg-235), and consensus-driver-flow and driver-pipeline order after this quest.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: Detent's lead took the default (msg-235): a quest of ours in consensus, ordered
+  after detent:consensus-quiesce-election-stall (fix round 1 of 2 in core.h's wake rule), not
+  folded into driver-pipeline.
+- Lens: correctness, with the protocol's races and the image loop as its questions.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: a protocol change in a shared library.
