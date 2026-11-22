@@ -26507,6 +26507,45 @@
       "updated": "2026-11-21T12:30:50",
       "worktree": "../task-wt/xapiand/split-task"
     },
+    "split-tooling": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+          "level": "light",
+          "minutes": 30,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+          "level": "light",
+          "minutes": 30,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/selfcontained.sh",
+        "tools/test_selfcontained.sh",
+        "tools/fnsizes*",
+        "tools/test_fnsizes*",
+        "tools/testdata/**",
+        "docs/SPLITTING.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "Split tooling: function sizes on Mach-O, macro-body locals, test trees, the ctest -N recipe",
+      "updated": "2026-11-21T16:21:11"
+    },
     "split-traceback": {
       "accepted": {},
       "after": [
