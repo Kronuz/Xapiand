@@ -1,6 +1,6 @@
 # group-heal--install: journal
 
-State: waiting on jobs 261121-173201-4aa79d 261121-173206-d6917f 261121-173210-076626 261121-173215-20e4f0 261121-173219-70b405 261121-173223-4bca51 261121-173227-05623f 261121-173231-b9c5e6 261121-173235-40775c 261121-173239-97acf3
+State: merged into quest/xapiand/group-heal (head strata:cd2a4a40); its evidence is the quest's step-1 jobs (261121-210217-362497 and the rest, in group-heal's journal). Nothing left on this task.
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
