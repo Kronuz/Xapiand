@@ -1,0 +1,57 @@
+# split-strict-stox: journal
+
+State: waiting on jobs 261121-145044-387ce1 (split_check, fixed tool, at merged HEAD ff3286d) 261121-145047-63724b (rerun of superseded ctest -N job; c50931 is the cited A3)
+Quest: .campaign/xapiand/quests/split-strict-stox.md (the lead's; never edit it)
+
+## Doing
+
+Queued at strict-stox:5a7e44b: build-test (A1) 261121-130207-7a60bd; split_check from the
+split-check-sources worktree (A2) 261121-131328-fe03fb; ctest -N diff vs d3eaf32, test lines only
+(A3) 261121-131329-c50931.
+
+Failed, superseded:
+- 261121-130208-b3f0bb (split check, landed tool): 18 errors, all lines of docs/source-layout.md,
+  which the landed split_check reads as code; 0 warnings, 1 note (strict_stox.hh over 1,000 lines,
+  kept whole by R1). Context item 4: the split-check-sources tool ignores non-C/C++ files; the lead
+  reruns the check with the landed tool once it lands.
+- 261121-130225-309d93 (ctest -N): the diff was only the build-tree paths (ctn-base vs ctn-head) in
+  the output lines; resubmitted comparing the `Test #` and `Total Tests` lines only.
+
+## Next
+
+0. Main merged (ff3286d). Check 387ce1 for warnings and answer them here; none expected (no moved code).
+
+1. When the jobs pass, paste `campaign brief`'s Evidence table and set State to ready for review.
+
+## Blocked on
+
+Nothing.
+
+## Evidence
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261121-130207-7a60bd (passed) |
+| A2 | 261121-131328-fe03fb (passed), 261121-145044-387ce1 (fixed checker at merged HEAD, pending) |
+| A3 | 261121-131329-c50931 (passed) |
+| A4 | `docs/source-layout.md` at strict-stox:5a7e44b |
+| A5 | CI at 5a7e44b; main merged into branch at ff3286d (ci.yml only), push pending CI |
+| A6 | 261121-130228-8f04e7 passed: "headers new since d3eaf32: none" (no new headers: the job lists headers added since d3eaf32 and runs selfcontained.sh on them if any) |
+| A7 | lead's read |
+
+## Result
+
+No split. `strict_stox.hh` (1,510 lines) stays whole; `docs/source-layout.md` (new) says why and
+lists the other large files (none over 1,000 lines: tools/verify.cc 995, test/slow_test.cc 862).
+
+## Rulings I made
+
+- R1 `strict_stox.hh` stays one file: the library's contract is a single header (README "One
+  header, no dependencies"; "Without CMake, copy `strict_stox.hh` onto your include path"), and
+  SPLITTING.md keeps a single-file contract unless the owner decides otherwise. Its layers also
+  share macros it defines and `#undef`s at its end. The owner can still choose a split; the
+  natural cuts would be the integer fast path, the Eisel-Lemire path with its generated 5^q table,
+  the big-integer slow path, and the public `Stox` API.
+- R2 Open branches: none edit `strict_stox.hh` (only origin/main; local codex/parser-fuzz is
+  merged into main).
+- R3 A2 has no moved lines to check; the split job runs over a diff that only adds the note.

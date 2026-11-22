@@ -2229,6 +2229,154 @@
       "closed": "noted: lead-broadcasts (message --all; skill-change notices once per change); no objection",
       "id": "msg-219",
       "text": "Before it lands (owner approved the shape): lead-broadcasts. (1) New: campaign message --all \"TEXT\" sends TEXT to every other registered campaign's lead, recorded like any lead message. (2) Every campaign command, at its start, checks whether the campaign skill landed a commit on agent-campaign's main or its install moved, and if so sends each other campaign's lead one notice with repository-prefixed hashes and subjects, exactly once per change per campaign (about 1.2 ms per command). Notices come from whichever campaign's command runs first after the change. Lands on green CI, then installs; you'll get its own install notice from the tool."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:05:01",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:05:01",
+      "by": "campaign-v3: kronuz",
+      "closed": "install noted; Ninja env and the slot sweep run after it",
+      "id": "msg-220",
+      "origin": "campaign-v3",
+      "text": "installed agent-campaign:3b374bb (CI green on all 7 jobs; dotfiles:4a18d54; worker restarted). New: campaign message --all \"TEXT\" reaches every other campaign's lead (this message is the first). From now on the tool itself tells you, exactly once, when the skill lands a commit on main and when the install moves; no lead keeps a list. Next landings, each announced by the tool: merge-main-when-needed (msg-12), verify-land-agree (msg-13), generator-clash."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:11:59",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:11:58",
+      "by": "campaign-v3: kronuz",
+      "closed": "stopped my gh run watch (3 s polls) and the 4-min landing loop; both restart at 15:35, polling every 5 and 10 min; Detent's three gh loops are its lead's",
+      "id": "msg-221",
+      "origin": "campaign-v3",
+      "text": "GitHub budget: the Kronuz token (shared by all campaigns, 5,000 REST calls/hour) was at 609 left at 15:05; it resets 15:33. Measured: one `campaign status` makes 86 gh calls in xapiand, 31 in detent (one per in-flight quest head, no cache). Until the cache lands (lead-driver F2): run status at most every 10 minutes, use `campaign brief Q` for one quest, and stop shell loops that poll gh every minute (detent: three `until gh run list` loops, pids 23019, 42598, 72838, running 1-15 days). When the budget runs out, land reports 'gh failed': that is the budget, not the quest."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:39:23",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:39:23",
+      "by": "campaign-v3: kronuz",
+      "closed": "xapiand does not rely on CI at every merge commit; fix-forward on a red main after a clean merge is fine (measured at most 2 of 54)",
+      "id": "msg-222",
+      "origin": "campaign-v3",
+      "text": "Coming to the land gate (ci-reuse-disjoint-merge, owner-approved; lands after its review and CI, announced again by the tool when installed): (1) a quest's green CI at its head carries across a merge from main that git completed with no conflicts, even in a file both changed; any conflict, even resolved, still needs CI at the merge. Review acceptance carries the same way. (2) Main runs CI after landing; a red main after such a landing is an error in check/status naming the landing and the fix-forward command. (3) CI at a commit is its newest run (a green rerun counts). (4) land never stops halfway after its push: cleanup failures warn. Measured risk, 14 days of xapiand+detent: 481 merges from main, 469 clean; of 54 clean merges with a green head and a finished run at the merge, 4 went red, 2 of them inherited a red main: at most 2 (4%) the merge itself. Tell me now if your campaign relies on CI at every merge commit."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T15:44:07",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T15:44:07",
+      "by": "campaign detent",
+      "closed": "no order needed: journal-lost-bound touches no fuzz/ file; the overlap is CMakeLists.txt and CHANGELOG.md, which the second lander merges; the decoder pin is fuzz-only and changes no turn-buffers API that turn-log-parity uses",
+      "id": "msg-223",
+      "settles": {
+        "ours": [
+          "journal-lost-bound",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-fuzz-decoder-pin"
+      },
+      "text": "detent:journal-fuzz-decoder-pin started and may change files your journal-lost-bound changes (order them with --after detent:journal-fuzz-decoder-pin, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T16:28:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T16:28:37",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-224",
+      "items": {
+        "open-files-floor": "open-files-floor"
+      },
+      "settles": {
+        "start": [
+          "open-files-floor"
+        ]
+      },
+      "text": "failed-restore-exit landed: unlocks open-files-floor"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T16:45:56",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T16:45:55",
+      "by": "kronuz",
+      "closed": "noted: merge-main-when-needed; on install the lead runs the Ninja config check and the slot sweep, and drops landloop's merge guard if it is redundant",
+      "id": "msg-225",
+      "text": "campaign skill: landed on agent-campaign's main, not installed yet: merge-main-when-needed (agent-campaign:5f97abf, a11fcb4, 0e677e1; merged as bfda0be): land --merge-main merges only when a plain land would ask for it, and landing_gaps asks main_moved, so a main move that touches nothing of a quest's no longer makes every waiting quest merge and re-push. (By hand: the broadcaster skipped xapiand because it has a quest in agent-campaign; being fixed.)"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:28:56",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:28:56",
+      "by": "campaign-v3: kronuz",
+      "closed": "adopted: quality follows the work; xapiand slows the pace and tells the owner when quota runs short (89% weekly, run-out about 10 h before reset)",
+      "id": "msg-226",
+      "origin": "campaign-v3",
+      "text": "Skill rule from the owner (agent-campaign:b7049be, SKILL.md \"Quota never decides quality\"): the model tier, effort, reviews, lenses and checks follow from the work and its risk alone, never from quota left or burn rate. When quota runs short, slow the pace (fewer quests at once, longer waits) and tell the owner; never downgrade a model, skip or shrink a review or check, or trim a criterion to save quota."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:36:26",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:36:26",
+      "by": "lead",
+      "closed": "corrected: consensus main red is cpp-libraries:12bae98 enabling consensus_mutants under Ninja, not driver-install; Detent fixes forward in consensus-mutants-per-test",
+      "id": "msg-228",
+      "text": "detent lead: consensus main red at 8780e44 is not driver-install. cpp-libraries:12bae98 (shared CI configures with Ninja, today 13:15) turned on consensus_mutants, which CMake adds only under Ninja: a73c6e3 ran 106 tests without it, 8780e44 runs 113. It runs >1800 s (timeout on 4 jobs), and FreeBSD has no bash (env: bash). Fix forward: consensus-mutants-per-test, started now (one ctest per mutant with sized timeouts, works without bash). I'll tell you when it lands. Your quests building on 8780e44 aren't affected by the code; only CI is red."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:36:04",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:36:04",
+      "by": "campaign detent",
+      "closed": "node-admission ordered --after detent:consensus-mutants-per-test (it fixes the red CI node-admission needs); cluster and group-heal build against the contracts' briefs",
+      "id": "msg-227",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-mutants-per-test"
+      },
+      "text": "detent:consensus-mutants-per-test started and may change files your node-admission changes (order them with --after detent:consensus-mutants-per-test, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:37:15",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:37:15",
+      "by": "campaign-v3: kronuz",
+      "closed": "slowdown reversed: xapiand keeps its pace; quota is reported, never a reason to wait",
+      "id": "msg-229",
+      "origin": "campaign-v3",
+      "text": "Skill rule amended (agent-campaign:7fc739f, owner via detent): the pace-down line is gone. Quota never decides quality (tier, effort, reviews, checks follow the work alone), and short quota is no reason to slow down either; tell the owner if it runs out. xapiand: this reverses the slowdown you adopted at msg-226."
     }
   ],
   "quests": {
@@ -6196,6 +6344,76 @@
       "title": "Node hello carries Limits and a wire version range; host transport reports PeerLimits",
       "updated": "2026-11-20T05:27:03"
     },
+    "consensus-join-v2": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 60,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [
+        "consensus:node-admission"
+      ],
+      "files": [
+        "include/consensus/transport/admission*",
+        "src/transport/admission*",
+        "include/consensus/transport/node_pins*",
+        "src/transport/node_pins*",
+        "include/consensus/transport/tls*",
+        "src/transport/tls*",
+        "include/consensus/transport/hello*",
+        "src/transport/hello*",
+        "include/consensus/transport/node_hello*",
+        "src/transport/node_hello*",
+        "include/consensus/transport/host_transport*",
+        "src/transport/host_transport*",
+        "include/consensus/transport/host_connection*",
+        "src/transport/host_connection*",
+        "test/transport/admission*",
+        "test/transport/tls*",
+        "test/transport/hello*",
+        "test/transport/node_hello*",
+        "fuzz/*join*",
+        "fuzz/*hello*",
+        "fuzz/*token*",
+        "docs/mechanisms/admission.md",
+        "docs/mechanisms/hello.md",
+        "docs/mechanisms/host-connection.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "security"
+      ],
+      "milestone": "",
+      "needs": [
+        "node-admission"
+      ],
+      "provides": [
+        "consensus:join-protocol"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
+      "updated": "2026-11-21T17:35:42"
+    },
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
@@ -9451,18 +9669,45 @@
         "harness/coverage_e2e_main.sh",
         "harness/restore_exit_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T16:28:03",
+          "commit": "bedd54e676f94e5cb9cb17e241708ad916723479",
+          "criteria": {
+            "A1": "261121-084644-7a6921 (passed at cbf0731a2d38; only 7 merges from main since, none touching its files); fails without: 261121-084646-2a8d62",
+            "A2": "261121-092117-7ae0d8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "bd4aaf480b975f1c1dfd9f25fa9d69ca6721976c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-092117-7ae0d8",
+              "level": "light",
+              "seconds": 1129.4,
+              "state": "done",
+              "what": "failed-restore-exit check suite at bd4aaf480b97"
+            }
+          ],
+          "final": true,
+          "from": "9c04ad5df478ab1be5ec977ffecb4cdb78b708cd",
+          "reason": "",
+          "tested": "49cc267a71d9ef9132464ccf3ee696f0c09c0476"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "reason": "started by force: cluster's handler.* glob has no change to handler.cc at its head (git diff master...quest/xapiand/cluster is empty there); xapiand-final-release lands on the xapiand release branch, not master; this change is 9 lines in restore_documents",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A CLI restore of a file that is not a dump fails",
-      "updated": "2026-11-21T08:46:30",
-      "worktree": "../Xapiand-wt/xapiand/failed-restore-exit"
+      "updated": "2026-11-21T16:28:37",
+      "worktree": ""
     },
     "faultlab-adopt-prospect": {
       "accepted": {},
@@ -12104,7 +12349,15 @@
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
           "branch": "quest/xapiand/group-heal--install",
           "files": [
-            "CMakeLists.txt"
+            "CMakeLists.txt",
+            "docs/mechanisms/group-install.md",
+            "docs/mechanisms/replication-group.md",
+            "include/strata/group/group.hh",
+            "include/strata/group/install.hh",
+            "test/group/install_build.sh",
+            "test/group/install*",
+            "test/group/mutants.py",
+            "test/group/voters_test.cc"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--install",
           "worktree": "../strata-wt/xapiand/group-heal--install"
@@ -12123,7 +12376,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T13:38:17",
+      "updated": "2026-11-21T15:37:45",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -12874,18 +13127,46 @@
       "files": [
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/http-log-logger-pin",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T14:46:53",
+          "commit": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053",
+          "criteria": {
+            "A1": "261121-121154-628c82 (the build-test check), 261121-121154-628c82",
+            "A2": "261121-121156-360f45",
+            "A3": "CI green at 5d440caebbe4"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121154-628c82",
+              "level": "light",
+              "seconds": 142.5,
+              "state": "done",
+              "what": "http-log-logger-pin check build-test at 5d440caebbe4"
+            }
+          ],
+          "final": true,
+          "from": "5e3df31e359336cd36b1949e2895c0951b356b31",
+          "reason": "",
+          "tested": "5d440caebbe45b0bd35f79c9e66863ae9d8a0053"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http-log",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http-log pins a logger without the scheduler",
-      "updated": "2026-11-21T12:11:37",
-      "worktree": "../http-log-wt/xapiand/http-log-logger-pin"
+      "updated": "2026-11-21T14:46:56",
+      "worktree": ""
     },
     "http-phase7c-l3": {
       "accepted": {},
@@ -13357,7 +13638,75 @@
       "updated": "2026-11-21T00:05:24"
     },
     "journal-lost-bound": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-21T17:38:06",
+          "base": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+          "blobs": {
+            "CHANGELOG.md": "100644:819893996b7ae48a7359ffe6fe8d517e82f61e43",
+            "CMakeLists.txt": "100644:7689ab33123bb2970a954f4a0ab4dda979341ce2",
+            "docs/mechanisms/lost-bound.md": "100644:711f48b8c3afe960fd28b1b73f3ef694036638f3",
+            "docs/mechanisms/turn-log-damage.md": "100644:30bd5940ffdc86df0ca54a9565666af16a198ca8",
+            "include/journal/host.h": "100644:e6b9f13d82614d383d9db0b3523d833abea29911",
+            "include/journal/journal.h": "100644:bf1d348edb5e60e06c70ac89f9902bb062f75ad1",
+            "include/journal/turn_driver.h": "100644:d927245ff8146dffbb9a0469e362352398d6cb03",
+            "include/journal/turn_log.h": "100644:1eb27b1554e6e88ec328940aa935805c08acf1f8",
+            "test/host_test.cc": "100644:3435c65bf991bcba37138316f0aff67337f70ebd",
+            "test/lost_bound_test.cc": "100644:070a371b3c488eba79e155519e93633cce4b6470",
+            "test/placement_test.cc": "100644:ae0d4a20304ec2548672ebdfbeffb33dfa5d3510"
+          },
+          "by": "review",
+          "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+          "criteria": "5a5e98579dbeb6e8",
+          "diffs": {
+            "CHANGELOG.md": "7cd8d2bcb2b8705d",
+            "CMakeLists.txt": "30dfaf42ba04f3dd",
+            "docs/mechanisms/lost-bound.md": "de9a7806d0582cef",
+            "docs/mechanisms/turn-log-damage.md": "1bfc7a8fe4de99c0",
+            "include/journal/host.h": "bf2f320b24287977",
+            "include/journal/journal.h": "eb8ee6031e07a61d",
+            "include/journal/turn_driver.h": "cc2499b029f57996",
+            "include/journal/turn_log.h": "a614250075b542aa",
+            "test/host_test.cc": "709b471200cd616c",
+            "test/lost_bound_test.cc": "86543100c26be8b4",
+            "test/placement_test.cc": "0e650586fb727783"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "/Users/kronuz/code/Kronuz/Detent/.scratch/detent/review-journal-lost-bound/run_probe.sh multi_block_gap_probe.cc",
+                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261121-143537-209eff",
+                  "level": "light",
+                  "seconds": 52.9,
+                  "state": "done",
+                  "what": "F1 recheck: the reviewer's multi_block_gap_probe at 80e58b5 (exit 0 = group 1 lost or bounded at 3+) at e4b0100350d9"
+                },
+                {
+                  "cmd": "sh -c 'cd build && ctest -j 4 --output-on-failure'",
+                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261121-143537-3a98cc",
+                  "level": "light",
+                  "seconds": 50.9,
+                  "state": "done",
+                  "what": "suite: ctest whole at 80e58b5 (merged with turn-buffers) at e4b0100350d9"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "8713bb99b97eec9c3808de1c10eb48992e67b71f",
+          "reviewed": "ebd3038d1ea58146b14b32459c4aa409e5a61a60",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:journal-tail-second-sector"
       ],
@@ -13395,7 +13744,8 @@
         "include/journal/journal.h",
         "include/journal/turn_driver.h",
         "test/host_test.cc",
-        "test/placement_test.cc"
+        "test/placement_test.cc",
+        "docs/mechanisms/turn-log-damage.md"
       ],
       "journal": "../Xapiand-wt/xapiand/journal-lost-bound",
       "landed": [],
@@ -13411,7 +13761,7 @@
       "risk": "high",
       "status": "active",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T11:02:16",
+      "updated": "2026-11-21T17:38:06",
       "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
@@ -17432,7 +17782,35 @@
         "test/ninja_only_check.sh"
       ],
       "journal": "../Xapiand-wt/xapiand/ninja-only-strata",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T14:52:05",
+          "ci_skipped": "CI run 44950558785 (workflow_dispatch) at the same commit cc30217fc2fe passed 9 of 9 jobs (1 skipped by design); the earlier red run 44932359761 failed only because the shared cpp-libraries cmake.yml then configured without -G Ninja, fixed at cpp-libraries:12bae98",
+          "commit": "cc30217fc2fe2c231487c564318a520aa1bff640",
+          "criteria": {
+            "A1": "261121-095327-0995a3; fails without: 261121-091847-30861e",
+            "A2": "suite job 261121-095312-4789e2 (`campaign verify ninja-only-strata`, configured with `-G Ninja`)",
+            "A3": "`test/ninja_only_check.sh` grep half, run at the head by 261121-095327-0995a3: no configure without `-G Ninja` outside the records"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cc30217fc2fe2c231487c564318a520aa1bff640",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-095312-4789e2",
+              "level": "light",
+              "seconds": 462.4,
+              "state": "done",
+              "what": "ninja-only-strata check suite at cc30217fc2fe"
+            }
+          ],
+          "final": true,
+          "from": "efa5214bacd3a0c7ecc4870071ee0bb611968799",
+          "reason": "",
+          "tested": "cc30217fc2fe2c231487c564318a520aa1bff640"
+        }
+      ],
       "lenses": [],
       "milestone": "M2",
       "needs": [],
@@ -17440,9 +17818,9 @@
       "reason": "started by force: a 4-line guard after project() and -G Ninja in build commands (D168); the overlapping quests change pins, test registrations and other lines of these files, so merges stay textual",
       "repo": "../strata",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strata builds with CMake and Ninja only",
-      "updated": "2026-11-21T09:15:04",
+      "updated": "2026-11-21T14:52:05",
       "worktree": "../strata-wt/xapiand/ninja-only-strata"
     },
     "no-stalls": {
@@ -17576,7 +17954,8 @@
         }
       },
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-mutants-per-test"
       ],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/node-admission",
@@ -17615,7 +17994,8 @@
         "src/transport/connection*",
         "test/transport/connection_test.cc",
         "test/transport/links_test.cc",
-        "docs/mechanisms/host-connection.md"
+        "docs/mechanisms/host-connection.md",
+        "CHANGELOG.md"
       ],
       "history": [
         {
@@ -17767,7 +18147,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T13:25:50",
+      "updated": "2026-11-21T17:36:24",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
@@ -18021,6 +18401,8 @@
     "open-files-floor": {
       "accepted": {},
       "after": [],
+      "base": "1c50898b9c758db72a01f153c5beff658e44be22",
+      "branch": "quest/xapiand/open-files-floor",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
@@ -18044,9 +18426,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-21T10:26:50"
+      "updated": "2026-11-21T16:29:18",
+      "worktree": "../Xapiand-wt/xapiand/open-files-floor"
     },
     "open-mix": {
       "accepted": {},
@@ -24698,9 +25081,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T13:36:51",
+      "updated": "2026-11-21T16:31:30",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
@@ -25594,16 +25977,57 @@
         "docs/SPLITTING.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-sources",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T15:50:19",
+          "commit": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+          "criteria": {
+            "A1": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (the test check: test_layout_note_and_cmake_lines_are_not_code, test_line_moved_into_an_inc_fragment_is_lost)",
+            "A2": "261121-124545-96b4e5 (lint: ruff check and format), 261121-133755-41bf52 (test: 44 pass); both reused at 7fb030488886, whose tools/ equals d1bca4032097",
+            "A3": "CI green at 7fb030488886",
+            "A4": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (test_include_guards_are_allowed, test_a_new_macro_is_not_a_guard)",
+            "A5": "261121-133755-41bf52 (the test check); 261121-133755-41bf52 (static-to-inline, added inline, namespace-scope detail using as warnings; using inside a function and `using namespace std;` fail)"
+          },
+          "evidence": [
+            {
+              "cmd": "/usr/local/bin/python3 tools/test_split_check.py",
+              "commit": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-133755-41bf52",
+              "level": "light",
+              "seconds": 29.8,
+              "state": "done",
+              "what": "split-check-sources check test at 7fb030488886"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/split_check.py tools/test_split_check.py'",
+              "commit": "d1bca4032097999d37718c2d531ee22ee1116d7a",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-124545-96b4e5",
+              "level": "light",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "split-check-sources check lint at d1bca4032097"
+            }
+          ],
+          "final": true,
+          "from": "12bae98c2a12c4a1339f4072cb952cea29b34f32",
+          "reason": "",
+          "tested": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check compares only C and C++ sources",
-      "updated": "2026-11-21T12:39:08",
+      "updated": "2026-11-21T15:50:20",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-sources"
     },
     "split-completion": {
@@ -25685,18 +26109,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-constexpr-phf",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:18:34",
+          "commit": "58653a7588ada724d2165fd7dcbcda0b8afb9d30",
+          "criteria": {
+            "A1": "261121-130253-74ad7d (the build-test check), 261121-130253-74ad7d (passed at c5efe766b720; only 1 merge from main since, none touching its files), 261121-155749-cc04c3",
+            "A2": "261121-155749-cc04c3 (the split check), 261121-130255-fe1094 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A3": "261121-131354-2a6f84 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at constexpr-phf:c5efe76: no new files; names `phf.hh` (1,484 lines) kept whole and why, and the gperf output in bench/ as generated",
+            "A5": "CI green at 58653a7588ad",
+            "A6": "261121-130301-172ca6 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "c5efe766b720cf064a805fc0dac035e8390a0ea2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130253-74ad7d",
+              "level": "light",
+              "seconds": 55.4,
+              "state": "done",
+              "what": "split-constexpr-phf check build-test at c5efe766b720"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master .",
+              "commit": "58653a7588ada724d2165fd7dcbcda0b8afb9d30",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155749-cc04c3",
+              "level": "light",
+              "seconds": 1.2,
+              "state": "done",
+              "what": "split-constexpr-phf check split at 58653a7588ad"
+            }
+          ],
+          "final": true,
+          "from": "f4bc77a836747fcd746591dce255d6a0897bf3f5",
+          "reason": "",
+          "tested": "58653a7588ada724d2165fd7dcbcda0b8afb9d30"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../constexpr-phf",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "constexpr-phf's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:42",
-      "worktree": "../constexpr-phf-wt/xapiand/split-constexpr-phf"
+      "updated": "2026-11-21T18:18:36",
+      "worktree": ""
     },
     "split-datetime": {
       "accepted": {},
@@ -25778,18 +26245,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-docset",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:18:56",
+          "commit": "3df598536e72fe04d38afd70942956abb87ea18c",
+          "criteria": {
+            "A1": "261121-130438-3642f5 (the build-test check), 261121-130438-3642f5 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files), 261121-155752-1e40d2",
+            "A2": "261121-155752-1e40d2 (the split check), 261121-130438-3642f5 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files), 261121-155752-1e40d2",
+            "A3": "261121-130855-ced313 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] `docs/source-layout.md` at docset:2878b0e",
+            "A5": "CI green at 3df598536e72",
+            "A6": "261121-130443-a0ab12 (passed at 2878b0e975f0; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "2878b0e975f0ec22df563cfb2ab68ea1b65285b0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130438-3642f5",
+              "level": "light",
+              "seconds": 41.9,
+              "state": "done",
+              "what": "split-docset check build-test at 2878b0e975f0"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "3df598536e72fe04d38afd70942956abb87ea18c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155752-1e40d2",
+              "level": "light",
+              "seconds": 0.8,
+              "state": "done",
+              "what": "split-docset check split at 3df598536e72"
+            }
+          ],
+          "final": true,
+          "from": "cee813528aa9808fe918ae9a1a5eb7ef056663c5",
+          "reason": "",
+          "tested": "3df598536e72fe04d38afd70942956abb87ea18c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../docset",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "docset's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:49",
-      "worktree": "../docset-wt/xapiand/split-docset"
+      "updated": "2026-11-21T18:18:57",
+      "worktree": ""
     },
     "split-enum-reflection": {
       "accepted": {},
@@ -25822,18 +26332,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-enum-reflection",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:16",
+          "commit": "0c7f34f01c3c8af53211d338dd20a59f45d905fe",
+          "criteria": {
+            "A1": "261121-130303-a6714d (the build-test check), 261121-130303-a6714d (passed at 6227a072b2f1; only 1 merge from main since, none touching its files), 261121-155753-e9b229",
+            "A2": "261121-155753-e9b229 (the split check), 261121-131435-def0ec (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130315-050173 (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at enum-reflection:6227a07: lists `enum.h`, kept whole, with its sections and why",
+            "A5": "CI green at 0c7f34f01c3c",
+            "A6": "261121-130318-1c55be (passed at 6227a072b2f1; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6227a072b2f114136c91d0a43108b1b0409474b6",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130303-a6714d",
+              "level": "light",
+              "seconds": 59.8,
+              "state": "done",
+              "what": "split-enum-reflection check build-test at 6227a072b2f1"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "0c7f34f01c3c8af53211d338dd20a59f45d905fe",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155753-e9b229",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-enum-reflection check split at 0c7f34f01c3c"
+            }
+          ],
+          "final": true,
+          "from": "36284254e37340ffca9fd642b986682f19cee785",
+          "reason": "",
+          "tested": "0c7f34f01c3c8af53211d338dd20a59f45d905fe"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../enum-reflection",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "enum-reflection's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:55",
-      "worktree": "../enum-reflection-wt/xapiand/split-enum-reflection"
+      "updated": "2026-11-21T18:19:18",
+      "worktree": ""
     },
     "split-faultlab": {
       "accepted": {},
@@ -25866,18 +26419,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-faultlab",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T14:47:19",
+          "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+          "criteria": {
+            "A1": "261121-130439-4b9352 (the build-test check), 261121-130439-4b9352, 261121-130440-2801d9",
+            "A2": "261121-130440-2801d9 (the split check), 261121-130441-7cc706",
+            "A3": "261121-130444-b53329",
+            "A4": "`docs/source-layout.md` lists the four pieces, what each holds, and that no file over 1,000 lines remains",
+            "A5": "CI green at 71a617f03d05",
+            "A6": "261121-130448-3a21ae",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130439-4b9352",
+              "level": "light",
+              "seconds": 63.8,
+              "state": "done",
+              "what": "split-faultlab check build-test at 71a617f03d05"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main include/faultlab",
+              "commit": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130440-2801d9",
+              "level": "light",
+              "seconds": 1.9,
+              "state": "done",
+              "what": "split-faultlab check split at 71a617f03d05"
+            }
+          ],
+          "final": true,
+          "from": "e3fcfe3ca197d40e53371dffee1497708fc438b5",
+          "reason": "",
+          "tested": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultlab's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:02",
-      "worktree": "../faultlab-wt/xapiand/split-faultlab"
+      "updated": "2026-11-21T14:47:21",
+      "worktree": ""
     },
     "split-htm": {
       "accepted": {},
@@ -25910,18 +26506,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-htm",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:36",
+          "commit": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+          "criteria": {
+            "A1": "261121-131843-3e7231 (the build-test check), 261121-131843-3e7231 (passed at f20c06135f8f; only 1 merge from main since, none touching its files), 261121-155754-f8993c",
+            "A2": "261121-155754-f8993c (the split check), 261121-131843-3e7231 (passed at f20c06135f8f; only 1 merge from main since, none touching its files), 261121-155754-f8993c",
+            "A3": "261121-131843-5adddc (passed at f20c06135f8f; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at htm:f20c061: htm.cc named kept whole, with the reasons and the cut to make",
+            "A5": "CI green at c4577b702aed",
+            "A6": "261121-132934-57906c (passed at f20c06135f8f; only 1 merge from main since, none touching its files)",
+            "A7": "Lead's read: keep htm.cc whole (message above)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "f20c06135f8fc69b83031ed2a8b066e3f334f772",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-131843-3e7231",
+              "level": "light",
+              "seconds": 66.7,
+              "state": "done",
+              "what": "split-htm check build-test at f20c06135f8f"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155754-f8993c",
+              "level": "light",
+              "seconds": 0.9,
+              "state": "done",
+              "what": "split-htm check split at c4577b702aed"
+            }
+          ],
+          "final": true,
+          "from": "0e3fe66cce82587f46464cd7988a2236ee39ee5e",
+          "reason": "",
+          "tested": "c4577b702aed9bfdecc837e8a9b309e2b267c48f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../htm",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "htm's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:09",
-      "worktree": "../htm-wt/xapiand/split-htm"
+      "updated": "2026-11-21T18:19:38",
+      "worktree": ""
     },
     "split-http": {
       "accepted": {},
@@ -25956,18 +26595,61 @@
         "test/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-http",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:56",
+          "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+          "criteria": {
+            "A1": "261121-121235-b632ee, 261121-155756-3106f6",
+            "A2": "261121-155756-3106f6 (the split check), 261121-121235-b632ee, 261121-155756-3106f6",
+            "A3": "261121-121244-ae1958",
+            "A4": "docs/source-layout.md",
+            "A5": "CI green at 944e8cfd7a34",
+            "A6": "261121-121251-4665eb",
+            "A7": "lead, 2026-11-21: read the split; http_asio.h cut into connection, connection_io, response and service, and two tests by section into TUs with support headers; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+              "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121235-b632ee",
+              "level": "light",
+              "seconds": 217.5,
+              "state": "done",
+              "what": "split-http check build-test at 944e8cfd7a34"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155756-3106f6",
+              "level": "light",
+              "seconds": 2.3,
+              "state": "done",
+              "what": "split-http check split at 944e8cfd7a34"
+            }
+          ],
+          "final": true,
+          "from": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "reason": "",
+          "tested": "944e8cfd7a3460e0208c45e43d98beb20054aaee"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http's large header and tests split where it helps maintenance",
-      "updated": "2026-11-21T12:04:47",
-      "worktree": "../http-wt/xapiand/split-http"
+      "updated": "2026-11-21T18:19:59",
+      "worktree": ""
     },
     "split-http-parser": {
       "accepted": {},
@@ -26008,18 +26690,61 @@
         "ARCHITECTURE.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-http-parser",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:20:19",
+          "commit": "a3180d77a619b58abccf963aeaf27a98b25d3c8f",
+          "criteria": {
+            "A1": "261121-121452-92646b (the build-test check), 261121-121452-92646b (passed at db201cd892ab; only 1 merge from main since, none touching its files), 261121-155757-47db35, 261121-121453-cb7868 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A2": "261121-155757-47db35 (the split check), 261121-121452-92646b (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A3": "261121-121503-33e747 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A4": "docs/source-layout.md lists each new file",
+            "A5": "CI green at a3180d77a619",
+            "A6": "261121-121501-c2f765 (passed at db201cd892ab; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; the parse switch stays whole in http_parser.cc; api, url, chars, tables and internal pieces each open with what they hold"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "db201cd892ab82cefd371c438738c8081a52cd04",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121452-92646b",
+              "level": "light",
+              "seconds": 172.3,
+              "state": "done",
+              "what": "split-http-parser check build-test at db201cd892ab"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "a3180d77a619b58abccf963aeaf27a98b25d3c8f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155757-47db35",
+              "level": "light",
+              "seconds": 2.8,
+              "state": "done",
+              "what": "split-http-parser check split at a3180d77a619"
+            }
+          ],
+          "final": true,
+          "from": "6bc81824c2661961d41e0a4e32f31d085a2cf85f",
+          "reason": "",
+          "tested": "a3180d77a619b58abccf963aeaf27a98b25d3c8f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http-parser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http-parser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:14:13",
-      "worktree": "../http-parser-wt/xapiand/split-http-parser"
+      "updated": "2026-11-21T18:20:21",
+      "worktree": ""
     },
     "split-logger": {
       "accepted": {},
@@ -26056,18 +26781,61 @@
         "docs/source-layout.md",
         "docs/exit-lifetime.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-logger",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:20:41",
+          "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+          "criteria": {
+            "A1": "261121-122612-10374d (the build-test check), 261121-122612-10374d, 261121-155758-5d0ffd",
+            "A2": "261121-155758-5d0ffd (the split check)",
+            "A3": "261121-122628-68f755, 261121-141115-e653f3",
+            "A4": "docs/source-layout.md in the logger repo",
+            "A5": "CI green at 992f98674de2",
+            "A6": "261121-122630-7a4f4d",
+            "A7": "lead, 2026-11-21: read the split; logger_format.h and logger_timestamp.cc are separate units; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-122612-10374d",
+              "level": "light",
+              "seconds": 209.7,
+              "state": "done",
+              "what": "split-logger check build-test at 992f98674de2"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155758-5d0ffd",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-logger check split at 992f98674de2"
+            }
+          ],
+          "final": true,
+          "from": "18be8a3c3c1919e9c4331e1490212d5295aec7f5",
+          "reason": "",
+          "tested": "992f98674de29f02a1616133e244faa2cc0b39b4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "logger's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:30:32",
-      "worktree": "../logger-wt/xapiand/split-logger"
+      "updated": "2026-11-21T18:20:42",
+      "worktree": ""
     },
     "split-msgpack": {
       "accepted": {},
@@ -26235,18 +27003,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-strict-stox",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:05",
+          "commit": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+          "criteria": {
+            "A1": "261121-130207-7a60bd (the build-test check), 261121-130207-7a60bd (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files), 261121-155806-7e5517",
+            "A2": "261121-155806-7e5517 (the split check), 261121-130207-7a60bd (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files), 261121-155806-7e5517, 261121-131328-fe03fb (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A3": "261121-131329-c50931 (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at strict-stox:5a7e44b",
+            "A5": "CI green at ff3286d76ced",
+            "A6": "261121-130228-8f04e7 (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A7": "lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5a7e44bcb9abcb722b9480407836cecda6516c57",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130207-7a60bd",
+              "level": "light",
+              "seconds": 130.9,
+              "state": "done",
+              "what": "split-strict-stox check build-test at 5a7e44bcb9ab"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155806-7e5517",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-strict-stox check split at ff3286d76ced"
+            }
+          ],
+          "final": true,
+          "from": "6fccf17cfcbb8bb4d2e78196f8f9c6e5978a7803",
+          "reason": "",
+          "tested": "ff3286d76ced1dd219c5d2a16a83bbccc783963e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strict-stox",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strict-stox's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:24",
-      "worktree": "../strict-stox-wt/xapiand/split-strict-stox"
+      "updated": "2026-11-21T18:21:06",
+      "worktree": ""
     },
     "split-task": {
       "accepted": {},
@@ -26286,18 +27097,108 @@
         "docs/source-layout.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-task",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:27",
+          "commit": "3179d8508a5f4b370c74e4e741b6edd54fe389ea",
+          "criteria": {
+            "A1": "261121-122744-c21719 (the build-test check), 261121-122744-c21719 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-155807-57422b",
+            "A2": "261121-155807-57422b (the split check), 261121-122744-c21719 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-155807-57422b",
+            "A3": "261121-122752-7d2bfd (passed at 259f0cb6d73f; ignores docs-only AGENTS.md)",
+            "A4": "docs/source-layout.md at task:259f0cb6d73f",
+            "A5": "CI green at 3179d8508a5f",
+            "A6": "261121-122803-c360df (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-122809-473c08 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md)",
+            "A7": "lead, 2026-11-21: read the split; task.hh cut into cancel, coroutine, drivers, frame_pool, scheduler, sync and timing; tests split by topic into TUs with support headers"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "259f0cb6d73f437ee58afaa3216ec0ed91118f88",
+              "docs": [
+                "AGENTS.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-122744-c21719",
+              "level": "light",
+              "seconds": 108.5,
+              "state": "done",
+              "what": "split-task check build-test at 259f0cb6d73f"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "3179d8508a5f4b370c74e4e741b6edd54fe389ea",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155807-57422b",
+              "level": "light",
+              "seconds": 3.1,
+              "state": "done",
+              "what": "split-task check split at 3179d8508a5f"
+            }
+          ],
+          "final": true,
+          "from": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+          "reason": "",
+          "tested": "3179d8508a5f4b370c74e4e741b6edd54fe389ea"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "task's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:30:50",
-      "worktree": "../task-wt/xapiand/split-task"
+      "updated": "2026-11-21T18:21:29",
+      "worktree": ""
+    },
+    "split-tooling": {
+      "accepted": {},
+      "after": [],
+      "base": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+      "branch": "quest/xapiand/split-tooling",
+      "checks": [
+        {
+          "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+          "level": "light",
+          "minutes": 30,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+          "level": "light",
+          "minutes": 30,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/selfcontained.sh",
+        "tools/test_selfcontained.sh",
+        "tools/fnsizes*",
+        "tools/test_fnsizes*",
+        "tools/testdata/**",
+        "docs/SPLITTING.md",
+        "tools/README.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/split-tooling",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "active",
+      "title": "Split tooling: function sizes on Mach-O, macro-body locals, test trees, the ctest -N recipe",
+      "updated": "2026-11-21T16:33:46",
+      "worktree": "../cpp-libraries-wt/xapiand/split-tooling"
     },
     "split-traceback": {
       "accepted": {},
@@ -26377,18 +27278,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-uinteger-t",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:55",
+          "commit": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+          "criteria": {
+            "A1": "261121-121039-c6d5e2 (the build-test check); build-test job 261121-121039-c6d5e2 at 6815126e3170",
+            "A2": "261121-155810-1cf14f (the split check), 261121-121039-c6d5e2 (passed at 6815126e3170; only 1 merge from main since, none touching its files), 261121-155810-1cf14f",
+            "A3": "261121-121040-919d81 (passed at 6815126e3170; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] docs/source-layout.md: the 8 test pieces, and uinteger_t.hh kept whole with why",
+            "A5": "CI green at 8a6fe9030aab",
+            "A6": "261121-121044-660a41 (passed at 6815126e3170; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; property.cc split by topic into self-contained headers kept in one TU (static linkage kept, two CTest targets build property.cc; reason in docs/source-layout.md); accepted"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6815126e3170ef49e1a98366773e421417175d69",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121039-c6d5e2",
+              "level": "light",
+              "seconds": 648.5,
+              "state": "done",
+              "what": "split-uinteger-t check build-test at 6815126e3170"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master . test",
+              "commit": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155810-1cf14f",
+              "level": "light",
+              "seconds": 3.1,
+              "state": "done",
+              "what": "split-uinteger-t check split at 8a6fe9030aab"
+            }
+          ],
+          "final": true,
+          "from": "14cbb6e1f95103c2fef854ce83ce82dc834dcc36",
+          "reason": "",
+          "tested": "8a6fe9030aababbb03b1206fd2bf023f31d67645"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "uinteger_t's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:17",
-      "worktree": "../uinteger_t-wt/xapiand/split-uinteger-t"
+      "updated": "2026-11-21T18:21:56",
+      "worktree": ""
     },
     "split-url-parser": {
       "accepted": {},
@@ -26467,18 +27411,65 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-workpool",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:22:18",
+          "commit": "bdf893212605a8d64f54b8cd7e9c19065ad56c10",
+          "criteria": {
+            "A1": "261121-130515-92a210 (the build-test check), 261121-130515-92a210 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md), 261121-155814-b73b8c",
+            "A2": "261121-155814-b73b8c (the split check), 261121-130515-92a210 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md), 261121-155814-b73b8c, 261121-130517-25263e (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A3": "261121-130520-f98c9e (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A4": "docs/source-layout.md (workpool:22acbb0)",
+            "A5": "CI green at bdf893212605",
+            "A6": "261121-130523-77f795 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A7": "lead, 2026-11-21: read the split; idle, ready-ring and sync pieces are separate mechanisms; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "22acbb0e99df1760455c33a4c36636ed2d62db36",
+              "docs": [
+                "AGENTS.md",
+                "ARCHITECTURE.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130515-92a210",
+              "level": "light",
+              "seconds": 46.5,
+              "state": "done",
+              "what": "split-workpool check build-test at 22acbb0e99df"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "bdf893212605a8d64f54b8cd7e9c19065ad56c10",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155814-b73b8c",
+              "level": "light",
+              "seconds": 1.6,
+              "state": "done",
+              "what": "split-workpool check split at bdf893212605"
+            }
+          ],
+          "final": true,
+          "from": "0e3f919055d4ca78fd521b0d5f4c2733ef79f7e1",
+          "reason": "",
+          "tested": "bdf893212605a8d64f54b8cd7e9c19065ad56c10"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../workpool",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T13:17:24",
-      "worktree": "../workpool-wt/xapiand/split-workpool"
+      "updated": "2026-11-21T18:22:19",
+      "worktree": ""
     },
     "split-xapiand-core": {
       "accepted": {},
