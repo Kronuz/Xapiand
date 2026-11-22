@@ -6,13 +6,13 @@ Quest: .campaign/xapiand/quests/split-traceback.md (the lead's; never edit it)
 ## Doing
 
 No split. Note committed at traceback:29f0dd1 (branch quest/xapiand/split-traceback). Jobs at
-29f0dd1: build-test (A1) 261121-130417-01d2eb, split (A2) 261121-130417-7d9331 (both submitted
+29f0dd1: build-test (A1) 261121-182200-d7fe5b, split (A2) 261121-130417-7d9331 (both submitted
 by `campaign verify --for A1`; the split job proves A2), ctest -N diff vs 066853d (A3)
 261121-130428-319638, new-header self-containment (A6) 261121-130431-d0c0e2.
 
 ## Next
 
-1. When build-test 261121-130417-01d2eb, A3 261121-130845-a8f326 and A2 261121-130848-594a3e pass, paste `campaign brief`'s Evidence table and set State to ready for review.
+1. When build-test 261121-182200-d7fe5b, A3 261121-130845-a8f326 and A2 261121-130848-594a3e pass, paste `campaign brief`'s Evidence table and set State to ready for review.
 2. main changed .github/workflows/ci.yml since the branch point; the brief suggests `campaign land split-traceback --merge-main` (the lead's).
 
 ## Blocked on
@@ -23,7 +23,7 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130417-01d2eb |
+| A1 | build-test 261121-182200-d7fe5b |
 | A2 | 261121-155809-4e674f: the split check (landed split_check.py) at a6690d9, passed |
 | A3 | 261121-130845-a8f326 (ctest -N `Test #`/`Total Tests` lines at base 066853d and head, diffed). Failed 261121-130428-319638: the diff compared unbuilt-executable warnings that name the build dirs ctn-base vs ctn-head, not tests |
 | A4 | [artifact] `docs/source-layout.md` at traceback:29f0dd1 |
