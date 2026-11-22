@@ -27003,18 +27003,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-strict-stox",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:05",
+          "commit": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+          "criteria": {
+            "A1": "261121-130207-7a60bd (the build-test check), 261121-130207-7a60bd (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files), 261121-155806-7e5517",
+            "A2": "261121-155806-7e5517 (the split check), 261121-130207-7a60bd (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files), 261121-155806-7e5517, 261121-131328-fe03fb (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A3": "261121-131329-c50931 (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at strict-stox:5a7e44b",
+            "A5": "CI green at ff3286d76ced",
+            "A6": "261121-130228-8f04e7 (passed at 5a7e44bcb9ab; only 1 merge from main since, none touching its files)",
+            "A7": "lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5a7e44bcb9abcb722b9480407836cecda6516c57",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130207-7a60bd",
+              "level": "light",
+              "seconds": 130.9,
+              "state": "done",
+              "what": "split-strict-stox check build-test at 5a7e44bcb9ab"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155806-7e5517",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-strict-stox check split at ff3286d76ced"
+            }
+          ],
+          "final": true,
+          "from": "6fccf17cfcbb8bb4d2e78196f8f9c6e5978a7803",
+          "reason": "",
+          "tested": "ff3286d76ced1dd219c5d2a16a83bbccc783963e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strict-stox",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "strict-stox's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:24",
-      "worktree": "../strict-stox-wt/xapiand/split-strict-stox"
+      "updated": "2026-11-21T18:21:06",
+      "worktree": ""
     },
     "split-task": {
       "accepted": {},
