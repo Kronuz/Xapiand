@@ -27097,18 +27097,64 @@
         "docs/source-layout.md",
         "AGENTS.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-task",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:27",
+          "commit": "3179d8508a5f4b370c74e4e741b6edd54fe389ea",
+          "criteria": {
+            "A1": "261121-122744-c21719 (the build-test check), 261121-122744-c21719 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-155807-57422b",
+            "A2": "261121-155807-57422b (the split check), 261121-122744-c21719 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-155807-57422b",
+            "A3": "261121-122752-7d2bfd (passed at 259f0cb6d73f; ignores docs-only AGENTS.md)",
+            "A4": "docs/source-layout.md at task:259f0cb6d73f",
+            "A5": "CI green at 3179d8508a5f",
+            "A6": "261121-122803-c360df (passed at 259f0cb6d73f; ignores docs-only AGENTS.md), 261121-122809-473c08 (passed at 259f0cb6d73f; ignores docs-only AGENTS.md)",
+            "A7": "lead, 2026-11-21: read the split; task.hh cut into cancel, coroutine, drivers, frame_pool, scheduler, sync and timing; tests split by topic into TUs with support headers"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "259f0cb6d73f437ee58afaa3216ec0ed91118f88",
+              "docs": [
+                "AGENTS.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-122744-c21719",
+              "level": "light",
+              "seconds": 108.5,
+              "state": "done",
+              "what": "split-task check build-test at 259f0cb6d73f"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "3179d8508a5f4b370c74e4e741b6edd54fe389ea",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155807-57422b",
+              "level": "light",
+              "seconds": 3.1,
+              "state": "done",
+              "what": "split-task check split at 3179d8508a5f"
+            }
+          ],
+          "final": true,
+          "from": "dc2be963fbb5638c605bcae30c43aacb0286655c",
+          "reason": "",
+          "tested": "3179d8508a5f4b370c74e4e741b6edd54fe389ea"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../task",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "task's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:30:50",
-      "worktree": "../task-wt/xapiand/split-task"
+      "updated": "2026-11-21T18:21:29",
+      "worktree": ""
     },
     "split-tooling": {
       "accepted": {},
