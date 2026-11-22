@@ -6539,6 +6539,8 @@
       "after": [
         "detent:consensus-quiesce-election-stall"
       ],
+      "base": "e35356a97d8fc849bd017ba718e625435f3ec10d",
+      "branch": "quest/xapiand/consensus-request-install",
       "checks": [
         {
           "cmd": "ci:macos-arm64",
@@ -6568,6 +6570,7 @@
         "docs/mechanisms/install-request.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/consensus-request-install",
       "landed": [],
       "lenses": [
         "correctness"
@@ -6577,11 +6580,13 @@
       "provides": [
         "consensus:install-request"
       ],
+      "reason": "started by force: the overlap with node-admission is CMakeLists.txt alone (one test registration each); node-admission lands first, and a conflict there is one line",
       "repo": "../consensus",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-21T21:50:41"
+      "updated": "2026-11-21T21:51:11",
+      "worktree": "../consensus-wt/xapiand/consensus-request-install"
     },
     "consensus-rpc-lane": {
       "accepted": {},
