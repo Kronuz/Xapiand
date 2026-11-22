@@ -24339,8 +24339,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T20:27:19",
-          "base": "78484bdee35512b0b66d42366cf4216601f05e21",
+          "at": "2026-11-21T21:56:41",
+          "base": "a23c3b502ebc14f0283796cb443665d176b1cf5e",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -24350,7 +24350,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "8b662eca9522096b296555a54345243091526e1f",
+          "commit": "edb1b4b8fb832711ac90b01b1f7f81ccef3ac3f1",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -24361,7 +24361,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "lead re-read main's changes under the quest since the review (0547322..78484bd): only failed-restore-exit's CLI file restore (handler.cc restore_documents(fd) refuses non-map objects, main.cc maps it to EX_DATAERR, its check script). restore-stream's own change is the HTTP stream restore in search_views.cc; the two paths share no code, and the merged tree keeps the refusal (handler.cc:1148-1156). Evidence rerun at the merge head a076cc9: A1 4181b4 and 55f313, A2 f84811, A3 1b6655, A6 c8ca75 (32 CPU-minutes).",
+          "note": "lead read main's 13 changed code files since the review (78484bdee355..a23c3b502ebc): cjk-words' opt-in CJK_WORDS segmentation in engine/text.cc, schema and generate_terms, plus CMake. None touches restore-stream's diff (search_views.cc/.h, its tests and fuzz) or the stream feed's header skip and count; cjk_words advances on every character and landed with its own review.",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -24410,7 +24410,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T20:27:19",
+      "updated": "2026-11-21T21:56:41",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
