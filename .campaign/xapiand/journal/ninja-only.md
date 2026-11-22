@@ -1,6 +1,6 @@
 # ninja-only: journal
 
-State: waiting on jobs 261121-232251-214a22 (A1, A3) and the suite rerun at e66db4e (lead, 23:22)
+State: waiting on jobs 261121-232251-214a22 (A1, A3) and suite 261121-234535-6419a0 (A2, priority 5) at fa7443d (lead, 23:45)
 Quest: .campaign/xapiand/quests/ninja-only.md (the lead's; never edit it)
 
 ## Doing
@@ -21,7 +21,7 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | pass job 261121-232251-214a22 (check at the head e66db4e, level none: one refused configure and a grep); mutant job 261121-091759-59baa5 (`--fails-without`: the base CMakeLists.txt has no guard, the check must exit nonzero) |
-| A2 | suite job 261121-091802-8fc0f2 (`campaign verify ninja-only`, configured with `-G Ninja`) |
+| A2 | suite job 261121-234535-6419a0 at fa7443d (the suite configured with `-G Ninja`, priority 5; passed at d431d16 as 261121-222918-29457f) |
 | A3 | `harness/ninja_only_check.sh` (its grep half; run at the head by 261121-232251-214a22): lists configures without `-G Ninja` outside the records; docs/dev/engine-census.md is excluded by name, see Rulings |
 
 ## Result
