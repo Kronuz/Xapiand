@@ -45,3 +45,5 @@ AGENTS.md rewritten to 55 lines in Detent's shape; added the Hard rules and mach
 
 - The copyright-line rule is kept in Hard rules (owner's standing rule).
 - Release/changelog procedure dropped rather than moved: stale per the quest.
+
+- Lead, 2026-11-21: read AGENTS.md and docs/dev/agent-codebase.md at quest/xapiand/agents-md 10d3390: accurate to master (Ninja only, quiet holds, identity and attribution rules, code map moved out); approved. Lines check 261121-095115-0de0c7 passed. Lands after ninja-only.
