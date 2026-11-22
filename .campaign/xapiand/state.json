@@ -17838,17 +17838,40 @@
         ".github/workflows/freebsd.yml",
         "TESTING.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T21:20:20",
+          "commit": "a3de26e8e23b0b86fc61c533ab640f9148080294",
+          "criteria": {
+            "A1": "261121-105123-f5b150 (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A2": "261121-105122-a72926 (passed at e8c578487a7a; only 7 merges from main since, none touching its files), 261121-105123-e0bfaf (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A3": "CI green at 1c3c13d8d4a8"
+          },
+          "evidence": [
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "bcca6ac5844122bd27932784734989703ec68d48",
+          "reason": "",
+          "tested": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Pin newman for the docs E2E in one place",
-      "updated": "2026-11-21T03:30:26",
-      "worktree": "../Xapiand-wt/xapiand/newman-pin"
+      "updated": "2026-11-21T21:20:41",
+      "worktree": ""
     },
     "nightly-retry": {
       "accepted": {},
