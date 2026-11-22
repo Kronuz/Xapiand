@@ -29,7 +29,7 @@ same tool with `--base 64c9a973efdb`.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-130451-f1eea0 (pending) |
-| A2 | split_check (split-check-sources version, --base 64c9a97) 261121-130453-379519 passed: 0 errors, 0 warnings, 1 note (queryparser.cc 1,295 lines, kept whole: see the layout note); gate `split` 261121-130451-f8682b failed: --base main is the stale 40743e3, so it reports the 20 unrelated origin/main commits (10,862 errors, all in files this quest never touched); rerun once main is reset |
+| A2 | split_check (split-check-sources version, --base 64c9a97) 261121-130453-379519 passed: 0 errors, 0 warnings, 1 note (queryparser.cc 1,295 lines, kept whole: see the layout note); gate `split` 261121-155803-fd79e8 failed: --base main is the stale 40743e3, so it reports the 20 unrelated origin/main commits (10,862 errors, all in files this quest never touched); rerun once main is reset |
 | A3 | 261121-130456-b1dd83: configures 64c9a97 and head, diffs `ctest -N` (pending) |
 | A4 | `docs/source-layout.md` at queryparser:2679882 |
 | A5 | CI run 44950018532 (workflow_dispatch on the quest branch), pending |
