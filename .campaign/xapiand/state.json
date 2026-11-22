@@ -26781,18 +26781,61 @@
         "docs/source-layout.md",
         "docs/exit-lifetime.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-logger",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:20:41",
+          "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+          "criteria": {
+            "A1": "261121-122612-10374d (the build-test check), 261121-122612-10374d, 261121-155758-5d0ffd",
+            "A2": "261121-155758-5d0ffd (the split check)",
+            "A3": "261121-122628-68f755, 261121-141115-e653f3",
+            "A4": "docs/source-layout.md in the logger repo",
+            "A5": "CI green at 992f98674de2",
+            "A6": "261121-122630-7a4f4d",
+            "A7": "lead, 2026-11-21: read the split; logger_format.h and logger_timestamp.cc are separate units; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-122612-10374d",
+              "level": "light",
+              "seconds": 209.7,
+              "state": "done",
+              "what": "split-logger check build-test at 992f98674de2"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "992f98674de29f02a1616133e244faa2cc0b39b4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155758-5d0ffd",
+              "level": "light",
+              "seconds": 1.4,
+              "state": "done",
+              "what": "split-logger check split at 992f98674de2"
+            }
+          ],
+          "final": true,
+          "from": "18be8a3c3c1919e9c4331e1490212d5295aec7f5",
+          "reason": "",
+          "tested": "992f98674de29f02a1616133e244faa2cc0b39b4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../logger",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "logger's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:30:32",
-      "worktree": "../logger-wt/xapiand/split-logger"
+      "updated": "2026-11-21T18:20:42",
+      "worktree": ""
     },
     "split-msgpack": {
       "accepted": {},
