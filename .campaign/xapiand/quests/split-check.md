@@ -38,6 +38,13 @@ Provides cpp-libraries:split-check, consumed by every split quest (schema-split,
 - Lead, 2026-11-21: one shared tool in cpp-libraries, not one per repository; schema-split's
   planned `harness/split_check.py` is replaced by it.
 
+- Lead, 2026-11-21 (contributor's questions): namespace-scope function prototypes and `extern`
+  declarations are allowed added lines, listed as linkage warnings. Lines are not compared as a
+  set: each file's non-allowed lines at HEAD are a concatenation of contiguous slices of the old
+  files, in order, each starting and ending at a top-level boundary (brace depth 0, not counting
+  namespace braces, ignoring braces in strings and comments), so a statement reordered inside a
+  function fails and whole declarations may move.
+
 ## May land early
 
 Nothing: one landing.
