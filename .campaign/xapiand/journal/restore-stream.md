@@ -1,6 +1,6 @@
 # restore-stream: journal
 
-State: waiting on CI at Xapiand:0d542bf (master merged by the lead; job evidence passed at edb1b4b and carries; security re-accepted at 0d542bf). Then the landing loop lands it.
+State: blocked on CI: GitHub CI at Xapiand:0d542bf (master merged by the lead; job evidence passed at edb1b4b and carries; security re-accepted at 0d542bf). Then the landing loop lands it.
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
