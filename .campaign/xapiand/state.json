@@ -14233,7 +14233,8 @@
             "tests/test_group_chunk*.cc",
             "harness/blob_crash_check.sh"
           ],
-          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--chunks"
+          "merged": "5ff24dcdc3b9f4c392d982edf51c8175414825b5",
+          "worktree": ""
         },
         "restore": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -14257,7 +14258,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T12:08:57",
+      "updated": "2026-11-21T21:27:24",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
