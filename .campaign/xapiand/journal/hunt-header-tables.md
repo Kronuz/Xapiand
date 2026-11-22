@@ -1,6 +1,6 @@
 # hunt-header-tables: journal
 
-State: blocked on lead: inline const is a net loss on Mach-O; expand the file set to data.cc and keymaker.cc for extern definitions?
+State: waiting on jobs 261122-002109-cfb3da (A1 suite), 261122-002121-a5a538 (A2 one-job A/B), 261122-002150-16faf1 (A3 startup)
 Quest: .campaign/xapiand/quests/hunt-header-tables.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,6 +13,12 @@ Experiment 1 (hypothesis: `inline const` removes every per-TU copy and initializ
 header tables): b853eefa0. Refuted on Mach-O for initializers: one copy per program, but each
 including TU keeps its own guarded `__cxx_global_var_init` (no COMDAT), 324 new ones.
 
+Experiment 2 (lead's ruling, msg on 2026-11-22: one definition per table; constexpr where literal,
+else extern + one .cc definition; file set widened to data.cc, keymaker.cc): ae96a1309.
+A2 rerun as one job: `--build ab.sh head` fetches a new dependency tree and builds head, then
+`ab.sh base` builds base ($JOB_REF_BASE) against the same tree; diff.sh now matches `_GLOBAL__sub_I_`
+(Mach-O and ELF) and `__cxx_global_var_init`. Experiment 1's tables kept as exp1-{base,head}.sz.
+
 Confirmed on master (6cffdc7af), by a transitive `#include` closure over src (grep, so an upper bound):
 - `database/data.h`: 12 `static const ct_type_t` + `msgpack_serializers`, in 26 TUs.
 - `multivalue/keymaker.h`: 7 namespace-scope `const std::string` (internal linkage; `SERIALIZED_*`
@@ -23,24 +29,12 @@ Confirmed on master (6cffdc7af), by a transitive `#include` closure over src (gr
 
 ## Next
 
-1. On the lead's ruling: experiment 2, `extern const` in data.h/keymaker.h, definitions in data.cc
-   and keymaker.cc; then rerun A2 as one job building base and head back to back from one .deps
-   (fix diff.sh's `__GLOBAL__sub_I_` pattern to `_GLOBAL__sub_I_`), and A1/A3 at that head.
-2. Lead: file the soundex and htm rows from docs/dev/header-tables.md "Library rows" in hunt.md
-   (a campaign file, outside this quest's file set).
+1. Read cfb3da, a5a538, 16faf1; fill Evidence (A1-A3) and Result; update docs/dev/header-tables.md
+   with experiment 2's numbers; State "ready for review"; push.
 
 ## Blocked on
 
-Lead: is the head a win? On macOS Release+LTO, `inline const` removes the per-TU copies (`__bss`
--13952 B) but grows static-init code +31808 B (`_GLOBAL__sub_I_*` -16000, `__cxx_global_var_init*`
-+47808) and `__gcc_except_tab` +3796 B; initializers run at startup 153 -> 473; startup unchanged
-within noise. ELF dedupes the initializers by COMDAT (expected, unmeasured).
-Options:
-1. Expand the file set to src/database/data.cc and src/multivalue/keymaker.cc: `extern const`
-   declarations, one definition each; one object and one initializer on every platform. No
-   namespace-scope initializer in another TU reads them, so no order hazard. Recommended.
-2. Land as is: a memory win and a Linux code win, a macOS code loss.
-3. Drop the Xapiand change; keep only the doc and the library rows.
+Nothing. (The mechanism question was ruled by the lead: option 1, with constexpr where literal.)
 
 ## Evidence
 
@@ -72,6 +66,15 @@ to 35 TUs) rows are in docs/dev/header-tables.md.
 - Inline variables keep order: each is defined after the ones it uses in the same header, so
   partially-ordered initialization runs `json_type` before `msgpack_serializers` in every program.
 - keymaker.h's strings are in scope: same defect, in the quest's file set.
+- Which form each table took: all 20 are `extern const` with one definition. `ct_type_t` holds two
+  `std::string`s and has `clear()`: not literal without changing the type. `msgpack_serializers` is
+  assigned to a `std::vector` in search_views.cc (outside the file set), so it stays a vector. The
+  `SERIALIZED_*` strings need `Serialize::floating` at run time. The four other keymaker strings
+  could be `constexpr std::string_view`, but that changes their declared type (tests compare them
+  as strings, every return site converts); one shape for the seven costs 4 initializers in one TU.
+- No order hazard: no namespace-scope initializer outside data.cc/keymaker.cc reads them (grep:
+  only function bodies, default arguments and function-local statics); msgpack_serializers follows
+  the ct_type_t definitions in data.cc, so in-TU order holds.
 - A2 numbers come from the two saved size tables and the `size -m` totals in the job logs, not new
   jobs: the existing jobs cannot isolate the change (LZ4 link drift), so a rerun waits for the
   ruling on the mechanism.
