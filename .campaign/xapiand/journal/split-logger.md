@@ -29,7 +29,7 @@ Nothing. campaign check names no overlap with logger.cc / logger.h; the reposito
 | A4 | docs/source-layout.md in the logger repo |
 | A5 | CI on the pushed branch |
 | A6 | job 261121-122630-7a4f4d: tools/selfcontained.sh -x logger.h . (logger_format.h is the only new header) |
-| A7 | the lead's reading |
+| A7 | lead, 2026-11-21: read the split; logger_format.h and logger_timestamp.cc are separate units; each opens with what it holds |
 
 ## Result
 
