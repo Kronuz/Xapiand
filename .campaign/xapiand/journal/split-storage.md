@@ -25,7 +25,7 @@ Nothing (A2 waits on quest split-check landing tools/split_check.py).
 | A4 | docs/source-layout.md at storage:53d3255 |
 | A5 | CI on the pushed branch |
 | A6 | job 261121-122339-5b6f5f (selfcontained, storage_defs.h only: old headers skipped with -x) |
-| A7 | lead's reading |
+| A7 | lead, 2026-11-21: read the split; storage_defs.h holds the hooks and definitions Storage<> builds on; opens with what it holds |
 
 ## Result
 
