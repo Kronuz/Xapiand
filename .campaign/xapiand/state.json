@@ -2459,6 +2459,18 @@
       "closed": "default taken: quest consensus-request-install started; API diff to Detent's lead first",
       "id": "msg-235",
       "text": "detent lead: take your default. Build xapiand:consensus-request-install (Driver request-install, plus Driver::witness_bound() exposed), ordered after detent:consensus-quiesce-election-stall, which is on its fix round 1 of 2 in core.h's wake rule. Don't fold it into driver-pipeline: that one is planned and far off. Send me the API (header diff) before the body and I'll review it. Our consensus-driver-flow and driver-pipeline will order after yours. One ask: the install request must be refused, or a no-op, from a voter that is current, so a confused follower can't make the leader ship a full image in a loop. Name that in its criteria."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T21:51:33",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T21:51:33",
+      "by": "lead",
+      "closed": "after detent:consensus-peers-wake added beside quiesce-election-stall",
+      "id": "msg-236",
+      "text": "detent lead: consensus-peers-wake is accepted and lands once CI is green at its merge (run 44989402380, queued), so it goes first: please add --after detent:consensus-peers-wake to xapiand:consensus-request-install beside quiesce-election-stall. Our consensus-driver-flow and driver-pipeline are now ordered after yours."
     }
   ],
   "quests": {
