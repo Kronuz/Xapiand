@@ -10,17 +10,17 @@ Code pushed at cpp-libraries e991e52 (quest branch): tools/fnsizes.sh + test_fns
 ## Next
 
 1. Read the jobs; paste `campaign brief`'s table into Evidence; answer any failure.
-2. Check CI at e991e52 (Linux fnsizes).
+2. Set State to ready for review.
 
 ## Blocked on
 
-Lead, one decision: A1's Linux half. `.github/workflows/tools.yml` already runs `bash tools/test_selfcontained.sh` on ubuntu-24.04 and macos-15 but not test_fnsizes.sh. It needs a step `bash tools/test_fnsizes.sh` and `tools/fnsizes.sh tools/test_fnsizes.sh` added to its shellcheck line (outside the file set; widen it). tools/README.md (a fnsizes.sh table row, already in e991e52) is also outside the set: widen it or revert it.
+Nothing. A1's Linux half (tools.yml has no test_fnsizes.sh step) waits for the owner; .github/workflows is not touched. tools/README.md is in the file set.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-162810-84f4aa (test_fnsizes.sh: fixture binary and object, nonzero sizes, identical reruns) |
+| A1 | macOS proven by 261121-162810-84f4aa (test_fnsizes.sh: fixture binary and object, nonzero sizes, identical reruns); Linux pending the owner's decision on tools.yml |
 | A2 | 261121-162808-78cfcf (test check); 261121-162815-11af5b fails-without: new MacroShapesTest at the old split_check.py must fail |
 | A3 | 261121-162808-78cfcf (test_selfcontained.sh, -t cases) |
 | A4 | artifact: docs/SPLITTING.md "Moves only" and "What lands a split" item 3 (ctest -N grep recipe, fnsizes.sh) |
