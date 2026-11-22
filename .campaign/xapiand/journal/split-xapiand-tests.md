@@ -1,6 +1,6 @@
 # split-xapiand-tests: journal
 
-State: waiting on jobs 261121-133845-7ac98b (suite, A1), 261121-133857-a00ef2 (A2, split-check-sources tool), 261121-133902-8c14ea (A3 head ctest -N), 261121-133907-590b1a (A6); gate split 261121-161502-fc35ab uses the landed tool and fails until split-check-sources lands (the lead reruns it); A7 is the lead's read
+State: waiting on jobs 261121-212407-41954f (suite, A1) and 261121-212408-bc1f58 (split gate, A2) at the head; other criteria hold per `campaign brief` (jobs at 814b2d651dc5, only merges from main since, none touching the files)
 Quest: .campaign/xapiand/quests/split-xapiand-tests.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
