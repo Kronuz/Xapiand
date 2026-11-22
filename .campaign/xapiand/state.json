@@ -33357,7 +33357,8 @@
         "bench/ab.sh",
         "bench/common.sh",
         "CMakeLists.txt",
-        "test/**"
+        "test/**",
+        "tools/**"
       ],
       "history": [
         {
@@ -33385,7 +33386,7 @@
       "risk": "normal",
       "status": "active",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-21T22:06:37",
+      "updated": "2026-11-21T22:28:22",
       "worktree": "../uinteger_t-wt/xapiand/uinteger-restructure"
     },
     "unpin-after-kick": {
