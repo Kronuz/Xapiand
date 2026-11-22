@@ -1,6 +1,6 @@
 # hunt-faultlab-at-mark: journal
 
-State: working
+State: waiting on jobs 261121-202427-8ee313 261121-202430-846c9f
 Quest: .campaign/xapiand/quests/hunt-faultlab-at-mark.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Two cases added to faultlab test/faultfs_test.cc (faultlab:50b5394): at_mark and two ordering points. A1 = build-test job 261121-202430-846c9f. A2 = mutant job 261121-202427-8ee313 (script .scratch/xapiand/hunt-faultlab-at-mark/mutant.sh in the faultlab worktree, uncommitted): deletes `node_->at_mark.clear()` in the after-effect sync fault, builds, expects the test to exit 1.
 
 ## Next
 
-1. <step>
+1. Read both jobs; if the mutant is caught by the at_mark case, mark ready.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
