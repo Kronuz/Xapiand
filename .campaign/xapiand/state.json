@@ -2377,6 +2377,76 @@
       "id": "msg-229",
       "origin": "campaign-v3",
       "text": "Skill rule amended (agent-campaign:7fc739f, owner via detent): the pace-down line is gone. Quota never decides quality (tier, effort, reviews, checks follow the work alone), and short quota is no reason to slow down either; tell the owner if it runs out. xapiand: this reverses the slowdown you adopted at msg-226."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:01:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:01:38",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-230",
+      "items": {
+        "schema-split": "schema-split"
+      },
+      "settles": {
+        "start": [
+          "schema-split"
+        ]
+      },
+      "text": "cjk-words landed: unlocks schema-split"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:06:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:06:38",
+      "by": "kronuz",
+      "closed": "install noted; Ninja env already set, sweep clean (0 of 393 slots), landing loops unchanged",
+      "id": "msg-231",
+      "text": "campaign skill installed: agent-campaign:d8e4eea (dotfiles:21cb551, CI green 7/7, worker restarted), by hand because the broadcaster still skips xapiand (broadcast-every-lead fixes it). New for a lead: land accepts what verify reuses across a clean merge from main (verify-land-agree; your msg-22), and land --merge-main merges only when a plain land asks (merge-main-when-needed). Quota never decides tier, effort, reviews or checks."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:08:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:08:22",
+      "by": "campaign-v3: kronuz",
+      "closed": "noted; at install, requeue the split gate checks through verify",
+      "id": "msg-232",
+      "origin": "campaign-v3",
+      "text": "Coming with gate-check-jobs (landing next): gate checks that `campaign verify` queues run at priority 2, ahead of other light evidence (your split checks stop waiting behind 166 jobs), and a gate check's job identity includes the bytes of the scripts its command runs, so a changed checker reruns and `job submit` of the same check reuses verify's job."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:35:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:35:37",
+      "by": "lead",
+      "closed": "no xapiand quest or queued job fuzzes journal's decoders; asked Detent's lead for the runs it meant",
+      "id": "msg-233",
+      "text": "detent lead: journal-fuzz-decoder-pin landed on journal main at journal:9cdaa34. Configure with -DJOURNAL_FUZZ=ON -DJOURNAL_FUZZ_DECODER=segment (or checkpoint); empty keeps data[0] % 2, and the first byte is consumed either way, so corpora are shared. Measured 60 s per setting on macOS: mixed 21,467, segment 220,207, checkpoint 18,230 executions, no crash (job 261121-154444-95ae40). Your two 60 CPU-minute runs can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:58:28",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:58:28",
+      "by": "campaign-v3: kronuz",
+      "closed": "noted; at install, work the to-do list on each wake",
+      "id": "msg-234",
+      "origin": "campaign-v3",
+      "text": "Landed on agent-campaign main, installed after main's CI is green: lead-driver (agent-campaign:f958fe7). For a lead: `campaign wait --commits` now also returns when the to-do list grows (or at once if it isn't empty), re-fires each item after CAMPAIGN_TODO_REPEAT, and ends every return with the list: the items that woke you first, then up to 10 (`campaign status` shows all). Waiting is not work: an in-flight quest with no live agent, job or CI waiter is an item. Quests blocked on the owner are parked, not resumed. A lead tool call stuck over 15 minutes (a permission prompt) raises a notification. CI reads are cached on disk, shared by every process (status went from 86 gh calls to about 6 in xapiand). After the install: launch an agent for every item, then wait again."
     }
   ],
   "quests": {
@@ -4373,10 +4443,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T20:01:31",
+          "commit": "dacfe414bb5b84c0e0a901a23759b93bd0030ca6",
+          "criteria": {
+            "A1": "261120-182340-d04e6e (passed at 234d834c4efc; only 15 merges from main since, none touching its files)",
+            "A2": "ci:Build + unit + smoke, 261120-182340-d04e6e (passed at 234d834c4efc; only 15 merges from main since, none touching its files); fails without: 261120-182354-5059f0",
+            "A3": "docs/mechanisms/cjk-words.md (Differences filled from the oracle)"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "ee5677fd88c24222418cd4f3ac5f641182179079",
+              "state": "done"
+            },
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "ee5677fd88c24222418cd4f3ac5f641182179079",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "230ebdcd6911e46199ddd187369d4f43edf0d412",
+          "reason": "",
+          "tested": "ee5677fd88c24222418cd4f3ac5f641182179079"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "cjk-segmenter"
@@ -4384,10 +4483,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T19:22:31",
-      "worktree": "../Xapiand-wt/xapiand/cjk-words"
+      "updated": "2026-11-21T20:01:38",
+      "worktree": ""
     },
     "cli-restore-records": {
       "accepted": {
@@ -13232,6 +13331,68 @@
       "title": "Xapiand takes http's half-close fix",
       "updated": "2026-11-20T05:27:22"
     },
+    "hunt-faultlab-at-mark": {
+      "accepted": {},
+      "after": [],
+      "base": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+      "branch": "quest/xapiand/hunt-faultlab-at-mark",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/faultfs_test.cc"
+      ],
+      "journal": "../Xapiand-wt/xapiand/hunt-faultlab-at-mark",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "active",
+      "title": "faultlab's suite reaches faultfs's at_mark sync path",
+      "updated": "2026-11-21T20:22:59",
+      "worktree": "../faultlab-wt/xapiand/hunt-faultlab-at-mark"
+    },
+    "hunt-header-tables": {
+      "accepted": {},
+      "after": [],
+      "base": "6cffdc7af11c601d25b4786b1bd189667dd7a4f9",
+      "branch": "quest/xapiand/hunt-header-tables",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 45,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/data.h",
+        "src/multivalue/keymaker.h",
+        "src/phonetic.h",
+        "docs/dev/header-tables.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "active",
+      "title": "Header static tables: one copy and one initializer per program",
+      "updated": "2026-11-21T20:22:48",
+      "worktree": "../Xapiand-wt/xapiand/hunt-header-tables"
+    },
     "hunt-lua-fetch": {
       "accepted": {},
       "after": [
@@ -13407,6 +13568,74 @@
       "title": "radix-router: bound slow matching inputs found by fuzzing",
       "updated": "2026-11-17T22:45:34",
       "worktree": ""
+    },
+    "hunt-tls-expiry": {
+      "accepted": {},
+      "after": [],
+      "base": "bf7c3d71eaa2463ece238b516c5055f31a71df2a",
+      "branch": "quest/xapiand/hunt-tls-expiry",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 45,
+          "name": "suite"
+        }
+      ],
+      "consumes": [
+        "reactor"
+      ],
+      "files": [
+        "src/tls.cc",
+        "src/tls.h",
+        "docs/dev/extraction-ledger.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "superseded by docs/design/lifecycle-adoption.md quest 8 (server-limits): it repins reactor past 409c4ce (27 commits: wheel, TLS cache, phased stop), takes tls::server_context and removes the global tls_context, which takes tls_seconds_to_expiry with it; Xapiand's reactor pin 886131b lacks seconds_to_expiry",
+      "repo": ".",
+      "risk": "low",
+      "status": "dropped",
+      "title": "Xapiand calls reactor's seconds_to_expiry and drops its own",
+      "updated": "2026-11-21T20:25:37",
+      "worktree": "../Xapiand-wt/xapiand/hunt-tls-expiry"
+    },
+    "hunt-traceback-freebsd": {
+      "accepted": {},
+      "after": [],
+      "base": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+      "branch": "quest/xapiand/hunt-traceback-freebsd",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "traceback.cc",
+        "traceback.h",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/hunt-traceback-freebsd",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../traceback",
+      "risk": "normal",
+      "status": "active",
+      "title": "traceback's dump names the dumping thread on FreeBSD",
+      "updated": "2026-11-21T21:09:29",
+      "worktree": "../traceback-wt/xapiand/hunt-traceback-freebsd"
     },
     "hybrid-go-no-go": {
       "accepted": {},
@@ -13757,11 +13986,15 @@
       "provides": [
         "journal:recovery"
       ],
+      "reason": "durability accepted at journal:e4b0100; lands after detent:journal-tail-second-sector (Detent, active)",
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T17:38:06",
+      "until": [
+        "detent:journal-tail-second-sector"
+      ],
+      "updated": "2026-11-21T21:31:13",
       "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
@@ -14004,7 +14237,8 @@
             "tests/test_group_chunk*.cc",
             "harness/blob_crash_check.sh"
           ],
-          "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal--chunks"
+          "merged": "5ff24dcdc3b9f4c392d982edf51c8175414825b5",
+          "worktree": ""
         },
         "restore": {
           "base": "7e232b1f71688995bd97437c563b254d5a8e5b34",
@@ -14028,7 +14262,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T12:08:57",
+      "updated": "2026-11-21T21:27:24",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -17609,17 +17843,40 @@
         ".github/workflows/freebsd.yml",
         "TESTING.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T21:20:20",
+          "commit": "a3de26e8e23b0b86fc61c533ab640f9148080294",
+          "criteria": {
+            "A1": "261121-105123-f5b150 (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A2": "261121-105122-a72926 (passed at e8c578487a7a; only 7 merges from main since, none touching its files), 261121-105123-e0bfaf (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A3": "CI green at 1c3c13d8d4a8"
+          },
+          "evidence": [
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "bcca6ac5844122bd27932784734989703ec68d48",
+          "reason": "",
+          "tested": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Pin newman for the docs E2E in one place",
-      "updated": "2026-11-21T03:30:26",
-      "worktree": "../Xapiand-wt/xapiand/newman-pin"
+      "updated": "2026-11-21T21:20:41",
+      "worktree": ""
     },
     "nightly-retry": {
       "accepted": {},
@@ -23930,8 +24187,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T13:09:43",
-          "base": "0547322a4d72d6bdd23ab95dce87505826c89d40",
+          "at": "2026-11-21T20:27:19",
+          "base": "78484bdee35512b0b66d42366cf4216601f05e21",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -23941,7 +24198,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "e3265faf514789f623ca060c7b8fd700e0530ef4",
+          "commit": "8b662eca9522096b296555a54345243091526e1f",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -23952,7 +24209,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "lead read main's changes since the review (git diff 9d0d2703aeee 0547322a4d72): shard.cc's stale-id replace now throws version_conflict (racing-put-409), range.cc compares only given range ends (keyword-open-range), and tests and a doc follow them; none reaches the restore stream's input path (search_views.cc), which the review covered",
+          "note": "lead re-read main's changes under the quest since the review (0547322..78484bd): only failed-restore-exit's CLI file restore (handler.cc restore_documents(fd) refuses non-map objects, main.cc maps it to EX_DATAERR, its check script). restore-stream's own change is the HTTP stream restore in search_views.cc; the two paths share no code, and the merged tree keeps the refusal (handler.cc:1148-1156). Evidence rerun at the merge head a076cc9: A1 4181b4 and 55f313, A2 f84811, A3 1b6655, A6 c8ca75 (32 CPU-minutes).",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -24001,7 +24258,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T13:09:43",
+      "updated": "2026-11-21T20:27:19",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -24243,6 +24500,8 @@
       "after": [
         "split-check"
       ],
+      "base": "57496b89a73f9413512385741083d2b00140cbcd",
+      "branch": "quest/xapiand/schema-split",
       "checks": [
         {
           "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src/database",
@@ -24256,8 +24515,8 @@
         "src/database/schema.cc",
         "src/database/schema.h",
         "src/database/schema/**",
-        "harness/split_check.py",
-        "docs/dev/schema-layout.md"
+        "docs/dev/schema-layout.md",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -24296,9 +24555,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T12:05:42"
+      "updated": "2026-11-21T20:43:18",
+      "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
       "accepted": {},
@@ -25054,7 +25314,34 @@
       "updated": "2026-11-08T15:39:29"
     },
     "single-flight-budget": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-21T19:58:16",
+          "base": "d19defca7d70047d165b6117342c238f4f759faa",
+          "blobs": {
+            "docs/mechanisms/cancellation.md": "100644:b6021322f02e75a957c6add531423b2a4dc7f56a",
+            "harness/async_allowlist.tsv": "100644:cb681a25fc31fbb46b4996d4ad4601ebb041c348",
+            "src/database/schemas_lru.cc": "100644:2435f307974e3577a3cc450ca629364b92b18aba",
+            "src/single_flight.h": "100644:ccb2cd4e3fd4e4b95debca2c0a2888efde3dc391",
+            "tests/test_single_flight.cc": "100644:2155adf723b5ab938453f12913f26cde745650bc"
+          },
+          "by": "review",
+          "commit": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
+          "criteria": "8c3d2f0d55ad66b6",
+          "diffs": {
+            "docs/mechanisms/cancellation.md": "be952f27dae22751",
+            "harness/async_allowlist.tsv": "cac89cb1ed679c03",
+            "src/database/schemas_lru.cc": "b83688834c9a765b",
+            "src/single_flight.h": "926a777ac93cf1c6",
+            "tests/test_single_flight.cc": "8867b342844c857e"
+          },
+          "findings": {},
+          "note": "",
+          "review": "14b48c9cc3e1435be2a4621659ae0fca526f5dda",
+          "reviewed": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "4e7be674c0d2a6b912e1c6ea5f8f900bbf294772",
       "branch": "quest/xapiand/single-flight-budget",
@@ -25072,10 +25359,13 @@
         "tests/test_single_flight*",
         "tests/CMakeLists.txt",
         "docs/mechanisms/cancellation.md",
-        "src/database/schemas_lru.cc"
+        "src/database/schemas_lru.cc",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -25083,7 +25373,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T16:31:30",
+      "updated": "2026-11-21T19:58:16",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
@@ -25993,6 +26283,44 @@
       "title": "split_check.py proves a file split moved code and changed none",
       "updated": "2026-11-21T12:29:17",
       "worktree": ""
+    },
+    "split-check-anchor": {
+      "accepted": {},
+      "after": [],
+      "base": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+      "branch": "quest/xapiand/split-check-anchor",
+      "checks": [
+        {
+          "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+          "level": "light",
+          "minutes": 30,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+          "level": "light",
+          "minutes": 30,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/testdata/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/split-check-anchor",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "active",
+      "title": "split_check matches repeated lines by their unique anchors",
+      "updated": "2026-11-21T20:43:56",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-anchor"
     },
     "split-check-sources": {
       "accepted": {},
@@ -27007,11 +27335,15 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "the permission check denied the contributor's push of queryparser:0fdec0c (main merged); owner decides",
       "repo": "../queryparser",
       "risk": "low",
-      "status": "active",
+      "status": "blocked",
       "title": "queryparser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:16",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T21:32:26",
       "worktree": "../queryparser-wt/xapiand/split-queryparser"
     },
     "split-storage": {
@@ -27359,18 +27691,62 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-traceback",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T21:07:26",
+          "ci_skipped": "freebsd-x86_64's traceback_hooks abort predates the split: traceback main fails it since 2026-11-19 (run 44570136588 at traceback:47c5736); every other CI job green at a6690d9 (run 44958843249); hunt row 404 filed",
+          "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+          "criteria": {
+            "A1": "261121-182200-d7fe5b (the build-test check), 261121-182200-d7fe5b, 261121-182200-2504ee",
+            "A2": "261121-182200-2504ee (the split check), 261121-130848-594a3e (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130845-a8f326 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] `docs/source-layout.md` at traceback:29f0dd1",
+            "A5": "CI waived by --no-ci",
+            "A6": "261121-130431-d0c0e2 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-d7fe5b",
+              "level": "light",
+              "seconds": 17.5,
+              "state": "done",
+              "what": "split-traceback check build-test at a6690d9be025"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-2504ee",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-traceback check split at a6690d9be025"
+            }
+          ],
+          "final": true,
+          "from": "47c5736514b240eaf728779733f388eab33cf4bd",
+          "reason": "",
+          "tested": "a6690d9be025b8d7e66de9a2bc656664cb730285"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../traceback",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "traceback's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:31",
-      "worktree": "../traceback-wt/xapiand/split-traceback"
+      "updated": "2026-11-21T21:07:56",
+      "worktree": ""
     },
     "split-uinteger-t": {
       "accepted": {},
@@ -32220,12 +32596,13 @@
             "fuzz/**",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--tolerant-open",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--tolerant-open"
+          "journal": "",
+          "merged": "a16d117c1ac7e351e0fe983c11b2a0182b09d97d",
+          "worktree": ""
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T13:16:50",
+      "updated": "2026-11-21T21:25:48",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
@@ -35480,11 +35857,15 @@
       "milestone": "Xapian-only release",
       "needs": [],
       "provides": [],
+      "reason": "owner: tag v1.0.0-alpha.11 at Xapiand:cfc2a5b80 (A6), and the release line's base and file set",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "blocked",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-21T09:42:46",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T21:27:32",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {

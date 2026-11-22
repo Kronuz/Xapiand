@@ -57,8 +57,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install newman
-        run: npm install -g newman@6
+          cache: npm
+          cache-dependency-path: harness/package-lock.json
       - name: Build Release and run the suite
         run: |
           set -eux
