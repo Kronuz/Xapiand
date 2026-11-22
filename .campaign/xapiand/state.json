@@ -33088,6 +33088,8 @@
       "after": [
         "split-check-members"
       ],
+      "base": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+      "branch": "quest/xapiand/uinteger-restructure",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -33130,6 +33132,7 @@
           "weakened": []
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/uinteger-restructure",
       "landed": [],
       "lenses": [
         "correctness"
@@ -33139,9 +33142,10 @@
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-21T22:06:28"
+      "updated": "2026-11-21T22:06:37",
+      "worktree": "../uinteger_t-wt/xapiand/uinteger-restructure"
     },
     "unpin-after-kick": {
       "accepted": {
