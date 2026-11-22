@@ -26506,18 +26506,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-htm",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:36",
+          "commit": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+          "criteria": {
+            "A1": "261121-131843-3e7231 (the build-test check), 261121-131843-3e7231 (passed at f20c06135f8f; only 1 merge from main since, none touching its files), 261121-155754-f8993c",
+            "A2": "261121-155754-f8993c (the split check), 261121-131843-3e7231 (passed at f20c06135f8f; only 1 merge from main since, none touching its files), 261121-155754-f8993c",
+            "A3": "261121-131843-5adddc (passed at f20c06135f8f; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at htm:f20c061: htm.cc named kept whole, with the reasons and the cut to make",
+            "A5": "CI green at c4577b702aed",
+            "A6": "261121-132934-57906c (passed at f20c06135f8f; only 1 merge from main since, none touching its files)",
+            "A7": "Lead's read: keep htm.cc whole (message above)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "f20c06135f8fc69b83031ed2a8b066e3f334f772",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-131843-3e7231",
+              "level": "light",
+              "seconds": 66.7,
+              "state": "done",
+              "what": "split-htm check build-test at f20c06135f8f"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "c4577b702aed9bfdecc837e8a9b309e2b267c48f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155754-f8993c",
+              "level": "light",
+              "seconds": 0.9,
+              "state": "done",
+              "what": "split-htm check split at c4577b702aed"
+            }
+          ],
+          "final": true,
+          "from": "0e3fe66cce82587f46464cd7988a2236ee39ee5e",
+          "reason": "",
+          "tested": "c4577b702aed9bfdecc837e8a9b309e2b267c48f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../htm",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "htm's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:09",
-      "worktree": "../htm-wt/xapiand/split-htm"
+      "updated": "2026-11-21T18:19:38",
+      "worktree": ""
     },
     "split-http": {
       "accepted": {},
