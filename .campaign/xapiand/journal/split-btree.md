@@ -31,7 +31,7 @@ Nothing (A2 waits on split-check landing).
 | A4 | docs/source-layout.md lists every new file and the files kept whole, with why |
 | A5 | CI on pushed branch |
 | A6 | selfcontained.sh -s 17 over the 6 new headers: job 261121-121259-79bc8a; local quiet-light runs 6 ok at c++17 and c++20 |
-| A7 | the lead's read |
+| A7 | lead, 2026-11-21: read the split; btree.h is an umbrella over compare, params, node, iterator, tree and container pieces cut at class boundaries, each opening with what it holds (cpp-btree:b3f404a) |
 
 ## Result
 
