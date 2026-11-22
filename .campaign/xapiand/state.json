@@ -13306,6 +13306,35 @@
       "title": "Xapiand takes http's half-close fix",
       "updated": "2026-11-20T05:27:22"
     },
+    "hunt-header-tables": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 45,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "src/database/data.h",
+        "src/multivalue/keymaker.h",
+        "src/phonetic.h",
+        "docs/dev/header-tables.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Header static tables: one copy and one initializer per program",
+      "updated": "2026-11-21T20:21:50"
+    },
     "hunt-lua-fetch": {
       "accepted": {},
       "after": [
