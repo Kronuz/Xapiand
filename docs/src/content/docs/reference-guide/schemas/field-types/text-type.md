@@ -94,6 +94,84 @@ Other available stop strategies are:
 | `stop_all`, `all`         | If a word is identified as a stop word, skip it completely.     |
 | `stop_stemmed`, `stemmed` | If a word is identified as a stop word, index its unstemmed form but skip the stem. Unstemmed forms are indexed with positional information by default, so this allows searches for phrases containing stopwords to be supported. (This is the default mode). |
 
+## CJK words
+
+`_cjk_words` splits Chinese, Japanese and Korean text into words for indexing and queries, so a search by word finds the document.
+
+```rest
+PUT /cjk/words/doc
+
+{
+  "body": {
+    "_type": "text",
+    "_cjk_words": true,
+    "_value": "我喜欢吃苹果"
+  }
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+SEARCH /cjk/words/
+```
+
+<!-- e2e:begin
+---
+params: query=body:%E8%8B%B9%E6%9E%9C
+---
+
+```js
+pm.test("The word finds the document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(1);
+  pm.expect(jsonData.hits[0]['_id']).to.equal('doc');
+});
+```
+e2e:end -->
+
+Words joined by a middle dot, an apostrophe or an ampersand are still words of their own:
+
+```rest
+PUT /cjk/words/name
+
+{
+  "body": "乔治·华盛顿"
+}
+```
+
+<!-- e2e:begin
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+e2e:end -->
+
+```rest
+SEARCH /cjk/words/
+```
+
+<!-- e2e:begin
+---
+params: query=body:%E5%8D%8E%E7%9B%9B%E9%A1%BF
+---
+
+```js
+pm.test("One word of the name finds the document", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(1);
+  pm.expect(jsonData.hits[0]['_id']).to.equal('name');
+});
+```
+e2e:end -->
+
 ## Parameters
 
 The following parameters are accepted by _Text_ fields:
@@ -112,6 +190,7 @@ The following parameters are accepted by _Text_ fields:
 | `_spelling`                           | Feed the spelling dictionary. (The default is `false`).                                 |
 | `_ngram`                              | Index character n-grams of the words. (The default is `false`).                         |
 | `_cjk_ngram`                          | Index CJK text as unigrams and bigrams. (The default is `false`).                       |
+| `_cjk_words`                          | Index CJK text as words, split as ICU's word break iterator splits them, with no ICU. Not with `_cjk_ngram`. (The default is `false`). |
 | `_position`                           | The position number the first word of the value starts at.                              |
 
 [Snowball]: http://snowballstem.org
