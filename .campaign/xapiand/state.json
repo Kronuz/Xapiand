@@ -13606,6 +13606,8 @@
     "hunt-traceback-freebsd": {
       "accepted": {},
       "after": [],
+      "base": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+      "branch": "quest/xapiand/hunt-traceback-freebsd",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13622,6 +13624,7 @@
         "docs/**",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-traceback-freebsd",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -13629,9 +13632,10 @@
       "provides": [],
       "repo": "../traceback",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "traceback's dump names the dumping thread on FreeBSD",
-      "updated": "2026-11-21T21:09:21"
+      "updated": "2026-11-21T21:09:29",
+      "worktree": "../traceback-wt/xapiand/hunt-traceback-freebsd"
     },
     "hybrid-go-no-go": {
       "accepted": {},
