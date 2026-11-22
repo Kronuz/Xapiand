@@ -27625,18 +27625,62 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-traceback",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T21:07:26",
+          "ci_skipped": "freebsd-x86_64's traceback_hooks abort predates the split: traceback main fails it since 2026-11-19 (run 44570136588 at traceback:47c5736); every other CI job green at a6690d9 (run 44958843249); hunt row 404 filed",
+          "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+          "criteria": {
+            "A1": "261121-182200-d7fe5b (the build-test check), 261121-182200-d7fe5b, 261121-182200-2504ee",
+            "A2": "261121-182200-2504ee (the split check), 261121-130848-594a3e (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130845-a8f326 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] `docs/source-layout.md` at traceback:29f0dd1",
+            "A5": "CI waived by --no-ci",
+            "A6": "261121-130431-d0c0e2 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-d7fe5b",
+              "level": "light",
+              "seconds": 17.5,
+              "state": "done",
+              "what": "split-traceback check build-test at a6690d9be025"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-2504ee",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-traceback check split at a6690d9be025"
+            }
+          ],
+          "final": true,
+          "from": "47c5736514b240eaf728779733f388eab33cf4bd",
+          "reason": "",
+          "tested": "a6690d9be025b8d7e66de9a2bc656664cb730285"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../traceback",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "traceback's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:31",
-      "worktree": "../traceback-wt/xapiand/split-traceback"
+      "updated": "2026-11-21T21:07:56",
+      "worktree": ""
     },
     "split-uinteger-t": {
       "accepted": {},
