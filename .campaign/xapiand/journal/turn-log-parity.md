@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261121-151646-4dcef9 261121-151648-9ffb16 261121-151714-b5123c 261121-151701-7bf803 261121-151703-21b6d5 261121-151716-4f387f 261121-151725-649183
+State: ready for review at strata:b533db12 (pushed); evidence jobs queued: 261121-183142-9fa0f6 (build-test) 261121-183106-bb529c 261121-183107-df159e 261121-183109-1a0cf0 261121-183110-47450d (A1) 261121-183121-b8a9f9 261121-183125-bd57b5 (A2) 261121-183107-decc0f 261121-183109-837d25 261121-183110-399fd2 (A3) 261121-183108-f29e13 261121-183128-18f3a2 (A4) 261121-183108-996f58 261121-183108-a5a124 (A6)
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,25 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-CI-red pass (lead's three failures of run 44938627226) at strata:e59af09e, pushed:
+Merge pass (lead, 2026-11-21) at strata:b533db12, pushed:
+
+1. strata:3b8da146 merges task group-commit (strata:80f91fd0). Conflicts in turn_seal.hh,
+   index.hh and test_barrier_cohort.cc, resolved keeping both sides: await()/await_sealed() keep
+   the CI-red pass's reread after each inline turn (`idle`, `inline_turn()`) and gain the task's
+   release bookkeeping (`p.owe()`, `released`); the member `await_sealed(s)` (large-tx's helper,
+   used by plain and chunked joins) reports the writer's arrival with `joined(false)` before it
+   waits on a full record; join_chunks' per-chunk `wake()` becomes `joined(true)`, since `wake()`
+   no longer counts an arrival. test_barrier_cohort takes the task's configurations on `fl::`.
+2. strata:926ea902 merges task tolerant-open (strata:a16d117c), clean.
+3. strata:b533db12: journal pin 178030b -> journal:e4b0100 (journal-lost-bound's head, durability
+   accepted there): tolerant-open needs `Host::bound`, `Host::lose`, `GroupStatus::bounded`. The
+   test moved into the file set: `test/test_tolerant_open.cc` -> `test/test_reopen_damaged.cc`
+   (`test/test_reopen*`), ctest `reopen_damaged`.
+4. Out-of-scope warnings: group-commit's `docs/design/rocksdb-parity.md` and tolerant-open's
+   `include/strata/core/turn_seal.hh` are both in the quest's file set: kept.
+5. origin/main (strata:cc30217f) unchanged since the last main merge: no merge needed.
+
+Earlier, CI-red pass (lead's three failures of run 44938627226) at strata:e59af09e, pushed:
 
 1. `reopen_loops` "a turn-log wait with nothing to write" and `standalone_turn_log`'s ASan abort
    are one bug, in main's `turn_sealer::await`/`await_sealed` (strata:1755bfb8 fixes it). With no
@@ -38,48 +56,23 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
 
 ## Next
 
-1. Read the CI-red pass jobs: 151646-4dcef9 (fix, Release), 151648-9ffb16 (mutant must fail),
-   151714-b5123c (main must fail), 151701-7bf803 (TSan), 151703-21b6d5 (TSan mutant must fail),
-   151716-4f387f (ASan+UBSan), 151725-649183 (suite at strata:e59af09e); then CI at strata:e59af09e.
-2. Read jobs 261121-145544-911db0 (suite), 145545-2e50d3 and 145547-24d332 (A1, A1 TSan),
-   145549-3a3a17 and 145601-f05091 (A3 sweep, A3 fuzz), 145550-f81cd5 (A4), 145551-877bc0 and
-   145553-9dd19f (A6 D9, D2/D10) into Evidence; tolerant-open's 145607-0e1ac9 (A2 test at
-   strata:a16d117c, journal:1e3505a) and 145613-34602d (its opens-every mutant, `--fails-without`).
-3. Lead: Blocked on items 1-3.
+1. Read the queued jobs (State) into Evidence; A4's mutant 261121-183128-18f3a2 must show
+   `test_barrier_cohort` failing after a clean build (a build failure is not a kill).
+2. Lead: the durability review; Blocked on 1 before landing.
 
 ## Blocked on
 
-1. Lead, task group-commit (strata:2f236c94) not merged: not proven on CI. Its jobs pass
-   (A4 test 261121-101429-f8726f; mutant 261121-101433-65f5c5 failed as required; suite
-   261121-114248-d19804; TSan in CI run 44934094130 passed), but the same CI run fails its own
-   `barrier_cohort` on freebsd-x86_64 (K=4 I=4 L=1: 16 of 84 commits on a 2nd barrier) and
-   macos-arm64 (K=4 I=2 L=2). Its exact "every commit rides the next barrier" check is timing-bound
-   on shared runners. The base test is also flaky there (freebsd in large-tx's run 44938627226,
-   line 130), so group-commit inherits the flake and widens it. Needs a fix in the task: a check
-   robust to runner stalls (e.g. count writers whose 2nd barrier follows a release they observed
-   late), proven on CI, before it merges.
-2. Lead, task tolerant-open (strata:a16d117c) not merged: it builds only against
-   journal-lost-bound (journal:1e3505a, in review; CI run 44937383488 fails to compile at today's
-   pin: no `Host::bound`, `Host::lose`, `GroupStatus::bounded`), and its A2 test and mutant never
-   ran (261121-104705-3d9542, 261121-104707-bd7691 failed at configure: Makefiles `build`). Reran
-   as 145607-0e1ac9 and 145613-34602d. It merges with strata's journal pin bump once
-   journal-lost-bound lands. Its standalone suite 261121-115239-ee5107 and journal mutant
-   261121-115241-8bbc79 (exit 134) are done.
-3. Lead, the build-test check (`cmake -B build ...`) has no `-G Ninja`. Since main's 9cefc0e5 a fresh
-   configure without it is refused, and the slot's `build` holds tolerant-open's cache
-   (`FETCHCONTENT_SOURCE_DIR_JOURNAL` = the slot's `ref-journal`, RelWithDebInfo), so `campaign
-   verify` would build the quest against journal-lost-bound. I did not run it; suite
-   261121-145544-911db0 stands in (`-G Ninja -B build-q`, journal override cleared). Suggested check:
-   `cmake -G Ninja -B build-q -DCMAKE_BUILD_TYPE=Release -DFETCHCONTENT_SOURCE_DIR_JOURNAL= && ...`.
-4. Resolved in the CI-red pass (Doing): fix and tests at strata:e59af09e, jobs pending. Was: the
-   quest head is red on CI before this merge. Large-tx's run 44938627226 (merged at
-   b467309d): `standalone_turn_log` aborts under ASan; `large_tx` has a TSan data race at
-   test/test_large_tx.cc:436 (`visible()`); `reopen_loops` on linux-arm64-gcc throws "strata: a
-   turn-log wait with nothing to write" (turn_seal.hh:241/269) during recovery, seed-dependent (also
-   in group-commit's run: step 1 cut 20 seed 2621; large-tx's: cut 44 seed 5764). The last one is a
-   recovery-path logic_error, a durability bug in a merged task, not a test flake. CI on b146febc
-   will show whether they persist.
-5. Earlier: A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
+1. Lead, before landing: the journal pin is journal:e4b0100, journal-lost-bound's head, not on
+   journal main. journal-lost-bound lands after detent:journal-tail-second-sector; then the pin
+   moves to journal main (a pin-only commit here, jobs rerun).
+2. Lead: stale queued jobs at older commits not cancelled (cancel was refused here):
+   261121-151525-9704d9, 261121-151523-00cd16 (task heads, superseded by the merge and
+   261121-183128-18f3a2), 261121-151725-649183 and 261121-151646-4dcef9 (suite and fix at
+   strata:e59af09e, superseded by build-test and 261121-183109-1a0cf0).
+3. Earlier: A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
+
+Resolved: group-commit (CI-timing check replaced by recorded turns at strata:80f91fd0, merged);
+tolerant-open (merged with the pin above); build-test now configures with `-G Ninja`.
 
 ## Merge of main (strata:cc30217f into b467309d, as b146febc)
 
@@ -97,22 +90,24 @@ test/standalone_turn_log_test.cc). Semantic resolution, keeping both sides:
 
 ## Evidence
 
-At strata:b146febc (main merged) unless stated. Earlier passing runs ran pre-merge code; their
-replacements are the pending jobs named here. Mutant runs (`--fails-without`) stand: they ran
-at mutant commits.
+At strata:b533db12 (both tasks merged). From `campaign brief`:
 
 | Criterion | Evidence |
 |---|---|
-| A1 | test_ryw + t4 served 261121-145545-2e50d3, TSan 261121-145547-24d332 (pending; replace 261121-090415-53357a, 261121-090438-28fbcd). Fails without: 261121-090430-5cd461 (owner-cut-at-v), 261121-090433-fa1d1f (install-before-log-wait), 261121-090436-c180a4 (v-follows-apply) |
-| A2 | not on the quest branch (Blocked on 2). Task tolerant-open: 261121-145607-0e1ac9 (pending), suite 261121-115239-ee5107; fails without: 261121-115241-8bbc79, 261121-145613-34602d (pending) |
-| A3 | test_large_tx 261121-145549-3a3a17, fuzz 261121-145601-f05091 (pending; replace 261121-110105-830c31, 261121-114248-3845d4). Fails without: 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1 (and round 1 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11) |
-| A4 | base cohort test (per group) 261121-145550-f81cd5 (pending; replaces 261120-192604-5eca03); fails without: 261120-082448-f562c7. The per-writer count is group-commit's, not merged (Blocked on 1) |
-| A5 | none: the note still records Q3-Q5 open; design-note task not run |
-| A6 | partial, no gate rows: merge_policy 261121-145551-877bc0, checkpoint window + reopen loops + kv batch 261121-145553-9dd19f (pending; replace 261120-192628-0cc5e8, 261120-194415-bf027b, 261120-204250-36020e, 261121-050248-2f7f8d, 261121-054157-2f69f9); fails without: 261120-081225-8f09de, 261120-204252-7f2e9c, 261120-204253-47f1cc |
-| build-test | suite 261121-151725-649183 at strata:e59af09e (pending; stands in for the check, Blocked on 3; superseded the queued 261121-145544-911db0 at b146febc) |
-| await reread (CI-red 1, 3) | fix 261121-151646-4dcef9, ASan+UBSan 261121-151716-4f387f, TSan 261121-151701-7bf803 (pending). Fails without: 261121-151648-9ffb16 (pending). Pre-existing on main: 261121-151714-b5123c (pending; passes when `rival` fails at main cc30217f plus the test) |
-| large_tx race (CI-red 2) | TSan 261121-151701-7bf803 (pending). Fails without: 261121-151703-21b6d5 (TSan at the plain-counter mutant, pending) |
-| CI | strata:e59af09e pushed; run pending (b146febc's 44959280523 superseded) |
+| A1 | <261121-090415-53357a ran other code; 261121-090438-28fbcd ran other code; 261121-183106-bb529c queued; 261121-183107-df159e queued; 261121-183109-1a0cf0 queued; 261121-183110-47450d queued> |
+| A2 | 261121-145607-0e1ac9, 261121-115239-ee5107; fails without: 261121-115241-8bbc79, 261121-145613-34602d |
+| A3 | <261121-110105-830c31 ran other code; 261121-114248-3845d4 ran other code; 261121-183107-decc0f queued; 261121-183109-837d25 queued; 261121-183110-399fd2 queued> |
+| A4 | <261120-192604-5eca03 ran other code; 261121-101105-1c95d9 failed; 261121-151521-37deb9 running; 261121-183108-f29e13 queued> |
+| A6 | <261120-081226-1f9736 ran in /Users/kronuz/code/Kronuz/strata-wt/xapiand/turn-log-parity--merge-runs, not the quest's repository; 261120-192628-0cc5e8 ran other code; 261120-194415-bf027b ran other code; 261121-050248-2f7f8d ran other code; 261120-204250-36020e ran other code; 261121-054157-2f69f9 ran other code; 261121-183108-996f58 queued; 261121-183108-a5a124 queued> |
+| A5 | <no evidence yet> |
+
+Added at strata:b533db12, not yet in the brief: A2 reopen_damaged 261121-183121-b8a9f9 and the
+standalone suite 261121-183125-bd57b5 against the pinned journal (replace 145607-0e1ac9 and
+115239-ee5107, which built journal:1e3505a through an override); A4 mutant 261121-183128-18f3a2 at
+strata:6c946dc3 (`refs/mutants/turn-log-parity-cohort-groups`, local: the quest head with the cohort
+counting released groups, not writers; `--fails-without`). build-test 261121-183142-9fa0f6.
+Still queued at their own commits and standing: 261121-151648-9ffb16, 261121-151703-21b6d5
+(mutants), 261121-151714-b5123c (main attribution).
 
 Smallest jobs, once built (each a `campaign job submit --quest turn-log-parity`):
 
@@ -124,8 +119,8 @@ Smallest jobs, once built (each a `campaign job submit --quest turn-log-parity`)
   seconds-long smoke before each.
 
 Hunt item "journal park contract" (Detent msg-188): not applied. Its two strata items wait for a pin
-at journal:b6a7697 or later; this branch pins journal:178030b, and b6a7697 is only on
-`quest/detent/journal-idle-groups`, not an ancestor of 178030b.
+at journal:b6a7697 or later. The pin is journal:e4b0100 since the merge pass, which contains
+b6a7697: the item is now applicable (not done in the merge pass).
 
 ### Design round 2 probes (models of the design, not of built code)
 
@@ -137,6 +132,21 @@ at journal:b6a7697 or later; this branch pins journal:178030b, and b6a7697 is on
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (merge pass, 2026-11-21)
+
+- Chunked joins report the writer's arrival like plain joins (`joined(true)` per chunk,
+  `joined(false)` before waiting on a full record): the task's per-writer count otherwise misses a
+  writer whose command is chunked, and its cohort wait runs to the bound for it.
+- Pinned journal-lost-bound's head rather than leaving tolerant-open unbuilt: the lead asked for
+  both merged, and build-test cannot compile A2's code at journal:178030b.
+- Renamed the tolerant-open test into `test/test_reopen*` rather than reverting it: it is A2's test.
+- Resubmitted, not reran, A2's two jobs: their specs build `test_tolerant_open` against a journal
+  override. Did not rerun the brief's jobs that configure `build` without `-G Ninja`
+  (5eca03, 0cc5e8, bf027b, 36020e, 2f7f8d, 2f69f9, 53357a, 28fbcd, 110105, 114248): the
+  build-q reruns run the same tests at the head.
+- The task-level A4 mutant (151523-00cd16 at strata:191551bf) is replaced by the same mutation at
+  the quest head.
 
 ## Rulings I made (CI-red pass, 2026-11-21)
 
