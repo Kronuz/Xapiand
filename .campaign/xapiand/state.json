@@ -27273,18 +27273,60 @@
         "docs/SPLITTING.md",
         "tools/README.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-tooling",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T19:21:31",
+          "commit": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+          "criteria": {
+            "A1": "261121-162808-78cfcf (the test check), 261121-162810-84f4aa",
+            "A2": "261121-162808-78cfcf (the test check), 261121-162808-78cfcf, 261121-162809-3dccaf; fails without: 261121-162815-11af5b",
+            "A3": "261121-162808-78cfcf (the test check), 261121-162808-78cfcf, 261121-162809-3dccaf",
+            "A4": "artifact: docs/SPLITTING.md \"Moves only\" and \"What lands a split\" item 3 (ctest -N grep recipe, fnsizes.sh)",
+            "A5": "261121-162808-78cfcf, 261121-162809-3dccaf",
+            "A6": "261121-162808-78cfcf (the test check); fails without: 261121-162815-11af5b"
+          },
+          "evidence": [
+            {
+              "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+              "commit": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-162808-78cfcf",
+              "level": "light",
+              "seconds": 91.3,
+              "state": "done",
+              "what": "split-tooling check test at e991e527a1a5"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+              "commit": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-162809-3dccaf",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-tooling check lint at e991e527a1a5"
+            }
+          ],
+          "final": true,
+          "from": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+          "reason": "",
+          "tested": "e991e527a1a5af63b79caa7fb763c17619311f7f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Split tooling: function sizes on Mach-O, macro-body locals, test trees, the ctest -N recipe",
-      "updated": "2026-11-21T16:33:46",
-      "worktree": "../cpp-libraries-wt/xapiand/split-tooling"
+      "updated": "2026-11-21T19:21:34",
+      "worktree": ""
     },
     "split-traceback": {
       "accepted": {},
