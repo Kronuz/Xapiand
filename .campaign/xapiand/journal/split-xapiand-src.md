@@ -1,6 +1,6 @@
 # split-xapiand-src: journal
 
-State: working
+State: waiting on jobs 261121-193134-8f7fe3 (sizes at f32e6e627), 261121-193145-0eac8e (diff vs master), 261121-193241-6c463f (suite), 261121-193241-3c22d6 (split check), 261121-193243-bfd940 (A6), and CI at 8d7356121
 Quest: .campaign/xapiand/quests/split-xapiand-src.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
