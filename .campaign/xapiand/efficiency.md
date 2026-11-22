@@ -742,3 +742,78 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
   - land reads the first CI run, not the newest.
   - No per-quest base branch (put to the owner).
 - Host: load 7 (was 61 at 14:20), 299 GiB free. Quota 86% weekly, burn 0.62%/h; at this rate it is exhausted about 7 h before the reset in 29.7 h.
+
+### 2026-11-21 18h (hourly)
+
+- Landed: split-check-sources (cpp-libraries:7fb0304); the landing script then re-verified all 22 split quests with the fixed checker.
+- Lead read (A7) of all 22 splits:
+  - 19 pass: 12 real cuts, 7 kept whole with reasons.
+  - btree (7 headers) and xapiand-src (serialize_detail.h) lacked the what-it-holds opening line and were fixed by contributors. btree is now recorded.
+  - split-datetime is still deciding its calendar cut on benchmark numbers.
+  - 17 splits are in landing loops.
+- Agent runs, Sonnet:
+  - Kept-whole splits: constexpr-phf, enum-reflection, htm (60-64k each).
+  - btree opening comments 62k, datetime finish 77k, xapiand-src finish 105k.
+  - C2 fuzz queue 69k (blocked: one fuzz target holds both decoders; asked Detent for a FUZZ_DECODER pin, which Detent started).
+  - warm-heap explorer 87k (harness only; its build still queued).
+- Agent runs, Opus:
+  - group-commit barrier_cohort 131k: timing replaced by the sealer's recorded turns.
+  - turn-log-parity red-CI 163k: found strata main's turn_sealer await race, a false fence; fixed on the quest; hunt row filed.
+  - placement 121k: repair task merged by hand; fixed main's faultfs.hh removal that had reddened its CI everywhere.
+  - netlab-consensus 126k: the 1 ms round-trip miss was a stale timer floor; per-peer floors now.
+- Findings:
+  - Mach-O nm prints size 0, so SPLITTING.md's inlining recipe proved nothing on macOS. Only split-xapiand-src cited it. Now quest split-tooling, with three other split-tool rows.
+  - Gate checks can't be prioritized: verify has no priority, and a submit never matches verify's key, which omits external script digests. Sent to campaign-v3, which started gate-check-jobs.
+- Waste:
+  - 19 priority-2 resubmits didn't count as gates (the key mismatch above) and stay only as early signals.
+  - One datetime bench job without a build step exited 127.
+- Queue: 235 jobs queued and 4 light slots, light 77% used last hour. Most landings wait on the queue or on GitHub's 20 runners, not on agents.
+- Host: load 29 (Detent's reader-s6 ASan job on 10 cores), 296 GiB free. Quota 87% weekly, burn 0.62%/h, reset in 28.7 h.
+
+### 2026-11-21 19h (hourly)
+
+- Landed: failed-restore-exit (Xapiand:bedd54e, 16:29). No other landings: the waiting quests (ninja-only, cjk-words, empty-aggregation, newman-pin) each re-merge master after every landing and rerun CI. campaign-v3's merge-main-when-needed (agent-campaign:bfda0be, not yet installed) removes that churn.
+- Agent runs (Sonnet):
+  - restore-stream landing chores 65k: the master merge voided its security acceptance. The lead read main's change since the review (CLI restore type check only, no change to the HTTP stream) and will re-accept on the reruns.
+  - split-storage A6 64k: exit 125 was a cross-repository slot. The job named slot `sc`, a msgpack worktree, and the storage commit wasn't there. Sent to campaign-v3 (msg-18), folded into its slot-checkout quest.
+  - journal-replaces-wal restore 80k: test_restore_batch's bodies were one repeated byte, which zstd shrank to nothing, so 300 writes fit one entry. The fix is the test's data, plus a per-write encoded_size check.
+- Agent runs (Opus): single-flight-budget correctness review, conditional APPROVE (N1-N3 filed to hunt). Launched at 17:20: group-catalog fix round (R1-R4 job failed: bound close, bare commit's P_H durable), group-heal install (abstract `row` after consensus driver-install), cluster next step (A5 jobs passed).
+- Evidence this hour: journal-lost-bound F1 fails at its mutant and passes at the fix, A2 crash cases pass on faultfs. restore-stream A1/A2 reruns pass at the merge head. split-completion build-test and split pass, and two ctest -N diffs pass.
+- Waste: one A6 job lost to the cross-repository slot (exit 125, empty log).
+- Queue: 202 queued, 4 running; light slots 80% used (383 of 480 slot-minutes); 84 jobs ended, 12 failed, 23 produced nothing (9 cancelled, 14 skipped). No explorer batch: the light slots are the limit.
+- Host: load 33 (Detent's reader-s6 TSan job at 6.2 cores), 295 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 27.7 h.
+
+### 2026-11-21 20h (hourly)
+
+- Landed (split landing loop, 18:18-18:19): split-constexpr-phf (constexpr-phf:58653a7), split-docset (docset:3df5985), split-enum-reflection (enum-reflection:0c7f34f). A lone landing-record interruption on enum-reflection cleared on the next state write.
+- Agent runs (Opus, high):
+  - group-heal install 136k: the compile break was a test row still overriding the old hook. The install-silent fails-without at 133923-ba5a0d was a false kill: the build failed and its regex matched no test. The suite script now exits 127 on a failed build or zero tests. Main merged by hand (a faultlab conflict).
+  - cluster 152k: A5 recorded (TSan x3, plain, CI green). Membership's admission rule and liveness table built as pure code with a 4,000-history model test. A4 needed consensus additions no quest held, now quest consensus-join-v2 (planned, needs node-admission).
+  - group-catalog fix round 2, 173k so far: "P_H durable 6" was the test's arithmetic; a TSan race in group::blocking() fixed. A Debug-only owner_break abort and a never-succeeding bound close are still in diagnosis.
+- Accepted: journal-lost-bound durability at journal:e4b0100 (F1 by the reviewer's probe and the suite; fails at mutant 6d1502c).
+- Findings:
+  - consensus main went red at 8780e44 because cpp-libraries:12bae98 (shared CI on Ninja) turned on consensus_mutants, which CMake adds only under Ninja. It times out at 1800 s and needs bash, absent on FreeBSD. I first blamed driver-install, wrongly; Detent corrected me and fixes forward (consensus-mutants-per-test).
+  - traceback main has been red on FreeBSD since 11-19 (traceback_hooks aborts). Hunt row filed, and split-traceback lands with --no-ci.
+- Tool gaps to campaign-v3:
+  - fails-without counts a build failure as a kill (msg-19; quest fails-without-honest).
+  - land --merge-main pushes without --push (msg-21; ci-reuse-disjoint-merge, and contributors now merge with git).
+  - verify reuses a gate check that land refuses (msg-22).
+- Rules: quota never decides quality (msg-226), and the pace-down line was removed (msg-229). No slowdown.
+- Queue: 148 queued, 5 running; light slots 92% used (442 of 480 slot-minutes); 82 ended, 7 failed, 5 produced nothing. No explorer batch: the light slots are full.
+- Host: load 4 now (27 over 15 min), 294 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 26.7 h.
+
+### 2026-11-21 21h (hourly)
+
+- Landed, 12 quests, 11 of them by the split landing loop:
+  - split-htm (htm:c4577b7), split-http (http:944e8cf), split-http-parser (http-parser:a3180d7), split-logger (logger:992f986) and split-strict-stox (strict-stox:ff3286d).
+  - split-task (task:3179d85), split-uinteger-t (uinteger_t:8a6fe90), split-workpool (workpool:bdf8932), split-completion (completion:02ab67f) and split-btree (btree:b3f404a).
+  - By the lead after its read: split-tooling (cpp-libraries:e991e52; A1's ELF half has no run until the owner decides on the tools.yml step) and split-url-parser (url-parser:657f7fe; its A7 read had never been recorded, now done).
+- Agent runs (Opus, high): turn-log-parity merge 153k. Both tasks merged at strata:b533db1; group-commit's conflicts kept both the inline-turn fix and per-writer release counting; the journal pin moved to journal-lost-bound's head e4b0100.
+- Mutant kills checked by log (a named test failing after a complete build): turn-log-parity tolerant-open, 3 failing checks in test_tolerant_open; group-commit A4, 4 failing checks in the cohort test.
+- Lead fixes:
+  - strata-pin-catalog's harness copied .deps into an old-pin directory, whose subbuild caches named the copied-from path (exit 126). It now fetches fresh: Xapiand:6a19e67.
+  - The A2 job timed out still compiling under a 30-minute limit, so it was rerun at 90.
+  - A first fix used an rm loop, and its test was refused by the safety check. It was replaced by a version that deletes nothing.
+- Findings: placement doesn't compile at group-heal's consensus pin 8780e44 (no ActivateImage handler; group-heal's install adds one), so it builds on group-heal's head.
+- Queue: 124 queued, 5 running; light slots 98% used (468 of 480 slot-minutes); 59 ended, 2 failed, 9 produced nothing (5 cancelled, 1 skipped, 3 timeout).
+- Host: load 50 (Detent's reader-s6 TSan at 4.9 cores among others), 290 GiB free. Quota 90% weekly, burn 0.63%/h, reset in 25.7 h (run-out projected about 10 h before it).
