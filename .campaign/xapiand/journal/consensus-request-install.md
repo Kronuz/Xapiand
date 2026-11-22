@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: working: bodies at consensus:fc4af4f; first build job 261121-223440-971166 (targeted cases, codec, corpus replay).
+State: waiting on jobs 261121-223440-971166 (cases+codec+replay), 261121-223618-6521b4 (A2 mutant), 261121-223622-85de99 (A4 mutant), 261121-223626-0f7cf8 (A6 fuzz); CI suite/asan/tsan at consensus:fc4af4f (pushed).
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,8 +9,8 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Bodies and tests written (consensus:9ea7c55 header fixes, consensus:fc4af4f bodies); first
-build job 261121-223440-971166 running.
+Bodies, tests and docs at consensus:fc4af4f, pushed; nothing compiled yet except by the jobs
+in State (machine work only through jobs).
 
 ## Next
 
@@ -157,12 +157,13 @@ the tree compiles. The wider file set is needed before step 3, not for the revie
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <none yet> |
-| A2 | <none yet> |
-| A3 | <none yet> |
-| A4 | <none yet> |
-| A5 | <none yet> |
-| A6 | CI on consensus:c7a1ad7 (pushed, not examined) |
+| A1 | job 261121-223440-971166 (lost_state, behind) and the suite check on CI at consensus:fc4af4f |
+| A2 | job 261121-223440-971166 (current, after_install, unrequested); mutant job 261121-223618-6521b4 (`--fails-without`, after_install) |
+| A3 | job 261121-223440-971166 (leader_lost, second_request, non_leader) and the suite check on CI |
+| A4 | job 261121-223440-971166 (witness_bound); mutant job 261121-223622-85de99 (`--fails-without`, witness_bound) |
+| A5 | [artifact] docs/mechanisms/install-request.md at consensus:fc4af4f |
+| A6 | codec round-trip and corpus replay in job 261121-223440-971166; fuzz job 261121-223626-0f7cf8 (30 CPU-min, ASan+UBSan); wire version ruling in the note's Wire section |
+| A7 | CI at consensus:fc4af4f (asan, tsan, every platform) |
 
 Messages: msg-235 (Detent's ask) is taken as A2's refusal by base. The API goes to Detent for
 review through the lead.
