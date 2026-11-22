@@ -43,6 +43,11 @@ inline constexpr unsigned WILDCARD_MULTI = 1U << 5;   // '*' inside a pattern
 inline constexpr unsigned PARTIAL        = 1U << 6;   // the last word may be incomplete
 inline constexpr unsigned FUZZY          = 1U << 7;   // words ending in '~' match within an edit distance
 inline constexpr unsigned CJK_NGRAM      = 1U << 8;   // CJK text as n-grams
+inline constexpr unsigned CJK_WORDS      = 1U << 9;   // CJK text as words
+
+// The text with a space between its CJK words (as the segmenter splits them) and wherever CJK
+// text meets other words, so indexing and parsing read the same words.
+std::string cjk_words(std::string_view text);
 }  // namespace text
 
 // Which words of a query text are stemmed.
