@@ -43,6 +43,7 @@
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception_engine.h"                          // for CastError, SerializationError
 #include "xapiand_exception.h"                                // for SerializationError, ...
+#include "xapiand_strings.hh"                         // for strings::join
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
