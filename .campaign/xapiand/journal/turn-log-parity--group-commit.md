@@ -1,37 +1,46 @@
 # turn-log-parity--group-commit: journal
 
-State: waiting on jobs 261121-101429-f8726f 261121-101433-65f5c5 261121-101437-69bee8
+State: waiting on jobs 261121-213706-2e8246 261121-213641-0cfcd2 261121-213700-e680a2 261121-213646-d951e0 (head strata:6c3d0862)
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 ## Doing
 
-Fix committed and pushed: strata:2f236c94 on quest/xapiand/turn-log-parity--group-commit (base
-strata:330bfd41). Mutant strata:017bb849 (the base's `turn_seal.hh` and `index.hh` with the new
-test) at `refs/mutants/turn-log-parity--group-commit`, not pushed. CI run 44934094130 (its
-`linux-tsan` job is the TSan gate for this concurrency change).
+Head strata:6c3d0862 on quest/xapiand/turn-log-parity--group-commit, pushed (CI runs at it).
+strata:80f91fd0 is already in the quest by git merge (strata:3b8da146); 6c3d0862 touches only
+`test/test_barrier_cohort.cc`, lines the quest's merge left alone.
 
 ## Next
 
-1. Read jobs 261121-101429-f8726f (test, A4), 261121-101433-65f5c5 (mutant, `--fails-without`,
-   A4), 261121-101437-69bee8 (suite), and CI run 44934094130's `linux-tsan`; paste the brief's
-   Evidence table; State "ready to merge" when all pass.
+1. Read 2e8246 (test, A4), 0cfcd2 (mutant, `--fails-without`: log must show the build, then
+   `std::logic_error ... nothing to write`), e680a2 (probe, must pass), d951e0 (suite) and the
+   CI run at 6c3d0862; paste the Evidence table; State "ready to merge" at 6c3d0862 when all pass.
 
 ## Blocked on
 
-Nothing. No journal change needed.
+Nothing. For the lead: quest head strata:b533db12 fails CI on every platform at build,
+`test/test_reopen_damaged.cc` uses `faultfs::` (main's `fl::` rename; tolerant-open's file, not
+this task's). CI run 44976323378.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A4 | test 261121-101429-f8726f (queued); mutant 261121-101433-65f5c5 (`--fails-without`, queued); suite 261121-101437-69bee8 (queued); TSan: CI run 44934094130 `linux-tsan` (queued) |
+| A4 | test 261121-213706-2e8246 (queued); mutant 261121-213641-0cfcd2 (`--fails-without`, queued); probe 261121-213700-e680a2 (queued); suite 261121-213646-d951e0 (queued) |
+
+Read this session (at strata:80f91fd0): test 261121-151521-37deb9 passed; mutant
+261121-151523-00cd16 (strata:191551bf, groups not writers) built, then failed 4 named CHECKs
+(`test_barrier_cohort.cc:175`, K=4 I=2 L=2), as it must; suite 261121-151525-9704d9 timed out
+at 30 min: hazard_litmus took 478 s (95 s at 2f236c94) and four tests none of which uses
+`turn_sealer` ran on, with host load 73 on 16 CPUs: load, not a hang; rerun with
+`ctest --timeout 900` so a hang names itself. Earlier: 261121-101429-f8726f passed,
+261121-101433-65f5c5 failed as it must (both at 2f236c94); suite 261121-101437-69bee8 exit 130
+(interrupted); 261121-114248-d19804 suite passed at 2f236c94.
+
+CI run 44960903080 at 80f91fd0: all green but freebsd-x86_64, where barrier_cohort aborted on an
+uncaught `std::logic_error` in K=4 I=2 L=2 (fixed by 6c3d0862, below).
 
 Failed, not evidence: 261121-101105-1c95d9, 261121-101111-6888d0, 261121-101116-d36e5e exited 1 at
-configure: the slot's `build` is a Makefiles tree and the jobs pass `-G Ninja` (D168). Resubmitted
-into `build-ninja`; the slot's `build` was left alone, since other tasks' queued jobs use it.
-
-Local runs (light holds, not evidence): the new test against the base mechanism fails 4 checks
-(below); at the fix it passes.
+configure (Makefiles tree in `build`, D168).
 
 ## Result
 
@@ -68,6 +77,14 @@ count, so no bench row is expected to move, and no throughput claim is made here
 Doc: strata `docs/design/rocksdb-parity.md`, D5 paragraph (counts above).
 
 ## Rulings I made
+
+- FreeBSD abort at 80f91fd0: writers started beside the loop threads, so a first wait could
+  see `served_` false and write an inline turn the loop's first turn had emptied, throwing
+  "nothing to write" (main's race; strata:1755bfb8 fixes it on the quest). The test measures
+  served turns, so it marks each sealer `served(true)` before writers start (strata:6c3d0862),
+  rather than merging the quest (it would bring the quest's broken `test_reopen_damaged` build).
+  Proof: mutant strata:3f4bc171 (80f91fd0 with loops started one barrier late) must throw; probe
+  strata:7e380d50 (6c3d0862 with the same delay) must pass. Refs under `refs/mutants/`, unpushed.
 
 - A4 vs D7 (rocksdb-parity task 5): A4 does not subsume D7. A4 bounds the barriers a waiting
   writer rides (the turn's timing against arrivals); D7 bounds the bytes a log admits and packs
