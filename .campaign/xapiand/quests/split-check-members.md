@@ -5,32 +5,52 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Two classes hold most of their files: strata's `basic_index` (5,309 of index.hh's 6,139 lines) and
+`uinteger_t` (5,709 of uinteger_t.hh's 6,042). SPLITTING.md forbids cutting a class body, so both
+were kept whole. The owner, 2026-11-21: "One class body of 5K+ lines is just not right! Not right at
+all. It makes this single file one of the busiest ones and it also makes the file very very hard
+to understand", and for uinteger_t, "algorithms should be split into multiple files". Quests
+index-restructure and uinteger-restructure move member definitions out of each class body into one
+header per mechanism or algorithm family. This quest gives them a mechanical proof that the move
+changed no code, and puts the rule in SPLITTING.md.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 `split_check.py --members` (or an equivalent mode) proves an out-of-class move: every member
+  function body removed from a class body reappears as an out-of-class definition in a piece, with
+  its body unchanged except a uniform change of leading indentation, and its declaration left in
+  the class. Allowed signature changes are exactly: in-class-only specifiers dropped from the
+  definition (`static`, `virtual`, `override`, `final`, `explicit`, `friend` stays in the class,
+  default arguments), `inline` added, a `template <...>` header and the class qualifier (`C::`,
+  `C<P...>::`) added, and a trailing `;` on the declaration. Anything else fails, naming the member:
+  the `test` check, with fixtures for a class template (`basic_index<Layout>`'s shape), a
+  non-template class (`uinteger_t`'s shape), constructors with initializer lists, operators,
+  `const`/`noexcept`/ref-qualified members, trailing return types, nested classes, and overloads
+  with the same name
+- A2 A mutated move fails with the member named: one fixture each for a changed statement, a
+  reordered statement, a dropped definition, a changed default argument and a changed signature
+- A3 The existing modes behave as before: every existing fixture passes unchanged, and the command
+  line and exit codes stay as they are (22 gate checks call it): the `test` check
+- A4 [artifact] `docs/SPLITTING.md` gains a section on restructuring a large class, holding the
+  owner's words above: a class body holding several mechanisms or algorithm families is not "one
+  coherent unit"; it is restructured on its own quest (step 1, out-of-class definitions by
+  mechanism, proved by A1's mode and a function-size diff; step 2, subobjects where state stands
+  apart, reviewed); "Keep whole" names only a class whose members only make sense together, and
+  never one because a class body can't be cut. "What `tools/split_check.py` checks" and
+  `tools/README.md` describe the new mode
+- A5 ruff check and ruff format pass, and CI is green: the `lint` check; [ci]
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+`split_check.py`'s existing command line and exit codes stay as they are. The new mode is opt-in.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: one shared checker for both restructures (index-restructure,
+  uinteger-restructure), not a mover script: contributors move code by hand or with throwaway
+  scripts, and this mode is the independent proof. Low risk: tools and docs. It needs
+  split-check-anchor, which holds split_check.py now.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
