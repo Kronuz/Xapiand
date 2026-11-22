@@ -9509,18 +9509,45 @@
         "harness/coverage_e2e_main.sh",
         "harness/restore_exit_check.sh"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T16:28:03",
+          "commit": "bedd54e676f94e5cb9cb17e241708ad916723479",
+          "criteria": {
+            "A1": "261121-084644-7a6921 (passed at cbf0731a2d38; only 7 merges from main since, none touching its files); fails without: 261121-084646-2a8d62",
+            "A2": "261121-092117-7ae0d8"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "bd4aaf480b975f1c1dfd9f25fa9d69ca6721976c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-092117-7ae0d8",
+              "level": "light",
+              "seconds": 1129.4,
+              "state": "done",
+              "what": "failed-restore-exit check suite at bd4aaf480b97"
+            }
+          ],
+          "final": true,
+          "from": "9c04ad5df478ab1be5ec977ffecb4cdb78b708cd",
+          "reason": "",
+          "tested": "49cc267a71d9ef9132464ccf3ee696f0c09c0476"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "reason": "started by force: cluster's handler.* glob has no change to handler.cc at its head (git diff master...quest/xapiand/cluster is empty there); xapiand-final-release lands on the xapiand release branch, not master; this change is 9 lines in restore_documents",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A CLI restore of a file that is not a dump fails",
-      "updated": "2026-11-21T08:46:30",
-      "worktree": "../Xapiand-wt/xapiand/failed-restore-exit"
+      "updated": "2026-11-21T16:28:37",
+      "worktree": ""
     },
     "faultlab-adopt-prospect": {
       "accepted": {},
