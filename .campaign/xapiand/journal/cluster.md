@@ -1,9 +1,17 @@
 # cluster: journal
 
-State: waiting on jobs 261121-085756-35e5b9 (A5 under TSan x3, own build dir; e6cd96 never built: build-cluster-tsan was configured from tests/cluster) 261121-054412-d9be07 (A5 plain) at Xapiand:4fa179c7c; CI on the push
+State: waiting on jobs 261121-172909-58037c (cluster_* tests, Ninja, at Xapiand:ff4ca20e7), 261121-172931-6d32fb (control: mutant/xapiand/cluster-admission-boot, passes when the admission tests fail), 261121-172942-3f8c76 (cluster check), 261121-172942-792d1c (no-walk, expected red until `search`); CI on the push
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 ## Doing
+
+2026-11-21 (2): A5 closed: TSan x3 261121-085756-35e5b9 and plain 261121-054412-d9be07 green, CI
+green at Xapiand:ff4098d0b (CI 44910406634, arm64 44910406427, FreeBSD 44910406369). Built what
+waits on nothing: membership's M7 admission rule (`src/cluster/membership_admission.*`) and the
+root leader's keepalive table (`src/cluster/membership_liveness.*`), pure code with unit tests
+(`tests/cluster/test_membership.cc`: admission, the model's 4,000 random histories, cold check,
+liveness, duplicate) and `docs/mechanisms/cluster-membership.md`. No master merge: these jobs need
+nothing from it.
 
 2026-11-21: read the 2026-11-20 jobs and CI at Xapiand:44c2ba5e4; fixed this quest's one red,
 merged master (clean, Xapiand:4fa179c7c), pushed. Membership design is at revision 3
@@ -15,7 +23,7 @@ Failures and whose they are:
 |---|---|---|
 | TSan `cluster_rpc_streams`: 261120-095830-2935c9 (exit 8), CI "Unit tests under TSan" | `test_streams`' forward_write handler ran `CHECK_EQ` on the loop thread, racing `testh::checks` | this quest; fixed at Xapiand:a2470c24a (the handler records an atomic, the main thread checks) |
 | build-test 261120-104100-17872a (exit 1; ctest 89/89 green), CI "Blocking calls on reactor paths", arm64 and FreeBSD rows `t1_strict_owed` and `gate_tools` | `async_check --strict`: `async_allowlist.tsv:37` `src/engine/strata/shard.cc` 6 hits for 5 allowed, `pool.cc` row stale; files this branch never touched | master at the merge base Xapiand:b9de2ed42; fixed on master by Xapiand:bf593a759 and Xapiand:7290c10d8, in this branch by the merge |
-| cluster 261120-104101-0779b2 (exit 2) | `harness/run_all.sh cluster`: "unknown layer: cluster"; run_all.sh has no `cluster` layer (the tier-1 entry is `harness/cluster/run.sh check`) and `run_all.sh` is outside this file set | the lead's check definition (or `cluster-harness`): point the check at `harness/cluster/run.sh check --nodes 3` / `--nodes 5`, or add the layer |
+| cluster 261120-104101-0779b2 (exit 2) | `harness/run_all.sh cluster`: "unknown layer: cluster" | the lead's; fixed 2026-11-21T05:54 (the check now runs the checklist on 3 and 5 nodes); expected red until `shard-map` |
 | no-walk 261120-104101-65db6c (exit 1) | `expand(Endpoint::cwd` is still in `src`: removing it is task `search` (A3), not built | expected red until `search` |
 
 Passed and standing: e2e 261120-104101-6fec3b; A5 tests 261120-104107-5a4591; fuzz smoke
@@ -24,10 +32,11 @@ Passed and standing: e2e 261120-104101-6fec3b; A5 tests 261120-104107-5a4591; fu
 
 ## Next
 
-1. Read 261121-054409-e6cd96 and 261121-054412-d9be07 and CI at the pushed head; the A5 control
-   (mutant/xapiand/cluster-version) is still at Xapiand:37f0c5a5f.
-2. `membership` once B2 and B3 are answered and the design round passes: node identity, `--join`,
-   keepalives, `suspect`/`down` over the `keepalive` method, the directory behind an interface the root fills (placement).
+1. Read 261121-172909-58037c, 261121-172931-6d32fb, the two checks and CI at the pushed head.
+2. `membership` wiring once `node-admission` lands with consensus additions 1-5 and 7 (design
+   "What consensus must add"): the keepalive handler feeding `LivenessTable`, admission over the
+   hello, tokens (version 2 codec), the join exchange, the 0600 socket; the directory behind an
+   interface the root fills (placement).
 3. `shard-map`, `search`, `migration`, `api`: after `group-core`, `journal-replaces-wal` and
    `placement` publish their contracts (none is built yet; see Dependencies).
 4. Multicast wiring (`--discovery-*` onto consensus `Seeds`) last, after `multicast-seeds` lands.
@@ -45,6 +54,11 @@ Passed and standing: e2e 261120-104101-6fec3b; A5 tests 261120-104107-5a4591; fu
 
 ## Blocked on
 
+- What waits (2026-11-21): A1, A2 and A6 on `journal-replaces-wal` (`xapiand:command`),
+  `group-heal` (`strata:group-install`) and `placement` (`strata:placement-records`); A3 on
+  `shard-map` plus those; A4's joins, pins and refusals on consensus `node-admission` (in review)
+  and its additions 1-5 and 7, which no quest holds yet (lead: open one, or widen
+  `node-admission`); A4's multicast on `multicast-seeds`.
 - B1 answered by the lead: `CMakeLists.txt` and `cmake/**` are in the file set; done at
   Xapiand:f49d0e0f7 (pins and `add_subdirectory(tests/cluster)`). `src/cluster/*` is still not in
   `XAPIAND_SRC_LIST`: the server does not call the RPC yet, so the tests build it themselves; the
@@ -77,7 +91,7 @@ Passed and standing: e2e 261120-104101-6fec3b; A5 tests 261120-104107-5a4591; fu
 | A2 | none yet |
 | A3 | none yet |
 | A4 | none yet |
-| A5 | at Xapiand:f49d0e0f7: tests 261120-104107-5a4591, fuzz 261120-104118-187dc4 (smoke) and 261120-104125-6ca616, 261120-104127-4d45de, 261120-104128-564b3a (seeds 1-3, 25 min each, no crash); at Xapiand:37f0c5a5f: ASan+UBSan 261120-095833-f98de7 green, TSan 261120-095830-2935c9 red (test race, fixed at Xapiand:a2470c24a); control 261120-095855-16a31d fails as required; at Xapiand:4fa179c7c: TSan x3 261121-054409-e6cd96, plain 261121-054412-d9be07 pending. |
+| A5 | at Xapiand:4fa179c7c: plain 261121-054412-d9be07 and TSan x3 261121-085756-35e5b9 (at Xapiand:ff4098d0b, same code) green; CI green at Xapiand:ff4098d0b; control 261120-095855-16a31d (mutant/xapiand/cluster-version fails `cluster_rpc_versions`); rerun at Xapiand:ff4ca20e7 in 261121-172909-58037c. Earlier: at Xapiand:f49d0e0f7: tests 261120-104107-5a4591, fuzz 261120-104118-187dc4 (smoke) and 261120-104125-6ca616, 261120-104127-4d45de, 261120-104128-564b3a (seeds 1-3, 25 min each, no crash); at Xapiand:37f0c5a5f: ASan+UBSan 261120-095833-f98de7 green, TSan 261120-095830-2935c9 red (test race, fixed at Xapiand:a2470c24a); control 261120-095855-16a31d fails as required; at Xapiand:4fa179c7c: e6cd96 never built (wrong build dir). |
 | A6 | none yet |
 
 ## Tasks for other agents
@@ -91,6 +105,13 @@ two worth their own agents; `migration` and `api` follow. `membership` waits on 
 Not yet.
 
 ## Rulings I made
+
+- R12: membership's admission and liveness are built ahead of their wiring as pure code (no
+  transport, no msgpack, their own static library), so they are tested now and the wiring only
+  calls them. Timing: `suspect` at two silent 500 ms intervals and `down` at three (D6's "500 ms x
+  3 misses"), so a 250 ms sweep logs `down` within 2 s (A4). The largest u64 number is `stale`
+  (no offer above it). The admission control is an inverted job (`! ctest`), since `--fails-without`
+  needs a criterion and M7's (A11) is not in the quest's A1-A6.
 
 - R11: the cluster-check and no-walk reds are not this quest's code to fix now (the first is the
   check's command, outside the file set; the second is task `search`); the master merge is a plain
