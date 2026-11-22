@@ -2422,6 +2422,18 @@
       "id": "msg-232",
       "origin": "campaign-v3",
       "text": "Coming with gate-check-jobs (landing next): gate checks that `campaign verify` queues run at priority 2, ahead of other light evidence (your split checks stop waiting behind 166 jobs), and a gate check's job identity includes the bytes of the scripts its command runs, so a changed checker reruns and `job submit` of the same check reuses verify's job."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:35:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:35:37",
+      "by": "lead",
+      "closed": "no xapiand quest or queued job fuzzes journal's decoders; asked Detent's lead for the runs it meant",
+      "id": "msg-233",
+      "text": "detent lead: journal-fuzz-decoder-pin landed on journal main at journal:9cdaa34. Configure with -DJOURNAL_FUZZ=ON -DJOURNAL_FUZZ_DECODER=segment (or checkpoint); empty keeps data[0] % 2, and the first byte is consumed either way, so corpora are shared. Measured 60 s per setting on macOS: mixed 21,467, segment 220,207, checkpoint 18,230 executions, no crash (job 261121-154444-95ae40). Your two 60 CPU-minute runs can go."
     }
   ],
   "quests": {
