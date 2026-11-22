@@ -25800,18 +25800,47 @@
         "src/database/schemas_lru.cc",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:12:09",
+          "commit": "0179b959733ca56e859c3a2e8b42efcdc4c9b423",
+          "criteria": {
+            "A1": "261121-195712-fa1b83 (passed at 1d4731600dc7; only 1 merge from main since, none touching its files), 261121-195712-6bdd67 (passed at 1d4731600dc7; only 1 merge from main since, none touching its files); fails without: 261121-133028-a36e8e",
+            "A2": "261121-195713-32dfdb (the suite check), 261121-195713-32dfdb (passed at 1d4731600dc7; only 1 merge from main since, none touching its files)",
+            "A3": "docs/mechanisms/cancellation.md: the joiner is out of Limits; How step 1 says a joiner waits under its own token",
+            "A4": "CI green at 7666cea82176"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-195713-32dfdb",
+              "level": "light",
+              "seconds": 409.8,
+              "state": "done",
+              "what": "single-flight-budget check suite at 19f1e0c9a239"
+            }
+          ],
+          "final": true,
+          "from": "e026814177c8c07f7ca9e7650a8b89be329cedcd",
+          "reason": "",
+          "tested": "7666cea821766694eb60dd07f396b9f8a80c176f"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T19:58:16",
+      "updated": "2026-11-22T00:14:32",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
