@@ -1,6 +1,6 @@
 # journal-lost-bound: journal
 
-State: waiting on jobs 261121-143020-cf1f10 261121-143022-821a58 261121-143041-c78107 261121-143044-e9efc6 261121-143052-131df7 261121-143056-1352b6 and CI at journal:80e58b5 (pushed)
+State: durability accepted at journal:e4b0100 (F1 confirmed by 143537-209eff and 143537-3a98cc; fails-without 143022-821a58 at mutant 6d1502c). Lands after detent:journal-tail-second-sector; CI at the head next.
 Quest: .campaign/xapiand/quests/journal-lost-bound.md (the lead's; never edit it)
 
 ## Doing
@@ -40,7 +40,7 @@ shards); e9efc6 (TSan: lost_bound whole and host_test whole); 131df7 (suite: cte
 ## Next
 
 1. Read the six jobs and CI (pushed journal:80e58b5; CI is the gate).
-2. Lead: `campaign accept journal-lost-bound durability --confirm F1=261121-143052-131df7`
+2. Lead: `campaign accept journal-lost-bound durability --confirm F1=261121-143537-3a98cc`
    once the suite job passes; widen the file set (Blocked on).
 
 ## Blocked on
