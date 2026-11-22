@@ -801,3 +801,19 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Rules: quota never decides quality (msg-226), and the pace-down line was removed (msg-229). No slowdown.
 - Queue: 148 queued, 5 running; light slots 92% used (442 of 480 slot-minutes); 82 ended, 7 failed, 5 produced nothing. No explorer batch: the light slots are full.
 - Host: load 4 now (27 over 15 min), 294 GiB free. Quota 89% weekly, burn 0.63%/h, reset in 26.7 h.
+
+### 2026-11-21 21h (hourly)
+
+- Landed, 12 quests, 11 of them by the split landing loop:
+  - split-htm (htm:c4577b7), split-http (http:944e8cf), split-http-parser (http-parser:a3180d7), split-logger (logger:992f986) and split-strict-stox (strict-stox:ff3286d).
+  - split-task (task:3179d85), split-uinteger-t (uinteger_t:8a6fe90), split-workpool (workpool:bdf8932), split-completion (completion:02ab67f) and split-btree (btree:b3f404a).
+  - By the lead after its read: split-tooling (cpp-libraries:e991e52; A1's ELF half has no run until the owner decides on the tools.yml step) and split-url-parser (url-parser:657f7fe; its A7 read had never been recorded, now done).
+- Agent runs (Opus, high): turn-log-parity merge 153k. Both tasks merged at strata:b533db1; group-commit's conflicts kept both the inline-turn fix and per-writer release counting; the journal pin moved to journal-lost-bound's head e4b0100.
+- Mutant kills checked by log (a named test failing after a complete build): turn-log-parity tolerant-open, 3 failing checks in test_tolerant_open; group-commit A4, 4 failing checks in the cohort test.
+- Lead fixes:
+  - strata-pin-catalog's harness copied .deps into an old-pin directory, whose subbuild caches named the copied-from path (exit 126). It now fetches fresh: Xapiand:6a19e67.
+  - The A2 job timed out still compiling under a 30-minute limit, so it was rerun at 90.
+  - A first fix used an rm loop, and its test was refused by the safety check. It was replaced by a version that deletes nothing.
+- Findings: placement doesn't compile at group-heal's consensus pin 8780e44 (no ActivateImage handler; group-heal's install adds one), so it builds on group-heal's head.
+- Queue: 124 queued, 5 running; light slots 98% used (468 of 480 slot-minutes); 59 ended, 2 failed, 9 produced nothing (5 cancelled, 1 skipped, 3 timeout).
+- Host: load 50 (Detent's reader-s6 TSan at 4.9 cores among others), 290 GiB free. Quota 90% weekly, burn 0.63%/h, reset in 25.7 h (run-out projected about 10 h before it).
