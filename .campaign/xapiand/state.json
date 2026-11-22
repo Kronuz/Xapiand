@@ -13319,7 +13319,7 @@
       ],
       "consumes": [],
       "files": [
-        "test/model_test.cc"
+        "test/faultfs_test.cc"
       ],
       "landed": [],
       "lenses": [],
@@ -13330,7 +13330,7 @@
       "risk": "low",
       "status": "planned",
       "title": "faultlab's suite reaches faultfs's at_mark sync path",
-      "updated": "2026-11-21T20:22:00"
+      "updated": "2026-11-21T20:22:18"
     },
     "hunt-header-tables": {
       "accepted": {},
