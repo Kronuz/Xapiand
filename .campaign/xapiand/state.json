@@ -13915,6 +13915,8 @@
         "turn-log-parity",
         "split-check-members"
       ],
+      "base": "cc30217fc2fe2c231487c564318a520aa1bff640",
+      "branch": "quest/xapiand/index-restructure",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13969,6 +13971,7 @@
           "weakened": []
         }
       ],
+      "journal": "../Xapiand-wt/xapiand/index-restructure",
       "landed": [],
       "lenses": [
         "correctness"
@@ -13976,11 +13979,13 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "started by force: turn-log-parity, the only open branch editing index.hh, lands first unchanged; this quest then merges main and re-applies its edits (quest file, Decisions)",
       "repo": "../strata",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-21T22:06:11"
+      "updated": "2026-11-21T22:06:43",
+      "worktree": "../strata-wt/xapiand/index-restructure"
     },
     "install-own-files": {
       "accepted": {},
