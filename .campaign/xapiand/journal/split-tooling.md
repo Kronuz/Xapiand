@@ -1,6 +1,6 @@
 # split-tooling: journal
 
-State: waiting on jobs 261121-162808-78cfcf 261121-162809-3dccaf 261121-162810-84f4aa 261121-162815-11af5b 261121-162819-d43053
+State: landed by the lead after its read (2026-11-21 19:25). A1 Linux (ELF) half has no run yet: it waits on the owner's decision on a tools.yml step (hunt row).
 Quest: .campaign/xapiand/quests/split-tooling.md (the lead's; never edit it)
 
 ## Doing
