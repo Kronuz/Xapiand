@@ -42,7 +42,7 @@ any bytes; Data stores a record raw when zstd does not shrink it); each case pri
 
 | Case | Limit it crosses | Check | Stored size |
 |---|---|---|---|
-| encoded_size, 70000-byte body | leb128 length past 3 bytes' 2^14, body > 65536 | document > 70000 | pending 261121-203231-e1086b |
+| encoded_size, 70000-byte body | a 3-byte leb128 length (>= 2^14) and a body > 65536 | document > 70000 | pending 261121-203231-e1086b |
 | packing at 4096 | entry limit 4096, several writes per entry | 1 < commands < writes, next write overflows | pending |
 | packing at 65536 | entry limit COMMAND_ENTRY_BYTES/16 | same | pending |
 | 1.5 MiB body | COMMAND_ENTRY_BYTES (1 MiB): a command alone, split_command > 2 chunks | encoded_size > 1 MiB | pending |
