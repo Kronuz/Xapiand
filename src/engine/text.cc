@@ -33,6 +33,8 @@
 #include <vector>                  // for std::vector
 
 #include "analysis.hh"             // for analysis::stem_strategy
+#include "cjk/segmenter.hh"        // for analysis::cjk::segmenter
+#include "unicode.hh"              // for unicode::next_utf8
 #include "exception_engine.h"        // for QueryParserError, InvalidTextConfigError
 #include "queryparser.hh"          // for queryparser::parse
 #include "snowball.hh"             // for snowball::stemmer
@@ -281,6 +283,69 @@ convert(const queryparser::query& tree, const Fields& field)
 }  // namespace
 
 
+std::string
+text::cjk_words(std::string_view text)
+{
+	std::string result;
+	result.reserve(text.size() + text.size() / 4);
+	analysis::cjk::segmenter segmenter;
+	const char* const begin = text.data();
+	const char* const end = begin + text.size();
+	const char* p = begin;
+	bool prev_word = false, prev_cjk = false;
+	while (p < end) {
+		const char* q = p;
+		const auto c = unicode::next_utf8(q, end);
+		const bool word = analysis::is_word_char(c);
+		const bool cjk = word && analysis::is_ngram_char(c);
+		if (!cjk) {
+			// A letter infix ('&', '\'', U+00B7, ...) beside CJK text is set apart, so the term
+			// generator does not join the CJK word to its neighbor across it.
+			if (!word && analysis::detail::infix_of(c).kind == analysis::detail::infix::letter) {
+				const char* r = q;
+				const auto next = r < end ? unicode::next_utf8(r, end) : char32_t(0);
+				if (prev_cjk || (r > q && analysis::is_word_char(next) && analysis::is_ngram_char(next))) {
+					result += ' ';
+					result.append(p, q);
+					result += ' ';
+					prev_word = prev_cjk = false;
+					p = q;
+					continue;
+				}
+			}
+			// A word of another script right after CJK text starts a new word.
+			if (word && prev_cjk) { result += ' '; }
+			result.append(p, q);
+			prev_word = word;
+			prev_cjk = false;
+			p = q;
+			continue;
+		}
+		// The whole run of CJK characters goes to the segmenter.
+		const char* r = q;
+		while (r < end) {
+			const char* s = r;
+			const auto d = unicode::next_utf8(s, end);
+			if (!analysis::is_word_char(d) || !analysis::is_ngram_char(d)) { break; }
+			r = s;
+		}
+		if (prev_word && !prev_cjk) { result += ' '; }
+		segmenter.reset(std::string_view(p, r - p));
+		analysis::cjk::segment seg;
+		bool first = true;
+		while (segmenter.next(seg)) {
+			if (seg.kind == analysis::cjk::word_kind::none) { continue; }
+			if (!first) { result += ' '; }
+			first = false;
+			result.append(p + seg.begin, seg.end - seg.begin);
+		}
+		prev_word = prev_cjk = true;
+		p = r;
+	}
+	return result;
+}
+
+
 Query
 parse_text(std::string_view text, const TextConfig& config, std::string* description)
 {
@@ -312,7 +377,8 @@ parse_text(std::string_view text, const TextConfig& config, std::string* descrip
 	cfg.partial_expansion = { config.partial_max_expansion, queryparser::expansion_limit::most_frequent };
 	cfg.fuzzy_expansion = { config.fuzzy_max_expansion, queryparser::expansion_limit::error };
 
-	auto parsed = queryparser::parse(text, cfg);
+	const auto words = (config.flags & text::CJK_WORDS) ? text::cjk_words(text) : std::string();
+	auto parsed = queryparser::parse((config.flags & text::CJK_WORDS) ? std::string_view(words) : text, cfg);
 	if (parsed.err) {
 		if (parsed.err->kind == queryparser::error_kind::out_of_memory) {
 			throw std::bad_alloc();

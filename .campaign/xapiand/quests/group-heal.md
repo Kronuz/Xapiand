@@ -86,6 +86,13 @@ payloads go to `transfer()`, the rest to `receive()`; the whole transfer finishe
 - `track-d` gives up `sim/**` and `docs/design/simulator.md` (it is parked).
 - Parked, no hardware: old `phase3r` A5 (quorum ingest against Elasticsearch on NVMe), A6 (fsyncs at
   1,000 groups, after the release by D125) and A8 (FreeBSD and arm64 rows; D35, D36).
+- Lead, 2026-11-21 (task `repair`, A3): a damaged replica reinstalls through install's own path. A
+  follower asks its leader for an install (a consensus Driver call that makes the leader treat it as
+  below its base), so there is one mechanism for a replica that needs state and no new strata wire.
+  Rejected: a `repair/pin` fetch name (new bytes, races sustained commits) and a membership
+  replacement per repair (a membership change and a whole-replica transfer each time). The Driver
+  call lands in consensus first (asked of Detent's lead, msg-229; default quest
+  consensus-request-install); `repair` builds on it, and sim-rows goes ahead meanwhile.
 
 ## When done
 
