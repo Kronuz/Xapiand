@@ -1,6 +1,6 @@
 # split-xapiand-tests: journal
 
-State: waiting on jobs 261121-133845-7ac98b (suite, A1), 261121-133857-a00ef2 (A2, split-check-sources tool), 261121-133902-8c14ea (A3 head ctest -N), 261121-133907-590b1a (A6); gate split 261121-133845-643987 uses the landed tool and fails until split-check-sources lands (the lead reruns it); A7 is the lead's read
+State: waiting on jobs 261121-133845-7ac98b (suite, A1), 261121-133857-a00ef2 (A2, split-check-sources tool), 261121-133902-8c14ea (A3 head ctest -N), 261121-133907-590b1a (A6); gate split 261121-161502-fc35ab uses the landed tool and fails until split-check-sources lands (the lead reruns it); A7 is the lead's read
 Quest: .campaign/xapiand/quests/split-xapiand-tests.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,7 +30,7 @@ non-C++ files); A2 runs that branch's tool meanwhile.
 | Criterion | Evidence |
 |---|---|
 | A1 | suite 261121-133845-7ac98b at 19820a501 (replaces 261121-121046-87774b, which failed to compile at 83dbe650e: `datas_of` undeclared in search_callbacks.cc) |
-| A2 | 261121-133857-a00ef2: split-check-sources' split_check.py --base c2bc67fac tests (a local run at 19820a501: 0 errors, 216 warnings, answered below); gate 261121-133845-643987 waits on the landed tool. Earlier: 261121-114927-58c8e2, 261121-121047-65d7d0, 261121-123005-b98fae failed on non-C++ files (the landed tool) |
+| A2 | 261121-133857-a00ef2: split-check-sources' split_check.py --base c2bc67fac tests (a local run at 19820a501: 0 errors, 216 warnings, answered below); gate 261121-161502-fc35ab waits on the landed tool. Earlier: 261121-114927-58c8e2, 261121-121047-65d7d0, 261121-123005-b98fae failed on non-C++ files (the landed tool) |
 | A3 | head 261121-133902-8c14ea, base 261121-114945-35c995 (at e5f7765d1): diff only their `Test #` and `Total Tests` lines. Earlier head 261121-121049-f3b321 at 83dbe650e |
 | A4 | docs/dev/test-layout.md |
 | A5 | CI on the pushed branch at 19820a501 or later |
