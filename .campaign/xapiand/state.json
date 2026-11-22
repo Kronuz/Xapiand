@@ -26586,8 +26586,7 @@
         "tools/test_fnsizes*",
         "tools/testdata/**",
         "docs/SPLITTING.md",
-        "tools/README.md",
-        ".github/workflows/tools.yml"
+        "tools/README.md"
       ],
       "journal": "../Xapiand-wt/xapiand/split-tooling",
       "landed": [],
@@ -26599,7 +26598,7 @@
       "risk": "low",
       "status": "active",
       "title": "Split tooling: function sizes on Mach-O, macro-body locals, test trees, the ctest -N recipe",
-      "updated": "2026-11-21T16:33:21",
+      "updated": "2026-11-21T16:33:46",
       "worktree": "../cpp-libraries-wt/xapiand/split-tooling"
     },
     "split-traceback": {
