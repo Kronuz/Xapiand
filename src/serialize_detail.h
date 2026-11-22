@@ -22,14 +22,17 @@
  */
 
 // What the serialize_*.cc pieces share: the UUID separator list and encoder macro, and
-// serialize_detail::positive_of (defined in serialize_exact.cc).
+// serialize_detail::positive_of, inline so each piece keeps it inlined.
 
 #pragma once
 
 #include "config.h"                 // for XAPIAND_UUID_ENCODED
 
+#include <cerrno>                   // for EINVAL
 #include <cstdint>                  // for uint64_t
 #include <string_view>              // for std::string_view
+
+#include "strict_stox.hh"           // for strict_stoull
 
 
 constexpr char UUID_SEPARATOR_LIST = ';';
@@ -41,6 +44,15 @@ constexpr char UUID_SEPARATOR_LIST = ';';
 
 namespace serialize_detail {
 
-uint64_t positive_of(int* errno_save, std::string_view text) noexcept;
+// The uint64 a text spells. strtoull reads a sign and wraps a negative, so text with a '-' is EINVAL.
+inline uint64_t
+positive_of(int* errno_save, std::string_view text) noexcept
+{
+	if (text.find('-') != std::string_view::npos) {
+		*errno_save = EINVAL;
+		return 0;
+	}
+	return strict_stoull(errno_save, text);
+}
 
 }  // namespace serialize_detail

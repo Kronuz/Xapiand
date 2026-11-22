@@ -47,13 +47,13 @@
 #include "htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "phf.hh"                                     // for phf
-#include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
 #include "reserved/fields.h"                           // for ID_FIELD_NAME
 #include "serialize_list.h"                           // for StringList, CartesianList and RangeList
 #include "sha256.h"                                   // for kronuz::sha256::hasher
 #include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
+#include "strict_stox.hh"                             // for strict_stod, strict_stoll
 #include "utype.hh"                                   // for toUType
 #include "serialize_detail.h"
 

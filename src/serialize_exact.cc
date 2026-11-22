@@ -47,31 +47,16 @@
 #include "htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "phf.hh"                                     // for phf
-#include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
 #include "reserved/fields.h"                           // for ID_FIELD_NAME
 #include "serialize_list.h"                           // for StringList, CartesianList and RangeList
 #include "sha256.h"                                   // for kronuz::sha256::hasher
 #include "sortable.hh"                                // for sortable::encode, sortable::decode
 #include "split.h"                                    // for Split
+#include "strict_stox.hh"                             // for strict_stoll, strict_stod
 #include "utype.hh"                                   // for toUType
 #include "serialize_detail.h"
 
-
-namespace serialize_detail {
-
-// The uint64 a text spells. strtoull reads a sign and wraps a negative, so text with a '-' is EINVAL.
-uint64_t
-positive_of(int* errno_save, std::string_view text) noexcept
-{
-	if (text.find('-') != std::string_view::npos) {
-		*errno_save = EINVAL;
-		return 0;
-	}
-	return strict_stoull(errno_save, text);
-}
-
-}  // namespace serialize_detail
 
 using serialize_detail::positive_of;
 
