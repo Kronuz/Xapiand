@@ -33,6 +33,15 @@ contributors jobs or silently proved nothing (hunt rows 392, 393, 394, 400):
   keeps only `Test #` and `Total Tests` lines, and the function-size recipe of A1
 - A5 ruff check and ruff format pass on every tool touched, the existing tool tests pass, and CI
   is green: the `lint` and `test` checks; [ci]
+- A6 Three msgpack shapes are read as top-level boundaries, not cuts (split-msgpack's check
+  261121-155625-47439d at msgpack:68e45d8 reported 14 errors and 17 warnings, all of them these):
+  - A macro call that ends with `)` and no `;` (`ENUM_CLASS(MsgPackType, uint8_t, ...)`).
+  - A namespace a macro opens (`MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {`). The
+    operators defined inside it are not namespace-scope dynamic initializers.
+  - A line repeated identically across the file (`template <typename M, typename>`). It matches
+    the occurrence adjacent to the declaration it heads.
+  Each is a fixture in the `test` check, and a real cut inside a function body still fails. That
+  msgpack commit's split then passes with no errors.
 
 ## Contracts
 
