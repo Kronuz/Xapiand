@@ -1,6 +1,6 @@
 # agg-shard-parity: journal
 
-State: merged into quest/xapiand/group-heal (head strata:cd2a4a40); its evidence is the quest's step-1 jobs (261121-210217-362497 and the rest, in group-heal's journal). Nothing left on this task.
+State: ready for review (A2 jobs pending: 08b954, 842794)
 Quest: .campaign/xapiand/quests/agg-shard-parity.md (the lead's; never edit it)
 
 ## Doing
