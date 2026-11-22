@@ -23135,6 +23135,45 @@
       "updated": "2026-11-10T03:20:14",
       "worktree": ""
     },
+    "queryparser-restructure": {
+      "accepted": {},
+      "after": [
+        "split-check-members"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main .",
+          "level": "light",
+          "minutes": 10,
+          "name": "members"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "queryparser.cc",
+        "queryparser/**",
+        "docs/source-layout.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [
+        "split-queryparser"
+      ],
+      "provides": [],
+      "repo": "../queryparser",
+      "risk": "low",
+      "status": "planned",
+      "title": "queryparser: the parser's operator, word and group layers in headers of their own",
+      "updated": "2026-11-21T22:24:21"
+    },
     "queue-drain-throughput": {
       "accepted": {
         "correctness": {
