@@ -13897,18 +13897,46 @@
         "docs/**",
         "CHANGELOG.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-traceback-freebsd",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T23:05:31",
+          "commit": "ee5debb3ae28a9e54407837bec054d9cab845684",
+          "criteria": {
+            "A1": "261121-211440-65eb0b (the build-test check), 261121-211440-65eb0b",
+            "A2": "261121-211444-6d3f40; fails without: 261121-211442-6909c6",
+            "A3": "CI green at ee5debb3ae28"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "ee5debb3ae28a9e54407837bec054d9cab845684",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-211440-65eb0b",
+              "level": "light",
+              "seconds": 28.4,
+              "state": "done",
+              "what": "hunt-traceback-freebsd check build-test at ee5debb3ae28"
+            }
+          ],
+          "final": true,
+          "from": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+          "reason": "",
+          "tested": "ee5debb3ae28a9e54407837bec054d9cab845684"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../traceback",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "traceback's dump names the dumping thread on FreeBSD",
-      "updated": "2026-11-21T21:09:29",
-      "worktree": "../traceback-wt/xapiand/hunt-traceback-freebsd"
+      "updated": "2026-11-21T23:05:34",
+      "worktree": ""
     },
     "hybrid-go-no-go": {
       "accepted": {},
