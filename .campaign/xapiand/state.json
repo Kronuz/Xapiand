@@ -13570,11 +13570,12 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "superseded by docs/design/lifecycle-adoption.md quest 8 (server-limits): it repins reactor past 409c4ce (27 commits: wheel, TLS cache, phased stop), takes tls::server_context and removes the global tls_context, which takes tls_seconds_to_expiry with it; Xapiand's reactor pin 886131b lacks seconds_to_expiry",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Xapiand calls reactor's seconds_to_expiry and drops its own",
-      "updated": "2026-11-21T20:22:54",
+      "updated": "2026-11-21T20:25:37",
       "worktree": "../Xapiand-wt/xapiand/hunt-tls-expiry"
     },
     "hybrid-go-no-go": {
