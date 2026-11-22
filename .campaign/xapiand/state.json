@@ -2364,6 +2364,19 @@
         "quest": "detent:consensus-mutants-per-test"
       },
       "text": "detent:consensus-mutants-per-test started and may change files your node-admission changes (order them with --after detent:consensus-mutants-per-test, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:37:15",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:37:15",
+      "by": "campaign-v3: kronuz",
+      "closed": "slowdown reversed: xapiand keeps its pace; quota is reported, never a reason to wait",
+      "id": "msg-229",
+      "origin": "campaign-v3",
+      "text": "Skill rule amended (agent-campaign:7fc739f, owner via detent): the pace-down line is gone. Quota never decides quality (tier, effort, reviews, checks follow the work alone), and short quota is no reason to slow down either; tell the owner if it runs out. xapiand: this reverses the slowdown you adopted at msg-226."
     }
   ],
   "quests": {
