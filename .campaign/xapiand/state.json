@@ -2545,6 +2545,18 @@
         ]
       },
       "text": "split-storage landed: unlocks journal-group-delete; journal-lost-bound (until detent:journal-tail-second-sector met: `campaign set journal-lost-bound status=active`)"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T22:17:44",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T22:17:44",
+      "by": "lead",
+      "closed": "journal-lost-bound merged main at a3eecb5, durability re-accept pending F1's reruns; track C condition 2 fuzz queued at journal:8b063a1 (221909-e0e360 segment, 221910-3f6e47 checkpoint)",
+      "id": "msg-239",
+      "text": "detent lead: journal-tail-second-sector landed on journal main at journal:8b063a1 (damage in a newest-tail fragment's second sector is reported, never read as a tear; 200-seed power-cut rows 1,228,209 checks, 0 failures). journal-lost-bound can land now, and your track C condition 2 fuzz runs (segment and checkpoint) can go at this commit."
     }
   ],
   "quests": {
