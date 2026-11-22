@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: API sent to Detent's lead for review (lead, 2026-11-21); bodies wait for the verdict. A2 amended: one image per requester per leader base (answers Q1, Q2). Files widened to codec.h, admission.h, worker.h, codec_test.cc, docs/DRIVER.md.
+State: working: bodies at consensus:fc4af4f; first build job 261121-223440-971166 (targeted cases, codec, corpus replay).
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,17 +9,17 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Waiting for Detent's verdict on the header diff (consensus:c7a1ad7, base e35356a, msg-235).
+Bodies and tests written (consensus:9ea7c55 header fixes, consensus:fc4af4f bodies); first
+build job 261121-223440-971166 running.
 
 ## Next
 
-1. Fold in Detent's verdict on the API (relayed by the lead) and its answers to Q1 and Q2 below.
+1. Fix what job 261121-223440-971166 shows; then push and run `campaign verify` (suite, asan,
+   tsan on CI), the two mutant jobs and the 30-CPU-minute decoder fuzz.
 2. Merge consensus main once detent:consensus-quiesce-election-stall and
-   detent:consensus-peers-wake land (merge, never rebase).
-3. Write the bodies: Core (the request, the leader's decision, the follower's acceptance, the
-   resend), the wire (tags 10 and 11), admission plans, the Worker gate and accessor, and the
-   Driver bodies. Then the tests below, with the mutants as jobs.
-4. Write docs/mechanisms/install-request.md (A5).
+   detent:consensus-peers-wake land (merge, never rebase). Expect one conflict: Core's
+   next_deadline follower line (theirs adds acknowledge_at_, mine install_deadline()); keep both
+   in one std::min.
 
 ## API (consensus:c7a1ad7)
 
@@ -172,6 +172,26 @@ review through the lead.
 <pending>
 
 ## Rulings I made
+
+- Detent's fixes (msg-235 verdict) are consensus:9ea7c55, header only: Current states the
+  per-requester-per-base rule in types.h and driver.h; NotMember maps to InvalidRepair.
+- `imaged` records any image the peer got at a base (requested or lagging, at Started and at
+  Installed), so "one image per requester per leader base" holds across both paths.
+- `requested` survives Unavailable, TimedOut and Stale releases (nothing whole reached the
+  peer: the leader retries the same base's image) and clears on Installed, CaughtUp, Rejected.
+  A follower that rejects its image gets Current next, never a second image at that base.
+- Unanswered for an election timeout, the follower's request fails NotLeader (bounds a lost or
+  undecodable frame); answered, it asks again every snapshot_timeout until an image is admitted.
+- `wire_version` stays 1 (mechanism note, Wire): formats open until release, Gone (kind 9)
+  precedent, and the frames never reach an older node unprompted. Bumping would also break
+  test/transport/hello_test.cc's version() case, which uses 2 as "newer", outside this file set.
+- reinstall is its own waiter Kind (`reinstall`), so the blocking entry refuses it needs_peer
+  like propose; it still completes through RepairCompleted's waiter slot.
+- A resting follower's reinstall wakes it through wake() (called, not edited) and suppresses
+  rest while pending, so core.h stays off the wake rule's lines.
+- Mutants run as `--fails-without` jobs that perl-patch core.h in the job's checkout in the
+  build step (driver_mutants.py is outside this file set); a patch that does not apply fails the
+  build, so only a complete build then the named test failing passes.
 
 - The call is named `reinstall`, not `request_install`, because `Worker::request_install` already
   means admitting an incoming image.
