@@ -1,6 +1,6 @@
 # schema-split: journal
 
-State: working
+State: waiting on jobs 261121-200713-a4eb7a 261121-203757-64078f 261121-203624-f53a56 261121-203627-ff0c0a 261121-203631-291e5b 261121-203641-50bda7 261121-203642-2768b9; blocked on lead: CMake glob, split_check fix
 Quest: .campaign/xapiand/quests/schema-split.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,26 +9,57 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Cutting schema.cc by the plan below, one commit per new file, with a generator script
-(~/.scratch/xapiand/schema-split/cut.py) that copies line ranges of the base file verbatim.
+Split cut and committed (12 pieces, cut.py the generator); docs/dev/schema-layout.md written.
+Waiting on the jobs below and on the lead's two rulings (Blocked on).
 
 ## Next
 
-1. Cut, commit per file, push; split check, selfcontained and a probe build (CMake glob patched in
-   the job only, not evidence) as jobs.
-2. After the lead's ruling on the glob: suite (A1), fnsizes at the head, diff against the base job
-   261121-200713-a4eb7a, classify every row.
-3. docs/dev/schema-layout.md (A3).
+1. Read the jobs: probe suite, selfcontained, ctest -N, gate split check (expected red, see
+   Blocked on 2), patched split check, fnsizes base and head.
+2. Diff fnsizes base vs head, classify every row (moved, inlining change, new/duplicated
+   initializer); restore lost inlining on the indexing path with `inline` in a detail header.
+3. After the glob ruling: suite as A1 (`campaign verify schema-split --for A1`); after the checker
+   ruling: split check as A2.
 
 ## Blocked on
 
-Lead: the source glob. CMakeLists.txt:1127 globs `src/database/*.c*`, not recursively, so a `.cc`
-under `src/database/schema/` is not built (the quest says no CMake change is needed; it is). Options:
-1. Add `"${PROJECT_SOURCE_DIR}/src/database/schema/*.c*"` to XAPIAND_SRC_LIST (one line,
-   CMakeLists.txt outside my file set: the lead lands it on master or adds it to the set).
-2. Put the pieces next to schema.cc as `src/database/schema_*.cc` (needs `src/database/schema_*`
-   in the file set; no CMake change).
-Recommendation: 1, the directory the quest names; I build on it meanwhile (a rename if 2).
+1. Lead: the source glob. CMakeLists.txt:1127 globs `src/database/*.c*`, not recursively, so a
+   `.cc` under `src/database/schema/` is not built (the quest says no CMake change is needed; it
+   is). Options:
+   1. Add `"${PROJECT_SOURCE_DIR}/src/database/schema/*.c*"` to XAPIAND_SRC_LIST (one line,
+      outside my file set: the lead lands it on master or adds CMakeLists.txt to the set).
+   2. Rename the pieces to `src/database/schema_*.cc` beside schema.cc (needs `src/database/schema_*`
+      in the file set; no CMake change).
+   Recommendation: 1. Probe jobs patch it in their own fresh checkout only (probe.sh, fnsz_probe.sh).
+2. Lead: split_check misattributes repeated lines. Its greedy text match lets a new piece's
+   license `/*` claim a moved block-comment opener inside a function, a dropped static's
+   `inline bool` claim another function's `inline bool`, and so on: 40 errors at the head, every one
+   a line that did move verbatim. Fix (cpp-libraries tools/split_check.py, outside my file set): an
+   anchored pre-pass pins lines whose text is unique in both the added and the base side, then
+   extends each pin over neighboring lines while they match. Patch with two regression tests:
+   ~/.scratch/xapiand/schema-split/split_check_anchor.patch (ruff clean; 52/52 tests pass; both new
+   tests fail on the current checker). With it: 0 errors, 43 warnings at the head (answered
+   below). Recommendation: land the patch in cpp-libraries; A2 then runs green unchanged.
+
+## Layout at the head
+
+| File | Lines | Base lines |
+|---|---|---|
+| `schema.cc` | 505 | 1-75, 94-146, 2541-2617, 9270-9563 |
+| `schema/reserved.h` | 1,006 | 76-93, 210-303, 355-394, 408-429, 446-476, 495-517, 563-701, 1300-1588, 1652-1913 |
+| `schema/specification.cc` | 1,399 | 147-206, 305-316, 403-407, 438-445, 478-494, 519-562, 703-1299, 1623-1651, 1920-2471 |
+| `schema/walk.h` | 419 | 2472-2540, 2618-2731, 4660-4693, 5883-5978, 6881-6912 |
+| `schema/handlers.h` | 1,022 | 8278-9225 |
+| `schema/dispatch.h` | 945 | 1915-1918, 5979-6833, 6868-6880 |
+| `schema/index.cc` | 886 | 207-209, 2732-3543 |
+| `schema/update.cc` | 1,039 | 3578-4544 |
+| `schema/types.cc` | 748 | 4545-4548, 4607-4659, 4694-5313 |
+| `schema/value.cc` | 731 | 3544-3577, 4549-4606, 5314-5882 |
+| `schema/properties.cc` | 883 | 6834-6867, 6913-6975, 7609-8277, 9226-9269 |
+| `schema/feed.cc` | 703 | 6976-7608 |
+| `schema/fields.cc` | 756 | 318-354, 395-402, 430-437, 1589-1622, 9564-10159 |
+
+The cut plan below was the first draft; this table (and cut.py) is the record.
 
 ## Map of schema.cc (10,159 lines at the base 57496b89a)
 
@@ -64,7 +95,7 @@ translation unit of every caller or moves verbatim to a header.
 | 9416-9562 | stop-word checks (anonymous namespace), get_modified_schema, get_const_schema, to_string | |
 | 9564-10159 | _get_data_id, get_data_id/set_data_id/get_data_script, get_data_field, get_slot_field, get_dynamic_subproperties, get_prefixed_global | query-side field lookups |
 
-## Cut plan
+## Cut plan (first draft, superseded by "Layout at the head")
 
 | File | Holds | Base lines |
 |---|---|---|
@@ -87,18 +118,53 @@ Line ranges are approximate until cut.py's table is final; cut.py is the record.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending |
-| A2 | pending |
-| A3 | pending |
+| A1 | pending the glob ruling (probe 261121-203624-f53a56 is not evidence) |
+| A2 | 261121-203641-50bda7 (expected red: Blocked on 2); patched probe 261121-203642-2768b9 |
+| A3 | docs/dev/schema-layout.md |
 | A4 | lead |
 
-Jobs: 261121-200713-a4eb7a (fnsizes, Release+LTO at the base 57496b89a).
+Jobs:
+- 261121-200713-a4eb7a fnsizes, Release+LTO at the base 57496b89a
+- 261121-203757-64078f fnsizes probe at the split (glob patched in a fresh checkout)
+- 261121-203624-f53a56 suite probe (glob patched in a fresh checkout)
+- 261121-203627-ff0c0a the four new headers compile alone (selfcontained.sh)
+- 261121-203631-291e5b ctest -N at the base and the split
+- 261121-203641-50bda7 split check (gate); 261121-203642-2768b9 split check with the patch
+
+Scripts: ~/.scratch/xapiand/schema-split/{cut.py,probe.sh,fnsz_probe.sh,selfcontained.sh,ctestn.sh}.
+
+## Split-check warnings answered (43, with the anchored checker)
+
+- 12 `using namespace schema_detail;` (schema.cc and every piece but reserved.h): the shared
+  helpers moved into `schema_detail`; each TU looks them up as it did when they were file-scope.
+  No name in `schema_detail` collides with a global the pieces use (each compiles; probe suite).
+- 10 `extern` declarations in reserved.h and 10 dropped `static` on the same tables in
+  specification.cc (`def_accuracy_*` x4, `str_set_*` x6): one definition, read by several pieces.
+  Their dynamic initializers stay in specification.cc beside `global_acc_prefix_*` and
+  `default_spc`, which read them, so the initialization order inside that TU is the base's.
+- 8 dropped `static` in reserved.h (`static inline` helpers, now `inline` in `schema_detail`):
+  one definition across TUs instead of one copy per TU; the fnsizes diff checks the code.
+- 2 added `inline` in reserved.h (`_get_stemmer_name`, `repr_field`): a header definition needs
+  it; `repr_field` was external, its only users are the schema pieces.
+- 1 added `inline` on `normalize_script` (handlers.h): it shares the one top-level
+  `#ifdef XAPIAND_LUA` with `write_script`, which is inline and must be in a header.
 
 ## Result
 
 <When ready for review.>
 
 ## Rulings I made
+
+- Headers hold the inline closure: the walks inline the dispatch tables and the tables inline the
+  concrete-field handlers, so walk.h, dispatch.h and handlers.h hold them verbatim rather than
+  dropping `inline` (which would change inlining on the indexing path).
+- Schema::check lives in walk.h: a template the constructor and the update/write walks instantiate.
+- Tables become one extern definition in specification.cc (not header `static const` copies):
+  the quest says not to repeat them, and their initializers stay in one TU.
+- The L_* debug toggles stay at the top of schema.cc: `L_SCHEMA` is defined there and used
+  nowhere, and the `L_DEBUG`/`L_CALL` overrides are commented out, so every piece gets log.h's
+  defaults, as the base did. Turning tracing on for a piece means copying the toggle into it.
+- split_check.py: not copied to harness/; the fix belongs in cpp-libraries (Blocked on 2).
 
 - schema.h stays whole: 552-1068 is one class body (can't be cut) and 1-550 the enums and
   specification structs it is built on; no caller needs one without the other.
