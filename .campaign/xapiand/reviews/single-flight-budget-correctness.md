@@ -1,6 +1,6 @@
 # single-flight-budget review: correctness
 
-Commit: eea2bee555fbdf190b7904e5bbf7c4ec75d947e5
+Commit: 19f1e0c9a2399855ea2582ad9efd0737fa12861b (code reviewed at eea2bee555fb; re-checked below)
 Verdict: APPROVE
 Date: 2026-11-21
 
@@ -96,3 +96,7 @@ task:18eb51672e4f):
   platforms (A4 is red at 074d415c8; I did not look at why).
 - No end-to-end request test of a joining search whose client disconnects through http. The wiring
   was checked by reading the code only.
+
+## Re-check
+
+APPROVE at 19f1e0c9a2399855ea2582ad9efd0737fa12861b. src/single_flight.h is unchanged from eea2bee555fb. The allowlist row (harness/async_allowlist.tsv:70, count 3) matches the three `lock_guard` sites, single_flight.h:71 (the leader's end), :108 (a join) and :146 (a cancelled joiner's leave), and none of them is held across the load or a wait. One nit: the leave's `std::erase` scans the flight's joiner list, so it costs linear time in the waiting joiners rather than the note's "O(1)". It is still bounded and does no I/O.

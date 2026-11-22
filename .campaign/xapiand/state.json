@@ -25056,27 +25056,29 @@
     "single-flight-budget": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-21T19:54:02",
-          "base": "4e7be674c0d2a6b912e1c6ea5f8f900bbf294772",
+          "at": "2026-11-21T19:58:16",
+          "base": "d19defca7d70047d165b6117342c238f4f759faa",
           "blobs": {
             "docs/mechanisms/cancellation.md": "100644:b6021322f02e75a957c6add531423b2a4dc7f56a",
+            "harness/async_allowlist.tsv": "100644:cb681a25fc31fbb46b4996d4ad4601ebb041c348",
             "src/database/schemas_lru.cc": "100644:2435f307974e3577a3cc450ca629364b92b18aba",
             "src/single_flight.h": "100644:ccb2cd4e3fd4e4b95debca2c0a2888efde3dc391",
             "tests/test_single_flight.cc": "100644:2155adf723b5ab938453f12913f26cde745650bc"
           },
           "by": "review",
-          "commit": "074d415c84c21d22ce0fc589464ecd48deed75c0",
+          "commit": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
           "criteria": "8c3d2f0d55ad66b6",
           "diffs": {
             "docs/mechanisms/cancellation.md": "be952f27dae22751",
+            "harness/async_allowlist.tsv": "cac89cb1ed679c03",
             "src/database/schemas_lru.cc": "b83688834c9a765b",
             "src/single_flight.h": "926a777ac93cf1c6",
             "tests/test_single_flight.cc": "8867b342844c857e"
           },
           "findings": {},
           "note": "",
-          "review": "3b48fd91bcd9a5bd2b7a2b2445ae9b30c7120e0d",
-          "reviewed": "eea2bee555fbdf190b7904e5bbf7c4ec75d947e5",
+          "review": "14b48c9cc3e1435be2a4621659ae0fca526f5dda",
+          "reviewed": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
           "verdict": "APPROVE"
         }
       },
@@ -25111,7 +25113,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T19:55:45",
+      "updated": "2026-11-21T19:58:16",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
