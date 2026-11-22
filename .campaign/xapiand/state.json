@@ -17841,7 +17841,8 @@
         }
       },
       "after": [
-        "detent:consensus-transport"
+        "detent:consensus-transport",
+        "detent:consensus-mutants-per-test"
       ],
       "base": "e1f249d8d9ff64410f87042ba90f4c218d9ec336",
       "branch": "quest/xapiand/node-admission",
@@ -18033,7 +18034,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T14:41:53",
+      "updated": "2026-11-21T17:36:24",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
