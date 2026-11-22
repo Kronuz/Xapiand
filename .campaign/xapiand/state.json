@@ -26595,18 +26595,61 @@
         "test/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-http",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:19:56",
+          "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+          "criteria": {
+            "A1": "261121-121235-b632ee, 261121-155756-3106f6",
+            "A2": "261121-155756-3106f6 (the split check), 261121-121235-b632ee, 261121-155756-3106f6",
+            "A3": "261121-121244-ae1958",
+            "A4": "docs/source-layout.md",
+            "A5": "CI green at 944e8cfd7a34",
+            "A6": "261121-121251-4665eb",
+            "A7": "lead, 2026-11-21: read the split; http_asio.h cut into connection, connection_io, response and service, and two tests by section into TUs with support headers; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build-ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure -j4",
+              "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121235-b632ee",
+              "level": "light",
+              "seconds": 217.5,
+              "state": "done",
+              "what": "split-http check build-test at 944e8cfd7a34"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "944e8cfd7a3460e0208c45e43d98beb20054aaee",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155756-3106f6",
+              "level": "light",
+              "seconds": 2.3,
+              "state": "done",
+              "what": "split-http check split at 944e8cfd7a34"
+            }
+          ],
+          "final": true,
+          "from": "e4ad5b94a41fe851f6132d7c93506fa7d6f7439d",
+          "reason": "",
+          "tested": "944e8cfd7a3460e0208c45e43d98beb20054aaee"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../http",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "http's large header and tests split where it helps maintenance",
-      "updated": "2026-11-21T12:04:47",
-      "worktree": "../http-wt/xapiand/split-http"
+      "updated": "2026-11-21T18:19:59",
+      "worktree": ""
     },
     "split-http-parser": {
       "accepted": {},
