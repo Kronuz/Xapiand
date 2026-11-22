@@ -4373,10 +4373,39 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T20:01:31",
+          "commit": "dacfe414bb5b84c0e0a901a23759b93bd0030ca6",
+          "criteria": {
+            "A1": "261120-182340-d04e6e (passed at 234d834c4efc; only 15 merges from main since, none touching its files)",
+            "A2": "ci:Build + unit + smoke, 261120-182340-d04e6e (passed at 234d834c4efc; only 15 merges from main since, none touching its files); fails without: 261120-182354-5059f0",
+            "A3": "docs/mechanisms/cjk-words.md (Differences filled from the oracle)"
+          },
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:Build + unit + smoke",
+              "commit": "ee5677fd88c24222418cd4f3ac5f641182179079",
+              "state": "done"
+            },
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "ee5677fd88c24222418cd4f3ac5f641182179079",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "230ebdcd6911e46199ddd187369d4f43edf0d412",
+          "reason": "",
+          "tested": "ee5677fd88c24222418cd4f3ac5f641182179079"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "Phase 5",
       "needs": [
         "cjk-segmenter"
@@ -4384,10 +4413,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "_cjk_words back, on Phase 5's segmenter",
-      "updated": "2026-11-20T19:22:31",
-      "worktree": "../Xapiand-wt/xapiand/cjk-words"
+      "updated": "2026-11-21T20:01:38",
+      "worktree": ""
     },
     "cli-restore-records": {
       "accepted": {
