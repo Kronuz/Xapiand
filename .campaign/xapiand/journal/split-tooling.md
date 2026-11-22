@@ -14,7 +14,7 @@ Code pushed at cpp-libraries e991e52 (quest branch): tools/fnsizes.sh + test_fns
 
 ## Blocked on
 
-Nothing.
+Lead, one decision: A1's Linux half. `.github/workflows/tools.yml` already runs `bash tools/test_selfcontained.sh` on ubuntu-24.04 and macos-15 but not test_fnsizes.sh. It needs a step `bash tools/test_fnsizes.sh` and `tools/fnsizes.sh tools/test_fnsizes.sh` added to its shellcheck line (outside the file set; widen it). tools/README.md (a fnsizes.sh table row, already in e991e52) is also outside the set: widen it or revert it.
 
 ## Evidence
 
