@@ -1,6 +1,6 @@
 # cluster--search: journal
 
-State: waiting on jobs 261121-215150-cb25b8
+State: waiting on jobs 261121-215150-cb25b8 (build + cluster_search_* + engine search tests), 261121-215351-3a7a5b (control: mutant/xapiand/cluster-search-drop fails cluster_search_equal), 261121-215355-00d31e (control: mutant/xapiand/cluster-search-per-shard fails cluster_search_expansions)
 Quest: .campaign/xapiand/quests/cluster.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -21,10 +21,10 @@ aggregation_shards, for the `search_batched` refactor). Never compiled before th
 ## Next
 
 1. Read 261121-215150-cb25b8; fix what it shows.
-2. Mutants (`--fails-without --for A3`), each a branch off the green head:
-   `mutant/xapiand/cluster-search-drop` (coordinator skips the last node's part in `search_take`;
-   `cluster_search_equal` must fail) and `mutant/xapiand/cluster-search-per-shard` (strata
-   `expansion_of` ignores `plan.expansions`; `cluster_search_expansions` must fail).
+2. Read the controls (queued after 1): `mutant/xapiand/cluster-search-drop` (Xapiand:016ae7a6e,
+   `search_take` drops node 2's part; `cluster_search_equal` must fail) and
+   `mutant/xapiand/cluster-search-per-shard` (Xapiand:ea804fed4, strata `expansion_of` ignores
+   `plan.expansions`; `cluster_search_expansions` must fail). Rebase them onto any fix.
 3. Round 2, patterns (needs B1): `index_pattern::expand` over `ShardMapView::indexes(prefix)`
    candidates, the walk, `walk_gate.h` and `tests/fuzz_index_expand.cc` deleted, the no-walk check.
 4. The RPC binding of `cluster::Nodes` (needs B2), and the coordinator's call from the handler
