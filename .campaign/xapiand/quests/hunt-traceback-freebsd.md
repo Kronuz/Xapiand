@@ -5,32 +5,31 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt row 404. On FreeBSD CI, `traceback_hooks` fails `test/hooks_test.cc:50`,
+`CHECK(dump.find("hooks-main") != std::string::npos)`, while line 49 (`total:2`) passes: the dump
+counts both registered threads but does not print the main thread's registered name. It has
+failed this way since 2026-11-19 (traceback main, run 44570136588 at traceback:47c5736; again in
+run 44958843249 at a6690d9). Linux and macOS pass. Find why the dumping thread's name is missing
+on FreeBSD (thread identity, registration lookup, the self-signal, or what the dump prints for the
+thread doing the dumping) and fix the library, not the test.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check
+- A2 The fix has a test that fails without it on a platform the job can run, or, if the defect
+  shows only on FreeBSD, the journal names the FreeBSD-only mechanism with file:line and CI's
+  FreeBSD job shows the failure before and the pass after
+- A3 [ci] CI is green on every platform, FreeBSD included
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: traceback's API and output format stay as they are.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: normal risk (signal-handler code). One correctness review, or a waiver if the
+  fix is small with A2's proof.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None.
