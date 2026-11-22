@@ -34,7 +34,7 @@ same tool with `--base 64c9a973efdb`.
 | A4 | `docs/source-layout.md` at queryparser:2679882 |
 | A5 | CI run 44950018532 (workflow_dispatch on the quest branch), pending |
 | A6 | no header created; job 261121-130500-1fe08d checks no *.h/*.hh/*.hpp/*.hxx was added since 64c9a97 passed: only `docs/source-layout.md` and `queryparser_describe.cc` were added |
-| A7 | the lead's read |
+| A7 | lead, 2026-11-21: read the split; describe() moved to queryparser_describe.cc, a separate unit with its opening line |
 
 ## Result
 
