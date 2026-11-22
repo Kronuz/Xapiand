@@ -34,7 +34,7 @@ Nothing. A2 waits for split-check.
 | A4 | docs/source-layout.md at task:259f0cb6d73f |
 | A5 | CI at task:3179d8508a5f (pushed) |
 | A6 | selfcontained over task/*.hh plus the two test support headers: 261121-122809-473c08 (261121-122803-c360df is the same command run by `sh`, redundant) |
-| A7 | lead's reading |
+| A7 | lead, 2026-11-21: read the split; task.hh cut into cancel, coroutine, drivers, frame_pool, scheduler, sync and timing; tests split by topic into TUs with support headers |
 
 ## Result
 
