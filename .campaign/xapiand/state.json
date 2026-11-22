@@ -32686,6 +32686,42 @@
       "title": "Track P research items not yet started (split per item at start)",
       "updated": "2026-11-20T05:28:59"
     },
+    "tuple-buffer-restructure": {
+      "accepted": {},
+      "after": [
+        "split-check-members"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/prospect",
+          "level": "light",
+          "minutes": 10,
+          "name": "members"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/prospect/tuple_buffer.hh",
+        "include/prospect/tuple_buffer_*.hh",
+        "docs/source-layout.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../prospect",
+      "risk": "low",
+      "status": "planned",
+      "title": "prospect's tuple_buffer: run building, the entry codec and the run merger out of the class body",
+      "updated": "2026-11-21T22:24:28"
+    },
     "turn-log-parity": {
       "accepted": {
         "design": {
