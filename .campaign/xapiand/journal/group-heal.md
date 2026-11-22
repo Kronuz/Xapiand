@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261121-210217-362497 261121-210236-dca37d 261121-210245-1aac19 261121-210246-3f5652 261121-210246-ad33f8 261121-210247-218fb3 261121-210247-d363e5 261121-210247-fbfca9 261121-210248-1c5575 261121-210248-b81f77 261121-205709-52ed84 261121-204814-6859fe 261121-204824-971469 261121-214445-82aca9 (placement merges strata:cd2a4a40, the quest head, once plain 362497 passes)
+State: waiting on jobs 261121-210217-362497 261121-210236-dca37d 261121-210245-1aac19 261121-210246-3f5652 261121-210246-ad33f8 261121-210247-218fb3 261121-210247-d363e5 261121-210247-fbfca9 261121-210248-1c5575 261121-210248-b81f77 261121-205709-52ed84 261121-204814-6859fe 261121-204824-971469 261121-214745-036576 261121-214749-38a541 261121-214752-5dffc3 (placement merges strata:cd2a4a40, the quest head, once plain 362497 passes)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,8 +32,8 @@ mutants 210245-1aac19 210246-3f5652 210246-ad33f8 210247-218fb3 210247-d363e5 21
 1. The jobs in State: plain must pass, every mutant fail on its named test; the probe says
    whether both changes are needed. Then `campaign verify group-heal`. Quest CI at cd2a4a40
    (run 44987690334) was still queued on runners at 21:45.
-2. witness (task group-heal--witness, strata:c7f3dedc, pushed): CI run 44990695475 is its first
-   build; A4 job 261121-214445-82aca9. Its journal has the rest.
+2. witness (task group-heal--witness, strata:7db919a5, pushed): CI there is its first build;
+   A4 plain 214745-036576, mutants 214749-38a541, 214752-5dffc3. Its journal has the rest.
 3. repair: blocked on the design ruling below. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
