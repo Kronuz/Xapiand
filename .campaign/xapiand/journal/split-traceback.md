@@ -24,10 +24,10 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261121-130417-01d2eb |
-| A2 | 261121-130848-594a3e and 261121-145055-e9ab79 (fixed checker at a6690d9, no source change: no warnings expected): split_check.py from the split-check-sources worktree (ignores non-C/C++ files). The landed tool's split check 261121-130417-7d9331 failed only on docs/source-layout.md's prose lines (26 errors, 0 warnings): the pre-split-check-sources tool checks every file; the lead reruns A2 once that tool lands |
+| A2 | 261121-155809-4e674f: the split check (landed split_check.py) at a6690d9, passed |
 | A3 | 261121-130845-a8f326 (ctest -N `Test #`/`Total Tests` lines at base 066853d and head, diffed). Failed 261121-130428-319638: the diff compared unbuilt-executable warnings that name the build dirs ctn-base vs ctn-head, not tests |
 | A4 | [artifact] `docs/source-layout.md` at traceback:29f0dd1 |
-| A5 | CI at 29f0dd1: all green except freebsd-x86_64, whose vmactions/freebsd-vm step died (ssh exited with code 8), a runner failure, not code; rerun on a6690d9 pending |
+| A5 | CI at a6690d9 (run 44958843249): every job green except freebsd-x86_64, where traceback_hooks aborts in its subprocess. traceback main has failed the same way since 2026-11-19 (run 44570136588, at 47c5736), so the cause predates the split; the lead lands with --no-ci and files the bug in hunt.md |
 | A6 | 261121-130431-d0c0e2 done, exit 0: "headers new since 066853d: none" (selfcontained.sh runs only when a header was added) |
 | A7 | the lead's read |
 
