@@ -33116,8 +33116,24 @@
         "CMakeLists.txt",
         "test/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-21T22:06:28",
+          "lenses": [
+            [],
+            [
+              "correctness"
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
+      ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -33125,7 +33141,7 @@
       "risk": "normal",
       "status": "planned",
       "title": "uinteger_t: the algorithms leave the 5,709-line class body, one header per family",
-      "updated": "2026-11-21T22:05:44"
+      "updated": "2026-11-21T22:06:28"
     },
     "unpin-after-kick": {
       "accepted": {
