@@ -6534,6 +6534,55 @@
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
       "updated": "2026-11-21T17:35:42"
     },
+    "consensus-request-install": {
+      "accepted": {},
+      "after": [
+        "detent:consensus-quiesce-election-stall"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 60,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:linux-asan-ubsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "asan"
+        },
+        {
+          "cmd": "ci:linux-tsan",
+          "level": "light",
+          "minutes": 30,
+          "name": "tsan"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/consensus/driver.h",
+        "include/consensus/core.h",
+        "include/consensus/types.h",
+        "test/driver_install_request_test.cc",
+        "docs/mechanisms/install-request.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [
+        "consensus:install-request"
+      ],
+      "repo": "../consensus",
+      "risk": "high",
+      "status": "planned",
+      "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
+      "updated": "2026-11-21T21:50:41"
+    },
     "consensus-rpc-lane": {
       "accepted": {},
       "after": [
