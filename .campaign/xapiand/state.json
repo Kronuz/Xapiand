@@ -32587,12 +32587,13 @@
             "fuzz/**",
             "CMakeLists.txt"
           ],
-          "journal": "../Xapiand-wt/xapiand/turn-log-parity--tolerant-open",
-          "worktree": "../strata-wt/xapiand/turn-log-parity--tolerant-open"
+          "journal": "",
+          "merged": "a16d117c1ac7e351e0fe983c11b2a0182b09d97d",
+          "worktree": ""
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-21T13:16:50",
+      "updated": "2026-11-21T21:25:48",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
