@@ -13812,6 +13812,41 @@
       "title": "Idle index cost landscape",
       "updated": "2026-11-08T15:40:05"
     },
+    "index-restructure": {
+      "accepted": {},
+      "after": [
+        "turn-log-parity",
+        "field-check-at-map"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 45,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/core/index.hh",
+        "include/strata/core/index_*.hh",
+        "docs/source-layout.md",
+        "docs/mechanisms/index-layout.md",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
+      "updated": "2026-11-21T21:46:18"
+    },
     "install-own-files": {
       "accepted": {},
       "after": [],
