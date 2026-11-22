@@ -1,6 +1,6 @@
 # split-storage: journal
 
-State: waiting on jobs 261121-170219-d2f630 (A6), 261121-155804-60211a (check split)
+State: waiting on job 261121-212343-084e42 (A3: ctest -N base vs head diff)
 Quest: .campaign/xapiand/quests/split-storage.md (the lead's; never edit it)
 
 ## Doing
@@ -9,23 +9,31 @@ Split done and committed (storage:53d3255). Waiting on jobs; push done once.
 
 ## Next
 
-1. Read job results; diff the two `ctest -N` outputs (A3); fold in the split check's warnings (A2) once split_check.py lands (job exits 2 until then).
+1. When 261121-212343-084e42 passes (prints SAME), set State to "ready for review".
 
 ## Blocked on
 
-Nothing (A2 waits on quest split-check landing tools/split_check.py).
+Nothing.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
 | A1 | 261121-122326-e5a752 (the build-test check); job 261121-122326-e5a752 (build-test) |
-| A2 | 261121-122326-e5a752 |
-| A3 | 261121-122336-a5af06 |
+| A2 | 261121-155804-60211a (split_check at 53d3255: 0 errors, 0 warnings, 1 note); build-test 261121-122326-e5a752 |
+| A3 | 261121-212343-084e42 (base e0e7bed vs head, SPLITTING.md recipe); head list 261121-122336-a5af06 (11 tests) |
 | A4 | docs/source-layout.md at storage:53d3255 |
 | A5 | CI green at 53d325543622 |
 | A6 | 261121-170219-d2f630 (resubmit; replaces failed 261121-134307-6878c9) |
 | A7 | lead, 2026-11-21: read the split; storage_defs.h holds the hooks and definitions Storage<> builds on; opens with what it holds |
+
+Failed jobs, superseded: split check 261121-122326-a913a0 failed on the old checker (it flagged every
+line of docs/source-layout.md as an unallowed added line); rerun with the landed split_check.py,
+261121-155804-60211a, passes. new-headers 261121-122339-5b6f5f (exit 125, empty log) hit the same
+wrong-slot failure as below; 261121-170219-d2f630 passes (storage_defs.h compiles alone, c++20).
+
+Split-check warnings: none. One note, storage.h has 1,373 lines (over 1000): kept whole on purpose,
+one class template whose members share state (reason in docs/source-layout.md).
 
 A6 failure (261121-134307-6878c9, exit 125, empty log): not a missing build step. Its slot was `sc`,
 a worktree of the msgpack repo, so `git checkout 53d3255` there failed ("unable to read tree"): the
