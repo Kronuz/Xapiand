@@ -13913,7 +13913,7 @@
       "accepted": {},
       "after": [
         "turn-log-parity",
-        "field-check-at-map"
+        "split-check-members"
       ],
       "checks": [
         {
@@ -13921,15 +13921,53 @@
           "level": "light",
           "minutes": 45,
           "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
+          "level": "light",
+          "minutes": 10,
+          "name": "members"
         }
       ],
       "consumes": [],
       "files": [
         "include/strata/core/index.hh",
         "include/strata/core/index_*.hh",
+        "include/strata/core/index/**",
         "docs/source-layout.md",
-        "docs/mechanisms/index-layout.md",
-        "CMakeLists.txt"
+        "docs/mechanisms/index-layout.md"
+      ],
+      "history": [
+        {
+          "at": "2026-11-21T22:06:11",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 45,
+                "name": "build-test"
+              },
+              {
+                "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main include/strata/core",
+                "level": "light",
+                "minutes": 10,
+                "name": "members"
+              }
+            ]
+          ],
+          "reason": "",
+          "voided": [],
+          "weakened": []
+        }
       ],
       "landed": [],
       "lenses": [
@@ -13942,7 +13980,7 @@
       "risk": "high",
       "status": "planned",
       "title": "strata's index.hh: basic_index's 5,309-line class body split by mechanism",
-      "updated": "2026-11-21T21:46:18"
+      "updated": "2026-11-21T22:06:11"
     },
     "install-own-files": {
       "accepted": {},
