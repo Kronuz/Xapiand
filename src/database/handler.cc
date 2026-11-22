@@ -1146,6 +1146,15 @@ DatabaseHandler::restore_documents(const Endpoint& endpoint, int fd)
 			while (unpacker.next(result)) {
 				batch.emplace_back(result.get());
 			}
+			for (auto& obj : batch) {   // a dump holds maps (or arrays of them): anything else is not a dump
+				if (obj.is_array()) {
+					for (auto& o : obj) {
+						if (!o.is_map()) THROW(ClientError, "Restore object has an unsupported type: {} (the file is not a dump)", enum_name(o.get_type()));
+					}
+				} else if (!obj.is_map()) {
+					THROW(ClientError, "Restore object has an unsupported type: {} (the file is not a dump)", enum_name(obj.get_type()));
+				}
+			}
 			if (!indexer && !batch.empty()) {
 				// Resolved as RESTORE resolves it: writable, the first object as its settings, which saves the
 				// index's settings and shard records in .xapiand/indexes before its documents are written.
