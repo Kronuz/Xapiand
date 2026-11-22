@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: waiting on jobs 261121-135825-03ec6d 261121-135851-757e6d 261121-135852-69c5e6 261121-135854-c3ed31 261121-135856-0ef165 261121-135858-646f53 261121-135859-aa398e 261121-135901-443c9b 261121-135903-e4b096 261121-135915-f674a1 261121-135916-f7ee81 261121-135918-6dc4d8 261121-135920-9c9fde 261121-135932-46de17 261121-135942-dacf70 261121-132654-daff1f
+State: waiting on jobs 261121-172749-984db7 (diagnosis at strata:7fc5eb54) and CI at strata:7d57b2a0
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,21 +9,40 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Durability review (CHANGES at strata:096dbd04, `.campaign/xapiand/reviews/group-catalog-durability.md`),
-fix round 1 at strata:add2f00a (pushed; CI running). Code never compiled locally: the first job
-(261121-135825-03ec6d) is also the compile check; every other job runs `--after` it.
+Fix round 2 (after 261121-135825-03ec6d and CI at strata:add2f00a failed). Branch at
+strata:7d57b2a0 (main merged, pushed by `campaign land --merge-main`; CI runs there).
+
+Causes found:
+- bare-commit-crash "P_H is durable: 6": the test's bug. A lone voter's first entry is its term's
+  own, so five writes apply through 6 (borrow prints 9 applied for 8 writes; sweep "closed at 6").
+  strata:7fc5eb54 checks P_H against the applied position read before the commit, and that the
+  recovered group's close succeeds (CI showed it throws in the second process; cause unknown).
+- CI linux-tsan bare-commit-crash data race (loop's ~runtime_error vs the lane's what() in
+  close_payload): blocking() woke the waiter from task::spawn's callback while run_then still held
+  the work's frame and its exception_ptr (task.hh run_then calls done(e) before the frame ends).
+  strata:39be97de ends the work frame and moves the error out on the loop before the wake.
+  Its test is CI's linux-tsan group_catalog_bare_commit_crash.
+- replace and bare-commit-crash abort in Debug (TSan, FreeBSD) in owner_break (owner.hh:55),
+  caller unknown; Release passes. bound: begin_bound_close never true for 30 s on every platform;
+  hypothesis: demotion left maps, hold_off set probe_at an hour out (sweep_ns default).
+  strata:7fc5eb54 prints the slot's state, pins, failures, probe time and maps on that failure.
+  Diagnosis job 261121-172749-984db7 (Debug build-dbg; script
+  ~/.scratch/xapiand/group-catalog/diag.sh: each case, lldb backtrace on abort) decides both.
 
 ## Next
 
-1. When 261121-135825-03ec6d (every group_catalog case + lifetime failed-open) passes, read the
-   mutant jobs (each must exit nonzero: the test kills it), the TSan job 261121-135932-46de17 and
-   the suite 261121-135942-dacf70. A compile error or a failing case: `campaign job log ID`, fix,
-   resubmit the chain (round 2 is the last).
-2. Read the reviewer's probe 261121-132654-daff1f (at 096dbd04) when it lands: a TSan report in
-   `attach` or `failed-open` there is the pre-fix race, the R1/R2 attribution.
-3. All green and CI green: Evidence table below, State "ready for review" with
-   `campaign accept group-catalog durability --confirm R1=<tsan> R2=<tsan> R3=<suite> R4=<suite>`
-   for the lead.
+1. Read 261121-172749-984db7 (`campaign job log`): the owner_break caller for replace and
+   bare-commit-crash, the bound slot's state line, and payload_error of the recovered close. Fix
+   the cause, a test failing without each.
+2. Read CI at strata:7d57b2a0 (`gh run list --branch quest/xapiand/group-catalog -L 1`).
+3. Push once, then resubmit 261121-135825-03ec6d's chain at the head (`campaign job rerun`), the
+   TSan job, and `campaign verify group-catalog`; rerun 261121-103852-b1cb8c.
+4. All green: Evidence, State "ready for review", confirm line
+   `campaign accept group-catalog durability --confirm R1=<tsan> R2=<tsan> R3=<suite> R4=<suite>`.
+
+Reviewer's probe 261121-132654-daff1f failed to compile (review_probe.cc:339, `op` not captured,
+in the reviewer's generated scratch file): no result. Its four scenarios are this quest's
+group_catalog cases failed-open, attach, sweep and bare-commit-crash; not rerun.
 
 ## Blocked on
 
