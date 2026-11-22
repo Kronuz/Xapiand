@@ -371,7 +371,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			auto read = co_await metadata_loads.run(
 				strings::format("{}:{}", local_schema_path, read_flags),
 				[&] { return load_metadata(local_schema_path, endpoints, read_flags, context, budget, foreign_uri, endpoints_path, new_schema); },
-				[&] { return cached_metadata(local_schema_path); });
+				[&] { return cached_metadata(local_schema_path); },
+				budget ? budget->token() : task::cancel_token{});   // a joiner leaves when its request does
 			if (after_metadata_flight) {
 				co_await after_metadata_flight();
 			}
@@ -616,7 +617,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						shared = co_await foreign_loads.run(
 							strings::format("{}:{}", foreign_uri, read_flags),
 							[&] { return load_foreign(foreign_uri, foreign_id, foreign_endpoint, read_flags, context, budget); },
-							[&] { return cached_foreign(foreign_uri); });
+							[&] { return cached_foreign(foreign_uri); },
+							budget ? budget->token() : task::cancel_token{});
 					} else {
 						shared = co_await load_shared(foreign_id, foreign_endpoint, read_flags, context, budget);
 					}
