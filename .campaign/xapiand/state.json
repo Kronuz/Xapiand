@@ -2377,6 +2377,26 @@
       "id": "msg-229",
       "origin": "campaign-v3",
       "text": "Skill rule amended (agent-campaign:7fc739f, owner via detent): the pace-down line is gone. Quota never decides quality (tier, effort, reviews, checks follow the work alone), and short quota is no reason to slow down either; tell the owner if it runs out. xapiand: this reverses the slowdown you adopted at msg-226."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:01:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:01:38",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-230",
+      "items": {
+        "schema-split": "schema-split"
+      },
+      "settles": {
+        "start": [
+          "schema-split"
+        ]
+      },
+      "text": "cjk-words landed: unlocks schema-split"
     }
   ],
   "quests": {
@@ -24272,6 +24292,8 @@
       "after": [
         "split-check"
       ],
+      "base": "57496b89a73f9413512385741083d2b00140cbcd",
+      "branch": "quest/xapiand/schema-split",
       "checks": [
         {
           "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src/database",
@@ -24325,9 +24347,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T12:05:42"
+      "updated": "2026-11-21T20:02:55",
+      "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
       "accepted": {},
