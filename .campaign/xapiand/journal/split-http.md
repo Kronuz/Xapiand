@@ -33,7 +33,7 @@ Nothing. Main merge: already up to date (base e4ad5b9). A1/A3/A6 jobs passed at 
 | A3 | 261121-121244-ae1958 at 944e8cf vs base e4ad5b9. Earlier first-round ctest -N jobs, same list shape: 261121-114853-b2726f (b283dcd), 261121-114903-8148a4 (3d931dd), 261121-115542-54b74a (8c6cd46) |
 | A4 | docs/source-layout.md |
 | A6 | 261121-121251-4665eb at 944e8cf. Failed run examined: 261121-115533-838bff (asio.hpp not on the include path; the command now passes -I and -DASIO_STANDALONE) |
-| A7 | the lead reads the split |
+| A7 | lead, 2026-11-21: read the split; http_asio.h cut into connection, connection_io, response and service, and two tests by section into TUs with support headers; each opens with what it holds |
 
 ## Result
 
