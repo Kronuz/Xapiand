@@ -27278,18 +27278,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-uinteger-t",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:21:55",
+          "commit": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+          "criteria": {
+            "A1": "261121-121039-c6d5e2 (the build-test check); build-test job 261121-121039-c6d5e2 at 6815126e3170",
+            "A2": "261121-155810-1cf14f (the split check), 261121-121039-c6d5e2 (passed at 6815126e3170; only 1 merge from main since, none touching its files), 261121-155810-1cf14f",
+            "A3": "261121-121040-919d81 (passed at 6815126e3170; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] docs/source-layout.md: the 8 test pieces, and uinteger_t.hh kept whole with why",
+            "A5": "CI green at 8a6fe9030aab",
+            "A6": "261121-121044-660a41 (passed at 6815126e3170; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; property.cc split by topic into self-contained headers kept in one TU (static linkage kept, two CTest targets build property.cc; reason in docs/source-layout.md); accepted"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "6815126e3170ef49e1a98366773e421417175d69",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-121039-c6d5e2",
+              "level": "light",
+              "seconds": 648.5,
+              "state": "done",
+              "what": "split-uinteger-t check build-test at 6815126e3170"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master . test",
+              "commit": "8a6fe9030aababbb03b1206fd2bf023f31d67645",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155810-1cf14f",
+              "level": "light",
+              "seconds": 3.1,
+              "state": "done",
+              "what": "split-uinteger-t check split at 8a6fe9030aab"
+            }
+          ],
+          "final": true,
+          "from": "14cbb6e1f95103c2fef854ce83ce82dc834dcc36",
+          "reason": "",
+          "tested": "8a6fe9030aababbb03b1206fd2bf023f31d67645"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../uinteger_t",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "uinteger_t's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:05:17",
-      "worktree": "../uinteger_t-wt/xapiand/split-uinteger-t"
+      "updated": "2026-11-21T18:21:56",
+      "worktree": ""
     },
     "split-url-parser": {
       "accepted": {},
