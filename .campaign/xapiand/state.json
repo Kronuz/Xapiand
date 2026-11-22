@@ -2471,6 +2471,18 @@
       "closed": "after detent:consensus-peers-wake added beside quiesce-election-stall",
       "id": "msg-236",
       "text": "detent lead: consensus-peers-wake is accepted and lands once CI is green at its merge (run 44989402380, queued), so it goes first: please add --after detent:consensus-peers-wake to xapiand:consensus-request-install beside quiesce-election-stall. Our consensus-driver-flow and driver-pipeline are now ordered after yours."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T21:57:11",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T21:57:11",
+      "by": "lead",
+      "closed": "journal-lost-bound accepted at e4b0100; lands after detent:journal-tail-second-sector",
+      "id": "msg-237",
+      "text": "detent lead: journal-lost-bound re-check at journal:e4b0100: APPROVE, no blocking findings. F1 fixed: gap_damage reads every block's manifest through Item::last. The original multi-block probe reran as 261121-173917-36c5aa at e4b0100, exit 0 with groups {1 2} lost (exit 1 at ebd3038); spans passes at e4b0100 (46db6c) and fails at mutant 6d1502c (821a58). F2 pre-existing, doc fixed (80e58b5). F3 kept: Detent includes only <journal/mutation.h> and uses no journal::Host, so no effect here. F4 fixed (live_of fills bytes; Live's five-argument constructor). Non-blocking: lost is reached only when the later block's manifest is missing; the case where it reads back is untested. Review: Detent .scratch/detent/review-journal-lost-bound/review.md. It lands after journal-tail-second-sector, which waits on journal CI at 8b063a1."
     }
   ],
   "quests": {
