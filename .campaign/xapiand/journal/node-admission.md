@@ -1,6 +1,6 @@
 # node-admission: journal
 
-State: waiting on jobs at consensus:a5c615a (main merged at 8780e44; lead read a73c6e3..8780e44: nothing touching admission): 261121-144251-c4fe6d (F1 epoch) 261121-144250-ae978d (F2 issue) 261121-144251-fe5d36 (F3 save) 261121-144251-8155dd (every case) 261121-144252-07afc2 (TSan) 261121-144250-a686e0 (refused_pins) 261121-144249-290072 (refused_ca) 261121-144248-dad8de (remove_ca) 261121-144248-e12c22 (transport set); all queued; CI run 44958120227 queued. When F1-F3 pass, the lead runs: `campaign accept node-admission correctness --confirm F1=261121-144251-c4fe6d --confirm F2=261121-144250-ae978d --confirm F3=261121-144251-fe5d36 --note "F1-F3 confirmed at a5c615a; main's changes since the review (a73c6e3..8780e44) read, none touch admission; since the review: open_of in the test, hold() uses routed()"`. If linux-tsan is the only red CI job and fails consensus_transport_rpc_host_fetch (TSan timing, shared by main run 44930858682; Detent's consensus-transport-test-flakes), land with --no-ci citing it.
+State: waiting on jobs 261121-212559-2dcae9 (every admission case, A1/A3/A5) 261121-212601-71bd94 (configure + ctest -N: one consensus_mutant_ test per mutant beside the admission tests) and CI on consensus:b4e0690 (main merged at e35356a; pushed). F1-F3 and the rest passed at a5c615a (all exit 0). CI at a5c615a (44958120227): the only failure on every platform was consensus_mutants (Timeout 1800 s; FreeBSD `env: bash`), main's, fixed on main by e35356a. If CI at b4e0690 is green, the lead runs: `campaign accept node-admission correctness --confirm F1=261121-144251-c4fe6d --confirm F2=261121-144250-ae978d --confirm F3=261121-144251-fe5d36 --note "F1-F3 confirmed at a5c615a; main's changes since the review read"`. If linux-tsan fails only consensus_transport_rpc_host_fetch (Detent's consensus-transport-test-flakes; also CI 44940676266 here), land with --no-ci citing it.
 Quest: .campaign/xapiand/quests/node-admission.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,16 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+CI failures at consensus:a5c615a (run 44958120227), round 3:
+- linux-asan-ubsan, linux-tsan (and linux-x86_64-clang, linux-arm64-gcc, macos-x86_64): one failure each,
+  `consensus_mutants` Timeout 1800 s; freebsd-x86_64: `consensus_mutants` Failed, `env: bash: No such file`.
+  Not this quest's: main's CI 44951962478 fails the same test the same way on every platform, and the
+  quest does not touch tools/mutants.sh or its test. Main's e35356a (one ctest per mutant, bash only where
+  found) fixes it; merged at consensus:b4e0690. No code fix here, so no fails-without test.
+- Earlier run 44940676266 (de51801): linux-tsan `consensus_transport_rpc_host_fetch` failed: Detent's
+  consensus-transport-test-flakes (shared consensus repo); main's 44930858682 fails it too.
+- Merge of main (e35356a: CMakeLists.txt, tools/mutants.sh) at consensus:b4e0690: clean, no conflict.
 
 Fix after the merge, consensus:9e66e5b, pushed. At 2374e2c every case building a HostTransport
 aborted: main's constructor throws "member_of and open_of are required" and the admission hosts set
