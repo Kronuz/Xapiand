@@ -41,7 +41,7 @@ instantiate with different error types, so its definition is in `walk.h`, where 
   rest are the enums and specification structs the class is built on.
 - `schema/specification.cc` (1,399): `_get_type` is one 596-line perfect-hash table of type names;
   with the three specification structs' members and their tables it is one unit.
-- `schema/handlers.h` (1,022): the 31 `consistency_*` checks and the concrete-field `process_*`
+- `schema/handlers.h` (1,022): the 26 `consistency_*` checks and the 15 concrete-field `process_*`
   handlers are one family, each the per-document handler of one reserved word.
 - `schema/reserved.h` (1,006): `_get_str_type` (267 lines) and `_get_stem_language` (230) are tables;
   the rest are their siblings for the other reserved values.
