@@ -5,32 +5,58 @@ Risk: high. The lead writes this quest; contributors read it and never edit it. 
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+strata's `include/strata/core/index.hh` is 6,139 lines on main (strata:cc30217f; 106 commits), and
+5,309 of them are one class body, `class basic_index` (lines 823-6131), with every member function
+defined in the class. SPLITTING.md forbids cutting a class body, so a moves-only split reaches only
+the other ~830 lines (`log_state`, `basic_index_options`, `hash_slots`, `io_spill`, `file_sink`,
+`lent_frame`). The class holds several mechanisms, each with its own state and invariants: open and
+replay, the turn log and group commit, checkpoints, merges, spills and reads. It is not one coherent
+unit. This quest gives each mechanism its own header, a maintainer can open one to work on one
+mechanism, and no behavior changes.
+
+Two steps, each landable alone:
+
+1. Out-of-class definitions. basic_index's member functions move out of the class body into one
+   header per mechanism (`index_open.hh`, `index_turns.hh`, `index_checkpoint.hh`,
+   `index_merge.hh`, `index_read.hh`, or the cut its reading shows), as `template <...> inline`
+   definitions of `basic_index<...>::f`. The class body keeps its data members and declarations.
+   `index.hh` stays the include every caller names. Bodies, names and statement order are
+   unchanged.
+2. Subobjects, only where one wins. Where a mechanism's state and invariants stand apart (the turn
+   log's cohort state, the checkpoint window, replay), they become a member class basic_index owns,
+   each with its own unit tests. Each extraction is judged on maintenance: fewer members a reader
+   must hold in mind, and an invariant stated in one place. No size targets.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes at each step's head: the `build-test` check, plus CI on every platform with
+  sanitizers ([ci])
+- A2 Step 1 changes no code: a split_check mode (or an extension in cpp-libraries' tools, with its
+  own fixture) proves every moved member body reappears unchanged as an out-of-class definition. A
+  Release+LTO `tools/fnsizes.sh` diff of strata's test binaries, base against step 1, shows no
+  function whose size changed, or each difference explained in the journal
+- A3 Step 2: each extracted subobject has unit tests of its own invariant, plus a mutant per
+  invariant that a named test kills (the log shows a complete build, then the named test failing)
+- A4 [artifact] `docs/source-layout.md` lists each new header and what it holds, and
+  `docs/mechanisms/index-layout.md` says which mechanism lives where, and why each one stays
+  inside basic_index or leaves it
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+`strata:index`'s public API stays the same. Callers include `strata/core/index.hh` and see the same
+names.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21 (owner asked why index.hh is still this big): turn-log-parity's planned `split`
+  task never started; its trigger (after group-commit and large-tx merge, before tolerant-open) passed
+  when tolerant-open merged first. It would have reached only the ~830 lines outside the class, so
+  this quest replaces it. It is high risk because it moves durability code; step 1 is proved
+  mechanically, so one correctness review covers both steps.
+- It starts the day turn-log-parity lands: six of turn-log-parity's tasks and its fix round edit
+  index.hh, and a split under open branches costs them their edits (SPLITTING.md, "When").
+  field-check-at-map also holds index.hh.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Step 1, on its own proof (A1, A2), before step 2 starts.
