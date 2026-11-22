@@ -29,7 +29,7 @@ Nothing.
 | A4 | docs/source-layout.md (workpool:22acbb0) |
 | A5 | CI on workpool:bdf8932 (pushed, after merging main) |
 | A6 | selfcontained.sh over the three new headers: 261121-130523-77f795 at 22acbb0 passed, 3 ok, 0 failed; at d958170 (same headers) 261121-130440-45a7f8 passed, 3 ok |
-| A7 | the lead's read |
+| A7 | lead, 2026-11-21: read the split; idle, ready-ring and sync pieces are separate mechanisms; each opens with what it holds |
 
 Other jobs: 261121-130434-7c3da2 cancelled (superseded by the head job with the same command;
 resubmitted with SIDE=before as 723d31); 261121-130437-47f635 (ctest -N at d958170, 6 tests,
