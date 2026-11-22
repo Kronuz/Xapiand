@@ -1,6 +1,6 @@
 # split-storage: journal
 
-State: waiting on jobs 261121-122326-e5a752 261121-122326-a913a0 261121-122336-a5af06 261121-122337-4eb641 261121-122339-5b6f5f
+State: waiting on jobs 261121-170219-d2f630 (A6), 261121-155804-60211a (check split)
 Quest: .campaign/xapiand/quests/split-storage.md (the lead's; never edit it)
 
 ## Doing
@@ -19,13 +19,18 @@ Nothing (A2 waits on quest split-check landing tools/split_check.py).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261121-122326-e5a752 (build-test) |
-| A2 | job 261121-122326-a913a0 (split; exit 2 until split_check.py lands) |
-| A3 | head 261121-122336-a5af06, base 261121-122337-4eb641: diff the two outputs |
+| A1 | 261121-122326-e5a752 (the build-test check); job 261121-122326-e5a752 (build-test) |
+| A2 | 261121-122326-e5a752 |
+| A3 | 261121-122336-a5af06 |
 | A4 | docs/source-layout.md at storage:53d3255 |
-| A5 | CI on the pushed branch |
-| A6 | job 261121-122339-5b6f5f (selfcontained, storage_defs.h only: old headers skipped with -x) |
+| A5 | CI green at 53d325543622 |
+| A6 | 261121-170219-d2f630 (resubmit; replaces failed 261121-134307-6878c9) |
 | A7 | lead, 2026-11-21: read the split; storage_defs.h holds the hooks and definitions Storage<> builds on; opens with what it holds |
+
+A6 failure (261121-134307-6878c9, exit 125, empty log): not a missing build step. Its slot was `sc`,
+a worktree of the msgpack repo, so `git checkout 53d3255` there failed ("unable to read tree"): the
+commit is in the storage repo only. Resubmitted without `--slot` (the quest's own slot,
+xapiand-split-storage) with `--build "cmake -G Ninja -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"`.
 
 ## Result
 
