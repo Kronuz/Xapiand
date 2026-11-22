@@ -26108,18 +26108,61 @@
         "docs/mechanisms/commit-barriers.md",
         "tools/mutants.py"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-completion",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T19:14:17",
+          "commit": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+          "criteria": {
+            "A1": "261121-142449-56c397 (the build-test check), 261121-142449-56c397, 261121-161350-a448b8",
+            "A2": "261121-142449-867ce2 (the split check), 261121-161350-10811a",
+            "A3": "261121-161351-43cd9a",
+            "A4": "docs/source-layout.md at completion:2a13cc671db4",
+            "A5": "CI green at 02ab67fd44f1",
+            "A6": "261121-161351-03d95c",
+            "A7": "lead, 2026-11-21: read the split; posix.h cut into file, sync, volume and support pieces at type boundaries; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-142449-56c397",
+              "level": "light",
+              "seconds": 32.4,
+              "state": "done",
+              "what": "split-completion check build-test at 02ab67fd44f1"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main include/completion",
+              "commit": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-142449-867ce2",
+              "level": "light",
+              "seconds": 1.7,
+              "state": "done",
+              "what": "split-completion check split at 02ab67fd44f1"
+            }
+          ],
+          "final": true,
+          "from": "714186eab63d5b1b8001a9f9a1afcfc7602f8766",
+          "reason": "",
+          "tested": "02ab67fd44f1f47eafe2e1eb8c4baf1576440a52"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../completion",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "completion's large files split where it helps maintenance",
-      "updated": "2026-11-21T14:24:30",
-      "worktree": "../completion-wt/xapiand/split-completion"
+      "updated": "2026-11-21T19:14:23",
+      "worktree": ""
     },
     "split-constexpr-phf": {
       "accepted": {},
