@@ -24872,9 +24872,9 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T13:36:51",
+      "updated": "2026-11-21T16:31:30",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
