@@ -22,13 +22,16 @@
 
 #pragma once
 
+#include <compare>                 // for operator<=>
 #include <cstddef>                 // for std::size_t
-#include <cstdint>                 // for std::uint8_t
+#include <cstdint>                 // for std::uint8_t, std::uint64_t
 #include <functional>              // for std::function
 #include <limits>                  // for std::numeric_limits
+#include <map>                     // for std::map
 #include <memory>                  // for std::unique_ptr
 #include <span>                    // for std::span
 #include <string>                  // for std::string
+#include <string_view>             // for std::string_view
 #include <utility>                 // for std::move
 #include <vector>                  // for std::vector
 
@@ -62,6 +65,48 @@ private:
 
 // Reads the query. Raises what the engine's query parser raises on text it cannot parse.
 std::unique_ptr<PreparedQuery> prepare(const Query& query);
+
+// A term under a field, as a query names it.
+struct FieldTerm {
+	std::string field;
+	std::string term;
+	auto operator<=>(const FieldTerm&) const = default;
+};
+
+// A term's frequencies over an index, deleted documents included: documents holding it, and the sum of its wdf.
+struct TermStatistics {
+	std::uint64_t df = 0;
+	std::uint64_t cf = 0;
+	bool operator==(const TermStatistics&) const = default;
+};
+
+// What a search weighs one index with, gathered from its shards and summed (docs/mechanisms/distributed-search.md):
+// a search over some of the shards that takes the sum weighs as one search over all of them.
+struct IndexStatistics {
+	std::uint64_t documents = 0;          // deleted documents included, as the weights count them
+	std::uint64_t total_length = 0;
+	std::map<std::string, std::map<std::string, TermStatistics, std::less<>>, std::less<>> terms;   // by field, then term
+	// The terms each expanding node of the query (expanding_nodes()) matches in the index, sorted: as gathered, then
+	// as the node's limit keeps them once finish() has run.
+	std::vector<std::vector<FieldTerm>> expansions;
+
+	const TermStatistics* find(std::string_view field, std::string_view term) const;
+
+	// Sums the figures and joins the expansions; raises errc::invalid for statistics of another query.
+	IndexStatistics& operator+=(const IndexStatistics& other);
+	bool operator==(const IndexStatistics&) const = default;
+};
+
+// The wildcard and edit-distance nodes of a query, in the order statistics number them: depth first, each place a
+// node appears counted.
+std::vector<const QueryNode*> expanding_nodes(const Query& query);
+
+// The terms an expanding node keeps of those it matches in an index (sorted), under its limit: past `max_expansion`
+// it raises errc::invalid, keeps the first or keeps the most frequent by `df`, the term's frequency in the index.
+std::vector<FieldTerm> limit_expansion(const QueryNode& node, std::vector<FieldTerm> matched, const std::function<std::uint64_t(const FieldTerm&)>& df);
+
+// Applies each expanding node's limit to an index's summed statistics, as one search over the whole index applies it.
+void finish(const PreparedQuery& query, IndexStatistics& statistics);
 
 // How documents with equal rank are ordered.
 enum class DocidOrder : std::uint8_t {
@@ -99,6 +144,11 @@ struct SearchRequest {
 	// index. A relevance weight reads the statistics of its own index, so it does not depend on the other indexes
 	// searched with it. Empty: all the shards are one index. Borrowed; outlives the search.
 	std::span<const std::uint32_t> index_of;
+
+	// The statistics each index weighs with and the terms its expanding nodes take, gathered over all of the index's
+	// shards and finished; an index's entry is at its `index_of` value (entry 0 when `index_of` is empty). Empty: each
+	// index's own, read from the shards given. Borrowed; outlives the search.
+	std::span<const IndexStatistics> statistics;
 };
 
 struct Hit {
@@ -128,6 +178,11 @@ struct SearchResult {
 // prepare() may reject a query shape first, with errc::invalid or errc::internal.
 task::task<SearchResult> search(std::span<Shard* const> shards, const SearchRequest& request);
 
+// The statistics of the shards for the query, one per index (`index_of` as in SearchRequest, in the order the
+// indexes first appear): the frequencies of every term the query names and of every term its expanding nodes match.
+// A node's share of a search answers its shards' with these; the coordinator sums them by index and finishes them.
+task::task<std::vector<IndexStatistics>> gather(std::span<Shard* const> shards, const PreparedQuery& query, std::span<const std::uint32_t> index_of);
+
 // A hit's weight as a percentage of the top weight, in [0, 100]; against an infinite top weight a hit
 // is 100 if it is infinite too and 0 otherwise.
 int percent_of(double score, double top);
@@ -138,6 +193,39 @@ int percent_of(double score, double top);
 struct BatchResult {
 	SearchResult result;
 	std::vector<std::size_t> positions;
+};
+
+// Merges the results of searches over disjoint sets of a search's `total` shards into the result one search over
+// all of them returns: each part is searched under part() and add()ed with its shards' positions, in any order.
+class Merge {
+public:
+	Merge(std::size_t total, const SearchRequest& request);
+
+	// The request each part runs under: the top of the whole window (under a collapse, all it keeps), with the keys
+	// the merge ranks by. Its `index_of` is the whole search's; a caller gives each part its own.
+	const SearchRequest& part() const noexcept {
+		return part_;
+	}
+
+	void add(BatchResult done);
+	SearchResult finish();
+
+private:
+	struct Candidate {
+		Hit hit;
+		hitid id;
+	};
+
+	bool above(const Candidate& a, const Candidate& b) const;
+
+	std::size_t total_;
+	SearchRequest request_;
+	SearchRequest part_;
+	bool collapse_;
+	std::uint64_t window_;
+	std::vector<Candidate> top_;
+	std::uint64_t estimated_ = 0;
+	double heaviest_ = 0;
 };
 
 // Searches shards [begin, end) of the whole search under `request`. The host holds them open for the

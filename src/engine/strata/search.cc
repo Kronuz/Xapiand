@@ -31,6 +31,7 @@
 #include <limits>                  // for std::numeric_limits
 #include <memory>                  // for std::make_unique
 #include <optional>                // for std::optional
+#include <set>                     // for std::set
 #include <span>                    // for std::span
 #include <stdexcept>               // for std::invalid_argument, std::exception
 #include <string>                  // for std::string
@@ -117,24 +118,79 @@ struct Group {
 	std::optional<p::weight> synonym;   // the weight of the union, for a SYNONYM combiner
 };
 
+// Each expanding node's place in the query (engine::expanding_nodes), its first where it appears more than once.
+using Ordinals = std::unordered_map<const QueryNode*, std::size_t>;
+
 // What a search works out once over one index and every segment of it then shares, so a document
-// weighs the same in all of them: the groups of its nodes.
+// weighs the same in all of them: the groups of its nodes. With supplied statistics, the expanding
+// nodes take the terms the statistics carry, by their place in the query.
 struct Plan {
 	std::span<const p::segment_snapshot> segments;
 	p::term_table& terms;
 	std::unordered_map<const QueryNode*, Group> groups;
+	const std::vector<std::vector<engine::FieldTerm>>* expansions = nullptr;
+	const Ordinals* ordinals = nullptr;
 };
 
-// One index's segments with the term table and plan that weigh them.
+// The engine's statistics as prospect reads them.
+p::supplied_statistics
+to_supplied(const IndexStatistics& given)
+{
+	p::supplied_statistics supplied;
+	supplied.collection = p::statistics(given.documents, given.total_length);
+	for (const auto& [field, by_term] : given.terms) {
+		auto& mine = supplied.terms[field];
+		for (const auto& [term, figures] : by_term) {
+			mine.emplace(term, p::term_statistics{figures.df, figures.cf});
+		}
+	}
+	return supplied;
+}
+
+// One index's segments with the term table and plan that weigh them: its own statistics, or the
+// ones given for the whole index.
 struct Scope {
 	std::span<const p::segment_snapshot> segments;
+	std::optional<p::supplied_statistics> supplied;
 	p::term_table terms;
 	Plan plan;
 
-	explicit Scope(std::span<const p::segment_snapshot> segments) : segments(segments), terms(segments), plan{segments, terms, {}} { }
+	Scope(std::span<const p::segment_snapshot> segments, const IndexStatistics* given, const Ordinals& ordinals)
+		: segments(segments),
+		  supplied(given != nullptr ? std::optional<p::supplied_statistics>(to_supplied(*given)) : std::nullopt),
+		  terms(segments, supplied ? &*supplied : nullptr),
+		  plan{segments, terms, {}, given != nullptr ? &given->expansions : nullptr, &ordinals} { }
 	Scope(const Scope&) = delete;
 	Scope& operator=(const Scope&) = delete;
 };
+
+// The terms of the index a wildcard or edit-distance node matches, sorted, before its limit.
+std::vector<engine::FieldTerm>
+matched(const QueryNode& node, std::span<const p::segment_snapshot> segments, p::term_table& terms)
+{
+	QueryNode unlimited = node;
+	unlimited.parameter = 0;
+	std::vector<engine::FieldTerm> found;
+	for (auto& term : expand(unlimited, segments, terms)) {
+		found.push_back({std::move(term.field), std::move(term.term)});
+	}
+	return found;
+}
+
+// The terms an expanding node takes: the statistics' when the search was given them, else its own
+// expansion over the index under its limit.
+std::vector<engine::FieldTerm>
+expansion_of(const QueryNode& node, Plan& plan)
+{
+	if (plan.expansions != nullptr) {
+		const auto at = plan.ordinals->find(&node);
+		if (at == plan.ordinals->end() || at->second >= plan.expansions->size()) {
+			throw Error(errc::invalid, "A search was given statistics without its query's expansions");
+		}
+		return (*plan.expansions)[at->second];
+	}
+	return engine::limit_expansion(node, matched(node, plan.segments, plan.terms), [&](const engine::FieldTerm& t) { return plan.terms.df(t.field, t.term); });
+}
 
 // What building a query for one segment reads: the segment, and the term table and statistics of
 // the index it belongs to, so a weight is the same in all the segments of that index.
@@ -179,7 +235,7 @@ group_of(const QueryNode& node, const Builder& b)
 			group.members.push_back({leaf.field, leaf.str, leaf.wqf});
 		}
 	} else {
-		for (auto& expanded : expand(node, b.plan.segments, b.terms)) {
+		for (auto& expanded : expansion_of(node, b.plan)) {
 			group.members.push_back({std::move(expanded.field), std::move(expanded.term), 1});
 		}
 	}
@@ -600,6 +656,177 @@ build(const Query& query, const Builder& b, int depth)
 }
 
 
+// The shards' views, one snapshot over their segments and a scope per index: what a search and a
+// gather read. Filled in place and never moved, since the scopes point into the snapshot.
+struct Held {
+	std::vector<Shard*> mine;
+	std::vector<Viewed> views;
+	std::optional<p::multi_snapshot> snapshot;
+	std::vector<std::unique_ptr<Scope>> scopes;
+	std::unordered_map<const p::segment*, Scope*> scope_of;
+	Ordinals ordinals;
+	std::uint64_t documents = 0;   // the most a window can return
+
+	Held() = default;
+	Held(const Held&) = delete;
+	Held& operator=(const Held&) = delete;
+};
+
+void
+hold(Held& held, std::span<engine::Shard* const> shards, std::span<const std::uint32_t> index_of, std::span<const IndexStatistics> statistics, const Query& source)
+{
+	// Hold one view of every distinct index, none of which blocks a write, a refresh or another search.
+	auto& mine = held.mine;
+	mine.reserve(shards.size());
+	for (auto* shard : shards) {
+		auto* strata = dynamic_cast<Shard*>(shard);
+		if (strata == nullptr) {
+			throw Error(errc::invalid, "A strata search was given a shard of another engine");
+		}
+		mine.push_back(strata);
+	}
+	auto& views = held.views;
+	views.reserve(mine.size());
+	const auto viewed_of = [&](const Shard* shard) -> const Viewed* {
+		for (const auto& viewed : views) {
+			if (viewed.identity() == shard->identity()) {
+				return &viewed;
+			}
+		}
+		return nullptr;
+	};
+	for (auto* shard : mine) {
+		if (viewed_of(shard) == nullptr) {
+			views.push_back(shard->view());
+		}
+	}
+	const auto view_of = [&](const Shard* shard) -> const Viewed& {
+		if (const auto* viewed = viewed_of(shard)) {
+			return *viewed;
+		}
+		throw Error(errc::internal, "A strata search lost a viewed shard");
+	};
+
+	// One snapshot over the shards' segments, so shard i is the i-th shard asked for (its slot in the docid
+	// interleave). Statistics are read per index: the shards of one index share a term table and a plan, and
+	// another index's documents do not weigh into them.
+	if (!index_of.empty() && index_of.size() != mine.size()) {
+		throw Error(errc::invalid, "A strata search was given an index for some of its shards only");
+	}
+	std::vector<p::shard_input> inputs(mine.size());
+	for (std::size_t i = 0; i < mine.size(); ++i) {
+		for (const auto& view : view_of(mine[i]).segments()) {
+			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead, &view_of(mine[i]).fields()});
+			held.documents += view.seg()->core().doc_count();
+		}
+	}
+	held.snapshot.emplace(std::move(inputs));
+	const auto& snapshot = *held.snapshot;
+	const auto expanding = engine::expanding_nodes(source);
+	for (std::size_t k = 0; k < expanding.size(); ++k) {
+		held.ordinals.emplace(expanding[k], k);
+	}
+	const auto all = snapshot.segments();
+	std::size_t first = 0;     // the first segment of the index being gathered
+	std::size_t seen = 0;      // segments of the shards gathered so far
+	for (std::size_t i = 0; i < mine.size(); ++i) {
+		seen += snapshot.segments(i).size();
+		const bool ends = i + 1 == mine.size() || (!index_of.empty() && index_of[i + 1] != index_of[i]);
+		if (!ends) {
+			continue;
+		}
+		const IndexStatistics* given = nullptr;
+		if (!statistics.empty()) {
+			const std::size_t index = index_of.empty() ? 0 : index_of[i];
+			if (index >= statistics.size()) {
+				throw Error(errc::invalid, "A search was given statistics for some of its indexes only");
+			}
+			given = &statistics[index];
+			if (given->expansions.size() != expanding.size()) {
+				throw Error(errc::invalid, "A search was given statistics without its query's expansions");
+			}
+		}
+		held.scopes.push_back(std::make_unique<Scope>(all.subspan(first, seen - first), given, held.ordinals));
+		for (const auto& segment : held.scopes.back()->segments) {
+			held.scope_of.emplace(segment.seg, held.scopes.back().get());
+		}
+		first = seen;
+	}
+}
+
+// The terms a query weighs by name: every term leaf but match_all's, deduplicated.
+std::vector<engine::FieldTerm>
+named_terms(const Query& query)
+{
+	std::set<engine::FieldTerm> names;
+	std::vector<const Query*> pending{&query};
+	while (!pending.empty()) {
+		const auto* node = pending.back()->node();
+		pending.pop_back();
+		if (node == nullptr) {
+			continue;
+		}
+		if (node->kind == QueryKind::term && !is_match_all(*node)) {
+			names.insert({node->field, node->str});
+		}
+		for (const auto& sub : node->subqueries) {
+			pending.push_back(&sub);
+		}
+	}
+	return {names.begin(), names.end()};
+}
+
+
+task::task<std::vector<IndexStatistics>>
+gather_held(std::span<engine::Shard* const> shards, const Query& source, std::span<const std::uint32_t> index_of)
+{
+	std::vector<IndexStatistics> out;
+	if (shards.empty()) {
+		co_return out;
+	}
+	Held held;
+	hold(held, shards, index_of, {}, source);
+	const auto expanding = engine::expanding_nodes(source);
+	const auto named = named_terms(source);
+	for (const auto& scope : held.scopes) {
+		IndexStatistics statistics;
+		std::set<engine::FieldTerm> names(named.begin(), named.end());
+		std::unordered_map<const QueryNode*, std::vector<engine::FieldTerm>> by_node;
+		for (const auto* node : expanding) {
+			auto found = by_node.find(node);
+			if (found == by_node.end()) {
+				auto terms = matched(*node, scope->segments, scope->terms);
+				// Past the first `max_expansion` terms (one more under `error`), no term of this share can be kept.
+				if (node->parameter != 0 && node->limit != Expansion::most_frequent) {
+					const std::size_t cap = std::size_t{node->parameter} + (node->limit == Expansion::error ? 1 : 0);
+					if (terms.size() > cap) {
+						terms.resize(cap);
+					}
+				}
+				found = by_node.emplace(node, std::move(terms)).first;
+			}
+			names.insert(found->second.begin(), found->second.end());
+			statistics.expansions.push_back(found->second);
+		}
+		std::vector<p::term_name> term_names;
+		term_names.reserve(names.size());
+		for (const auto& name : names) {
+			term_names.push_back({name.field, name.term});
+		}
+		const auto gathered = p::gather_statistics(scope->segments, term_names);
+		statistics.documents = gathered.collection.doc_count;
+		statistics.total_length = gathered.collection.total_length;
+		for (const auto& [field, by_term] : gathered.terms) {
+			auto& mine = statistics.terms[field];
+			for (const auto& [term, figures] : by_term) {
+				mine.emplace(term, TermStatistics{figures.df, figures.cf});
+			}
+		}
+		out.push_back(std::move(statistics));
+	}
+	co_return out;
+}
+
 // A match under a collapse: what ranks it, and the id to return.
 struct Ranked {
 	hitid did;
@@ -625,72 +852,12 @@ run(std::span<engine::Shard* const> shards, const SearchRequest& request, Callba
 		co_return SearchResult{};
 	}
 
-	// Hold one view of every distinct index, none of which blocks a write, a refresh or another search.
-	std::vector<Shard*> mine;
-	mine.reserve(shards.size());
-	for (auto* shard : shards) {
-		auto* strata = dynamic_cast<Shard*>(shard);
-		if (strata == nullptr) {
-			throw Error(errc::invalid, "A strata search was given a shard of another engine");
-		}
-		mine.push_back(strata);
-	}
-	std::vector<Viewed> views;
-	views.reserve(mine.size());
-	const auto viewed_of = [&](const Shard* shard) -> const Viewed* {
-		for (const auto& held : views) {
-			if (held.identity() == shard->identity()) {
-				return &held;
-			}
-		}
-		return nullptr;
-	};
-	for (auto* shard : mine) {
-		if (viewed_of(shard) == nullptr) {
-			views.push_back(shard->view());
-		}
-	}
-	const auto view_of = [&](const Shard* shard) -> const Viewed& {
-		if (const auto* held = viewed_of(shard)) {
-			return *held;
-		}
-		throw Error(errc::internal, "A strata search lost a viewed shard");
-	};
-
-	// One snapshot over the shards' segments, so shard i is the i-th shard asked for (its slot in the docid
-	// interleave). Statistics are read per index: the shards of one index share a term table and a plan, and
-	// another index's documents do not weigh into them.
-	if (!request.index_of.empty() && request.index_of.size() != mine.size()) {
-		throw Error(errc::invalid, "A strata search was given an index for some of its shards only");
-	}
-	std::vector<p::shard_input> inputs(mine.size());
-	std::uint64_t documents = 0;   // the most a window can return
-	for (std::size_t i = 0; i < mine.size(); ++i) {
-		for (const auto& view : view_of(mine[i]).segments()) {
-			inputs[i].segments.push_back({view.seg(), view.deleted, view.dead, &view_of(mine[i]).fields()});
-			documents += view.seg()->core().doc_count();
-		}
-	}
-	const p::multi_snapshot snapshot(std::move(inputs));
-	std::vector<std::unique_ptr<Scope>> scopes;
-	std::unordered_map<const p::segment*, Scope*> scope_of;
-	{
-		const auto all = snapshot.segments();
-		std::size_t first = 0;     // the first segment of the index being gathered
-		std::size_t seen = 0;      // segments of the shards gathered so far
-		for (std::size_t i = 0; i < mine.size(); ++i) {
-			seen += snapshot.segments(i).size();
-			const bool ends = i + 1 == mine.size() || (!request.index_of.empty() && request.index_of[i + 1] != request.index_of[i]);
-			if (!ends) {
-				continue;
-			}
-			scopes.push_back(std::make_unique<Scope>(all.subspan(first, seen - first)));
-			for (const auto& segment : scopes.back()->segments) {
-				scope_of.emplace(segment.seg, scopes.back().get());
-			}
-			first = seen;
-		}
-	}
+	Held held;
+	hold(held, shards, request.index_of, request.statistics, source);
+	const auto& mine = held.mine;
+	const auto& snapshot = *held.snapshot;
+	const auto& scope_of = held.scope_of;
+	const std::uint64_t documents = held.documents;
 
 	// Collapse keeps `collapse_max` hits per value of the slot, the best ranked; a document without the value never collapses.
 	const bool collapse = request.collapse_key != BAD_VALUENO && request.collapse_max != 0;
@@ -794,6 +961,19 @@ search(std::span<engine::Shard* const> shards, const SearchRequest& request)
 		throw;   // the request was cancelled at a checkpoint: not a failure of the engine
 	} catch (...) {
 		rethrow_translated(nullptr, guarded.threw());
+	}
+}
+
+
+task::task<std::vector<IndexStatistics>>
+gather(std::span<engine::Shard* const> shards, const PreparedQuery& query, std::span<const std::uint32_t> index_of)
+{
+	try {
+		co_return co_await gather_held(shards, query.source(), index_of);
+	} catch (const task::cancelled&) {
+		throw;
+	} catch (...) {
+		rethrow_translated();
 	}
 }
 
