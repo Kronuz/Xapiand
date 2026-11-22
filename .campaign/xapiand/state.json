@@ -2422,6 +2422,31 @@
       "id": "msg-232",
       "origin": "campaign-v3",
       "text": "Coming with gate-check-jobs (landing next): gate checks that `campaign verify` queues run at priority 2, ahead of other light evidence (your split checks stop waiting behind 166 jobs), and a gate check's job identity includes the bytes of the scripts its command runs, so a changed checker reruns and `job submit` of the same check reuses verify's job."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:35:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:35:37",
+      "by": "lead",
+      "closed": "no xapiand quest or queued job fuzzes journal's decoders; asked Detent's lead for the runs it meant",
+      "id": "msg-233",
+      "text": "detent lead: journal-fuzz-decoder-pin landed on journal main at journal:9cdaa34. Configure with -DJOURNAL_FUZZ=ON -DJOURNAL_FUZZ_DECODER=segment (or checkpoint); empty keeps data[0] % 2, and the first byte is consumed either way, so corpora are shared. Measured 60 s per setting on macOS: mixed 21,467, segment 220,207, checkpoint 18,230 executions, no crash (job 261121-154444-95ae40). Your two 60 CPU-minute runs can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:58:28",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:58:28",
+      "by": "campaign-v3: kronuz",
+      "closed": "noted; at install, work the to-do list on each wake",
+      "id": "msg-234",
+      "origin": "campaign-v3",
+      "text": "Landed on agent-campaign main, installed after main's CI is green: lead-driver (agent-campaign:f958fe7). For a lead: `campaign wait --commits` now also returns when the to-do list grows (or at once if it isn't empty), re-fires each item after CAMPAIGN_TODO_REPEAT, and ends every return with the list: the items that woke you first, then up to 10 (`campaign status` shows all). Waiting is not work: an in-flight quest with no live agent, job or CI waiter is an item. Quests blocked on the owner are parked, not resumed. A lead tool call stuck over 15 minutes (a permission prompt) raises a notification. CI reads are cached on disk, shared by every process (status went from 86 gh calls to about 6 in xapiand). After the install: launch an agent for every item, then wait again."
     }
   ],
   "quests": {
@@ -13570,12 +13595,47 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "superseded by docs/design/lifecycle-adoption.md quest 8 (server-limits): it repins reactor past 409c4ce (27 commits: wheel, TLS cache, phased stop), takes tls::server_context and removes the global tls_context, which takes tls_seconds_to_expiry with it; Xapiand's reactor pin 886131b lacks seconds_to_expiry",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "dropped",
       "title": "Xapiand calls reactor's seconds_to_expiry and drops its own",
-      "updated": "2026-11-21T20:22:54",
+      "updated": "2026-11-21T20:25:37",
       "worktree": "../Xapiand-wt/xapiand/hunt-tls-expiry"
+    },
+    "hunt-traceback-freebsd": {
+      "accepted": {},
+      "after": [],
+      "base": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+      "branch": "quest/xapiand/hunt-traceback-freebsd",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "traceback.cc",
+        "traceback.h",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "journal": "../Xapiand-wt/xapiand/hunt-traceback-freebsd",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../traceback",
+      "risk": "normal",
+      "status": "active",
+      "title": "traceback's dump names the dumping thread on FreeBSD",
+      "updated": "2026-11-21T21:09:29",
+      "worktree": "../traceback-wt/xapiand/hunt-traceback-freebsd"
     },
     "hybrid-go-no-go": {
       "accepted": {},
@@ -17778,17 +17838,40 @@
         ".github/workflows/freebsd.yml",
         "TESTING.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-21T21:20:20",
+          "commit": "a3de26e8e23b0b86fc61c533ab640f9148080294",
+          "criteria": {
+            "A1": "261121-105123-f5b150 (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A2": "261121-105122-a72926 (passed at e8c578487a7a; only 7 merges from main since, none touching its files), 261121-105123-e0bfaf (passed at e8c578487a7a; only 7 merges from main since, none touching its files)",
+            "A3": "CI green at 1c3c13d8d4a8"
+          },
+          "evidence": [
+            {
+              "check": "e2e",
+              "ci": "ci:Functional E2E (docs)",
+              "commit": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "bcca6ac5844122bd27932784734989703ec68d48",
+          "reason": "",
+          "tested": "1c3c13d8d4a8cc12a20c6af9ec6b45e74d522f3e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Pin newman for the docs E2E in one place",
-      "updated": "2026-11-21T03:30:26",
-      "worktree": "../Xapiand-wt/xapiand/newman-pin"
+      "updated": "2026-11-21T21:20:41",
+      "worktree": ""
     },
     "nightly-retry": {
       "accepted": {},
@@ -24099,8 +24182,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T13:09:43",
-          "base": "0547322a4d72d6bdd23ab95dce87505826c89d40",
+          "at": "2026-11-21T20:27:19",
+          "base": "78484bdee35512b0b66d42366cf4216601f05e21",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -24110,7 +24193,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "e3265faf514789f623ca060c7b8fd700e0530ef4",
+          "commit": "8b662eca9522096b296555a54345243091526e1f",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -24121,7 +24204,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "lead read main's changes since the review (git diff 9d0d2703aeee 0547322a4d72): shard.cc's stale-id replace now throws version_conflict (racing-put-409), range.cc compares only given range ends (keyword-open-range), and tests and a doc follow them; none reaches the restore stream's input path (search_views.cc), which the review covered",
+          "note": "lead re-read main's changes under the quest since the review (0547322..78484bd): only failed-restore-exit's CLI file restore (handler.cc restore_documents(fd) refuses non-map objects, main.cc maps it to EX_DATAERR, its check script). restore-stream's own change is the HTTP stream restore in search_views.cc; the two paths share no code, and the merged tree keeps the refusal (handler.cc:1148-1156). Evidence rerun at the merge head a076cc9: A1 4181b4 and 55f313, A2 f84811, A3 1b6655, A6 c8ca75 (32 CPU-minutes).",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -24170,7 +24253,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T13:09:43",
+      "updated": "2026-11-21T20:27:19",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -24427,8 +24510,8 @@
         "src/database/schema.cc",
         "src/database/schema.h",
         "src/database/schema/**",
-        "harness/split_check.py",
-        "docs/dev/schema-layout.md"
+        "docs/dev/schema-layout.md",
+        "CMakeLists.txt"
       ],
       "history": [
         {
@@ -24469,7 +24552,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T20:02:55",
+      "updated": "2026-11-21T20:43:18",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
@@ -26196,6 +26279,44 @@
       "updated": "2026-11-21T12:29:17",
       "worktree": ""
     },
+    "split-check-anchor": {
+      "accepted": {},
+      "after": [],
+      "base": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+      "branch": "quest/xapiand/split-check-anchor",
+      "checks": [
+        {
+          "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+          "level": "light",
+          "minutes": 30,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+          "level": "light",
+          "minutes": 30,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/testdata/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/split-check-anchor",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "active",
+      "title": "split_check matches repeated lines by their unique anchors",
+      "updated": "2026-11-21T20:43:56",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-anchor"
+    },
     "split-check-sources": {
       "accepted": {},
       "after": [],
@@ -27561,18 +27682,62 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-traceback",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T21:07:26",
+          "ci_skipped": "freebsd-x86_64's traceback_hooks abort predates the split: traceback main fails it since 2026-11-19 (run 44570136588 at traceback:47c5736); every other CI job green at a6690d9 (run 44958843249); hunt row 404 filed",
+          "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+          "criteria": {
+            "A1": "261121-182200-d7fe5b (the build-test check), 261121-182200-d7fe5b, 261121-182200-2504ee",
+            "A2": "261121-182200-2504ee (the split check), 261121-130848-594a3e (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A3": "261121-130845-a8f326 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A4": "[artifact] `docs/source-layout.md` at traceback:29f0dd1",
+            "A5": "CI waived by --no-ci",
+            "A6": "261121-130431-d0c0e2 (passed at 29f0dd138647; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-d7fe5b",
+              "level": "light",
+              "seconds": 17.5,
+              "state": "done",
+              "what": "split-traceback check build-test at a6690d9be025"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "a6690d9be025b8d7e66de9a2bc656664cb730285",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-182200-2504ee",
+              "level": "light",
+              "seconds": 1.1,
+              "state": "done",
+              "what": "split-traceback check split at a6690d9be025"
+            }
+          ],
+          "final": true,
+          "from": "47c5736514b240eaf728779733f388eab33cf4bd",
+          "reason": "",
+          "tested": "a6690d9be025b8d7e66de9a2bc656664cb730285"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../traceback",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "traceback's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:31",
-      "worktree": "../traceback-wt/xapiand/split-traceback"
+      "updated": "2026-11-21T21:07:56",
+      "worktree": ""
     },
     "split-uinteger-t": {
       "accepted": {},
