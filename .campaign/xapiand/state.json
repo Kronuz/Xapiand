@@ -25054,7 +25054,32 @@
       "updated": "2026-11-08T15:39:29"
     },
     "single-flight-budget": {
-      "accepted": {},
+      "accepted": {
+        "correctness": {
+          "at": "2026-11-21T19:54:02",
+          "base": "4e7be674c0d2a6b912e1c6ea5f8f900bbf294772",
+          "blobs": {
+            "docs/mechanisms/cancellation.md": "100644:b6021322f02e75a957c6add531423b2a4dc7f56a",
+            "src/database/schemas_lru.cc": "100644:2435f307974e3577a3cc450ca629364b92b18aba",
+            "src/single_flight.h": "100644:ccb2cd4e3fd4e4b95debca2c0a2888efde3dc391",
+            "tests/test_single_flight.cc": "100644:2155adf723b5ab938453f12913f26cde745650bc"
+          },
+          "by": "review",
+          "commit": "074d415c84c21d22ce0fc589464ecd48deed75c0",
+          "criteria": "8c3d2f0d55ad66b6",
+          "diffs": {
+            "docs/mechanisms/cancellation.md": "be952f27dae22751",
+            "src/database/schemas_lru.cc": "b83688834c9a765b",
+            "src/single_flight.h": "926a777ac93cf1c6",
+            "tests/test_single_flight.cc": "8867b342844c857e"
+          },
+          "findings": {},
+          "note": "",
+          "review": "3b48fd91bcd9a5bd2b7a2b2445ae9b30c7120e0d",
+          "reviewed": "eea2bee555fbdf190b7904e5bbf7c4ec75d947e5",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [],
       "base": "4e7be674c0d2a6b912e1c6ea5f8f900bbf294772",
       "branch": "quest/xapiand/single-flight-budget",
@@ -25075,7 +25100,9 @@
         "src/database/schemas_lru.cc"
       ],
       "landed": [],
-      "lenses": [],
+      "lenses": [
+        "correctness"
+      ],
       "milestone": "",
       "needs": [],
       "provides": [],
@@ -25083,7 +25110,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T16:31:30",
+      "updated": "2026-11-21T19:54:02",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
