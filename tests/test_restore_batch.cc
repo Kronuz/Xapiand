@@ -89,6 +89,18 @@ struct Replica {
 	}
 };
 
+// An incompressible body of the given size: Data zstd-compresses what it stores, so a repeated byte would shrink to
+// nothing and the sizes below would not follow the body's.
+std::string noise(std::size_t size) {
+	std::string out(size, ' ');
+	std::uint64_t state = 0x9e3779b97f4a7c15ull ^ size;
+	for (auto& c : out) {
+		state = state * 6364136223846793005ull + 1442695040888963407ull;
+		c = static_cast<char>('!' + (state >> 33) % 90);
+	}
+	return out;
+}
+
 // A write as the leader's prepare leaves it against what the index held then: its expectation and the version it
 // predicted, stamped on the document as prepare stamps it (the version slot, the data's _version).
 CommandWrite prepared(const std::string& key, engine::rev seen, std::size_t body = 16) {
@@ -99,7 +111,7 @@ CommandWrite prepared(const std::string& key, engine::rev seen, std::size_t body
 	Data data;
 	MsgPack obj = MsgPack::MAP();
 	obj[VERSION_FIELD_NAME] = version;
-	obj["body"] = std::string(body, 'x');
+	obj["body"] = noise(body);
 	data.set_obj(obj);
 	data.flush();
 	doc.set_data(data.serialize());
@@ -144,9 +156,14 @@ void test_encoded_size_matches_the_codec() {
 	auto c = prepared("Kc", 0);
 	c.expected.reset();
 	c.document = CommandBytes{{}, true, CommandStream::staging, 17, 1ull << 21};
+	CHECK(b.document.bytes.size() > 70000u);
 	const Command none{9, {}};
 	const Command all{9, {a, b, c}};
 	CHECK_EQ(encode_entry(all, 1ull << 30).size(), encode_entry(none).size() + encoded_size(a) + encoded_size(b) + encoded_size(c));
+	for (const auto& w : {a, b, c}) {
+		const Command one{9, {w}};
+		CHECK_EQ(encode_entry(one, 1ull << 30).size(), encode_entry(none).size() + encoded_size(w));
+	}
 }
 
 // Writes pack in input order, each command within the limit and closed only when its next write would not fit;
