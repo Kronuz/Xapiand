@@ -1,6 +1,6 @@
 # split-xapiand-src: journal
 
-State: waiting on jobs 261121-160547-7e3aa6 (nm sizes, master), 261121-160552-112d6f (nm sizes, head), 261121-160601-1958d9 (their diff), and the split check and CI at the new head (see Evidence)
+State: waiting on jobs 261121-160657-bc3fb8 (suite), 261121-160657-e37af0 (split check), 261121-160547-7e3aa6 / 261121-160552-112d6f / 261121-160601-1958d9 (nm sizes, diff), 261121-160715-6bf677 (A6), and CI at a35f26074189
 Quest: .campaign/xapiand/quests/split-xapiand-src.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -25,12 +25,12 @@ Merged master again (clean). Added the opening comment to src/serialize_detail.h
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-121055-04ff19 (suite passed at eab05d251a2d; only the master merge since, none touching the quest's files) |
-| A2 | 261121-145050-4c6e2a (split_check.py from split-check-sources, at 85892a5f343c). Failed jobs examined: 261121-114550-041735 and 261121-121055-ba2719 (script absent, exit 2); 261121-123004-245d6f (old checker, 3 errors + 1 warning, answered below). 261121-145048-988eab (old script path, same checker) cancelled |
+| A1 | 261121-160657-bc3fb8 (suite at a35f26074189) |
+| A2 | 261121-160657-e37af0 (split check, cpp-libraries main's split_check.py at a35f26074189); warnings answered under Warnings. Earlier: 245d6f (old checker, 3 errors, answered); 145050-4c6e2a and the two 64676726d632 split jobs cancelled as stale |
 | A3 | 261121-160547-7e3aa6 (master), 261121-160552-112d6f (head), 261121-160601-1958d9 (diff). Replaces 261121-121104-e6ee83 / 261121-121123-22c397 and earlier: Mach-O nm sizes are always zero, so those compared names only |
 | A4 | artifact: `docs/dev/source-layout.md` lists every new file (5 serialize_*, 5 metrics_*.h, 3 bucket_*.h) and what it holds; processor.cc kept whole with its reason. Read at the merged head |
-| A5 | CI after the push |
-| A6 | 261121-121111-6d8976 (all new headers, passed at eab05d251a2d); earlier head: 261121-115601-758a68 |
+| A5 | CI at a35f26074189 |
+| A6 | 261121-160715-6bf677 (all new headers at a35f26074189) |
 | A7 | [manual], the lead's |
 
 Answers to the old checker's findings (245d6f):
