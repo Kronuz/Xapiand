@@ -13638,7 +13638,75 @@
       "updated": "2026-11-21T00:05:24"
     },
     "journal-lost-bound": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-21T17:38:06",
+          "base": "60ab864407fe4eb2ac05fa354f504916ae55c6e6",
+          "blobs": {
+            "CHANGELOG.md": "100644:819893996b7ae48a7359ffe6fe8d517e82f61e43",
+            "CMakeLists.txt": "100644:7689ab33123bb2970a954f4a0ab4dda979341ce2",
+            "docs/mechanisms/lost-bound.md": "100644:711f48b8c3afe960fd28b1b73f3ef694036638f3",
+            "docs/mechanisms/turn-log-damage.md": "100644:30bd5940ffdc86df0ca54a9565666af16a198ca8",
+            "include/journal/host.h": "100644:e6b9f13d82614d383d9db0b3523d833abea29911",
+            "include/journal/journal.h": "100644:bf1d348edb5e60e06c70ac89f9902bb062f75ad1",
+            "include/journal/turn_driver.h": "100644:d927245ff8146dffbb9a0469e362352398d6cb03",
+            "include/journal/turn_log.h": "100644:1eb27b1554e6e88ec328940aa935805c08acf1f8",
+            "test/host_test.cc": "100644:3435c65bf991bcba37138316f0aff67337f70ebd",
+            "test/lost_bound_test.cc": "100644:070a371b3c488eba79e155519e93633cce4b6470",
+            "test/placement_test.cc": "100644:ae0d4a20304ec2548672ebdfbeffb33dfa5d3510"
+          },
+          "by": "review",
+          "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+          "criteria": "5a5e98579dbeb6e8",
+          "diffs": {
+            "CHANGELOG.md": "7cd8d2bcb2b8705d",
+            "CMakeLists.txt": "30dfaf42ba04f3dd",
+            "docs/mechanisms/lost-bound.md": "de9a7806d0582cef",
+            "docs/mechanisms/turn-log-damage.md": "1bfc7a8fe4de99c0",
+            "include/journal/host.h": "bf2f320b24287977",
+            "include/journal/journal.h": "eb8ee6031e07a61d",
+            "include/journal/turn_driver.h": "cc2499b029f57996",
+            "include/journal/turn_log.h": "a614250075b542aa",
+            "test/host_test.cc": "709b471200cd616c",
+            "test/lost_bound_test.cc": "86543100c26be8b4",
+            "test/placement_test.cc": "0e650586fb727783"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "/Users/kronuz/code/Kronuz/Detent/.scratch/detent/review-journal-lost-bound/run_probe.sh multi_block_gap_probe.cc",
+                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261121-143537-209eff",
+                  "level": "light",
+                  "seconds": 52.9,
+                  "state": "done",
+                  "what": "F1 recheck: the reviewer's multi_block_gap_probe at 80e58b5 (exit 0 = group 1 lost or bounded at 3+) at e4b0100350d9"
+                },
+                {
+                  "cmd": "sh -c 'cd build && ctest -j 4 --output-on-failure'",
+                  "commit": "e4b0100350d977171d13a55c3da4d286fa3b75fb",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261121-143537-3a98cc",
+                  "level": "light",
+                  "seconds": 50.9,
+                  "state": "done",
+                  "what": "suite: ctest whole at 80e58b5 (merged with turn-buffers) at e4b0100350d9"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "8713bb99b97eec9c3808de1c10eb48992e67b71f",
+          "reviewed": "ebd3038d1ea58146b14b32459c4aa409e5a61a60",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:journal-tail-second-sector"
       ],
@@ -13693,7 +13761,7 @@
       "risk": "high",
       "status": "active",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T14:35:05",
+      "updated": "2026-11-21T17:38:06",
       "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
