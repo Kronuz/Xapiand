@@ -13306,6 +13306,32 @@
       "title": "Xapiand takes http's half-close fix",
       "updated": "2026-11-20T05:27:22"
     },
+    "hunt-faultlab-at-mark": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "test/model_test.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../faultlab",
+      "risk": "low",
+      "status": "planned",
+      "title": "faultlab's suite reaches faultfs's at_mark sync path",
+      "updated": "2026-11-21T20:22:00"
+    },
     "hunt-header-tables": {
       "accepted": {},
       "after": [],
