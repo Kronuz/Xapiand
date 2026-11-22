@@ -2577,6 +2577,26 @@
         ]
       },
       "text": "split-queryparser landed: unlocks queryparser-restructure"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T00:01:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T00:01:22",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-243",
+      "items": {
+        "split-check-members": "split-check-members"
+      },
+      "settles": {
+        "start": [
+          "split-check-members"
+        ]
+      },
+      "text": "split-check-anchor landed: unlocks split-check-members"
     }
   ],
   "quests": {
@@ -9607,18 +9627,52 @@
         "src/aggregations/aggregations.cc",
         "tests/test_serialize_validation_aggregation_types.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:36:11",
+          "ci": {
+            "carried": true,
+            "commit": "e966d59992d10bf8e5ee28ea0fc2a18d885c777e",
+            "runs": [
+              44989048213
+            ]
+          },
+          "commit": "af53ae4092acb10ab597ca613d0720d67937d354",
+          "criteria": {
+            "A1": "261121-090800-a9013e (passed at ac6a3f22c988; only 10 merges from main since, none touching its files); fails without: 261121-090803-0ef0af",
+            "A2": "261121-090907-cbe642 (suite, passed at ac6a3f22c988; reused at 4f907d19d724, the merges from master touch none of its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "9216e258f244863383adacfdb3cbdce977a4942f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-090907-cbe642",
+              "level": "light",
+              "seconds": 936.2,
+              "state": "done",
+              "what": "empty-aggregation check suite at 9216e258f244"
+            }
+          ],
+          "final": true,
+          "from": "026946ac361b3981e4c52fb79544da78d006f215",
+          "reason": "",
+          "tested": "af53ae4092acb10ab597ca613d0720d67937d354"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "reason": "started by force: xapiand-final-release lands on the xapiand release branch, not master",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "An aggregation with no type, two types or an unknown key is a 400",
-      "updated": "2026-11-21T09:08:51",
-      "worktree": "../Xapiand-wt/xapiand/empty-aggregation"
+      "updated": "2026-11-22T00:36:17",
+      "worktree": ""
     },
     "endpoint-uuid": {
       "accepted": {
@@ -13650,7 +13704,9 @@
       "consumes": [],
       "files": [
         "src/database/data.h",
+        "src/database/data.cc",
         "src/multivalue/keymaker.h",
+        "src/multivalue/keymaker.cc",
         "src/phonetic.h",
         "docs/dev/header-tables.md"
       ],
@@ -13663,7 +13719,7 @@
       "risk": "low",
       "status": "active",
       "title": "Header static tables: one copy and one initializer per program",
-      "updated": "2026-11-21T20:22:48",
+      "updated": "2026-11-22T00:18:09",
       "worktree": "../Xapiand-wt/xapiand/hunt-header-tables"
     },
     "hunt-lua-fetch": {
@@ -24605,8 +24661,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T21:56:41",
-          "base": "a23c3b502ebc14f0283796cb443665d176b1cf5e",
+          "at": "2026-11-21T23:56:55",
+          "base": "dfc5f741383735ff2aae8fe2d9dada4841a5f2d4",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -24616,7 +24672,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "edb1b4b8fb832711ac90b01b1f7f81ccef3ac3f1",
+          "commit": "0d542bf9e22e1c3da67c6fca17d9c2357f9af14c",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -24627,7 +24683,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "lead read main's 13 changed code files since the review (78484bdee355..a23c3b502ebc): cjk-words' opt-in CJK_WORDS segmentation in engine/text.cc, schema and generate_terms, plus CMake. None touches restore-stream's diff (search_views.cc/.h, its tests and fuzz) or the stream feed's header skip and count; cjk_words advances on every character and landed with its own review.",
+          "note": "lead read master a23c3b5..dfc5f74 (newman-pin's landing: CI workflows, harness scripts, harness/package.json and its lock, TESTING.md); no product code, nothing under src/ or the restore decoder, nothing in the quest's file set",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -24676,7 +24732,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T21:56:41",
+      "updated": "2026-11-21T23:56:55",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
@@ -25780,18 +25836,47 @@
         "src/database/schemas_lru.cc",
         "harness/async_allowlist.tsv"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:12:09",
+          "commit": "0179b959733ca56e859c3a2e8b42efcdc4c9b423",
+          "criteria": {
+            "A1": "261121-195712-fa1b83 (passed at 1d4731600dc7; only 1 merge from main since, none touching its files), 261121-195712-6bdd67 (passed at 1d4731600dc7; only 1 merge from main since, none touching its files); fails without: 261121-133028-a36e8e",
+            "A2": "261121-195713-32dfdb (the suite check), 261121-195713-32dfdb (passed at 1d4731600dc7; only 1 merge from main since, none touching its files)",
+            "A3": "docs/mechanisms/cancellation.md: the joiner is out of Limits; How step 1 says a joiner waits under its own token",
+            "A4": "CI green at 7666cea82176"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "19f1e0c9a2399855ea2582ad9efd0737fa12861b",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-195713-32dfdb",
+              "level": "light",
+              "seconds": 409.8,
+              "state": "done",
+              "what": "single-flight-budget check suite at 19f1e0c9a239"
+            }
+          ],
+          "final": true,
+          "from": "e026814177c8c07f7ca9e7650a8b89be329cedcd",
+          "reason": "",
+          "tested": "7666cea821766694eb60dd07f396b9f8a80c176f"
+        }
+      ],
       "lenses": [
         "correctness"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "review",
+      "status": "landed",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T19:58:16",
+      "updated": "2026-11-22T00:14:32",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
@@ -26728,21 +26813,62 @@
         "tools/testdata/**"
       ],
       "journal": "../Xapiand-wt/xapiand/split-check-anchor",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:01:20",
+          "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+          "criteria": {
+            "A1": "261121-220731-d77242 (the test check); fails without: 261121-204458-816e97",
+            "A2": "the `lint` check at fe8491f: 261121-220731-795185; tool tests: 261121-220731-d77242 (passed)",
+            "A3": "261122-000012-53c86b"
+          },
+          "evidence": [
+            {
+              "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+              "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-220731-d77242",
+              "level": "light",
+              "seconds": 79.5,
+              "state": "done",
+              "what": "split-check-anchor check test at fe8491fb9884"
+            },
+            {
+              "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+              "commit": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-220731-795185",
+              "level": "light",
+              "seconds": 1.6,
+              "state": "done",
+              "what": "split-check-anchor check lint at fe8491fb9884"
+            }
+          ],
+          "final": true,
+          "from": "e991e527a1a5af63b79caa7fb763c17619311f7f",
+          "reason": "",
+          "tested": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "split_check matches repeated lines by their unique anchors",
-      "updated": "2026-11-21T20:43:56",
+      "updated": "2026-11-22T00:01:21",
       "worktree": "../cpp-libraries-wt/xapiand/split-check-anchor"
     },
     "split-check-members": {
       "accepted": {},
       "after": [],
+      "base": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+      "branch": "quest/xapiand/split-check-members",
       "checks": [
         {
           "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
@@ -26765,6 +26891,7 @@
         "docs/SPLITTING.md",
         "tools/README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-check-members",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26774,9 +26901,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-21T22:05:01"
+      "updated": "2026-11-22T00:02:01",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
       "accepted": {},
