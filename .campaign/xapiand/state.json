@@ -21167,6 +21167,8 @@
             "test/placement/root_corpus/**"
           ],
           "journal": "../Xapiand-wt/xapiand/placement--repair",
+          "reason": "its head d30901a is already merged into quest/xapiand/placement by git; its cases run in the quest's evidence at strata:63472c6 (placement_repair_group via ctest, job 261121-213355-f37e3f); its own jobs ran at the pre-group-heal pin, without -G Ninja",
+          "status": "dropped",
           "worktree": "../strata-wt/xapiand/placement--repair"
         },
         "root": {
@@ -21201,7 +21203,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-21T10:20:28",
+      "updated": "2026-11-21T21:37:29",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
