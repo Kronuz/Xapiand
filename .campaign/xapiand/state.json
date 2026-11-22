@@ -13670,7 +13670,9 @@
       "consumes": [],
       "files": [
         "src/database/data.h",
+        "src/database/data.cc",
         "src/multivalue/keymaker.h",
+        "src/multivalue/keymaker.cc",
         "src/phonetic.h",
         "docs/dev/header-tables.md"
       ],
@@ -13683,7 +13685,7 @@
       "risk": "low",
       "status": "active",
       "title": "Header static tables: one copy and one initializer per program",
-      "updated": "2026-11-21T20:22:48",
+      "updated": "2026-11-22T00:18:09",
       "worktree": "../Xapiand-wt/xapiand/hunt-header-tables"
     },
     "hunt-lua-fetch": {
