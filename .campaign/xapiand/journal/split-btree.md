@@ -1,6 +1,6 @@
 # split-btree: journal
 
-State: waiting on jobs 261121-145037-38dcba (A2, fixed checker at merged HEAD f6d0fc6)
+State: waiting on jobs 261121-160418-a0c4fc (build-test, A1) and 261121-160418-0a4839 (split, A2) at cpp-btree b3f404a
 Quest: .campaign/xapiand/quests/split-btree.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Reassessed against cpp-libraries docs/SPLITTING.md (owner refinement). Pushed at 553ed60. Only jobs remain; A7 is the lead's read.
+Reassessed against cpp-libraries docs/SPLITTING.md (owner refinement). Pushed at 553ed60. Only jobs remain; A7 is the lead's read. The six opening comments (plus the btree.h umbrella) answer the lead's read of A7: cpp-btree f129ee9, b3f404a, comments only, pushed.
 
 ## Next
 
@@ -25,8 +25,8 @@ Nothing (A2 waits on split-check landing).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-121304-c1d1ff at 553ed60 |
-| A2 | split 261121-145037-38dcba (split-check-sources checker, merged HEAD f6d0fc6); 261121-123001-f68c62 (old checker) failed on include guards, which the new one allows; replaces cee137. Self-check: multiset of moved body lines equals the original (3,114 non-blank lines); node_layout.cc byte-identical to the original |
+| A1 | build-test 261121-160418-a0c4fc at b3f404a (was 261121-121304-c1d1ff at 553ed60) |
+| A2 | split 261121-160418-0a4839 at b3f404a; earlier 261121-145037-38dcba (split-check-sources checker, merged HEAD f6d0fc6); 261121-123001-f68c62 (old checker) failed on include guards, which the new one allows; replaces cee137. Self-check: multiset of moved body lines equals the original (3,114 non-blank lines); node_layout.cc byte-identical to the original |
 | A3 | base 8b65a55: 261121-115051-03e1ff (intentionally at base); head 553ed60: 261121-121302-5dc03c |
 | A4 | docs/source-layout.md lists every new file and the files kept whole, with why |
 | A5 | CI on pushed branch |
