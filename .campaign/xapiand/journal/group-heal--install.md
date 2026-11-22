@@ -1,6 +1,6 @@
 # group-heal--install: journal
 
-State: waiting on jobs 261121-172551-9db0a4 261121-172613-7a078d
+State: waiting on jobs 261121-173201-4aa79d 261121-173206-d6917f 261121-173210-076626 261121-173215-20e4f0 261121-173219-70b405 261121-173223-4bca51 261121-173227-05623f 261121-173231-b9c5e6 261121-173235-40775c 261121-173239-97acf3
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,10 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Merged into quest/xapiand/group-heal at strata:2b080579, main merged at c79cf24e, both pushed;
+the task-head jobs 261121-172551-9db0a4 / 172613-7a078d were cancelled for the quest-head ones
+(State; the quest journal lists them). Proof now lives at the quest head.
 
 Build fix 2 (strata:167f77ed, f05b6672): 261121-133859-cf44a4 failed to compile at 95bdaa2e:
 footprint_test's `row` still overrode the old one-argument `install_needed`, so it left the
@@ -45,9 +49,8 @@ voters_test only, after the plain).
 
 ## Next
 
-1. Jobs (State): 261121-172551-9db0a4 must pass, 261121-172613-7a078d must fail on the test.
-   Then merge the task into quest/xapiand/group-heal, merge main, push once, and queue the
-   quest-head jobs (suite, install_mutants at the head).
+1. Jobs (State), at the quest head c79cf24e: the plain 261121-173201-4aa79d must pass; the
+   install-silent mutant and the eight install_mutants must fail on their tests.
 2. Mutant reruns only if the lead asks (finished results stand).
 3. Rerun the install_mutants at the head (they ran at 0e67dcb7) with STRATA_CMAKE_ARGS for the
    consensus override, since install_test includes group.hh through oracle.hh.
@@ -63,8 +66,8 @@ driver-install's landing (consensus:8780e44, no install API change since 887a88b
 | Criterion | Evidence |
 |---|---|
 | A1 (transfer half) | 261120-181817-a0cc80 install_test all cases at 0e67dcb7; `--fails-without` mutants: skip-file-set 261120-181820-54034f, keep-unchecked 261120-181823-382ea2, write-past-failure 261120-181826-ed7951, marker-before-sync 261120-181829-f2050f, holder-unordered 261120-181832-5929d9, no-resume 261120-181835-53159e, serve-past-length 261120-181842-4fc87c; pin-names-unchecked survived (261120-181838-e03e4e), fixed at acca8f77: 261121-054230-6f2ce0, mutant 261121-054233-ce72e0 (pending) |
-| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-172551-9db0a4 (voters_test `install_gap`, `grow_and_heal`; group_install); 261121-133859-cf44a4 failed to compile at 95bdaa2e (fixed f05b6672) |
-| A2 | pending: 261121-172551-9db0a4 (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent 261121-172613-7a078d; 261121-133923-ba5a0d is a false kill (compile error), not evidence |
+| A1 (learner installs, promoted, replace/remove across leader changes) | pending at c79cf24e: 261121-173201-4aa79d (voters_test `install_gap`, `grow_and_heal`; group_install); install_mutants 261121-173210-076626 (skip-file-set) .. 173239-97acf3; 261121-133859-cf44a4 failed to compile at 95bdaa2e (fixed f05b6672) |
+| A2 | pending at c79cf24e: 261121-173201-4aa79d (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent 261121-173206-d6917f; 261121-133923-ba5a0d is a false kill (compile error), not evidence |
 | TSan (`threads`) | CI's linux-tsan runs ctest; group_install_test reaches it only once CMakeLists.txt registers it (Blocked on 1). No local sanitizer job, per the lead. |
 
 ## Result
