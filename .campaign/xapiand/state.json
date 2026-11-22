@@ -27335,11 +27335,15 @@
       "milestone": "",
       "needs": [],
       "provides": [],
+      "reason": "the permission check denied the contributor's push of queryparser:0fdec0c (main merged); owner decides",
       "repo": "../queryparser",
       "risk": "low",
-      "status": "active",
+      "status": "blocked",
       "title": "queryparser's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:58:16",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T21:32:26",
       "worktree": "../queryparser-wt/xapiand/split-queryparser"
     },
     "split-storage": {
