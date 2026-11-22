@@ -13511,6 +13511,36 @@
       "updated": "2026-11-17T22:45:34",
       "worktree": ""
     },
+    "hunt-tls-expiry": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 45,
+          "name": "suite"
+        }
+      ],
+      "consumes": [
+        "reactor"
+      ],
+      "files": [
+        "src/tls.cc",
+        "src/tls.h",
+        "docs/dev/extraction-ledger.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "Xapiand calls reactor's seconds_to_expiry and drops its own",
+      "updated": "2026-11-21T20:21:55"
+    },
     "hybrid-go-no-go": {
       "accepted": {},
       "after": [],
