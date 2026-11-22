@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204931-3120eb and 261121-204935-bd15d9 (N4 fix and mutant at strata:be285bec)
+State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204931-3120eb and 261121-204935-bd15d9 (N4 fix and mutant at strata:be285bec); strata:be285bec pushed (CI there checks N4; bound still fails until its fix)
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
