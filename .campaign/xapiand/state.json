@@ -4971,8 +4971,29 @@
       "repo": ".",
       "risk": "high",
       "status": "active",
+      "tasks": {
+        "search": {
+          "base": "a6c06ac27e6eabe5aa24102153bf8d84ab6f9f87",
+          "branch": "quest/xapiand/cluster--search",
+          "files": [
+            "src/engine/search.*",
+            "src/engine/strata/search.*",
+            "src/index_pattern.*",
+            "src/walk_gate.h",
+            "tests/test_index_pattern.cc",
+            "tests/fuzz_index_pattern.cc",
+            "tests/fuzz_index_expand.cc",
+            "src/cluster/search*",
+            "src/cluster/shard_map_view*",
+            "tests/cluster/test_search*",
+            "tests/cluster/CMakeLists.txt",
+            "docs/mechanisms/distributed-search.md"
+          ],
+          "worktree": "../Xapiand-wt/xapiand/cluster--search"
+        }
+      },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-21T09:42:43",
+      "updated": "2026-11-21T21:33:24",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
