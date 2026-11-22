@@ -28821,17 +28821,67 @@
         "src/lua/processor*",
         "docs/dev/source-layout.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T01:30:02",
+          "ci": {
+            "carried": true,
+            "commit": "c0adc7fe6995b5a84a1f1a9b679bd495ea732777",
+            "runs": [
+              44988816630
+            ]
+          },
+          "commit": "c6d4d66d976bbe8b769887d55abdccfead085ca7",
+          "criteria": {
+            "A1": "261121-211815-2a9c29 (passed at c0adc7fe6995; only 1 merge from main since, none touching its files), 261121-211816-0a57eb (passed at c0adc7fe6995; only 1 merge from main since, none touching its files)",
+            "A2": "261121-211816-0a57eb (the split check), 261121-211815-2a9c29 (passed at c0adc7fe6995; only 1 merge from main since, none touching its files), 261121-211816-0a57eb (passed at c0adc7fe6995; only 1 merge from main since, none touching its files)",
+            "A3": "261121-231124-fbf460 (passed at c0adc7fe6995; only 1 merge from main since, none touching its files), 261121-211826-3917ed (passed at c0adc7fe6995; only 1 merge from main since, none touching its files), 261121-211826-a796f0 (passed at c0adc7fe6995; only 1 merge from main since, none touching its files)",
+            "A4": "artifact: `docs/dev/source-layout.md` lists every new file (5 serialize_*, 5 metrics_*.h, 3 bucket_*.h) and what it holds; processor.cc kept whole with its reason. Read at the merged head",
+            "A5": "CI green at c0adc7fe6995 (carried to c6d4d66d976b across clean merges)",
+            "A6": "261121-211848-76ad50 (passed at c0adc7fe6995; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; aggregations cut into bucket and metric families, serialize.cc into exact, guess, scalar and unserialize, with a shared detail header; each piece opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "c0adc7fe6995b5a84a1f1a9b679bd495ea732777",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-211815-2a9c29",
+              "level": "light",
+              "seconds": 564.6,
+              "state": "done",
+              "what": "split-xapiand-src check suite at c0adc7fe6995"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master src",
+              "commit": "c0adc7fe6995b5a84a1f1a9b679bd495ea732777",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-211816-0a57eb",
+              "level": "light",
+              "seconds": 3.0,
+              "state": "done",
+              "what": "split-xapiand-src check split at c0adc7fe6995"
+            }
+          ],
+          "final": true,
+          "from": "184ab593d3b3f94915bc173c3140e31948f35cf4",
+          "reason": "",
+          "tested": "c6d4d66d976bbe8b769887d55abdccfead085ca7"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand's free large sources split where it helps maintenance",
-      "updated": "2026-11-21T12:05:34",
-      "worktree": "../Xapiand-wt/xapiand/split-xapiand-src"
+      "updated": "2026-11-22T01:30:14",
+      "worktree": ""
     },
     "split-xapiand-tests": {
       "accepted": {},
