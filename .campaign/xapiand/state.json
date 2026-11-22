@@ -13543,6 +13543,8 @@
     "hunt-tls-expiry": {
       "accepted": {},
       "after": [],
+      "base": "bf7c3d71eaa2463ece238b516c5055f31a71df2a",
+      "branch": "quest/xapiand/hunt-tls-expiry",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -13566,9 +13568,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Xapiand calls reactor's seconds_to_expiry and drops its own",
-      "updated": "2026-11-21T20:21:55"
+      "updated": "2026-11-21T20:22:54",
+      "worktree": "../Xapiand-wt/xapiand/hunt-tls-expiry"
     },
     "hybrid-go-no-go": {
       "accepted": {},
