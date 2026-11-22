@@ -1,6 +1,6 @@
 # uinteger-restructure: journal
 
-State: waiting on jobs 261121-222414-b91586 261121-222518-fe23a8 261121-222522-c21125 261121-222535-06b7c7 261121-222540-d43319 261121-222548-f7f06b 261121-222601-a73e84
+State: waiting on jobs 261121-222414-b91586 261121-222518-fe23a8 261121-222522-c21125 261121-222535-06b7c7 261121-222540-d43319 261121-222548-f7f06b 261121-222601-a73e84 261121-223626-d524b3 261121-223630-0744ab 261121-223633-b5b630 261121-223655-7060a5 261121-223707-66d5fb 261121-223718-b4402d 261121-223730-c9a014 261121-223738-12ce4d 261121-223745-fa1a75 261121-223750-f985fb 261121-223757-b31995 261121-223802-646643 261121-223807-d3361c 261121-223812-5b0b0e 261121-223817-e54127 261121-223822-fd48f6 261121-223832-74a9ef 261121-223840-7687a2 261121-223700-cd1d87 261121-223712-9f4b7c 261121-223724-2cad83 261121-223734-c8f23e 261121-223741-5ba34c 261121-223748-005c95 261121-223754-b3101c 261121-223800-3ee005 261121-223805-f83f5f 261121-223810-a80b9e 261121-223814-836fb4 261121-223819-0e7029 261121-223827-dac4d6 261121-223835-1d2df7 261121-223844-f7858b
 Quest: .campaign/xapiand/quests/uinteger-restructure.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -32,12 +32,33 @@ property.cc, public_api.cc compile with -Wall -Wextra, no diagnostics. A line mu
 only lines of master's header found nowhere in the new tree are 354, one signature line per moved
 function.
 
+Mutation tooling, uinteger_t:5dd518f (the lead widened the files to `tools/**`): `mutate.py`
+copies `uinteger_t/` and applies each edit to its own header; a set's `header:` is the default and a
+`header:` inside a mutant names the header of the edits after it. Defaults: divq, kernels
+`div_schoolbook.hh`; newton `div_recursive.hh`; ntt `ntt_transform.hh`; repr `arithmetic.hh`; toom,
+toom4 `mul_toom.hh`. 66 edits of moved bodies lose one tab; forced_redo, forced_redo_noreload and
+mul64-hi were anchored on the next member's in-class signature and now anchor on the moved code
+(forced_redo_noreload's second edit is in `arithmetic.hh`). Migration scripts in
+`~/.scratch/xapiand/uinteger-restructure/mutants/` (locate2.py, rewrite.py; equiv.py is the proof).
+
+Mutation jobs: `--check` on every set at head 261121-223626-d524b3, at master 261121-223630-0744ab;
+equivalence 261121-223633-b5b630 (equiv.py: each of the 355 mutants removes and adds the same lines,
+indentation stripped, at head as at master, same tests, same equivalent marks). Full runs, 15 chunks
+of at most 30 mutants (chunks.txt there; jobs.txt maps each id to its set), head: 261121-223655-7060a5 261121-223707-66d5fb 261121-223718-b4402d 261121-223730-c9a014 261121-223738-12ce4d 261121-223745-fa1a75 261121-223750-f985fb 261121-223757-b31995 261121-223802-646643 261121-223807-d3361c 261121-223812-5b0b0e 261121-223817-e54127 261121-223822-fd48f6 261121-223832-74a9ef 261121-223840-7687a2; master:
+261121-223700-cd1d87 261121-223712-9f4b7c 261121-223724-2cad83 261121-223734-c8f23e 261121-223741-5ba34c 261121-223748-005c95 261121-223754-b3101c 261121-223800-3ee005 261121-223805-f83f5f 261121-223810-a80b9e 261121-223814-836fb4 261121-223819-0e7029 261121-223827-dac4d6 261121-223835-1d2df7 261121-223844-f7858b. Compare per set: killed counts at head must equal master's (and MUTATION.md's table: divq
+32, toom 34, toom4 76, ntt 119, newton 43, kernels 21, repr 13); a drop is a finding to fix.
+
+The earlier evidence jobs ran at uinteger_t:db44669; the head is uinteger_t:5dd518f, which changes
+only `tools/`, `docs/MUTATION.md` and `AGENTS.md`.
+
 ## Next
 
-1. Read the jobs: A3 diff (explain each size change), A4 tables into `docs/perf/` with the A/A
+1. Read the mutation jobs: --check at head 355 apply (master 355), equiv 0 differ, per-set kills
+   head = master; record them in Evidence.
+2. Read the jobs: A3 diff (explain each size change), A4 tables into `docs/perf/` with the A/A
    spread and hosts, A1/A5 results into Evidence.
-2. members check (A2) once split-check-members lands; answer its warnings.
-3. Step 2 (detail free functions) on its own commit, after the lead agrees the map (A7).
+3. members check (A2) once split-check-members lands; answer its warnings.
+4. Step 2 (detail free functions) on its own commit, after the lead agrees the map (A7).
 
 ## Notes for tools/outline.py (msg from the lead)
 
@@ -101,13 +122,7 @@ Not candidates: the value-level members (`add`, `divide`, `_from_digits`, ...), 
 
 ## Blocked on
 
-- Lead: mutation testing (`tools/mutate.py`, `tools/mutants/*.txt`) is outside this quest's file
-  set and breaks with the move: each mutants file names one `header:` (`uinteger_t.hh`), its
-  regexes match the old body indentation, and `Tree` copies only top-level headers, so its copy
-  lacks `uinteger_t/`. Not in CI or the criteria. Options: (a) add `tools/**` to this quest's files
-  and let me make `header:` per mutant, copy `uinteger_t/` in `Tree`, and rebase the regexes on the
-  new indentation, proved by `mutate.py --check` on every set; (b) a follow-up quest. Recommend
-  (a): otherwise the tool is broken from this landing on.
+Nothing.
 
 ## Evidence
 
@@ -138,5 +153,10 @@ Not candidates: the value-level members (`add`, `divide`, `_from_digits`, ...), 
   `radix_encode.hh` (left in the class, the undef would precede the bodies that use it).
 - The free operators, `std::to_string` and the stream operator move from the end of
   `uinteger_t.hh` to `operators.hh`, unchanged.
+- Mutants name a header per edit, not one per set: forced_redo_noreload edits `div_schoolbook.hh`
+  and `arithmetic.hh`, and every set spans several family headers; a set default plus a per-mutant
+  `header:` states the exceptions only.
+- `mutate.py` still passes `-G Ninja` only when `ninja` is on the PATH (it is, on every host here);
+  making it unconditional is left for the lead, since the evidence jobs ran at uinteger_t:5dd518f.
 - Each family header includes `../uinteger_t.hh` only: the umbrella keeps every standard include,
   so a family needs nothing else to compile alone.
