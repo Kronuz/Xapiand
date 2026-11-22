@@ -44,3 +44,5 @@ Pending the jobs.
 - `static const char* undefined = "\0";` moved with the constants into msgpack_types.h: a constant-initialized object, no dynamic initializer.
 - test/diff_test.cc kept whole (1,026 lines): one differential test whose generator, runner and checks share one anonymous namespace in one translation unit; the three-header split put fragments inside it, so it was reverted rather than turned into separate translation units (that needs a linkage change for no gain). Earlier commits e64b234 and its revert 84bbc99 are in the branch history.
 - No CMake change: no install rules or header list exist (include directory only); ctest names unchanged.
+
+- Lead, 2026-11-21: split checks 261121-121649-b844e7, 261121-155625-47439d and 261121-155800-2547bb failed on the checker before split-tooling (macro-call and macro-namespace shapes, repeated lines); the landed checker passes at the same commit (261121-192206-226c8f).
