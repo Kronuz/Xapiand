@@ -29,6 +29,19 @@ foreach(c codec malformed wire)
 	set_tests_properties(cluster_rpc_methods_${c} PROPERTIES TIMEOUT 120)
 endforeach()
 
+# Membership's admission rule and keepalive table: no transport, no msgpack.
+add_library(xapiand_cluster_membership STATIC "${CLUSTER_SRC}/membership_admission.cc" "${CLUSTER_SRC}/membership_liveness.cc")
+target_include_directories(xapiand_cluster_membership PUBLIC "${PROJECT_SOURCE_DIR}/src")
+target_compile_features(xapiand_cluster_membership PUBLIC cxx_std_20)
+add_executable(xapiand_cluster_test_membership test_membership.cc)
+target_include_directories(xapiand_cluster_test_membership PRIVATE "${PROJECT_SOURCE_DIR}/tests")
+target_link_libraries(xapiand_cluster_test_membership PRIVATE xapiand_cluster_membership)
+add_dependencies(check xapiand_cluster_test_membership)
+foreach(c admission histories cold liveness duplicate)
+	add_test(NAME cluster_membership_${c} COMMAND xapiand_cluster_test_membership ${c})
+	set_tests_properties(cluster_membership_${c} PROPERTIES TIMEOUT 120)
+endforeach()
+
 # The seed corpus: one valid envelope per decoder (fuzz_rpc_seed DIR).
 add_executable(fuzz_rpc_seed fuzz_rpc_seed.cc)
 target_include_directories(fuzz_rpc_seed PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
