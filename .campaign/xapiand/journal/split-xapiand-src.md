@@ -31,7 +31,7 @@ Merged master again (clean). Added the opening comment to src/serialize_detail.h
 | A4 | artifact: `docs/dev/source-layout.md` lists every new file (5 serialize_*, 5 metrics_*.h, 3 bucket_*.h) and what it holds; processor.cc kept whole with its reason. Read at the merged head |
 | A5 | CI at a35f26074189 |
 | A6 | 261121-160715-6bf677 (all new headers at a35f26074189) |
-| A7 | [manual], the lead's |
+| A7 | lead, 2026-11-21: read the split; aggregations cut into bucket and metric families, serialize.cc into exact, guess, scalar and unserialize, with a shared detail header; each piece opens with what it holds |
 
 Answers to the old checker's findings (245d6f):
 
