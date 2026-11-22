@@ -1,6 +1,6 @@
 # restore-stream: journal
 
-State: ready for review (A8 waits on the lua-method-flake fix; exclusive logs A/B 261121-040146-c8fed8 queued, the lead's)
+State: ready for review; security accepted, landing chores in progress (A8 met: CI green at e3265faf5147, no blocker)
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
@@ -11,7 +11,7 @@ shakespeare 1,860 -> 405, 11.21 / 7.65 / 9.66). Memory cut unchanged within 4%; 
 
 ## Next
 
-1. Lead: read 261121-040146-c8fed8 when it runs; land once CI is green (lua-method-flake).
+1. Lead: land once CI is green at the merge head.
 
 ## Blocked on
 
@@ -21,14 +21,14 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-034215-99dd61, 261121-034217-cc2491 at 5842f9ef3 (peak RSS median, master -> change: logs 1,357 -> 344 MB, shakespeare 1,860 -> 405 MB; A/A 1,351 and 1,854) |
-| A2 | same jobs (seconds, master / change / A/A: logs 8.47 / 9.19 / 7.98, shakespeare 11.21 / 7.65 / 9.66; ranges in the note; logs +8% inside the spread, not shown absent) |
-| A3 | 261121-034214-a0dea9 |
-| A4 | 261121-034148-685f8b; fails without: 261121-034201-4acbcc, 261121-034203-69a143 (exit 1 as required) |
-| A5 | 261121-034148-685f8b |
-| A6 | 261121-020737-3fde05 |
+| A1 | 261121-130617-b4bf50, 261121-130617-d17500 |
+| A2 | 261121-130617-b4bf50, 261121-130617-d17500, 261121-130618-00615a |
+| A3 | 261121-130617-9aa0dc |
+| A4 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143 |
+| A5 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md) |
+| A6 | 261121-130616-1999cd |
 | A7 | `docs/perf/bulk-load-rss.md`: "With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing" |
-| A8 | CI red at 5842f9ef3 on every branch from test_lua (known flake, lua-method-flake quest); not this quest's |
+| A8 | CI green at e3265faf5147 (run 44949695201); no longer waits on lua-method-flake |
 
 ## Result
 
