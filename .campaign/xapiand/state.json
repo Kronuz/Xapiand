@@ -9627,18 +9627,52 @@
         "src/aggregations/aggregations.cc",
         "tests/test_serialize_validation_aggregation_types.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:36:11",
+          "ci": {
+            "carried": true,
+            "commit": "e966d59992d10bf8e5ee28ea0fc2a18d885c777e",
+            "runs": [
+              44989048213
+            ]
+          },
+          "commit": "af53ae4092acb10ab597ca613d0720d67937d354",
+          "criteria": {
+            "A1": "261121-090800-a9013e (passed at ac6a3f22c988; only 10 merges from main since, none touching its files); fails without: 261121-090803-0ef0af",
+            "A2": "261121-090907-cbe642 (suite, passed at ac6a3f22c988; reused at 4f907d19d724, the merges from master touch none of its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "9216e258f244863383adacfdb3cbdce977a4942f",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-090907-cbe642",
+              "level": "light",
+              "seconds": 936.2,
+              "state": "done",
+              "what": "empty-aggregation check suite at 9216e258f244"
+            }
+          ],
+          "final": true,
+          "from": "026946ac361b3981e4c52fb79544da78d006f215",
+          "reason": "",
+          "tested": "af53ae4092acb10ab597ca613d0720d67937d354"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "M2",
       "needs": [],
       "provides": [],
       "reason": "started by force: xapiand-final-release lands on the xapiand release branch, not master",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "An aggregation with no type, two types or an unknown key is a 400",
-      "updated": "2026-11-21T09:08:51",
-      "worktree": "../Xapiand-wt/xapiand/empty-aggregation"
+      "updated": "2026-11-22T00:36:17",
+      "worktree": ""
     },
     "endpoint-uuid": {
       "accepted": {
