@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: ready for review at strata:b533db12 (pushed); evidence jobs queued: 261121-183142-9fa0f6 (build-test) 261121-183106-bb529c 261121-183107-df159e 261121-183109-1a0cf0 261121-183110-47450d (A1) 261121-183121-b8a9f9 261121-183125-bd57b5 (A2) 261121-183107-decc0f 261121-183109-837d25 261121-183110-399fd2 (A3) 261121-183108-f29e13 261121-183128-18f3a2 (A4) 261121-183108-996f58 261121-183108-a5a124 (A6)
+State: waiting on jobs 261121-214538-7ed56e (A2 reopen_damaged at strata:bc8c614c: D1 and D2) 261121-214541-f24fed (A2 standalone) 261121-214545-0d42a7 (D2 mutant, --fails-without at strata:e60cc249) 261121-214553-5dbd30 (build-test at strata:bc8c614c); confirm D1=261121-214538-7ed56e D2=261121-214538-7ed56e (mutant 261121-214545-0d42a7); reviewer's D2 probe 261121-213954-ecd99d (at strata:5953ed46) still queued
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,22 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Fix round 1 (durability review CHANGES at strata:5953ed46), head strata:bc8c614c:
+
+1. D1, strata:c38e4bc9: `test_reopen_damaged.cc` names faultlab as `fl::` (kv_test.hh's alias of
+   `kronuz::faultlab`, faultlab e3fcfe3); 5953ed46's redundant `faultlab/faultfs.h` include
+   dropped. The bounds `manifest_named` asserts (C 4, U 5, W 4, D 3) are unchanged by
+   journal:c851826/e4b0100 as read: the damage is one bad fragment of U's u1 inside block X, and
+   X+1 holds only the rest of U's filler, which "adds nothing" (lost-bound.md). Job 7ed56e decides.
+2. D2: replay's no-run check (`index.hh` `replay_log`) applies only above the head
+   (strata:bc8c614c): a chunk at or below `cur_.applied` with no run before it is skipped. A head
+   never sits inside a run (a run applies whole at its last chunk), so such a chunk belongs to a
+   run the head holds. Test strata:e60cc249: `chunk_covered`, a C-like index with a ~100 KiB value
+   (a chunk run its head covers, checkpoint record never sealed), first then a middle chunk
+   damaged; it must open with the value, write, and reopen `stored`. e60cc249 is the mutant (test
+   without the fix); its job must show a complete build, then `open threw: ... no run before it`.
+3. N3: the rename stays (Rulings, fix round 1). N1 is the owner's; untouched.
 
 Merge pass (lead, 2026-11-21) at strata:b533db12, pushed:
 
@@ -56,9 +72,13 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
 
 ## Next
 
-1. Read the queued jobs (State) into Evidence; A4's mutant 261121-183128-18f3a2 must show
+1. Read 7ed56e, f24fed, 0d42a7, 5dbd30 into Evidence; if manifest_named's bounds moved under
+   journal:e4b0100, fix the asserted bounds and rerun. Lead: `campaign accept turn-log-parity
+   durability --confirm D1=261121-214538-7ed56e --confirm D2=261121-214538-7ed56e`, or the
+   suite 261121-214553-5dbd30 for both if accept wants the suite job.
+2. Earlier: read the queued jobs (State) into Evidence; A4's mutant 261121-183128-18f3a2 must show
    `test_barrier_cohort` failing after a clean build (a build failure is not a kill).
-2. Lead: the durability review; Blocked on 1 before landing.
+3. Lead: Blocked on 1 before landing.
 
 ## Blocked on
 
@@ -132,6 +152,21 @@ b6a7697: the item is now applicable (not done in the merge pass).
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (fix round 1, 2026-11-21)
+
+- N3: `checkpoint_floor_bytes` keeps its name. The option changed meaning, from the checkpoint
+  trigger (64 MiB) to a floor under the group's share of the log's window (1 MiB): the old name
+  with a new meaning and default would change what a caller's setting does without a compile
+  error. Only the quest's own probe (`bench/kv/probes/rocksdb-parity/checkpoint-floor.cc`) sets
+  it; nothing in Xapiand or our libraries does (all callers are ours, so no alias). Stale mentions of `checkpoint_log_bytes` remain in `docs/design/standalone-turn-log.md`
+  (225, 573; not in the file set: lead's) and rocksdb-parity.md's 157, 167 and 823, which describe
+  the pre-quest trigger and the plan's row.
+- D2's skip leaves `run` unset, so a later chunk above the head with no run still throws
+  `log_lost`; setting `run` there would replay a partial run's bytes.
+- D2's case added beside the reviewer's probe, not instead of it: the probe (213954-ecd99d) is
+  queued at 5953ed46 and was not read; the mutant job is the reproduction either way.
+- Left job 261121-213912-e4b13d (build-test at 5953ed46, running, fails on D1) to the lead.
 
 ## Rulings I made (merge pass, 2026-11-21)
 
