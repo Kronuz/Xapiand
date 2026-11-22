@@ -835,3 +835,47 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool: agent-campaign:d8e4eea is installed (verify-land-agree, merge-main-when-needed). Ninja sweep: 0 Makefiles trees in 393 slots.
 - Queue: 110 queued, 6 running; light slots 71% used (339 of 480 slot-minutes); 44 ended, 1 failed, 6 cancelled.
 - Host: load 19 (it was 45), 289 GiB free. Quota 91% weekly, burn 0.63%/h, reset in 24.7 h (run-out projected about 10 h before it).
+
+### 2026-11-21 23h (hourly)
+
+- Landed: split-traceback (traceback:a6690d9, record Xapiand:181ef3c), without CI. FreeBSD's traceback_hooks abort predates the split, and hunt row 404 is now the quest hunt-traceback-freebsd.
+- Agent runs:
+  - schema-split contributor, Opus high, 121k. The glob line is its own commit, Xapiand:8d85af0; the suite, ctest -N, headers-alone and fnsizes jobs are queued.
+  - group-catalog fix round 2, Opus high, 220k. pin-check is fixed by strata marking its own chore work (ruling 10 amended: no host wraps anything; strata:be285be). bound is still open: a slot is closed by something unknown, then reopens fail on EMFILE. Its diagnosis job is queued.
+  - group-heal install fix, Opus high, 196k. The cause was the test, not install. group_voters had never compiled before, and its network reordered snapshot frames, which the snapshot channel's ordered-transport contract (consensus snapshot_channel.h:33) forbids. Its 60 s snapshot_timeout also outlasted the 20 s settle. Fixed as test-only at strata:cd2a4a4; the plain run and 9 mutants are rerunning.
+  - hunt-traceback-freebsd, Opus high, 123k. dump_callstacks compared frames past the recorded count (traceback.cc:848), reading uninitialized locals, so FreeBSD's short main stack read as idle. Fixed at traceback:ee5debb, with a poisoned-stack test meant to fail without the fix on macOS.
+- Lead fixes: split-xapiand-src failed to compile at Xapiand:8d73561 (serialize_scalar.cc:289, strings::lower). Xapiand:f32e6e6 had dropped query_dsl.h, which brought strings:: in transitively. Xapiand:c0adc7f includes xapiand_strings.hh in both pieces that use it. open-files-floor's coverage job timed out at 30 min while still compiling and was rerun at 90.
+- Mutant and fails-without checked by log: open-files-floor's master main.cc fails 3 of 97 named checks (test_coverage_main.cc:525, 543, 575).
+- Tool: lead-driver (agent-campaign:f958fe7) lands; it installs after its CI. msg-234 was closed.
+- Queue: 101 queued, 6 running; light slots 82% used (396 of 480 slot-minutes); 102 ended, 10 failed, 28 produced nothing (17 cancelled, 10 skipped, 1 timeout). No explorer batch: no idle slots.
+- Host: load 19, 287 GiB free. Quota 93% weekly, burn 0.64%/h, reset in 23.7 h (run-out projected about 13 h before it).
+
+### 2026-11-21 24h (hourly)
+
+- Landed: split-msgpack (msgpack:b7fc78c) and split-storage (storage:35a0c15), by the landing loop.
+- Owner rulings: a giant class body is not one coherent unit (basic_index, uinteger_t); class bodies over 1,000 lines get restructured with craft where it helps maintenance and parallel work. Quests filed: split-check-members (cpp-libraries: --members mode, tools/outline.py, SPLITTING.md section), index-restructure (started now), uinteger-restructure, catalog-restructure (needs group-catalog), queryparser-restructure (needs split-queryparser), tuple-buffer-restructure. Storage waits for PLAN D7; consensus' four classes went to Detent's lead.
+- Agent runs:
+  - turn-log-parity durability review, Opus high, 178k. CHANGES at strata:5953ed4: D1, the head didn't build (faultfs:: vs fl::); D2, a spurious log_lost for a covered index whose damage hits a chunk run. Non-blocking N1 (pre-existing lost-bound limit, owner's call), N2, N3.
+  - turn-log-parity fix round 1, Opus high, 117k. D1 at strata:c38e4bc, D2 at bc8c614 (no-run check only above the head), test chunk_covered and a fails-without job; build-test passed at bc8c614 (214553-5dbd30).
+  - group-heal resume, Opus high, 245k. Witness task at strata:7db919a (witness.hh, three cases, two mutants). Asked the repair question; lead ruled the reinstall goes through install via a consensus request.
+  - cluster search task, Opus high, 266k. Fan-out, statistics round and merge at Xapiand:52fb72f, never compiled (first build queued); file set widened to rpc_methods.* and expand.*; search_views.cc waits for restore-stream.
+  - consensus-request-install API, Opus high, 174k. consensus:c7a1ad7 (+41/-1, types.h and driver.h). Detent's lead approved the shape with two doc fixes; A2 became one image per requester per leader base; A6 adds the wire change and decoder fuzz.
+  - index-restructure step 1, Opus high, 184k. 196 definitions (3,468 lines) into 11 mechanism headers at strata:88058f2; class body 5,309 to 2,071 lines, index.hh 6,139 to 2,915; jobs queued.
+  - uinteger-restructure step 1, Opus high, 214k. 354 member functions into 17 family headers (uinteger_t:303d2a1); class 5,709 to 1,607 lines, uinteger_t.hh 6,042 to 1,799; ab.sh takes trees (393c114); jobs queued.
+- Lead fixes: restore-stream's security re-accepted (cjk-words' changes don't reach the restore decoder) and citations swapped; split-check-anchor's pyrefly error (cpp-libraries:fe8491f); journal-lost-bound merged main (journal:a3eecb5, a one-line conflict in recovery, confirmed by Detent's lead); ninja-only's check caught two new bare configures (Xapiand:d431d16). A wrong-journal State edit on group-heal--install's branch was reverted (Xapiand:2a2b22b) and redone.
+- Queued: track C condition 2 fuzz at journal:8b063a1 (221909-e0e360 segment, 221910-3f6e47 checkpoint).
+- Tool findings to campaign-v3: `campaign wait` lists a task's "jobs ended" while its State's jobs are queued (submitted without --task).
+- Queue: 183 queued, 10 running; light slots 77% used (368 of 480 slot-minutes); 65 ended, 5 failed, 22 produced nothing (20 cancelled). No explorer batch and tuple-buffer-restructure held: no idle slots.
+- Host: load 124 then 116 on 16 CPUs (a whole-disk find from one of this session's agents ran at 364% for two minutes; told it to search only repositories), 287 GiB free. Quota 97% weekly, burn 0.67%/h, reset in 22.5 h; run-out projected in about 4.5 h.
+
+### 2026-11-22 00h (hourly)
+
+- Landed: split-queryparser (queryparser:0fdec0c) and hunt-traceback-freebsd (traceback:ee5debb, hunt row 404), by the lead after reading each. The queryparser main checkout had sat on a merged `compat20` branch since 10-27; switched back to main.
+- Agent runs:
+  - consensus-request-install implementation, Opus high, 112k. Detent's header fixes at consensus:9ea7c55; bodies, DTC2 kinds 10 and 11, fuzz seeds, tests and the mechanism note at fc4af4f; wire_version stays 1 (the note says why). Nothing compiled yet; four jobs and CI queued. Its earlier `find /` (364% CPU, 2 min) was this agent's.
+  - uinteger-restructure mutation tooling, Opus high, 119k. tools/mutate.py copies uinteger_t/ and takes a per-edit `header:` (uinteger_t:5dd518f); 66 edits re-indented, 3 re-anchored; --check at head and master, an equivalence job over 355 mutants, and 30 kill chunks queued. Its mover's shapes are now split-check-members' fixtures.
+- Checked by log: group-heal's three install mutants are real kills (skip-file-set 1,526 of 278,351 bytes; keep-unchecked misses vol-2's 63 B; write-past-failure refetches 280,732 B for 65,656 lacking); traceback's fails-without stops at hooks_test line 65. turn-log-parity's A4 mutant (6c946dc) was cut from the pre-D1 head and only failed to compile: no kill, re-cut after the group-commit merge.
+- Lead fixes: node-admission merged consensus main after Detent's peers-wake landed (consensus:42a8cde), main's 20 files read (host_transport.h gains transfer helpers only), review-fix and evidence jobs moved there. Detent's three new quests overlap ours only in CMakeLists.txt and trial-merge clean; told Detent's lead, no ordering. ninja-only chased master since 09:18 (its 5-second check waited 50 min as a light job): merged master (Xapiand:e66db4e) and its check now runs at level none. group-heal's install task and turn-log-parity's group-commit task get their stale jobs rerun at their heads so `task merge` can record them. split-check-anchor's empty journal filled.
+- Held: queryparser-restructure and tuple-buffer-restructure, launchable, wait for split-check-members' shared mover (tools/outline.py) so they don't write a third and fourth private one. No explorer batch: light slots 85% used, 174 queued.
+- Queue: 174 queued, 7 running; light slots 85% used (409 of 480 slot-minutes).
+- Host: load 19 on 16 CPUs (was 124 an hour ago), 287 GiB free. Quota 99% weekly, burn 0.68%/h, reset in 21.7 h; run-out projected in about 1.5 h.
