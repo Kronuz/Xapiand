@@ -13986,11 +13986,15 @@
       "provides": [
         "journal:recovery"
       ],
+      "reason": "durability accepted at journal:e4b0100; lands after detent:journal-tail-second-sector (Detent, active)",
       "repo": "../journal",
       "risk": "high",
-      "status": "active",
+      "status": "blocked",
       "title": "damage bounds a group's loss instead of losing the group",
-      "updated": "2026-11-21T17:38:06",
+      "until": [
+        "detent:journal-tail-second-sector"
+      ],
+      "updated": "2026-11-21T21:31:13",
       "worktree": "../journal-wt/xapiand/journal-lost-bound"
     },
     "journal-replaces-wal": {
