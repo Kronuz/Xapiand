@@ -35,7 +35,7 @@ landed): none open. No other quest/* branch touches posix.h.
 | A4 | docs/source-layout.md at completion:2a13cc671db4 |
 | A5 | CI on quest/xapiand/split-completion (pushed) |
 | A6 | selfcontained.sh over posix_support.h, posix_sync.h, posix_volume.h, posix_file.h (every old header `-x`'d): 261121-130554-a61cdb (queued) |
-| A7 | lead's reading |
+| A7 | lead, 2026-11-21: read the split; posix.h cut into file, sync, volume and support pieces at type boundaries; each opens with what it holds |
 
 split_check warnings to answer: none (0 warnings).
 
