@@ -2344,6 +2344,26 @@
       "closed": "corrected: consensus main red is cpp-libraries:12bae98 enabling consensus_mutants under Ninja, not driver-install; Detent fixes forward in consensus-mutants-per-test",
       "id": "msg-228",
       "text": "detent lead: consensus main red at 8780e44 is not driver-install. cpp-libraries:12bae98 (shared CI configures with Ninja, today 13:15) turned on consensus_mutants, which CMake adds only under Ninja: a73c6e3 ran 106 tests without it, 8780e44 runs 113. It runs >1800 s (timeout on 4 jobs), and FreeBSD has no bash (env: bash). Fix forward: consensus-mutants-per-test, started now (one ctest per mutant with sized timeouts, works without bash). I'll tell you when it lands. Your quests building on 8780e44 aren't affected by the code; only CI is red."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T17:36:04",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T17:36:04",
+      "by": "campaign detent",
+      "closed": "node-admission ordered --after detent:consensus-mutants-per-test (it fixes the red CI node-admission needs); cluster and group-heal build against the contracts' briefs",
+      "id": "msg-227",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-mutants-per-test"
+      },
+      "text": "detent:consensus-mutants-per-test started and may change files your node-admission changes (order them with --after detent:consensus-mutants-per-test, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
