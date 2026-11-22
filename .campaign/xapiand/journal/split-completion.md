@@ -1,6 +1,6 @@
 # split-completion: journal
 
-State: waiting on jobs 261121-130537-3bead5 (A1 build-test) 261121-130550-2aed7e (A3) 261121-130554-a61cdb (A6)
+State: waiting on jobs 261121-142449-56c397 (A1 build-test) 261121-130550-2aed7e (A3) 261121-130554-a61cdb (A6)
 Quest: .campaign/xapiand/quests/split-completion.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -29,8 +29,8 @@ landed): none open. No other quest/* branch touches posix.h.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test 261121-130537-3bead5 (queued) |
-| A2 | split_check (split-check-sources worktree version) 261121-130547-c392d9: exit 0, 0 errors, 0 warnings; the landed-tool `split` check 261121-130537-2f2f5d: exit 0 |
+| A1 | build-test 261121-142449-56c397 (queued) |
+| A2 | split_check (split-check-sources worktree version) 261121-130547-c392d9: exit 0, 0 errors, 0 warnings; the landed-tool `split` check 261121-142449-867ce2: exit 0 |
 | A3 | 261121-130550-2aed7e: one job, ctest -N at base 714186eab63d ($JOB_REF_BASE) and at head, `Test #` lines diffed (queued) |
 | A4 | docs/source-layout.md at completion:2a13cc671db4 |
 | A5 | CI on quest/xapiand/split-completion (pushed) |
