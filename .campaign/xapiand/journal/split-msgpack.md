@@ -30,7 +30,7 @@ Nothing (split waits on split-check landing).
 | A4 | docs/source-layout.md |
 | A5 | CI on the pushed branch |
 | A6 | selfcontained.sh job 261121-121647-167eff at 68e45d8 (261121-121108-797630 at a43dc0f failed: superseded pieces still tracked) (earlier runs: 261121-115616-071a12 failed on msgpack_ctor.h, 261121-120211-04c861 passed on the 16-header layout) |
-| A7 | the lead reads the split: see Rulings |
+| A7 | lead, 2026-11-21: read the split; msgpack.h cut by member family (class body whole in msgpack_class.h); msgpack_types.h is 82 lines but is the constants and enum header every piece builds on, accepted as a unit |
 
 ## Result
 
