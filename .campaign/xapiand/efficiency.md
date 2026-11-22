@@ -817,3 +817,21 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Findings: placement doesn't compile at group-heal's consensus pin 8780e44 (no ActivateImage handler; group-heal's install adds one), so it builds on group-heal's head.
 - Queue: 124 queued, 5 running; light slots 98% used (468 of 480 slot-minutes); 59 ended, 2 failed, 9 produced nothing (5 cancelled, 1 skipped, 3 timeout).
 - Host: load 50 (Detent's reader-s6 TSan at 4.9 cores among others), 290 GiB free. Quota 90% weekly, burn 0.63%/h, reset in 25.7 h (run-out projected about 10 h before it).
+
+### 2026-11-21 22h (hourly)
+
+- Landed, 3 quests:
+  - split-tooling (cpp-libraries:e991e52) and split-url-parser (url-parser:657f7fe), by the lead after its reads.
+  - cjk-words (Xapiand:ee5677f, merge dacfe41), by the landing loop.
+- Agent runs:
+  - split-xapiand-src performance, Opus high, 144k. It classified every size difference (+52,544 B text, +0.8%). Serialize::positive had lost inlining (736 → 560 B plus a call) and is made inline again. About 13 KB of initializer per new TU comes from header `static const` tables, filed as row 406.
+  - single-flight-budget correctness re-check, Opus, 150k (the same reviewer resumed). APPROVE at Xapiand:19f1e0c after the lead's allowlist row. Its nit, the note's "O(1)" being wrong for the leave's erase, went to journal-replaces-wal as msg-1.
+- Lead fixes: single-flight-budget's CI failed only the async audit (3 lock sites against a row allowing 2). The row is now 3 with a note (Xapiand:ded8488), and the file set was widened by that one file, which journal-replaces-wal holds but hasn't touched.
+- Mutant kills checked by log: turn-log-parity's await reread (the rival test fails at round 0) and its TSan mutant (a data race reported). Attribution job 151714-b5123c: the turn_sealer race fails on strata main cc30217 too.
+- Started:
+  - schema-split, Opus high: schema.cc is 10,159 lines.
+  - An explorer batch of three: hunt-header-tables (Opus high), hunt-tls-expiry and hunt-faultlab-at-mark (Sonnet medium).
+- Hunt rows: 392, 393, 394 and 400 done by split-tooling. Row 238 waits on open-files-floor (test_coverage_main.cc).
+- Tool: agent-campaign:d8e4eea is installed (verify-land-agree, merge-main-when-needed). Ninja sweep: 0 Makefiles trees in 393 slots.
+- Queue: 110 queued, 6 running; light slots 71% used (339 of 480 slot-minutes); 44 ended, 1 failed, 6 cancelled.
+- Host: load 19 (it was 45), 289 GiB free. Quota 91% weekly, burn 0.63%/h, reset in 24.7 h (run-out projected about 10 h before it).
