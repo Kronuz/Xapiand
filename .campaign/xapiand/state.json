@@ -12493,10 +12493,24 @@
           "journal": "",
           "merged": "6d870c0536f2e5ddbde56ea3ec99c4100f87c110",
           "worktree": ""
+        },
+        "witness": {
+          "base": "cd2a4a40b996730386c9c3f12ac4084bdd9aba34",
+          "branch": "quest/xapiand/group-heal--witness",
+          "files": [
+            "include/strata/group/witness*",
+            "test/group/witness*",
+            "test/group/world.hh",
+            "test/group/voters_test.cc",
+            "CMakeLists.txt",
+            "docs/mechanisms/replication-group.md"
+          ],
+          "journal": "../Xapiand-wt/xapiand/group-heal--witness",
+          "worktree": "../strata-wt/xapiand/group-heal--witness"
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-21T15:37:45",
+      "updated": "2026-11-21T21:36:54",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
