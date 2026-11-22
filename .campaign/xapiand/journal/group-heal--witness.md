@@ -1,6 +1,6 @@
 # group-heal--witness: journal
 
-State: working
+State: waiting on jobs 261121-214745-036576 261121-214749-38a541 261121-214752-5dffc3 (and CI at strata:7db919a5)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -21,9 +21,10 @@ member lost). Not compiled locally: CI on the pushed task branch is the first bu
 
 ## Next
 
-1. CI at the task head compiles and runs group_witness; fix what it finds. Then the A4 job
-   (`--for A4`) at the task head, and a mutant: the witness's Sink applying a range it is
-   handed (or validating nothing) must fail `group_witness`.
+1. Read the jobs at strata:7db919a5: plain group_witness 214745-036576 must pass; mutants
+   `witness-holds-range` 214749-38a541 and `witness-refuses-image` 214752-5dffc3
+   (`test/group/mutants.py`, `--fails-without`, case `join`) must fail with a full build. CI at
+   7db919a5 is the first compile of world.hh and witness_test.cc; fix what it finds, rerun.
 2. Ready for the lead's merge into group-heal.
 
 ## Blocked on
@@ -43,6 +44,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
+| A4 | plain 261121-214745-036576 queued; fails without: 261121-214749-38a541, 261121-214752-5dffc3 queued (82aca9 superseded at c7f3dedc) |
 | <A1> | <from `campaign brief`> |
 
 ## Result
@@ -64,4 +66,6 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 - Task file set widened by `test/group/install_suite.sh` (quest file set; install merged at
   strata:2b080579): the group suite builds an explicit target list, so `group_witness_test`
   joins it or ctest finds the test not built.
+- `test/group/mutants.py` joins the file set too: the witness's two guards live beside the
+  quest's other group mutants.
 - `--force` at `campaign start`: install's file set still registered though merged.
