@@ -13309,6 +13309,8 @@
     "hunt-faultlab-at-mark": {
       "accepted": {},
       "after": [],
+      "base": "71a617f03d05cd43cd002260d498f0d6cdb2cfeb",
+      "branch": "quest/xapiand/hunt-faultlab-at-mark",
       "checks": [
         {
           "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -13321,6 +13323,7 @@
       "files": [
         "test/faultfs_test.cc"
       ],
+      "journal": "../Xapiand-wt/xapiand/hunt-faultlab-at-mark",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -13328,9 +13331,10 @@
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "faultlab's suite reaches faultfs's at_mark sync path",
-      "updated": "2026-11-21T20:22:18"
+      "updated": "2026-11-21T20:22:59",
+      "worktree": "../faultlab-wt/xapiand/hunt-faultlab-at-mark"
     },
     "hunt-header-tables": {
       "accepted": {},
