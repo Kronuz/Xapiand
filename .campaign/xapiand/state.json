@@ -5011,13 +5011,15 @@
             "src/cluster/shard_map_view*",
             "tests/cluster/test_search*",
             "tests/cluster/CMakeLists.txt",
-            "docs/mechanisms/distributed-search.md"
+            "docs/mechanisms/distributed-search.md",
+            "src/cluster/rpc_methods.*",
+            "src/engine/strata/expand.*"
           ],
           "worktree": "../Xapiand-wt/xapiand/cluster--search"
         }
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-21T21:33:24",
+      "updated": "2026-11-21T21:55:12",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
