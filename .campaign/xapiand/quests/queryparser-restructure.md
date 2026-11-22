@@ -5,32 +5,42 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`queryparser.cc`'s `class parser` (line 218, 1,047 lines) is one recursive-descent parser in three
+layers, already apart in its file order:
+- operator recognition (lines 221-475): keywords, NEAR/ADJ chains, `binary_keyword`, `op_kind`;
+- the word layer (476-905): globs, fuzzy suffixes, word groups, CJK n-grams, phrases, stopwords and
+  terms;
+- grouping and the tree (906-1232): frames, `push_item`, `combine_pass`, `join`, `fold` and
+  `reduce`.
+Its scanner and tree builder are already subobjects. The class declaration moves into an internal
+header (`queryparser/parser.hh`), and each layer's definitions into a header of its own
+(`queryparser/parser_operators.hh`, `parser_words.hh`, `parser_groups.hh`), all included only by
+`queryparser.cc`. It stays one translation unit, so inlining and codegen stay the same. A word bug
+(wildcards, CJK) and a precedence bug then open different files.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, and CI on every platform ([ci])
+- A2 The move changes no code: the `members` check passes, and the journal answers each warning.
+  A Release `tools/fnsizes.sh` diff of the test binaries, base against head, in one job, shows no
+  function whose size changed, or each difference explained in the journal
+- A3 Every new header compiles alone: `tools/selfcontained.sh` over the new headers
+- A4 [artifact] `docs/source-layout.md` lists each header and its layer
+- A5 [manual] The lead reads the cut and agrees each header is one layer a maintainer opens alone
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+queryparser's public API and `queryparser.cc`'s translation unit stay the same.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 2026-11-21, on the class bodies over 1,000 lines: "These files would have to be carefully
+  split. I would still split them with craftmanship and aiming at improving maintainability and
+  parallel work. Decide which are worth and how to split them cleanly."
+- Lead, 2026-11-21: worth it for maintainability; parallel work on it is low (13 commits in 30 days,
+  one quest at a time). It needs split-queryparser, which holds queryparser.cc. Low risk: a
+  mechanically proved move in one translation unit.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.

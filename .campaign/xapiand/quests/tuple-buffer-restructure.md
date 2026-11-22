@@ -5,32 +5,40 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+prospect's `include/prospect/tuple_buffer.hh` is 1,229 lines, and `class tuple_buffer` (line 203)
+is 1,024 of them: the write buffer from ingest to runs. Its pipeline stages are apart already:
+- ingest and flush planning (`add`, `flush`, `plan`, `field_plan`, `splitters`) stay in the class;
+- run building (`drain`, `group_run`, `split`, `sort_groups`, `radix_sort`, `sort_run`, batch
+  memory) moves to `tuple_buffer_run.hh`;
+- the entry codec (`entry_view`, `encode_entry`, `decode_entry`, `decode`, `relabel`) moves to
+  `tuple_buffer_codec.hh`;
+- the k-way `merger` (a nested class, defined outside the body) and the read side (`scan`,
+  `each_term`, `postings_of`) move to `tuple_buffer_read.hh`.
+Pieces under about 100 lines join a neighbor. No open branch edits the file (prospect follows the
+release, D39), so a move now costs no one their edits.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, and CI on every platform ([ci])
+- A2 The move changes no code: the `members` check passes, and the journal answers each warning.
+  A Release `tools/fnsizes.sh` diff of the test binaries, base against head, in one job, shows no
+  function whose size changed, or each difference explained in the journal
+- A3 Every new header compiles alone: `tools/selfcontained.sh` over the new headers
+- A4 [artifact] `docs/source-layout.md` lists each header and its stage
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+prospect's public API and the run format's bytes stay the same.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Owner, 2026-11-21, on the class bodies over 1,000 lines: "These files would have to be carefully
+  split. I would still split them with craftmanship and aiming at improving maintainability and
+  parallel work. Decide which are worth and how to split them cleanly."
+- Lead, 2026-11-21: worth it now because it is free: no branch edits it. It is the one write buffer
+  (one mechanism per kind) the engine keeps, and its codec is the format the runs carry. Low risk:
+  a proved move.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+Nothing: one landing.
