@@ -2287,6 +2287,26 @@
         "quest": "detent:journal-fuzz-decoder-pin"
       },
       "text": "detent:journal-fuzz-decoder-pin started and may change files your journal-lost-bound changes (order them with --after detent:journal-fuzz-decoder-pin, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T16:28:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T16:28:37",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-224",
+      "items": {
+        "open-files-floor": "open-files-floor"
+      },
+      "settles": {
+        "start": [
+          "open-files-floor"
+        ]
+      },
+      "text": "failed-restore-exit landed: unlocks open-files-floor"
     }
   ],
   "quests": {
@@ -18172,6 +18192,8 @@
     "open-files-floor": {
       "accepted": {},
       "after": [],
+      "base": "1c50898b9c758db72a01f153c5beff658e44be22",
+      "branch": "quest/xapiand/open-files-floor",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
@@ -18195,9 +18217,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-21T10:26:50"
+      "updated": "2026-11-21T16:29:18",
+      "worktree": "../Xapiand-wt/xapiand/open-files-floor"
     },
     "open-mix": {
       "accepted": {},
