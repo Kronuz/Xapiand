@@ -1,6 +1,6 @@
 # restore-stream: journal
 
-State: waiting on jobs 261121-170017-c8ca75 (A6), 261121-170017-1b6655 (A3), 261121-202757-d2afb8 + 261121-202758-e5258b (A1), 261121-170019-f84811 (A2), at merge head a076cc91f0a9; CI there needs the push. Master merge voided the security acceptance (21 code files under review); lead re-accepts after reading `git diff 0547322a4d72 78484bdee355` and these jobs.
+State: waiting on jobs 261121-202756-2c7fb6 (A6), 261121-202756-ca0d1d (A3), 261121-202757-d2afb8 + 261121-202758-e5258b (A1), 261121-202758-fe2fcf (A2), at merge head a076cc91f0a9; CI there needs the push. Master merge voided the security acceptance (21 code files under review); lead re-accepts after reading `git diff 0547322a4d72 78484bdee355` and these jobs.
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
@@ -22,11 +22,11 @@ Nothing.
 | Criterion | Evidence |
 |---|---|
 | A1 | 261121-202757-d2afb8, 261121-202758-e5258b |
-| A2 | 261121-202757-d2afb8, 261121-202758-e5258b, 261121-170019-f84811 |
-| A3 | 261121-170017-1b6655 |
+| A2 | 261121-202757-d2afb8, 261121-202758-e5258b, 261121-202758-fe2fcf |
+| A3 | 261121-202756-ca0d1d |
 | A4 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143 |
 | A5 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md) |
-| A6 | 261121-170017-c8ca75 |
+| A6 | 261121-202756-2c7fb6 |
 | A7 | `docs/perf/bulk-load-rss.md`: "With the body streamed, the peak is 344-405 MB, held mostly by strata's write buffer until the RESTORE's one closing" |
 | A8 | CI green at e3265faf5147 (run 44949695201); no longer waits on lua-method-flake |
 
