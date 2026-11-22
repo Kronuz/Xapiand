@@ -1,6 +1,6 @@
 # group-catalog: journal
 
-State: waiting on jobs 261121-172749-984db7 (diagnosis at strata:7fc5eb54) and CI at strata:7d57b2a0
+State: waiting on jobs 261121-203615-54e301 (bound diagnosis at strata:e2d41b7e), 261121-204714-4950b9 and 261121-204738-b610c4 (N4 fix and mutant at strata:51a46c47)
 Quest: .campaign/xapiand/quests/group-catalog.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -31,11 +31,21 @@ Causes found:
 
 ## Next
 
-1. Read 261121-172749-984db7 (`campaign job log`): the owner_break caller for replace and
-   bare-commit-crash, the bound slot's state line, and payload_error of the recovered close. Fix
-   the cause, a test failing without each.
-2. Read CI at strata:7d57b2a0 (`gh run list --branch quest/xapiand/group-catalog -L 1`).
-3. Push once, then resubmit 261121-135825-03ec6d's chain at the head (`campaign job rerun`), the
+Round 2 findings (diagnosis 261121-172749-984db7, CI at strata:7d57b2a0: every platform builds with
+assertions; all fail replace and bare-commit-crash on owner_break and bound):
+- owner_break is CT-R15's "a catalog index was called with no pin held": a reopen whose bundle is
+  below the log (replace, bare-commit-crash; borrow and sweep reopen at their bundle) replays on the
+  group's chore after open_payload returns, slot {0, open}, no pin. Fixed in strata:51a46c47
+  (`strata::payload_work`, ruling 10). Jobs: 261121-204714-4950b9 (pin-check, replace,
+  bare-commit-crash in Debug), mutant payload-unmarked 261121-204738-b610c4 (must fail pin-check).
+- bound: the journal's hypothesis is refuted (0 maps, probe 0). The slot ends `free` (Linux ASan,
+  TSan) or `failed` with failures 8 (FreeBSD, macOS, gcc): it was closed and reopened, and the
+  reopens failed on EMFILE, so begin_bound_close (owed only) never holds. Who closed it is open:
+  261121-203615-54e301 prints the passes, bound closes, replaces and every state edge.
+
+1. Read 261121-203615-54e301; fix bound's cause, a test failing without it.
+2. Read 261121-204714-4950b9 and 261121-204738-b610c4.
+3. Push once, then rerun 261121-135825-03ec6d's chain at the head (`campaign job rerun`), the
    TSan job, and `campaign verify group-catalog`; rerun 261121-103852-b1cb8c.
 4. All green: Evidence, State "ready for review", confirm line
    `campaign accept group-catalog durability --confirm R1=<tsan> R2=<tsan> R3=<suite> R4=<suite>`.
@@ -135,6 +145,12 @@ exemption, N5 (whether the sweep commits a group's uncommitted applies: the owne
 
 ## Rulings I made
 
+10. (Round 2) N4 made real: `strata::payload_work` (catalog.hh) marks a thread as running a slot
+   payload's work, and CT-R15's pin_held passes it as a pin. Sound because H holds the slot until
+   close_payload and its calls take the write lease that demotion, wake and close chores need. The
+   host wraps H's chore in it (the test's chore thread; Xapiand's journal-replaces-wal must do the
+   same: a host-side addition to this quest's own hook contract, for the lead to confirm). A real
+   chore pin per group item would need a group::config hook: not taken.
 7. (Durability round) A failed open sets `closing_` and tears down fully, so a later close()
    returns at once rather than throwing `group_fenced`; no test relied on the throw.
 8. R1's and R2's deterministic tests check the loop's table on the loop from open_payload (and
