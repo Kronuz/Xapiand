@@ -1,6 +1,6 @@
 # split-datetime: journal
 
-State: waiting on jobs 261121-122646-ec8c05 (bench base) 261121-123009-72a6f6 (bench base A/A) 261121-122640-21e252 (bench split, at c6d6ff7); older jobs at c6d6ff7 are superseded by the next push
+State: waiting on jobs 261121-160518-63e0f2 (A1 build-test) 261121-160515-3084ef (A2 split_check, fixed script) 261121-160519-3cbaa9 + 261121-160531-3f29b1 (A3 head, base) 261121-160522-0e7ac1 (A6) and benches 261121-122646-ec8c05 (base) 261121-123009-72a6f6 (base A/A) 261121-160540-27adfc (head ee3d707); all queued
 Quest: .campaign/xapiand/quests/split-datetime.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,9 +13,9 @@ datetime.cc split (datetime-wt c6d6ff7) into datetime.cc (parse), datetime_math.
 
 ## Next
 
-1. Read bench base, base A/A and head: if a hot row regresses beyond the A/A band, move datetime_calendar.cc back into datetime.cc (and its row in source-layout.md). Then push once and resubmit A1, A6, A2, A3-head and the benches at the pushed head (359745b or later). Old: read bench base vs head (old/new ratio per row); if a hot row regresses, move calendar back into datetime.cc and rerun.
-2. Finish docs/source-layout.md (written, uncommitted), commit, push, fill Evidence.
-3. Report: AGENTS.md and ARCHITECTURE.md (outside file set) say 'one .cc / single TU' and need the lead's edit.
+1. When the three benches finish, read base vs A/A band vs head (old/new per row). If a hot row (isValidDate, getDaysInMonth, parse, math) regresses beyond the A/A band, move datetime_calendar.cc back into datetime.cc and drop its row from docs/source-layout.md, push, rerun A1/A2/A3/A6. Put the numbers under Result.
+2. When the A-jobs pass, check A2 warnings against Rulings (the inline detail helpers) and fill the Evidence rows with `campaign brief`'s table.
+3. Done: docs/source-layout.md committed (5b07a01), AGENTS.md and ARCHITECTURE.md already match the split (3 lines, 359745b), main merged (ee3d707), pushed.
 
 ## Blocked on
 
@@ -30,7 +30,15 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | 261121-160518-63e0f2 (build-test at ee3d707); replaces 261121-122624-6b5417 (ran c6d6ff7) and 261121-122624-03379d (old split check, failed on the checker's .md and include-guard bugs, not the split) |
+| A2 | 261121-160515-3084ef (split_check from split-check-sources, at ee3d707); replaces 261121-122624-e89922 (failed: exit 2, old checker) and 261121-122624-03379d. Gate copy 261121-160518-8a9d65 uses the pre-fix script and is expected to fail the same way |
+| A3 | 261121-160519-3cbaa9 (head) vs 261121-160531-3f29b1 (base b5d46a8), diffed; replaces 261121-140751-b76baa (cancelled by the resubmit), 261121-122627-8f659b (failed exit 125) and 261121-122626-0ba83a (c6d6ff7) |
+| A4 | docs/source-layout.md (5b07a01): a row per new file, each .cc/.h's first line states what it holds, test/diff_test.cc kept whole with reasons |
+| A5 | CI on the pushed branch ee3d707 (not yet read) |
+| A6 | 261121-160522-0e7ac1 at ee3d707; replaces 261121-122628-2ad214 (ran c6d6ff7) |
+| A7 | the lead's read |
+
+Stale queued jobs at 359745b (261121-155141-64011b, 261121-155608-f3ce5c, 261121-155751-6e43a6): superseded by the ee3d707 ones. The brief's ci.yml out-of-scope warning comes from the main merge (origin/main is ahead of the local main), not from this quest.
 
 ## Result
 
