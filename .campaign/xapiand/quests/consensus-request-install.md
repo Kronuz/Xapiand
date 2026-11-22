@@ -34,7 +34,13 @@ witness can compact its log (D9). group-heal's `repair` task (strata) builds on 
   kills
 - A5 [artifact] `docs/mechanisms/install-request.md` describes the request, the current-voter
   refusal, the races and the cost (one image per real need)
-- A6 The `asan` and `tsan` checks pass, and CI is green on every platform: [ci]
+- A6 The two new frames are wire changes: `InstallRequest` and `InstallRequestResponse` join
+  `Message` with their codec frame kinds, and the change is named in the mechanism note with its
+  version handling (`wire_version` in node_hello.h bumps, or the note says why it needn't). The
+  codec round-trips both (test/transport/codec_test.cc), `fuzz/seed.cc` seeds both kinds into
+  `fuzz/corpus/decoders`, and `fuzz/fuzz_decoders.cc` runs at least 30 CPU-minutes under ASan and
+  UBSan with no finding (Detent's lead: decoder fuzz is a high-risk gate)
+- A7 The `asan` and `tsan` checks pass, and CI is green on every platform: [ci]
 
 ## Contracts
 
@@ -54,6 +60,11 @@ witness can compact its log (D9). group-heal's `repair` task (strata) builds on 
   comparison refuses a damaged replica at the leader's base until the leader checkpoints. So the
   rule is one image per requester per leader base (A2): loop-free by construction, bounded by base
   moves and leader changes, and it serves the repair case. Sent to Detent's lead with the header diff.
+- Detent's lead, 2026-11-21: APPROVE the API shape at consensus:c7a1ad7, with two header fixes before
+  the bodies. (1) `Current`'s docs in types.h (InstallRequestReply) and driver.h (reinstall) state
+  the per-requester-per-base rule, and that the leader keeps one entry per member, dropped at a
+  leader change. (2) reinstall's Fails-with list maps `NotMember` (a removed incarnation) to a
+  `RejectReason` (`InvalidRepair`). The new frames' codec change and decoder fuzz are A6.
 - Lens: correctness, with the protocol's races and the image loop as its questions.
 
 ## May land early
