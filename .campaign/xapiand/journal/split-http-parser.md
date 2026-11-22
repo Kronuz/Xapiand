@@ -30,7 +30,7 @@ Nothing.
 | A4 | docs/source-layout.md lists each new file |
 | A5 | CI on the pushed branch |
 | A6 | selfcontained 261121-121501-c2f765 (db201cd) |
-| A7 | lead's [manual] read |
+| A7 | lead, 2026-11-21: read the split; the parse switch stays whole in http_parser.cc; api, url, chars, tables and internal pieces each open with what they hold |
 
 ## Result
 
