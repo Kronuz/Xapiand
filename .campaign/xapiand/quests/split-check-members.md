@@ -44,7 +44,13 @@ changed no code, and puts the rule in SPLITTING.md.
   `.scratch/index-restructure/`), graduates to cpp-libraries: from a committed map (member line
   ranges or names to target headers), it writes the out-of-class definitions, with `--inline` for a
   non-template class. Its output on the fixtures passes A1's mode, and it is independent of the
-  checker (no shared parsing code), so the proof stays a second reading: the `test` check
+  checker (no shared parsing code), so the proof stays a second reading. Fixtures cover the shapes
+  both restructures met (uinteger-restructure's journal, "Notes for tools/outline.py"): nested-class
+  members, qualified and trailing return types, function-pointer returns, dropped default arguments,
+  constructor initializer lists, one-line bodies, `#define`/`#undef` pairs around members and
+  column-0 preprocessor lines. uinteger-restructure's mover
+  (`.scratch/uinteger-restructure/mover.py` on its branch) is read for its cases, and one tool
+  remains: the `test` check
 - A6 ruff check and ruff format pass, and CI is green: the `lint` check; [ci]
 
 ## Contracts
