@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261121-210217-362497 261121-210236-dca37d 261121-210245-1aac19 261121-210246-3f5652 261121-210246-ad33f8 261121-210247-218fb3 261121-210247-d363e5 261121-210247-fbfca9 261121-210248-1c5575 261121-210248-b81f77 261121-205709-52ed84 261121-204814-6859fe 261121-204824-971469
+State: waiting on jobs 261121-210217-362497 261121-210236-dca37d 261121-210245-1aac19 261121-210246-3f5652 261121-210246-ad33f8 261121-210247-218fb3 261121-210247-d363e5 261121-210247-fbfca9 261121-210248-1c5575 261121-210248-b81f77 261121-205709-52ed84 261121-204814-6859fe 261121-204824-971469 261121-214445-82aca9 (placement merges strata:cd2a4a40, the quest head, once plain 362497 passes)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,12 +30,37 @@ mutants 210245-1aac19 210246-3f5652 210246-ad33f8 210247-218fb3 210247-d363e5 21
 ## Next
 
 1. The jobs in State: plain must pass, every mutant fail on its named test; the probe says
-   whether both changes are needed. Then `campaign verify group-heal`.
-2. repair, witness (order 2, on install's contract, now merged), then sim-rows (order 3).
+   whether both changes are needed. Then `campaign verify group-heal`. Quest CI at cd2a4a40
+   (run 44987690334) was still queued on runners at 21:45.
+2. witness (task group-heal--witness, strata:c7f3dedc, pushed): CI run 44990695475 is its first
+   build; A4 job 261121-214445-82aca9. Its journal has the rest.
+3. repair: blocked on the design ruling below. sim-rows (order 3) after repair and witness.
 
 ## Blocked on
 
-Nothing.
+Lead (contract): how a damaged replica reinstalls (A3, task `repair`). install's transfer
+starts from the source's bundle: `fetch_pin` needs it, `serve` answers only pinned positions,
+and pins are made on the source's chore at `SnapshotNeeded`. consensus's `Driver::repair(b)`
+rewinds the apply index to any b in [own base, own commit] (Core::handle(Repair)), so a fenced
+replica that refetches state must land at or above its own checkpoint. Options:
+
+- (a) In place, a new strata fetch name: the fenced replica reopens, acknowledges its delivered
+  ranges unapplied, asks a data voter for `repair/pin` (the source pins its latest bundle on its
+  chore and answers bundle and pin), stages and activates as install does (files whose CRC32C
+  matches kept, damaged ones fetched whole), then `repair(P_source)`; needs P_source in
+  [own base, own commit], else retry. New wire (format-freeze reviews it); Repair is refused
+  Busy while a range is delivered, so it races sustained commits.
+- (b) Membership, existing contracts only: the host replaces the fenced incarnation by a fresh
+  one on the node (learner installs, promoted beside it, the old one removed). A membership
+  change and a whole-replica transfer per repair; host orchestration (placement).
+- (c) consensus surface: a follower asks its leader for an install (a Driver call that makes the
+  leader treat it as below its base). Install's path end to end, the image its new base, no
+  new strata wire; Detent's library.
+
+Recommendation: (c), one mechanism for a replica that needs state; (a) if Detent declines.
+
+Finding for Detent (from witness, in its journal): the Driver does not expose
+`Core::witness_bound`, so a witness cannot compact its log.
 
 ## Evidence
 
