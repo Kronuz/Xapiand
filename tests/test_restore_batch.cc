@@ -27,6 +27,7 @@
 
 #include "test_harness.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <filesystem>
 #include <optional>
@@ -89,14 +90,14 @@ struct Replica {
 	}
 };
 
-// An incompressible body of the given size: Data zstd-compresses what it stores, so a repeated byte would shrink to
-// nothing and the sizes below would not follow the body's.
+// An incompressible body of the given size, every byte value equally likely: Data zstd-compresses what it stores
+// (and keeps it raw when that does not shrink it), so a narrower alphabet would shrink below the sizes it names.
 std::string noise(std::size_t size) {
-	std::string out(size, ' ');
+	std::string out(size, '\0');
 	std::uint64_t state = 0x9e3779b97f4a7c15ull ^ size;
 	for (auto& c : out) {
 		state = state * 6364136223846793005ull + 1442695040888963407ull;
-		c = static_cast<char>('!' + (state >> 33) % 90);
+		c = static_cast<char>(state >> 56);
 	}
 	return out;
 }
@@ -156,6 +157,7 @@ void test_encoded_size_matches_the_codec() {
 	auto c = prepared("Kc", 0);
 	c.expected.reset();
 	c.document = CommandBytes{{}, true, CommandStream::staging, 17, 1ull << 21};
+	std::printf("70000-byte body: document %zu bytes, write %zu\n", b.document.bytes.size(), encoded_size(b));
 	CHECK(b.document.bytes.size() > 70000u);
 	const Command none{9, {}};
 	const Command all{9, {a, b, c}};
@@ -178,6 +180,7 @@ void test_packing_fills_each_entry() {
 	for (const std::size_t limit : {std::size_t(4096), COMMAND_ENTRY_BYTES / 16}) {
 		const auto commands = batch_all(writes, limit);
 		REQUIRE(commands.size() > 1u);
+		CHECK(commands.size() < writes.size());
 		std::vector<std::string> order;
 		for (std::size_t c = 0; c < commands.size(); ++c) {
 			const auto& command = commands[c];
@@ -193,7 +196,14 @@ void test_packing_fills_each_entry() {
 			}
 		}
 		CHECK(order == keys);
-		std::printf("limit %zu: %zu writes in %zu commands\n", limit, writes.size(), commands.size());
+		std::size_t smallest = limit, largest = 0, total = 0;
+		for (const auto& w : writes) {
+			smallest = std::min(smallest, encoded_size(w));
+			largest = std::max(largest, encoded_size(w));
+			total += encoded_size(w);
+		}
+		std::printf("limit %zu: %zu writes of %zu-%zu bytes (%zu in all) in %zu commands\n", limit, writes.size(), smallest, largest, total,
+			commands.size());
 	}
 }
 
@@ -203,6 +213,8 @@ void test_oversized_alone_schema_closes_refused() {
 	std::vector<CommandWrite> writes{prepared("Ka", 0), prepared("Kbig", 0, 3 * COMMAND_ENTRY_BYTES / 2), prepared("Kb", 0)};
 	const auto commands = batch_all(writes, COMMAND_ENTRY_BYTES);
 	REQUIRE_EQ(commands.size(), 3u);
+	std::printf("1.5 MiB body: write %zu bytes, limit %zu\n", encoded_size(commands[1].writes[0]), COMMAND_ENTRY_BYTES);
+	CHECK(encoded_size(commands[1].writes[0]) > COMMAND_ENTRY_BYTES);
 	CHECK_EQ(commands[1].writes.size(), 1u);
 	CHECK_EQ(commands[1].writes[0].key, std::string("Kbig"));
 	CHECK(split_command(commands[1], 1).size() > 2u);
