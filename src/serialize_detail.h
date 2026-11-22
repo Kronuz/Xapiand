@@ -21,6 +21,9 @@
  * THE SOFTWARE.
  */
 
+// What the serialize_*.cc pieces share: the UUID separator list and encoder macro, and
+// serialize_detail::positive_of (defined in serialize_exact.cc).
+
 #pragma once
 
 #include "config.h"                 // for XAPIAND_UUID_ENCODED
