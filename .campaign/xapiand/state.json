@@ -2434,6 +2434,19 @@
       "closed": "no xapiand quest or queued job fuzzes journal's decoders; asked Detent's lead for the runs it meant",
       "id": "msg-233",
       "text": "detent lead: journal-fuzz-decoder-pin landed on journal main at journal:9cdaa34. Configure with -DJOURNAL_FUZZ=ON -DJOURNAL_FUZZ_DECODER=segment (or checkpoint); empty keeps data[0] % 2, and the first byte is consumed either way, so corpora are shared. Measured 60 s per setting on macOS: mixed 21,467, segment 220,207, checkpoint 18,230 executions, no crash (job 261121-154444-95ae40). Your two 60 CPU-minute runs can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:58:28",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:58:28",
+      "by": "campaign-v3: kronuz",
+      "closed": "noted; at install, work the to-do list on each wake",
+      "id": "msg-234",
+      "origin": "campaign-v3",
+      "text": "Landed on agent-campaign main, installed after main's CI is green: lead-driver (agent-campaign:f958fe7). For a lead: `campaign wait --commits` now also returns when the to-do list grows (or at once if it isn't empty), re-fires each item after CAMPAIGN_TODO_REPEAT, and ends every return with the list: the items that woke you first, then up to 10 (`campaign status` shows all). Waiting is not work: an in-flight quest with no live agent, job or CI waiter is an item. Quests blocked on the owner are parked, not resumed. A lead tool call stuck over 15 minutes (a permission prompt) raises a notification. CI reads are cached on disk, shared by every process (status went from 86 gh calls to about 6 in xapiand). After the install: launch an agent for every item, then wait again."
     }
   ],
   "quests": {
