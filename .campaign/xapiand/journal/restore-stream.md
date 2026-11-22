@@ -1,6 +1,6 @@
 # restore-stream: journal
 
-State: waiting on jobs 261121-202756-2c7fb6 (A6), 261121-202756-ca0d1d (A3), 261121-202757-d2afb8 + 261121-202758-e5258b (A1), 261121-202758-fe2fcf (A2), at merge head a076cc91f0a9; CI there needs the push. Master merge voided the security acceptance (21 code files under review); lead re-accepts after reading `git diff 0547322a4d72 78484bdee355` and these jobs.
+State: waiting on CI at Xapiand:0d542bf (master merged by the lead; job evidence passed at edb1b4b and carries; security re-accepted at 0d542bf). Then the landing loop lands it.
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
