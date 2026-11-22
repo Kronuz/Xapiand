@@ -24100,8 +24100,8 @@
     "restore-stream": {
       "accepted": {
         "security": {
-          "at": "2026-11-21T13:09:43",
-          "base": "0547322a4d72d6bdd23ab95dce87505826c89d40",
+          "at": "2026-11-21T20:27:19",
+          "base": "78484bdee35512b0b66d42366cf4216601f05e21",
           "blobs": {
             "docs/perf/bulk-load-rss.md": "100644:683e8caebb9dbdf08715ac86e4d9afdd4e4bec93",
             "harness/bench/bulk_rss_probe.py": "100644:266e93006c3e4ae5f4306c20b18c683a61613fe9",
@@ -24111,7 +24111,7 @@
             "tests/test_restore_stream_fuzz.cc": "100644:0e917204d253e3febb512ff25b2e3eb467ee4c5a"
           },
           "by": "review",
-          "commit": "e3265faf514789f623ca060c7b8fd700e0530ef4",
+          "commit": "8b662eca9522096b296555a54345243091526e1f",
           "criteria": "fd024766c8bfafd1",
           "diffs": {
             "docs/perf/bulk-load-rss.md": "988a4aeb94e00b4e",
@@ -24122,7 +24122,7 @@
             "tests/test_restore_stream_fuzz.cc": "02d94e9d7e719b00"
           },
           "findings": {},
-          "note": "lead read main's changes since the review (git diff 9d0d2703aeee 0547322a4d72): shard.cc's stale-id replace now throws version_conflict (racing-put-409), range.cc compares only given range ends (keyword-open-range), and tests and a doc follow them; none reaches the restore stream's input path (search_views.cc), which the review covered",
+          "note": "lead re-read main's changes under the quest since the review (0547322..78484bd): only failed-restore-exit's CLI file restore (handler.cc restore_documents(fd) refuses non-map objects, main.cc maps it to EX_DATAERR, its check script). restore-stream's own change is the HTTP stream restore in search_views.cc; the two paths share no code, and the merged tree keeps the refusal (handler.cc:1148-1156). Evidence rerun at the merge head a076cc9: A1 4181b4 and 55f313, A2 f84811, A3 1b6655, A6 c8ca75 (32 CPU-minutes).",
           "review": "daa1844b4b11158fc566acd210baa875e8a9d1e8",
           "reviewed": "5842f9ef31f8533b301563b7e17419ae9b6ee892",
           "verdict": "APPROVE"
@@ -24171,7 +24171,7 @@
       "risk": "high",
       "status": "review",
       "title": "a whole-database RESTORE streams a top-level MessagePack array element by element",
-      "updated": "2026-11-21T13:09:43",
+      "updated": "2026-11-21T20:27:19",
       "worktree": "../Xapiand-wt/xapiand/restore-stream"
     },
     "retention": {
