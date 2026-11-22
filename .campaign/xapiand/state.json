@@ -29865,8 +29865,43 @@
           ]
         }
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T00:36:47",
+          "ci": {
+            "carried": true,
+            "commit": "6a19e67c9ea67ab56dd55b5334cfb2b9d4727ced",
+            "runs": [
+              44978418363
+            ]
+          },
+          "commit": "1312230566ee0483c81d4c422cff6fda70030839",
+          "criteria": {
+            "A1": "261121-234452-7a6978 (passed at 2a13d71a7918; only 1 merge from main since, none touching its files)",
+            "A2": "261121-234455-7262dd (passed at 2a13d71a7918; only 1 merge from main since, none touching its files); fails without: 261120-023044-64c800, 261121-045943-2b0229",
+            "A3": "261121-203422-0f8b3d (passed at 2425ae25a52b; only 2 merges from main since, none touching its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DLTO=OFF >/dev/null && cmake --build build -j4 --target xapiand_test_pool && build/bin/xapiand_test_pool",
+              "commit": "2425ae25a52b6d5bb6dcb84f68326326529b94db",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-203422-0f8b3d",
+              "level": "light",
+              "seconds": 280.8,
+              "state": "done",
+              "what": "strata-pin-catalog check build-test at 2425ae25a52b"
+            }
+          ],
+          "final": true,
+          "from": "c1a2ddc2d2a8ae8fa344057281e66f125c7bfcb1",
+          "reason": "",
+          "tested": "1312230566ee0483c81d4c422cff6fda70030839"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "stopword-lists"
@@ -29874,9 +29909,9 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "review",
+      "status": "landed",
       "title": "Pin strata at the catalog delivery fix; land test_pool's reproducer",
-      "updated": "2026-11-21T08:47:56",
+      "updated": "2026-11-22T00:36:48",
       "worktree": "../Xapiand-wt/xapiand/strata-pin-catalog"
     },
     "strata-pins-2026-11": {
