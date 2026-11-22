@@ -1,6 +1,6 @@
 # restore-stream: journal
 
-State: ready for review; security accepted, landing chores in progress (A8 met: CI green at e3265faf5147, no blocker)
+State: waiting on jobs 261121-170017-c8ca75 (A6), 261121-170017-1b6655 (A3), 261121-170018-4181b4 + 261121-170019-55f313 (A1), 261121-170019-f84811 (A2), at merge head a076cc91f0a9; CI there needs the push. Master merge voided the security acceptance (21 code files under review); lead re-accepts after reading `git diff 0547322a4d72 78484bdee355` and these jobs.
 Quest: .campaign/xapiand/quests/restore-stream.md (the lead's; never edit it)
 
 ## Doing
