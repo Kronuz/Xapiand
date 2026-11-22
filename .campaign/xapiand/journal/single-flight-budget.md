@@ -1,6 +1,6 @@
 # single-flight-budget: journal
 
-State: waiting on jobs 261121-133028-a36e8e 261121-133832-38434f 261121-133833-1d6960 261121-133836-974d76
+State: waiting on jobs 261121-133028-a36e8e 261121-195712-fa1b83 261121-195712-6bdd67 261121-195713-32dfdb
 Quest: .campaign/xapiand/quests/single-flight-budget.md (the lead's; never edit it)
 
 ## Doing
@@ -26,8 +26,8 @@ Cause on main (src/single_flight.h at 70ad01dd6): a joiner `co_await flight->don
 
 | Criterion | Evidence |
 |---|---|
-| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (pending); passes at eea2bee55: 261121-133832-38434f (pending); TSan 5 runs at eea2bee55: 261121-133833-1d6960 (pending) |
-| A2 | suite at eea2bee55: 261121-133836-974d76 (pending) |
+| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (pending); passes at eea2bee55: 261121-195712-fa1b83 (pending); TSan 5 runs at eea2bee55: 261121-195712-6bdd67 (pending) |
+| A2 | suite at eea2bee55: 261121-195713-32dfdb (pending) |
 | A3 | docs/mechanisms/cancellation.md: the joiner is out of Limits; How step 1 says a joiner waits under its own token |
 | A4 | CI at the pushed head (pending) |
 
