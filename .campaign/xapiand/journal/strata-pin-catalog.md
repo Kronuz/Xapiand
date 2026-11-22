@@ -14,7 +14,7 @@ under quiet light running; job scripts in ~/.scratch/xapiand/strata-pin-catalog/
 
 1. When the two A2 jobs finish, confirm A2 met in `campaign status`. The reproducer script is harness/pool_asan_repro.sh (outside the quest's file set: lead widens files). CI note: its ASan job skips test_pool in the parallel ctest but the next step runs `ctest -R '^test_pool$'` alone, so CI does run it under ASan on this branch.
 2. CI at 555a48b5f70f: only `Build + unit + smoke` red, and only test_lua.cc:1673 (known flake, lua-method-flake quest owns it); every other job green (ASan, TSan, E2E, arm64, FreeBSD). Not mine.
-3. A3: `campaign verify --for A3` reuses build-test 261121-145654-83eeec (passed at f8d8ddcfb43a; no merged file touches CMakeLists.txt pin or tests/test_pool.cc).
+3. A3: `campaign verify --for A3` reuses build-test 261121-203422-0f8b3d (passed at f8d8ddcfb43a; no merged file touches CMakeLists.txt pin or tests/test_pool.cc).
 
 ## Blocked on
 
@@ -26,7 +26,7 @@ Nothing.
 |---|---|
 | A1 | 261121-234452-7a6978 (ASan build + 5 runs at the merged head 4dd5713; passed earlier at 79740f7 as 261121-180527-6cb617) |
 | A2 | head (pass): 261121-234455-7262dd at 4dd5713 (passed earlier at 6a19e67 as 261121-185736-4a84b1); fails-without (head's test, strata pinned back to 397c02d5 via STRATA_PIN; the pre-pin commit has no reproducer): 261121-145729-0e1c32 (RUNS=1, TEST_FILTER=torn_down_scheduler, RUN_TIMEOUT=300); harness/pool_asan_repro.sh builds at the job's commit with ci.yml's ASan flags, exits 126 on a build break, exits 1 on a run that hangs past RUN_TIMEOUT. Superseded: 261121-084807-0ed3b0, 261121-130758-5861aa (build break), 261121-130809-89d93b (timeout), 261121-045943-2b0229 (asan_run.sh) |
-| A3 | 261121-145654-83eeec (build-test) + `ci:Functional E2E (docs)` at the head; CI red only from test_lua (known flake) |
+| A3 | 261121-203422-0f8b3d (build-test) + `ci:Functional E2E (docs)` at the head; CI red only from test_lua (known flake) |
 
 ## Rulings I made
 
