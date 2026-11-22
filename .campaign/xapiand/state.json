@@ -25097,7 +25097,8 @@
         "tests/test_single_flight*",
         "tests/CMakeLists.txt",
         "docs/mechanisms/cancellation.md",
-        "src/database/schemas_lru.cc"
+        "src/database/schemas_lru.cc",
+        "harness/async_allowlist.tsv"
       ],
       "landed": [],
       "lenses": [
@@ -25110,7 +25111,7 @@
       "risk": "normal",
       "status": "review",
       "title": "A request joining a schema load leaves when its client does",
-      "updated": "2026-11-21T19:54:02",
+      "updated": "2026-11-21T19:55:45",
       "worktree": "../Xapiand-wt/xapiand/single-flight-budget"
     },
     "sort-cast-not-wrap": {
