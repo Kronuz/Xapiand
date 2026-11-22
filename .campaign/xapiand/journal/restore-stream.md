@@ -21,8 +21,8 @@ Nothing.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-130617-b4bf50, 261121-130617-d17500 |
-| A2 | 261121-130617-b4bf50, 261121-130617-d17500, 261121-130618-00615a |
+| A1 | 261121-170018-4181b4, 261121-170019-55f313 |
+| A2 | 261121-170018-4181b4, 261121-170019-55f313, 261121-170019-f84811 |
 | A3 | 261121-130617-9aa0dc |
 | A4 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md); fails without: 261121-034201-4acbcc, 261121-034203-69a143 |
 | A5 | 261121-034148-685f8b (passed at c5b2c0689ce5; 5 merges from main since, none touching its files; ignores docs-only docs/perf/bulk-load-rss.md) |
