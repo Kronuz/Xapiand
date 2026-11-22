@@ -31,6 +31,7 @@
 #include <cstdint>                           // for std::uint64_t
 #include <functional>                        // for std::function
 #include <memory>                            // for std::shared_ptr, std::make_shared
+#include <optional>                          // for std::optional
 #include <stddef.h>                          // for size_t
 #include <string>                            // for std::string
 #include <string_view>                       // for std::string_view
@@ -38,6 +39,7 @@
 #include <utility>                           // for std::pair
 #include <vector>                            // for std::vector
 
+#include "database/command.h"                // for Command, CommandBytes, COMMAND_ENTRY_BYTES
 #include "database/flags.h"                  // for DB_*
 #include "endpoint.h"                        // for Endpoints
 #include "engine/callbacks.h"                // for engine::KeyMaker, engine::MatchSpy
@@ -63,6 +65,11 @@ class Schema;
 class SchemasLRU;
 struct ct_type_t;
 struct query_field_t;
+
+namespace strata::group {
+struct answer;
+enum class ack : std::uint8_t;
+}  // namespace strata::group
 
 
 engine::docid to_docid(std::string_view document_id);
@@ -306,6 +313,101 @@ public:
 
 	task::task<MsgPack> unserialize_term_id(std::string_view term_id);
 };
+
+
+// A shard's commands through its replication group, chunked past the entry limit (docs/design/cluster-release.md
+// D12; contract xapiand:chunked-command). ShardEndpoint's propose path is their caller (journal-replaces-wal core
+// step d); tests drive them through a strata::group.
+
+// Proposes one entry to the shard's group at a level and answers what its proposer heard.
+using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
+
+// A chunked command's id: the proposing leader's term in the high 32 bits, a sequence below.
+constexpr std::uint64_t chunked_id(std::uint64_t term, std::uint64_t sequence) noexcept {
+	return term << 32 | (sequence & 0xffffffffu);
+}
+
+// The term every entry of a chunked command lands in, or it fails: a higher term's first entry retires it (D12).
+constexpr std::uint64_t chunked_term(std::uint64_t id) noexcept {
+	return id >> 32;
+}
+
+// One leader's chunked-command ids, from `floor`, the group's last log index at its ready point. An id is drawn
+// only to propose its first chunk, so an earlier leader of the same term (a reopen that resumed it) never drew one
+// at or past `floor` that reached the log.
+class ChunkedIds {
+	std::uint64_t term_;
+	std::uint64_t next_;
+
+public:
+	ChunkedIds(std::uint64_t term, std::uint64_t floor) : term_(term), next_(floor + 1) { }
+
+	std::uint64_t next() noexcept {
+		return chunked_id(term_, next_++);
+	}
+};
+
+// A blob streamed through the group into a volume of its own (D12): its bytes as chunk entries of the upload
+// stream, each entry within `limit`, then the final entry of the command that names it, or its abort.
+class ChunkedUpload {
+	std::uint64_t id_;
+	std::uint64_t size_;
+	std::size_t limit_;
+	std::uint64_t offset_ = 0;   // the stream's bytes in entries so far
+	std::string pending_;        // the bytes of the next chunk
+
+	std::string chunk(std::size_t n);
+
+public:
+	ChunkedUpload(std::uint64_t id, std::uint64_t size, std::size_t limit = COMMAND_ENTRY_BYTES);
+
+	std::uint64_t id() const noexcept {
+		return id_;
+	}
+
+	std::uint64_t size() const noexcept {
+		return size_;
+	}
+
+	std::uint64_t received() const noexcept {
+		return offset_ + pending_.size();
+	}
+
+	// The chunk entries `bytes` completes; a partial chunk waits for more or for end(). Raises ClientError past
+	// the upload's size.
+	std::vector<std::string> append(std::string_view bytes);
+
+	// The last chunk entry, if bytes wait for one. Raises ClientError when the body ended short of the size.
+	std::vector<std::string> end();
+
+	// The record of the blob the final entry's write names: the upload stream's [0, size).
+	CommandBytes record() const;
+
+	// The final entry of `command`, whose write names record(). Raises errc::invalid past the entry limit.
+	std::string final_entry(const Command& command) const;
+};
+
+// The entry that ends chunked command `id` applying nothing: its staging and its upload retire.
+std::string abort_entry(std::uint64_t id);
+
+// Proposes `command` at `level` (D12): its entry alone when it fits `limit`, else chunks of `id` into its staging
+// stream at ack::none, then its final entry at `level`. A command cut by a leader change (an entry placed outside
+// its id's term, or superseded) applied nothing and raises errc::not_available: the request is retried whole. A
+// failure after the first chunk proposes the abort before it raises.
+task::task<strata::group::answer> propose_command(const ProposeEntry& propose, const Command& command, std::uint64_t id,
+	strata::group::ack level, std::size_t limit = COMMAND_ENTRY_BYTES);
+
+// Streams `body` into `upload` at ack::none. A failure proposes the abort before it raises: a body past or short of
+// the size raises ClientError, a leader change errc::not_available.
+task::task<void> propose_upload(const ProposeEntry& propose, ChunkedUpload& upload, DatabaseHandler::BodyChunks& body);
+
+// The upload's final entry for `command` at `level`, which applies it; cut as propose_command's are.
+task::task<strata::group::answer> propose_upload_final(const ProposeEntry& propose, const ChunkedUpload& upload,
+	const Command& command, strata::group::ack level);
+
+// Proposes the abort of a command whose proposer gives it up (a failed prepare, a lost client); answers whether the
+// group placed it, and never raises. One never ended stays open until a higher term retires it.
+task::task<bool> propose_abort(const ProposeEntry& propose, std::uint64_t id);
 
 
 // What a RESTORE's run met (tests assert their case occurred): the largest range applied at once, the writes of an id

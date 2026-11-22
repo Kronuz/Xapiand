@@ -46,6 +46,8 @@
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION, make_msgpack_unpacker
+#include "consensus/driver.h"               // for kronuz::consensus::superseded
+#include "strata/group/answer.hh"           // for strata::group::answer, ack
 #include "database/wal.h"                   // for DatabaseWAL
 #include "stopper.h"                       // for StopWordsMismatchError
 #include "database/wide_search.h"           // for wide_search::pins
@@ -657,6 +659,8 @@ DatabaseHandler::upload_stored(const MsgPack& document_id, const ct_type_t& ct_t
 	const auto term_id = co_await get_prefixed_term_id(document_id);
 	const size_t shard_num = id_shard(term_id, endpoints.size());
 
+	// SEAM(journal-replaces-wal core step d): through the shard's group, the body streams as propose_upload() into a
+	// ChunkedUpload and index_uploaded() proposes its document with propose_upload_final(); this storage push goes.
 	lock_shard lk_shard(endpoints[shard_num], flags, turn_token());
 	co_await lk_shard.pin();
 	auto upload = co_await lk_shard->upload_begin(chores, ct_type.to_string(), size);
@@ -715,6 +719,7 @@ DatabaseHandler::index_uploaded(const MsgPack& document_id, engine::rev document
 					if (!engine::is_missing(error.kind)) { throw; }
 				}
 			}
+			// SEAM(journal-replaces-wal core step d): the write's blob is the ChunkedUpload's record(), in its final entry.
 			data.update(ct_type, blob.volume, blob.offset, blob.size);
 			auto indexed = co_await index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 			if (const auto n_shards = endpoints.size(); n_shards > 1 && (indexed.first.did - 1) % n_shards != blob.shard) {
@@ -2392,6 +2397,210 @@ DatabaseHandler::unserialize_term_id(std::string_view term_id)
 		}
 		default:
 			THROW(SerializationError, "Term type: {} is an unknown type", type);
+	}
+}
+
+
+/*
+ * Chunked commands (docs/design/cluster-release.md D12)
+ */
+
+namespace {
+
+[[noreturn]] void
+chunked_cut()
+{
+	throw engine::Error(engine::errc::not_available, "A chunked command was cut by a leader change: retry it whole");
+}
+
+// An entry of chunked command `id` outside its id's term: a higher term's first entry retired the command.
+void
+check_chunked_term(std::uint64_t id, const strata::group::answer& answer)
+{
+	if (answer.placement.term != chunked_term(id)) {
+		chunked_cut();
+	}
+}
+
+// A chunk entry at ack::none, checked against its command's term.
+task::task<void>
+propose_chunk(const ProposeEntry& propose, std::uint64_t id, std::string entry)
+{
+	check_chunked_term(id, co_await propose(std::move(entry), strata::group::ack::none));
+}
+
+// The final entry at `level`: a superseded placement is a cut too.
+task::task<strata::group::answer>
+propose_final(const ProposeEntry& propose, std::uint64_t id, std::string entry, strata::group::ack level)
+{
+	strata::group::answer answer;
+	bool superseded = false;
+	try {
+		answer = co_await propose(std::move(entry), level);
+	} catch (const kronuz::consensus::superseded&) {
+		superseded = true;
+	}
+	if (superseded) {
+		chunked_cut();
+	}
+	check_chunked_term(id, answer);
+	co_return answer;
+}
+
+}  // namespace
+
+
+ChunkedUpload::ChunkedUpload(std::uint64_t id, std::uint64_t size, std::size_t limit)
+	: id_(id),
+	  size_(size),
+	  limit_(limit)
+{
+	if (size == 0) {
+		throw engine::Error(engine::errc::invalid, "A chunked upload has at least a byte");
+	}
+	if (chunk_capacity(id, size, limit) == 0) {
+		throw engine::Error(engine::errc::invalid, "The entry limit leaves no room for a chunk's bytes");
+	}
+}
+
+
+std::string
+ChunkedUpload::chunk(std::size_t n)
+{
+	auto entry = encode_entry(CommandChunk{id_, CommandStream::upload, offset_, std::string_view(pending_).substr(0, n)});
+	pending_.erase(0, n);
+	offset_ += n;
+	return entry;
+}
+
+
+std::vector<std::string>
+ChunkedUpload::append(std::string_view bytes)
+{
+	if (bytes.size() > size_ - received()) {
+		THROW(ClientError, "The blob is longer than its Content-Length");
+	}
+	std::vector<std::string> entries;
+	while (!bytes.empty()) {
+		const auto capacity = chunk_capacity(id_, offset_, limit_);
+		const auto take = std::min(bytes.size(), capacity - pending_.size());
+		pending_.append(bytes.substr(0, take));
+		bytes.remove_prefix(take);
+		if (pending_.size() == capacity) {
+			entries.push_back(chunk(capacity));
+		}
+	}
+	return entries;
+}
+
+
+std::vector<std::string>
+ChunkedUpload::end()
+{
+	if (received() != size_) {
+		THROW(ClientError, "The blob is shorter than its Content-Length");
+	}
+	std::vector<std::string> entries;
+	if (!pending_.empty()) {
+		entries.push_back(chunk(pending_.size()));
+	}
+	return entries;
+}
+
+
+CommandBytes
+ChunkedUpload::record() const
+{
+	return CommandBytes{{}, true, CommandStream::upload, 0, size_};
+}
+
+
+std::string
+ChunkedUpload::final_entry(const Command& command) const
+{
+	return encode_entry(CommandFinal{id_, command}, limit_);
+}
+
+
+std::string
+abort_entry(std::uint64_t id)
+{
+	return encode_entry(CommandFinal{id, Command{}});
+}
+
+
+task::task<strata::group::answer>
+propose_command(const ProposeEntry& propose, const Command& command, std::uint64_t id, strata::group::ack level, std::size_t limit)
+{
+	auto entries = split_command(command, id, limit);
+	if (entries.size() == 1) {
+		co_return co_await propose(std::move(entries.front()), level);
+	}
+	std::exception_ptr failed;
+	try {
+		for (std::size_t i = 0; i + 1 < entries.size(); ++i) {
+			co_await propose_chunk(propose, id, std::move(entries[i]));
+		}
+		co_return co_await propose_final(propose, id, std::move(entries.back()), level);
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	co_await propose_abort(propose, id);
+	std::rethrow_exception(failed);
+}
+
+
+task::task<void>
+propose_upload(const ProposeEntry& propose, ChunkedUpload& upload, DatabaseHandler::BodyChunks& body)
+{
+	bool proposed = false;
+	std::exception_ptr failed;
+	try {
+		std::string bytes;
+		while (co_await body.next(bytes)) {
+			for (auto& entry : upload.append(bytes)) {
+				proposed = true;
+				co_await propose_chunk(propose, upload.id(), std::move(entry));
+			}
+			bytes.clear();
+		}
+		for (auto& entry : upload.end()) {
+			proposed = true;
+			co_await propose_chunk(propose, upload.id(), std::move(entry));
+		}
+		co_return;
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	if (proposed) {
+		co_await propose_abort(propose, upload.id());
+	}
+	std::rethrow_exception(failed);
+}
+
+
+task::task<strata::group::answer>
+propose_upload_final(const ProposeEntry& propose, const ChunkedUpload& upload, const Command& command, strata::group::ack level)
+{
+	std::exception_ptr failed;
+	try {
+		co_return co_await propose_final(propose, upload.id(), upload.final_entry(command), level);
+	} catch (...) {
+		failed = std::current_exception();
+	}
+	co_await propose_abort(propose, upload.id());
+	std::rethrow_exception(failed);
+}
+
+
+task::task<bool>
+propose_abort(const ProposeEntry& propose, std::uint64_t id)
+{
+	try {
+		co_await propose(abort_entry(id), strata::group::ack::none);
+		co_return true;
+	} catch (...) {
+		co_return false;
 	}
 }
 
