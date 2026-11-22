@@ -2523,6 +2523,28 @@
         "quest": "detent:consensus-install-test-faultfs"
       },
       "text": "detent:consensus-install-test-faultfs started and may change files your consensus-request-install changes (order them with --after detent:consensus-install-test-faultfs, or narrow the files); may change files your node-admission changes (order them with --after detent:consensus-install-test-faultfs, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T22:17:32",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T22:17:32",
+      "by": "campaign",
+      "closed": "split-storage landed; journal-lost-bound unparked and merged main (a3eecb5)",
+      "id": "msg-238",
+      "items": {
+        "journal-group-delete": "journal-group-delete",
+        "journal-lost-bound": "journal-lost-bound (until detent:journal-tail-second-sector met: `campaign set journal-lost-bound status=active`)"
+      },
+      "settles": {
+        "start": [
+          "journal-group-delete",
+          "journal-lost-bound"
+        ]
+      },
+      "text": "split-storage landed: unlocks journal-group-delete; journal-lost-bound (until detent:journal-tail-second-sector met: `campaign set journal-lost-bound status=active`)"
     }
   ],
   "quests": {
