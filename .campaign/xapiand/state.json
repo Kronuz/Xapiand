@@ -25877,18 +25877,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-btree",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T19:12:14",
+          "commit": "b3f404a0132c165b99549723f8a055e93d48cd89",
+          "criteria": {
+            "A1": "261121-160418-a0c4fc (the build-test check); build-test 261121-160418-a0c4fc at b3f404a (was 261121-121304-c1d1ff at 553ed60)",
+            "A2": "261121-160418-0a4839 (the split check), 261121-160418-a0c4fc, 261121-163010-0fd174",
+            "A3": "261121-162004-7267ab, 261121-162003-4244c6",
+            "A4": "docs/source-layout.md lists every new file and the files kept whole, with why",
+            "A5": "CI green at b3f404a0132c",
+            "A6": "261121-162003-970180",
+            "A7": "lead, 2026-11-21: read the split; btree.h is an umbrella over compare, params, node, iterator, tree and container pieces cut at class boundaries, each opening with what it holds (cpp-btree:b3f404a)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "b3f404a0132c165b99549723f8a055e93d48cd89",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-160418-a0c4fc",
+              "level": "light",
+              "seconds": 30.3,
+              "state": "done",
+              "what": "split-btree check build-test at b3f404a0132c"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master btree tests",
+              "commit": "b3f404a0132c165b99549723f8a055e93d48cd89",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-160418-0a4839",
+              "level": "light",
+              "seconds": 1.3,
+              "state": "done",
+              "what": "split-btree check split at b3f404a0132c"
+            }
+          ],
+          "final": true,
+          "from": "4751ddde18617f2d4b5d374fcd4312c0ceb3a418",
+          "reason": "",
+          "tested": "b3f404a0132c165b99549723f8a055e93d48cd89"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../btree",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "btree's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:15",
-      "worktree": "../cpp-btree-wt/xapiand/split-btree"
+      "updated": "2026-11-21T19:12:17",
+      "worktree": ""
     },
     "split-check": {
       "accepted": {},
