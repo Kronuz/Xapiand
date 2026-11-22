@@ -1,6 +1,6 @@
 # journal-replaces-wal--restore: journal
 
-State: waiting on jobs 261121-111705-d17ab8 261121-111707-386655 261121-111709-7c5bad 261121-111711-87b492 261121-111719-e638cd
+State: waiting on jobs 261121-171240-f68a69 (tests) and mutants 261121-171257-bf7790 261121-171258-f08c53 261121-171258-da58a8, all at Xapiand:e3e55af98
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -22,6 +22,16 @@ Session 1 (2026-11-21), base Xapiand:cf65ae78b (core steps 1-3 and b). Built, ea
    assertions only; wal_recovery_check.sh and wal_replay_agg_check.sh deleted.
 6. harness/profile_bulk.sh: `--put`, `--clients`, `--query`, wall ms/doc, a window covering the smoke,
    a journal layer row.
+
+## Session 2 (restore fix)
+
+test_restore_batch failed 2 of 320 (:163, :188) at 2141ded67, fcd06fe60 and cc9f4b258 alike. Cause: the
+test's bodies were `std::string(n, 'x')`; Data zstd-compresses what it stores, so a 1.5 MiB body shrank to
+bytes and 300 writes fit one 64 KiB entry. Not the batcher, not leb128::size (same count as the old
+encode-based number_size; the 4096 limit case passed with 7 commands). Fix, Xapiand:e3e55af98: `noise()`
+incompressible bodies; the encoded_size check also asserts the body stays > 70000 bytes and compares each
+write alone with encode_entry's size (the aggregate check already existed). Jobs at e3e55af98: tests
+261121-171240-f68a69, the three mutants rerun there (the cc9f4b258 ones superseded).
 
 ## Next
 
@@ -48,8 +58,8 @@ Nothing. msg-204 and msg-205 answered by the lead (option (a) on both).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-111705-d17ab8 (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-111711-87b492 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
-| A5 | 261121-111705-d17ab8 (test_restore_batch); 261121-111707-386655 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-111709-7c5bad (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
+| A1 | 261121-171240-f68a69 (test_journal_replay, plus test_shard_group and test_group_command after my two changes to core's files); 261121-171258-da58a8 (mutant: the bundle drops the volume length, test_journal_replay fails); journal_replay_check.sh at the journal build pending step d |
+| A5 | 261121-171240-f68a69 (test_restore_batch); 261121-171257-bf7790 (mutant: RESTORE writes keep the expectation, the pipelined batch 2 is refused); 261121-171258-f08c53 (mutant: no restamp at apply, stored _version stale); RESTORE through the group's propose pending step d |
 | probe | 261121-111719-e638cd: journal_replay_check.sh and profile_bulk --put on the pre-journal build, mechanics only, not evidence |
 
 Cancelled, superseded by the renames: 261121-110941-17b096, 261121-110943-f67445, 261121-110959-9c6a80.
