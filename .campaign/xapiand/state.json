@@ -26109,18 +26109,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-constexpr-phf",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:18:34",
+          "commit": "58653a7588ada724d2165fd7dcbcda0b8afb9d30",
+          "criteria": {
+            "A1": "261121-130253-74ad7d (the build-test check), 261121-130253-74ad7d (passed at c5efe766b720; only 1 merge from main since, none touching its files), 261121-155749-cc04c3",
+            "A2": "261121-155749-cc04c3 (the split check), 261121-130255-fe1094 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A3": "261121-131354-2a6f84 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A4": "`docs/source-layout.md` at constexpr-phf:c5efe76: no new files; names `phf.hh` (1,484 lines) kept whole and why, and the gperf output in bench/ as generated",
+            "A5": "CI green at 58653a7588ad",
+            "A6": "261121-130301-172ca6 (passed at c5efe766b720; only 1 merge from main since, none touching its files)",
+            "A7": "the lead's read"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "c5efe766b720cf064a805fc0dac035e8390a0ea2",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130253-74ad7d",
+              "level": "light",
+              "seconds": 55.4,
+              "state": "done",
+              "what": "split-constexpr-phf check build-test at c5efe766b720"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master .",
+              "commit": "58653a7588ada724d2165fd7dcbcda0b8afb9d30",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155749-cc04c3",
+              "level": "light",
+              "seconds": 1.2,
+              "state": "done",
+              "what": "split-constexpr-phf check split at 58653a7588ad"
+            }
+          ],
+          "final": true,
+          "from": "f4bc77a836747fcd746591dce255d6a0897bf3f5",
+          "reason": "",
+          "tested": "58653a7588ada724d2165fd7dcbcda0b8afb9d30"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../constexpr-phf",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "constexpr-phf's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:57:42",
-      "worktree": "../constexpr-phf-wt/xapiand/split-constexpr-phf"
+      "updated": "2026-11-21T18:18:36",
+      "worktree": ""
     },
     "split-datetime": {
       "accepted": {},
