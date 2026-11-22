@@ -6607,9 +6607,13 @@
         "include/consensus/types.h",
         "include/consensus/worker.h",
         "include/consensus/transport/codec.h",
+        "include/consensus/transport/node_hello.h",
         "include/consensus/admission.h",
         "test/driver_install_request_test.cc",
         "test/transport/codec_test.cc",
+        "fuzz/fuzz_decoders.cc",
+        "fuzz/seed.cc",
+        "fuzz/corpus/decoders/**",
         "docs/mechanisms/install-request.md",
         "docs/DRIVER.md",
         "CMakeLists.txt"
@@ -6628,7 +6632,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus: a follower asks its leader for an install; the Driver exposes witness_bound",
-      "updated": "2026-11-21T22:03:33",
+      "updated": "2026-11-21T22:11:25",
       "worktree": "../consensus-wt/xapiand/consensus-request-install"
     },
     "consensus-rpc-lane": {
