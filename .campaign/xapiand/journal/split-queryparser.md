@@ -1,6 +1,6 @@
 # split-queryparser: journal
 
-State: waiting on jobs 261121-130451-f1eea0 261121-130456-b1dd83
+State: waiting on jobs 261121-212322-ece6fe (split at the merged head queryparser:0fdec0c); then CI at the head
 Quest: .campaign/xapiand/quests/split-queryparser.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -13,7 +13,7 @@ Split committed and pushed (queryparser:2679882); A2 and A6 passed; build-test (
 
 ## Next
 
-1. Read f1eea0 and b1dd83 and CI run 44950018532, paste `campaign brief`'s Evidence table, push the branch, set "ready for review".
+1. Merged main (queryparser:0fdec0c) done; push of it was denied by the classifier, so the lead pushes. Read ece6fe: if it passes, the old f8682b/fd79e8 errors were the old checker's shapes and main's stale reset (main is now a4ffbeb); answer any warnings here; then fill Evidence from `campaign brief` and set ready for review. Old: read f1eea0 and b1dd83 and CI run 44950018532, paste `campaign brief`'s Evidence table, push the branch, set "ready for review".
 
 ## Blocked on
 
