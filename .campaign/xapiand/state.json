@@ -35849,11 +35849,15 @@
       "milestone": "Xapian-only release",
       "needs": [],
       "provides": [],
+      "reason": "owner: tag v1.0.0-alpha.11 at Xapiand:cfc2a5b80 (A6), and the release line's base and file set",
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "blocked",
       "title": "The final Xapian-only Xapiand release",
-      "updated": "2026-11-21T09:42:46",
+      "until": [
+        "owner"
+      ],
+      "updated": "2026-11-21T21:27:32",
       "worktree": "../Xapiand-wt/xapiand/xapiand-final-release"
     },
     "xapiand-on-strata": {
