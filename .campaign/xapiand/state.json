@@ -27411,18 +27411,65 @@
         "AGENTS.md",
         "ARCHITECTURE.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-workpool",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T18:22:18",
+          "commit": "bdf893212605a8d64f54b8cd7e9c19065ad56c10",
+          "criteria": {
+            "A1": "261121-130515-92a210 (the build-test check), 261121-130515-92a210 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md), 261121-155814-b73b8c",
+            "A2": "261121-155814-b73b8c (the split check), 261121-130515-92a210 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md), 261121-155814-b73b8c, 261121-130517-25263e (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A3": "261121-130520-f98c9e (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A4": "docs/source-layout.md (workpool:22acbb0)",
+            "A5": "CI green at bdf893212605",
+            "A6": "261121-130523-77f795 (passed at 22acbb0e99df; 1 merge from main since, none touching its files; ignores docs-only AGENTS.md, ARCHITECTURE.md)",
+            "A7": "lead, 2026-11-21: read the split; idle, ready-ring and sync pieces are separate mechanisms; each opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "22acbb0e99df1760455c33a4c36636ed2d62db36",
+              "docs": [
+                "AGENTS.md",
+                "ARCHITECTURE.md"
+              ],
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-130515-92a210",
+              "level": "light",
+              "seconds": 46.5,
+              "state": "done",
+              "what": "split-workpool check build-test at 22acbb0e99df"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main .",
+              "commit": "bdf893212605a8d64f54b8cd7e9c19065ad56c10",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-155814-b73b8c",
+              "level": "light",
+              "seconds": 1.6,
+              "state": "done",
+              "what": "split-workpool check split at bdf893212605"
+            }
+          ],
+          "final": true,
+          "from": "0e3f919055d4ca78fd521b0d5f4c2733ef79f7e1",
+          "reason": "",
+          "tested": "bdf893212605a8d64f54b8cd7e9c19065ad56c10"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../workpool",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "workpool's large files split where it helps maintenance",
-      "updated": "2026-11-21T13:17:24",
-      "worktree": "../workpool-wt/xapiand/split-workpool"
+      "updated": "2026-11-21T18:22:19",
+      "worktree": ""
     },
     "split-xapiand-core": {
       "accepted": {},
