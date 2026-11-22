@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: API ready for Detent's review at consensus:c7a1ad7
+State: API sent to Detent's lead for review (lead, 2026-11-21); bodies wait for the verdict. A2 amended: one image per requester per leader base (answers Q1, Q2). Files widened to codec.h, admission.h, worker.h, codec_test.cc, docs/DRIVER.md.
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
