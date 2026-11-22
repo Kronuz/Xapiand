@@ -26209,6 +26209,40 @@
       "updated": "2026-11-21T12:29:17",
       "worktree": ""
     },
+    "split-check-anchor": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
+          "level": "light",
+          "minutes": 30,
+          "name": "test"
+        },
+        {
+          "cmd": "bash -c '/usr/local/bin/ruff check --config tools/ruff.toml tools/*.py && /usr/local/bin/ruff format --check --config tools/ruff.toml tools/*.py'",
+          "level": "light",
+          "minutes": 30,
+          "name": "lint"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tools/split_check.py",
+        "tools/test_split_check.py",
+        "tools/testdata/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../cpp-libraries",
+      "risk": "low",
+      "status": "planned",
+      "title": "split_check matches repeated lines by their unique anchors",
+      "updated": "2026-11-21T20:43:42"
+    },
     "split-check-sources": {
       "accepted": {},
       "after": [],
