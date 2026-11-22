@@ -2502,6 +2502,27 @@
         "quest": "detent:journal-drop-memory-io"
       },
       "text": "detent:journal-drop-memory-io started and may change files your journal-lost-bound changes (order them with --after detent:journal-drop-memory-io, or narrow the files); changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T22:18:39",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T22:18:39",
+      "by": "campaign detent",
+      "closed": "node-admission and consensus-request-install merge consensus main when consensus-install-test-faultfs lands; no ordering needed (shared CMakeLists/test registration only)",
+      "id": "msg-241",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-request-install",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-install-test-faultfs"
+      },
+      "text": "detent:consensus-install-test-faultfs started and may change files your consensus-request-install changes (order them with --after detent:consensus-install-test-faultfs, or narrow the files); may change files your node-admission changes (order them with --after detent:consensus-install-test-faultfs, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
