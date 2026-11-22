@@ -1,6 +1,6 @@
 # split-check-anchor: journal
 
-State: waiting on jobs 261121-204458-816e97 (A1, fails before) 261121-223121-3b5e22 (A3) and CI at cpp-libraries:fe8491f
+State: ready to land; the lead reads the diff and lands with --push
 Quest: .campaign/xapiand/quests/split-check-anchor.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,7 +30,7 @@ jobs no journal names), and answer each message by its id (msg-N).
 |---|---|
 | A1 | the `test` check at fe8491f: 261121-220731-d77242 (passed): test_split_check.py's repeated-line fixtures; the new tests fail on the checker before the change: 261121-204458-816e97 (queued) |
 | A2 | the `lint` check at fe8491f: 261121-220731-795185; tool tests: 261121-220731-d77242 (passed) |
-| A3 | 261121-223121-3b5e22: fe8491f's split_check.py on schema-split's head Xapiand:1d471a9 (`--base master src/database`) |
+| A3 | 261122-000012-53c86b (0 errors, 43 warnings): fe8491f's split_check.py on schema-split's head Xapiand:1d471a9 (`--base master src/database`) |
 
 ## Result
 
