@@ -1,6 +1,6 @@
 # split-xapiand-src: journal
 
-State: waiting on jobs 261121-145050-4c6e2a (A2, split_check from split-check-sources at the merged head 85892a5f343c; queued behind other holds)
+State: waiting on jobs 261121-160547-7e3aa6 (nm sizes, master), 261121-160552-112d6f (nm sizes, head), 261121-160601-1958d9 (their diff), and the split check and CI at the new head (see Evidence)
 Quest: .campaign/xapiand/quests/split-xapiand-src.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,12 +9,13 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Merged master (clean, no conflicts; master changed none of this quest's files, only src/engine/strata/shard.cc and docs/campaign files, so nothing to re-apply per file). Submitted A2 with the fixed checker; the suite (A1) and A3/A6 evidence stand at the merged head (campaign reuses them: only the merge came since, touching none of the quest's files). Pushed once.
+Merged master again (clean). Added the opening comment to src/serialize_detail.h (A7 gap). The first A3 nm job proved nothing: Mach-O `nm -S` prints size 0 for every symbol (the job log warns), so its diff compared only names. Replaced by nmsz.sh, which takes a symbol's size as the distance to the next text symbol, strips local `(.N)` suffixes, and diffs master vs head (jobs above). The checker job 261121-145050-4c6e2a is still queued; the warnings are answered from the diff below and the split check reruns through `campaign verify`.
 
 ## Next
 
-1. Read 261121-145050-4c6e2a. An error left is real: fix the split (moves only) and rerun. The three old errors are answered below.
-2. Lead: A7 read, rerun `check split` with campaign verify after split-check-sources lands.
+1. Read the nm diff (1958d9): explain each Serialize/aggregation difference under Warnings below; fix the split if a hot symbol grew.
+2. Read the split check at the head: an error left is real; a warning not answered below gets an answer.
+3. Lead: A7 read.
 
 ## Blocked on
 
@@ -26,7 +27,7 @@ Merged master (clean, no conflicts; master changed none of this quest's files, o
 |---|---|
 | A1 | 261121-121055-04ff19 (suite passed at eab05d251a2d; only the master merge since, none touching the quest's files) |
 | A2 | 261121-145050-4c6e2a (split_check.py from split-check-sources, at 85892a5f343c). Failed jobs examined: 261121-114550-041735 and 261121-121055-ba2719 (script absent, exit 2); 261121-123004-245d6f (old checker, 3 errors + 1 warning, answered below). 261121-145048-988eab (old script path, same checker) cancelled |
-| A3 | 261121-114627-30abac (base), 261121-121104-e6ee83 (head), 261121-121123-22c397 (diff); cancelled/skipped, superseded: 261121-114629-a6153b, 261121-114635-b0e829, 261121-121108-0d7f54 |
+| A3 | 261121-160547-7e3aa6 (master), 261121-160552-112d6f (head), 261121-160601-1958d9 (diff). Replaces 261121-121104-e6ee83 / 261121-121123-22c397 and earlier: Mach-O nm sizes are always zero, so those compared names only |
 | A4 | artifact: `docs/dev/source-layout.md` lists every new file (5 serialize_*, 5 metrics_*.h, 3 bucket_*.h) and what it holds; processor.cc kept whole with its reason. Read at the merged head |
 | A5 | CI after the push |
 | A6 | 261121-121111-6d8976 (all new headers, passed at eab05d251a2d); earlier head: 261121-115601-758a68 |
@@ -37,6 +38,16 @@ Answers to the old checker's findings (245d6f):
 - `src/serialize_exact.cc:76`, `serialize_guess.cc:60`, `serialize_scalar.cc:60`, `using serialize_detail::positive_of;`: errors in the old checker, warnings in the new. Each is the using-declaration that gives the piece the shared `positive_of` helper, which left serialize.cc's anonymous namespace so three TUs can call it (declared in serialize_detail.h, defined in serialize_exact.cc). No body, name or order changed; call sites stay `positive_of(...)`.
 - `src/serialize_detail.h:41` warning, `uint64_t positive_of(int*, std::string_view) noexcept;` (a new prototype, a linkage change): the same helper's declaration. The definition lost its anonymous namespace (a dropped `static`-equivalent), so it is inlinable across TUs only through LTO; A3 measured the symbol sizes under Release+LTO.
 - The over-1,000-line notes are other files, not this quest's, except src/lua/processor.cc (1,125, kept whole and justified in source-layout.md).
+
+## Warnings (the fixed checker), each answered
+
+1. Dropped `static` / linkage: one. `positive_of` sat in serialize.cc's anonymous namespace (internal linkage) and now has external linkage as `serialize_detail::positive_of`, because three pieces (serialize_exact/guess/scalar.cc) call it. Class `static` members and function-local `constexpr static` objects moved with their functions unchanged.
+2. New prototype: `uint64_t positive_of(int*, std::string_view) noexcept;` in serialize_detail.h, the declaration of that one helper; its definition is the moved body, in serialize_exact.cc.
+3. `using serialize_detail::positive_of;` at namespace scope in serialize_exact.cc, serialize_guess.cc, serialize_scalar.cc: keeps every call site `positive_of(...)` as it was; no body, name or order changed.
+4. Moved dynamic initializers: none. serialize.cc's only namespace-scope object is `constexpr char UUID_SEPARATOR_LIST`, constant-initialized, now in serialize_detail.h next to the `UUID_ENCODER` macro; the aggregation headers hold class templates only.
+5. Hot code across TUs: the Serialize per-type serializers moved into four TUs, and `positive_of` (a strtoull wrapper) is now a cross-TU call. The `nm` comparison (Release+LTO, jobs above) is the answer; result below.
+
+nm result: <fill from 261121-160601-1958d9>
 
 ## Result
 
