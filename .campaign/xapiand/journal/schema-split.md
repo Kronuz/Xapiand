@@ -1,6 +1,6 @@
 # schema-split: journal
 
-State: waiting on jobs 261121-200713-a4eb7a 261121-203757-64078f 261121-203624-f53a56 261121-203627-ff0c0a 261121-203631-291e5b 261121-203641-50bda7 261121-203642-2768b9; blocked on lead: CMake glob, split_check fix
+State: waiting on jobs 261121-204605-8fd08d 261121-204544-b0745e 261121-204547-0ba7f1 261121-204551-d364fa 261121-204554-38f339 261121-204542-68e0fc 261121-200713-a4eb7a
 Quest: .campaign/xapiand/quests/schema-split.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,37 +9,27 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Split cut and committed (12 pieces, cut.py the generator); docs/dev/schema-layout.md written.
-Waiting on the jobs below and on the lead's two rulings (Blocked on).
+Glob committed alone (8d85af070, the lead's ruling); A1, fnsizes, ctest -N, selfcontained and the
+anchored split check queued at that head.
 
 ## Next
 
-1. Read the jobs: probe suite, selfcontained, ctest -N, gate split check (expected red, see
-   Blocked on 2), patched split check, fnsizes base and head.
-2. Diff fnsizes base vs head, classify every row (moved, inlining change, new/duplicated
-   initializer); restore lost inlining on the indexing path with `inline` in a detail header.
-3. After the glob ruling: suite as A1 (`campaign verify schema-split --for A1`); after the checker
-   ruling: split check as A2.
+1. Diff fnsizes base (261121-200713-a4eb7a) vs head (261121-204544-b0745e); classify every row
+   (moved, inlining change, new/duplicated initializer); restore lost inlining on the indexing
+   path with `inline` in a detail header.
+2. Read A1, ctest -N, selfcontained, the anchored check; record.
+3. The gate `split` check (A2) reruns after split-check-anchor lands in cpp-libraries.
 
 ## Blocked on
 
-1. Lead: the source glob. CMakeLists.txt:1127 globs `src/database/*.c*`, not recursively, so a
-   `.cc` under `src/database/schema/` is not built (the quest says no CMake change is needed; it
-   is). Options:
-   1. Add `"${PROJECT_SOURCE_DIR}/src/database/schema/*.c*"` to XAPIAND_SRC_LIST (one line,
-      outside my file set: the lead lands it on master or adds CMakeLists.txt to the set).
-   2. Rename the pieces to `src/database/schema_*.cc` beside schema.cc (needs `src/database/schema_*`
-      in the file set; no CMake change).
-   Recommendation: 1. Probe jobs patch it in their own fresh checkout only (probe.sh, fnsz_probe.sh).
-2. Lead: split_check misattributes repeated lines. Its greedy text match lets a new piece's
-   license `/*` claim a moved block-comment opener inside a function, a dropped static's
-   `inline bool` claim another function's `inline bool`, and so on: 40 errors at the head, every one
-   a line that did move verbatim. Fix (cpp-libraries tools/split_check.py, outside my file set): an
-   anchored pre-pass pins lines whose text is unique in both the added and the base side, then
-   extends each pin over neighboring lines while they match. Patch with two regression tests:
-   ~/.scratch/xapiand/schema-split/split_check_anchor.patch (ruff clean; 52/52 tests pass; both new
-   tests fail on the current checker). With it: 0 errors, 43 warnings at the head (answered
-   below). Recommendation: land the patch in cpp-libraries; A2 then runs green unchanged.
+Nothing. Lead's rulings (msg from the lead, 2026-11-21):
+1. Glob: add `src/database/schema/*.c*` and `*.h*` after the src/database line; CMakeLists.txt is
+   in the file set. Done: Xapiand:8d85af070. The quest file's "no CMake change is needed" was the
+   lead's error, per the lead.
+2. split_check: my patch is quest split-check-anchor (cpp-libraries:449d913). Its A3 is this
+   split at 0 errors: job 261121-204551-d364fa (that worktree's checker, `--base master .
+   src/database`, at Xapiand:8d85af070). The gate A2 `split` check (261121-204542-68e0fc, current
+   checker, expected 40 errors) reruns after that quest lands.
 
 ## Layout at the head
 
@@ -118,20 +108,22 @@ Line ranges are approximate until cut.py's table is final; cut.py is the record.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | pending the glob ruling (probe 261121-203624-f53a56 is not evidence) |
-| A2 | 261121-203641-50bda7 (expected red: Blocked on 2); patched probe 261121-203642-2768b9 |
+| A1 | 261121-204605-8fd08d (suite at Xapiand:8d85af070) |
+| A2 | 261121-204542-68e0fc (current checker, expected red); 261121-204551-d364fa (anchored checker, 0 errors expected) |
 | A3 | docs/dev/schema-layout.md |
 | A4 | lead |
 
-Jobs:
-- 261121-200713-a4eb7a fnsizes, Release+LTO at the base 57496b89a
-- 261121-203757-64078f fnsizes probe at the split (glob patched in a fresh checkout)
-- 261121-203624-f53a56 suite probe (glob patched in a fresh checkout)
-- 261121-203627-ff0c0a the four new headers compile alone (selfcontained.sh)
-- 261121-203631-291e5b ctest -N at the base and the split
-- 261121-203641-50bda7 split check (gate); 261121-203642-2768b9 split check with the patch
+Jobs at Xapiand:8d85af070 (the glob head):
+- 261121-204605-8fd08d suite (A1)
+- 261121-204544-b0745e fnsizes, Release+LTO (base: 261121-200713-a4eb7a at 57496b89a)
+- 261121-204547-0ba7f1 ctest -N at the base and the split
+- 261121-204554-38f339 the four new headers compile alone (selfcontained.sh)
+- 261121-204542-68e0fc split check (gate); 261121-204551-d364fa split check, split-check-anchor's
 
-Scripts: ~/.scratch/xapiand/schema-split/{cut.py,probe.sh,fnsz_probe.sh,selfcontained.sh,ctestn.sh}.
+Cancelled as superseded: the glob-patched probes 261121-203624-f53a56, 261121-203757-64078f, and
+261121-203631-291e5b, 261121-203641-50bda7, 261121-203642-2768b9, 261121-203627-ff0c0a.
+
+Scripts: ~/.scratch/xapiand/schema-split/{cut.py,fnsz_head.sh,fnsz.sh,selfcontained.sh,ctestn.sh}.
 
 ## Split-check warnings answered (43, with the anchored checker)
 
