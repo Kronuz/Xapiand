@@ -57,6 +57,11 @@ names.
 - Owner, 2026-11-21 evening: "One class body of 5K+ lines is just not right! Not right at all. It
   makes this single file one of the busiest ones and it also makes the file very very hard to
   understand." So it starts now, on main, instead of after turn-log-parity.
+- Lead, 2026-11-21 (step 1 at strata:88058f27, its R3 and R4): the moved definitions of this class
+  template stay without `inline` (in-class definitions carry no inlining hint, so codegen keeps);
+  the 21 trailing return types are a shape split-check-members' mode accepts. The mover stays
+  committed under `.scratch/index-restructure/` until split-check-members graduates it to
+  cpp-libraries' `tools/outline.py`; then it leaves this branch.
 - Lead, 2026-11-21: turn-log-parity is the only open branch editing index.hh (201 lines, plus its
   tasks). It lands first, unchanged. Then this quest merges main and re-applies those edits inside
   the moved definitions, and the `members` check reruns against the new main, so the proof always

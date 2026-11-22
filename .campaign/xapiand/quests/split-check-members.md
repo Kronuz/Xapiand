@@ -22,7 +22,9 @@ changed no code, and puts the rule in SPLITTING.md.
   the class. Allowed signature changes are exactly: in-class-only specifiers dropped from the
   definition (`static`, `virtual`, `override`, `final`, `explicit`, `friend` stays in the class,
   default arguments), `inline` added, a `template <...>` header and the class qualifier (`C::`,
-  `C<P...>::`) added, and a trailing `;` on the declaration. Anything else fails, naming the member:
+  `C<P...>::`) added, a return type naming a class member written as a trailing return type
+  (`auto C<P...>::f(...) -> T`, index-restructure's 21 cases), and a trailing `;` on the
+  declaration. A template's out-of-class definition may omit `inline`. Anything else fails, naming the member:
   the `test` check, with fixtures for a class template (`basic_index<Layout>`'s shape), a
   non-template class (`uinteger_t`'s shape), constructors with initializer lists, operators,
   `const`/`noexcept`/ref-qualified members, trailing return types, nested classes, and overloads
@@ -38,7 +40,12 @@ changed no code, and puts the rule in SPLITTING.md.
   apart, reviewed); "Keep whole" names only a class whose members only make sense together, and
   never one because a class body can't be cut. "What `tools/split_check.py` checks" and
   `tools/README.md` describe the new mode
-- A5 ruff check and ruff format pass, and CI is green: the `lint` check; [ci]
+- A5 `tools/outline.py`, index-restructure's mover (strata quest branch,
+  `.scratch/index-restructure/`), graduates to cpp-libraries: from a committed map (member line
+  ranges or names to target headers), it writes the out-of-class definitions, with `--inline` for a
+  non-template class. Its output on the fixtures passes A1's mode, and it is independent of the
+  checker (no shared parsing code), so the proof stays a second reading: the `test` check
+- A6 ruff check and ruff format pass, and CI is green: the `lint` check; [ci]
 
 ## Contracts
 
@@ -46,9 +53,10 @@ changed no code, and puts the rule in SPLITTING.md.
 
 ## Decisions
 
-- Lead, 2026-11-21: one shared checker for both restructures (index-restructure,
-  uinteger-restructure), not a mover script: contributors move code by hand or with throwaway
-  scripts, and this mode is the independent proof. Low risk: tools and docs. It needs
+- Lead, 2026-11-21: one shared checker for every class restructure, and one shared mover. The
+  mover was written once, by index-restructure, and rerunning it after turn-log-parity lands is
+  cheaper than moving by hand. It graduates here (A5) instead of being dropped. The checker shares
+  no code with it, so a move is still proven by a second reading. Low risk: tools and docs. It needs
   split-check-anchor, which holds split_check.py now.
 
 ## May land early
