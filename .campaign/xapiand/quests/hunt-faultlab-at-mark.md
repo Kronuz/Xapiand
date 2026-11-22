@@ -5,32 +5,26 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt row 366, review faultlab-strata-gaps N1. faultlab's suite tests the A3 sync ordering at one
+point with the file staged there (test/faultfs_test.cc:366-388). The `at_mark` path and a second
+ordering point are untested, though the reviewer's probe showed both correct (job
+261120-232249-a2f0a5; probe.cc in faultlab-wt/xapiand/faultlab-strata-gaps/.scratch/xapiand/
+review-faultlab-strata-gaps-correctness/). Fold those cases into the suite.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes with the new cases: the `build-test` check
+- A2 Each new case fails without what it tests: a mutant of faultfs's at_mark sync path that a new
+  case must catch, as a job whose log shows that test failing on a tree that compiles
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: tests only.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: low risk; one contributor.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None.

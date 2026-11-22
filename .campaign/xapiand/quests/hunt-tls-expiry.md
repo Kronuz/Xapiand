@@ -5,32 +5,27 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt row 368. `src/tls.cc`'s `tls_seconds_to_expiry` (tls.cc:78) duplicates reactor's
+`reactor::tls::seconds_to_expiry(asio::ssl::context&)` (reactor_tls.h:380), which returns
+`std::optional<long>`. Xapiand calls reactor's and deletes its own; each caller handles the empty
+result the way `0` was handled before. The reduction is recorded in `docs/dev/extraction-ledger.md`.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes at the change: the `suite` check
+- A2 No caller changes behavior: a certificate expiring within 14 days still logs the warning, and
+  one with no presented certificate still yields what it did. A test or the existing TLS tests show
+  it, named in the journal
+- A3 [artifact] `docs/dev/extraction-ledger.md`: the row for this reduction
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+Consumes reactor's `tls::seconds_to_expiry`.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-21: low risk; one contributor.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
-
-## Tasks
-
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None.
