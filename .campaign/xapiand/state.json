@@ -26510,6 +26510,8 @@
     "split-tooling": {
       "accepted": {},
       "after": [],
+      "base": "7fb030488886b04c94e7a3dcaba9e71ca47da8f7",
+      "branch": "quest/xapiand/split-tooling",
       "checks": [
         {
           "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
@@ -26535,6 +26537,7 @@
         "tools/testdata/**",
         "docs/SPLITTING.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-tooling",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26542,9 +26545,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "Split tooling: function sizes on Mach-O, macro-body locals, test trees, the ctest -N recipe",
-      "updated": "2026-11-21T16:21:11"
+      "updated": "2026-11-21T16:21:51",
+      "worktree": "../cpp-libraries-wt/xapiand/split-tooling"
     },
     "split-traceback": {
       "accepted": {},
