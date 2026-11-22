@@ -26,7 +26,7 @@ Cause on main (src/single_flight.h at 70ad01dd6): a joiner `co_await flight->don
 
 | Criterion | Evidence |
 |---|---|
-| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (exit 8: test_joiners_that_leave_do_not_disturb_the_one_that_stays, 11 of 27 checks); passes at eea2bee55: 261121-195712-fa1b83 (passed); TSan 5 runs at eea2bee55: 261121-195712-6bdd67 (pending) |
+| A1 | fails at mutant 16a783020: 261121-133028-a36e8e (exit 8: test_joiners_that_leave_do_not_disturb_the_one_that_stays, 11 of 27 checks); passes at eea2bee55: 261121-195712-fa1b83 (passed); TSan 5 runs at eea2bee55: 261121-195712-6bdd67 (passed) |
 | A2 | suite at eea2bee55: 261121-195713-32dfdb (pending) |
 | A3 | docs/mechanisms/cancellation.md: the joiner is out of Limits; How step 1 says a joiner waits under its own token |
 | A4 | CI at the pushed head (pending) |
