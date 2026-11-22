@@ -46,16 +46,16 @@
 
 
 // A missing value's key: at DBL_MAX (or -DBL_MAX), below +inf (or above -inf).
-inline const std::string MAX_CMPVALUE(sortable::max_finite);
-inline const std::string MIN_CMPVALUE(sortable::min_finite);
+extern const std::string MAX_CMPVALUE;
+extern const std::string MIN_CMPVALUE;
 
-inline const std::string SERIALIZED_ZERO(Serialize::floating(0));
-inline const std::string SERIALIZED_ONE(Serialize::floating(1));
-inline const std::string SERIALIZED_M_PI(Serialize::floating(M_PI));
+extern const std::string SERIALIZED_ZERO;
+extern const std::string SERIALIZED_ONE;
+extern const std::string SERIALIZED_M_PI;
 
-inline const std::string MAX_STR_CMPVALUE("\xff");
+extern const std::string MAX_STR_CMPVALUE;
 // The least byte string: a missing slot keys at or below every value.
-inline const std::string MIN_STR_CMPVALUE;
+extern const std::string MIN_STR_CMPVALUE;
 
 
 class Multi_MultiValueKeyMaker;
