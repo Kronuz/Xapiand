@@ -16,8 +16,8 @@ tag=${tag:-pinned}
 build=build-asan-$tag
 deps=$PWD/.deps
 if [[ -n ${STRATA_PIN:-} ]]; then
-  deps=$PWD/.deps-$tag
-  [[ -d $deps || ! -d .deps ]] || cp -Rc .deps "$deps" 2>/dev/null || cp -R .deps "$deps"
+  # Its own deps, fetched fresh: a copied .deps fails, since each subbuild cache names its directory.
+  deps=$PWD/.deps-pin-${STRATA_PIN:0:8}
   trap 'git checkout -q -- CMakeLists.txt' EXIT
   sed -E "/FetchContent_Declare\(strata /s/GIT_TAG [0-9a-f]{40}/GIT_TAG $STRATA_PIN/" CMakeLists.txt > CMakeLists.txt.new
   mv CMakeLists.txt.new CMakeLists.txt
