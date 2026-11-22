@@ -2577,6 +2577,26 @@
         ]
       },
       "text": "split-queryparser landed: unlocks queryparser-restructure"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T00:01:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T00:01:22",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-243",
+      "items": {
+        "split-check-members": "split-check-members"
+      },
+      "settles": {
+        "start": [
+          "split-check-members"
+        ]
+      },
+      "text": "split-check-anchor landed: unlocks split-check-members"
     }
   ],
   "quests": {
@@ -26782,6 +26802,8 @@
     "split-check-members": {
       "accepted": {},
       "after": [],
+      "base": "fe8491fb9884fb7307f1624d15dfb6aba15eb67e",
+      "branch": "quest/xapiand/split-check-members",
       "checks": [
         {
           "cmd": "bash -c '/usr/local/bin/python3 tools/test_split_check.py && bash tools/test_selfcontained.sh'",
@@ -26804,6 +26826,7 @@
         "docs/SPLITTING.md",
         "tools/README.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/split-check-members",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -26813,9 +26836,10 @@
       "provides": [],
       "repo": "../cpp-libraries",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "split_check proves member definitions moved out of a class body; SPLITTING.md restructures giant classes",
-      "updated": "2026-11-21T22:05:01"
+      "updated": "2026-11-22T00:02:01",
+      "worktree": "../cpp-libraries-wt/xapiand/split-check-members"
     },
     "split-check-sources": {
       "accepted": {},
