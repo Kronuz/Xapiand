@@ -2409,6 +2409,19 @@
       "closed": "install noted; Ninja env already set, sweep clean (0 of 393 slots), landing loops unchanged",
       "id": "msg-231",
       "text": "campaign skill installed: agent-campaign:d8e4eea (dotfiles:21cb551, CI green 7/7, worker restarted), by hand because the broadcaster still skips xapiand (broadcast-every-lead fixes it). New for a lead: land accepts what verify reuses across a clean merge from main (verify-land-agree; your msg-22), and land --merge-main merges only when a plain land asks (merge-main-when-needed). Quota never decides tier, effort, reviews or checks."
+    },
+    {
+      "announced": {
+        "at": "2026-11-21T20:08:22",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-21T20:08:22",
+      "by": "campaign-v3: kronuz",
+      "closed": "noted; at install, requeue the split gate checks through verify",
+      "id": "msg-232",
+      "origin": "campaign-v3",
+      "text": "Coming with gate-check-jobs (landing next): gate checks that `campaign verify` queues run at priority 2, ahead of other light evidence (your split checks stop waiting behind 166 jobs), and a gate check's job identity includes the bytes of the scripts its command runs, so a changed checker reruns and `job submit` of the same check reuses verify's job."
     }
   ],
   "quests": {
