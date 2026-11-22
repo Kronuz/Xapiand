@@ -1,6 +1,6 @@
 # open-files-floor: journal
 
-State: working
+State: waiting on jobs 261121-163011-1ee7dc 261121-163013-2b7cd3 261121-163015-5d9da9 261121-163007-0100b9
 Quest: .campaign/xapiand/quests/open-files-floor.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,15 +9,15 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-<The current step, precisely enough for a fresh contributor to continue it.>
+Merged explore/xapiand/open-files-floor (clean, no conflicts with failed-restore-exit) at d9f7622afc5e. Jobs queued.
 
 ## Next
 
-1. <step>
+1. When jobs pass: paste `campaign brief` table into Evidence; State ready for review.
 
 ## Blocked on
 
-<What, and who decides. "Nothing" when nothing.>
+Nothing.
 
 ## Evidence
 
@@ -28,7 +28,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| <A1> | <from `campaign brief`> |
+| A1 | unit 261121-163011-1ee7dc, e2e 261121-163013-2b7cd3 at fix; fails-without at master main.cc 261121-163015-5d9da9 (nonzero must be the test failing, not a build error: check its log) |
+| A2 | suite 261121-163007-0100b9 |
 
 ## Result
 
