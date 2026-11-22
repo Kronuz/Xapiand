@@ -742,3 +742,30 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
   - land reads the first CI run, not the newest.
   - No per-quest base branch (put to the owner).
 - Host: load 7 (was 61 at 14:20), 299 GiB free. Quota 86% weekly, burn 0.62%/h; at this rate it is exhausted about 7 h before the reset in 29.7 h.
+
+### 2026-11-21 18h (hourly)
+
+- Landed: split-check-sources (cpp-libraries:7fb0304); the landing script then re-verified all 22 split quests with the fixed checker.
+- Lead read (A7) of all 22 splits:
+  - 19 pass: 12 real cuts, 7 kept whole with reasons.
+  - btree (7 headers) and xapiand-src (serialize_detail.h) lacked the what-it-holds opening line and were fixed by contributors. btree is now recorded.
+  - split-datetime is still deciding its calendar cut on benchmark numbers.
+  - 17 splits are in landing loops.
+- Agent runs, Sonnet:
+  - Kept-whole splits: constexpr-phf, enum-reflection, htm (60-64k each).
+  - btree opening comments 62k, datetime finish 77k, xapiand-src finish 105k.
+  - C2 fuzz queue 69k (blocked: one fuzz target holds both decoders; asked Detent for a FUZZ_DECODER pin, which Detent started).
+  - warm-heap explorer 87k (harness only; its build still queued).
+- Agent runs, Opus:
+  - group-commit barrier_cohort 131k: timing replaced by the sealer's recorded turns.
+  - turn-log-parity red-CI 163k: found strata main's turn_sealer await race, a false fence; fixed on the quest; hunt row filed.
+  - placement 121k: repair task merged by hand; fixed main's faultfs.hh removal that had reddened its CI everywhere.
+  - netlab-consensus 126k: the 1 ms round-trip miss was a stale timer floor; per-peer floors now.
+- Findings:
+  - Mach-O nm prints size 0, so SPLITTING.md's inlining recipe proved nothing on macOS. Only split-xapiand-src cited it. Now quest split-tooling, with three other split-tool rows.
+  - Gate checks can't be prioritized: verify has no priority, and a submit never matches verify's key, which omits external script digests. Sent to campaign-v3, which started gate-check-jobs.
+- Waste:
+  - 19 priority-2 resubmits didn't count as gates (the key mismatch above) and stay only as early signals.
+  - One datetime bench job without a build step exited 127.
+- Queue: 235 jobs queued and 4 light slots, light 77% used last hour. Most landings wait on the queue or on GitHub's 20 runners, not on agents.
+- Host: load 29 (Detent's reader-s6 ASan job on 10 cores), 296 GiB free. Quota 87% weekly, burn 0.62%/h, reset in 28.7 h.
