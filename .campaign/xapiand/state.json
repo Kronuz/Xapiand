@@ -13603,6 +13603,36 @@
       "updated": "2026-11-21T20:25:37",
       "worktree": "../Xapiand-wt/xapiand/hunt-tls-expiry"
     },
+    "hunt-traceback-freebsd": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "traceback.cc",
+        "traceback.h",
+        "test/**",
+        "docs/**",
+        "CHANGELOG.md"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../traceback",
+      "risk": "normal",
+      "status": "planned",
+      "title": "traceback's dump names the dumping thread on FreeBSD",
+      "updated": "2026-11-21T21:09:21"
+    },
     "hybrid-go-no-go": {
       "accepted": {},
       "after": [],
