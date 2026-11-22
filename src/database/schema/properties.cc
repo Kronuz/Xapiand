@@ -66,6 +66,7 @@
 #include "xapiand_strings.hh"                             // for strings::format, strings::inplace_lower
 #include "database/schema/reserved.h"
 #include "database/schema/walk.h"
+#include "database/schema/handlers.h"
 #include "database/schema/dispatch.h"
 
 
