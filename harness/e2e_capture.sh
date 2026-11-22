@@ -45,7 +45,7 @@
 # diff a report against a saved reference report for a deeper body comparison.)
 #
 # XAPIAND_FLAGS adds node flags (--tls-cert/--tls-key); SCHEME=https probes and runs the
-# collection over TLS, trusting CA (newman 6 or later, for --ssl-extra-ca-certs). PORT
+# collection over TLS, trusting CA (for --ssl-extra-ca-certs). PORT
 # pins the node port (default: a free one); E2E_TMP pins the work directory and keeps it.
 #
 # Example:
@@ -74,13 +74,8 @@ CA="${CA:-}"
 read -r -a node_flags <<< "${XAPIAND_FLAGS:-}"
 probe_ca=()
 newman_ca=()
-# newman 4 fails every request (it mangles the collection's templating), so the major version is checked on every run.
-major=$(newman --version 2>/dev/null | cut -d. -f1)
-[ "${major:-0}" -ge 6 ] || {
-	echo "the docs E2E needs newman 6 or later first on PATH (found '$(newman --version 2>/dev/null)')."
-	echo "Install one beside the work, not globally: npm i --prefix DIR newman@6.2.3; PATH=DIR/node_modules/.bin:\$PATH"
-	exit 1
-}
+# The newman pinned in harness/package.json, installed locally (a newman 4 fails every request; one on PATH is never used).
+. "$HARNESS_DIR/newman_env.sh" || exit 1
 if [ "$SCHEME" = https ]; then
 	[ -n "$CA" ] || { echo "SCHEME=https needs CA"; exit 1; }
 	probe_ca=(--cacert "$CA")
