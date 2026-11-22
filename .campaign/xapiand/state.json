@@ -27437,18 +27437,61 @@
         "tests/CMakeLists.txt",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/split-msgpack",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-21T21:55:32",
+          "commit": "b7fc78cd4df41df6cedb07c014e4d6a3ffaa2803",
+          "criteria": {
+            "A1": "261121-192206-a3a9bd (the build-test check); build-test job 261121-121649-8e64c6",
+            "A2": "261121-192206-226c8f (the split check), 261121-192206-a3a9bd (passed at 68e45d852ae7; only 1 merge from main since, none touching its files), 261121-192206-226c8f (passed at 68e45d852ae7; only 1 merge from main since, none touching its files)",
+            "A3": "261121-121651-f87cf4 (passed at 68e45d852ae7; only 1 merge from main since, none touching its files)",
+            "A4": "docs/source-layout.md",
+            "A5": "CI green at b7fc78cd4df4",
+            "A6": "261121-121647-167eff (passed at 68e45d852ae7; only 1 merge from main since, none touching its files)",
+            "A7": "lead, 2026-11-21: read the split; msgpack.h cut by member family (class body whole in msgpack_class.h); msgpack_types.h is 82 lines but is the constants and enum header every piece builds on, accepted as a unit"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "68e45d852ae760160be8fe422025b4acd0da8898",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-192206-a3a9bd",
+              "level": "light",
+              "seconds": 73.7,
+              "state": "done",
+              "what": "split-msgpack check build-test at 68e45d852ae7"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base main . test",
+              "commit": "68e45d852ae760160be8fe422025b4acd0da8898",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-192206-226c8f",
+              "level": "light",
+              "seconds": 2.7,
+              "state": "done",
+              "what": "split-msgpack check split at 68e45d852ae7"
+            }
+          ],
+          "final": true,
+          "from": "69f300f52a23f2d9e5ee723515720c3451d1acc1",
+          "reason": "",
+          "tested": "b7fc78cd4df41df6cedb07c014e4d6a3ffaa2803"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../msgpack",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "msgpack's large files split where it helps maintenance",
-      "updated": "2026-11-21T12:04:55",
-      "worktree": "../msgpack-wt/xapiand/split-msgpack"
+      "updated": "2026-11-21T21:55:41",
+      "worktree": ""
     },
     "split-queryparser": {
       "accepted": {},
