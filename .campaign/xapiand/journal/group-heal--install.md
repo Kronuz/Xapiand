@@ -1,6 +1,6 @@
 # group-heal--install: journal
 
-State: waiting on jobs 261121-084738-bee937 261121-084747-cde37d
+State: waiting on jobs 261121-172551-9db0a4 261121-172613-7a078d
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,19 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Build fix 2 (strata:167f77ed, f05b6672): 261121-133859-cf44a4 failed to compile at 95bdaa2e:
+footprint_test's `row` still overrode the old one-argument `install_needed`, so it left the
+binding's four pure notices (install_needed(peer, key), install_released, validate, activate)
+unimplemented. Implemented as empty (a row opens without `snapshots`). 261121-133923-ba5a0d (the
+install-silent `--fails-without` at mutant 89f2f507) "passed" on that same compile error, not on
+a failed test: a false kill, and its regex `^group_voters_test$` names no ctest test (ctest's is
+`group_voters`), so even a build would have run nothing of voters_test. Not evidence.
+install_suite.sh now exits 127 on a failed configure or build and errors on a regex matching no
+test; install_build.sh retired (group_install is registered), install_mutants.py rebuilds in a
+configured tree. Jobs: plain 261121-172551-9db0a4 (A1, A2 at f05b6672, consensus 8780e44);
+mutant install-silent 261121-172613-7a078d at strata:3ae7d70d
+(refs/mutants/group-heal--install/install-silent), voters only, after the plain.
 
 Step 2 (binding) written at strata:87bc0ebf, against consensus's driver-install branch
 (origin/quest/detent/consensus-driver-install at 887a88b; contract DRIVER.md Install,
@@ -32,8 +45,9 @@ voters_test only, after the plain).
 
 ## Next
 
-1. Jobs (State): fix the cases until 261121-084738-bee937 (or its successor) passes; the
-   install-silent mutant 261121-084747-cde37d must fail.
+1. Jobs (State): 261121-172551-9db0a4 must pass, 261121-172613-7a078d must fail on the test.
+   Then merge the task into quest/xapiand/group-heal, merge main, push once, and queue the
+   quest-head jobs (suite, install_mutants at the head).
 2. Mutant reruns only if the lead asks (finished results stand).
 3. Rerun the install_mutants at the head (they ran at 0e67dcb7) with STRATA_CMAKE_ARGS for the
    consensus override, since install_test includes group.hh through oracle.hh.
@@ -49,8 +63,8 @@ driver-install's landing (consensus:8780e44, no install API change since 887a88b
 | Criterion | Evidence |
 |---|---|
 | A1 (transfer half) | 261120-181817-a0cc80 install_test all cases at 0e67dcb7; `--fails-without` mutants: skip-file-set 261120-181820-54034f, keep-unchecked 261120-181823-382ea2, write-past-failure 261120-181826-ed7951, marker-before-sync 261120-181829-f2050f, holder-unordered 261120-181832-5929d9, no-resume 261120-181835-53159e, serve-past-length 261120-181842-4fc87c; pin-names-unchecked survived (261120-181838-e03e4e), fixed at acca8f77: 261121-054230-6f2ce0, mutant 261121-054233-ce72e0 (pending) |
-| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-084738-bee937 (voters_test `install_gap`, `grow_and_heal`); 261121-055544-08fada failed to compile at df6c992d |
-| A2 | pending: 261121-084738-bee937 (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent 261121-084747-cde37d |
+| A1 (learner installs, promoted, replace/remove across leader changes) | pending: 261121-172551-9db0a4 (voters_test `install_gap`, `grow_and_heal`; group_install); 261121-133859-cf44a4 failed to compile at 95bdaa2e (fixed f05b6672) |
+| A2 | pending: 261121-172551-9db0a4 (ungated seeds 8, 12, 16, 18, 23, 24, 27, 101-140); mutant install-silent 261121-172613-7a078d; 261121-133923-ba5a0d is a false kill (compile error), not evidence |
 | TSan (`threads`) | CI's linux-tsan runs ctest; group_install_test reaches it only once CMakeLists.txt registers it (Blocked on 1). No local sanitizer job, per the lead. |
 
 ## Result
@@ -92,3 +106,8 @@ The binding). Pin bump and test registration: Blocked on 1.
   replica, no longer holds); `install-silent` repointed; `publish-before-sync`,
   `commit-after-publish` repointed at the new unlink line; `destroy-keeps-member` repointed
   (it no longer applied on main: the destructor gained the hand-off cancel).
+- footprint_test.cc is outside this task's globs but inside the quest's (test/group/**): the
+  binding's pure notices break its `row`, so the fix goes with the binding. Empty overrides, not
+  default no-ops in `member`: a member that forgets one should not compile.
+- Jobs pin consensus at 8780e44 (CMakeLists.txt's pin, consensus main), not 887a88b: evidence
+  then matches what CI fetches.
