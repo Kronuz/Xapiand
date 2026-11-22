@@ -1,6 +1,6 @@
 # agents-md: journal
 
-State: waiting on jobs 261121-095115-0de0c7 (lines check; then ready for review)
+State: ready to land: lines check 261121-095115-0de0c7 passed and the lead read the diff (2026-11-21); lands after ninja-only.
 Quest: .campaign/xapiand/quests/agents-md.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
