@@ -35,6 +35,7 @@ non-C++ files); A2 runs that branch's tool meanwhile.
 | A4 | docs/dev/test-layout.md |
 | A5 | CI on the pushed branch at 19820a501 or later |
 | A6 | 261121-133907-590b1a: each of the six new headers included twice in an otherwise empty TU, -fsyntax-only, with the flags compile_commands.json gives a piece of its directory (script ~/.scratch/xapiand/split-xapiand-tests/selfcontained_new.py; cpp-libraries' selfcontained.sh skips tests/ directories, so it is the same check, driven by hand) |
+| A7 | lead, 2026-11-21: read the split; four test programs split by topic into TUs with support headers, each piece opens with what it holds |
 
 ### split_check warnings, answered (local run at 19820a501, base c2bc67fac)
 
