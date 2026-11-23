@@ -33566,18 +33566,38 @@
         "include/prospect/tuple_buffer_*.hh",
         "docs/source-layout.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/tuple-buffer-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-22T22:28:06",
+          "commit": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "evidence": [
+            {
+              "check": "build-test",
+              "ci": "ci:macos-arm64",
+              "commit": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "reason": "recorded after the fact: msg-28: gate job 261123-005506-e6c0af (members) passed at 44303965ec66 (23 moved, 0 errors, 0 warnings); the land lookup omits the job's outside-script hash (fix check-spec-one, agent-campaign:f50c120, not installed). Everything else brief lists was green; lead read the cut.",
+          "recorded": "2026-11-23T01:07:42",
+          "tested": "44303965ec66e29a1674447990cbbedc0deb3b9a",
+          "unverified": [
+            "members: no job"
+          ]
+        }
+      ],
       "lenses": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../prospect",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "prospect's tuple_buffer: run building, the entry codec and the run merger out of the class body",
-      "updated": "2026-11-22T22:20:14",
-      "worktree": "../prospect-wt/xapiand/tuple-buffer-restructure"
+      "updated": "2026-11-23T01:08:46",
+      "worktree": ""
     },
     "turn-log-parity": {
       "accepted": {
