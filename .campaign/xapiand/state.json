@@ -31760,7 +31760,7 @@
       "branch": "quest/xapiand/strata-journal-pin",
       "checks": [
         {
-          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -31776,6 +31776,34 @@
         "test/group/**",
         "sim/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-23T10:51:46",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-23: asserts on in strata's build-test (Release without NDEBUG), so the loop-ownership assert fails locally, not only in CI; a stronger check",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
       "landed": [],
       "lenses": [],
@@ -31786,7 +31814,7 @@
       "risk": "low",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T08:25:35",
+      "updated": "2026-11-23T10:51:46",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
