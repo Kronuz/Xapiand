@@ -18652,8 +18652,44 @@
         "docs/src/content/docs/reference-guide/search/query-dsl/compound-queries/range-searches.md"
       ],
       "hunt": "query-dsl-fixes review F5",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T01:56:05",
+          "ci": {
+            "carried": true,
+            "commit": "ca144f228928ecc32f83713a4fb99e90c5c20ce9",
+            "runs": [
+              45119092920
+            ]
+          },
+          "commit": "4177b724b243e478556472d67871f3b726d20cd3",
+          "criteria": {
+            "A1": "261123-015153-7ae881; fails without: 261123-000920-aac63a, 261123-000923-5c3bde, 261123-000927-324fb3",
+            "A2": "261122-213854-8ab1db (the suite check); 261122-213854-8ab1db (suite at ca144f228): pending",
+            "A3": "range-searches.md and range-aggregation.md under docs/src/content/docs/reference-guide/search/ say a NaN bound answers 400 naming the field and the bound",
+            "A4": "CI green at ca144f228928 (carried to 041422a33483 across clean merges)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "ca144f228928ecc32f83713a4fb99e90c5c20ce9",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-213854-8ab1db",
+              "level": "light",
+              "seconds": 1453.5,
+              "state": "done",
+              "what": "nan-range-bound check suite at ca144f228928"
+            }
+          ],
+          "final": true,
+          "from": "76b5b0673787218b92897a17aabb47470efadecd",
+          "reason": "",
+          "tested": "041422a334833242afed001d9a30567ecfa409cf"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-xapiand-src"
@@ -18661,10 +18697,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A NaN range bound is one behavior on every field type",
-      "updated": "2026-11-22T21:37:02",
-      "worktree": "../Xapiand-wt/xapiand/nan-range-bound"
+      "updated": "2026-11-23T01:56:14",
+      "worktree": ""
     },
     "netlab-consensus": {
       "accepted": {},
