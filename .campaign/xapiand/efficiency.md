@@ -915,3 +915,14 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Tool findings to campaign-v3, all confirmed: gate lookup omits outside-script hashes (split checks never count: split-datetime, split-xapiand-tests wait), --unversioned drops --ref, no way to raise a queued job's priority (folded into landing-priority), close_readers atexit traceback. Contributors no longer run `campaign land` in any form: it lands since agent-campaign:47dfb50.
 - Started: queryparser-restructure, tuple-buffer-restructure (Opus high, using the branch mover at cpp-libraries:2df69e8), group-heal stall fix (fresh Opus).
 - Host: load 55 on 16 CPUs, 281 GiB free, 183 queued, light slots 69% used. Quota 6% weekly at 4.6%/h: the projection says run-out in about 20 h, before the reset.
+
+### 2026-11-23 07h (hourly)
+
+- Landed: system-file-nr-close (system:b2a874f; Linux file-nr readers close through one helper; CI green everywhere, mutant red on the Linux jobs (build ok, test failed) and green on FreeBSD/macOS), node-admission (consensus:42a8cde; TSan rerun green).
+- Accepted: group-catalog durability (R1-R4 confirmed; R1 mutant failed-open-stays and A2 mutant close-skips-checkpoint killed with named checks). Lands when the A1 rerun at the merged head passes.
+- Measured: restore-stream A/B rerun at the merged head: peak 1,334 MB before, 1,315 MB A/A, 350 MB after (74% lower); load time not claimed (A/A differs by 4.6 s).
+- Found: tests/test_harness.h REQUIRE evaluates its condition twice; a side-effecting check that differs on the second run returns with no FAIL line. It hid every check after test_restore_batch.cc:246, so journal-replaces-wal's restamp mutant survived. New quest require-once (Sonnet high, 88k).
+- Agent runs (Opus high unless noted): split-check-members outline fix 111k (template parameter as class key; then a test wording), queryparser-restructure 155k (54 members, 3 headers), tuple-buffer-restructure 174k (23 members, body 1,024 -> 540; corrected the lead's note on merger), cluster search 96k (two test bugs: reserved `_` aggregation names, a reference into a freed vector), journal-replaces-wal restore 94k (the REQUIRE finding), group-heal stall (running).
+- Lead: critical path re-checked at the owner's question (07h): two path tasks sat idle 1-1.5 days with results waiting; both relaunched. Rule: path quests first when filling capacity. Lesson: merge main before long evidence runs (restore-stream reran 5 jobs, 32 CPU-min of fuzz included).
+- Tool findings to campaign-v3: rerun has no priority (msg-31; covered by landing-priority A1).
+- Host: load 57 on 16 CPUs, 280 GiB free, 120 queued, light slots 97% used. Quota 8% weekly at 3.6%/h; the projection says about 25 h left, before the reset.
