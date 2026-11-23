@@ -1,6 +1,6 @@
 # stox-no-libc: journal
 
-State: ready to land (lead, 2026-11-23): all criteria met at strict-stox:f51037b; CI pending.
+State: waiting on jobs 261123-130429-df3270 (A1), 261123-130432-96375e and 261123-130437-f0fa57 (A2), 261123-130445-dabdaa (A3), 261123-130449-dfdd7f (A4); extra 261123-130441-b494ea (-mlong-double-64 slow test); CI for A5
 Quest: .campaign/xapiand/quests/stox-no-libc.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -40,6 +40,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 stod and stof decide decimal text after C-locale white space or a single '+' in the library (`fp_lead`, strict_stox.hh, through the existing `fp_slow`), so Apple's strtod is never asked for it and the 209-byte abort cannot happen there. Hex, inf, nan, '+-', a directed rounding mode and a non-'.' locale still go to libc (fp_slow returns 0 for the last two); stold stays on strtold. Open: the header's top comment (strict_stox.hh:169-174) and README.md:29 still list white space and '+' as libc's for floats; the lead fixes both on main after landing, to keep the tested tree.
 
 ## Rulings I made
+
+- CI macos-arm64 (run 45251406255): long double is double there, so strtold aborts. Fixed at the new head: `fp_exact<R>` maps long double to double when LDBL_MANT_DIG == DBL_MANT_DIG; `_fast`, `_lead`, `_invalid_tail` use it, so stold follows stod (value widened); elsewhere strtold. The stold hook is `STRICT_STOX_STRTOLD` (counted under COUNT_LIBC). The local host is x86_64, so the double-format branch is exercised by job 261123-130441-b494ea (`-mlong-double-64`); A5 is CI's. A6: README.md and the header comment updated.
 
 - build-test 261123-112824-c866b0 failed at 5637e68: strict_stox_slow asserted the old route (test_reach_libc: "  1", "+1" reach libc; test_first_byte: white space and '+' reach strto*). Fixed at strict-stox head: both now assert decided-in-library; hex, inf, nan, directed rounding and locales still assert libc. Rerun: 261123-114038-c721f8.
 - The 4 `divideMPByMP` assertions in that log are the `libc_safe` children of test/slow_test.cc (a forked child tries libc first, and is expected to abort): the two curated cases at lines 114-115 (the 59-character fixture, each checked for stod and stof). They are printed only when the test fails (ctest hides passing output). My new tests call libc in-process only for strtold and on texts that pass in the replay; not a source of aborts.
