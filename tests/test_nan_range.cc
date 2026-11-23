@@ -94,9 +94,7 @@ void test_range_aggregation_nan_bound() {
 			const auto answer = aggregate(field, range_with(bound, nan));
 			std::fprintf(stderr, "agg %s %s NaN: %d %s\n", field, bound, answer.error_code, answer.error.c_str());
 			CHECK(answer.error_code == HTTP_STATUS_BAD_REQUEST);
-			CHECK(contains(answer.error, std::string("'") + field + "'"));
-			CHECK(contains(answer.error, bound));
-			CHECK(contains(answer.error, "NaN"));
+			CHECK(contains(answer.error, std::string("Field '") + field + "' range bound '" + bound + "' cannot be NaN"));
 		}
 	}
 }
@@ -112,10 +110,7 @@ void test_query_range_nan_bound() {
 			const auto answer = query(field, range_with(bound, nan));
 			std::fprintf(stderr, "query %s %s NaN: %d %s\n", field, bound, answer.error_code, answer.error.c_str());
 			CHECK(answer.error_code == HTTP_STATUS_BAD_REQUEST);
-			if (std::string_view(field) != "d") {
-				CHECK(contains(answer.error, std::string("'") + field + "'"));
-				CHECK(contains(answer.error, "nan"));
-			}
+			CHECK(contains(answer.error, std::string("Field '") + field + "' range bound '" + bound + "' cannot be NaN"));
 		}
 	}
 }
