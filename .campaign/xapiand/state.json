@@ -2660,6 +2660,26 @@
         ]
       },
       "text": "journal-lost-bound landed: unlocks frees include/journal/host.h, src/host*, CHANGELOG.md, CMakeLists.txt for journal-group-delete; nan-range-bound"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T23:05:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T23:05:36",
+      "by": "campaign",
+      "closed": "its quests started",
+      "id": "msg-247",
+      "items": {
+        "require-once": "frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
+      },
+      "settles": {
+        "start": [
+          "require-once"
+        ]
+      },
+      "text": "set require-once: unlocks frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
     }
   ],
   "quests": {
@@ -24711,6 +24731,8 @@
     "require-once": {
       "accepted": {},
       "after": [],
+      "base": "10d3bf51fa829b787287145f5ce8e0cd7cafd467",
+      "branch": "quest/xapiand/require-once",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -24731,9 +24753,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "REQUIRE evaluates its condition once",
-      "updated": "2026-11-22T23:06:19"
+      "updated": "2026-11-22T23:06:30",
+      "worktree": "../Xapiand-wt/xapiand/require-once"
     },
     "research-indexing": {
       "accepted": {},
