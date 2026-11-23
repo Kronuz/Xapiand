@@ -1,6 +1,6 @@
 # hunt-soundex-one-definition: journal
 
-State: waiting on jobs at soundex:dd922dc (lead applied the docs patch there; A1 build-test and A2 diff_languages resubmitted), then CI.
+State: ready to land at soundex:ba10f53 once CI is green there (lead recorded the A3 numbers in docs/TABLES.md).
 Quest: .campaign/xapiand/quests/hunt-soundex-one-definition.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -24,10 +24,10 @@ Nothing. (Doc fixes in AGENTS.md, ARCHITECTURE.md, CHANGELOG.md need a file-set 
 
 | Criterion | Evidence |
 |---|---|
-| A1 | build-test job 261123-133456-ff4d3e at 1699e58 (pending) |
-| A2 | job 261123-133452-ec36ac at 1699e58 (pending): test/diff_languages.cc, French/German/Spanish new vs frozen old headers, every string of up to 3 tokens (about 1.7M for French) plus 300k random per language, accents, digits, separators, stray bytes, NUL |
-| A3 | [artifact] Result below |
-| A4 | CI after push |
+| A1 | build-test job 261123-133456-ff4d3e passed at 1699e58 (reused at the docs-only commits after it) |
+| A2 | job 261123-133739-8d9dd0 passed at dd922dc: test/diff_languages.cc, French/German/Spanish new vs frozen old headers, every string of up to 3 tokens (about 1.7M for French) plus 300k random per language |
+| A3 | `docs/TABLES.md`: "| `__StaticInit` | 12,272 B | 0 B |" (lead, ba10f53) |
+| A4 | CI at ba10f53 |
 
 ## Result
 
