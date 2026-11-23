@@ -25,6 +25,7 @@
 
 #include <algorithm>                              // for std::max
 #include <cassert>                                // for assert
+#include <cmath>                                  // for std::isnan
 #include <strings.h>                              // for strncasecmp
 #include <utility>
 #include <vector>
@@ -903,6 +904,10 @@ exact_range(std::string_view path, FieldType type, const MsgPack& obj)
 	for (const auto* bound : { RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO }) {
 		const auto b = range.find(bound);
 		if (b != range.end()) {
+			// NaN has no place in any field's order: refused alike on every type, as range aggregations do.
+			if (b.value().get_type() == MsgPack::Type::FLOAT && std::isnan(b.value().f64())) {
+				THROW(QueryDslError, "Field {} range bound '{}' cannot be NaN", repr(path), bound);
+			}
 			range[bound] = Serialize::exact(path, type, b.value());
 		}
 	}
