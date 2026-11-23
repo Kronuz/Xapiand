@@ -13409,8 +13409,9 @@
             "test/group/sim*",
             "docs/gates/phase-3r.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/group-heal--sim-rows",
-          "worktree": "../strata-wt/xapiand/group-heal--sim-rows"
+          "journal": "",
+          "merged": "a53939071870e483e2af08316faf5f8aa1c12ba3",
+          "worktree": ""
         },
         "witness": {
           "base": "cd2a4a40b996730386c9c3f12ac4084bdd9aba34",
@@ -13429,7 +13430,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T04:37:05",
+      "updated": "2026-11-23T08:07:37",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
