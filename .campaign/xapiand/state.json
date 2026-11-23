@@ -13087,12 +13087,13 @@
             "CMakeLists.txt",
             "docs/mechanisms/replication-group.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/group-heal--witness",
-          "worktree": "../strata-wt/xapiand/group-heal--witness"
+          "journal": "",
+          "merged": "e48288841e96c528eb2dd4f29e71b7225c518d16",
+          "worktree": ""
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-22T21:30:11",
+      "updated": "2026-11-23T02:04:15",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -19639,8 +19640,42 @@
         "harness/coverage_e2e_main.sh",
         "CMakeLists.txt"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T03:30:46",
+          "ci": {
+            "carried": true,
+            "commit": "83a56bcd6f643c4c4bb563ec3ffadce45220d00a",
+            "runs": [
+              45151775419
+            ]
+          },
+          "commit": "68dea47002d81004128c60f3ef769feac943c495",
+          "criteria": {
+            "A1": "261123-015430-f9efd9 (passed at f023cca493c4; only 2 merges from main since, none touching its files); fails without: 261121-163015-5d9da9",
+            "A2": "261123-015429-c5ed0e (the suite check); 261122-225528-2b0953 (the suite check, 80/80 at d9f7622; macOS only)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build-ninja -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build-ninja -j4 && ctest --test-dir build-ninja --output-on-failure",
+              "commit": "f023cca493c4a46eb67d925d061024be7875a8e7",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-015429-c5ed0e",
+              "level": "light",
+              "seconds": 510.3,
+              "state": "done",
+              "what": "open-files-floor check suite at f023cca493c4"
+            }
+          ],
+          "final": true,
+          "from": "cba19363180cd0ce8885a8d16e43d31806fc095c",
+          "reason": "",
+          "tested": "68dea47002d81004128c60f3ef769feac943c495"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "failed-restore-exit"
@@ -19648,10 +19683,10 @@
       "provides": [],
       "repo": ".",
       "risk": "normal",
-      "status": "active",
+      "status": "landed",
       "title": "A start with fewer open files than the full pool needs shrinks the pool and starts",
-      "updated": "2026-11-22T22:54:55",
-      "worktree": "../Xapiand-wt/xapiand/open-files-floor"
+      "updated": "2026-11-23T03:31:00",
+      "worktree": ""
     },
     "open-mix": {
       "accepted": {},
@@ -24931,17 +24966,51 @@
         "tests/test_harness.h",
         "tests/test_string.cc"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T03:29:46",
+          "ci": {
+            "commit": "946c7380c0402bee83c2cad83ead3a20b806c4a6",
+            "runs": [
+              45151756302
+            ]
+          },
+          "commit": "a0ee6c59e8ff62429aec8c4dbdad8ff297d042d0",
+          "criteria": {
+            "A1": "261122-230814-920115 (the suite check); fails without: 261122-230842-8fa903",
+            "A2": "261122-230814-920115 (the suite check); suite 261122-230814-920115",
+            "A3": "manual, below"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "b6e852ebaa51128858bea8d07d377c121cebbc56",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-230814-920115",
+              "level": "light",
+              "seconds": 1344.4,
+              "state": "done",
+              "what": "require-once check suite at b6e852ebaa51"
+            }
+          ],
+          "final": true,
+          "from": "4e0754b9c36cd44288400ca4d1eacb1a34dbea6d",
+          "reason": "",
+          "tested": "946c7380c0402bee83c2cad83ead3a20b806c4a6"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "REQUIRE evaluates its condition once",
-      "updated": "2026-11-22T23:06:30",
-      "worktree": "../Xapiand-wt/xapiand/require-once"
+      "updated": "2026-11-23T03:29:59",
+      "worktree": ""
     },
     "research-indexing": {
       "accepted": {},

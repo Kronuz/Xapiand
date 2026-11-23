@@ -1,0 +1,55 @@
+# open-files-floor: journal
+
+State: waiting on jobs 261122-225528-2b0953 (suite) and CI at Xapiand:4729806 (lead, 2026-11-23: system pinned at b2a874f, system-file-nr-close landed; A1 and A2 rerun there)
+Quest: .campaign/xapiand/quests/open-files-floor.md (the lead's; never edit it)
+
+Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
+status` reads State and the first step under Next. State is one of: working, waiting on jobs <ids>,
+ready for review, fixing <findings>, blocked on <who>: <what>.
+
+## Doing
+
+Merged master at a4d674b00346 (clean). CI at 4a07d2e (run 44966941683) fails test_coverage_main on Linux in all three
+jobs (Build + unit + smoke, TSan, ASan + UBSan): this quest's check at tests/test_coverage_main.cc:529, the start at
+the exact minimum, gets SystemExit(72). Master's CI (45007834306) is green; master has no such check. Not a flake.
+
+Cause: Kronuz/system at a5dc407 (Xapiand's pin), system.cc, Linux branches of get_open_files_system_wide and
+get_max_files_system_wide each io::open("/proc/sys/fs/file-nr") and never close it. adjustOpenFilesLimit calls both
+before get_open_files_per_proc, so the test measures 3 open (minimum 78) and the function measures 5 (minimum 80):
+78 < 80 is refused. macOS uses sysctl, so local jobs pass. A production start on Linux also keeps the two descriptors.
+
+## Next
+
+1. After the system fix and pin bump reach master: `campaign land open-files-floor --merge-main`, rerun A1 (unit,
+   coverage e2e, fails-without) and A2 at the merged commit, push, read CI.
+
+## Blocked on
+
+Nothing. Resolved by the lead, 2026-11-23: system-file-nr-close landed (system:b2a874f, both Linux readers close through one helper); the pin moved to it at Xapiand:4729806 with CMakeLists.txt added to the file set.
+
+## Evidence
+
+Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
+Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
+checked what), name every job you examined, failures included (`campaign brief` lists failed
+jobs no journal names), and answer each message by its id (msg-N).
+
+| Criterion | Evidence |
+|---|---|
+| A1 | 261122-230848-ab5678, 261121-204931-2e7d5a; fails without: 261121-163015-5d9da9 (log: complete build, 3 of 97 checks fail at tests/test_coverage_main.cc:525, 543, 575) |
+| A2 | 261122-225528-2b0953 (the suite check, 80/80 at d9f7622; macOS only) |
+
+Examined: 261122-230848-ab5678 (unit + coverage, 97 checks pass, macOS); 261121-204931-2e7d5a (main e2e, 91 checks,
+0 failed); 261121-163015-5d9da9 (master's main.cc, fails as it must); 261122-225528-2b0953 (suite passes);
+261121-163013-2b7cd3 (timed out at 30 min mid-build, invalid; replaced by 261121-204931-2e7d5a). CI 44966941683 at
+4a07d2e: failed, Linux only, see Doing. All at pre-merge commits: rerun at the landed code once unblocked.
+
+## Result
+
+<When ready for review: what changed, its measured effect with numbers and the jobs behind them,
+and what it leaves open. Results and how it works go in the docs of the repository it changed
+(docs/perf/, docs/mechanisms/, a library's own); name them here. `campaign map` shows this.>
+
+## Rulings I made
+
+<Decisions inside the quest's scope, so the reviewer can check them.>

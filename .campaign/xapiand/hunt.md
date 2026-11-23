@@ -422,3 +422,14 @@ quest fixes them (2 of 5 on 11-20).
 
 - N1 (nit) An older peer on peers.h closes the control connection on an unknown frame kind (peers.h:726) rather than dropping it as the mechanism note says; host_transport.h drops it. Fix the note or make peers.h drop unknown kinds. Review: .campaign/xapiand/reviews/consensus-request-install-correctness.md.
 - N2 (gap) When every transfer fails, each resend is answered InFlight and the reinstall call never completes (core.h:1172). Bound it (a deadline or attempt count that fails the call). Liveness, normal risk.
+
+## group-heal durability review follow-ups (2026-11-23, review at strata:908b58c0; full text in reviews/group-heal-durability.md)
+
+- F3 (defect) `installs_needed()` and the lazily made install state outlive the leadership. `needed` is erased only on Installed or CaughtUp, so a leader that loses its leadership (or whose peer is Removed) mid-flight names the peer forever as a follower and never frees `sources_`. That idle group then gives back the 88 B that 
+- F4 (gap) serve's guard against the teardown (`serving_`) has no test off the loop thread. The ruling "TSan in CI covers the threads" has nothing to cover: world.hh:288 calls serve on the loop, and install_test's `threads` case calls install.hh's serve, not group::serve. Also, serve_scope calls notify_all after its decrement (
+- F5 (nit) grow_and_heal and witness join retire the removed voter without checking what it holds. 
+- F6 (nit) `release_pins` at recover releases every pin in the borrowed index's manifest. Install is the only pinner today (I grepped strata and Xapiand), but the index is the catalog's (D169), so a future pinner (backup, cold tier) would lose its pins at every group open. 
+
+## turn-log-parity durability follow-up (2026-11-23)
+
+- G1 (gap, availability) One flipped byte in a log's last turn, in a fragment crossing its sector, reads as a torn tail (journal `docs/mechanisms/turn-log-damage.md`, Limits): the host reports no damage, and strata's open refuses with `the index's head names turn-log records its log lacks` (strata `index.hh`, main's check from 6e455aca). The refusal is safe (opening would reissue applied sequences), but the index stays closed until repaired. Opening it needs a journal change: a per-fragment checksum, or the group's sequence kept at its head. Evidence: the D2 probe's `small (control)` and `last chunk damaged` cases (261121-213954-ecd99d, and again 261123-002234-c8c5d2 at strata:f5f6b7dc). Owner: Detent's journal (coordinate with its lead).
