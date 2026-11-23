@@ -52,14 +52,17 @@ fit with every byte staged is refused (`invalid`), never proposed over the limit
 
 `src/database/shard_group.h`, `ShardApplication`, the group's application over the catalog slot's index. Its
 state (`ShardGroupState`, contract `xapiand:volume-file-set`) is the current volume and its length, the next
-volume number, and the open chunked commands with their terms and upload volumes. Every function reads the
-entry's starting state only:
+volume number, and the open chunked commands by id with their upload volumes. A chunked command's id carries
+its proposer's term in its high 32 bits (`chunked_id`). Every function reads the entry's starting state only:
 
 1. **Effects.** An open command of a lower term is retired at the first entry of a higher one (its staging and
-   upload volume). A chunk writes its bytes at its offset into `stage-ID` or its upload's volume (numbered at
-   its first chunk). A command or a final entry writes each in-place blob record at the offset `place_blobs`
-   names, rotating a volume past `VOLUME_BYTES` (32 GiB, master's volume bound), and a final reads its staged
-   bytes back and retires its staging.
+   upload volume). A chunk or a final placed in another term than its id names applies nothing: a leader
+   change cut its command, and a deposed proposer's queued chunks must not write a retired file again. A chunk
+   writes its bytes at its offset into `stage-ID` or its upload's volume (numbered at its first chunk). A
+   command or a final entry writes each in-place blob record at the offset `place_blobs` names, rotating a
+   volume past `VOLUME_BYTES` (32 GiB, master's volume bound), and a final reads its staged bytes back and
+   retires its staging. A final whose blob names its upload seals the upload's volume; one that names none (an
+   abort, a final with no writes) retires it, so an abandoned upload frees its space.
 2. **Transaction.** Each write's document with its blobs' locators set from the placement, through
    `append_write`; none for a chunk, a final whose chunks were retired, or a non-command entry.
 3. **Advance.** The placement's state, the chunk's open command, the final's close.
@@ -75,5 +78,6 @@ publishes.
 - `tests/test_group_command.cc`: round trips, every entry within the limit at limits around a command's size,
   refusals over the limit, and corrupt bytes at every prefix refused.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
-  command applied at its final entry, an upload into its own volume, a higher term retiring open commands, and
-  the state's bytes.
+  command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
+  entries outside their id's term applying nothing, an abort retiring its upload's volume, and the state's
+  bytes.

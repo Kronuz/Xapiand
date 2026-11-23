@@ -99,6 +99,16 @@ struct Command {
 	bool operator==(const Command&) const = default;
 };
 
+// A chunked command's id: the proposing leader's term in the high 32 bits, a sequence below.
+constexpr std::uint64_t chunked_id(std::uint64_t term, std::uint64_t sequence) noexcept {
+	return term << 32 | (sequence & 0xffffffffu);
+}
+
+// The term every entry of a chunked command lands in, or it fails: a higher term's first entry retires it (D12).
+constexpr std::uint64_t chunked_term(std::uint64_t id) noexcept {
+	return id >> 32;
+}
+
 // A chunk of a chunked command: bytes at an offset of one of its streams.
 struct CommandChunk {
 	std::uint64_t id = 0;

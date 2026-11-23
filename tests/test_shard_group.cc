@@ -27,6 +27,7 @@
 
 #include "test_harness.h"
 
+#include <cstdio>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -238,6 +239,63 @@ void test_higher_term_retires_open_commands() {
 	CHECK_FALSE(r.index->find_key("Kbig").has_value());
 }
 
+// A chunk or final entry placed in a later term than its id names applies nothing (A9): at rf > 1 a deposed
+// leader's proposer still places the chunks it had queued, after the new term's first entry retired the command.
+void test_entries_outside_their_term_apply_nothing() {
+	Replica r("shard_group_cut");
+	Command command;
+	command.writes.push_back(put("Kcut", "application/x", pattern(2 * 1024 * 1024, 'k')));
+	const std::uint64_t id = (1ull << 32) | 11;
+	const auto entries = split_command(command, id);
+	REQUIRE(entries.size() >= 4u);
+	r.apply(entries[0], 1);
+	r.apply(entries[1], 1);
+	r.apply(std::string_view(), 2, cs::EntryKind::NoOp);   // the new leader's first entry retires the command
+	CHECK_FALSE(r.files->live(staging_name(id)));
+	for (std::size_t i = 2; i < entries.size(); ++i) {
+		bool threw = false;
+		std::optional<prospect::transaction> t;
+		try {
+			t = r.apply(entries[i], 2);
+		} catch (const std::exception& e) {
+			threw = true;
+			std::fprintf(stderr, "  entry %zu at term 2: %s\n", i, e.what());
+		}
+		CHECK_FALSE(threw);
+		CHECK_FALSE(t.has_value());
+		CHECK_FALSE(r.files->live(staging_name(id)));
+		CHECK(r.state.open.empty());
+	}
+	CHECK_FALSE(r.index->find_key("Kcut").has_value());
+	CHECK_EQ(r.state.length, 0u);
+}
+
+// An abort (a final entry with no writes) retires its upload's volume (A9): an abandoned upload frees its space.
+// A final whose blob names the upload seals it instead.
+void test_abort_retires_its_upload_volume() {
+	Replica r("shard_group_abort");
+	const std::uint64_t id = (1ull << 32) | 12;
+	r.apply(encode_entry(CommandChunk{id, CommandStream::upload, 0, "abandoned"}), 1);
+	const auto volume = r.state.open.at(id).upload;
+	CHECK(r.files->live(volume_name(volume)));
+	CHECK_FALSE(r.apply(encode_entry(CommandFinal{id, Command{}}), 1).has_value());
+	CHECK_FALSE(r.files->live(volume_name(volume)));
+	CHECK(r.state.open.empty());
+
+	const std::uint64_t kept = (1ull << 32) | 13;
+	const auto bytes = pattern(100, 'k');
+	r.apply(encode_entry(CommandChunk{kept, CommandStream::upload, 0, bytes}), 1);
+	const auto named = r.state.open.at(kept).upload;
+	auto w = put("Kkept", "video/mp4", std::string());
+	w.document.bytes = document("Kkept", "video/mp4", bytes.size());
+	w.blobs[0].record = CommandBytes{{}, true, CommandStream::upload, 0, bytes.size()};
+	Command final;
+	final.writes.push_back(std::move(w));
+	REQUIRE(r.apply(encode_entry(CommandFinal{kept, final}), 1).has_value());
+	CHECK(r.files->live(volume_name(named)));
+	CHECK(r.files->read(volume_name(named), 0, bytes.size()) == bytes);
+}
+
 // The state round-trips through the checkpoint bundle's bytes, and bytes that are not one are refused.
 void test_state_bytes() {
 	Replica r("shard_group_state");
@@ -245,8 +303,8 @@ void test_state_bytes() {
 	s.volume = 4;
 	s.length = 1ull << 35;
 	s.next = 9;
-	s.open[5] = {3, 0};
-	s.open[1ull << 40] = {7, 8};
+	s.open[5] = {0};
+	s.open[1ull << 40] = {8};
 	const auto bytes = r.app->encode(s);
 	CHECK(r.app->decode(bytes) == s);
 	for (std::size_t n = 0; n < bytes.size(); ++n) {
@@ -263,4 +321,5 @@ void test_state_bytes() {
 }  // namespace
 
 TEST_MAIN(test_blobs_at_the_offsets_the_state_names, test_rotation_in_log_order, test_chunked_command_applies_at_its_final_entry,
-	test_upload_into_its_own_volume, test_higher_term_retires_open_commands, test_state_bytes)
+	test_upload_into_its_own_volume, test_higher_term_retires_open_commands, test_entries_outside_their_term_apply_nothing,
+	test_abort_retires_its_upload_volume, test_state_bytes)

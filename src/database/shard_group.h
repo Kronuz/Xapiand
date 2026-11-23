@@ -45,10 +45,9 @@ inline constexpr std::uint64_t VOLUME_BYTES = 32ull << 30;
 
 // What the group keeps beside strata, in its checkpoint bundle (contract xapiand:volume-file-set).
 struct ShardGroupState {
-	// A chunked command whose final entry has not applied: the term of its chunks, and the volume its upload
+	// A chunked command whose final entry has not applied, by id (its id names its term): the volume its upload
 	// stream writes (0 until its first upload chunk).
 	struct Open {
-		std::uint64_t term = 0;
 		std::uint64_t upload = 0;
 		bool operator==(const Open&) const = default;
 	};

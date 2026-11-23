@@ -266,6 +266,7 @@ void test_upload_body_of_another_size() {
 	// A body past its size, then one short of it: each after a chunk was placed.
 	for (const auto& [size, n] : {std::pair{std::size_t(1024 * 1024), std::size_t(1536 * 1024)}, std::pair{std::size_t(2048 * 1024), std::size_t(1536 * 1024)}}) {
 		const auto id = chunked_id(1, size);
+		const auto volume = g.state.next;   // the upload's, at its first chunk
 		ChunkedUpload upload(id, size);
 		Body body(pattern(n, 'x'), 64 * 1024);
 		bool client = false;
@@ -281,6 +282,7 @@ void test_upload_body_of_another_size() {
 		CHECK_EQ(final->id, id);
 		CHECK(final->command.writes.empty());
 		CHECK_EQ(g.state.open.count(id), 0u);
+		CHECK_FALSE(g.files->live(volume_name(volume)));   // the abort freed it (A9)
 	}
 }
 

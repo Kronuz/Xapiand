@@ -42,7 +42,7 @@ namespace {
 namespace cs = kronuz::consensus;
 
 constexpr char STATE_MAGIC[2] = {'X', 'G'};
-constexpr std::uint8_t STATE_VERSION = 1;
+constexpr std::uint8_t STATE_VERSION = 2;
 
 engine::WriteOp
 write_op(CommandOp op)
@@ -58,12 +58,26 @@ write_op(CommandOp op)
 	return engine::WriteOp::none;
 }
 
-// A chunk applies unless its id is open in a lower term: that command failed at this entry (D12).
+// A chunk or final entry applies only in the term its id names (D12): placed in another, a leader change cut its
+// command, whose files a higher term's first entry retired.
 bool
-chunk_applies(const ShardGroupState& s, const CommandChunk& chunk, std::uint64_t term)
+in_its_term(std::uint64_t id, std::uint64_t term)
 {
-	const auto it = s.open.find(chunk.id);
-	return it == s.open.end() || it->second.term >= term;
+	return chunked_term(id) == term;
+}
+
+// Whether a blob of `command` is in its upload stream.
+bool
+names_upload(const Command& command)
+{
+	for (const auto& write : command.writes) {
+		for (const auto& blob : write.blobs) {
+			if (blob.record.staged && blob.record.stream == CommandStream::upload) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 // The volume an upload chunk of `id` writes: its upload's, or the next number when this is its first.
@@ -131,7 +145,7 @@ ShardApplication::effects(const state& s, const strata::group::entry& e, strata:
 	resolved_ = Resolved{e.index, std::nullopt, 0};
 	// An open chunked command of a lower term fails at the first entry of a higher one (D12): its files retire.
 	for (const auto& [id, open] : s.open) {
-		if (open.term < e.term) {
+		if (chunked_term(id) < e.term) {
 			files.retire(staging_name(id), e.index);
 			if (open.upload != 0) {
 				files.retire(volume_name(open.upload), e.index);
@@ -143,7 +157,7 @@ ShardApplication::effects(const state& s, const strata::group::entry& e, strata:
 	}
 	auto decoded = decode_entry(e.command);
 	if (const auto* chunk = std::get_if<CommandChunk>(&decoded)) {
-		if (chunk_applies(s, *chunk, e.term)) {
+		if (in_its_term(chunk->id, e.term)) {
 			const auto name = chunk->stream == CommandStream::staging ? staging_name(chunk->id) : volume_name(upload_volume(s, chunk->id));
 			files.write(name, chunk->offset, chunk->bytes);
 		}
@@ -153,7 +167,7 @@ ShardApplication::effects(const state& s, const strata::group::entry& e, strata:
 	Command command;
 	if (auto* final = std::get_if<CommandFinal>(&decoded)) {
 		const auto it = s.open.find(final->id);
-		if (it == s.open.end() || it->second.term < e.term) {
+		if (it == s.open.end() || !in_its_term(final->id, e.term)) {
 			return;   // its chunks were retired, or never applied: the command fails
 		}
 		id = final->id;
@@ -194,7 +208,12 @@ ShardApplication::effects(const state& s, const strata::group::entry& e, strata:
 	if (id != 0) {
 		files.retire(staging_name(id), e.index);
 		if (const auto upload = s.open.at(id).upload; upload != 0) {
-			files.seal(volume_name(upload));   // complete: immutable from here
+			// Complete and named: immutable from here. Named by no blob (an abort): its space is freed.
+			if (names_upload(command)) {
+				files.seal(volume_name(upload));
+			} else {
+				files.retire(volume_name(upload), e.index);
+			}
 		}
 	}
 	resolved_.command = std::move(command);
@@ -305,7 +324,7 @@ ShardApplication::advance(state& s, const strata::group::entry& e)
 	if (e.kind == cs::EntryKind::Command && !r.command) {
 		auto decoded = decode_entry(e.command);
 		if (const auto* c = std::get_if<CommandChunk>(&decoded)) {
-			if (chunk_applies(s, *c, e.term)) {
+			if (in_its_term(c->id, e.term)) {
 				chunk = *c;
 			}
 		}
@@ -316,10 +335,9 @@ ShardApplication::advance(state& s, const strata::group::entry& e)
 			s.open.erase(r.id);
 		}
 	}
-	std::erase_if(s.open, [&](const auto& open) { return open.second.term < e.term; });
+	std::erase_if(s.open, [&](const auto& open) { return chunked_term(open.first) < e.term; });
 	if (chunk) {
 		auto& open = s.open[chunk->id];
-		open.term = e.term;
 		if (chunk->stream == CommandStream::upload && open.upload == 0) {
 			open.upload = s.next++;
 		}
@@ -340,7 +358,6 @@ ShardApplication::encode(const state& s) const
 	put(s.open.size());
 	for (const auto& [id, open] : s.open) {
 		put(id);
-		put(open.term);
 		put(open.upload);
 	}
 	return out;
@@ -369,9 +386,7 @@ ShardApplication::decode(std::string_view bytes) const
 	s.next = get();
 	for (auto count = get(); count > 0; --count) {
 		const auto id = get();
-		auto& open = s.open[id];
-		open.term = get();
-		open.upload = get();
+		s.open[id].upload = get();
 	}
 	if (p != end || s.volume == 0 || s.next <= s.volume) {
 		bad();

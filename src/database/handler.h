@@ -322,16 +322,6 @@ public:
 // Proposes one entry to the shard's group at a level and answers what its proposer heard.
 using ProposeEntry = std::function<task::task<strata::group::answer>(std::string entry, strata::group::ack level)>;
 
-// A chunked command's id: the proposing leader's term in the high 32 bits, a sequence below.
-constexpr std::uint64_t chunked_id(std::uint64_t term, std::uint64_t sequence) noexcept {
-	return term << 32 | (sequence & 0xffffffffu);
-}
-
-// The term every entry of a chunked command lands in, or it fails: a higher term's first entry retires it (D12).
-constexpr std::uint64_t chunked_term(std::uint64_t id) noexcept {
-	return id >> 32;
-}
-
 // One leader's chunked-command ids, from `floor`, the group's last log index at its ready point. An id is drawn
 // only to propose its first chunk, so an earlier leader of the same term (a reopen that resumed it) never drew one
 // at or past `floor` that reached the log.
