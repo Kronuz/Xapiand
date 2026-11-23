@@ -1,6 +1,6 @@
 # group-heal--witness: journal
 
-State: waiting on jobs 261121-214745-036576 261121-214749-38a541 261121-214752-5dffc3 (and CI at strata:7db919a5)
+State: waiting on jobs 261123-014646-0ebc24 261123-014651-e0f143 261123-014655-73ffe0 261123-014705-499a3a (and CI at strata:e4828884)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,15 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+2026-11-23 (group-heal's contributor): the quest head strata:82ea744c merged in at
+strata:e4828884 (install pin fix, the release that stalls short of space, lazy leader install
+state). voters_test's world edits went to world.hh (uploads counter, cut_leader, holds,
+removed_by_core). join no longer proposes the replaced voter's removal: consensus's core removes
+it (D3) and the voter never learns that commit, the same expectation that failed grow_and_heal at
+75b5ac9b. The earlier failures at 7db919a5 (loss, join) were the install stall. Jobs at
+e4828884: group_witness 0ebc24, mutants witness-holds-range e0f143, witness-refuses-image 73ffe0
+(case join), group suite 499a3a.
 
 A4 (witness). strata:55168358 and the suite line after it: `include/strata/group/witness.hh`, a
 `member` with no index, file set or chore (consensus D9 does the protocol: acknowledges the
@@ -21,10 +30,8 @@ member lost). Not compiled locally: CI on the pushed task branch is the first bu
 
 ## Next
 
-1. Read the jobs at strata:7db919a5: plain group_witness 214745-036576 must pass; mutants
-   `witness-holds-range` 214749-38a541 and `witness-refuses-image` 214752-5dffc3
-   (`test/group/mutants.py`, `--fails-without`, case `join`) must fail with a full build. CI at
-   7db919a5 is the first compile of world.hh and witness_test.cc; fix what it finds, rerun.
+1. Read the jobs at strata:e4828884 (State); plain group_witness must pass, both mutants fail with
+   a full build. Fix what fails, rerun.
 2. Ready for the lead's merge into group-heal.
 
 ## Blocked on
