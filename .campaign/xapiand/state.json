@@ -12600,11 +12600,46 @@
         "test/group/footprint_test.cc",
         "test/group/mutants.py"
       ],
-      "journal": "../Xapiand-wt/xapiand/group-catalog",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T01:16:25",
+          "ci": {
+            "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+            "runs": [
+              45116136136
+            ]
+          },
+          "commit": "00eb018da75d20715b3e05a2593937a970b40201",
+          "criteria": {
+            "A1": "261122-230337-12f31e; fails without: 261122-211133-7c6764, 261122-211133-b0ca6a, 261122-211134-b909b9, 261122-211135-521cb5, 261122-211136-fdb1c0, 261122-211137-41350c, 261122-211138-b805d6, 261122-211138-6143f3, 261122-211140-2f6a14",
+            "A2": "261122-230337-12f31e; fails without: 261121-103856-a3faa5, 261122-211135-d64b14, 261122-211135-e08c97, 261122-211136-ca0414",
+            "A3": "261122-230337-12f31e, 261122-211116-a8f861 (passed at 8bacffe482d8; only 1 merge from main since, none touching its files); fails without: 261121-103905-bc298a, 261122-211020-f3b814, 261122-211027-87f7a1",
+            "A4": "[artifact] strata `docs/mechanisms/group-catalog.md` (strata:513d959d)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "8bacffe482d82ebff39c3edcbfa0e11a0aeecfff",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-211206-187ec0",
+              "level": "light",
+              "seconds": 842.6,
+              "state": "done",
+              "what": "group-catalog check suite at 8bacffe482d8"
+            }
+          ],
+          "final": true,
+          "from": "7131ed4480b14dacbb975ca9de06a4c43881cff2",
+          "reason": "",
+          "tested": "00eb018da75d20715b3e05a2593937a970b40201"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [
@@ -12612,10 +12647,10 @@
       ],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "title": "a replication group runs on its catalog slot's index",
-      "updated": "2026-11-22T23:02:44",
-      "worktree": "../strata-wt/xapiand/group-catalog"
+      "updated": "2026-11-23T01:16:36",
+      "worktree": ""
     },
     "group-core": {
       "accepted": {},
