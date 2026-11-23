@@ -9,7 +9,7 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Head datetime-wt 2afe156: the fraction parsers (parse_fsec_long, parse_fsec: datetime.cc only; parse_dotted_fsec: datetime_time.cc only) are back as `static` in the piece that uses them, original lines byte for byte. This clears split check 261121-160518-8a9d65's 2 errors: `[[gnu::noinline]] static` -> `[[gnu::noinline]] inline` is no allowed shape (the checker's static/inline strip doesn't see past the attribute; fixed in the split, not the checker). Header drops <string>, <string_view>, strict_stox.hh (only those parsers used them); datetime.cc regains its base <string> and strict_stox.hh lines.
+Head datetime-wt 2afe156: the fraction parsers (parse_fsec_long, parse_fsec: datetime.cc only; parse_dotted_fsec: datetime_time.cc only) are back as `static` in the piece that uses them, original lines byte for byte. This clears split check 261122-211645-adc848's 2 errors: `[[gnu::noinline]] static` -> `[[gnu::noinline]] inline` is no allowed shape (the checker's static/inline strip doesn't see past the attribute; fixed in the split, not the checker). Header drops <string>, <string_view>, strict_stox.hh (only those parsers used them); datetime.cc regains its base <string> and strict_stox.hh lines.
 
 ## Next
 
@@ -30,8 +30,8 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-160518-63e0f2 (build-test at ee3d707); replaces 261121-122624-6b5417 (ran c6d6ff7) and 261121-122624-03379d (old split check, failed on the checker's .md and include-guard bugs, not the split) |
-| A2 | 261121-160515-3084ef (split_check from split-check-sources, at ee3d707); replaces 261121-122624-e89922 (failed: exit 2, old checker) and 261121-122624-03379d. Gate copy 261121-160518-8a9d65 uses the pre-fix script and is expected to fail the same way |
+| A1 | 261122-211644-7ddf11 (build-test at ee3d707); replaces 261121-122624-6b5417 (ran c6d6ff7) and 261121-122624-03379d (old split check, failed on the checker's .md and include-guard bugs, not the split) |
+| A2 | 261121-160515-3084ef (split_check from split-check-sources, at ee3d707); replaces 261121-122624-e89922 (failed: exit 2, old checker) and 261121-122624-03379d. Gate copy 261122-211645-adc848 uses the pre-fix script and is expected to fail the same way |
 | A3 | 261121-160519-3cbaa9 (head) vs 261121-160531-3f29b1 (base b5d46a8), diffed; replaces 261121-140751-b76baa (cancelled by the resubmit), 261121-122627-8f659b (failed exit 125) and 261121-122626-0ba83a (c6d6ff7) |
 | A4 | docs/source-layout.md (5b07a01): a row per new file, each .cc/.h's first line states what it holds, test/diff_test.cc kept whole with reasons |
 | A5 | CI at 2afe156 (pushed, not yet read) |
