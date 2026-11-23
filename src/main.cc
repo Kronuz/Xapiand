@@ -348,10 +348,12 @@ void adjustOpenFilesLimit()
 	ssize_t new_database_pool_size;
 	ssize_t new_max_clients;
 	ssize_t files = 1;
-	ssize_t minimum_files = 1;
 	ssize_t recommended_files = 1;
 
 	ssize_t open_files_per_proc = get_open_files_per_proc();
+
+	// The least that holds one database and one client; a smaller pool and fewer clients than configured start with it.
+	ssize_t minimum_files = open_files_per_proc + FDS_RESERVED + 3 * FDS_PER_DATABASE + 2 * FDS_PER_CLIENT;
 
 	while (true) {
 		ssize_t used_files = open_files_per_proc + FDS_RESERVED;
@@ -371,7 +373,7 @@ void adjustOpenFilesLimit()
 		used_files += (new_max_clients + 1) * FDS_PER_CLIENT;
 
 		if (new_database_pool_size < 1 || new_max_clients < 1) {
-			files = minimum_files = used_files;
+			files = used_files;
 		} else if (new_database_pool_size < opts.database_pool_size || new_max_clients < opts.max_clients) {
 			files = recommended_files = used_files;
 		} else {
@@ -445,7 +447,8 @@ void adjustOpenFilesLimit()
 	files = max_files;
 	ssize_t used_files = FDS_RESERVED;
 	used_files += FDS_PER_DATABASE;
-	new_database_pool_size = (files - used_files) / FDS_PER_DATABASE;
+	// The pool leaves room for one client: the spare database and two clients' descriptors are counted below.
+	new_database_pool_size = (files - used_files - FDS_PER_DATABASE - 2 * FDS_PER_CLIENT) / FDS_PER_DATABASE;
 	if (new_database_pool_size > opts.database_pool_size) {
 		new_database_pool_size = opts.database_pool_size;
 	}
@@ -454,6 +457,16 @@ void adjustOpenFilesLimit()
 	new_max_clients = (files - used_files) / FDS_PER_CLIENT;
 	if (new_max_clients > opts.max_clients) {
 		new_max_clients = opts.max_clients;
+	}
+
+
+	// Refuse a limit that cannot hold one database and one client, before any reduction is reported:
+	if (max_files < minimum_files) {
+		L_CRIT("Your open files limit of {} is not enough for the server to start. Please increase your system-wide open files limit to at least {}",
+			max_files,
+			minimum_files);
+		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
+		throw SystemExit(EX_OSFILE);
 	}
 
 
@@ -468,14 +481,8 @@ void adjustOpenFilesLimit()
 	}
 
 
-	// Warn about minimum/recommended sizes:
-	if (max_files < minimum_files) {
-		L_CRIT("Your open files limit of {} is not enough for the server to start. Please increase your system-wide open files limit to at least {}",
-			max_files,
-			minimum_files);
-		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
-		throw SystemExit(EX_OSFILE);
-	} else if (max_files < recommended_files) {
+	// Warn about the recommended size:
+	if (max_files < recommended_files) {
 		L_WARNING_ONCE("Your current max_files of {} is not enough. Please increase your system-wide open files limit to at least {}",
 			max_files,
 			recommended_files);

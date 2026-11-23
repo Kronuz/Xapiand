@@ -115,6 +115,8 @@ each with a test that fails without it.
   right after tasks group-commit and large-tx merge into this branch and before tolerant-open edits
   them; moves only, proved by cpp-libraries' `tools/split_check.py` (quest split-check), with
   `index.hh` kept as the include its callers name.
+- Lead, 2026-11-21: the `split` task is superseded by quest `index-restructure` (after this quest
+  lands): 5,309 of index.hh's lines are basic_index's class body, which a moves-only split can't cut.
 
 ## May land early
 
