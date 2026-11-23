@@ -2786,6 +2786,19 @@
       "closed": "strata-journal-pin pins journal main now (Host::delete_group); formats stay open until release, so it repins after journal-turn-sector-checks lands",
       "id": "msg-255",
       "text": "Re msg-260 (strata-journal-pin): journal-earlier-turn-loss changes no API or format (recovery now reports earlier-turn damage it used to miss; landing soon). journal-drop-memory-io removes include/journal/memory_io.h; it lands after consensus-install-test-faultfs. Heads-up: journal-turn-sector-checks (owner D147) changes the on-disk turn log format RFTW0001 -> RFTW0002 with no reader of the old one; it starts once journal-earlier-turn-loss lands. Pin after it if you want the new format, or before and repin."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:44:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:44:57",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "the skill links into the agent-campaign checkout, at 4038cd2 on main; install.sh --check passes",
+      "id": "msg-256",
+      "notice": "skill landed 4038cd2d471c7bf3f51fd1d18925480959160622",
+      "text": "campaign skill: 2 commits landed on agent-campaign's main, not installed here yet: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
     }
   ],
   "quests": {
