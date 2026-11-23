@@ -37,7 +37,7 @@ A1 build-test 261123-082128-ac3d19 and A2 group rows 261123-082130-ef040a queued
    returns" for create/reopen is stale (journal now commits transitions before the loop's next
    turn with records; strata's join order still holds, the first record's turn commits it first).
 2. Lead / group-heal: include/strata/group/group.hh:214 recovers only `stored`/`closed`; a
-   `bounded` group falls to `driver.create`, which creates over an open entry. group-heal holds
+   `bounded` group falls to `driver.create` over an open table entry (unverified what consensus does then). group-heal holds
    the file; the fix is to route `bounded` to `driver.recover` (consensus's Journal Store loses a
    bounded group on recover, per journal's changelog) or to `lose` it first. Not touched.
 
