@@ -34839,7 +34839,8 @@
         "fuzz/corpus/command/**",
         "bench/kv/kv_strata.hh",
         "test/kv_strata_batch_test.cc",
-        "docs/mechanisms/large-transactions.md"
+        "docs/mechanisms/large-transactions.md",
+        "docs/design/standalone-turn-log.md"
       ],
       "history": [
         {
@@ -35000,7 +35001,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T04:09:17",
+      "updated": "2026-11-23T06:57:19",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
