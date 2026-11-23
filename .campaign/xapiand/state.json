@@ -35831,17 +35831,53 @@
         }
       ],
       "journal": "../Xapiand-wt/xapiand/turn-log-parity",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T14:43:39",
+          "ci": {
+            "commit": "cbc4dd1b264330e2d25af138ab6646e754079d7e",
+            "runs": [
+              45240441455
+            ]
+          },
+          "commit": "757c00ab4a0c03044394bd0dda87a138f5a98f9b",
+          "criteria": {
+            "A1": "261123-103824-1a142a, 261123-103824-c55688; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16, 261123-002143-aa5d40",
+            "A2": "261123-132004-4e6fad, 261123-132007-eebb45; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7",
+            "A3": "261123-132013-a6ff01, 261123-132010-1e093e, 261123-132000-0586f1, 261123-132020-d42c76; fails without: 261121-104113-4f8cbb, 261121-104116-816fc6, 261121-104119-d0dd11, 261121-110107-c64ff6, 261121-110108-aa171b, 261121-110110-5b9806, 261121-110112-a647c1, 261121-151703-21b6d5",
+            "A4": "261123-103821-e0c376; fails without: 261120-082448-f562c7, 261121-101433-65f5c5, 261121-151523-00cd16, 261122-212021-14ab70",
+            "A5": "[artifact] strata:3a29aa9b, `docs/design/standalone-turn-log.md`, \"Questions for the owner\": Q3, Q4, Q5 closed with mechanisms, file:line, tests and mutants"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "cbc4dd1b264330e2d25af138ab6646e754079d7e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-103754-039064",
+              "level": "light",
+              "seconds": 1640.8,
+              "state": "done",
+              "what": "turn-log-parity check build-test at cbc4dd1b2643"
+            }
+          ],
+          "final": true,
+          "from": "93d104461a79e17b0b9e43b93965a77d7ab711ed",
+          "reason": "",
+          "tested": "757c00ab4a0c03044394bd0dda87a138f5a98f9b"
+        }
+      ],
       "lenses": [
         "durability",
         "design"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "landed",
       "tasks": {
         "checkpoint-window": {
           "base": "fcf5b55b98b2027ed2cd7f5171322ad5cc3885e1",
@@ -35971,7 +36007,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T14:43:14",
+      "updated": "2026-11-23T14:43:40",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {
