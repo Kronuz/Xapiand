@@ -2680,6 +2680,25 @@
         ]
       },
       "text": "set require-once: unlocks frees tests/test_harness.h, tests/test_harness_self.cc, tests/CMakeLists.txt for require-once"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T05:58:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T05:58:57",
+      "by": "campaign detent",
+      "closed": "expected: consensus-request-install waits on consensus-rpc-fetch-lag; cluster and group-heal rebuild against its contracts when it lands",
+      "id": "msg-249",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-rpc-fetch-lag"
+      },
+      "text": "detent:consensus-rpc-fetch-lag started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
