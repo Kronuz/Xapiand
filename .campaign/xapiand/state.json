@@ -7145,7 +7145,12 @@
         "docs/mechanisms/admission.md",
         "docs/mechanisms/hello.md",
         "docs/mechanisms/host-connection.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "include/consensus/transport/links.h",
+        "include/consensus/transport/connection.h",
+        "test/transport/links_test.cc",
+        "test/transport/connection_test.cc",
+        "test/transport/mutant_commit.py"
       ],
       "journal": "../Xapiand-wt/xapiand/consensus-join-v2",
       "landed": [],
@@ -7163,7 +7168,7 @@
       "risk": "high",
       "status": "active",
       "title": "consensus joins a node by token v2 on the transport port, pins keys, reloads certificates and checks the boot",
-      "updated": "2026-11-23T13:10:02",
+      "updated": "2026-11-23T13:13:28",
       "worktree": "../consensus-wt/xapiand/consensus-join-v2"
     },
     "consensus-request-install": {
