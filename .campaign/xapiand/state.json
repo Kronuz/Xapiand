@@ -13184,6 +13184,8 @@
             "test/group/voters_test.cc"
           ],
           "journal": "../Xapiand-wt/xapiand/group-heal--install",
+          "reason": "already merged: quest/xapiand/group-heal--install is an ancestor of the quest branch (merged at strata:cd2a4a40); task merge refuses on superseded failing runs 12c599/ca81f0 at f05b667, and its evidence is the quest suite 1cfc1e at a1e786f4",
+          "status": "dropped",
           "worktree": "../strata-wt/xapiand/group-heal--install"
         },
         "repair": {
@@ -13236,7 +13238,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T04:32:39",
+      "updated": "2026-11-23T04:37:00",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
