@@ -970,3 +970,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Lead errors: told the owner 3 of 97 uinteger_t binaries differ in fnsizes; it is 95 (campaign job log shows only the tail; full log at jobs/<id>/a1/log). Reran non-evidence probes at a task head, which blocked its merge.
 - Agent runs: uinteger evidence pass (Sonnet high, 142k), consensus CI (Opus high, 149k), placement CI (Opus high, 131k), journal-group-delete review (Opus high, 162k), group-heal fixes (Opus high, 216k).
 - Host: load 366 on 16 CPUs (Detent's four-way reader soak), light slots 61% used, 45 queued, 285 GiB free. Quota 12% weekly at 1.6%/h.
+
+## 2026-11-23 13h
+
+- Quota: weekly 14% (1.73%/h window average; projected exhaustion ~49 h, before the 2026-11-30 reset). Owner told.
+- Finished agents: group-heal evidence pass (Sonnet, 92k: found A3 and A5 unbuilt, two tasks started); main-branch probe explorer (Opus, 89k: proved first-commit-crash, 40 of 90 cuts refused at strata:00eb018d); journal-replaces-wal c/d1 (Opus, 320k); sim-rows (Opus, 290k, uncompiled; its mutant script points at a missing binary, 4 of 4 mutant jobs FileNotFoundError, not kills); repair (Opus, 302k, uncompiled, first compile queued e451c4).
+- New quest: first-commit-crash (high, durability), A2 fails-without proven (9bf051), fix passes the sweep (ad76e7).
+- Lead errors: told the owner group-heal waited only on CI and consensus while A3/A5 tasks were unbuilt; caught by the evidence pass.
+- Environment: github.com unreachable from the host and its VMs from ~13:00 UTC (connect refused in ms, other hosts fine); pushes, CI reads and VM dependency fetches fail.
