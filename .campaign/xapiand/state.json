@@ -11369,12 +11369,11 @@
       "milestone": "",
       "needs": [],
       "provides": [],
-      "reason": "started by force: a durability fix of a few lines in index.hh's commit/recover path, refused today on 40 of 90 cuts; it lands after turn-log-parity (--after), and index-restructure's moves are tool-made from a committed map, so it regenerates them after this lands",
       "repo": "../strata",
       "risk": "high",
-      "status": "active",
+      "status": "review",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T04:44:42",
+      "updated": "2026-11-23T05:26:50",
       "worktree": "../strata-wt/xapiand/first-commit-crash"
     },
     "flush-memory": {
