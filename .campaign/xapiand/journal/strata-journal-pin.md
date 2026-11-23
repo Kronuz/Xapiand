@@ -77,3 +77,4 @@ A4, journal 9e11713 -> 9e0649d, what strata follows:
   head is below the bound is lost with log_lost; accepted under its durability review). This quest lands after
   turn-log-parity, then takes main and rebuilds its pin on top: no second copy of that check here.
 - group.hh:214 (a bounded group goes to driver.create) is group-heal's: filed in hunt.md for its durability re-review.
+- F10 of group-heal's durability re-review (2026-11-23): on journal main a bounded group reaches driver.create in group.hh, which throws; the replica never rejoins. This quest takes it after group-heal lands (group-heal holds group.hh).
