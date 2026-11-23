@@ -117,6 +117,11 @@ Provides (bytes, reviewed by `format-freeze`): `xapiand:command` (D3), `xapiand:
   root, inside the dot-leading namespace Xapiand already owns (listing and patterns skip it, and
   `.xapiand/indexes` and `.xapiand/nodes` are its system indexes), so no user index name is newly
   reserved. A top-level `.journal` would take a name a user can create today.
+- Lead, 2026-11-24 (durability review): R1, the host's PosixIO takes `engine::strata::posix_io_options()`
+  so `--full-flush-ordering` reaches the journal's reclaim barrier and its warning, with a test and a
+  `--fails-without` mutant (A5). R2 is strata's: quest `file-set-seal-streaming` (after group-heal and
+  placement); this quest moves its strata pin to that landing and lands after it. G1: the `levels` task
+  runs now, as planned (task 3); A5 stays whole.
 
 ## When done
 

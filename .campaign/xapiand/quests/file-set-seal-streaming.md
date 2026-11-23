@@ -1,36 +1,38 @@
 # file-set-seal-streaming: file_set::seal checksums a volume streaming, as verify does
 
-Risk: high. The lead writes this quest; contributors read it and never edit it. Its machine state
-(status, branch, checks, reviews) is in `state.json`: `campaign status file-set-seal-streaming`.
+Risk: high (durability). The lead writes this quest; contributors read it and never edit it. Its machine
+state is in `state.json`: `campaign status file-set-seal-streaming`.
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+`strata::group::file_set::seal` computes a volume's CRC32C with the streaming `crc32c_of` that
+verification already uses (`file_set.hh:149`, called at `:129`), never by reading the whole file into one
+string. Sealing a 32 GiB rotated volume or a multi-GiB upload then uses bounded memory, so it cannot fail
+with `bad_alloc` and leave a shard that replays the same failing seal forever. Blocking finding R2 of
+journal-replaces-wal's durability review (`.campaign/xapiand/reviews/journal-replaces-wal-durability.md`).
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, a job tagged `--for A1`
+- A2 A test seals a file larger than a bound the test sets on the IO's read size and checks the sealed CRC
+  equals the whole-file CRC32C; a mutant that seals by one whole read fails it (a `--fails-without` job)
+- A3 One mechanism: `seal` and the verifier share `crc32c_of`; no other whole-file read remains in
+  `file_set.hh` for checksums (`git grep` in the journal)
+- A4 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changed: the sealed CRC value is the same bytes' CRC32C.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-24: its own quest, after group-heal and placement (both change `file_set.hh`).
+  journal-replaces-wal moves its strata pin to this landing.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one change.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (implementation, strong, high).
