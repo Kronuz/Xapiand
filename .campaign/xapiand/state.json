@@ -15464,7 +15464,20 @@
         "tests/test_engine_strata.cc",
         "tests/test_engine_replay.cc",
         "tests/test_quarantine.cc",
-        "tests/test_coverage_database.cc"
+        "tests/test_coverage_database.cc",
+        "docs/src/content/docs/reference-guide/wal.md",
+        "docs/src/content/docs/reference-guide/api.md",
+        "docs/src/content/docs/about.md",
+        "docs/src/content/docs/basics.md",
+        "docs/src/content/docs/manipulation.md",
+        "docs/src/content/docs/reference-guide/indexes/backups.md",
+        "docs/src/content/docs/architecture/dependencies.md",
+        "docs/src/content/docs/architecture/internals.md",
+        "docs/mechanisms/wal-replay.md",
+        "harness/stored_stream.sh",
+        "src/server/search_views.h",
+        "docs/astro.config.*",
+        "docs/src/sidebar*"
       ],
       "history": [
         {
@@ -15718,7 +15731,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T08:15:15",
+      "updated": "2026-11-23T08:43:03",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
