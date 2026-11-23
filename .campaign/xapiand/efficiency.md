@@ -1013,3 +1013,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - journal-replaces-wal step e (Opus high, 127k, 205 tool uses): WAL, fsyncher, scheduler, flags, :wal verb and two options deleted; no-wal check passes at c0dc4160; A9 fix 3 test still fails (reopen does not abort an upload left open).
 - turn-log-parity: every rerun green at the merged head; A6 (RocksDB parity) waits on 13 unstarted parity tasks; split proposed to the owner.
 - Quota: weekly 18% (1.59%/h). Host: load 23, 289 GiB free.
+
+## 2026-11-23 18h
+
+- Landed: split-datetime (datetime:2afe1565). Accepted: placement correctness at strata:ef1e91e2 (F1-F3 fixed; 5 mutants killed; plan test 3000 seeds).
+- Merged into group-heal: repair (strata:bea1f568, 17/17 mutants). Durability re-review (Opus high, 225k): CHANGES, F7 body rot wedges the learner, F8 two damaged leaders ping-pong without an optional hook, F9 quarantine deletes a lone voter's bytes, F12 corruption sim row skipped. Fix round 2 (Opus high, 316k) at strata:e256792b, jobs queued.
+- journal-replaces-wal: fix round (Opus high, 320k): shard.cc's dead DataStorage path deleted, A9 reopen test was a test bug; docs cleanup (Sonnet medium, 2 rounds, 89k): WAL text gone outside dated records. No-wal and A8 pass at the new heads; 26 jobs queued.
+- strata-journal-pin (Opus medium, 120k): pin to journal main builds and passes the suite; found `bounded` handling missing on main; lands after turn-log-parity.
+- Lead mistake: ran agent-campaign's checkout install.sh (bypassed campaign-v3's install gate, 08:45-09:10); restored by campaign-v3, no reruns needed. Prompt written empty once (sed delimiter); 1 wasted launch, ~56k.
+- Quota: weekly 19% (1.54%/h). Host: load 100 (Detent asan at 9 cores), 289 GiB free.
