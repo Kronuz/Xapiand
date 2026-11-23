@@ -1,6 +1,6 @@
 # group-heal--sim-rows: journal
 
-State: waiting on jobs 261123-053444-c51484 261123-053422-5df6d3 261123-053425-7d40db 261123-053427-f9a12e 261123-053447-2bfa62 261123-053450-58e6b8
+State: waiting on jobs 261123-053444-c51484 261123-053447-2bfa62 261123-053450-58e6b8
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -35,7 +35,10 @@ Round 3 at strata:18525c5f: the driver keeps retired members' records in the ora
 (checked for agreement). Jobs: rows c51484 (--task); mutants (plain --quest, --fails-without,
 --for A5) apply-skips-entry 5df6d3, read-skips-probe 7d40db, apply-abandoned-chunk f9a12e, all on
 `faults 3`; probes on the first-commit-crash merge strata:91dd7b54: all rows 2bfa62,
-recovery-as-found on `barriers 3` 58e6b8. (A plain probe with the rows' exact command superseded
+recovery-as-found on `barriers 3` 58e6b8. Mutants done, each a complete build and named
+`faults 3` failures: apply-skips-entry 5df6d3 (`no node applied index 12`, accepted put without a
+version), read-skips-probe 7d40db (histories not linearizable, 5 seeds), apply-abandoned-chunk
+f9a12e (`upload N cut by a leader change writes nothing`, 5 uploads). (A plain probe with the rows' exact command superseded
 the task's 59a63e: probes now carry a distinct regex argument.)
 
 ## Next
@@ -56,7 +59,7 @@ for task `repair` (on consensus-request-install).
 
 | Criterion | Evidence |
 |---|---|
-| A5 | pending: 261123-045257-ebd91a; fails without: 261123-045305-643f0d, 261123-045307-7047cc, 261123-045310-66fba2, 261123-045313-6aa91f |
+| A5 | pending: 261123-053444-c51484 (barriers wait on first-commit-crash); fails without: 261123-053422-5df6d3, 261123-053425-7d40db, 261123-053427-f9a12e; recovery-as-found probe 261123-053450-58e6b8 (scratch merge) |
 
 ## Result
 
