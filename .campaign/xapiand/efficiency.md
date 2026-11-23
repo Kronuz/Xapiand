@@ -935,3 +935,11 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Lead fixes: nan-range-bound's four A1 jobs ran `build/` for binaries in `build/bin/` (exit 127); resubmitted. group-heal probe 2 waited 1h35m at priority 1; resubmitted at 5 (ran at once). consensus-request-install A7's [ci] tag sat at the line end.
 - Agent runs: group-heal stall 257k (Opus high; root cause and fix), consensus-request-install review (running), turn-log-parity resume (running), require-once 88k (Sonnet high).
 - Host: load 45 on 16 CPUs, 277 GiB free, 78 queued, light slots 67% used. Quota 8% weekly at 2.4%/h; the projection says about 38 h left, before the reset.
+
+### 2026-11-23 09h (hourly)
+
+- Landed: split-check-members cpp-libraries:bc16496; group-catalog strata:00eb018; tuple-buffer-restructure prospect:44303965 and schema-split Xapiand:03560d4, both by `land --record` (msg-28: the land lookup misses the green split/members job; its fix check-spec-one is not installed; campaign-v3 advised --record).
+- Found: split-check-members CI found two CI-only gaps: pyrefly 1.4.0 (CI's pin) refuses an untyped empty list the local 1.3.1 passes (lead fix cpp-libraries:50a564c); GCC rejects `inline` after a noinline declaration, Clang accepts it (mover now moves the attribute to the definition; uinteger_t's 5 members fixed at uinteger_t:2523f7a). turn-log-parity CI: 16 turn-mutex sites tripped journal's owner-thread debug check; local Release jobs had asserts off (fix strata:f5f6b7dc). journal-group-delete CI (GCC x86_64 only): unspecified argument order in a test check (the message's recover() ran before the condition's status read); fix journal:d8453f6.
+- Queue: group-heal's 13 critical-path jobs sat 9h25m at priority 1; resubmitted at 3 (msg-33; campaign-v3's next install raises in place). Landing schema-split (CMakeLists.txt) voided restore-stream's 5 evidence jobs (32 CPU-min fuzz) and needed master merges in 3 quests.
+- Agent runs: turn-log-parity resume 157k (Opus high), split-check-members fix 177k (Opus high), uinteger-restructure 116k (Sonnet high), journal-group-delete 102k (Opus high); consensus-request-install review still on its probe.
+- Host: load 17 on 16 CPUs, 276 GiB free, 80 queued, light slots 83% used. Quota 9% weekly at 2.1%/h; about 44 h left by the projection, before the reset.
