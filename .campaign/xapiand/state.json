@@ -11818,6 +11818,38 @@
       "title": "Sparse field design proposal",
       "updated": "2026-11-08T15:39:37"
     },
+    "file-set-seal-streaming": {
+      "accepted": {},
+      "after": [
+        "group-heal",
+        "placement"
+      ],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/strata/group/file_set.hh",
+        "test/group/file_set*"
+      ],
+      "landed": [],
+      "lenses": [
+        "correctness"
+      ],
+      "milestone": "Phase 7b",
+      "needs": [],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "file_set::seal checksums a volume streaming, as verify does",
+      "updated": "2026-11-23T15:33:25"
+    },
     "first-commit-crash": {
       "accepted": {
         "durability": {
