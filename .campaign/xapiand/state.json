@@ -25098,7 +25098,8 @@
         "src/database/schema.h",
         "src/database/schema/**",
         "docs/dev/schema-layout.md",
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "harness/async_allowlist.tsv"
       ],
       "history": [
         {
@@ -25139,7 +25140,7 @@
       "risk": "low",
       "status": "active",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-21T20:43:18",
+      "updated": "2026-11-22T21:18:21",
       "worktree": "../Xapiand-wt/xapiand/schema-split"
     },
     "script-method": {
