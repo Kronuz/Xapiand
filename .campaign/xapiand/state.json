@@ -15717,7 +15717,8 @@
         "docs/dev/agent-codebase.md",
         "src/database/utils.cc",
         "ARCHITECTURE.md",
-        "src/xapiand_storage_trace.h"
+        "src/xapiand_storage_trace.h",
+        "assets/runtime.svg"
       ],
       "history": [
         {
@@ -15971,7 +15972,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T11:38:37",
+      "updated": "2026-11-23T11:40:24",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
