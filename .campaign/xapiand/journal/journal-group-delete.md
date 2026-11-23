@@ -1,37 +1,48 @@
 # journal-group-delete: journal
 
-State: working
+State: waiting on jobs 261122-215035-c7dbb7 261122-215039-399df3 261122-215043-dca797 261122-215047-9ec120 261122-215050-32f31b 261122-215053-70b4bc 261122-215058-e0f727 261122-215102-3473fb 261122-215107-13499e 261122-215112-7da67f
 Quest: .campaign/xapiand/quests/journal-group-delete.md (the lead's; never edit it)
 
 ## Doing
 
-Round 1 (implementation) in the journal worktree
-`/Users/kronuz/code/Kronuz/journal-wt/xapiand/journal-group-delete`, branch
-quest/xapiand/journal-group-delete off journal:a3eecb5: `Host::delete_group`, the deleted table
-state, the create's floor, `test/host_delete_test.cc` (6 cases), `docs/mechanisms/host-delete.md`,
-CHANGELOG. Local Debug build of the test first, then jobs.
+Round 1 done at journal:d89528f (pushed; CI runs on the push): `Host::delete_group`, the
+`deleted` table state, the create's floor (one line in journal.h, see R2), `test/host_delete_test.cc`
+(6 cases, one CTest entry each), `docs/mechanisms/host-delete.md`, CHANGELOG 2026-11-22.
+Local Debug run at d89528f, every case 0 failures: reopen_empty 17 checks, stays_deleted 6,
+refused 13, loop_thread 15, crash 290 (both outcomes), crash_finish 1,766. Not evidence; jobs are.
+
+Mutant commits (local refs refs/scratch/journal-group-delete/NAME, each one hunk off d89528f):
+artifacts-first journal:6fe803c (A2, the lead's: artifacts removed before the deleted record),
+open-skips-finish journal:c798eb5 (A2), no-floor journal:90bd31c (A1), commit-drops-deleted
+journal:4e15555 (A1), create-from-one journal:55dce72 (A1, drops the journal.h line). A local check
+of the mutants was stopped before it reported (lead's request); the jobs below replace it.
+
+Shape sent to Detent's lead via the lead: msg-245.
 
 ## Next
 
-1. Build and run host_delete_test locally (Debug); fix.
-2. Mutant commits under refs/scratch/journal-group-delete/ (A2: artifacts before the record; A1:
-   no floor at create); jobs for A1-A3, A7, suite; push; message Detent's lead the shape.
+1. Read the jobs: A1 c7dbb7, A2 399df3, A3 dca797, A7 9ec120, suite (A4) 7da67f; fails-without
+   32f31b (artifacts-first, crash), 70b4bc (open-skips-finish, crash_finish), e0f727 (no-floor,
+   reopen_empty), 3473fb (commit-drops-deleted, stays_deleted), 13499e (create-from-one,
+   reopen_empty). Each mutant log must show a complete build, then the named case failing.
+2. CI at d89528f (A4 ASan+UBSan and TSan, A6).
+3. Then State "ready for review" (durability lens).
 
 ## Blocked on
 
-Nothing yet. File set: see Rulings (journal.h).
+Lead: include/journal/journal.h is outside the file set (R2); widen it or rule otherwise. The suite check (`cmake -B build ...`) lacks -G Ninja; it is the lead's.
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <no evidence yet> |
-| A2 | <no evidence yet> |
-| A3 | <no evidence yet> |
-| A4 | <no evidence yet> |
+| A1 | c7dbb7 (reopen_empty, stays_deleted); fails-without e0f727, 3473fb, 13499e |
+| A2 | 399df3 (crash, crash_finish); fails-without 32f31b (artifacts-first), 70b4bc |
+| A3 | dca797 (refused) |
+| A4 | suite 7da67f; CI asan/tsan at d89528f |
 | A5 | `docs/mechanisms/host-delete.md`, CHANGELOG.md 2026-11-22 |
-| A6 | CI |
-| A7 | <no evidence yet> |
+| A6 | CI at d89528f |
+| A7 | 9ec120 (loop_thread, owner check compiled in) |
 
 ## Result
 
