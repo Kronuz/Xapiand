@@ -14947,6 +14947,46 @@
       "updated": "2026-11-17T22:45:34",
       "worktree": ""
     },
+    "hunt-soundex-one-definition": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "*.h",
+        "*.cc",
+        "src/**",
+        "include/**",
+        "test/**",
+        "tests/**",
+        "CMakeLists.txt",
+        "README.md",
+        "docs/**"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../soundex",
+      "risk": "low",
+      "status": "planned",
+      "title": "soundex tables defined once, not per including TU",
+      "updated": "2026-11-23T13:22:28"
+    },
     "hunt-tls-expiry": {
       "accepted": {},
       "after": [],
