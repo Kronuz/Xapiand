@@ -53,8 +53,8 @@ widened and edited by the lead at journal:e4b0100. The jobs at 80e58b5 were move
 
 | Criterion | Evidence |
 |---|---|
-| A1 | At journal:ebd3038: 261121-105412-c88261 passed (`lost_bound_test bounds`), 261121-105355-e0cfd0 passed (host_test whole); `--fails-without` at the mutant journal:63494f8 (every named group lost): 261121-105415-3c8f01 (bounds), 261121-105358-5bfdac failed as required (idle_damage). At journal:1e3505a: 5d2ded passed, e1fed8 failed at the mutant journal:1d773a5 as required |
-| A2 | At journal:ebd3038: 261121-105413-504c72: `lost_bound_test crash second retention`, turn_log_test (double damage), turn_log_power_test, placement damage cases and all 8 remap shards (passed at journal:1e3505a as c450ec) |
+| A1 | At journal:ebd3038: 261121-222032-774530 passed (`lost_bound_test bounds`), 261121-222032-8cf2ff passed (host_test whole); `--fails-without` at the mutant journal:63494f8 (every named group lost): 261121-105415-3c8f01 (bounds), 261121-105358-5bfdac failed as required (idle_damage). At journal:1e3505a: 5d2ded passed, e1fed8 failed at the mutant journal:1d773a5 as required |
+| A2 | At journal:ebd3038: 261121-222032-840708: `lost_bound_test crash second retention`, turn_log_test (double damage), turn_log_power_test, placement damage cases and all 8 remap shards (passed at journal:1e3505a as c450ec) |
 | A3 | `docs/mechanisms/lost-bound.md` at journal:2a0ff36 |
 
 Local runs before submitting (Debug, under quiet light): lost_bound 111 checks 0 failures;
