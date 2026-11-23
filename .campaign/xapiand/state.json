@@ -23419,6 +23419,8 @@
       "after": [
         "split-check-members"
       ],
+      "base": "0fdec0c0184abb51e259765a4137b768429e9400",
+      "branch": "quest/xapiand/queryparser-restructure",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -23440,6 +23442,7 @@
         "docs/source-layout.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/queryparser-restructure",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -23449,9 +23452,10 @@
       "provides": [],
       "repo": "../queryparser",
       "risk": "low",
-      "status": "planned",
+      "status": "active",
       "title": "queryparser: the parser's operator, word and group layers in headers of their own",
-      "updated": "2026-11-21T22:24:21"
+      "updated": "2026-11-22T22:19:59",
+      "worktree": "../queryparser-wt/xapiand/queryparser-restructure"
     },
     "queue-drain-throughput": {
       "accepted": {
