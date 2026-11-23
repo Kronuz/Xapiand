@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: ready for the lead: every job at strata:870ac9f5 passed (CI at 870ac9f5 next)
+State: waiting on jobs 261123-132924-9cd5a0 261123-132927-4c1e5c 261123-132929-4c9a48 261123-132932-93c39f 261123-132934-042a5a 261123-132937-cc0e98 261123-132940-e656bf 261123-132942-4fa30d 261123-132944-c23175 261123-132947-02dbc5 261123-132949-99dceb 261123-132951-a56998 261123-132954-64a995 261123-132957-e926bf 261123-132959-5cf8ec 261123-133001-5ae453 261123-133003-d59cd0 261123-133007-86835e 261123-133009-a71050 261123-133011-aa75d3 261123-133013-aee60d 261123-133015-0d2a4b 261123-133017-eb0d5e 261123-133019-70f204 261123-133021-74c673 261123-133023-485f6d 261123-133026-0cb903 261123-133028-4d4a77 261123-133030-f99812 261123-133032-e5a45a 261123-133034-06f388 261123-133037-f2372e 261123-133039-33dff2 261123-133041-3dedb8 261123-133044-fef7e2 261123-133046-dd03db 261123-133048-0efca1 261123-133050-acbf8c 261123-133052-66d55b 261123-133054-9fd18a 261123-133056-eaf411 261123-133059-2c8b41 261123-133101-37c462 261123-133103-36b0aa 261123-133107-84c367 261123-133109-38aa74 261123-133111-9b826a (evidence at strata:378130635e74, consensus by CMakeLists.txt's pin, main 6e1122c)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -313,8 +313,7 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. CI at 870ac9f5 (asan, tsan, build-test); then the lead's durability re-check.
-2. Evidence table from `campaign brief`; ready for the lead's durability re-review.
+1. Read the jobs at 378130635e74 (State); then CI at 378130635e74 (asan, tsan, build-test).
 
 ## Blocked on
 
@@ -344,21 +343,21 @@ Finding for Detent (from witness, in its journal): the Driver does not expose
 
 ## Evidence
 
-Jobs prove criteria by their tags (`--for A1`); paste `campaign brief`'s generated table here.
-Write the rows of [artifact], [decision] and [manual] criteria (a `path`, a decision id, who
-checked what), and answer each message by its id (msg-N).
-
-At strata:a1e786f4 (2026-11-23; the code is final, its durability review accepted there: F1 and
-F2 confirmed by suite 261123-025745-1cfc1e). `campaign brief`'s rows, with the task rows:
+At strata:378130635e74 (2026-11-23): the durability fix rounds as accepted at 870ac9f5 plus the
+lead's consensus pin (main 6e1122c, CMakeLists.txt only). Every job builds a fresh `build-pin`
+on the pin, no CONSENSUS_DIR. Earlier rows (a1e786f4, 870ac9f5) are superseded by these.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261123-025745-1cfc1e (install_suite.sh, 16 of 16 `^group_` tests pass: group_install, group_voters, group_file_set, group_catalog*, group_footprint, ...; replaces a25890); fails without: install mutants skip-file-set 261121-210245-1aac19, keep-unchecked 261121-210246-3f5652, write-past-failure 261121-210246-ad33f8, marker-before-sync 261121-210247-fbfca9, holder-unordered 261121-210247-218fb3 and at a1e786f4 261123-025822-68b83b, no-resume 261121-210247-d363e5 and at a1e786f4 261123-025825-5422c2, serve-past-length 261121-210248-1c5575, pin-names-unchecked 261121-210248-b81f77; at a1e786f4 release-at-open 261123-025756-3c979b, install-onto-deferred 261123-025800-60799b and 261123-025818-4a4f12, release-fences 261123-025803-7e8f02, pin-per-flight 261123-025807-5e3091, install-silent 261123-025811-3c291c, close-skips-install-tasks 261123-025815-b0df66. Task install: merged at cd2a4a40, its step-1 jobs superseded by the above (261121-210245-1aac19 replaces 261121-173210-076626). Confirmations of F1 261123-025733-6d601b and F2 261123-025741-994ce2 |
-| A2 | 261123-025745-1cfc1e (the ungated schedules, install_gap, grow_and_heal 3 and 5 are group_voters cases); fails without: install-silent 261123-025811-3c291c at a1e786f4, 261121-210236-dca37d (earlier), 261121-133923-ba5a0d |
-| A3 | none. Task `repair` is unbuilt: it waits on consensus-request-install (ruled (c), Decisions 2026-11-23). Related, not the criterion: install_test `damaged` (a sealed file with a flipped byte is fetched again, 261123-025745-1cfc1e) and file_set_test (a flipped byte fails recovery on its CRC32C); neither fences and reinstalls through a request, and no non-prefix device runs |
-| A4 | 261123-041202-998ec3 (group_witness at a1e786f4); fails without: witness-holds-range 261123-021427-94e042 and 261123-014651-e0f143, witness-refuses-image 261123-021429-dfeb44 and 261123-014655-73ffe0, 261121-214749-38a541, 261121-214752-5dffc3 (task witness: merged at e48288841e96; its mutant rows are brief's at 908b58c0d2ee). 261123-021425-711463 (at 908b58c0) is replaced by 998ec3 |
-| A5 | none. Task `sim-rows` is unbuilt (order 3, after repair). The port is merged (task sim-port, 6d870c0536f2; sizing 261120-232059-b57cfe, determinism 261120-180334-1b82c5, lost-write mutant 261120-180342-65db6c); no job at a1e786f4 runs `simulation_*`, and the group's fault rows, checker rows and four mutants do not exist yet |
-| A6 | [artifact] `docs/mechanisms/group-install.md` and `docs/mechanisms/simulator.md` in strata at a1e786f4 (last changed by strata:a1e786f4; nothing to update: the fix round is described). group-install.md, Activation: "A deferred index (a fresh learner's, which never committed) commits its empty state first: install writes its segment copies before its manifest, and a directory holding segments with no manifest log is damage to strata's open, not an interrupted create." (F2); the binding: "pins a crash or a fenced close left in strata's manifest go after the next open: recovery reads them (`held_pins`) and queues their release on the chore, where short of space it stalls as above, so a full disk never fails the open." (F1); Proof names `reopen_short_of_space`, `deferred_learner_crash` and mutants `release-at-open`, `install-onto-deferred`. simulator.md: "`sim/` runs a cluster on one thread in simulated time. A seed fixes every draw, so a run is a function of its seed", its Tests table, and "The group's fault rows are `sim-rows`" (Status) |
+| A1 | suite 261123-132924-9cd5a0 (suite.sh `^group_`: group_install, group_voters incl. install_gap, grow_and_heal 3/5, reopen_short_of_space, deferred_learner_crash, settle_heals; group_file_set, group_catalog*, group_footprint, ...); fails without (install_mutants.py): skip-file-set 261123-133021-74c673, keep-unchecked 261123-133023-485f6d, write-past-failure 261123-133026-0cb903, marker-before-sync 261123-133028-4d4a77, holder-unordered 261123-133030-f99812, no-resume 261123-133032-e5a45a, pin-names-unchecked 261123-133034-06f388, serve-past-length 261123-133037-f2372e; (mutants.py, group_voters_test): release-at-open 261123-133046-dd03db, release-fences 261123-133048-0efca1, pin-per-flight 261123-133050-acbf8c, close-skips-install-tasks 261123-133052-66d55b |
+| A2 | suite 261123-132924-9cd5a0 (group_voters: seeds 8, 12, 16, 18, 23, 24, 27 settle by install, 40 ungated seeds 101-140); fails without: install-silent 261123-133044-fef7e2 |
+| A3 | suite 261123-132924-9cd5a0 (group_repair: segment, manifest, file, apply, read, refusal, staged, leader, source, body, rot, deposed, two-damaged, handoff-down, lone, crash sweeps; group_repair_eager; group_install rotted) and sim rows 261123-132927-4c1e5c (simulation_group_corruption: segment, manifest and set-file damage, 3 seeds each; device rows: non-prefix logs); fails without (repair_mutants.py): open-rethrows 261123-132929-4c9a48, unmarked 261123-132932-93c39f, quarantine-first 261123-132934-042a5a, set-damage-fences 261123-132937-cc0e98, no-ack 261123-132940-e656bf, waiters-unanswered 261123-132942-4fa30d, apply-damage-fences 261123-132944-c23175, read-damage-passes 261123-132947-02dbc5, activate-unchecked 261123-132949-99dceb, marker-kept 261123-132951-a56998, leader-keeps 261123-132954-64a995, no-retry 261123-132957-e926bf, pin-unchecked 261123-132959-5cf8ec, refusal-unchecked 261123-133001-5ae453, refusal-rejected 261123-133003-d59cd0, reason-kept 261123-133007-86835e, handoff-first 261123-133009-a71050, handoff-fixed 261123-133011-aa75d3, quarantine-deletes 261123-133013-aee60d, quarantine-kept 261123-133015-0d2a4b, stage-caught-up 261123-133017-eb0d5e, needed-kept 261123-133019-70f204; (install_mutants.py): stage-unchecked 261123-133039-33dff2, install-damage-escapes 261123-133041-3dedb8 |
+| A4 | suite 261123-132924-9cd5a0 (group_witness: loss of each member, join); fails without: witness-holds-range 261123-133056-eaf411, witness-refuses-image 261123-133059-2c8b41 |
+| A5 | sim rows 261123-132927-4c1e5c (suite.sh `^simulation_group_`: faults, barriers, membership 3 and 5, growth 1, device 3, corruption); fails without (sim_mutants.py): apply-skips-entry 261123-133101-37c462, read-skips-probe 261123-133103-36b0aa, apply-abandoned-chunk 261123-133107-84c367, recovery-as-found 261123-133109-38aa74, marker-kept 261123-133111-9b826a; (mutants.py) settle-keeps-isolation 261123-133054-9fd18a |
+| A6 | [artifact] `docs/mechanisms/group-install.md` at strata:378130635e74: install, the binding, Repair (damage marker, `quarantine_strata` / `release_quarantine`, the hand-off ring, a failed flight released `Unavailable` and `check_pin`), Proof (names `reopen_short_of_space`, `deferred_learner_crash`, `release-at-open`, repair_mutants.py, install_mutants.py); `docs/mechanisms/simulator.md` at strata:378130635e74: `sim/` in simulated time, its Tests table, "The group's fault rows are `sim-rows`" |
+
+Reviews: durability accepted by the lead at 870ac9f5 (APPROVE, F7/F8/F9/F12 closed); reviewer
+probes at 870ac9f5: 261123-123604-a54cf2 (B1, B3, B4 ok).
 
 ## Result
 
