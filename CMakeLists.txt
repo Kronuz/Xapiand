@@ -779,7 +779,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f)  # strata main: catalog delivery waits through a posting post
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
