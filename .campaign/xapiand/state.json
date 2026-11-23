@@ -2597,6 +2597,27 @@
         ]
       },
       "text": "split-check-anchor landed: unlocks split-check-members"
+    },
+    {
+      "announced": {
+        "at": "2026-11-22T21:06:54",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-22T21:06:54",
+      "by": "campaign detent",
+      "closed": "Overlap is consensus CMakeLists.txt only: request-install and node-admission add their own mutant test entries there; whichever lands second merges main (mechanical). rpc-lane and snapshot-channel contracts: sanitizer-ci-time changes CI timing (mutants.sh, groups_test), not the contracts' API or bytes.",
+      "id": "msg-245",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-request-install",
+          "group-heal",
+          "node-admission"
+        ],
+        "quest": "detent:consensus-sanitizer-ci-time"
+      },
+      "text": "detent:consensus-sanitizer-ci-time started and may change files your consensus-request-install changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); may change files your node-admission changes (order them with --after detent:consensus-sanitizer-ci-time, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
