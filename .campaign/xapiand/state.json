@@ -13676,16 +13676,49 @@
         "test/faultfs_test.cc"
       ],
       "journal": "../Xapiand-wt/xapiand/hunt-faultlab-at-mark",
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-22T21:04:57",
+          "ci": {
+            "commit": "7f3910c950f08623a94e103975f3db735c029653",
+            "runs": [
+              44999042888
+            ]
+          },
+          "commit": "42cc324032aca53668451f9a175f1620da9e6f6f",
+          "criteria": {
+            "A1": "261121-233632-7ed5f1 (the build-test check), 261121-233632-7ed5f1 (passed at 7f3910c950f0; only 1 merge from main since, none touching its files)",
+            "A2": "261121-233633-0df7d0 (passed at 7f3910c950f0; only 1 merge from main since, none touching its files)"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "7f3910c950f08623a94e103975f3db735c029653",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261121-233632-7ed5f1",
+              "level": "light",
+              "seconds": 46.2,
+              "state": "done",
+              "what": "hunt-faultlab-at-mark check build-test at 7f3910c950f0"
+            }
+          ],
+          "final": true,
+          "from": "a17735df5e9789bcbe8d32daa76ed823ae6e503c",
+          "reason": "",
+          "tested": "42cc324032aca53668451f9a175f1620da9e6f6f"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultlab's suite reaches faultfs's at_mark sync path",
-      "updated": "2026-11-21T20:22:59",
+      "updated": "2026-11-22T21:05:01",
       "worktree": "../faultlab-wt/xapiand/hunt-faultlab-at-mark"
     },
     "hunt-header-tables": {
