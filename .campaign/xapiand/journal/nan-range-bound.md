@@ -1,6 +1,6 @@
 # nan-range-bound: journal
 
-State: working
+State: waiting on jobs 261122-213206-6de57d 261122-213213-6018a2 261122-213223-ea3b17 261122-213233-e1b2f5; blocked on lead: date-query field naming (see Blocked on)
 Quest: .campaign/xapiand/quests/nan-range-bound.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
