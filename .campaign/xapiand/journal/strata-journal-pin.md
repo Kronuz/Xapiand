@@ -70,3 +70,10 @@ A4, journal 9e11713 -> 9e0649d, what strata follows:
 1. A2: no `simulation_group_*` rows or test/group/sim_suite.sh exist at strata:93d10446; the
    closest are the `group_*` ctest rows (voters, lone voter, lifetime, catalog, footprint, file
    set), run as A2.
+
+## Lead rulings (2026-11-23)
+
+- The `bounded` handling exists once, on turn-log-parity's branch (index.hh attach_log: a bounded group whose
+  head is below the bound is lost with log_lost; accepted under its durability review). This quest lands after
+  turn-log-parity, then takes main and rebuilds its pin on top: no second copy of that check here.
+- group.hh:214 (a bounded group goes to driver.create) is group-heal's: filed in hunt.md for its durability re-review.
