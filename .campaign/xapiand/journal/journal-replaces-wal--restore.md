@@ -1,6 +1,6 @@
 # journal-replaces-wal--restore: journal
 
-State: waiting on jobs 261121-203231-e1086b (tests), mutants 261121-203231-13b0f8 261121-203232-74304e 261121-203232-09b718, all at Xapiand:72efab739; probe 261121-203148-ccf367 at Xapiand:e3e55af98
+State: investigating the restamp mutant's survival; probe 261122-211622-716e2b (queued)
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -51,6 +51,19 @@ Mutants rerun at 72efab739 (the e3e55af98 ones superseded): 261121-203231-13b0f8
 261121-203232-09b718.
 
 msg-1: deferred to the next allowlist edit (this task does not edit harness/async_allowlist.tsv).
+
+## Session 4 (jobs at 72efab739 read)
+
+- 261121-203231-e1086b: pass, 4 of 4 (restore_batch, journal_replay, shard_group, group_command).
+- 261121-203231-13b0f8 (expectation kept): killed, test_restore_batch.cc:190 `CHECK_FALSE(w.expected.has_value())`, 600 of 673.
+- 261121-203232-09b718 (bundle drops the volume length): killed, test_journal_replay.cc:263-264, then file_set_damage abort.
+- 261121-203232-74304e (no restamp at apply): SURVIVED. Log shows shard_group.cc.o rebuilt with the mutant and
+  test_restore_batch passed; the :190 kill the lead read is 13b0f8's. The pipelined test does not see a stale `_version`.
+- Probe 261121-203148-ccf367 (e3e55af98, 90-character noise): stored 57663 of 70000; the 1.5 MiB write encoded 1292087.
+- Stored sizes at 72efab739 (13b0f8's log, same bodies): 70000-byte body -> document 70057, write 70302; packing
+  writes 156-466 bytes, 93718 in all: 24 commands at 4096, 2 at 65536; 1.5 MiB body -> write 1572935 of 1048576.
+- Quest jobs at cf65ae78b: 261121-105359-853976 pass 3 of 3; mutants 105428-7308c6 (group_command:169/171),
+  105431-21e0e8 (shard_group:235/236), 105434-07ffd7 (group_prepare:165-179) killed; CI run 44938092439 success.
 
 ## Next
 
