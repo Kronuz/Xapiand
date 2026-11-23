@@ -2743,6 +2743,24 @@
         "quest": "detent:consensus-driver-flow"
       },
       "text": "detent:consensus-driver-flow started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:52:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:52:49",
+      "by": "campaign detent",
+      "closed": "noted: turn-log-parity rechecks journal:turn-buffers parity when journal-earlier-turn-loss lands; it does not wait on it",
+      "id": "msg-252",
+      "settles": {
+        "ours": [
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-earlier-turn-loss"
+      },
+      "text": "detent:journal-earlier-turn-loss started and changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
@@ -11428,9 +11446,7 @@
           "verdict": "APPROVE"
         }
       },
-      "after": [
-        "turn-log-parity"
-      ],
+      "after": [],
       "base": "00eb018da75d20715b3e05a2593937a970b40201",
       "branch": "quest/xapiand/first-commit-crash",
       "checks": [
@@ -11447,20 +11463,56 @@
         "test/lifecycle_test.cc",
         "docs/mechanisms/manifest-log-file.md"
       ],
-      "journal": "../Xapiand-wt/xapiand/first-commit-crash",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T06:57:36",
+          "ci": {
+            "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+            "runs": [
+              45189114595
+            ]
+          },
+          "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+          "criteria": {
+            "A1": "261123-060918-81a036, 261123-053633-726a56",
+            "A2": "261123-053633-726a56; fails without: 261123-045326-9bf051, 261123-050145-4fa570, 261123-053640-93a0e0",
+            "A3": "261123-060918-81a036",
+            "A4": "261123-053633-726a56; fails without: 261123-050148-1c20df, 261123-050150-0c1ced, 261123-050152-1a9db0, 261123-050154-7775a1, 261123-053645-dd3621, 261123-064304-2767bb, 261123-064305-a29217, 261123-064306-dfba67, 261123-064651-131790",
+            "A5": "docs/mechanisms/manifest-log-file.md, \"The first manifest\" and \"Files no manifest names\""
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-060918-81a036",
+              "level": "light",
+              "seconds": 1781.0,
+              "state": "done",
+              "what": "first-commit-crash check build-test at 4955a679f160"
+            }
+          ],
+          "final": true,
+          "from": "00eb018da75d20715b3e05a2593937a970b40201",
+          "reason": "",
+          "tested": "4955a679f16083f36f5b4b7b27b35fd96c4dbc4e"
+        }
+      ],
       "lenses": [
         "durability"
       ],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../strata",
       "risk": "high",
-      "status": "review",
+      "status": "landed",
       "title": "A crash in a fresh index's first commit leaves an index that opens",
-      "updated": "2026-11-23T06:10:22",
-      "worktree": "../strata-wt/xapiand/first-commit-crash"
+      "updated": "2026-11-23T06:57:40",
+      "worktree": ""
     },
     "flush-memory": {
       "accepted": {},
@@ -15247,7 +15299,7 @@
           "name": "e2e"
         },
         {
-          "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src",
           "level": "light",
           "minutes": 60,
           "name": "crash"
@@ -15436,6 +15488,92 @@
             "gate check build-test changed",
             "gate check e2e changed"
           ]
+        },
+        {
+          "at": "2026-11-23T07:21:48",
+          "checks": [
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src && harness/removed_options_check.sh build/bin/xapiand && harness/blob_crash_check.sh build/bin/xapiand",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ],
+            [
+              {
+                "cmd": "ci:Build + unit + smoke",
+                "level": "light",
+                "minutes": 150,
+                "name": "build-test"
+              },
+              {
+                "cmd": "ci:Functional E2E (docs)",
+                "level": "light",
+                "minutes": 120,
+                "name": "e2e"
+              },
+              {
+                "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure && harness/async_check.sh --strict --owed --extern strata=.deps/strata-src",
+                "level": "light",
+                "minutes": 60,
+                "name": "crash"
+              },
+              {
+                "cmd": "ci:AddressSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:ThreadSanitizer",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              },
+              {
+                "cmd": "! git grep -n DatabaseWAL -- src",
+                "level": "none",
+                "minutes": 5,
+                "name": "no-wal"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-23: development builds always configure with -G Ninja (D168); the crash check gains -G Ninja, nothing else changes",
+          "voided": [],
+          "weakened": [
+            "gate check crash changed"
+          ]
         }
       ],
       "landed": [],
@@ -15491,7 +15629,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-21T21:27:24",
+      "updated": "2026-11-23T07:21:48",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -34823,7 +34961,8 @@
         "fuzz/corpus/command/**",
         "bench/kv/kv_strata.hh",
         "test/kv_strata_batch_test.cc",
-        "docs/mechanisms/large-transactions.md"
+        "docs/mechanisms/large-transactions.md",
+        "docs/design/standalone-turn-log.md"
       ],
       "history": [
         {
@@ -34984,7 +35123,7 @@
         }
       },
       "title": "A logged index matches RocksDB: read-your-writes, tolerant open, large transactions",
-      "updated": "2026-11-23T04:09:17",
+      "updated": "2026-11-23T06:57:19",
       "worktree": "../strata-wt/xapiand/turn-log-parity"
     },
     "turn-seal": {

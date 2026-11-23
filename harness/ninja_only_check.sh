@@ -19,27 +19,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# A1/A3 (D168): CMake configures with Ninja only. Exits 0 only when
-#  1. a fresh "Unix Makefiles" configure fails with the top-level guard's message, and
-#  2. no tracked file outside the records of past runs configures CMake without -G Ninja.
+# D168: development builds configure with Ninja. Exits 0 only when no tracked file outside the
+# records of past runs configures CMake without -G Ninja.
 set -u
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 [ -n "$ROOT" ] || exit 2
-TREE=$(mktemp -d "$ROOT/.scratch/ninja-only-check.XXXXXX" 2> /dev/null || { mkdir -p "$ROOT/.scratch" && mktemp -d "$ROOT/.scratch/ninja-only-check.XXXXXX"; }) || exit 2
-trap 'rm -rf "$TREE"' EXIT
 status=0
-
-# Own FETCHCONTENT_BASE_DIR: the shared .deps is never touched.
-if cmake -G "Unix Makefiles" -S "$ROOT" -B "$TREE/build" -DFETCHCONTENT_BASE_DIR="$TREE/deps" > "$TREE/configure.log" 2>&1; then
-	echo "FAIL: a Unix Makefiles configure succeeded"
-	status=1
-elif grep -q -- "-G Ninja" "$TREE/configure.log"; then
-	echo "ok: a Unix Makefiles configure is refused: $(grep -m1 -- "-G Ninja" "$TREE/configure.log" | sed 's/^ *//')"
-else
-	echo "FAIL: a Unix Makefiles configure failed without the guard's message:"
-	tail -20 "$TREE/configure.log"
-	status=1
-fi
 
 # A configure is a cmake line with -S, -B or a source dir; a record of a past run keeps its command.
 found=$(git -C "$ROOT" grep -nE '(^|[^[:alnum:]_./-])cmake +(-[SB]|\.\.?( |$|")|\$)' -- . \

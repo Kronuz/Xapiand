@@ -41,8 +41,9 @@ manifest names, and only in a directory that has no manifest log.
   first manifest exists before any segment) and recovery (a directory with no manifest log is
   uncreated, whatever segments it holds), and records why. Whichever it is must not let recovery
   delete data a committed manifest names.
-- Lead, 2026-11-23: lands after turn-log-parity, which holds index.hh. index-restructure moves
-  index.hh's member bodies by tool, so it regenerates its moves after this lands.
+- Lead, 2026-11-23: lands first; turn-log-parity, which also edits index.hh, merges it from main.
+  (It was ordered after turn-log-parity, whose A6 waits on 13 open parity tasks.) index-restructure
+  moves index.hh's member bodies by tool, so it regenerates its moves after this lands.
 
 ## May land early
 
