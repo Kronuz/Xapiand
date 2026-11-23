@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on CI at strata:a1e786f4 (no job of mine running; 261123-025901-9a4aba failed exit 127, a probe, not a criterion). Remaining: A3 needs task repair and A5 needs task sim-rows, both unbuilt, after consensus-request-install; landing after consensus-request-install
+State: waiting on jobs 261123-091118-f25b39 261123-091128-afeea5 261123-091131-4dfb18 261123-091133-514300 261123-091135-07e7fa 261123-091137-d9d2bd 261123-091138-79be76 261123-091140-8d3005 261123-091141-a0ef3e 261123-091143-71b1c2 261123-091145-c71a59 261123-091146-1b98a3 261123-091154-52a6af (durability round 2 at strata:e256792b, pushed)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,57 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Durability fix round 2 (2026-11-23), review group-heal-durability at strata:bea1f568 (CHANGES:
+F7, F8, F9, F12 blocking; F11 nit). One commit, strata:e256792b (pushed); nothing built locally,
+the jobs are the first compile. Consensus 59ae07f by --ref.
+
+- F7 (body rot behind a valid footer wedges the learner). Cause: make_pin took each segment's
+  CRC32C from its current bytes and checked only its footer, so rot shipped with a matching CRC;
+  the learner's activation then met strata's refusal (`ix.install` corrupt_segment), which
+  fenced its activation and never reached the source. Fix: (1) make_pin checks each segment
+  whole from the bytes it ships (`checked_segment`: footer against the manifest entry, then
+  `basic_segment<Layout>(bytes).verify_all()`), a failure is the source's damage (become_damaged,
+  hand-off); (2) the learner checks the staged checkpoint the same way before `validated`
+  (`check_stage`), a failure answers validation_failed and sweeps; (3) a flight released
+  `Rejected` makes the source read its pin's files again against their CRC32Cs (`check_pin`):
+  bytes that rotted after the pin are its damage; (4) an activation whose `ix.install` throws
+  damage marks the replica damaged, sweeps and answers `activated` damaged (as a staged file
+  failing its CRC32C does). Tests: repair `body` (B1 rested, seeds 1, 2), repair `rot` (rot
+  after the pin was made and served), install `rotted` (each mechanism unit-level). Mutants:
+  pin-unchecked (body), refusal-unchecked (rot), stage-unchecked and install-damage-escapes
+  (install rotted).
+- F8 (two damaged leaders ping-pong without applied_past). Fix: hand_leadership_away uses no
+  host view: each try goes to the next data voter after itself in incarnation order, one further
+  per try (a one-byte count in existing padding). Tests: repair `two-damaged` (B3 with the view
+  off), `handoff-down` (the ring's next voter is down). Mutants handoff-first (the reviewed rule),
+  handoff-fixed (always the next voter). `handoff-any` retired with the view branch.
+- F9 (quarantine deletes a lone voter's bytes). Fix: quarantine_strata renames strata names to
+  `iq.<name>` (parse_name ignores them); `release_quarantine` removes them in adopt once the
+  replica is unmarked (after an activation, or a reopen after one). Tests: repair `lone` (B4:
+  every strata file set aside byte for byte, the voter stays damaged); staging_left counts `iq.`,
+  so every repaired case and both crash sweeps check none stays. Mutants quarantine-deletes
+  (lone), quarantine-kept (manifest).
+- F11: the caller guard `if (!log_holding(dir)) ix.commit();` removed; both install-onto-deferred
+  mutants removed (mutants.py, install_mutants.py); the deferred tests now guard strata's own.
+- F12: `simulation_group_corruption` built: 3 seeds per class (segment, manifest, sealed set
+  file), 1,500 faults-row events, a follower damaged while stopped, 1,500 more, then finish().
+  finish() now waits for every damaged replica to reinstall before its checks (all rows). The
+  row sets STRATA_EAGER_SEGMENTS=1 (segment damage met at the reopen) and runs by name only;
+  its world sets no host view, so F8's ring runs there. Mutant sim marker-kept.
+- msg from the lead (the suite): test/group/suite.sh replaces install_suite.sh, repair_suite.sh
+  and sim_suite.sh. CMake target `group_tests` collects every `group_*_test` of the top
+  directory (BUILDSYSTEM_TARGETS) plus group_sim_test, so a new test cannot be left out again.
+  Default regex `^(group_|simulation_group_)`; the jobs split it in two for the 30-minute cap.
+- needed-kept mutant: its first hunk named `reason`, which the code now does; it keeps the second.
+
+Jobs at e256792b: suite `^group_` 261123-091118-f25b39 (A1-A4); sim rows 261123-091128-afeea5
+(A3, A5); fails-without: pin-unchecked 4dfb18, refusal-unchecked 514300, handoff-first 07e7fa,
+handoff-fixed d9d2bd, quarantine-deletes 79be76, quarantine-kept 8d3005, needed-kept a0ef3e,
+stage-unchecked 71b1c2, install-damage-escapes c71a59, sim marker-kept 1b98a3 (all
+261123-0911xx). Reviewer probes rerun 261123-091154-52a6af (plain: B1 and B3 must heal; B4's
+check counts parseable strata names, which now sit under `iq.`, so it reports 0 by design: the
+`lone` case is its replacement).
 
 Durability fix round 1 (2026-11-23), review at strata:908b58c0 (CHANGES, F1 and F2 blocking).
 Fix at strata:a1e786f4; nothing built locally, the jobs are the first compile.
@@ -201,11 +252,9 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. CI at strata:a1e786f4 (asan, tsan, build-test); a red case is fixed next commit.
-2. Report the first-commit window to the lead (probe 261123-025901-9a4aba failed exit 127, so the
-   probe needs a rerun or the lead's call; the cause is in the Doing section).
-3. After consensus-request-install lands: repair (A3), then sim-rows (A5); then the When-done
-   review gate rows. The quest lands after consensus-request-install.
+1. Read the round-2 jobs (State). A red case: fix in the next commit with its job. Then CI at
+   e256792b (asan, tsan, build-test).
+2. Evidence table from `campaign brief`; ready for the lead's durability re-review.
 
 ## Blocked on
 
@@ -261,6 +310,15 @@ and what it leaves open. Results and how it works go in the docs of the reposito
 
 <Decisions inside the quest's scope, so the reviewer can check them.>
 
+- F7 round 2: three checks, one per place bytes can rot: the source checks what it ships
+  (whole, at the pin), the learner what it staged (whole, before validated), and a rejected
+  flight makes the source re-read its pin (CRC32C only: make_pin's whole check vouched for those
+  bytes, so any change since is a CRC mismatch). Cost: one more read of each segment at the pin
+  (with the CRC pass, one map), one more read of the staged segments per install, and one read of
+  the pin per rejected flight (the pin race's rejection included). A refused stage is swept whole.
+- F8: one hand-off mechanism, no host view, applied_past kept only for the stall hand-off (D3).
+- F9: set-aside names go at adopt once unmarked (every recovery scans the directory once for
+  them); a name already set aside keeps its first copy.
 - F2 (a1e786f4): the fix is group's activation order, not strata's open: strata cannot tell an
   interrupted first install from a committed index that lost its log, so the group makes the
   old state committed before install, as install's contract presumes. The general first-commit
