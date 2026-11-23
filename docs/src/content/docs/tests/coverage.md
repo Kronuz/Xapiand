@@ -36,7 +36,7 @@ check it, and lists what no request covers, with the reason.
 | `GET`, `HEAD`, `INFO` of an index | [Get](/Xapiand/reference-guide/indexes/get-api), [Exists](/Xapiand/reference-guide/indexes/exists-api), [Info](/Xapiand/reference-guide/indexes/info-api) | Docs E2E |
 | `DELETE`, `CLOSE`, `OPEN` of an index (`501`) | [Delete](/Xapiand/reference-guide/indexes/delete-api), [Close](/Xapiand/reference-guide/indexes/close-api) | Docs E2E; `harness/removed_features_check.sh` |
 | `DUMP`, `RESTORE` | [Backups](/Xapiand/reference-guide/indexes/backups) | Docs E2E; [Restore](/Xapiand/tests/restore/restore); `harness/restore_schema_check.sh`, `harness/restore_stream_check.sh`, `harness/cli_roundtrip_check.sh` |
-| `WAL`, replay after a crash | [WAL](/Xapiand/reference-guide/wal) | Docs E2E; `tests/test_wal_replay.cc`, `tests/test_engine_replay.cc`; `harness/wal_recovery_check.sh`, `harness/wal_replay_check.sh`, `harness/wal_replay_agg_check.sh`, `harness/engine_crash_check.sh` |
+| Replay after a crash | `docs/mechanisms/journal-durability.md` | `tests/test_journal_replay.cc`, `tests/test_engine_replay.cc`; `harness/journal_replay_check.sh`, `harness/engine_crash_check.sh` |
 | Index patterns over several indexes | [API](/Xapiand/reference-guide/api) | Docs E2E (`SEARCH`, `COUNT`); `tests/test_index_pattern.cc`, `tests/fuzz_index_pattern.cc`, `tests/test_wide_search.cc`; `harness/wide_search_check.py` |
 
 ### The node

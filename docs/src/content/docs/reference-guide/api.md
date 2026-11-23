@@ -195,7 +195,6 @@ the path does not accept answers `405 Method Not Allowed`.
 | `COMMIT` | one index | Commit the index now (`200`) |
 | `CHECK` | one index | Check the index's files; answers `{"errors": {<index>: <count>}}` |
 | `DUMP`, `RESTORE` | one index, document | [Dump or restore](/Xapiand/reference-guide/indexes/backups) its documents |
-| `WAL` | one single-shard index | The [write-ahead log](/Xapiand/reference-guide/wal) |
 | `FLUSH`, `QUIT` | `/` | [Administrative commands](#administrative-commands), only with `--admin-commands` |
 | `OPTIONS` | any | `200` with an `Allow` header |
 | `OPEN`, `CLOSE` | any | `429 Too Many Requests` | Too many searches wait to look up the index names of their patterns (`--search-walk-queue`); `Retry-After` says when to try again. |

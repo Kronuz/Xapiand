@@ -60,7 +60,7 @@ Xapiand
 |---|---|
 | [threadpool](https://github.com/Kronuz/threadpool) | `WorkPool` and `WorkGroup`: the pool of named threads that runs chores and merges |
 | [scheduler](https://github.com/Kronuz/scheduler) | Timer-wheel scheduler and debouncer |
-| [storage](https://github.com/Kronuz/storage) | Crash-safe append-only volumes (32 GiB each) for the WAL and the blobs |
+| [storage](https://github.com/Kronuz/storage) | Crash-safe append-only volumes (32 GiB each) for the journal's blobs |
 | [io](https://github.com/Kronuz/io) | POSIX file and socket I/O (EINTR-safe, portable) |
 | [fs](https://github.com/Kronuz/fs) | Filesystem utilities (stat, mkdir, walk) |
 | [system](https://github.com/Kronuz/system) | OS facts: descriptor limits, CPU count, memory |

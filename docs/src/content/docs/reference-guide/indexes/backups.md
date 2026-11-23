@@ -156,7 +156,7 @@ e2e:end -->
   so it is limited to 16 MiB (`413`). NDJSON and MessagePack are streamed when the request
   carries a `Content-Length`, whatever their size; a chunked body of those types is
   refused with `413`.
-- It runs without the write-ahead log and without autocommit, and commits once when
+- It runs without autocommit, and commits once when
   the body ends (what was indexed before an error stays). Documents are
   searchable when it answers.
 - A restore takes a single index; a list answers `400`.

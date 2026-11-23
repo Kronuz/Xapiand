@@ -7,7 +7,7 @@ visible to the next search or get as soon as the node has answered the write.
 The index commits to disk 1 s after its last write (3 s while writes keep
 coming, and 8 to 10 s after the first of them at the latest), or before the
 answer when the request carries `?commit`. A write the node answered with a 2xx
-is in the write-ahead log and survives a crash either way.
+is in the journal and survives a crash either way.
 
 Every `PUT`, `POST`, `UPDATE`, `PATCH`, `UPSERT` and `DELETE` below addresses a
 document in an index by its path: in `/twitter/user/John` the index is

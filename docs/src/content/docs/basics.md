@@ -143,8 +143,8 @@ e2e:end -->
 
 A write is visible to the next read as soon as the node has answered it: a
 search or a get refreshes its index first, so a request reads its own writes.
-Durability comes in two steps. The node appends every write to the index's
-write-ahead log before it answers (see [Write-Ahead Log](/Xapiand/reference-guide/wal)),
+Durability comes in two steps. The node appends every write to the shard's
+journal before it answers (see `docs/mechanisms/journal-durability.md`),
 and the index commits 1 s after its last write (3 s while writes keep coming, and
 8 to 10 s after the first of them at the latest). A `?commit` on the request
 commits before the answer. A crash replays the log the next time the index

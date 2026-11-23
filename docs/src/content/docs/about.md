@@ -56,7 +56,7 @@ It features:
 
 ##### Sharding:
   * Each index splits into shards on a single node (`number_of_shards`).
-  * A write-ahead log recovers the writes of a crash.
+  * The journal recovers the writes of a crash.
 
 <sup><a id="footnote-1">1</a></sup> [Finding a needle in Haystack: Facebook's photo storage.](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf)
 
