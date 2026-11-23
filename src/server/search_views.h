@@ -27,6 +27,7 @@
 
 #include <chrono>                           // for std::chrono, std::chrono::steady_clock, std::chrono::time_point
 #include <condition_variable>               // for std::condition_variable
+#include <cstdint>                          // for std::uint8_t, std::uint32_t
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
 #include <optional>                         // for std::optional
@@ -162,6 +163,14 @@ public:
 	engine::Chores* parse_chores = nullptr;
 	bool body_ended = false;
 	msgpack::unpacker unpacker = make_msgpack_unpacker();  // msgpack unpacker, depth-limited
+
+	// A streamed MessagePack body that is one non-empty top-level array streams as its elements: its header's
+	// bytes, then the elements it still declares (docs/perf/bulk-load-rss.md).
+	enum class BodyArray : std::uint8_t { unknown, header, elements, none };
+	BodyArray body_array = BodyArray::unknown;
+	std::uint8_t array_header[5] = {};
+	std::uint8_t array_header_size = 0;
+	std::uint32_t array_left = 0;
 
 	ct_type_t ct_type;
 

@@ -25,7 +25,9 @@
 
 #include "config.h"                         // for XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
+#include <algorithm>                        // for std::min
 #include <cassert>                          // for assert
+#include <cstdint>                          // for std::uint8_t, std::uint32_t
 #include <charconv>                         // for std::from_chars (indent param)
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
@@ -2914,6 +2916,15 @@ Request::decoded_body()
 }
 
 
+// The unpacker of a top-level array's elements: as the body's own, with the array one of its MAX_JSON_DEPTH levels.
+static msgpack::unpacker
+make_element_unpacker()
+{
+	return msgpack::unpacker([](msgpack::type::object_type, std::size_t, void*) { return true; }, nullptr, MSGPACK_UNPACKER_INIT_BUFFER_SIZE,
+		msgpack::unpack_limit(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, MAX_JSON_DEPTH - 1));
+}
+
+
 bool
 Request::append(const char* at, size_t length)
 {
@@ -2983,14 +2994,86 @@ Request::append(const char* at, size_t length)
 
 			break;
 
-		case Mode::STREAM_MSGPACK:
+		case Mode::STREAM_MSGPACK: {
 			assert(has_content_length);
 
-			if (length) {
-				unpacker.reserve_buffer(length);
-				memcpy(unpacker.buffer(), at, length);
-				unpacker.buffer_consumed(length);
+			// A non-empty top-level array streams as its elements: its header is taken here, and each chunk's
+			// complete elements arrive as one array, the shape the whole array had for the indexer.
+			const bool last = length == 0;
+			const char* head = nullptr;   // an empty array's header, which the unpacker reads as before
+			if (body_array == BodyArray::unknown && length) {
+				const auto b = static_cast<std::uint8_t>(*at);
+				body_array = (b & 0xf0) == 0x90 || b == 0xdc || b == 0xdd ? BodyArray::header : BodyArray::none;
+			}
+			if (body_array == BodyArray::header && length) {
+				const auto first = array_header_size != 0 ? array_header[0] : static_cast<std::uint8_t>(*at);
+				const std::size_t size = first == 0xdc ? 3 : first == 0xdd ? 5 : 1;
+				const auto take = std::min(size - array_header_size, length);
+				memcpy(array_header + array_header_size, at, take);
+				array_header_size += take;
+				at += take;
+				length -= take;
+				if (array_header_size == size) {
+					std::uint32_t count = size == 1 ? first & 0x0f : 0;
+					for (std::size_t i = 1; i < size; ++i) {
+						count = count << 8 | array_header[i];
+					}
+					if (count == 0) {
+						body_array = BodyArray::none;
+						head = reinterpret_cast<const char*>(array_header);
+					} else {
+						body_array = BodyArray::elements;
+						array_left = count;
+						unpacker = make_element_unpacker();
+					}
+				}
+			}
+			if (body_array == BodyArray::elements && array_left == 0 && length) {
+				THROW(ClientError, "The request body holds more than its top-level array declares");
+			}
 
+			const auto feed = [this](const char* bytes, std::size_t size) {
+				unpacker.reserve_buffer(size);
+				memcpy(unpacker.buffer(), bytes, size);
+				unpacker.buffer_consumed(size);
+			};
+			if (head != nullptr) {
+				feed(head, array_header_size);
+			}
+			if (length) {
+				feed(at, length);
+			}
+
+			if (body_array == BodyArray::elements) {
+				if (length) {
+					std::vector<msgpack::object_handle> elements;
+					try {
+						msgpack::object_handle result;
+						while (array_left != 0 && unpacker.next(result)) {
+							--array_left;
+							elements.push_back(std::move(result));
+						}
+					} catch (const std::exception& exc) {
+						THROW(ClientError, "The request body's top-level array holds an invalid element: {}", exc.what());
+					}
+					if (!elements.empty()) {
+						std::vector<msgpack::object> items;
+						items.reserve(elements.size());
+						for (const auto& element : elements) {
+							items.push_back(element.get());
+						}
+						msgpack::object chunk;
+						chunk.type = msgpack::type::ARRAY;
+						chunk.via.array.size = static_cast<std::uint32_t>(items.size());
+						chunk.via.array.ptr = items.data();
+						signal_pending = true;
+						objects.emplace_back(std::as_const(chunk));
+					}
+					if (array_left == 0 && unpacker.nonparsed_size() != 0) {
+						THROW(ClientError, "The request body holds more than its top-level array declares");
+					}
+				}
+			} else if (head != nullptr || length) {
 				try {
 					msgpack::object_handle result;
 					while (unpacker.next(result)) {
@@ -3002,7 +3085,11 @@ Request::append(const char* at, size_t length)
 				}
 			}
 
+			if (last && (body_array == BodyArray::header || (body_array == BodyArray::elements && array_left != 0))) {
+				THROW(ClientError, "The request body ended inside its top-level array");
+			}
 			break;
+		}
 	}
 
 	return signal_pending;
