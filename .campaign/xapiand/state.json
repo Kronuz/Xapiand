@@ -2906,6 +2906,19 @@
         "quest": "detent:consensus-simulation-asan-timeout"
       },
       "text": "detent:consensus-simulation-asan-timeout started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T11:10:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T11:10:38",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "install notice, noted; no action",
+      "id": "msg-264",
+      "notice": "skill installed a51bfc2a1c240f6e7ec0fe3a66f0e89703d8eb61",
+      "text": "campaign skill: agent-campaign:a51bfc2 installed here, 3 commits: agent-campaign:42099a5 Order a task's jobs by submit time, not by id; agent-campaign:d14ecd5 Drop the job index after editing a spec in the id-order test; agent-campaign:a51bfc2 Merge main into quest/campaign-v3/task-jobs-order"
     }
   ],
   "quests": {
