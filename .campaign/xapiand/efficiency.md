@@ -1076,3 +1076,14 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - uinteger-radix-family: macos-arm64 not acquired by GitHub (capacity) on 4 attempts; rerun again; not waived (CI green on every platform is the rule).
 - Owner: D176, docs site moves to site/ after journal-replaces-wal; site-core asleep with dirty files in the main checkout (docs/ only).
 - Quota: weekly 27% (1.56%/h; exhaustion in about 47 h at this burn, reset 2026-11-30). Host: load 51 (31 over 5 min) on 16 CPUs, 98 jobs queued, 282 GiB free.
+
+## 2026-11-24 00h
+
+- Landed: turn-log-parity (strata:757c00a; 18 superseded job citations swapped by the lead, durability and design re-accepted with their original confirming jobs), hunt-faultfs-at-mark-clear (faultlab:5d4df9b; Detent repinning consensus and journal to it).
+- Incident (lead): campaign commits Xapiand:bba0c5a2a and b3af21591 swept site-core's staged deletion of 18 docs/src files (its unfinished move to @kronuz/starlight-core) into master through the shared index; Pages failed ~2 h. Restored at 49e3c510e and 4c84ab9da (site source equals the last good deploy, 160c03a0f). Rule now: `git commit -- PATHS` in shared checkouts.
+- journal-replaces-wal: test_shard_group was the contributor's own wrong count (Data() holds the main object, data.cc:489), fixed at c4d06c80d; CI green at a76e2ed61; master merged by hand (352710042). Previous contributor retired at 250k; fresh Opus contributor for the full evidence set and an Opus durability reviewer launched in parallel.
+- consensus-join-v2: implementation done (220k, 2h03m); A2 and A4 mutants killed; contributor fixed a pre-existing HostTransport redial bug (reload flaky 4/96 to 40/40). Opus security reviewer launched. groups_test.cc waits on Detent's flake quest (land first, agreed).
+- group-heal: false-positive probe clean (635 refused-pin re-reads over 23 suites, 0 healthy sources marked damaged; 9 real corruptions reinstalled); 44 jobs left. Its reviewer stopped by the lead (it kept waking on its own probe).
+- htm explorer: extern table in htm.cc (htm:e51e63e), CI green; probes queued. soundex: A3 sizes in docs/TABLES.md (soundex:ba10f53). stox-no-libc: lead's header comment (strict-stox:aebfcd9). Both wait on macOS arm64 CI (runner shortage; uinteger_t's attempt 7).
+- Tool bug to campaign-v3 (msg-47): artifact rows with backticks or two files stay pending silently (~6 edits, ~40k lead tokens).
+- Quota: weekly 29% (1.58%/h; exhaustion in about 45 h at this burn, reset 2026-11-30). Host: load 42 (52 over 5 min) on 16 CPUs, 113 jobs queued, 284 GiB free.
