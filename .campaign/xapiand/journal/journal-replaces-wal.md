@@ -320,7 +320,7 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 | A3 | 261123-152906-9e8d80; 261123-152909-4b66de; fails without: 261123-152911-321a3c, 261123-152914-a77324, 261123-152916-f6d476 |
 | A4 | 261123-152919-29202d; 261123-152856-709fdd; fails without: 261123-152922-d6b84e |
 | A5 | ci:Functional E2E (docs); 261123-152940-dd5a34; 261123-152942-695236; fails without: 261123-152944-81bd40, 261123-152947-bf7b9f |
-| A6 | decision, lead default pending the owner: ack defaults to quorum (docs/design/cluster-release.md:222, Q1 (a)) and Q6 as written; read-your-writes is Q-F27 (a), a read refreshes a dirty shard first, which a lone voter always is (quest Decisions); the code ships both defaults |
+| A6 | D113 (owner: Q1 (a), default ack quorum, bulk loaders choose none) and D142 (owner: Q6 as written, ?commit = ack=quorum&refresh=true; Q-F27 (a), read-your-writes served from the leader's replica); the code ships both defaults, A4's test covers Q-F27 |
 | A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
 | A8 | 261123-152956-ac9c00 |
 | A9 | 261123-152856-709fdd; fails without: 261123-152949-135bf6, 261123-152951-7c729a, 261123-152954-946a8a |
