@@ -1055,3 +1055,14 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Detent: journal-bound-first-open approved (opens read each log twice until journal-open-single-read; xapiand pins past it only with that or a measured open cost); consensus-driver-flow lands after consensus-request-install.
 - CI: macOS arm64 jobs cancelled twice after ~69 min without a runner (5 shared macOS runners); uinteger-radix-family rerun again.
 - Quota: weekly 24% (1.57%/h; exhaustion in about 48 h at this burn, reset 2026-11-30). Host: load 3.6, 286 GiB free; light slots 62% idle behind Detent's exclusive measurement rows.
+
+## 2026-11-23 22h
+
+- Landed: consensus-request-install (consensus:6e1122c) after one macos-x86_64 rerun; the failure was the pre-existing fetch-alongside flake (also on consensus main a068ba06), now Detent's quest consensus-fetch-alongside-flake.
+- group-heal: B4 probe failure was a stale name filter (iq. prefix), resolved by the resumed contributor (+15k, 250k total). Durability re-check (fresh Opus reviewer, ~206k) APPROVE at strata:870ac9f5, F7/F8/F9/F12 closed with power-cut probes R5-R7; accepted --commit 870ac9f5 with a recorded pin-bump scope; lead moved the consensus pin to main (strata:37813063); evidence rerunning, CI queued.
+- stox-no-libc: CI macos-arm64 caught strict_stold aborting on Apple arm64 (long double is double there; this host is x86_64, so every local job missed it). Quest amended (A5 CI arm64, A6 docs); contributor fixed it (+11k, 162k total); jobs rerunning.
+- journal-replaces-wal: CI failed at configure (zstd's own CMake project added a second `uninstall` target once the storage library no longer loaded compressors first); fixed at the cause (+27k, 243k total) by finding system zstd before prospect.
+- consensus-join-v2 started (Opus high, critical path to cluster join); file set widened twice on its requests; groups_test.cc held by Detent, so it lands after consensus-fetch-alongside-flake.
+- Exploration batch launched (3 Sonnet): faultfs at_mark, soundex tables, htm start tables.
+- turn-log-parity: 7 evidence reruns had never queued (two older jobs referenced a deleted journal-lost-bound worktree and aborted the batch rerun); requeued individually.
+- Quota: weekly 25% (1.53%/h; at this burn exhaustion in about 49 h, reset 2026-11-30). Host: load 3.7 (9.1 over 5 min), 286 GiB free; light slots 42% idle.
