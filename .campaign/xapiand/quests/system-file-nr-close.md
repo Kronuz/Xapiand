@@ -5,32 +5,35 @@ Risk: normal. The lead writes this quest; contributors read it and never edit it
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+On Linux, `get_open_files_system_wide` and `get_max_files_system_wide` each open
+`/proc/sys/fs/file-nr` and never close it, on every path, and parse a buffer `read` never
+terminates. Xapiand's `adjustOpenFilesLimit` calls both, so every start holds two stray
+descriptors, and open-files-floor's "start at the exact minimum" case fails on every Linux CI job
+(run 44966941683 at Xapiand:4a07d2e: it counts 3 open, the function 5). After this quest one
+reader opens the file, reads a terminated line and closes the descriptor on every path, and both
+functions use it.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 Calling each system-wide reader leaves the process's open-descriptor count unchanged: a check
+  in test/test.cc, run by the `build-test` check
+- A2 [ci] The same check fails on Linux CI with the close removed (a mutant commit pushed to a
+  `quest/**` branch, its failing run cited), and CI is green on every platform at the fix
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None changes: the functions keep their signatures and what they measure.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: one helper reads file-nr for both functions, so the open, terminate and close
+  are written once. Review waived for a small fix whose test fails without it on the platform it
+  fixes.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one commit.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: the lead.
