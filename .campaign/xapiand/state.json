@@ -24633,9 +24633,56 @@
         "docs/source-layout.md",
         "CMakeLists.txt"
       ],
-      "journal": "../Xapiand-wt/xapiand/queryparser-restructure",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T08:22:12",
+          "ci": {
+            "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+            "runs": [
+              45124357782
+            ]
+          },
+          "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+          "criteria": {
+            "A1": "261122-222817-2abf44 (the build-test check); build-test 261122-222817-2abf44 at queryparser:fc02cb5 passed (8/8 tests); CI run 45124357782 on the pushed branch (queued)",
+            "A2": "261123-005505-cd8ac8 (the members check), 261122-222826-4f317e",
+            "A3": "261122-222831-76a27b",
+            "A4": "`docs/source-layout.md` at queryparser:fc02cb5: each header, its lines and its layer",
+            "A5": "[manual] the lead (2026-11-23) read the cut at fc02cb50: parser.hh holds the class (data members, one declaration per member) and its builder; parser_operators.hh the driver and operator recognition (run, step, keywords, op_kind); parser_words.hh words and terms (globs, fuzzy, phrases, n-grams, stop words, make_term); parser_groups.hh grouping and the tree (frames, close_group, combine, join, nary, fold). Each is one layer a maintainer opens alone, 270-446 lines; agreed."
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261122-222817-2abf44",
+              "level": "light",
+              "seconds": 72.9,
+              "state": "done",
+              "what": "queryparser-restructure check build-test at fc02cb50cacb"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --members --base main .",
+              "commit": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-005505-cd8ac8",
+              "level": "light",
+              "seconds": 2.3,
+              "state": "done",
+              "what": "queryparser-restructure check members at fc02cb50cacb"
+            }
+          ],
+          "final": true,
+          "from": "0fdec0c0184abb51e259765a4137b768429e9400",
+          "reason": "",
+          "tested": "fc02cb50cacb5198df1fb9024afe17cf335c0ee4"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [
         "split-queryparser"
@@ -24643,10 +24690,10 @@
       "provides": [],
       "repo": "../queryparser",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "queryparser: the parser's operator, word and group layers in headers of their own",
-      "updated": "2026-11-22T22:19:59",
-      "worktree": "../queryparser-wt/xapiand/queryparser-restructure"
+      "updated": "2026-11-23T08:22:14",
+      "worktree": ""
     },
     "queue-drain-throughput": {
       "accepted": {
