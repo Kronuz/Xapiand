@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261122-221746-290a7a (probe 2: is the leader's chore running pin_for; queued since 22:17)
+State: waiting on jobs 261122-232034-115dd4 (probe 2: is the leader's chore running pin_for; queued since 22:17)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,7 +16,7 @@ the next flight the same, 500 times). The leader's pin_for never traces: neither
 (boundary/recovered mismatch) nor "make_pin threw", and install_needed saw boundary == recovered
 (3, 13). The flight's frames start 5-45 ms after SnapshotNeeded, ticks in which every chore
 drains, so the pin is not merely late: the leader's chore does not run pin_for at all, or a
-pin is removed before the fetch. Probe 2 (261122-221746-290a7a, .scratch/group-heal/probe2.sh,
+pin is removed before the fetch. Probe 2 (261122-232034-115dd4, .scratch/group-heal/probe2.sh,
 outputs {gap3,heal3}-chore.out) traces every notice item run, kick refusals (stalled, hold,
 installing), pin_for successes and unpin_for.
 
@@ -69,7 +69,7 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read probe 2 (261122-221746-290a7a; its log, .scratch/group-heal/{gap3,heal3}-chore.out in the
+1. Read probe 2 (261122-232034-115dd4; its log, .scratch/group-heal/{gap3,heal3}-chore.out in the
    strata worktree): does the leader's chore run pin_for (a "pin_for: pinned" line, or "chore ran
    ...notice_work" lines), or is it refused (kick refused: stalled/hold/installing) or stuck
    behind an item returning more (2) or stall (3)? Fix that cause in group.hh with a test that
