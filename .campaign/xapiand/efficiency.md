@@ -943,3 +943,12 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Queue: group-heal's 13 critical-path jobs sat 9h25m at priority 1; resubmitted at 3 (msg-33; campaign-v3's next install raises in place). Landing schema-split (CMakeLists.txt) voided restore-stream's 5 evidence jobs (32 CPU-min fuzz) and needed master merges in 3 quests.
 - Agent runs: turn-log-parity resume 157k (Opus high), split-check-members fix 177k (Opus high), uinteger-restructure 116k (Sonnet high), journal-group-delete 102k (Opus high); consensus-request-install review still on its probe.
 - Host: load 17 on 16 CPUs, 276 GiB free, 80 queued, light slots 83% used. Quota 9% weekly at 2.1%/h; about 44 h left by the projection, before the reset.
+
+### 2026-11-23 10h (hourly)
+
+- Landed: nan-range-bound Xapiand:4177b72.
+- Critical path: group-heal unblocked: suite green at strata:82ea744c (the promotion failure was a test expecting consensus not to remove a replaced voter itself; footprint +88 B/idle group on libstdc++ fixed by lazy install state); witness task merged (8/8 group tests at e4828884, both witness mutants killed); strata main merged (3 conflicts with group-catalog; the merge exposed close racing a learner's install tasks, fixed at strata:908b58c0 with close_mid_install); durability review running. consensus-request-install: review CHANGES F1 (a lost follower request spent the base's one image; probe 261122-235756-e57e70), fixed consensus:1869826, accepted with F1=261123-014604-5bfb1e. journal-replaces-wal restore task: all three mutants killed by name, the restamp one included.
+- Landing churn: each Xapiand landing voids the others' evidence; restore-stream has rerun its strict RSS jobs three times today (still 1,845 -> 404 MB shakespeare, 1,337 -> 325-362 MB logs). Landing order now fixed: require-once, split-xapiand-tests, open-files-floor, restore-stream last.
+- Lead errors: my priority-resubmit script re-quoted 4 commands not starting with `sh -c '` (one exit 127, all 4 re-run unchanged); one plain A1 job lacked its --for tag. Tool: msg-35 (a task's job supersedes its quest's job of the same criterion).
+- Agent runs: group-heal promotion 162k, consensus F1 131k, consensus review 171k, group-heal merge 201k (all Opus high); group-heal durability review running.
+- Host: load 11 on 16 CPUs, 278 GiB free, 53 queued, light slots 57% used. No explorer batch: open hunt targets overlap active file sets. Quota 10% weekly at 1.9%/h; about 48 h left by the projection, before the reset.
