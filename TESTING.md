@@ -23,6 +23,13 @@ below); `OUTDIR/coverage-files.txt` has every file. A line left uncovered is lis
 | Scorers, collectors, counting | >= 95% | >= 90% | `engine/strata/search.cc`, `engine/strata/expand.cc`, `engine/search.cc` |
 | Everything else | >= 90% | >= 80% | the rest of `src/`, one row per directory |
 
+## Docs E2E
+
+`harness/engine_e2e.sh` and `harness/run_all.sh e2e tls` run the one newman release pinned in `harness/package.json` (lockfile
+`harness/package-lock.json`). They install it themselves with `npm ci --prefix harness` into `harness/node_modules` (untracked)
+and put it first on `PATH`; a newman installed elsewhere is never used, and CI installs nothing globally. To bump it, edit
+`harness/package.json` and run `npm install --package-lock-only --prefix harness`.
+
 ## Restore corpora
 
 `tests/corpora/` holds one directory per writer, each a `--dump` of the index `rt` (`rt.mp`, with a `BUILD` line naming the
