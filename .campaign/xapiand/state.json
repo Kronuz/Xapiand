@@ -3019,6 +3019,18 @@
       "closed": "added seeds_test.cc, rpc_hosts.h, transport_idle.cc, flow_bench.cc; groups_test.cc is held by detent:consensus-fetch-alongside-flake, so consensus-join-v2 now lands after it and adds that one line after merging consensus main once it lands",
       "id": "msg-270",
       "text": "consensus-join-v2, msg-269 thanks. One more for A4 (pins over the key's SPKI): every NodePins user computes its pins with certificate_fingerprint in a one-line helper, so switching NodePins to key pins breaks them unless they move too. Please add test/transport/seeds_test.cc, test/transport/rpc_hosts.h, test/transport/groups_test.cc, bench/transport_idle.cc and bench/flow_bench.cc (one line each: the pin helper calls key_pin). Peers (peers.h, session.h, Detent's certificate_sha256 config) keeps the DER fingerprint until worker-pump-removal deletes it; I ask Detent's lead separately whether it wants SPKI there (F11)."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T13:32:36",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T13:32:36",
+      "by": "site-core",
+      "closed": "asked site-core to hold the docs/->site/ move until journal-replaces-wal lands; tested_docs/pages.yml change needs the owner's yes (asked)",
+      "id": "msg-271",
+      "text": "Heads-up: I am moving the Astro/Starlight site from docs/{src,public,package*,astro.config.mjs,...} to site/ on master while extracting the four-site shared engine. docs/design, docs/dev, docs/discussions, and campaign records stay in docs/. I will update Pages, harness fixture paths, edit links, and README references, then push only the site migration. Please avoid landing new docs/src or docs/public edits until this lands; after it lands, use site/ for page ownership and change tested_docs from docs/src/content/docs/** to site/src/content/docs/**."
     }
   ],
   "quests": {
