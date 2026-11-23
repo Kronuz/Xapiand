@@ -1,65 +1,60 @@
 # group-heal--repair: journal
 
-State: blocked on lead: the task's file set (`src/group/repair*`, `test/group/repair*`) cannot hold A3
+State: waiting on jobs 261123-045314-e451c4
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
 
-Nothing. Stopped before writing code: every A3 path needs files outside the set (below).
+First build and run of group_repair at strata:9ba22c18 against consensus:59ae07f (job
+261123-045314-e451c4, `--ref consensus=/Users/kronuz/code/Kronuz/consensus@59ae07f`,
+`CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/repair_suite.sh build-repair "^group_repair$"`).
+A red build or case is fixed next commit.
 
 ## Next
 
-1. Once the lead widens the file set (option (a) below): build A3 as designed below, against
-   consensus:59ae07f through the quest's override (`--ref consensus=59ae07f`,
-   `CONSENSUS_DIR=$JOB_REF_CONSENSUS test/group/install_suite.sh`), no pin change.
+1. Green group_repair; then the whole group suite (`repair_suite.sh build-repair`, `^group_`)
+   for install/voters/witness/footprint regressions from group.hh and install.hh.
+2. Mutants as plain `--quest group-heal --fails-without` jobs (no `--task`), one per name in
+   `test/group/repair_mutants.py --list`: `sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS python3
+   test/group/repair_mutants.py build-repair-mut NAME'`.
+3. Push the branch once the round is green.
 
 ## Blocked on
 
-The lead: the file set. strata::group is header-only: `src/group/` does not exist (the witness task
-had `include/strata/group/witness*`). Beyond the glob, A3 cannot be built outside group.hh:
+Nothing. The lead unblocked the task (file set widened to option (a), design approved).
 
-- A damaged strata segment or manifest throws `corrupt_index` from `index::open` in
-  `group::open_index` (group.hh:194), so no index exists to install onto. It must catch that, put
-  strata's names aside, open a deferred index and mark the group damaged.
-- Recovery on a damaged replica fails in `adopt` (group.hh:1105, P_b > P_H) and in
-  `files_.recover` (`file_set_damage`, a sealed set file's CRC32C). A damaged recovery must skip
-  both, hold apply, refuse reads, and ask for the image.
-- Fencing today is `application_failed` (group.hh:1341), which fences consensus's Core for good;
-  `Driver::reinstall` needs an unfenced follower with no delivered range outstanding
-  (core.h@59ae07f:885: `delivered_through_` must be 0), so the damaged group must acknowledge each
-  delivered range unapplied (`applied`) and call `reinstall` on the loop: new group state.
-- A damage found at a read (`read_applied`, a segment block's checksum) must fence the same way.
-- install.hh's `activate` moves staged `ia.` files in without a CRC32C check (the durability
-  review's Not-run note, which it assigns to A3's fencing).
-- The test target needs a line in CMakeLists.txt (`group_repair_test`, `add_test`).
+## Design (approved by the lead)
 
-Options:
-- (a) Widen the task to `include/strata/group/repair*`, `include/strata/group/group.hh`,
-  `include/strata/group/install.hh`, `test/group/repair*`, `CMakeLists.txt` (the test target
-  only) and `docs/mechanisms/group-install.md` (a Repair section). group.hh is also placement's,
-  which lands after this quest. Recommended.
-- (b) Keep the set: impossible. A host-side helper in `repair.hh` that wipes the replica and
-  reopens still fails `adopt` (consensus restores the base from its journal), and the runtime
-  read path is group.hh's.
-
-Design for (a), in two lines: damage (strata `corrupt_index` at open or read, `file_set_damage`)
-fences the group locally only (reads and apply refused, delivered ranges acknowledged unapplied),
-and the group calls `Driver::reinstall`, which installs the leader's base (at or below commit)
-through install's own stage and activate, CRC32C-matching files kept, damaged ones fetched whole;
-`RepairCompleted` unfences it, readable once applied reaches P_H. A damaged leader transfers
-leadership first (`LeaderMustTransfer`); `Current` (one image per base) or `NotLeader` retry on the
-next leader or leader checkpoint.
+Damage (strata `corrupt_index`/`corrupt_segment`, the set's `file_set_damage`) at open, recovery,
+apply or a read writes the durable marker `rd` first, quarantines a damaged index for a deferred
+one, fences the group locally (reads, proposals, checkpoints answer `replica_damaged`; delivered
+ranges acknowledged unapplied; no pin or serve), and calls `Driver::reinstall` on the loop, again
+each election timeout while damaged; a damaged leader hands off first. The image stages and
+activates through install's path; activation now checks every staged file's CRC32C, and a
+complete activation removes `rd` before its sweep. Files: include/strata/group/{repair.hh,
+group.hh,install.hh}, test/group/repair_{test.cc,suite.sh,mutants.py}, CMakeLists.txt (target),
+docs/mechanisms/group-install.md (Repair).
 
 ## Evidence
 
 | Criterion | Evidence |
 |---|---|
-| A3 | none: blocked on the file set |
+| A3 | pending: 261123-045314-e451c4 (first build) |
 
 ## Result
 
-None yet.
+Not yet.
 
 ## Rulings I made
 
-None.
+- Unfencing happens when the activation's recovery from the bundle succeeds (`adopt`), which is
+  the moment consensus completes the call with RepairCompleted; an unrequested image that
+  activates (a lagging replica) repairs too. The marker is the damage, not the call.
+- A staged file that fails its check at activation marks the replica damaged and still answers
+  `activated`: `activation_failed` fences consensus's Core for good, while consensus holding the
+  image as its base is harmless (the replica serves nothing and asks again).
+- A live set file has no CRC32C in the bundle, so its damage at rest is not detected (F24, no
+  scrubber); the staged check covers live files through the pin's CRC32C.
+- The repair retry shares the stall hand-off's timer (one wheel entry per group).
+- The test's `read` and `apply` cases inject strata's `corrupt_index` through the read function
+  and the app's `before_write` hook: deterministic, and the same error strata raises.
