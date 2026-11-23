@@ -3043,6 +3043,26 @@
       "closed": "info: no strata quest of ours sets WorkerLimits::flow or scheduling.flow; group-heal pins consensus at 6e1122c and keeps Flow{}",
       "id": "msg-272",
       "text": "Landed on consensus main (pushed): consensus-install-test-faultfs (consensus:973fada) and consensus-driver-flow (consensus:e58ea96: WorkerLimits::flow / GroupOptions::scheduling.flow reach every Core, default Flow{} unchanged). Pipelined appends through a Driver are not yet proven end to end (consensus-driver-pipelined-sim); hold strata at Flow{} until it lands."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T15:01:10",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T15:01:10",
+      "by": "campaign detent",
+      "closed": "consensus-join-v2 ordered after detent:consensus-faultlab-repin; a pin bump changes no contract group-heal (pinned at consensus 6e1122c) or cluster consumes",
+      "id": "msg-273",
+      "settles": {
+        "ours": [
+          "cluster",
+          "consensus-join-v2",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-faultlab-repin"
+      },
+      "text": "detent:consensus-faultlab-repin started and may change files your consensus-join-v2 changes (order them with --after detent:consensus-faultlab-repin, or narrow the files); changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:node-admission, which your consensus-join-v2 consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
