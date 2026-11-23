@@ -1,6 +1,6 @@
 # consensus-join-v2: journal
 
-State: working
+State: waiting on jobs 261123-133811-fee953 261123-133816-735a28 261123-133820-3e888d 261123-150157-b0634d 261123-150202-29c750 261123-150206-ee4ab3 261123-150210-a56a49 261123-150215-ec3793 261123-150231-e1409c 261123-150234-473c5f 261123-150236-7aa566, and CI at consensus:45f2309
 Quest: .campaign/xapiand/quests/consensus-join-v2.md (the lead's; never edit it)
 
 Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
@@ -8,27 +8,18 @@ Code: consensus worktree `../consensus-wt/xapiand/consensus-join-v2`, branch
 
 ## Doing
 
-Steps 3-6 written, uncommitted, building: A3 (Links::accept peeks the first byte inside the
-handshakes' pool; the join magic's 'D' goes to JoinService's pool: 64, 8 per source, 10/s per
-source delayed, slot 10 s, answer 10 s; test `flood`), A5 (DTHL0003: boot, directory, reason;
-LinkOptions::check_boot async at both ends, boot_refused at the dialer; HostTransport::boot();
-test `boot`), A6 fuzzers (fuzz/token_fuzz.cc, join_fuzz.cc, hello_fuzz.cc, CONSENSUS_FUZZ), A7
-docs (admission.md, hello.md, host-connection.md).
-
-Done: step 1 (A1, A2) consensus:166327d; step 2 (A4) consensus:a921f4e.
+All code for A1-A7 is committed and pushed: consensus:166327d (A1, A2), consensus:a921f4e (A4),
+consensus:45f2309 (A3 join pool on the port, A5 DTHL0003 boot check, the HostTransport redial
+fix, A6 fuzzers, A7 docs). Locally: the 50 targeted transport tests pass (admission_nodes every
+case, links, connection, node_hello, hello, seeds, rpc_host); reload stressed 40 times 8 at once
+with the redial fix, 0 failures (before it: 4 of 96). Fuzzers ran 15 s each locally, clean.
 
 ## Next
 
-1. Build, run admission_nodes (all cases), links, connection, node_hello, hello, seeds; commit.
-2. Mutant jobs: skip-boot-check (A5, boot), join-no-cap / join-no-slot-deadline / join-no-rate
-   (A3, flood). Fuzz jobs (A6): token, join, hello, 2 workers x 1000 s each, ASan+UBSan, built
-   with /usr/local/opt/llvm/bin/clang++ -DCONSENSUS_FUZZ=ON.
-3. Push the branch; `campaign verify consensus-join-v2` for A1-A5, A8 (CI).
-4. Old step list for reference: Step 4 (A5): hello DTHL0003 with boot and directory version, acceptor check through a hook,
-   refusal reason in the refusing hello; mutant skip-boot-check.
-5. Step 5 (A6): fuzzers fuzz/join_fuzz.cc (token v2, offer, request, answer) and
-   fuzz/hello_fuzz.cc, 30 CPU-minutes each under ASan+UBSan.
-6. Step 6 (A7): docs/mechanisms/admission.md, hello.md, host-connection.md.
+1. Read the jobs' results into Evidence; CI at consensus:45f2309 (`campaign verify
+   consensus-join-v2`): the suite, asan and tsan checks.
+2. groups_test (Blocked on, below): its pin helper fails every case until the one-line change.
+3. A security review is the lead's to launch.
 
 ## Blocked on
 
@@ -50,11 +41,14 @@ Done: step 1 (A1, A2) consensus:166327d; step 2 (A4) consensus:a921f4e.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <pending> |
-
-Jobs submitted: A2 mutants save-in-place 261123-132818-a116ef, sign-each-time
-261123-132820-5a61c4; A4 mutants pin-der 261123-133811-fee953, reload-keeps-links
-261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d.
+| A1 | suite (CI at consensus:45f2309); `issue` case; mutants any-token, join-any-cluster, join-unpinned-ca, token-no-version |
+| A2 | sign-each-time 261123-132820-5a61c4 (fails issue: 3 signatures), save-in-place 261123-132818-a116ef (fails save: the kill-during-save crash test) |
+| A3 | `flood` case (suite, tsan in CI); join-no-cap 261123-150202-29c750, join-no-slot-deadline 261123-150206-ee4ab3, join-no-rate 261123-150210-a56a49 |
+| A4 | `renew`, `expired`, `reload`, `redial` cases; pin-der 261123-133811-fee953, reload-keeps-links 261123-133816-735a28, reload-keeps-trust 261123-133820-3e888d, redial-at-deadline 261123-150215-ec3793 |
+| A5 | `boot` case; skip-boot-check 261123-150157-b0634d |
+| A6 | token 261123-150231-e1409c, join 261123-150234-473c5f, hello 261123-150236-7aa566 (2 workers x 16 min each, ASan+UBSan) |
+| A7 | docs/mechanisms/admission.md, hello.md, host-connection.md at consensus:45f2309 |
+| A8 | CI at consensus:45f2309 |
 
 ## Result
 
@@ -82,3 +76,15 @@ Jobs submitted: A2 mutants save-in-place 261123-132818-a116ef, sign-each-time
   pin.
 - Joined::save order: node.key, ca.pem, node.pem; the certificate is the commit point.
 - The request carries an opaque `detail` (name, index paths for M3) within the 64 KiB frame.
+- A5 shape: DTHL0003 (180 bytes) adds boot (16), directory version (u64) and a refusal reason
+  (u32) after the connection id. `LinkOptions::check_boot(peer hello, loop)` is a coroutine
+  returning 0 or the caller's code; both ends run it (the acceptor before the tie-break, the
+  dialer on the accepting hello), the acceptor's code goes back in `reason`, and the dialer calls
+  `LinkOptions::boot_refused(peer, reason)`. `HostTransport::boot(id, directory)` changes them
+  live. An acceptor without a check starts the link at its reply, and the dialer's check closes
+  it.
+- Pre-existing HostTransport bug fixed (host_transport.h, in the file set): a Bulk call made
+  within `redial` of a failed dial, when that dial's failure saw no call waiting, never dialed
+  until its deadline (pump returned on `dial_after` and armed no redial). Found as a 1-in-16
+  flake of `reload` under load (no dial after the second reload; instrumented locally). Fix:
+  pump arms the peer's redial for the spacing's end. Test `redial`, mutant `redial-at-deadline`.
