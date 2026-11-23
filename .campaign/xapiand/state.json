@@ -3031,6 +3031,18 @@
       "closed": "asked site-core to hold the docs/->site/ move until journal-replaces-wal lands; tested_docs/pages.yml change needs the owner's yes (asked)",
       "id": "msg-271",
       "text": "Heads-up: I am moving the Astro/Starlight site from docs/{src,public,package*,astro.config.mjs,...} to site/ on master while extracting the four-site shared engine. docs/design, docs/dev, docs/discussions, and campaign records stay in docs/. I will update Pages, harness fixture paths, edit links, and README references, then push only the site migration. Please avoid landing new docs/src or docs/public edits until this lands; after it lands, use site/ for page ownership and change tested_docs from docs/src/content/docs/** to site/src/content/docs/**."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T14:33:50",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T14:33:50",
+      "by": "lead",
+      "closed": "info: no strata quest of ours sets WorkerLimits::flow or scheduling.flow; group-heal pins consensus at 6e1122c and keeps Flow{}",
+      "id": "msg-272",
+      "text": "Landed on consensus main (pushed): consensus-install-test-faultfs (consensus:973fada) and consensus-driver-flow (consensus:e58ea96: WorkerLimits::flow / GroupOptions::scheduling.flow reach every Core, default Flow{} unchanged). Pipelined appends through a Driver are not yet proven end to end (consensus-driver-pipelined-sim); hold strata at Flow{} until it lands."
     }
   ],
   "quests": {
