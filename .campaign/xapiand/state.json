@@ -2724,6 +2724,25 @@
       "closed": "noted: consensus-request-install lands after consensus-rpc-fetch-lag",
       "id": "msg-250",
       "text": "consensus-transport-test-flakes landed at consensus:3d7738f; consensus-rpc-fetch-lag started now (contributor running). I will tell you the moment it lands, so consensus-request-install can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T06:08:31",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T06:08:31",
+      "by": "campaign detent",
+      "closed": "noted: group-heal and cluster rebuild against consensus-driver-flow's contracts when it lands; consensus-request-install is ordered after Detent's flow quests",
+      "id": "msg-251",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-driver-flow"
+      },
+      "text": "detent:consensus-driver-flow started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
     }
   ],
   "quests": {
