@@ -1,6 +1,6 @@
 # netlab-consensus: journal
 
-State: waiting on jobs 261121-155538-b542e7 261121-155541-b33da6 261121-155544-5ff2fd 261121-155547-b1b79f (selftest, its fails-without, 3- and 5-node VM rows at consensus:4e98c8c).
+State: waiting on jobs 261122-211901-cc23ef 261122-211904-f193f9 261122-211907-bb83b9 261122-211910-df953d (selftest, its fails-without, 3- and 5-node VM rows at consensus:e534d6c).
 Quest: .campaign/xapiand/quests/netlab-consensus.md (the lead's; never edit it)
 
 ## Doing
@@ -62,9 +62,24 @@ applied index and the leader's `ss -tin` every 0.5 s, with the load wait raised 
 - Merged consensus main (15 files, install surface) clean: consensus:db5a3b0. node.cc's Sink has a
   catch-all, so ActivateImage needs nothing.
 
+## Round 2026-11-22 (resumed)
+
+- Jobs at consensus:4e98c8c: selftest 261121-155538-b542e7 ok; fails-without 261121-155541-b33da6
+  failed as it must; 3 nodes 261121-155544-5ff2fd all checks; 5 nodes 261121-155547-b1b79f 43 of
+  44, "1ms: round trip" again: peer 3 4.135 vs 3.461 ± 0.517. Residuals (ping - set - floor) at
+  1 ms: 3 nodes -0.26..+0.05, 5 nodes -0.19..+0.71, and the missing peer differs per run.
+- Fix consensus:e534d6c: lateness sampled in 5 rounds alternating with each peer's pings (2 pings,
+  6 sleeps) so both see the same drift. selftest's fake stall starts at the samples after node 2's
+  1ms ping; 4e98c8c's sequential sampling fails it (job 261122-211904-f193f9). Doc Calibration 6.
+- CI at 4e98c8c: linux-tsan, freebsd-x86_64, linux-asan-ubsan, linux-arm64-gcc, macos-x86_64 all
+  fail only consensus_mutants (timeout 1800 s; freebsd Failed 0.00 s). Pre-existing: main's run
+  44951962478 at consensus:8780e44 (the merged base) fails the same five jobs on the same test.
+  Main made each mutant its own ctest; main a068ba0 is green (run 45033414369).
+- Merged main (7 files, peers-wake): consensus:6a2a123, clean.
+
 ## Next
 
-1. Read the four jobs; A1/A2 cite the VM rows at 4e98c8c once green. If a round trip fails again,
+1. Read the four jobs at e534d6c; A1/A2 cite the VM rows once green; CI at e534d6c. If a round trip fails again,
    its row's `pings` names the peer and whether its lateness rose with it.
 2. Hunt rows for the lead: docs/perf/netlab-consensus.md Findings 1 (stall), 2 (reorder doubles a
    64 KiB commit to 2 round trips), 3 (loss: 4 round trips), 7 (3-node election 3.5 s at 80 ms).
@@ -89,6 +104,8 @@ checks, the history workload, the table), `selftest.py` (fake runner and cluster
 `vm.sh` (build and run in one guest of Xapiand's VM tier).
 
 ## Rulings I made
+- 11-22: the floor is sampled in rounds alternating with the pings, deterministic in the selftest
+  and drift-paired; margin unchanged (no widened constant).
 - 11-21: the per-peer floor is sampled right after each ping, not concurrently with it: sequential
   keeps the selftest deterministic and the gap to ~0 s; the rows' `pings` field says whether a
   failure is the link (lateness normal) or the host (lateness up).
