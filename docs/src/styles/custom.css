@@ -604,6 +604,14 @@ html.snippet-no-lines .snippet-code pre.shiki .line::before {
 }
 .snippet-copy.is-copied::before { opacity: 1; }
 
+/* Touch screens reveal Copy when the code is tapped. Keyboard focus still
+   exposes it, and mouse hover keeps Expressive Code's native behavior. */
+@media (hover: none) {
+	.expressive-code .frame .copy { opacity: 0; pointer-events: none; }
+	.expressive-code .frame[data-copy-revealed] .copy,
+	.expressive-code .frame:has(.copy button:focus-visible) .copy { opacity: 1; pointer-events: auto; }
+}
+
 /* Sidebar menu icons. Starlight's sidebar renders links as plain text, so we add
    a leading icon via a CSS mask, reusing Starlight's own icon set (so they match
    the top-nav icons exactly). The icon follows the link color (currentColor), so
