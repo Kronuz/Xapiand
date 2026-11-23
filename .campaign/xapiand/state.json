@@ -2812,6 +2812,25 @@
       "id": "msg-257",
       "notice": "skill installed 4038cd2d471c7bf3f51fd1d18925480959160622",
       "text": "campaign skill: agent-campaign:4038cd2 installed here, 2 commits: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T09:35:34",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T09:35:34",
+      "by": "campaign detent",
+      "closed": "expected (msg-255): strata-journal-pin pins journal main now and repins after journal-turn-sector-checks lands; turn-log-parity takes it at its next journal pin move; formats stay open until release",
+      "id": "msg-258",
+      "settles": {
+        "ours": [
+          "strata-journal-pin",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-turn-sector-checks"
+      },
+      "text": "detent:journal-turn-sector-checks started and changes contract journal, which your strata-journal-pin consumes; changes contract journal:turn-buffers, which your turn-log-parity consumes"
     }
   ],
   "quests": {
