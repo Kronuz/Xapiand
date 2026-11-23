@@ -1,6 +1,6 @@
 # group-heal--repair: journal
 
-State: waiting on jobs 261123-063129-a135ff (group_repair, group_repair_eager at strata:d457da76); after it 261123-063139-f5dbcc (^group_) and 17 mutants 261123-063143-84cfc5 .. 261123-063248-279216
+State: waiting on jobs 261123-080614-8b99ae (group_repair, group_repair_eager at strata:06bfb2f5, main merged); after it mutants no-ack 261123-080623-cab898, pin-unchecked-footer 261123-080626-53f862
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 ## Doing
@@ -64,6 +64,14 @@ staged, source and four crash points). strata:d457da76:
   and consensus refused it CaughtUp (decided at InstallPrepared, after validation; no Sink notice).
   Fix: a sound replica answers validated without staging an image at or below its applied
   index. Mutant stage-caught-up; the failure messages print the stage's position if it stays.
+
+Round 4 (lead's message): at d457da76 cases a135ff and suite f5dbcc passed, 15 of 17 mutants
+killed. Survivors: no-ack ran against `manifest`, which never needs the ack; it now runs against
+`refusal` (consensus's applied index past the replica's). pin-unchecked-footer: strata's
+checkpoint inside make_pin learns every unread segment's facts (prepare_commit), so the lazy
+map met the damage first. The footer check is reachable for bytes that rot on disk after the
+leader mapped them (facts known, no remap at commit): case `source` now runs that variant too
+("source at rest"), which only the footer check sees. strata:06bfb2f5 (main merged at c6520990).
 
 ## Next
 
