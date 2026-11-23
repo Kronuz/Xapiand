@@ -462,3 +462,4 @@ quest fixes them (2 of 5 on 11-20).
 - Once first-commit-crash lands with its install() guard (review F1), group-heal's caller guard in include/strata/group/install.hh is redundant: remove it (one mechanism, in the core).
 - R1 (nit, re-check at strata:4955a679) install()'s guard runs before the source checkpoint check and storage admission, so a failed install leaves a committed empty generation 1 (valid, durable) while install()'s comment says a bad checkpoint "leaves this index as it was". Move the guard to just before the copies, or fix the comment.
 - R2 (test nit) the install sweep checks the installed documents, not the applied position.
+- (group-heal, after first-commit-crash landed at strata:4955a679) install() now takes commit_empty() itself: remove group-heal's redundant caller guard (its F2 fix at strata:a1e786f4) when group-heal next merges main.
