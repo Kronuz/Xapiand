@@ -25933,6 +25933,18 @@
           "unverified": [
             "split: no job"
           ]
+        },
+        {
+          "at": "2026-11-23T00:04:55",
+          "commit": "ae5798e3de2186426b09f0965234ac7f701caecd",
+          "evidence": [],
+          "final": true,
+          "reason": "recorded after the fact: merged into master by hand earlier (campaign check reports it); recorded now",
+          "recorded": "2026-11-23T05:20:09",
+          "tested": "ae5798e3de2186426b09f0965234ac7f701caecd",
+          "unverified": [
+            "split: no job"
+          ]
         }
       ],
       "lenses": [],
@@ -25943,10 +25955,10 @@
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "schema.cc split along its responsibilities",
-      "updated": "2026-11-23T01:13:53",
-      "worktree": "../Xapiand-wt/xapiand/schema-split"
+      "updated": "2026-11-23T05:20:22",
+      "worktree": ""
     },
     "script-method": {
       "accepted": {},
