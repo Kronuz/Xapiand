@@ -36,11 +36,11 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-163011-1ee7dc, 261121-204931-2e7d5a; fails without: 261121-163015-5d9da9 (log: complete build, 3 of 97 checks fail at tests/test_coverage_main.cc:525, 543, 575) |
-| A2 | 261121-163007-0100b9 (the suite check, 80/80 at d9f7622; macOS only) |
+| A1 | 261122-230848-ab5678, 261121-204931-2e7d5a; fails without: 261121-163015-5d9da9 (log: complete build, 3 of 97 checks fail at tests/test_coverage_main.cc:525, 543, 575) |
+| A2 | 261122-225528-2b0953 (the suite check, 80/80 at d9f7622; macOS only) |
 
-Examined: 261121-163011-1ee7dc (unit + coverage, 97 checks pass, macOS); 261121-204931-2e7d5a (main e2e, 91 checks,
-0 failed); 261121-163015-5d9da9 (master's main.cc, fails as it must); 261121-163007-0100b9 (suite passes);
+Examined: 261122-230848-ab5678 (unit + coverage, 97 checks pass, macOS); 261121-204931-2e7d5a (main e2e, 91 checks,
+0 failed); 261121-163015-5d9da9 (master's main.cc, fails as it must); 261122-225528-2b0953 (suite passes);
 261121-163013-2b7cd3 (timed out at 30 min mid-build, invalid; replaced by 261121-204931-2e7d5a). CI 44966941683 at
 4a07d2e: failed, Linux only, see Doing. All at pre-merge commits: rerun at the landed code once unblocked.
 
