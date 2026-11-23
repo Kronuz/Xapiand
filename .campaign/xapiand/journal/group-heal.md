@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-115259-ccf2c8 261123-115301-3839f5 261123-115303-42b792 261123-115305-fdca6d 261123-115307-1cf54a 261123-115309-f3b6ea (settle fix at strata:870ac9f5, pushed)
+State: ready for the lead: every job at strata:870ac9f5 passed (CI at 870ac9f5 next)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,20 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+Results at strata:870ac9f5 (2026-11-23): sim rows 261123-115259-ccf2c8 pass
+(simulation_group_corruption included); suite `^group_` 261123-115301-3839f5 passes;
+fails-without killed: settle-keeps-isolation 261123-115303-42b792 (complete build, then
+"FAIL [3 voters, a settle with the leader cut off]: the settle heals the cut-off leader"), sim
+marker-kept 261123-115305-fdca6d, install-damage-escapes 261123-115307-1cf54a. Reviewer probes
+261123-115309-f3b6ea failed B4 only, on the probe's stale name filter, not on lost bytes: its
+own log lists iq.manifest-1 and iq.seg-1.sx after the reopen, the 2 strata names it counted
+before. Probe fixed (reviewer's .scratch/xapiand/review-group-heal-durability/probes2.inc; the
+old one kept as probes2.inc.orig-bea1f568): B4 reads each damaged strata file's bytes before
+the reopen and requires each whole under its own name or `iq.<name>` after the reopen and
+after 50,000 steps. Rerun 261123-123604-a54cf2: B1 ok, B3 ok, B4 ok ("2 strata files before
+the reopen, 2 kept whole after it, 2 after 50000 steps"). What fails without F9 is the suite's
+`lone` case under mutant quarantine-deletes (261123-092949-ccaf0c).
 
 Settle fix (2026-11-23), after sim rows 261123-092900-8f83e5 at c76c68f9 failed
 simulation_group_corruption, file seed 3 ("the cluster settles": node 2 at applied 34, term 6;
@@ -299,8 +313,7 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the jobs at 870ac9f5 (State). A red case: fix in the next commit with its job. Then CI
-   at 870ac9f5 (asan, tsan, build-test).
+1. CI at 870ac9f5 (asan, tsan, build-test); then the lead's durability re-check.
 2. Evidence table from `campaign brief`; ready for the lead's durability re-review.
 
 ## Blocked on
