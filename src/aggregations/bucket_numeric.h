@@ -270,9 +270,6 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				}
 				default: {
 					const auto d = std::ceil(value.as_f64());
-					if (std::isnan(d)) {
-						THROW(AggregationError, "bounds must be numbers");
-					}
 					if (d < lowest) {
 						return { Reach::below, T() };
 					}
@@ -333,9 +330,14 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				}
 				const auto& bound_value = bound_it.value();
 				switch (bound_value.get_type()) {
+					case MsgPack::Type::FLOAT:
+						// NaN has no place in any field's order: refused alike on every type.
+						if (std::isnan(bound_value.as_f64())) {
+							THROW(AggregationError, "Field {} range bound '{}' cannot be NaN", repr(_conf.at(RESERVED_AGGS_FIELD).str_view()), name);
+						}
+						return reach_of<T>(bound_value);
 					case MsgPack::Type::POSITIVE_INTEGER:
 					case MsgPack::Type::NEGATIVE_INTEGER:
-					case MsgPack::Type::FLOAT:
 						return reach_of<T>(bound_value);
 					default:
 						THROW(AggregationError, "'{}' must be a number", name);
