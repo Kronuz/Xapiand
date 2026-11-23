@@ -879,3 +879,15 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - Held: queryparser-restructure and tuple-buffer-restructure, launchable, wait for split-check-members' shared mover (tools/outline.py) so they don't write a third and fourth private one. No explorer batch: light slots 85% used, 174 queued.
 - Queue: 174 queued, 7 running; light slots 85% used (409 of 480 slot-minutes).
 - Host: load 19 on 16 CPUs (was 124 an hour ago), 287 GiB free. Quota 99% weekly, burn 0.68%/h, reset in 21.7 h; run-out projected in about 1.5 h.
+
+### 2026-11-22 01h (hourly)
+
+- Landed: split-check-anchor (cpp-libraries:fe8491f), after the lead read the anchor pass (a pinned removed line is skipped by the line pass and the lost-line report), and single-flight-budget (Xapiand:7666cea, merge 0179b95).
+- Started: split-check-members (Opus high), the critical path of the four restructures: `--members`, tools/outline.py, and a run on both real restructure heads.
+- Agent runs:
+  - hunt-faultlab-at-mark mutant gap, Opus high, 97k. The first mutant (file.h:157) survived because `settle_staged()` clears every record while any ordering point exists; a new case recreates the one window that line matters in (faultlab:7f3910c). Side finding filed in hunt.md: a failed ordering point leaves a stale at_mark record.
+  - hunt-header-tables finish, Opus high, 116k. Blocked on the lead, correctly: `inline const` tables raise macOS initializers from 153 to 473 (+31,808 B static-init code, Mach-O has no COMDAT) while `__bss` drops 13,952 B; startup no slower, within noise. 17,792 B of `__text` growth was LZ4 linked statically at the head only (slot deps rebuilt between builds). Ruling: one definition per table (constexpr where literal, else extern in data.cc/keymaker.cc), base and head in one job; resumed. soundex (~50 KB of initializers over 4 TUs) and htm (35 TUs, inferred) filed in hunt.md.
+- Checked by log: journal-replaces-wal's restore mutant is a kill (test_restore_batch.cc:190). group-heal's three install mutants are kills.
+- Lead fixes: landing reruns at --priority 5 (strata-pin-catalog A1 passed about 1 h after, against 2.6-4.3 h before; ninja-only's suite 40 min). A gate check counts only with its exact cmd, level and minutes (a `sh -c` wrapper or `--level none` makes a different job). restore-stream merged master with its evidence kept, security re-accepted after reading newman-pin's 12 files, State set to "blocked on CI". split-xapiand-tests had sat since 21:33, when a GitHub "fatal error in commit_refs_rules" on a push stopped the landing loop for it; master merged again and its jobs resubmitted at priority. Tool finding sent to campaign-v3 (msg-25): it started quest landing-priority.
+- Held: queryparser-restructure and tuple-buffer-restructure until split-check-members' mover lands. No explorer batch: light slots 84% used, 159 queued.
+- Host: load 53 on 16 CPUs, 286 GiB free. Quota 99% weekly, burn 0.67%/h, reset in 20.7 h; the projection still says run-out in about 1.5 h.
