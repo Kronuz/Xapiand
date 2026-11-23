@@ -14517,7 +14517,7 @@
       "branch": "quest/xapiand/journal-group-delete",
       "checks": [
         {
-          "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 30,
           "name": "suite"
@@ -14546,6 +14546,58 @@
         "CMakeLists.txt",
         "include/journal/journal.h"
       ],
+      "history": [
+        {
+          "at": "2026-11-23T01:03:00",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 30,
+                "name": "suite"
+              },
+              {
+                "cmd": "ci:linux-asan-ubsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "asan"
+              },
+              {
+                "cmd": "ci:linux-tsan",
+                "level": "light",
+                "minutes": 30,
+                "name": "tsan"
+              }
+            ]
+          ],
+          "reason": "suite check gains -G Ninja (owner rule D168: every configure uses Ninja); same build, tests and flags; no review accepted yet",
+          "voided": [],
+          "weakened": [
+            "gate check suite changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/journal-group-delete",
       "landed": [],
       "lenses": [
@@ -14565,7 +14617,7 @@
       "risk": "high",
       "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-22T21:52:54",
+      "updated": "2026-11-23T01:03:00",
       "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
