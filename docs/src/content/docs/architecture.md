@@ -138,11 +138,13 @@ pick the shard                propose the command; the       last write, at most
    The group logs it in the journal and applies it in log order: strata assigns
    the docid and the new version and adds the document to its write buffer, and
    the blobs go to the group's volumes.
-3. **Answer.** The write is acknowledged once the journal holds it and the group
-   applied it. With `?commit` the response waits for a commit; otherwise the write
-   schedules the autocommit, which commits the index 1 s after its last write,
-   3 s after each write while writes keep coming, and never later than 8 to 10 s
-   after the first uncommitted one.
+3. **Answer.** At `ack=quorum`, the default, the write is acknowledged once the
+   journal holds it and the group applied it; at `ack=none`, once the journal
+   holds it. `refresh=true` (and `?commit`, which is `ack=quorum&refresh=true`)
+   refreshes the index before the answer. The write schedules the autocommit,
+   which commits the index 1 s after its last write, 3 s after each write while
+   writes keep coming, and never later than 8 to 10 s after the first
+   uncommitted one.
 4. **Commit.** A commit is the group's checkpoint: strata writes the buffered
    documents as segments and a new manifest and syncs them, and the journal keeps
    only what the checkpoint does not hold. The index's revision goes up by one.

@@ -141,11 +141,140 @@ e2e:end -->
 
 ## Visibility and Durability
 
-A write is visible to the next read as soon as the node has answered it: a
-search or a get refreshes its index first, so a request reads its own writes.
-Durability comes in two steps. The node appends every write to the shard's
-journal before it answers (see `docs/mechanisms/journal-durability.md`),
-and the index commits 1 s after its last write (3 s while writes keep coming, and
-8 to 10 s after the first of them at the latest). A `?commit` on the request
-commits before the answer. A crash replays the log the next time the index
-opens.
+A write the node answered with a 2xx is in its shard's journal and survives a
+crash (see `docs/mechanisms/journal-durability.md`). The index commits on its
+own 1 s after its last write (3 s while writes keep coming, and 8 to 10 s after
+the first of them at the latest), and `COMMIT` commits it now; a commit bounds
+the journal, which a crash replays the next time the index opens.
+
+Writes and reads take their levels as query parameters:
+
+| Parameter | Values | What it asks |
+|---|---|---|
+| `ack` | `quorum` (default), `none` | `quorum` answers once the write applied, with its result: a `409` when its version check failed. `none` answers `202 Accepted` once the write is in the journal, before it applies: the answer has no `_version`, and a refusal at apply is not reported. |
+| `refresh` | `false` (default), `wait_for`, `true` | `true` refreshes the index before the answer, so no read pays for it. `wait_for` answers once every read sees the write, waiting for an `ack=none` write to apply. `false` leaves the refresh to the next read. |
+| `read` | `prefix` (default), `linearizable` | `linearizable` waits until every write answered before the read has applied. `prefix` reads what has applied, which may miss an `ack=none` write still on its way. |
+
+A search or a get refreshes its index first, so either `read` sees every write
+answered at `ack=quorum`. `?commit` means `ack=quorum&refresh=true`, and another
+level beside it answers `400`; `?volatile` means `read=linearizable`. A `RESTORE`
+takes `ack` too: at `none` each object's result has no `_version`, and it
+answers `202`.
+
+A bulk loader that does not need each answer to carry its result writes at
+`ack=none`:
+
+```rest
+PUT /concepts/levels/1?ack=none
+
+{
+  "title": "Answered once it is in the journal"
+}
+```
+
+<!-- e2e:begin
+---
+description: ack=none answers 202 once the write is in the journal
+status: 202
+---
+e2e:end -->
+
+A `linearizable` read sees it, applied or not when the read arrived:
+
+```rest
+GET /concepts/levels/1?read=linearizable
+```
+
+<!-- e2e:begin
+---
+description: A linearizable get sees the ack=none write
+---
+
+```js
+pm.test("The ack=none write is read back", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().title).to.equal("Answered once it is in the journal");
+});
+```
+e2e:end -->
+
+`refresh=true` refreshes before the answer, `refresh=wait_for` answers once
+reads see the write, and `?commit` is `ack=quorum&refresh=true`:
+
+```rest
+PUT /concepts/levels/2?refresh=true
+
+{
+  "title": "Refreshed before the answer"
+}
+```
+
+<!-- e2e:begin
+---
+description: refresh=true answers once refreshed
+---
+e2e:end -->
+
+```rest
+PUT /concepts/levels/3?ack=none&refresh=wait_for
+
+{
+  "title": "Answered once reads see it"
+}
+```
+
+<!-- e2e:begin
+---
+description: refresh=wait_for at ack=none answers 202 once applied
+status: 202
+---
+e2e:end -->
+
+```rest
+PUT /concepts/levels/4?commit
+
+{
+  "title": "ack=quorum and refresh=true"
+}
+```
+
+<!-- e2e:begin
+---
+description: ?commit is ack=quorum&refresh=true
+---
+e2e:end -->
+
+```rest
+SEARCH /concepts/levels/?read=prefix
+```
+
+<!-- e2e:begin
+---
+description: A prefix search sees every write once it applied
+---
+
+```js
+pm.test("The four writes are found", function () {
+  pm.response.to.be.success;
+  pm.expect(pm.response.json().hits.length).to.equal(4);
+});
+```
+e2e:end -->
+
+A level the node does not know, or one beside `?commit` that contradicts it,
+answers `400`:
+
+```rest
+PUT /concepts/levels/5?commit&ack=none
+
+{
+  "title": "Refused"
+}
+```
+
+<!-- e2e:begin
+---
+description: ?commit with ack=none is refused
+status: 400
+---
+e2e:end -->

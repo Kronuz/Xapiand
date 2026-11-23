@@ -33,8 +33,8 @@ curl localhost:8880/twitter/tweet/1                         # get it back
 curl -X SEARCH 'localhost:8880/twitter/tweet/?q=user:Kronuz'  # search for it
 ```
 
-The index is created on first write. Writes become searchable at the next commit,
-about a second later; `?commit` waits for it. The
+The index is created on first write. A write is searchable once the node answered
+it; `?commit` also refreshes the index before the answer. The
 [Quick-start](https://kronuz.github.io/Xapiand/quickstart/) continues with
 searches, aggregations, and geo queries.
 

@@ -273,9 +273,9 @@ untrusted clients cannot reach.
 - `--max-files` is the most files the node opens. By default the node computes
   what its clients and indexes need, and raises the process limit to it; it
   lowers `--max-clients` and `--database-pool-size` when the limit is too low.
-- `--full-flush-ordering` (off) makes macOS order commits with a full flush (`F_FULLFSYNC`) instead of the
-  barrier, whose order Apple guarantees only on internal SSDs. Where the barrier is not guaranteed the node logs
-  one warning per volume naming this switch. Linux and FreeBSD already flush in full.
+- `--full-flush-ordering` (off) makes macOS order commits, the indexes' and the journal's, with a full flush
+  (`F_FULLFSYNC`) instead of the barrier, whose order Apple guarantees only on internal SSDs. Where the barrier
+  is not guaranteed the node logs one warning per volume naming this switch. Linux and FreeBSD already flush in full.
 - `--database-pool-size` is the most indexes (shards) the pool keeps open. By default it holds what 1% of physical RAM covers at about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit above; a size you give wins.
 - `--schema-pool-size` is the most schemas the node keeps (100), and
   `--schema-versions-size` the most versions of schema it keeps in its cache (100).

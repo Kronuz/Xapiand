@@ -1,8 +1,8 @@
 > Status: in progress (quest journal-replaces-wal). Built: the prepared write, the command codec, the group's
-> application, each index's group in its catalog slot, the writes, blobs and RESTORE through it, and the commit
-> as the checkpoint. The WAL, its fsync threads and the scheduler library are deleted. Pending: deleting a group
+> application, each index's group in its catalog slot, the writes, blobs and RESTORE through it, the commit
+> as the checkpoint, and the HTTP levels. The WAL, its fsync threads and the scheduler library are deleted. Pending: deleting a group
 > with its index (the index DELETE answers 501, and strata's journal pin predates `Host::delete_group`).
-> Design: `docs/design/cluster-release.md` D2, D3, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
+> Design: `docs/design/cluster-release.md` D2, D3, D4, D12, D16, D17; strata `docs/mechanisms/replication-group.md`.
 
 # Journal durability (how it works)
 
@@ -77,21 +77,25 @@ publishes.
 `src/database/shard_group.h`, `ShardGroups` and `ShardGroup`. The process keeps one journal host over
 `.xapiand/journal` in the data directory (Xapiand's own namespace, beside its system indexes) (`DatabasePool::set_journal`, called by the manager), its group loop on a
 thread of its own, and two chore threads the groups apply on. The journal's IO completes inline on the loop's
-thread. Each index the catalog opens is a lone voter (D2) whose group borrows the slot's directory and index
-(strata's group-catalog, D169):
+thread, and its `PosixIO` takes `engine::strata::posix_io_options()`, as the indexes' do: `--full-flush-ordering`
+turns the turn log's ordering barrier (`TurnLog::reclaim`) into a full flush on macOS, and the per-volume barrier
+warning names the switch (D10). Each index the catalog opens is a lone voter (D2) whose group borrows the slot's
+directory and index (strata's group-catalog, D169):
 
 1. **Open.** `open_payload` builds the entry, which opens the group last: the group recovers from its last
    bundle on the index as the open left it, or creates itself. Its id is the first 8 bytes of the index's
    uuid, and its journal identity the uuid.
 2. **Catch-up.** Before the open returns, a linearizable read's barrier waits until the group applied what its
-   log committed (a replay included), and the engine owes reads a refresh. On the chore it reads the chunked
+   log committed (a replay included). On the chore it reads the chunked
    commands still open and the id counter's metadata. The ready point then proposes an abort for each open
    command (A9): a reopen that resumed its term with no election would otherwise leave an earlier proposer's
    upload open, its volume never freed.
 3. **Writes.** Under the index's turn, `ShardEndpoint::write_document` prepares on the engine, encodes the
-   prepared write as a command (`command_write`) and proposes it on the group's loop at `quorum`, chunked past
-   the entry limit with an id of the term the loop sees; the answer's verdict is the write's result, checked
-   against what prepare predicted (`engine::strata::Shard::landed`). A metadata write is a `set_metadata`
+   prepared write as a command (`command_write`) and proposes it on the group's loop at the write's `ack` level,
+   chunked past the entry limit with an id of the term the loop sees; at `quorum` the answer's verdict is the
+   write's result, checked against what prepare predicted (`engine::strata::Shard::landed`). Every apply marks
+   the engine (`applied_by_group`, from `ShardApplication::applied` on the chore, before the answer): reads owe a
+   refresh and the index a commit, whatever the level. A metadata write is a `set_metadata`
    command. A write that moves the id counter past what the log holds carries it as a `set_metadata` write of
    its own command, so the counter is durable with the document. There is no other log: the WAL is gone, and a
    pool with no journal (a test's, the CLI's) is durable only at its commits.
@@ -108,12 +112,32 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
    nothing), into `RestoreBatcher`'s commands of as many writes as fit one entry; each command is proposed at
    `quorum` in input order, and `restore_results` reads its writes' docids and versions from the verdict. A write
    whose document left its placed shard is missed, as before, and takes the serial path.
-6. **Commit.** A request's commit (`?commit`, the autocommit) awaits the group's checkpoint (`commit_group`):
-   its bundle covers what the writes before it applied, and the group truncates its log behind it. The catalog's
+6. **Commit.** A request's commit (`COMMIT`, a RESTORE's closing commit, the autocommit) awaits the group's
+   checkpoint (`commit_group`): its bundle covers what the writes before it applied, and the group truncates its
+   log behind it; the engine's view is then refreshed past anything applied since the capture. The catalog's
    commit hook stays a plain strata commit (D169: its chore holds the index's lease, which the checkpoint takes).
 7. **Close.** Every catalog close runs `close_payload` before the index's close: the group checkpoints until
    its bundle covers what it committed, and the process keeps its closed record, so a reopen resumes its term
    with no election. The catalog's commit hook and a request's commit stay plain strata commits.
+
+## Levels
+
+The HTTP levels (D4) are flags of a request's use of an index (`src/database/flags.h`), parsed in
+`src/server/search_views.cc` (`write_levels`, `query_field_maker`):
+
+| Level | Flag | Mechanism |
+|---|---|---|
+| `ack=quorum` (default) | none | `write_document` awaits the proposer's apply of its placement and answers the verdict. |
+| `ack=none` | `DB_ACK_NONE` | Answered at `ProposalPlaced` (`202`): the result is the key, with no docid or version. The endpoint marks itself `unapplied_`, and the turn's next holder (`take_turn`) awaits `caught_up` first, so a prepare, a placement read or a commit sees the write. A RESTORE proposes its batches at `none` too, and its results carry no version. |
+| `refresh=true` | `DB_REFRESH` | `finish_write` refreshes the engine (`fresh`) before the answer. |
+| `refresh=wait_for` | `DB_REFRESH_WAIT_FOR` | `finish_write` awaits the write's apply (`caught_up`, at `ack=none`): a read refreshes a dirty shard first (Q-F27 (a)), so every read on the leader's replica sees an applied write. |
+| `read=linearizable`, `?volatile` | `DB_LINEARIZABLE` | `Shard::engine_for_read` awaits `caught_up` (the group's `read_applied` barrier) before its refresh. |
+| `?commit` | `DB_REFRESH` | `ack=quorum&refresh=true`; any other level beside it answers 400. |
+
+`read=prefix` reads what has applied, refreshing first when the shard is dirty. The engine's marks are atomic and
+cleared before their work (`Core::refresh`, `Core::commit`), so an apply on the chore that lands meanwhile marks
+the shard again. A metadata write (a schema's, a setting's) is always at `quorum`. A RESTORE's refresh levels ask
+nothing more of its closing commit, which refreshes.
 
 ## Proof
 
@@ -132,6 +156,15 @@ thread. Each index the catalog opens is a lone voter (D2) whose group borrows th
   `test_a_reopen_aborts_an_upload_left_open` (A9's ready point). `test_a_cold_pin_reads_what_the_log_replays`,
   `test_a_fenced_index_is_replaced_and_replays_its_log` and `test_the_id_counter_persists_replays_and_advances`:
   a write whose checkpoint failed on a faulted disk is read back from the journal by the next open.
+- `tests/test_node.cc`: `test_ack_quorum_answers_once_applied` (a PUT waits while its apply is held),
+  `test_ack_none_answers_at_placement_and_linearizable_reads_wait_for_it` (`202` while the apply is held, a
+  `prefix` get misses it, a `linearizable` get waits and sees it), `test_refresh_levels_and_commit` (the shard
+  is clean after `refresh=true` and `?commit`, `wait_for` at `none` waits for the apply, unknown levels answer
+  400), `test_a_restore_at_ack_none_reports_no_versions`. `tests/test_pool.cc`
+  (`test_a_lone_voter_reads_its_writes`): a get and a search right after each write see it.
+- `tests/test_shard_group.cc` (`test_the_journal_io_takes_the_io_options`): the host's IO carries
+  `--full-flush-ordering` and the barrier warning, and admits a group-writable directory, which PosixIO's
+  defaults refuse.
 - `tests/test_shard_group.cc`: offsets from the state and idempotent effects, rotation in log order, a chunked
   command applied at its final entry, an upload into its own volume, a higher term retiring open commands,
   entries outside their id's term applying nothing, an abort retiring its upload's volume, the state's bytes, and

@@ -14,7 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs reading controls:** An Aa button enlarges reading text and opens the reading column; desktop images and diagrams zoom when they fit larger.
 - **`--full-flush-ordering` and the barrier warning (macOS)**: on storage other than an internal Apple SSD the
   ordering barrier is not guaranteed, and the node logs one warning per volume naming the switch; the switch
-  orders commits with a full flush instead. Off by default; Linux and FreeBSD are unchanged.
+  orders commits, the indexes' and the journal's, with a full flush instead. Off by default; Linux and FreeBSD
+  are unchanged.
+- **Write and read levels**: `ack` (`quorum`, the default, answers once the write applied, with its result;
+  `none` answers `202` once it is in the journal), `refresh` (`false`, `wait_for`, `true`) and `read` (`prefix`,
+  `linearizable`) on writes, `RESTORE` and reads. `?commit` means `ack=quorum&refresh=true` and `?volatile`
+  means `read=linearizable`.
 - **`_sort` takes the order as a string**: `{"balance": "desc"}` and
   `[{"age": "asc"}, {"balance": "desc"}]`, as Elasticsearch writes them.
 - **`:metrics` reports how late each event loop runs**: the `xapiand_reactor_lag_seconds` histogram, one
@@ -26,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `POST` without an id in the URL answers `400`.
 
 ### Changed
+- **`?commit` refreshes, `COMMIT` commits**: a write is durable once the journal holds it, so `?commit` on a
+  write means `ack=quorum&refresh=true` and no longer waits for the index's commit; `COMMIT /index/` commits.
 - **The open-index pool is sized from memory**: with no `--database-pool-size` it holds what 1% of RAM covers at
   about 40 KiB per open index (about 4,200 on 16 GiB), within the open-files limit, not a fixed 200; a size you
   give wins.
