@@ -1,6 +1,6 @@
 # group-heal--sim-rows: journal
 
-State: waiting on jobs 261123-053444-c51484 261123-053447-2bfa62 261123-053450-58e6b8
+State: waiting on jobs 261123-053444-c51484 261123-053447-2bfa62 261123-053450-58e6b8 (not pushed: GitHub unreachable; strata:18525c5f and the journal are committed locally)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
