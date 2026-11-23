@@ -630,7 +630,7 @@ add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 # are compiled into XAPIAND_OBJ below (io/strings deps already on the path, so its own CMake
 # is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
 # Xapiand's real logger (+ error::name/description).
-FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG a5dc407fc7c095d2d5f6b8e1e25a72e16115fbde)
+FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG b2a874fb22da70f7a96448a3f68e3d9305559983)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
@@ -774,7 +774,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f)  # strata main: catalog delivery waits through a posting post
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -1125,6 +1125,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/lua/*.c*" "${PROJECT_SOURCE_DIR}/src/lua/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/database/schema/*.c*" "${PROJECT_SOURCE_DIR}/src/database/schema/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/strata/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/strata/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"

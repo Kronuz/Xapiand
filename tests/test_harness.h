@@ -72,14 +72,25 @@ inline int failures = 0;
 // for preconditions where continuing would crash or be meaningless.
 #define REQUIRE(cond) \
 	do { \
-		CHECK(cond); \
-		if (!(cond)) return; \
+		++testh::checks; \
+		const bool require_ok_ = static_cast<bool>(cond); \
+		if (!require_ok_) { \
+			std::fprintf(stderr, "  FAIL %s:%d: REQUIRE(%s)\n", __FILE__, __LINE__, #cond); \
+			++testh::failures; \
+			return; \
+		} \
 	} while (0)
 
 #define REQUIRE_EQ(a, b) \
 	do { \
-		CHECK_EQ(a, b); \
-		if (!((a) == (b))) return; \
+		++testh::checks; \
+		const auto& require_a_ = (a); \
+		const auto& require_b_ = (b); \
+		if (!(require_a_ == require_b_)) { \
+			std::fprintf(stderr, "  FAIL %s:%d: REQUIRE_EQ(%s, %s)\n", __FILE__, __LINE__, #a, #b); \
+			++testh::failures; \
+			return; \
+		} \
 	} while (0)
 
 #define CHECK_THROW(expr, exc) \

@@ -19,7 +19,8 @@ Two steps, each landable alone:
 1. Out-of-class definitions. basic_index's member functions move out of the class body into one
    header per mechanism (`index_open.hh`, `index_turns.hh`, `index_checkpoint.hh`,
    `index_merge.hh`, `index_read.hh`, or the cut its reading shows), as `template <...> inline`
-   definitions of `basic_index<...>::f`. The class body keeps its data members and declarations.
+   definitions of `basic_index<...>::f`, under `include/strata/core/index/` or as `index_*.hh`
+  beside it. The class body keeps its data members and declarations.
    `index.hh` stays the include every caller names. Bodies, names and statement order are
    unchanged.
 2. Subobjects, only where one wins. Where a mechanism's state and invariants stand apart (the turn
@@ -31,8 +32,8 @@ Two steps, each landable alone:
 
 - A1 The suite passes at each step's head: the `build-test` check, plus CI on every platform with
   sanitizers ([ci])
-- A2 Step 1 changes no code: a split_check mode (or an extension in cpp-libraries' tools, with its
-  own fixture) proves every moved member body reappears unchanged as an out-of-class definition. A
+- A2 Step 1 changes no code: the `members` check (split_check's member mode, from quest
+  split-check-members) passes, and the journal answers each warning. A
   Release+LTO `tools/fnsizes.sh` diff of strata's test binaries, base against step 1, shows no
   function whose size changed, or each difference explained in the journal
 - A3 Step 2: each extracted subobject has unit tests of its own invariant, plus a mutant per
@@ -53,9 +54,19 @@ names.
   when tolerant-open merged first. It would have reached only the ~830 lines outside the class, so
   this quest replaces it. It is high risk because it moves durability code; step 1 is proved
   mechanically, so one correctness review covers both steps.
-- It starts the day turn-log-parity lands: six of turn-log-parity's tasks and its fix round edit
-  index.hh, and a split under open branches costs them their edits (SPLITTING.md, "When").
-  field-check-at-map also holds index.hh.
+- Owner, 2026-11-21 evening: "One class body of 5K+ lines is just not right! Not right at all. It
+  makes this single file one of the busiest ones and it also makes the file very very hard to
+  understand." So it starts now, on main, instead of after turn-log-parity.
+- Lead, 2026-11-21 (step 1 at strata:88058f27, its R3 and R4): the moved definitions of this class
+  template stay without `inline` (in-class definitions carry no inlining hint, so codegen keeps);
+  the 21 trailing return types are a shape split-check-members' mode accepts. The mover stays
+  committed under `.scratch/index-restructure/` until split-check-members graduates it to
+  cpp-libraries' `tools/outline.py`; then it leaves this branch.
+- Lead, 2026-11-21: turn-log-parity is the only open branch editing index.hh (201 lines, plus its
+  tasks). It lands first, unchanged. Then this quest merges main and re-applies those edits inside
+  the moved definitions, and the `members` check reruns against the new main, so the proof always
+  covers a pure move. Starting under turn-log-parity's file set is recorded with --force on start.
+  field-check-at-map (planned) builds on the new layout.
 
 ## May land early
 
