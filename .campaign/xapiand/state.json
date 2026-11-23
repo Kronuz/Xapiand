@@ -5508,11 +5508,12 @@
             "src/cluster/rpc_methods.*",
             "src/engine/strata/expand.*"
           ],
-          "worktree": "../Xapiand-wt/xapiand/cluster--search"
+          "merged": "5e1dedbbacc60942e501a8a9bc641ebfe1f2e3de",
+          "worktree": ""
         }
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-22T23:04:14",
+      "updated": "2026-11-23T11:00:05",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
