@@ -155,6 +155,9 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 8. Volumes rotate past 32 GiB (`VOLUME_BYTES`, master's data-storage volume bound, storage.h); locators keep
    byte offsets. Chunked-command ids must be unique across the group's log (the proposer puts its term in
    the high bits); a chunk of an id open in a lower term is dropped, and its final writes nothing.
+9. The command codec is LEB128 over the kinds command/chunk/final with a version byte (pre-release bytes,
+   contract `xapiand:command`/`xapiand:chunked-command`, format-freeze reviews them); `split_command`
+   stages the largest in-place bytes first until the final fits.
 10. The journal's IO completes inline (InlineCompletion) on the group loop's own thread, never a reactor's:
     correctness first; T11 measures whether the loop's syncs sit on the write's critical path.
 11. A group's id is the first 8 bytes of its index's uuid (nonzero), its journal identity the uuid: the id
@@ -166,6 +169,3 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 14. A9's rf > 1 cases are tested on the replica's application entry by entry (the deposed proposer's chunk
     placed in the new term): apply is a function of entry and state, so it is the sequence every voter applies.
 15. A request's commit and the catalog's commit hook stay bare strata commits (D169) until d4.
-9. The command codec is LEB128 over the kinds command/chunk/final with a version byte (pre-release bytes,
-   contract `xapiand:command`/`xapiand:chunked-command`, format-freeze reviews them); `split_command`
-   stages the largest in-place bytes first until the final fits.
