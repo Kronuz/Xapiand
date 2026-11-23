@@ -32,6 +32,9 @@ Available values for the `_index` option are:
 `field` is an alias of `field_all` and `global` of `global_all`, and a pair joined by a comma
 (such as `"global_terms,field_values"`) combines the terms of one with the values of the other.
 
+Whether the value is also kept in the stored document is a separate option, `_store`: see
+[Storing Mode](store).
+
 The default is `field_all` (both terms and values, under the field prefix). The `_id` field is
 always `field_all`. Sources: `src/database/schema.cc:518-690`, `src/database/schema.h:121`.
 

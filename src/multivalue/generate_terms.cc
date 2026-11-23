@@ -33,6 +33,7 @@
 
 #include "config.h"                               // for HAVE_LIBCPP
 #include "engine/error.h"                         // for engine::Error
+#include "engine/text.h"                          // for engine::text::cjk_words
 #include "database/schema.h"                      // for required_spc_t, FieldType, UnitTime
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
@@ -526,7 +527,8 @@ GenerateTerms::text(engine::Document& doc,
 	bool cjk_ngram,
 	const std::string& language, const std::string& stem_language,
 	analysis::stop_strategy stop_strategy,
-	analysis::stem_strategy stem_strategy)
+	analysis::stem_strategy stem_strategy,
+	bool cjk_words)
 {
 	analysis::term_generator term_generator;
 	term_generator.cjk_ngram = cjk_ngram;
@@ -547,7 +549,8 @@ GenerateTerms::text(engine::Document& doc,
 	const auto kind = positions ? engine::FieldKind::text : engine::FieldKind::terms;
 	std::optional<engine::FieldRef> word_field, stem_field;
 	const bool stems_lead_z = stem_strategy == analysis::stem_strategy::all_z || stem_strategy == analysis::stem_strategy::some;
-	term_generator.index_text(value, [&](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
+	const auto words = cjk_words ? engine::text::cjk_words(value) : std::string();
+	term_generator.index_text(cjk_words ? std::string_view(words) : std::string_view(value), [&](std::string_view term, std::uint32_t wdf, std::uint32_t pos) {
 		engine::FieldRef field;
 		if (stems_lead_z && !term.empty() && term.front() == 'Z') {
 			if (!stem_field) {

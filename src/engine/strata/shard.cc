@@ -883,7 +883,8 @@ prepare_write(Core& core, WriteOp op, docid did, const std::string& key, Documen
 							p.result.version = static_cast<rev>(found->second);
 							return p;
 						}
-						throw Error(errc::invalid, "The key belongs to another document");
+						// The id is stale (the document was deleted and recreated): a conflict the writer retries.
+						throw version_conflict(static_cast<rev>(found->second));
 					}
 					stored = static_cast<rev>(found->second);
 				} else {
