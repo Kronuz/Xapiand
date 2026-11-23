@@ -12936,7 +12936,129 @@
       "worktree": "../strata-wt/xapiand/group-core"
     },
     "group-heal": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T04:11:46",
+          "base": "00eb018da75d20715b3e05a2593937a970b40201",
+          "blobs": {
+            "CMakeLists.txt": "100644:a5dfca17b158a4227349ac948a64c64d1c9a3882",
+            "docs/mechanisms/group-install.md": "100644:8b6522fe020e09b95a7637459abaeaaf761c9048",
+            "docs/mechanisms/replication-group.md": "100644:50f10ab6bd4e42ac68d21dfb929a2f474c5dc50d",
+            "docs/mechanisms/simulator.md": "100644:ade41f699cff5472d4c8f284cb6b4f577ac917d4",
+            "include/strata/group/file_set.hh": "100644:6a259e7b977a1a94c9a401dd5e03fc1b6f30f5cd",
+            "include/strata/group/group.hh": "100644:8f4e2e33ad7cca4d63f535065a6a43c784b7adf9",
+            "include/strata/group/install.hh": "100644:3014373ff872bab2955a3ad1c8af31e0dc905ed4",
+            "include/strata/group/witness.hh": "100644:c22ed0ab0ef04bd3fcbbb488fa286245442255e5",
+            "sim/CMakeLists.txt": "100644:3ad5d3cbfcec2f4720ce0a37ac0b571c655f6448",
+            "sim/LICENSE": "100644:b735c45c9e67b1dd3d57691552a3bd72e08237fd",
+            "sim/cmake/same_history.cmake": "100644:016d2502a68be2a3a1e1c8cdc6f1fbd6bc9e0b83",
+            "sim/include/simulation/checker.hh": "100644:ae3baf59547639ceb75e20688e424a40e54f2de3",
+            "sim/include/simulation/clock.hh": "100644:5caaa15c67af7c682b84b16ea875a74710f50fbb",
+            "sim/include/simulation/engine.hh": "100644:f54e3e229757c1f8ebb9c6e4033cf23d0c0a9d81",
+            "sim/include/simulation/history.hh": "100644:c3915321a3ec5e17744ed561b1cbf9189bf405d7",
+            "sim/include/simulation/network.hh": "100644:9167296daabb76dc3335bb3ef20ba00b2d6073c6",
+            "sim/include/simulation/random.hh": "100644:712e71b6a067785bcd42713186100509c9bcdef7",
+            "sim/test/checker_test.cc": "100644:1468bd8ba3c9213fdb77c7b5583c3a81edee0cab",
+            "sim/test/engine_test.cc": "100644:f27850e0e0606112345d9a14e9ba3fbf917bac78",
+            "sim/test/engine_wrap_test.cc": "100644:d7fb631b457d31e07d24393ab56bfa707c67e7dc",
+            "sim/test/histories/linearizable.history": "100644:a6af7b950e32e3f04f95ee2617e1bb868778f83b",
+            "sim/test/histories/violation.history": "100644:a260f35566d5b80ebd0813fdf015439bda090519",
+            "sim/test/history_test.cc": "100644:9c08f810747d2d01ce41bb038f0f53f9c61f74b5",
+            "sim/test/network_test.cc": "100644:780780caa0495331c75e36d30fe7892480c9b752",
+            "sim/test/random_test.cc": "100644:604c866d20ad68f9787d49542f4b908a2f6c5962",
+            "sim/tools/sim_check.cc": "100644:046319f820464b586828038d793a0f99e5e6489c",
+            "sim/tools/sim_run.cc": "100644:c126f101a32e22218035ccad764c1783dbc621fe",
+            "test/group/footprint_test.cc": "100644:8e1a215d0aa28da38863c581ae7abe309bc5b9bb",
+            "test/group/install_mutants.py": "100644:63afa639d4f263197cfa5140f3ac369c017dfd57",
+            "test/group/install_suite.sh": "100644:9dbc31c302202715f502b9455fc66cadc7c7792d",
+            "test/group/install_test.cc": "100644:ab110aa136d395cfcf9ce9faa8964f0d3fbed21b",
+            "test/group/mutants.py": "100644:6715937cf9566285f53305c60c931ccaeaa57ed1",
+            "test/group/voters_test.cc": "100644:8b7967af2ddc8e3fb804b1b47511eca033b86eb8",
+            "test/group/witness_test.cc": "100644:708061f4eed05b5fc75ac9ca7800e0eee3827b06",
+            "test/group/world.hh": "100644:ec43297ace9e87efb0262312328ebdca69908876"
+          },
+          "by": "review",
+          "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+          "criteria": "987c23accdcf1e4c",
+          "diffs": {
+            "CMakeLists.txt": "4d742e4335f7a946",
+            "docs/mechanisms/group-install.md": "7bb754f968c0e64d",
+            "docs/mechanisms/replication-group.md": "878c7efc5f901062",
+            "docs/mechanisms/simulator.md": "6a00cc48303b6ba2",
+            "include/strata/group/file_set.hh": "f95e0c0f28158d0a",
+            "include/strata/group/group.hh": "8f8249faa9060860",
+            "include/strata/group/install.hh": "22c784f9f275f979",
+            "include/strata/group/witness.hh": "98bbd093192fdb84",
+            "sim/CMakeLists.txt": "2abe92058e8c74e6",
+            "sim/LICENSE": "b373a14186e00f7b",
+            "sim/cmake/same_history.cmake": "b1dc0901f06aa71d",
+            "sim/include/simulation/checker.hh": "fe499a334461f5a8",
+            "sim/include/simulation/clock.hh": "c3c6e24ae351ad9a",
+            "sim/include/simulation/engine.hh": "70b710f76a97eee3",
+            "sim/include/simulation/history.hh": "9d2f75a70d76c39d",
+            "sim/include/simulation/network.hh": "54047348a138fab4",
+            "sim/include/simulation/random.hh": "7b7b08aaf0560e60",
+            "sim/test/checker_test.cc": "f0932ff7a77494f6",
+            "sim/test/engine_test.cc": "7e104df4288db05e",
+            "sim/test/engine_wrap_test.cc": "523d62d900c5b40a",
+            "sim/test/histories/linearizable.history": "73f1e153a255153f",
+            "sim/test/histories/violation.history": "a9e265f879fefd69",
+            "sim/test/history_test.cc": "9133d04e052ee4ee",
+            "sim/test/network_test.cc": "ed19f08275e855f9",
+            "sim/test/random_test.cc": "d65cfc2ffc19c029",
+            "sim/tools/sim_check.cc": "0e42874374ca792a",
+            "sim/tools/sim_run.cc": "49ef76828b058df5",
+            "test/group/footprint_test.cc": "1cac1719ea084bd3",
+            "test/group/install_mutants.py": "54b764eafa00e59e",
+            "test/group/install_suite.sh": "87c4131d1d009f51",
+            "test/group/install_test.cc": "dea189c745e5bae0",
+            "test/group/mutants.py": "10ad5e4e61d24a41",
+            "test/group/voters_test.cc": "ade38ac211075e0b",
+            "test/group/witness_test.cc": "1fa1d3a0fe64c93f",
+            "test/group/world.hh": "6c9a28a48f313d0a"
+          },
+          "findings": {
+            "F1": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
+                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-025745-1cfc1e",
+                  "level": "light",
+                  "seconds": 370.0,
+                  "state": "done",
+                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            },
+            "F2": {
+              "jobs": [
+                {
+                  "cmd": "sh -c 'CONSENSUS_DIR=$JOB_REF_CONSENSUS sh test/group/install_suite.sh build-heal'",
+                  "commit": "a1e786f4a1c08c4f2a0c314ea484b8c2a1e80301",
+                  "exit": 0,
+                  "host": "kronuz",
+                  "job": "261123-025745-1cfc1e",
+                  "level": "light",
+                  "seconds": 370.0,
+                  "state": "done",
+                  "what": "group suite at the durability fix (reopen_short_of_space, deferred_learner_crash, install deferred)"
+                }
+              ],
+              "kind": "defect",
+              "reproduced": false
+            }
+          },
+          "note": "",
+          "review": "ca986675efb5dbb28c520ba8621732852aa5bbba",
+          "reviewed": "908b58c0d2ee3512744c68be8a083daea72715ec",
+          "verdict": "CHANGES"
+        }
+      },
       "after": [
         "detent:consensus-driver-install",
         "consensus-request-install"
@@ -13093,7 +13215,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T02:04:15",
+      "updated": "2026-11-23T04:11:46",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
