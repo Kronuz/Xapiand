@@ -30776,6 +30776,8 @@
     "system-file-nr-close": {
       "accepted": {},
       "after": [],
+      "base": "2471c5f26e24e1ef3533d94fa5f34bae9184b015",
+      "branch": "quest/xapiand/system-file-nr-close",
       "checks": [
         {
           "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
@@ -30790,6 +30792,7 @@
         "test/test.cc",
         "CHANGELOG.md"
       ],
+      "journal": "../Xapiand-wt/xapiand/system-file-nr-close",
       "landed": [],
       "lenses": [],
       "milestone": "",
@@ -30797,9 +30800,10 @@
       "provides": [],
       "repo": "../system",
       "risk": "normal",
-      "status": "planned",
+      "status": "active",
       "title": "Linux file-nr readers close their descriptor",
-      "updated": "2026-11-22T21:17:54"
+      "updated": "2026-11-22T21:19:32",
+      "worktree": "../system-wt/xapiand/system-file-nr-close"
     },
     "t10-flood-limit": {
       "accepted": {
