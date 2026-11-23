@@ -22663,7 +22663,7 @@
     "placement": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-23T05:44:28",
+          "at": "2026-11-23T08:47:04",
           "base": "00eb018da75d20715b3e05a2593937a970b40201",
           "blobs": {
             "CMakeLists.txt": "100644:12c74a9aa1ffbafd23d6b48fb3c499f68bcbd64f",
@@ -22811,15 +22811,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_plan_test && ./build-n/placement_repair_plan_test'",
+                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_group_test && ctest --test-dir build-n -R '\"'\"'^placement_repair_group$'\"'\"' --output-on-failure'",
                   "commit": "ef1e91e2155f1171621a55585d50de1232b22c30",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261123-052058-5b15a2",
+                  "job": "261123-052115-f25679",
                   "level": "light",
-                  "seconds": 38.7,
+                  "seconds": 38.1,
                   "state": "done",
-                  "what": "placement fix F1-F3: repair plan test, 3000 seeds + new cases"
+                  "what": "placement fix F1-F3: ctest placement_repair_group"
                 }
               ],
               "kind": "defect",
@@ -23006,7 +23006,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-23T05:44:28",
+      "updated": "2026-11-23T08:47:04",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
