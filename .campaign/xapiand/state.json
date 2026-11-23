@@ -14653,18 +14653,58 @@
         "test/faultfs_test.cc",
         "docs/**"
       ],
-      "journal": "../Xapiand-wt/xapiand/hunt-faultfs-at-mark-clear",
-      "landed": [],
+      "journal": "",
+      "landed": [
+        {
+          "at": "2026-11-23T14:59:31",
+          "ci": {
+            "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+            "runs": [
+              45270163673
+            ]
+          },
+          "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+          "criteria": {
+            "A1": "261123-132542-c99f18 (the build-test check), 261123-132542-c99f18",
+            "A2": "261123-132538-2cb7f4; fails without: 261123-132536-5edf40",
+            "A3": "CI green at 5d4df9b04d70"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+              "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-132542-c99f18",
+              "level": "light",
+              "seconds": 59.1,
+              "state": "done",
+              "what": "hunt-faultfs-at-mark-clear check build-test at 5d4df9b04d70"
+            },
+            {
+              "check": "ci",
+              "ci": "ci:ci",
+              "commit": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c",
+              "state": "done"
+            }
+          ],
+          "final": true,
+          "from": "42cc324032aca53668451f9a175f1620da9e6f6f",
+          "reason": "",
+          "tested": "5d4df9b04d7064fc978c84d29e7db8e6789bb10c"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": "../faultlab",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "faultfs clears a removed ordering point's at_mark record",
-      "updated": "2026-11-23T13:23:01",
-      "worktree": "../faultlab-wt/xapiand/hunt-faultfs-at-mark-clear"
+      "updated": "2026-11-23T14:59:44",
+      "worktree": ""
     },
     "hunt-faultlab-at-mark": {
       "accepted": {},
