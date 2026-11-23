@@ -14325,6 +14325,8 @@
         "detent:journal-power-silent-loss",
         "detent:journal-tail-second-sector"
       ],
+      "base": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+      "branch": "quest/xapiand/journal-group-delete",
       "checks": [
         {
           "cmd": "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
@@ -14355,6 +14357,7 @@
         "CHANGELOG.md",
         "CMakeLists.txt"
       ],
+      "journal": "../Xapiand-wt/xapiand/journal-group-delete",
       "landed": [],
       "lenses": [
         "durability"
@@ -14371,9 +14374,10 @@
       ],
       "repo": "../journal",
       "risk": "high",
-      "status": "planned",
+      "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-21T00:05:24"
+      "updated": "2026-11-22T21:16:26",
+      "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
       "accepted": {
