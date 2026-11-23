@@ -1,6 +1,6 @@
 # consensus-request-install: journal
 
-State: waiting on jobs 261122-211822-2168f0 (cases+codec+replay), 261122-211833-8e72b9 (A2 mutant), 261122-211833-e92f60 (A4 mutant), 261122-211813-967b3b (A6 fuzz); CI suite/asan/tsan at consensus:1f21967 (pushed).
+State: waiting on jobs 261123-014604-5bfb1e (F1 fails-without), 261123-014608-9d6850 (cases+codec+replay), 261123-014612-ecc91b (A2 mutant), 261123-014617-4a6a56 (A4 mutant), 261123-014626-1d15f8 (TSan cases); CI at consensus:1869826 (pushed). Lead confirm once they pass: `--confirm F1=261123-014604-5bfb1e`.
 Quest: .campaign/xapiand/quests/consensus-request-install.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,27 +9,30 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Round 2 at consensus:fbae510, merged with consensus main at consensus:1f21967 (clean merge;
-quiesce-election-stall had not landed yet), pushed. What job 261121-223440-971166 and CI run
-44994448707 (every platform, same failures) showed at consensus:fc4af4f, all test or seed
-bugs, no protocol bug:
-- non_leader, witness_bound: `first<T>(core->step(...))` kept a pointer into the step's
-  temporary batch (TSan heap-use-after-free at lines 565 and 615; bad_variant_access on macOS).
-  Each batch is now a named local; `first(Actions&&)` is deleted so it cannot recur.
-- after_install: expected boundary 3, but the base is the leader's applied index with its
-  no-op (4). It now uses `l->applied.size()`.
-- leader_lost: the next leader was the requester itself (LeaderMustTransfer, reason 8) or the
-  other follower with base 0 (Current, reason 11). The other follower now checkpoints first,
-  and the requester's PreVote/Vote requests are dropped so the other follower leads.
-- consensus_mutant_repair-with-a-delivery-outstanding: tools/mutants.sh seeds Repair's busy
-  line, which fc4af4f had extended with `reinstall_`. The line is back as main has it; the
-  pending-request refusal is its own line.
-- A2 mutant job 261121-223618-6521b4 did kill after_install (21 images), and A4's killed
-  witness_bound, but both are rerun since head failed those cases too.
+Round 3, review F1 (correctness review CHANGES at consensus:1443159), fixed at consensus:1869826:
+- F1: the leader set `imaged = base` at grant and at SnapshotNeeded, so an owed image that lands
+  CaughtUp (the follower's in-memory request lost to a restart or a NotLeader timeout) used up
+  the base's one image. `imaged` is now set only on Installed (as before) and Rejected
+  (release_snapshot, the key's boundary); CaughtUp leaves it. Grant and replicate no longer
+  touch it; `requested`/`snapshot` still answer InFlight until the peer answers whole.
+- Loop check: a follower with a request pending to (leader, term) always accepts that leader's
+  image at or below its commit: its base cannot move while pending (LocalCheckpoint, Repair
+  Busy), the boundary is committed so log matching gives `retains_suffix`, and the Worker's
+  cutover waits for !busy, so no Busy rejection. So CaughtUp from a requester means its record
+  was lost; every further grant needs a new InstallRequest, sent only by a host call. Images are
+  bounded by host calls, one installed per base.
+- Test `lost_record` (the review probe, now asserting NotLeader first, no activation from the
+  CaughtUp image, the image on the next call, then Current x5 and one activation). Note and
+  ctest list updated.
+- CI at consensus:1443159: linux-tsan failed transport_groups_owe-order and
+  transport_rpc_host_fetch (timing tests outside this quest's code; consensus main 42a8cde,
+  which 1443159 contains, was green); asan timed out at 1h. Fresh CI at 1869826 decides.
+- N1, N2: non-blocking, filed in hunt.md by the lead; left.
 
 ## Next
 
-1. Read jobs in State and CI at consensus:1f21967; fix what fails; then the correctness review.
+1. Read the jobs in State and CI at consensus:1869826; if the TSan transport tests fail again,
+   run them at consensus main's commit to show them pre-existing.
 2. Merge consensus main once detent:consensus-quiesce-election-stall and
    detent:consensus-peers-wake land (merge, never rebase). Expect one conflict: Core's
    next_deadline follower line (theirs adds acknowledge_at_, mine install_deadline()); keep both
@@ -171,13 +174,16 @@ the tree compiles. The wider file set is needed before step 3, not for the revie
 
 | Criterion | Evidence |
 |---|---|
-| A1 | job 261122-211822-2168f0 (lost_state, behind) and the suite check on CI at consensus:1f21967 |
-| A2 | job 261122-211822-2168f0 (current, after_install, unrequested); mutant job 261122-211833-8e72b9 (`--fails-without`, after_install) |
-| A3 | job 261122-211822-2168f0 (leader_lost, second_request, non_leader) and the suite check on CI |
-| A4 | job 261122-211822-2168f0 (witness_bound); mutant job 261122-211833-e92f60 (`--fails-without`, witness_bound) |
-| A5 | [artifact] docs/mechanisms/install-request.md at consensus:1f21967 |
-| A6 | codec round-trip and corpus replay in job 261122-211822-2168f0; fuzz job 261122-211813-967b3b (30 CPU-min, ASan+UBSan; at fc4af4f 261121-223626-0f7cf8 passed, 0 crashes); wire version ruling in the note's Wire section |
-| A7 | CI at consensus:1f21967 (asan, tsan, every platform) |
+| A1 | job 261123-014608-9d6850 (lost_state, behind) at consensus:1869826 |
+| A2 | job 261123-014608-9d6850 (current, after_install, lost_record, unrequested); fails without: 261123-014612-ecc91b (loop-guard mutant, after_install), 261123-014604-5bfb1e (F1: 1443159's core.h, lost_record) |
+| A3 | job 261123-014608-9d6850 (leader_lost, second_request, non_leader) |
+| A4 | job 261123-014608-9d6850 (witness_bound); fails without: 261123-014617-4a6a56 (bound+1 mutant) |
+| A5 | [artifact] docs/mechanisms/install-request.md at consensus:1869826 |
+| A6 | codec round-trip and corpus replay in 261123-014608-9d6850; fuzz 261122-235137-643930 (30 CPU-min, ASan+UBSan, at 1443159; the wire format is unchanged since); wire version ruling in the note's Wire section |
+| A7 | CI at consensus:1869826 (asan, tsan, every platform); TSan of the cases 261123-014626-1d15f8 |
+
+Review findings: F1 fixed at consensus:1869826 (test lost_record; fails without:
+261123-014604-5bfb1e). N1, N2 left (hunt.md).
 
 Messages: msg-235 (Detent's ask) is taken as A2's refusal by base. The API goes to Detent for
 review through the lead.
@@ -195,8 +201,9 @@ review through the lead.
 
 - Detent's fixes (msg-235 verdict) are consensus:9ea7c55, header only: Current states the
   per-requester-per-base rule in types.h and driver.h; NotMember maps to InvalidRepair.
-- `imaged` records any image the peer got at a base (requested or lagging, at Started and at
-  Installed), so "one image per requester per leader base" holds across both paths.
+- `imaged` records the base of the last image the peer answered Installed or Rejected
+  (requested or lagging); CaughtUp leaves it (F1, consensus:1869826). "One image per requester
+  per leader base" counts installed or refused images, not ones that landed after a lost record.
 - `requested` survives Unavailable, TimedOut and Stale releases (nothing whole reached the
   peer: the leader retries the same base's image) and clears on Installed, CaughtUp, Rejected.
   A follower that rejects its image gets Current next, never a second image at that base.
