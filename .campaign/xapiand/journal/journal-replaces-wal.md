@@ -1,9 +1,21 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs and CI at Xapiand:c4d06c80d (pushed). Jobs at c4d06c80d: test_shard_group under ASan 261123-142143-9b5bc3; fails without the flush fix 261123-142149-92c842; test_node rerun 261123-142155-d17a82 (item 9). Attribution must-fail at 09a223a4e: 261123-142137-528ce7. At d322cc9b6: fresh configure + full build 261123-131119-d8ca98; must-fail fresh configure at ecf684865 261123-131122-e573bf. At 91113fb2f: test_pool ab914d and test_loop_yield ae325b passed; test_node 576cc8 failed (item 9); test_pool ASan 95fb3d running. eca738 and a11289 were superseded unrun: at 91113fb2f the count bug (item 8) would have failed the plain one and passed the mutant for the wrong reason. e33085 queued. Next: when they pass and CI at the pushed head is green, the lead submits the crash check and the full job set at that commit, without --after (the d4 checkpoint mutant takes the perl pattern of 261123-101712-4f0aa1).
+State: waiting on jobs at Xapiand:7ab94031a (pushed). Gate: crash 261123-152727-be5042; no-wal 261123-152728-6a0a28 passed; CI at the pushed head gives build-test, e2e, asan, tsan. Criteria: A1 261123-152856-709fdd, 261123-152940-dd5a34, fails-without 261123-152925-f480a5, 261123-152927-bc4ebf, 261123-152930-75d92f, 261123-152932-868f23, 261123-152935-685abb, 261123-152938-dd8969; A2 261123-152858-6ea1fb, fails-without 261123-152901-a026b1, 261123-152903-53a5af; A3 261123-152906-9e8d80, 261123-152909-4b66de, fails-without 261123-152911-321a3c, 261123-152914-a77324, 261123-152916-f6d476; A4 261123-152919-29202d, fails-without 261123-152922-d6b84e; A5 261123-152942-695236, fails-without 261123-152944-81bd40, 261123-152947-bf7b9f; A8 261123-152956-ac9c00; A9 fails-without 261123-152949-135bf6, 261123-152951-7c729a, 261123-152954-946a8a. Still queued from session 10 (not run, so no verdict): 261123-142137-528ce7 (count must-fail at 09a223a4e), 261123-142155-d17a82 (test_node rerun), 261123-142143-9b5bc3, 261123-142149-92c842, 261123-131122-e573bf. Next: read them; fix only a job that fails.
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 11 (2026-11-23), the evidence set at the head (lead: nothing else unless a job fails):
+
+1. 261123-142137-528ce7 and 261123-142155-d17a82 had not run (109 jobs queued ahead): no verdict yet on the count
+   must-fail or on whether test_node's wildcard hang was load.
+2. A4 had no test: none read right after a write through the group. Xapiand:7ab94031a adds test_pool
+   `test_a_lone_voter_reads_its_writes` (three writes through the group, each followed by a get-by-id and a search
+   that must see it, no commit); its mutant drops `core.dirty = true;` in `Shard::applied_by_group`, so a read serves
+   the last refresh (ruling 31).
+3. The full set at 7ab94031a, fresh submits with no --after (State): every mutant pattern checked to match at the
+   head with git grep; the A3 term-staging mutant's line moved (`if (open.term < e.term)` is now
+   `if (chunked_term(id) < e.term)` in effects), the rest are the earlier commands. No job uses a ref override.
 
 Session 10 (2026-11-23), the lead's step (Blocked on 6 and 7, file set widened to data.* and agent-codebase.md):
 
@@ -303,12 +315,15 @@ Jobs prove criteria by their tags; paste `campaign brief`'s generated table here
 
 | Criterion | Evidence |
 |---|---|
-| A1 | partial: 261121-105434-07ffd7 (mutant: apply without prepare's expectation fails test_group_prepare); the group, WAL deletion and no-wal pending |
-| A3 | partial: 261121-105359-853976 (codec, application, prepare tests), 261121-105428-7308c6 (mutant: a command proposed whole fails test_group_command), 261121-105431-21e0e8 (mutant: no lower-term retirement fails test_shard_group); propose path and the upload's error answer pending (chunks task) |
-| A9 | 261123-042848-b46902 (plain, at e2f2bc9cf); fails without: 261123-042851-e13216 (a chunk applies outside its id's term), 261123-042854-5886cb (an abort seals its volume); fix 3 pending (d) |
-| A1 (c, d1) | 261123-043412-42a61c (step c: build, test_pool); 261123-044042-0153c6 (d1 tests); fails without: 261123-044046-3e5477 (writes skip the group, the kill -9 case fails); WAL deletion, no-wal and CI pending |
-| A2, A4-A6 | none yet |
-| A7 | draft: docs/mechanisms/journal-durability.md (built parts) |
+| A1 | 261123-152856-709fdd; 261123-152940-dd5a34; no-wal 261123-152728-6a0a28; crash 261123-152727-be5042; fails without: 261123-152925-f480a5, 261123-152927-bc4ebf, 261123-152930-75d92f, 261123-152932-868f23, 261123-152935-685abb, 261123-152938-dd8969 |
+| A2 | 261123-152858-6ea1fb; fails without: 261123-152901-a026b1, 261123-152903-53a5af |
+| A3 | 261123-152906-9e8d80; 261123-152909-4b66de; fails without: 261123-152911-321a3c, 261123-152914-a77324, 261123-152916-f6d476 |
+| A4 | 261123-152919-29202d; 261123-152856-709fdd; fails without: 261123-152922-d6b84e |
+| A5 | ci:Functional E2E (docs); 261123-152940-dd5a34; 261123-152942-695236; fails without: 261123-152944-81bd40, 261123-152947-bf7b9f |
+| A6 | decision, lead default pending the owner: ack defaults to quorum (docs/design/cluster-release.md:222, Q1 (a)) and Q6 as written; read-your-writes is Q-F27 (a), a read refreshes a dirty shard first, which a lone voter always is (quest Decisions); the code ships both defaults |
+| A7 | docs/mechanisms/journal-durability.md: Every shard is a strata::group: a lone voter at rf = 1. The group's journal is the shard's only durability path |
+| A8 | 261123-152956-ac9c00 |
+| A9 | 261123-152856-709fdd; fails without: 261123-152949-135bf6, 261123-152951-7c729a, 261123-152954-946a8a |
 
 ## Result
 
@@ -392,3 +407,6 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
     one fails silently.
 30. database/utils.cc (outside the set) loses its storage.h include and a history comment: required for the build
     once the library is gone.
+31. A4's test reads through test_pool's Shard (get_view, engine_for_read and engine::search), not HTTP: read-your-writes
+    is the shard's refresh-before-read, the same under any handler; the mutant that serves the last refresh is the
+    dirty mark the group's apply sets.
