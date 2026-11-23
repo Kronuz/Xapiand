@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: working (install stall at the quest head; probe 261122-211759-fd0696)
+State: waiting on jobs 261122-211759-fd0696 (probe: where every install flight fails; 35th of 65 queued at 21:27)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -16,7 +16,18 @@ peer in installs_needed, the peer stays at its old applied); CI run 44987690334 
 FreeBSD, macOS) the same. In a settle every message, fetch, IO and chore drains each 5 ms tick,
 so simulated time is not the cause: something fails every flight. Probe 261122-211759-fd0696
 (unversioned, .scratch/group-heal/probe.sh + probe-src, traced; consensus 8780e44 by --ref) shows
-where: install_gap(3) and grow_and_heal(3) at frame order kept and 3600 ms. The earlier probe
+where: install_gap(3), grow_and_heal(3) and seed 132, at frame order kept and 3600 ms; probe-src
+now also traces a chore item that throws (its type and reason). Installs do work sometimes (13 of
+the ungated seeds settle by install, grow_and_heal(5) round 0 installs), so the failure is
+state-dependent, not the whole binding. Unconfirmed leads, for the trace to decide:
+- seed 132's leader fences on "faultfs write: No space left on device": no install-free path
+  fences on ENOSPC (main's seeds pass short of space), and unpin_for's release_pin commits strata
+  uncaught on the chore (make_pin's commit is caught), so a release under ENOSPC fences the leader.
+- consensus's own driver_install_test checkpoints node 3 before cutting it off in every case;
+  install_gap's replica behind never checkpointed (strata's index still deferred).
+- the leader's source starts only when its Worker is idle (worker.h source_runnable: no output,
+  completion, persist, application or cutover debt); a flight stuck in AwaitSource times out and
+  repeats, which matches "names the peer" with no frames. The earlier probe
 261121-205709-52ed84 never built (JOB_REF_CONSENSUS unset: submitted without --ref).
 
 Separate cause, fixed at strata:74da850c: grow_and_heal(5) fenced every replica on "a retired
@@ -28,7 +39,8 @@ Install task jobs (lead's note): 261121-225628-12c599 ran the retired `test/grou
 (exit 127, no such file at f05b6672): a stale command; its rerun is install_suite.sh's
 `^group_install$`. 261121-225628-ca81f0 at f05b6672 fails group_voters: the stall above.
 
-Main merged at strata:44a0d295 (README.md).
+Main merged at strata:44a0d295 (README.md). strata 44a0d295 and 74da850c not pushed: CI would only
+repeat the stall; push with the stall fix.
 
 Witness jobs at 7db919a5 ended: plain 214745-036576 fails group_witness (loss: the lost voter
 never settles back; join: after the promotion), the install stall again (witness_test runs on the
