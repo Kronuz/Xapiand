@@ -24708,6 +24708,35 @@
       "title": "Move search into prospect repository",
       "updated": "2026-11-08T15:39:18"
     },
+    "require-once": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "tests/test_harness.h",
+        "tests/test_harness_self.cc",
+        "tests/CMakeLists.txt",
+        "tests/**/*.cc"
+      ],
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": ".",
+      "risk": "low",
+      "status": "planned",
+      "title": "REQUIRE evaluates its condition once",
+      "updated": "2026-11-22T23:05:02"
+    },
     "research-indexing": {
       "accepted": {},
       "after": [],
