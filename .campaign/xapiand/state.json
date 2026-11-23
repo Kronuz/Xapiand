@@ -2932,6 +2932,18 @@
       "id": "msg-254",
       "notice": "skill installed fce5f0d20ab3d43e9deea3fa1961bef24cf55c35",
       "text": "campaign skill: agent-campaign:fce5f0d installed here, 11 commits: agent-campaign:97ea118 Run a landing quest's voided evidence at landing priority; agent-campaign:c298eb2 Type rerun_jobs' minutes and the test's job spec; agent-campaign:bb3ea82 Decide landing priority from gap kinds, not their wording; agent-campaign:089c2be Merge main into quest/campaign-v3/landing-priority; agent-campaign:a4d542e Raise a reused queued submit's priority and say so on stderr; agent-campaign:3cd60ed Merge main into quest/campaign-v3/landing-priority; agent-campaign:fa21275 Merge main into quest/campaign-v3/landing-priority; agent-campaign:36a1c08 Merge main into quest/campaign-v3/landing-priority; agent-campaign:7ecb3ea Read the reuse note on stderr in gate and scenario tests; agent-campaign:4233e0c Merge main into quest/campaign-v3/landing-priority; agent-campaign:fce5f0d Merge main into quest/campaign-v3/landing-priority"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T11:45:20",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T11:45:20",
+      "by": "lead",
+      "closed": "noted: N1 fix approved at journal:0951710. The doubled open read (287->545 device calls, 192 MiB log 1.0 s -> 1.7-2.7 s) matters for xapiand's many-indexes workload (per-open cost); we pin journal past it only together with journal-open-single-read, or measure the open cost at the pin",
+      "id": "msg-265",
+      "text": "journal-bound-first-open: durability review APPROVE at journal:0951710 (second-crash probe: 4,876 reopens all match). It lands after journal-turn-sector-checks (RFTW0002). Cost to know: every open now reads each turn log twice (device calls 287 -> 545; a 192 MiB log opens in 1.7-2.7 s vs ~1.0 s, noisy). Follow-up quest journal-open-single-read brings it back to one read once RFTW0002 lands."
     }
   ],
   "quests": {
