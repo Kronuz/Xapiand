@@ -15093,6 +15093,46 @@
       "title": "Reopen installed segments from target files",
       "updated": "2026-11-08T15:39:30"
     },
+    "journal-bound-first-open": {
+      "accepted": {},
+      "after": [
+        "detent:journal-earlier-turn-loss"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/turn_log.h",
+        "include/journal/host.h",
+        "include/journal/host/**",
+        "test/**",
+        "docs/mechanisms/lost-bound.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../journal",
+      "risk": "high",
+      "status": "planned",
+      "title": "the lost bound survives a power cut during the first open",
+      "updated": "2026-11-23T10:46:38"
+    },
     "journal-group-delete": {
       "accepted": {
         "durability": {
