@@ -1,6 +1,6 @@
 # schema-split: journal
 
-State: waiting on jobs 261121-204605-8fd08d 261121-204544-b0745e 261121-204547-0ba7f1 261121-204551-d364fa 261121-204554-38f339 261121-204542-68e0fc 261121-200713-a4eb7a
+State: waiting on jobs 261122-211513-d04385 261122-211517-3263ba
 Quest: .campaign/xapiand/quests/schema-split.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -9,27 +9,35 @@ ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
 
-Glob committed alone (8d85af070, the lead's ruling); A1, fnsizes, ctest -N, selfcontained and the
-anchored split check queued at that head.
+Master merged (Xapiand:e9804943f, clean; it touches no schema file). A2 (gate split check, at
+cpp-libraries:fe8491f's anchor pass) and A1 (suite rerun) queued at that head.
 
 ## Next
 
-1. Diff fnsizes base (261121-200713-a4eb7a) vs head (261121-204544-b0745e); classify every row
-   (moved, inlining change, new/duplicated initializer); restore lost inlining on the indexing
-   path with `inline` in a detail header.
-2. Read A1, ctest -N, selfcontained, the anchored check; record.
-3. The gate `split` check (A2) reruns after split-check-anchor lands in cpp-libraries.
+1. Read 261122-211513-d04385 (A2, expect 0 errors, 43 warnings as answered below) and
+   261122-211517-3263ba (A1); record.
+2. After the lead's ruling on Blocked on 1: rename the allowlist row, push, read CI.
+3. Diff fnsizes base (261121-200713-a4eb7a, 18002 fns, 10,151,037 B) vs head
+   (261121-204544-b0745e, 18114 fns, 10,187,721 B); classify the +112 functions, +36,684 B.
 
 ## Blocked on
 
-Nothing. Lead's rulings (msg from the lead, 2026-11-21):
+1. lead: CI at Xapiand:1d471a960 failed in "Blocking calls on reactor paths (async_check
+   --strict)" (run 44986514175): `harness/async_allowlist.tsv:22` allows `src/database/schema.cc
+   [pool] lock_shard` x2, and both hits moved with Schema::index to `src/database/schema/index.cc`
+   (:155, :219), so the row shrank to 0 and the two hits are unclassified. The fix is one path:
+   `src/database/schema.cc` -> `src/database/schema/index.cc` on that row (rows 72-73, the
+   `adopted_mtx` and `lock() == schema` hits, are still in schema.cc). The file is outside this
+   quest's file set. Options: add `harness/async_allowlist.tsv` to the file set and I commit it
+   (recommended), or the lead commits it on the branch.
+
+Lead's earlier rulings (2026-11-21):
 1. Glob: add `src/database/schema/*.c*` and `*.h*` after the src/database line; CMakeLists.txt is
-   in the file set. Done: Xapiand:8d85af070. The quest file's "no CMake change is needed" was the
-   lead's error, per the lead.
-2. split_check: my patch is quest split-check-anchor (cpp-libraries:449d913). Its A3 is this
-   split at 0 errors: job 261121-204551-d364fa (that worktree's checker, `--base master .
-   src/database`, at Xapiand:8d85af070). The gate A2 `split` check (261121-204542-68e0fc, current
-   checker, expected 40 errors) reruns after that quest lands.
+   in the file set. Done: Xapiand:8d85af070.
+2. split_check: the anchor pass landed as cpp-libraries:fe8491f; the gate check reruns with it
+   (261122-211513-d04385). At the old checker, 261121-204542-68e0fc had 40 errors, all
+   "moved lines starts/ends inside a function" on repeated `inline void`-style lines; the
+   anchored checker at split-check-anchor gave 0 errors (261121-204551-d364fa).
 
 ## Layout at the head
 
@@ -108,20 +116,19 @@ Line ranges are approximate until cut.py's table is final; cut.py is the record.
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261121-204605-8fd08d (suite at Xapiand:8d85af070) |
-| A2 | 261121-204542-68e0fc (current checker, expected red); 261121-204551-d364fa (anchored checker, 0 errors expected) |
+| A1 | 261122-211517-3263ba (suite at Xapiand:e9804943f); 261121-204605-8fd08d passed 81/81 at Xapiand:8d85af070 |
+| A2 | 261122-211513-d04385 (gate split check at Xapiand:e9804943f) |
 | A3 | docs/dev/schema-layout.md |
 | A4 | lead |
 
-Jobs at Xapiand:8d85af070 (the glob head):
-- 261121-204605-8fd08d suite (A1)
-- 261121-204544-b0745e fnsizes, Release+LTO (base: 261121-200713-a4eb7a at 57496b89a)
-- 261121-204547-0ba7f1 ctest -N at the base and the split
-- 261121-204554-38f339 the four new headers compile alone (selfcontained.sh)
-- 261121-204542-68e0fc split check (gate); 261121-204551-d364fa split check, split-check-anchor's
-
-Cancelled as superseded: the glob-patched probes 261121-203624-f53a56, 261121-203757-64078f, and
-261121-203631-291e5b, 261121-203641-50bda7, 261121-203642-2768b9, 261121-203627-ff0c0a.
+Ended jobs at Xapiand:8d85af070 (the glob head):
+- 261121-204605-8fd08d suite: 81/81 passed
+- 261121-204544-b0745e fnsizes, Release+LTO: 18114 fns, 10,187,721 B (base 261121-200713-a4eb7a
+  at 57496b89a: 18002 fns, 10,151,037 B); not yet classified (Next 3)
+- 261121-204547-0ba7f1 ctest -N: 81 tests, identical at the base and the split
+- 261121-204554-38f339 reserved.h, walk.h, handlers.h, dispatch.h each compile alone
+- 261121-204542-68e0fc split check, old checker: 40 errors (superseded by fe8491f)
+- 261121-204551-d364fa split check, split-check-anchor's checker: 0 errors, 43 warnings
 
 Scripts: ~/.scratch/xapiand/schema-split/{cut.py,fnsz_head.sh,fnsz.sh,selfcontained.sh,ctestn.sh}.
 
