@@ -14604,7 +14604,36 @@
       "updated": "2026-11-08T15:39:30"
     },
     "journal-group-delete": {
-      "accepted": {},
+      "accepted": {
+        "durability": {
+          "at": "2026-11-23T04:07:07",
+          "base": "a3eecb543a39193960ad4e2a0dbb67ef22d46a10",
+          "blobs": {
+            "CHANGELOG.md": "100644:862015d4bff90c0cc74ca00e6195cc4344720945",
+            "CMakeLists.txt": "100644:ee565482045f9c0f8b15203b599dda995f94f2b7",
+            "docs/mechanisms/host-delete.md": "100644:9540ef846b89fd0660da6982bb9e68b2fa1171a6",
+            "include/journal/host.h": "100644:6ebf59e16deede4df46dbdc9f2e8feff0a8beb42",
+            "include/journal/journal.h": "100644:8b8a7299ea549776bcdaa38f7658adde3536266b",
+            "test/host_delete_test.cc": "100644:638ae36b00626b5cef0a67e018048a7d5c7f48f6"
+          },
+          "by": "review",
+          "commit": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "criteria": "77c367f1c18835f4",
+          "diffs": {
+            "CHANGELOG.md": "1fd0f3817d694133",
+            "CMakeLists.txt": "83f0b304d1f2f05f",
+            "docs/mechanisms/host-delete.md": "f327fca245d321f0",
+            "include/journal/host.h": "70f30139c4633927",
+            "include/journal/journal.h": "8529b4ca6f9c22c2",
+            "test/host_delete_test.cc": "344e181674216059"
+          },
+          "findings": {},
+          "note": "",
+          "review": "01df6f235090e2330ad4290da79137e4d80bd5be",
+          "reviewed": "d8453f6b67da28c01266485f0d046ce917d34736",
+          "verdict": "APPROVE"
+        }
+      },
       "after": [
         "detent:journal-idle-groups",
         "detent:journal-loop-handoff",
@@ -14715,7 +14744,7 @@
       "risk": "high",
       "status": "active",
       "title": "a host deletes a left group's journal, so the node can rejoin it",
-      "updated": "2026-11-23T01:03:00",
+      "updated": "2026-11-23T04:07:07",
       "worktree": "../journal-wt/xapiand/journal-group-delete"
     },
     "journal-lost-bound": {
