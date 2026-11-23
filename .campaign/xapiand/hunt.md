@@ -477,3 +477,11 @@ quest fixes them (2 of 5 on 11-20).
 | F16: duplicated helpers in the repair path | review re-check F16 | the review's file:line | strata | open |
 | consensus fetch-alongside-consensus flakes on CI macos-x86_64: 13 of 16 fetches exact, commits beside them up to 7 s late (groups_test.cc:2543) | main a068ba06 run 44996244171; consensus-request-install run 45240308075 | test/transport/groups_test.cc | consensus | Detent's quest consensus-fetch-alongside-flake (2026-11-23) |
 | cartesian: a constexpr `Cartesian` constructor for raw unit-sphere coordinates would make htm's start tables constant-initialized, removing the last 192 B static initializer htm-constexpr-start leaves (one inline definition program-wide) | probe 261123-132523-45413e: __StaticInit 192 B per TU before the fix | cartesian.h/cartesian.cc (the out-of-line Cartesian(double,double,double,int), its WGS84 branch) | cartesian | open |
+
+## consensus-join-v2 security review follow-ups (2026-11-24, non-blocking)
+
+| Target | Evidence | Start | Must stay identical |
+|---|---|---|---|
+| JoinService::take scans the whole source map under its mutex past 256 addresses (S2) | review S2: an IPv6 /64 flood keeps ~1 entry per connection per second; each accept pays the scan | consensus `admission_join.h`, JoinService::take | join admission, rate and slot behavior |
+| Stalled joiners hold all 64 join slots and newcomers are refused (S3) | review S3: 8 addresses or one /64 make joining unavailable for the flood | consensus join slots, slot deadline | established nodes unaffected (A3) |
+| Xapiand's issuer hook relays every well-formed request to the root's leader (S5) | review S5: one relay per unauthenticated request | Xapiand cluster issuer hook | consensus unchanged |
