@@ -5,32 +5,32 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt row (faultfs at_mark, from hunt-faultlab-at-mark's journal, faultlab:7f3910c): an ordering
+point that fails before its effect removes itself but leaves its `at_mark` record on the file.
+`settle_staged()` clears records only while some ordering point exists. First decide, with a test,
+whether a later sync, crash or second ordering point can read the leftover record as staged (wrong
+durable bytes after a simulated crash). If it can, fix it where the point is removed; if it cannot,
+still clear the record there so no state outlives its point, and say why it was harmless.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, a job tagged `--for A1`
+- A2 A new case removes a failed ordering point and then syncs, crashes and adds a second point,
+  checking the durable bytes by value; it fails without the fix (a `--fails-without` job)
+- A3 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: no API or behavior change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: low risk, an exploration batch target; the lead reads the diff, no review.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one change.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (exploration, economical, medium).

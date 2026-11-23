@@ -5,32 +5,34 @@ Risk: low. The lead writes this quest; contributors read it and never edit it. I
 
 ## Outcome
 
-<The behavior that exists when this quest lands, in one paragraph.>
+Hunt row (hunt-header-tables, Xapiand:073d466 docs/dev/header-tables.md, "Library rows"):
+htm.h's `start_vertices` builds 6 `Cartesian`s through a non-constexpr constructor in each of the
+35 including TUs, about 6.7 KB of initializers inferred, not proven. Measure first: confirm the
+initializer exists and its size. If it does, a constexpr `Cartesian` constructor (and constexpr
+start tables) makes them constant-initialized; if the measurement shows no initializer, stop and
+record that in the Result.
 
 ## Acceptance criteria
 
-Three to five, at outcome level: `- A1 <criterion>: <the test that shows it>`. An untagged one
-needs a job tagged `--for A1` passing at the landed code, often the suite; tag one `[artifact]`
-(a committed `path`), `[decision]` (a PLAN.md Decisions id), `[manual]` (checked by hand) or `[ci]`
-(CI green at the landed commit) when no job can show it.
-
-- A1 <criterion>: <evidence>
+- A1 The suite passes: the `build-test` check, a job tagged `--for A1`
+- A2 [artifact] The journal's Result gives, at named commits, the static initializer of one
+  including object file before and after (or the measurement showing there was none)
+- A3 Values are unchanged: a test compares start_vertices and start_trixels with the old values
+  (a job), unless A2 shows nothing to change
+- A4 [ci] CI is green on every platform
 
 ## Contracts
 
-<What this quest provides or consumes (APIs, formats, protocols), stated precisely enough that a
-quest depending on it can start before it lands.>
+None: no API or behavior change.
 
 ## Decisions
 
-<Decisions made, and by whom; open questions, naming the owner or the lead.>
+- Lead, 2026-11-23: low risk, an exploration batch target; the lead reads the diff, no review.
 
 ## May land early
 
-<Internal code behind tests, unless the quest is a format, wire or public API. "None" when
-everything waits for the review; `land --upto` refuses then.>
+Nothing: one change.
 
 ## Tasks
 
-<The steps that build the feature, one agent each: `T1 <what> (files; assignment, tier, effort;
-after T0)`. Each merges into the quest branch on its own tests.>
+None: one contributor (exploration, economical, medium).
