@@ -30133,17 +30133,66 @@
         "CMakeLists.txt",
         "docs/dev/test-layout.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T06:00:00",
+          "ci": {
+            "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+            "runs": [
+              45166114291
+            ]
+          },
+          "commit": "d6accaa2c2f9066ecde6fb2e1b0ea5a299da4b62",
+          "criteria": {
+            "A1": "261123-033232-0950af, 261123-033232-950aca",
+            "A2": "261123-033232-950aca (the split check), 261123-033232-0950af, 261123-033232-950aca",
+            "A3": "261123-033233-5dd25e",
+            "A4": "docs/dev/test-layout.md",
+            "A5": "CI green at eb9f09ee2a06",
+            "A6": "261123-033233-2cb9f7",
+            "A7": "lead, 2026-11-21: read the split; four test programs split by topic into TUs with support headers, each piece opens with what it holds"
+          },
+          "evidence": [
+            {
+              "cmd": "cmake -G Ninja -S . -B build -DFETCHCONTENT_BASE_DIR=\"$PWD/.deps\" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF && cmake --build build -j4 && ctest --test-dir build --output-on-failure",
+              "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-033232-0950af",
+              "level": "light",
+              "seconds": 1324.1,
+              "state": "done",
+              "what": "split-xapiand-tests check suite at eb9f09ee2a06"
+            },
+            {
+              "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master tests",
+              "commit": "eb9f09ee2a0608687418e83052b82ef75bf223d0",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-033232-950aca",
+              "level": "light",
+              "seconds": 4.6,
+              "state": "done",
+              "what": "split-xapiand-tests check split at eb9f09ee2a06"
+            }
+          ],
+          "final": true,
+          "from": "5d15b70737084026e5bce959654fe458d3ccc82a",
+          "reason": "",
+          "tested": "16f48637a8bfaff43e18195bc86560067f295973"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "Xapiand's free large tests split where it helps maintenance, same test names",
-      "updated": "2026-11-21T12:05:38",
-      "worktree": "../Xapiand-wt/xapiand/split-xapiand-tests"
+      "updated": "2026-11-23T06:01:11",
+      "worktree": ""
     },
     "stash-claim-hint-d64": {
       "accepted": {},
