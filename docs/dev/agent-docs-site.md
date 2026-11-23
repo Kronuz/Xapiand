@@ -27,3 +27,8 @@ uses the tracked `docs/` directory.
   with a local-editor icon in development. In production, `?editor=on` opts
   in and `?editor=off` opts out; the `kz-editor` choice persists across pages.
   The title row holds only the title.
+- **Code copy on touch screens.** `MarkdownContent.astro` mounts
+  `CopyReveal.astro` (`Kronuz.github.io:480b250`). Tapping a code block
+  reveals its Expressive Code Copy button; tapping the block again hides it.
+  The CSS keeps Copy hidden until
+  that tap or keyboard focus. Desktop hover retains Expressive Code's behavior.
