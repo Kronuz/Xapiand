@@ -740,6 +740,20 @@ FetchContent_MakeAvailable(task)
 # varint: the LEB128 and serialize_length codec strata consumes; pinned here so one copy builds.
 FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git GIT_TAG 4dd60a8f199c52f98af2e784d4097cc86f243eb1)
 
+# zstd: compressors' Zstandard backend (compressor_zstd.{h,cc}) compresses document
+# data and stored blobs (src/database/data.cc). Found from the system (Homebrew on
+# macOS) before any library processes compressors: compressors takes a found
+# ZSTD_LIBRARY/ZSTD_INCLUDE_DIR over fetching zstd's own CMake project (whose
+# uninstall target clashes with ours), so the binary links one zstd. Its header goes
+# on the include path, compressor_zstd.cc compiles into XAPIAND_OBJ, and libzstd
+# links below.
+find_library(ZSTD_LIBRARY NAMES zstd libzstd)
+find_path(ZSTD_INCLUDE_DIR zstd.h)
+if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
+	message(FATAL_ERROR "zstd not found (document data and stored blobs are zstd-compressed); install libzstd")
+endif()
+include_directories("${ZSTD_INCLUDE_DIR}")
+
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
@@ -925,16 +939,6 @@ foreach(dep uinteger_t radix_router)
 endforeach ()
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="xapiand_exception.h")
 
-# zstd: compressors' Zstandard backend (compressor_zstd.{h,cc}) compresses document
-# data and stored blobs (src/database/data.cc). Found from the system (Homebrew on
-# macOS); its header goes on the include path, compressor_zstd.cc compiles into
-# XAPIAND_OBJ, and libzstd links below.
-find_library(ZSTD_LIBRARY NAMES zstd libzstd)
-find_path(ZSTD_INCLUDE_DIR zstd.h)
-if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
-	message(FATAL_ERROR "zstd not found (document data and stored blobs are zstd-compressed); install libzstd")
-endif()
-include_directories("${ZSTD_INCLUDE_DIR}")
 
 
 
