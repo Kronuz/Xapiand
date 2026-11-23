@@ -1,6 +1,6 @@
 # journal-replaces-wal--restore: journal
 
-State: waiting on jobs 261122-211622-716e2b (probe: landing vs prepared version and stored _version with the restamp disabled); the restamp mutant 261121-203232-74304e survived, fix pending the probe
+State: waiting on jobs 261122-230005-c6e3fb (tests), 261122-230005-d4c585, 261122-230006-5fc529, 261122-230006-38ba97 (mutants), all at 8649f1029
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
@@ -65,6 +65,21 @@ msg-1: deferred to the next allowlist edit (this task does not edit harness/asyn
 - Quest jobs at cf65ae78b: 261121-105359-853976 pass 3 of 3; mutants 105428-7308c6 (group_command:169/171),
   105431-21e0e8 (shard_group:235/236), 105434-07ffd7 (group_prepare:165-179) killed; CI run 44938092439 success.
 
+## Session 5 (restamp mutant: cause and fix)
+
+- Probe 261122-211622-716e2b (restamp disabled, d2d7e8702): only two transaction() calls, both `Ka landing 1 native 1`,
+  no `batch 2 verdict` line, no stored-version line, `OK: 673 checks`. Cause: test_harness.h's REQUIRE evaluates its
+  condition twice, so `REQUIRE(r.apply(...).result == accepted)` at :246 applied the first entry twice; the second
+  conflicted on Ka's expectation (0, Ka at 1) and REQUIRE returned with no FAIL line. Nothing after :246 ever ran:
+  the pipelined test, its version and docid checks and the stored `_version` check were dead.
+- Fix, Xapiand:ef2320627: the entry applies once, outside REQUIRE; the final loop prints each key's index version,
+  stored `_version` and the wanted value, then checks both by value (Ka 3, Kb 2, Kc 2). Under the mutant three writes
+  of batch 2 keep their prepared stamps (Ka 2, Kb 1, Kc 1 then 1), so the stored values differ.
+- Merged origin/master, Xapiand:8649f1029: one conflict, CMakeLists.txt's strata pin; kept efa5214 (strata::group),
+  which contains master's e3edb426.
+- Jobs at 8649f1029: 261122-230005-c6e3fb (4 tests), mutants 261122-230005-d4c585 (expectation kept),
+  261122-230006-5fc529 (bundle drops the volume length), 261122-230006-38ba97 (no restamp).
+
 ## Next
 
 1. Read the five jobs (fill the stored sizes above from their logs); fix and rerun what fails.
@@ -75,7 +90,14 @@ msg-1: deferred to the next allowlist edit (this task does not edit harness/asyn
 
 ## Blocked on
 
-Nothing. msg-204 and msg-205 answered by the lead (option (a) on both).
+- tests/test_harness.h (outside every task's file set): REQUIRE and REQUIRE_EQ evaluate their arguments twice, so a
+  REQUIRE with a side effect runs it twice and can return silently (the failing evaluation's CHECK passed). Options:
+  (a) evaluate once into a local (`const bool ok_ = (cond); CHECK(ok_); if (!ok_) return;`, the same for
+  REQUIRE_EQ); (b) leave it and keep side effects out of REQUIRE. Recommend (a). The only side-effecting use found
+  in tests/ was this test's :246 (now outside REQUIRE); `REQUIRE(node.ready())` in test_endpoint_uuid.cc and
+  test_lua.cc look idempotent.
+
+msg-204 and msg-205 answered by the lead (option (a) on both).
 
 ## Messages
 
