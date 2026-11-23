@@ -18649,17 +18649,17 @@
     "node-admission": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-21T11:41:56",
-          "base": "a73c6e37ba4dbc5d63e6b47a45768bb63a2c9565",
+          "at": "2026-11-22T21:16:12",
+          "base": "a068ba067362beaa4b27c4943b95a70fbfb32e18",
           "blobs": {
-            "CHANGELOG.md": "100644:81119cb14770975fcb8d0e509ff7deec485e18e6",
-            "CMakeLists.txt": "100644:58f0d0582e89278e718f1fbad2b0415c5094d92d",
+            "CHANGELOG.md": "100644:d4aa5896ec9b3ceec672cb6e51de1dc1b2371eda",
+            "CMakeLists.txt": "100644:9e1da9980edee637fa7dee53683369a2089836c9",
             "docs/mechanisms/admission.md": "100644:a574b9ac38abc02b48db000e0f25d20e5113256d",
             "docs/mechanisms/host-connection.md": "100644:f9ead8a29ccdab6d5c17beb203a1548bd8fd0785",
             "include/consensus/transport/admission.h": "100644:4d8e08627349051ef142ded131dc91d620b8d8ea",
             "include/consensus/transport/admission_join.h": "100644:a59f126530060db00f43a2e01e7bcc6585c29c04",
             "include/consensus/transport/connection.h": "100644:e1a6f0f9cba5d40564be47e23c38879489d496a2",
-            "include/consensus/transport/host_transport.h": "100644:88ef36617b12c8abb0ff8881cbbb80198c5a0da2",
+            "include/consensus/transport/host_transport.h": "100644:b099a8d1c090f998c169512348e4d42388b3a2ba",
             "include/consensus/transport/links.h": "100644:0e4d82ed0b6169bb87e332fe8ad034eaf50cbd9a",
             "include/consensus/transport/node_pins.h": "100644:94de96550dd0eb1ae20c91bc5a48a54981e45446",
             "test/transport/admission_certificates.cmake": "100644:acd16c3c2093718bcc3bfe584e8ca8de5435968b",
@@ -18669,7 +18669,7 @@
             "test/transport/links_test.cc": "100644:581318a6faa49d54df159a8737d0ce14fc814ee7"
           },
           "by": "review",
-          "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+          "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
           "criteria": "a4b8d0cea601af32",
           "diffs": {
             "CHANGELOG.md": "b387692525ee5c84",
@@ -18693,14 +18693,14 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_epoch_(ca|pins)$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113224-8358a1",
+                  "job": "261121-230902-ad199a",
                   "level": "light",
-                  "seconds": 2.9,
+                  "seconds": 1.1,
                   "state": "done",
-                  "what": "F1 epoch cases plain at de51801ac969"
+                  "what": "F1 epoch cases plain at 42a8cde32591"
                 }
               ],
               "kind": "gap",
@@ -18710,14 +18710,14 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_issue$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113224-3a60bf",
+                  "job": "261121-230902-b3d90f",
                   "level": "light",
-                  "seconds": 4.0,
+                  "seconds": 2.1,
                   "state": "done",
-                  "what": "F2 issue with impostor plain at de51801ac969"
+                  "what": "F2 issue with impostor plain at 42a8cde32591"
                 }
               ],
               "kind": "gap",
@@ -18727,21 +18727,21 @@
               "jobs": [
                 {
                   "cmd": "ctest --test-dir build -R '^consensus_transport_admission_nodes_save$' --output-on-failure",
-                  "commit": "de51801ac96938e2c649d6b3b6744ec0ef064b89",
+                  "commit": "42a8cde325912df0cd463dabc39af0d15d2f8923",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261121-113225-813081",
+                  "job": "261121-230902-b6c772",
                   "level": "light",
-                  "seconds": 2.7,
+                  "seconds": 2.8,
                   "state": "done",
-                  "what": "F3 save plain at de51801ac969"
+                  "what": "F3 save plain at 42a8cde32591"
                 }
               ],
               "kind": "defect",
               "reproduced": false
             }
           },
-          "note": "",
+          "note": "main a73c6e3..a068ba0 read by the lead: host_transport.h gains transfer helpers only",
           "review": "cb69cfa0914384a632f9d0e221b157666b879fe8",
           "reviewed": "50446f8c835a60326a683fe6014cf63b396c9d85",
           "verdict": "CHANGES"
@@ -18941,7 +18941,7 @@
       "risk": "high",
       "status": "review",
       "title": "consensus admits a node's address and pin into a running transport",
-      "updated": "2026-11-21T17:36:24",
+      "updated": "2026-11-22T21:16:12",
       "worktree": "../consensus-wt/xapiand/node-admission"
     },
     "numeric-range": {
