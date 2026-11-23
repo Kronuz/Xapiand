@@ -154,14 +154,7 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-5. Stale WAL text outside the file set (found in session 6; the lead's ruling says the WAL goes everywhere):
-   `docs/src/content/docs/reference-guide/wal.md` (its docs E2E examples `WAL /walapi/` and `WAL /walapi-five/` run the
-   deleted method: the `e2e` check fails on them; delete the page and its sidebar entry), `reference-guide/api.md:198,916`
-   (the WAL method row), `about.md:59`, `basics.md:147`, `manipulation.md:10`, `reference-guide/indexes/backups.md:159`,
-   `architecture/dependencies.md:63`, `architecture/internals.md:29`, `docs/mechanisms/wal-replay.md` (the mechanism is
-   gone), `harness/stored_stream.sh:83,91` (counts `docdata.*` volumes; blobs are `app.vol-*` in the group's file set
-   now), and `src/server/search_views.h` (step e changed it; already outside). Recommend: widen the set to these files
-   and I fix them in this quest (the e2e gate needs wal.md gone). AGENTS.md waits for agents-md to land.
+Nothing open (5 answered below).
 
 Lead rulings, 2026-11-23:
 - 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
@@ -169,6 +162,8 @@ Lead rulings, 2026-11-23:
 - 3 and 4: the file set now covers the three deleted files and every file in item 4. Removing the WAL means
   removing it everywhere (code, options, metrics, docs, harness); do item 4 in this quest. AGENTS.md is shared
   with agents-md, which lands first: merge master before editing it.
+- 5 (2026-11-23): the set now covers every file item 5 lists, plus docs/astro.config.mjs and docs/src/sidebar*
+  for the page's sidebar entry. Delete wal.md and wal-replay.md; fix the rest in this quest.
 
 ## Evidence
 
