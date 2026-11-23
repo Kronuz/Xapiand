@@ -1,9 +1,28 @@
 # journal-replaces-wal: journal
 
-State: waiting on jobs at Xapiand:c0dc4160d (step e written, unbuilt; master merged): gate crash 261123-081143-316fa1, no-wal 261123-081144-3d7a18; A8 261123-081330-ed4296; A2 261123-081159-ab4ad7; A5 journal_replay_check 261123-081200-c69986; mutants (must fail) d1 261123-081243-e383f2, d2 261123-081247-4b112b, d3 261123-081250-18f9f5, d4 checkpoint 261123-081255-dd8ac5, d4 id counter 261123-081259-55e6bc, A9 fix 3 261123-081303-f25f47, A9 261123-081306-203d46 261123-081310-f81e01, A2 truncation 261123-081314-8fbbb3; and 261123-071825-3847bb at Xapiand:bc757bba9 (still running). Next: read them, fix what they show; Host::delete_group is blocked (Blocked on 2)
+State: waiting on jobs at Xapiand:0aeec8fc9 (the blob fix, the WAL text, master merged): build + group/pool tests (A1, A9) 261123-083729-a99731; gate crash 261123-083737-64aa68, no-wal 261123-083737-db63af; A8 261123-083745-3cb0e5; A2 261123-083747-1d9f09; A5 journal_replay_check 261123-083750-58484d; mutants (must fail, after a99731) d1 261123-083804-d59e5e, d2 261123-083807-24881d, d3 261123-083809-5c60e1, d4 checkpoint 261123-083811-52e8f7, d4 id counter 261123-083813-952cdc, A9 fix 3 261123-083815-599a5c, A9 261123-083817-d409c7 261123-083819-91e107, A2 truncation 261123-083820-6a878e. Also 261123-083258-b68856 (an earlier compile check at Xapiand:3d20661bd, redundant). Next: read them; fix compile errors first (a99731 builds with -k 0, so it lists them all). Blocked on 5 (stale WAL text outside the set)
 Quest: .campaign/xapiand/quests/journal-replaces-wal.md (the lead's; never edit it)
 
 ## Doing
+
+Session 6 (2026-11-23), the lead's fix round.
+
+1. Xapiand:3d20661bd: crash check 316fa1 did not compile: shard.cc still built a DataStorage whose header pieces
+   (UUID, the Storage base) came through the deleted wal.h. Nothing in production reaches it (every index is a group),
+   so the data storage goes: DataStorage and its headers, StoredUpload, upload_begin, storage_push_blobs/commit, the
+   `\x00` locator metadata read, the chores parameter of do_add/do_replace/do_replace_term/do_commit; the handler's
+   upload is the group's chunked command only (UploadedBlob is size, shard, upload). A pool with no journal refuses a
+   stored blob (ruling 21). test_blob_io_runs_in_chores reads through the group; new test_a_stored_blob_needs_the_group.
+2. Same commit, A9: test_a_reopen_aborts_an_upload_left_open failed (3847bb) because it wrote without a commit, and the
+   sweep closes only a committed index (strata catalog run_close: close_ready() needs nothing uncommitted), so the slot
+   never freed and the "reopen" pinned the same open entry, where the upload's final applied. The test commits before
+   the close now. The A9 fix-3 mutant (599a5c) shows whether the ready point's abort is what refuses the final.
+3. Xapiand:f6d8f2c65: the stale WAL text in the set (Blocked on 4 answered): config.h.in, log.h, metrics (wal errors,
+   fsync gauges), README, building/options/architecture/changelog pages, strata_write_check.sh (no :wal, no WAL log
+   lines, replaycrash scenario gone: its hook was the WAL's), engine_crash_check.sh (GRACE 0, ruling 23),
+   graceful_shutdown_check.sh, cluster/checklist.py, coverage_e2e_server.py (no WAL verb rows), one_id_mutants.sh
+   (no-replay gone), test comments, test_quarantine's names. profile_bulk.sh keeps its WAL row (ruling 22).
+4. Xapiand:0aeec8fc9: origin/master merged (campaign files only). AGENTS.md not edited: agents-md has not landed.
 
 Session 5 (2026-11-23), step e (A8). 3847bb was still running, so e went first.
 
@@ -135,7 +154,16 @@ strata: `group-catalog` (item 4), which `core` step c waits on.
 
 ## Blocked on
 
-Nothing open. Lead rulings, 2026-11-23:
+5. Stale WAL text outside the file set (found in session 6; the lead's ruling says the WAL goes everywhere):
+   `docs/src/content/docs/reference-guide/wal.md` (its docs E2E examples `WAL /walapi/` and `WAL /walapi-five/` run the
+   deleted method: the `e2e` check fails on them; delete the page and its sidebar entry), `reference-guide/api.md:198,916`
+   (the WAL method row), `about.md:59`, `basics.md:147`, `manipulation.md:10`, `reference-guide/indexes/backups.md:159`,
+   `architecture/dependencies.md:63`, `architecture/internals.md:29`, `docs/mechanisms/wal-replay.md` (the mechanism is
+   gone), `harness/stored_stream.sh:83,91` (counts `docdata.*` volumes; blobs are `app.vol-*` in the group's file set
+   now), and `src/server/search_views.h` (step e changed it; already outside). Recommend: widen the set to these files
+   and I fix them in this quest (the e2e gate needs wal.md gone). AGENTS.md waits for agents-md to land.
+
+Lead rulings, 2026-11-23:
 - 2: option (ii). Index DELETE is its own quest, index-delete (after strata-journal-pin bumps strata's journal pin
   past journal:131eb2e, and after this quest). 501 is today's behavior on master, not a regression here.
 - 3 and 4: the file set now covers the three deleted files and every file in item 4. Removing the WAL means
@@ -214,3 +242,11 @@ Drafts, applied when the code lands; each names the contract it shapes (format-f
 19. A pool with no journal (tests, the CLI) is durable only at its commits; no second log replaces the WAL there.
 20. The mutant probes carry `--for` their criterion with `--fails-without`: the tool refuses `--fails-without`
     with neither `--for` nor `--task`, and the lead's rule forbids `--task` for probes.
+21. A pool with no journal (tests only; the manager always sets one) holds no stored blob: a write naming one, an upload
+    or a batch is refused with `invalid` before anything applies, and a stored read raises `invalid`. The data storage
+    it used was the WAL era's second blob path; the group's file set is the one path (D16).
+22. `harness/profile_bulk.sh` keeps its WAL layer: T11 profiles master's WAL build as the baseline the journal is
+    measured against.
+23. `harness/engine_crash_check.sh` defaults GRACE to 0: an acknowledged write is in the journal before its answer, so
+    none may be missing after kill -9 (D2).
+24. The `\x00` locator metadata read (`GET /index/:<locator>`) is removed with the data storage it read.
