@@ -1,6 +1,6 @@
 # stox-no-libc: journal
 
-State: waiting on jobs 261123-130429-df3270 (A1), 261123-130432-96375e and 261123-130437-f0fa57 (A2), 261123-130445-dabdaa (A3), 261123-130449-dfdd7f (A4); extra 261123-130441-b494ea (-mlong-double-64 slow test); CI for A5
+State: waiting on jobs at strict-stox:aebfcd9 (lead's header-comment commit for A6): 261123-143451-1516fe, 261123-143454-c88998, 261123-143457-db487a, 261123-143459-89e019; then CI there.
 Quest: .campaign/xapiand/quests/stox-no-libc.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -30,10 +30,12 @@ jobs no journal names), and answer each message by its id (msg-N).
 
 | Criterion | Evidence |
 |---|---|
-| A1 | 261123-114038-c721f8 (build-test, Debug, asserts on) passed at f51037b. Earlier 261123-112824-c866b0 failed at 5637e68 (old-route asserts; see Rulings) |
-| A2 | 261123-114040-c8d496 passed at f51037b (no libc call for the artifact with a leading space, '+', and through stod/stof); fails-without 261123-114043-114edd exits 134 with the old header (SIGABRT in Apple's strtod) |
-| A3 | 261123-120631-8d50a2 (rerun of 261123-112831-f31ce1) passed at f51037b: corpus plus 1,000,000 strings equal to libc |
-| A4 | 261123-120631-0ae489 (rerun of 261123-112834-f40ac5) passed at f51037b: 15 CPU-minutes of fuzzing clean on macOS |
+| A1 | 261123-143451-1516fe (build-test, reruns 261123-130429-df3270) at aebfcd9. Earlier 261123-112824-c866b0 failed at 5637e68 (old-route asserts; see Rulings) |
+| A2 | 261123-143454-c88998 (reruns 261123-130432-96375e) at aebfcd9: no libc call for a leading space, '+', through stod/stof; fails-without 261123-130437-f0fa57 (old header, SIGABRT in Apple's strtod path) |
+| A3 | 261123-143457-db487a (reruns 261123-130445-dabdaa) at aebfcd9: corpus plus 1,000,000 strings equal to libc |
+| A4 | 261123-143459-89e019 (reruns 261123-130449-dfdd7f, passed at 85260bc) at aebfcd9: 15 CPU-minutes of fuzzing clean on macOS |
+| A5 | CI at aebfcd9 (85260bc green on every platform, macos-arm64 included) |
+| A6 | `README.md`: "`stold` takes the `stod` path where `long double` has"; `strict_stox.hh`: "strto* decides the rest" (lead, aebfcd9) |
 
 ## Result
 
