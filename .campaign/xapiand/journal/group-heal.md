@@ -1,6 +1,6 @@
 # group-heal: journal
 
-State: waiting on jobs 261123-091118-f25b39 261123-091128-afeea5 261123-091131-4dfb18 261123-091133-514300 261123-091135-07e7fa 261123-091137-d9d2bd 261123-091138-79be76 261123-091140-8d3005 261123-091141-a0ef3e 261123-091143-71b1c2 261123-091145-c71a59 261123-091146-1b98a3 261123-091154-52a6af (durability round 2 at strata:e256792b, pushed)
+State: waiting on jobs 261123-092858-a41353 261123-092900-8f83e5 261123-092916-b40b0c 261123-092932-b51e5e 261123-092935-acb4e2 261123-092939-49bd41 261123-092942-94c61e 261123-092946-4f156c 261123-092949-ccaf0c 261123-092953-100baf 261123-092957-937377 261123-093000-4d8dfd 261123-093004-aca03e 261123-093008-e20bce (F7 refusal fix at strata:c76c68f9, pushed)
 Quest: .campaign/xapiand/quests/group-heal.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,26 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+F7 refusal fix (2026-11-23), after suite 261123-091118-f25b39 at e256792b failed repair `rot`
+(seeds 1, 2: the source never damaged, reason empty; the learner never installed). Cause, in
+consensus 59ae07f: a learner's `validation_failed` disposes its checkpoint as InvalidApplication
+with no receiver term (worker.h dispose_checkpoint), so snapshot_channel.h:141 sends
+TransferOutcome::Failed, the source's channel calls `source_failed`, and core.h:829 releases the
+flight `Unavailable`. `Rejected` comes only from the learner's core refusing bytes it validated
+(install_rejection: Busy, Invalid, StaleTerm; it carries a term). check_refused_pin ran on
+Rejected only, so it never ran for a refused stage. Fix strata:c76c68f9: the pin is read again on
+every `Unavailable` release (the code comment and group-install.md say why). Fails without: the
+reviewed rule is e256792b itself (f25b39 above); mutant `refusal-rejected` restores it at
+c76c68f9 (job b51e5e). Nothing built locally.
+
+Jobs at c76c68f9 (all 261123-09xxxx, no --after so one red does not skip the rest): suite
+`^group_` 092858-a41353 (A1-A4); sim rows 092900-8f83e5 (A3, A5); reviewer probes
+092916-b40b0c; fails-without (A3): refusal-rejected 092932-b51e5e, pin-unchecked
+092935-acb4e2, refusal-unchecked 092939-49bd41, handoff-first 092942-94c61e, handoff-fixed
+092946-4f156c, quarantine-deletes 092949-ccaf0c, quarantine-kept 092953-100baf, needed-kept
+092957-937377, stage-unchecked 093000-4d8dfd, install-damage-escapes 093004-aca03e; (A5) sim
+marker-kept 093008-e20bce. They replace round 2's skipped jobs (091128-afeea5 ... 091154-52a6af).
 
 Durability fix round 2 (2026-11-23), review group-heal-durability at strata:bea1f568 (CHANGES:
 F7, F8, F9, F12 blocking; F11 nit). One commit, strata:e256792b (pushed); nothing built locally,
@@ -252,8 +272,8 @@ voters_test.cc world edit carried into world.hh at that merge).
 
 ## Next
 
-1. Read the round-2 jobs (State). A red case: fix in the next commit with its job. Then CI at
-   e256792b (asan, tsan, build-test).
+1. Read the jobs at c76c68f9 (State). A red case: fix in the next commit with its job. Then CI
+   at c76c68f9 (asan, tsan, build-test).
 2. Evidence table from `campaign brief`; ready for the lead's durability re-review.
 
 ## Blocked on
@@ -315,7 +335,12 @@ and what it leaves open. Results and how it works go in the docs of the reposito
   flight makes the source re-read its pin (CRC32C only: make_pin's whole check vouched for those
   bytes, so any change since is a CRC mismatch). Cost: one more read of each segment at the pin
   (with the CRC pass, one map), one more read of the staged segments per install, and one read of
-  the pin per rejected flight (the pin race's rejection included). A refused stage is swept whole.
+  the pin per failed flight (the pin race's included). A refused stage is swept whole.
+- F7 refusal (c76c68f9): the source cannot tell a learner's refusal from a lost transfer, since
+  consensus reports both as `Unavailable`; it reads its pin again on each (a retried flight waits
+  rpc_timeout, so at most one CRC pass of the pin per retry). Asking consensus to report a failed
+  validation as Rejected was the alternative: a consensus change for a cost the ruling above
+  already accepts.
 - F8: one hand-off mechanism, no host view, applied_past kept only for the stall hand-off (D3).
 - F9: set-aside names go at adopt once unmarked (every recovery scans the directory once for
   them); a name already set aside keeps its first copy.
