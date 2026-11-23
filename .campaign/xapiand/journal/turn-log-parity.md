@@ -1,6 +1,6 @@
 # turn-log-parity: journal
 
-State: waiting on jobs 261122-212012-8171cc 261122-212012-093945 261122-212013-5518cc 261122-212013-14b745 261122-212014-e16e63 261122-212014-fe9398 261122-212014-af489a 261122-212015-047955 261122-212015-13fb30 261122-212015-5e8a2d 261122-212016-851a82 261122-212016-403adc 261122-212017-075d06 261122-212017-0ace3a 261122-212021-14ab70 261122-212025-4b4ea8 and CI at strata:369cd7ef
+State: waiting on jobs 261123-002140-82018c 261123-002143-aa5d40 261123-002230-8ef26a 261123-002230-8e8f49 261123-002231-a77d54 261123-002231-aefb80 261123-002231-ed70e1 261123-002232-cad563 261123-002232-d1e532 261123-002232-6b94b8 261123-002233-c59105 261123-002233-1e4f69 261123-002233-b4a58c 261123-002234-c8c5d2 261123-002234-e3f49d 261123-002234-7bb281 261123-002235-16613d 261123-002235-947360 261123-002236-c527d0 261123-002245-d6ced9 261122-212021-14ab70 and CI at strata:f5f6b7dc
 Quest: .campaign/xapiand/quests/turn-log-parity.md (the lead's; never edit it)
 
 Keep this current and commit it with the work, so a fresh contributor can continue. `campaign
@@ -8,6 +8,27 @@ status` reads State and the first step under Next. State is one of: working, wai
 ready for review, fixing <findings>, blocked on <who>: <what>.
 
 ## Doing
+
+CI-red pass (2026-11-23), head strata:f5f6b7dc, pushed:
+
+1. CI run 45117084184 at 369cd7ef failed on every platform: standalone_turn_log, reopen_loops,
+   ryw, large_tx (and kv_strata_batch on 4 of 8) abort on journal `host.h:775`, `owned_ranges`:
+   `ranges.owner == std::this_thread::get_id() && "... adopt_loop hands it over"`. Ours, not a
+   flake or main's: journal:ca95301 (debug owner check plus `Host::adopt_loop`) is in the quest's
+   pins since e4b0100 (b533db12; CI at b533db12 and bc8c614c failed the same way) and not in main's
+   9e11713. The quest's jobs build Release (NDEBUG), so the check never ran locally; CI builds
+   RelWithDebInfo with its flags overridden to `-O2 -g -D_GLIBCXX_ASSERTIONS`, assertions on.
+2. Fix strata:f5f6b7dc: `turn_sealer::hold_loop()` takes the turn mutex and calls
+   `host_.adopt_loop(loop_)`; all 16 `turn_mu_` acquisitions use it. journal's host-ranges.md
+   names turn_sealer as the caller the handoff is for. Release cost: `ranges_.at(loop)`.
+3. Test: the existing tests in CI's assertion build. 261123-002140-82018c at f5f6b7dc (five tests,
+   must pass); 261123-002143-aa5d40 at 369cd7ef, `--fails-without` (must show a complete build,
+   then the `owned_ranges` abort). Plus CI at f5f6b7dc.
+4. Main: origin/main (strata:7131ed44) is already in the branch (merged at 7c6aa208); no merge.
+5. Every evidence job reran at f5f6b7dc (list in State); build-test 261123-002245-d6ced9.
+6. Durability D2 probe's `small (control)` and `last chunk damaged`: settled, not a defect of
+   this quest (Rulings, CI-red pass 2026-11-23). Its rerun at the head is 261123-002234-c8c5d2;
+   `first` and `a third in` must now open (D2's fix), the other two still refuse.
 
 Pin pass (2026-11-22), head strata:369cd7ef, pushed: the group-commit task merge is recorded
 (Xapiand:7c6739f96). strata:369cd7ef pins journal main, journal:a3eecb5 (it contains e4b0100;
@@ -105,11 +126,13 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
 
 ## Next
 
-1. Read the jobs in State into Evidence. The A4 mutant 212021-14ab70 must show a complete build,
-   then `test_barrier_cohort` failing a CHECK. Read the D2 probe 212016-403adc into Blocked on 2.
-2. Lead: `campaign accept turn-log-parity durability --confirm D1=261122-212014-e16e63 --confirm
-   D2=261122-212014-e16e63` (or the build-test 261122-212025-4b4ea8) once they pass.
-3. Lead: Blocked on 1 and 2 before landing.
+1. Read the jobs in State into Evidence. 002143-aa5d40 must show a complete build, then the
+   `owned_ranges` assertion; 14ab70 a complete build, then `test_barrier_cohort` failing a CHECK.
+   Check CI at f5f6b7dc green.
+2. Lead: `campaign accept turn-log-parity durability --confirm D1=261123-002245-d6ced9 --confirm
+   D2=261123-002245-d6ced9` (the suite at f5f6b7dc; reopen_damaged alone is 261123-002231-ed70e1)
+   once they pass.
+3. Lead: Blocked on 1 before landing.
 
 ## Blocked on
 
@@ -118,17 +141,10 @@ Not merged: group-commit, tolerant-open (Blocked on, below). Evidence at strata:
    rather than stopping. Options: (a) keep it (a no-ff merge, no rebase, the change the command
    makes); (b) revert it with a revert commit and let the lead run the command. Recommendation:
    (a). Your call.
-2. Reviewer/lead: the D2 probe's `small (control)` and `last chunk damaged` cases fail at
-   5953ed46 (261121-213954-ecd99d) with `the index's head names turn-log records its log lacks`
-   (status 1, bound 0). This is not D2's message, and neither the review nor the fix covers it.
-   The rerun at 369cd7ef is 261122-212016-403adc (pending; 211656-649631 was cancelled before it
-   ran). Options: (a) a correct refusal, since the damaged record is the log's tail and its bound
-   is unknown, recorded beside N1; (b) a defect like D2, fixed with a case in test_reopen_damaged.
-   No recommendation until the rerun is read.
-3. A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
-4. N1 stays the owner's call; the default (land with the limit recorded) stands.
+2. A5 and A6's gate rows wait for parity tasks 2-6 and 8-14 (closing pass below).
+3. N1 stays the owner's call; the default (land with the limit recorded) stands.
 
-Resolved: the journal pin (journal main a3eecb5, strata:369cd7ef); stale queued jobs (ended); group-commit (CI-timing check replaced by recorded turns at strata:80f91fd0, merged);
+Resolved: the D2 probe's control and last-chunk cases (Rulings, CI-red pass 2026-11-23); the journal pin (journal main a3eecb5, strata:369cd7ef); stale queued jobs (ended); group-commit (CI-timing check replaced by recorded turns at strata:80f91fd0, merged);
 tolerant-open (merged with the pin above); build-test now configures with `-G Ninja`.
 
 ## Merge of main (strata:cc30217f into b467309d, as b146febc)
@@ -147,16 +163,21 @@ test/standalone_turn_log_test.cc). Semantic resolution, keeping both sides:
 
 ## Evidence
 
-At strata:b533db12 (both tasks merged). From `campaign brief`:
+At strata:369cd7ef, from `campaign brief` (each row's jobs rerun at f5f6b7dc, State):
 
 | Criterion | Evidence |
 |---|---|
-| A1 | <261121-090415-53357a ran other code; 261121-090438-28fbcd ran other code; 261121-183106-bb529c queued; 261121-183107-df159e queued; 261121-183109-1a0cf0 queued; 261121-183110-47450d queued> |
-| A2 | 261121-145607-0e1ac9, 261121-115239-ee5107; fails without: 261121-115241-8bbc79, 261121-145613-34602d |
-| A3 | <261121-110105-830c31 ran other code; 261121-114248-3845d4 ran other code; 261121-183107-decc0f queued; 261121-183109-837d25 queued; 261121-183110-399fd2 queued> |
-| A4 | <261120-192604-5eca03 ran other code; 261121-101105-1c95d9 failed; 261121-151521-37deb9 running; 261121-183108-f29e13 queued> |
-| A6 | <261120-081226-1f9736 ran in /Users/kronuz/code/Kronuz/strata-wt/xapiand/turn-log-parity--merge-runs, not the quest's repository; 261120-192628-0cc5e8 ran other code; 261120-194415-bf027b ran other code; 261121-050248-2f7f8d ran other code; 261120-204250-36020e ran other code; 261121-054157-2f69f9 ran other code; 261121-183108-996f58 queued; 261121-183108-a5a124 queued> |
-| A5 | <no evidence yet> |
+| A1 | 261122-212012-8171cc, 261122-212012-093945, 261122-212013-5518cc, 261122-212013-14b745; fails without: 261121-090430-5cd461, 261121-090433-fa1d1f, 261121-090436-c180a4, 261121-151648-9ffb16 |
+| A2 | 261122-212014-e16e63, 261122-212014-fe9398; fails without: 261121-115241-8bbc79, 261121-145613-34602d, 261121-214545-0d42a7 |
+| A3 | 261122-212014-af489a; 261123-002232-6b94b8 (fuzz), 261123-002233-c59105 (TSan), 261123-002235-16613d, 261123-002235-947360 pending at f5f6b7dc |
+| A4 | 261123-002234-e3f49d, 261123-002234-7bb281, 261123-002236-c527d0 pending at f5f6b7dc; fails without: 261122-212021-14ab70 pending at e8699699 |
+| A6 | 261122-212015-5e8a2d; fails without: 261120-081225-8f09de, 261120-195114-cec936, 261120-202106-94eb96, 261120-202805-29d178, 261120-203457-3324d7, 261120-204252-7f2e9c, 261120-204253-47f1cc |
+| A5 | none yet (design-note task) |
+
+At strata:f5f6b7dc (CI fix): A1 assertion build 261123-002140-82018c; fails without
+261123-002143-aa5d40 at 369cd7ef. Reruns: A1 002230-8ef26a, 002230-8e8f49, 002231-a77d54,
+002231-aefb80; A2 002231-ed70e1, 002232-cad563; A3 002232-d1e532; A6 002233-1e4f69,
+002233-b4a58c; D2 probe 002234-c8c5d2; build-test 002245-d6ced9.
 
 Added at strata:b533db12, not yet in the brief: A2 reopen_damaged 261121-183121-b8a9f9 and the
 standalone suite 261121-183125-bd57b5 against the pinned journal (replace 145607-0e1ac9 and
@@ -189,6 +210,28 @@ b6a7697: the item is now applicable (not done in the merge pass).
 | F13 | probe K, `d1_ladder_model.py`, job 261120-133247-a1f4a0 (exit 0, all claims hold): rooms from `segment_bytes` throw at turn 1; rooms following the spare never throw, admitted to sealed 1 turn, 229 MiB/s at 16 MiB and 1,476 MiB/s at 64 MiB; smallest rung 48 MiB/s; naive step down 5 turns, guarded 1 |
 | F4, N5, F14 A3 stall | probe G, `d7_model.py`, job 261120-133248-df88a3 (exit 0, all ok): rows 1-5 as in round 1; row 6, other writers seal within 2 turns of arrival behind a 4-room transaction, admitted to sealed 0 |
 | Round 1 | F1 probe F 261120-083804-ec1239; N6 probe B2 261120-083211-0cbbce; N1 261120-074846-356a48 |
+
+## Rulings I made (CI-red pass, 2026-11-23)
+
+- The D2 probe's `small (control)` and `last chunk damaged` cases (261121-213954-ecd99d: `the
+  index's head names turn-log records its log lacks`, status stored, bound 0) are neither a defect
+  of this quest nor a probe bug in its mechanics; recorded and dropped from the quest. In both, the
+  flipped byte is in the log's last turn (the commit's checkpoint record is never sealed), in a
+  fragment crossing its sector. journal reads that as a torn tail, by its documented limit
+  (journal `docs/mechanisms/turn-log-damage.md`, Limits, first bullet: only a per-sector checksum
+  tells it from a tear), so the host reports no damage and no bound. strata's open then finds a
+  head past the log's end and refuses loudly: that check is main's (`index.hh`, strata:6e455aca;
+  line 3399 at origin/main), and the control has no chunk run, so neither D2's fix nor any quest
+  mechanism is involved. Refusing is the safe answer: opening would let the log hand out sequences
+  the head already applied, which replay would skip. Opening such an index needs a journal change
+  (the per-fragment checksum the quest file assigns to task 3, or keeping a group's sequence at
+  its head); it is not A2's gap, which is damage the host reports.
+- The brief's rerun of 261120-192604-5eca03 (cohort test, `cmake -B build`) is not taken: the
+  slot's `build` cache points `FETCHCONTENT_SOURCE_DIR_JOURNAL` at `ref-journal`, so it would not
+  test the pinned journal. 261121-183108-f29e13's rerun (002236-c527d0, `build-q`, no override) and
+  075d06's (002234-e3f49d) run the same test at the head.
+- The CI fix's test is the existing tests in CI's assertion build, not a new case: the defect is
+  the build mode the quest's jobs never used, and those tests already fail without the fix.
 
 ## Rulings I made (group-commit merge pass, 2026-11-22)
 
