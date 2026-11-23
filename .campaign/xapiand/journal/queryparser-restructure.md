@@ -80,10 +80,10 @@ tool's job 261122-222826-4f317e stands for it until then.
 | Criterion | Evidence |
 |---|---|
 | A1 | build-test 261122-222817-2abf44 at queryparser:fc02cb5 passed (8/8 tests); CI run 45124357782 on the pushed branch (queued) |
-| A2 | members (worktree tool, cpp-libraries:2df69e8) 261122-222826-4f317e (queued); fnsizes Release, base queryparser:0fdec0c and head in one job with one FetchContent tree, library objects and the six test binaries: 261122-222828-545da4 (queued); quest check `members` 261122-222818-a1a04e fails until split-check-members lands |
+| A2 | members (worktree tool, cpp-libraries:2df69e8) 261122-222826-4f317e (queued); fnsizes Release, base queryparser:0fdec0c and head in one job with one FetchContent tree, library objects and the six test binaries: 261122-222828-545da4 (queued); quest check `members` 261123-005505-cd8ac8 fails until split-check-members lands |
 | A3 | selfcontained.sh over every header (queryparser.hh, queryparser/*.hh), deps from a configured tree: 261122-222831-76a27b (queued) |
 | A4 | `docs/source-layout.md` at queryparser:fc02cb5: each header, its lines and its layer |
-| A5 | pending: the lead reads the cut |
+| A5 | [manual] the lead (2026-11-23) read the cut at fc02cb50: parser.hh holds the class (data members, one declaration per member) and its builder; parser_operators.hh the driver and operator recognition (run, step, keywords, op_kind); parser_words.hh words and terms (globs, fuzzy, phrases, n-grams, stop words, make_term); parser_groups.hh grouping and the tree (frames, close_group, combine, join, nary, fold). Each is one layer a maintainer opens alone, 270-446 lines; agreed. |
 
 ## Result
 
