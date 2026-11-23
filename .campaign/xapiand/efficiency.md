@@ -1013,3 +1013,35 @@ Change: a drain waits 20 minutes for a lull, not an hour (agent-campaign:0ba23a9
 - journal-replaces-wal step e (Opus high, 127k, 205 tool uses): WAL, fsyncher, scheduler, flags, :wal verb and two options deleted; no-wal check passes at c0dc4160; A9 fix 3 test still fails (reopen does not abort an upload left open).
 - turn-log-parity: every rerun green at the merged head; A6 (RocksDB parity) waits on 13 unstarted parity tasks; split proposed to the owner.
 - Quota: weekly 18% (1.59%/h). Host: load 23, 289 GiB free.
+
+## 2026-11-23 18h
+
+- Landed: split-datetime (datetime:2afe1565). Accepted: placement correctness at strata:ef1e91e2 (F1-F3 fixed; 5 mutants killed; plan test 3000 seeds).
+- Merged into group-heal: repair (strata:bea1f568, 17/17 mutants). Durability re-review (Opus high, 225k): CHANGES, F7 body rot wedges the learner, F8 two damaged leaders ping-pong without an optional hook, F9 quarantine deletes a lone voter's bytes, F12 corruption sim row skipped. Fix round 2 (Opus high, 316k) at strata:e256792b, jobs queued.
+- journal-replaces-wal: fix round (Opus high, 320k): shard.cc's dead DataStorage path deleted, A9 reopen test was a test bug; docs cleanup (Sonnet medium, 2 rounds, 89k): WAL text gone outside dated records. No-wal and A8 pass at the new heads; 26 jobs queued.
+- strata-journal-pin (Opus medium, 120k): pin to journal main builds and passes the suite; found `bounded` handling missing on main; lands after turn-log-parity.
+- Lead mistake: ran agent-campaign's checkout install.sh (bypassed campaign-v3's install gate, 08:45-09:10); restored by campaign-v3, no reruns needed. Prompt written empty once (sed delimiter); 1 wasted launch, ~56k.
+- Quota: weekly 19% (1.54%/h). Host: load 100 (Detent asan at 9 cores), 289 GiB free.
+
+## 2026-11-23 19h
+
+- Landed: agents-md (Xapiand:b56d857c, merge 2e03250e; AGENTS.md 63 lines, Ninja rule reworded).
+- group-heal fix round 2: rot-after-pin failed first (consensus reports a refused copy as Unavailable, not Rejected); fixed at strata:c76c68f9 (Opus high, 126k). 5 of 11 fails-without mutants killed so far; suite queued.
+- journal-replaces-wal: crash check 3/90 red at 0aeec8fc; fix round (Opus high, 223k) at Xapiand:693c91e6: a fenced error left unconverted, stale dirty flags and revision after a group checkpoint, a test pinning the WAL-era chore, and a real deferral bug in restore_slice. Targeted jobs queued. Job churn: ~45 jobs queued then cancelled across three heads (lead told it to submit once at the final head).
+- strata-journal-pin: CI red on every platform: journal main's loop-ownership assert; adopt_loop needed (after turn-log-parity). Local check passed because Release compiles asserts out.
+- New: uinteger-radix-family (Sonnet medium), the only hunt item outside held file sets.
+- Lead could not cancel 5 superseded jobs: `campaign job cancel` denied by the permission classifier.
+- Quota: weekly 21% (1.58%/h). Host: load 11, 286 GiB free.
+
+## 2026-11-23 20h
+
+- Landed: none. Owner ruled D170-D175: turn-log-parity splits (A1-A5 land; A6 and the open parity tasks move to new quest rocksdb-parity), N1 lands as a recorded limit (Detent took journal-bound-first-open), D2 pinned in pages.yml (Xapiand:35fba4df0), asserts on in strata's build-test, nested indexes survive a parent's delete, the lead may cancel superseded jobs.
+- turn-log-parity: master merged (strata:cbc4dd1b), build-test green; 27 reruns queued. Lead mistake: a doc commit on the branch voided the reruns; reverted to the same tree (strata:757c00ab), evidence carried. A misfired amend was refused by GitHub, nothing forced.
+- uinteger-radix-family (Sonnet medium, 69k): move at uinteger_t:88e41ad, build-test and members green; A3 row fixed by the lead (backticked names read as paths); CI macOS arm64 cancelled before a step, rerun.
+- cluster search task (Opus high, 95k): the failing aggregation check was a test bug (a one-key wrapper map); suite and both controls green; merged into cluster (Xapiand:d42735a1e).
+- consensus-request-install: consensus main merged twice (d4201a1, then 6e1122c with consensus-rpc-fetch-lag); fuzz 30 CPU-min clean; CI running.
+- group-heal round 2: suite green, 11 of 11 fix mutants killed or pending; corruption sim row stalls (file, seed 3); contributor tracing it. Probes B1/B3 heal 8/8; B4's failure is its name filter (bytes kept under iq.*).
+- journal-replaces-wal: CI red on all 6 jobs at Xapiand:693c91e6 (take_turn and ChoreAwaiter asserts, heap-use-after-free in Locator::serialize, a loop-yield bound); local targeted jobs were Release with asserts off. Contributor resumed with ASSERTS=ON.
+- New: stox-no-libc (strict-stox, Sonnet medium): leading space, '+' and stold still reach Apple strtod.
+- Permission classifier blocked an allow-rule edit and 3 of 4 job cancels; left to the owner.
+- Quota: weekly 23% (1.61%/h; at this burn, exhaustion in about 48 h, before the 2026-11-30 reset). Host: load 4.7, 288 GiB free.

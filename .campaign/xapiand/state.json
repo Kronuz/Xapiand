@@ -2786,6 +2786,152 @@
       "closed": "strata-journal-pin pins journal main now (Host::delete_group); formats stay open until release, so it repins after journal-turn-sector-checks lands",
       "id": "msg-255",
       "text": "Re msg-260 (strata-journal-pin): journal-earlier-turn-loss changes no API or format (recovery now reports earlier-turn damage it used to miss; landing soon). journal-drop-memory-io removes include/journal/memory_io.h; it lands after consensus-install-test-faultfs. Heads-up: journal-turn-sector-checks (owner D147) changes the on-disk turn log format RFTW0001 -> RFTW0002 with no reader of the old one; it starts once journal-earlier-turn-loss lands. Pin after it if you want the new format, or before and repin."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:44:57",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:44:57",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "the skill links into the agent-campaign checkout, at 4038cd2 on main; install.sh --check passes",
+      "id": "msg-256",
+      "notice": "skill landed 4038cd2d471c7bf3f51fd1d18925480959160622",
+      "text": "campaign skill: 2 commits landed on agent-campaign's main, not installed here yet: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T08:46:14",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T08:46:14",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted: agent-campaign:4038cd2 installed",
+      "id": "msg-257",
+      "notice": "skill installed 4038cd2d471c7bf3f51fd1d18925480959160622",
+      "text": "campaign skill: agent-campaign:4038cd2 installed here, 2 commits: agent-campaign:a103988 Time the hung-gh test from the hung call's start; agent-campaign:4038cd2 Merge main into quest/campaign-v3/lead-driver-flake"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T09:35:34",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T09:35:34",
+      "by": "campaign detent",
+      "closed": "expected (msg-255): strata-journal-pin pins journal main now and repins after journal-turn-sector-checks lands; turn-log-parity takes it at its next journal pin move; formats stay open until release",
+      "id": "msg-258",
+      "settles": {
+        "ours": [
+          "strata-journal-pin",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-turn-sector-checks"
+      },
+      "text": "detent:journal-turn-sector-checks started and changes contract journal, which your strata-journal-pin consumes; changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:05:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:05:36",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "noted; information only: the install moves through the dotfiles submodule, by campaign-v3",
+      "id": "msg-259",
+      "notice": "skill landed a51bfc2a1c240f6e7ec0fe3a66f0e89703d8eb61",
+      "text": "campaign skill: 3 commits landed on agent-campaign's main, not installed here yet: agent-campaign:42099a5 Order a task's jobs by submit time, not by id; agent-campaign:d14ecd5 Drop the job index after editing a spec in the id-order test; agent-campaign:a51bfc2 Merge main into quest/campaign-v3/task-jobs-order"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:36:37",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:36:37",
+      "by": "lead",
+      "closed": "merged consensus main (531b655) into consensus-request-install and pushed; it lands when its reruns and CI pass",
+      "id": "msg-260",
+      "text": "consensus-rpc-fetch-lag landed at consensus:531b655 (pushed): the fetch case's heartbeat bound is 1,000 ms plus the measured host lag; withheld heartbeats still fail it. consensus-request-install can go."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:49:51",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:49:50",
+      "by": "campaign detent",
+      "closed": "detent owns journal-bound-first-open; xapiand's copy dropped; rocksdb-parity's journal diffs go to detent's lead",
+      "id": "msg-261",
+      "settles": {
+        "ours": [
+          "strata-journal-pin",
+          "turn-log-parity"
+        ],
+        "quest": "detent:journal-bound-first-open"
+      },
+      "text": "detent:journal-bound-first-open started and changes contract journal, which your strata-journal-pin consumes; changes contract journal:turn-buffers, which your turn-log-parity consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T10:49:52",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T10:49:51",
+      "by": "lead",
+      "closed": "detent owns journal-bound-first-open; xapiand's copy dropped; rocksdb-parity's journal diffs go to detent's lead",
+      "id": "msg-262",
+      "text": "Re msg-268: I'm taking journal-bound-first-open into detent (same quest text, now detent:journal-bound-first-open, high, durability review), so journal recovery fixes have one campaign; drop yours. It starts now (files disjoint) and lands after journal-turn-sector-checks (RFTW0002, same recovery path). rocksdb-parity's journal diffs: send them to me for review as agreed."
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T11:03:25",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T11:03:25",
+      "by": "campaign detent",
+      "closed": "noted: a test-timeout investigation, not a contract change for our consumers; if consensus-request-install's asan CI times out on consensus_simulation, the lead reruns it and cites this quest",
+      "id": "msg-263",
+      "settles": {
+        "ours": [
+          "cluster",
+          "group-heal"
+        ],
+        "quest": "detent:consensus-simulation-asan-timeout"
+      },
+      "text": "detent:consensus-simulation-asan-timeout started and changes contract consensus:rpc-lane, which your cluster consumes; changes contract consensus:install-request, which your group-heal consumes; changes contract consensus:snapshot-channel, which your group-heal consumes"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T11:10:38",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T11:10:38",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "install notice, noted; no action",
+      "id": "msg-264",
+      "notice": "skill installed a51bfc2a1c240f6e7ec0fe3a66f0e89703d8eb61",
+      "text": "campaign skill: agent-campaign:a51bfc2 installed here, 3 commits: agent-campaign:42099a5 Order a task's jobs by submit time, not by id; agent-campaign:d14ecd5 Drop the job index after editing a spec in the id-order test; agent-campaign:a51bfc2 Merge main into quest/campaign-v3/task-jobs-order"
+    },
+    {
+      "announced": {
+        "at": "2026-11-23T07:30:46",
+        "surface": "1444E90B-7860-49C6-9C3B-192656914F27",
+        "why": ""
+      },
+      "at": "2026-11-23T07:30:45",
+      "by": "campaign campaign-v3, xapiand",
+      "closed": "install notice, noted",
+      "id": "msg-254",
+      "notice": "skill installed fce5f0d20ab3d43e9deea3fa1961bef24cf55c35",
+      "text": "campaign skill: agent-campaign:fce5f0d installed here, 11 commits: agent-campaign:97ea118 Run a landing quest's voided evidence at landing priority; agent-campaign:c298eb2 Type rerun_jobs' minutes and the test's job spec; agent-campaign:bb3ea82 Decide landing priority from gap kinds, not their wording; agent-campaign:089c2be Merge main into quest/campaign-v3/landing-priority; agent-campaign:a4d542e Raise a reused queued submit's priority and say so on stderr; agent-campaign:3cd60ed Merge main into quest/campaign-v3/landing-priority; agent-campaign:fa21275 Merge main into quest/campaign-v3/landing-priority; agent-campaign:36a1c08 Merge main into quest/campaign-v3/landing-priority; agent-campaign:7ecb3ea Read the reuse note on stderr in gate and scenario tests; agent-campaign:4233e0c Merge main into quest/campaign-v3/landing-priority; agent-campaign:fce5f0d Merge main into quest/campaign-v3/landing-priority"
     }
   ],
   "quests": {
@@ -2810,18 +2956,51 @@
         "docs/dev/agent-*.md",
         "docs/dev/contributing.md"
       ],
-      "landed": [],
+      "landed": [
+        {
+          "at": "2026-11-23T10:12:39",
+          "ci": {
+            "commit": "b56d857c3faac9ebd41e765f45edc399ef751730",
+            "runs": [
+              45219576164
+            ]
+          },
+          "commit": "2e03250ea98c02a27a668470e2d9ac973e19272b",
+          "criteria": {
+            "A1": "`AGENTS.md` is 55 lines; rules present: GPL paths, identity, no attribution, Ninja-only build, campaign skill authoritative, docs locations.",
+            "A2": "`docs/dev/agent-codebase.md` holds the moved sections; removed sections listed below, one line each."
+          },
+          "evidence": [
+            {
+              "cmd": "test $(wc -l < AGENTS.md) -le 80",
+              "commit": "b56d857c3faac9ebd41e765f45edc399ef751730",
+              "exit": 0,
+              "host": "kronuz",
+              "job": "261123-101135-6a47f1",
+              "level": "light",
+              "seconds": 1.2,
+              "state": "done",
+              "what": "agents-md check lines at b56d857c3faa"
+            }
+          ],
+          "final": true,
+          "from": "3e1ff7bc8d3b9921ea95f58a189c46711f8b306a",
+          "reason": "",
+          "tested": "b56d857c3faac9ebd41e765f45edc399ef751730"
+        }
+      ],
       "lenses": [],
+      "messages": [],
       "milestone": "",
       "needs": [],
       "provides": [],
       "reason": "started by force: ninja-only changes one line of AGENTS.md (the configure command); this rewrite keeps -G Ninja and lands after it (after=ninja-only)",
       "repo": ".",
       "risk": "low",
-      "status": "active",
+      "status": "landed",
       "title": "AGENTS.md says how Xapiand is built and worked on today",
-      "updated": "2026-11-21T09:47:14",
-      "worktree": "../Xapiand-wt/xapiand/agents-md"
+      "updated": "2026-11-23T10:13:40",
+      "worktree": ""
     },
     "agg-shard-parity": {
       "accepted": {
@@ -5374,11 +5553,12 @@
             "src/cluster/rpc_methods.*",
             "src/engine/strata/expand.*"
           ],
-          "worktree": "../Xapiand-wt/xapiand/cluster--search"
+          "merged": "5e1dedbbacc60942e501a8a9bc641ebfe1f2e3de",
+          "worktree": ""
         }
       },
       "title": "Xapiand in a cluster: shard groups, membership, routing, search, API, migration",
-      "updated": "2026-11-22T23:04:14",
+      "updated": "2026-11-23T11:00:05",
       "worktree": "../Xapiand-wt/xapiand/cluster"
     },
     "cluster-api": {
@@ -13398,8 +13578,9 @@
             "CMakeLists.txt",
             "docs/mechanisms/group-install.md"
           ],
-          "journal": "../Xapiand-wt/xapiand/group-heal--repair",
-          "worktree": "../strata-wt/xapiand/group-heal--repair"
+          "journal": "",
+          "merged": "06bfb2f5eb180a9fdd1b7b076198e6f57b96797e",
+          "worktree": ""
         },
         "sim-port": {
           "base": "51dcff1e2637f8a2c49983c61c1265a1b54aeaa7",
@@ -13442,7 +13623,7 @@
         }
       },
       "title": "Replication groups grow, heal and run in the simulator",
-      "updated": "2026-11-23T08:07:37",
+      "updated": "2026-11-23T08:35:22",
       "worktree": "../strata-wt/xapiand/group-heal"
     },
     "group-install": {
@@ -14989,6 +15170,47 @@
       "title": "Reopen installed segments from target files",
       "updated": "2026-11-08T15:39:30"
     },
+    "journal-bound-first-open": {
+      "accepted": {},
+      "after": [
+        "detent:journal-earlier-turn-loss"
+      ],
+      "checks": [
+        {
+          "cmd": "ci:macos-arm64",
+          "level": "light",
+          "minutes": 30,
+          "name": "suite"
+        },
+        {
+          "cmd": "ci:ci",
+          "level": "light",
+          "minutes": 30,
+          "name": "ci"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "include/journal/turn_log.h",
+        "include/journal/host.h",
+        "include/journal/host/**",
+        "test/**",
+        "docs/mechanisms/lost-bound.md"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "reason": "Detent took it as detent:journal-bound-first-open (msg-262): journal recovery fixes stay in one campaign",
+      "repo": "../journal",
+      "risk": "high",
+      "status": "dropped",
+      "title": "the lost bound survives a power cut during the first open",
+      "updated": "2026-11-23T10:50:01"
+    },
     "journal-group-delete": {
       "accepted": {
         "durability": {
@@ -15463,7 +15685,33 @@
         "tests/test_engine_strata.cc",
         "tests/test_engine_replay.cc",
         "tests/test_quarantine.cc",
-        "tests/test_coverage_database.cc"
+        "tests/test_coverage_database.cc",
+        "docs/src/content/docs/reference-guide/wal.md",
+        "docs/src/content/docs/reference-guide/api.md",
+        "docs/src/content/docs/about.md",
+        "docs/src/content/docs/basics.md",
+        "docs/src/content/docs/manipulation.md",
+        "docs/src/content/docs/reference-guide/indexes/backups.md",
+        "docs/src/content/docs/architecture/dependencies.md",
+        "docs/src/content/docs/architecture/internals.md",
+        "docs/mechanisms/wal-replay.md",
+        "harness/stored_stream.sh",
+        "src/server/search_views.h",
+        "docs/astro.config.*",
+        "docs/src/sidebar*",
+        "docs/dev/cr1-replay.md",
+        "docs/dev/docs-site-audit.md",
+        "docs/dev/testing.md",
+        "docs/mechanisms/control-plane.md",
+        "docs/mechanisms/engine-write-path.md",
+        "docs/mechanisms/seam-fields.md",
+        "docs/mechanisms/strata-engine.md",
+        "docs/status/cr1-fix.md",
+        "docs/status/phase7c-gate-prep.md",
+        "docs/status/phase7c-x6.md",
+        "src/engine/document.h",
+        "src/engine/strata/document.h",
+        "tests/fuzz_strata_document.cc"
       ],
       "history": [
         {
@@ -15717,7 +15965,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T08:15:15",
+      "updated": "2026-11-23T08:46:13",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
@@ -22623,7 +22871,7 @@
     "placement": {
       "accepted": {
         "correctness": {
-          "at": "2026-11-23T05:44:28",
+          "at": "2026-11-23T08:47:04",
           "base": "00eb018da75d20715b3e05a2593937a970b40201",
           "blobs": {
             "CMakeLists.txt": "100644:12c74a9aa1ffbafd23d6b48fb3c499f68bcbd64f",
@@ -22771,15 +23019,15 @@
             "F1": {
               "jobs": [
                 {
-                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_plan_test && ./build-n/placement_repair_plan_test'",
+                  "cmd": "bash -c 'cmake -G Ninja -B build-n -DCMAKE_BUILD_TYPE=Release >/dev/null && cmake --build build-n -j4 --target placement_repair_group_test && ctest --test-dir build-n -R '\"'\"'^placement_repair_group$'\"'\"' --output-on-failure'",
                   "commit": "ef1e91e2155f1171621a55585d50de1232b22c30",
                   "exit": 0,
                   "host": "kronuz",
-                  "job": "261123-052058-5b15a2",
+                  "job": "261123-052115-f25679",
                   "level": "light",
-                  "seconds": 38.7,
+                  "seconds": 38.1,
                   "state": "done",
-                  "what": "placement fix F1-F3: repair plan test, 3000 seeds + new cases"
+                  "what": "placement fix F1-F3: ctest placement_repair_group"
                 }
               ],
               "kind": "defect",
@@ -22966,7 +23214,7 @@
         }
       },
       "title": "The root authority places and repairs groups",
-      "updated": "2026-11-23T05:44:28",
+      "updated": "2026-11-23T08:47:04",
       "worktree": "../strata-wt/xapiand/placement"
     },
     "placement-locality-sim": {
@@ -26292,6 +26540,46 @@
       "status": "landed",
       "title": "Default to zero retained predecessors",
       "updated": "2026-11-08T15:39:24"
+    },
+    "rocksdb-parity": {
+      "accepted": {},
+      "after": [],
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 120,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [
+        "journal:turn-buffers"
+      ],
+      "files": [
+        "include/strata/core/**",
+        "bench/kv/**",
+        "test/**",
+        "fuzz/**",
+        "docs/design/rocksdb-parity.md",
+        "docs/design/standalone-turn-log.md",
+        "docs/mechanisms/**",
+        "docs/perf/**",
+        "CMakeLists.txt"
+      ],
+      "landed": [],
+      "lenses": [
+        "durability"
+      ],
+      "milestone": "",
+      "needs": [
+        "turn-log-parity"
+      ],
+      "provides": [],
+      "repo": "../strata",
+      "risk": "high",
+      "status": "planned",
+      "title": "strata matches or beats RocksDB on every gate row",
+      "updated": "2026-11-23T10:46:23"
     },
     "rocksdb-spec": {
       "accepted": {},
@@ -31354,6 +31642,44 @@
       "title": "Test rejection of short stored sections",
       "updated": "2026-11-08T15:39:19"
     },
+    "stox-no-libc": {
+      "accepted": {},
+      "after": [],
+      "base": "ff3286d76ced1dd219c5d2a16a83bbccc783963e",
+      "branch": "quest/xapiand/stox-no-libc",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "strict_stox.hh",
+        "strict_stox/**",
+        "strict_stox_*",
+        "test/**",
+        "tests/**",
+        "fuzz/**",
+        "docs/**",
+        "CHANGELOG.md",
+        "CMakeLists.txt"
+      ],
+      "journal": "../Xapiand-wt/xapiand/stox-no-libc",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../strict-stox",
+      "risk": "normal",
+      "status": "active",
+      "title": "strict-stox parses every double without libc strtod",
+      "updated": "2026-11-23T11:22:13",
+      "worktree": "../strict-stox-wt/xapiand/stox-no-libc"
+    },
     "strata-engine-callbacks": {
       "accepted": {},
       "after": [],
@@ -31518,7 +31844,7 @@
       "branch": "quest/xapiand/strata-journal-pin",
       "checks": [
         {
-          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
           "level": "light",
           "minutes": 120,
           "name": "build-test"
@@ -31534,6 +31860,34 @@
         "test/group/**",
         "sim/**"
       ],
+      "history": [
+        {
+          "at": "2026-11-23T10:51:46",
+          "checks": [
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ],
+            [
+              {
+                "cmd": "cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O3 && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+                "level": "light",
+                "minutes": 120,
+                "name": "build-test"
+              }
+            ]
+          ],
+          "reason": "owner 2026-11-23: asserts on in strata's build-test (Release without NDEBUG), so the loop-ownership assert fails locally, not only in CI; a stronger check",
+          "voided": [],
+          "weakened": [
+            "gate check build-test changed"
+          ]
+        }
+      ],
       "journal": "../Xapiand-wt/xapiand/strata-journal-pin",
       "landed": [],
       "lenses": [],
@@ -31544,7 +31898,7 @@
       "risk": "low",
       "status": "active",
       "title": "strata builds against journal main (Host::delete_group)",
-      "updated": "2026-11-23T08:25:35",
+      "updated": "2026-11-23T10:51:46",
       "worktree": "../strata-wt/xapiand/strata-journal-pin"
     },
     "strata-nospace-position": {
@@ -35587,6 +35941,46 @@
       "title": "TurnDriver::seal: one sealed record per group per turn",
       "updated": "2026-11-17T02:52:51",
       "worktree": "../journal-wt/xapiand/turn-seal"
+    },
+    "uinteger-radix-family": {
+      "accepted": {},
+      "after": [],
+      "base": "a1798226a2724ba4df781a3a11365ac29501de63",
+      "branch": "quest/xapiand/uinteger-radix-family",
+      "checks": [
+        {
+          "cmd": "cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j4 && ctest --test-dir build --output-on-failure -j4",
+          "level": "light",
+          "minutes": 30,
+          "name": "build-test"
+        },
+        {
+          "cmd": "/usr/local/bin/python3 /Users/kronuz/code/Kronuz/cpp-libraries/tools/split_check.py --base master uinteger_t.hh uinteger_t",
+          "level": "light",
+          "minutes": 10,
+          "name": "members"
+        }
+      ],
+      "consumes": [],
+      "files": [
+        "uinteger_t/**",
+        "uinteger_t.hh",
+        "docs/**",
+        "ARCHITECTURE.md",
+        "tools/**"
+      ],
+      "journal": "../Xapiand-wt/xapiand/uinteger-radix-family",
+      "landed": [],
+      "lenses": [],
+      "milestone": "",
+      "needs": [],
+      "provides": [],
+      "repo": "../uinteger_t",
+      "risk": "low",
+      "status": "active",
+      "title": "uinteger_t's output helpers leave radix_decode.hh",
+      "updated": "2026-11-23T10:21:30",
+      "worktree": "../uinteger_t-wt/xapiand/uinteger-radix-family"
     },
     "uinteger-restructure": {
       "accepted": {

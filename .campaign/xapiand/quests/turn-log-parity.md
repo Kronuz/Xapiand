@@ -30,10 +30,6 @@ mechanism ("Direct path first"), is A3's job.
 - A4 Group commit: with K concurrent writers, no writer that arrives during a barrier waits more
   than the next barrier, counted per writer; a mutant that defers it a whole barrier fails (a test,
   `--fails-without`)
-- A6 At par or better than RocksDB on every row and axis of document-gate's gate report (owner,
-  2026-11-20, replacing D143's 1.5x): throughput, p99 to p99.99, time to durable, group commit at
-  K writers on 1 to 8 logs, peak memory, disk, bytes written, CPU per operation, on the host and in
-  the Linux and FreeBSD VMs; one exclusive row per set after a seconds-long smoke, main merged
 - A5 [artifact] `docs/design/standalone-turn-log.md` records Q3 to Q5 closed, with the mechanisms
 
 ## Tasks
@@ -50,39 +46,9 @@ touches at `campaign start`, and tasks whose globs are not disjoint run in order
 | 2 | `group-commit` | the barrier scheduler, `test/*barrier*` | implementation, strong, high | Joining the next barrier, per-writer count (A4); one log and one log per core |
 | 3 | `design-note` | `docs/design/standalone-turn-log.md`, `docs/mechanisms/**` | documentation, economical, medium | Records Q3 to Q5 closed with the mechanisms (A5) |
 
-Parity tasks (D148; strata `docs/design/rocksdb-parity.md`, "Tasks for turn-log-parity", rows 1-12,
-each with its files and rows): cohort wait (1), zero-copy turn (2), segment ladder and spare pool
-(3), checkpoint inside the window (4), packed turn (5), background flush (6), sorted runs in the merge
-policy (7), reopen at a changed loop count (8), refuse a log past the loop count (9), one log per
-device after its design review (10), unversioned upsert (11), VM profile (12). Tasks 3, 5, 9 and 10
-change journal: Detent's lead gets each diff before it lands and checks it against its authority
-suite. Detent's constraints (2026-11-20): journal's I/O surface (`IO`, `IOOperation`, `PosixIO`,
-`NativeCompletionQueue`, `AsioCompletionDriver`, `LinuxCompletionPolicy`, `File`, `DirectoryCursor`,
-`drive_synchronously`, `MutationRequest`/`MutationCompletion`, `AdmissionLimits`, `PrimitiveKind`) and
-its completion ordering stay; a turn is durable before an artifact citing it publishes; a
-single-voter, one-loop authority opens its log after task 9. Log format changes need no migration.
-
-Copy flag (Detent ruling R3, journal-double-damage at journal:cca2427): damage that no manifest names
-loses every group, loudly. A copy flag in the record format lets recovery keep the groups that write
-again after the damage; tasks 3 and 5 (record format) add it, with a test that a group rewritten after
-double damage recovers and one that is not still reports the loss.
-
-Journal follow-ups (Detent's journal-double-damage review, journal:178030b): task 9 refuses at
-construction a block_bytes that is neither a multiple nor a divisor of 512 (F3); tasks 3 or 5 add a
-per-fragment checksum so a damaged fragment crossing a sector, and the damaged headers still silent
-at some block sizes, are reported (a format change), beside the copy flag above.
-
-TurnLog::forward_slice scans every live group each turn (Detent, msg-176), so setup grows with the square
-of the group count; parked groups leave that scan (journal:c3fb805: 0.01 records visited a turn over 20,000 parked, 193 for a mutant that keeps them); groups held or evicted still cost a walk, so a journal task indexes live records by segment, and and the D5/D7 tasks measure the
-turn cost at 1k, 100k and 1M groups with most parked.
-
-Parked groups are one mechanism (lead, 2026-11-20): the durable `parked` state the design review's
-F3 asks for is Detent's `journal-idle-groups` (provides `journal:idle-park`); this quest consumes it
-and defines no second park. Names (Detent, journal:7b64376): `parked` is the durable table state,
-`evicted` the in-memory release. Contract: create and reopen are durable at the group's first turn, not
-when the call returns; Xapiand's idle policy calls `Host::park` (Detent docs/design/idle-groups.md). Follow-up tasks from the revised note (strata:e5721fd6): 13 removes forward
-copies once parking lands; 14 a per-segment roster narrowing damage scope (16 B a live group); N3, the
-cohort wait counting writers rather than opened records.
+Parity tasks (D148) and RocksDB parity (the old A6) moved to quest `rocksdb-parity` (owner,
+2026-11-23); the parity tasks merged here (cohort-wait, checkpoint-window, merge-runs,
+reopen-loops) stay as landed parts of this quest.
 
 Needs `document-gate` and `group-core` (both hold `include/strata/core/**` or `index.hh`).
 
@@ -94,6 +60,10 @@ No new public API. Log and checkpoint bytes change (pre-release, D30); `format-f
 
 - D103 (owner, 2026-11-17): the gate takes options 1 for Q3-Q5; the gaps close in this feature.
 - D104 (per-core log or one shared log) is decided on the measurements below.
+- Owner, 2026-11-23: split. A1-A5 land here; A6 and the parity tasks not merged here move to
+  `rocksdb-parity`, which A6 gates unchanged. Review N1 (journal lost-bound, first open after
+  rule-5 damage plus a power cut) lands as a recorded limit (journal `docs/mechanisms/lost-bound.md`,
+  Limits) and is fixed by quest `detent:journal-bound-first-open`.
 
 ## When done
 
