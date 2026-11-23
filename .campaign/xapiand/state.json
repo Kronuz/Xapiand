@@ -15390,7 +15390,31 @@
         "src/database/command.h",
         "docs/src/content/docs/tests/coverage.md",
         "src/xapiand_scheduler_trace.h",
-        "src/logger_fwd.h"
+        "src/logger_fwd.h",
+        "src/debounce_or_run.h",
+        "tests/test_debounce_or_run.cc",
+        "src/xapiand_stash_trace.h",
+        "config.h.in",
+        "AGENTS.md",
+        "README.md",
+        "docs/src/content/docs/building.md",
+        "docs/src/content/docs/options.md",
+        "docs/src/content/docs/architecture.md",
+        "docs/src/content/docs/changelog.md",
+        "src/log.h",
+        "src/metrics.h",
+        "src/metrics.cc",
+        "harness/strata_write_check.sh",
+        "harness/engine_crash_check.sh",
+        "harness/graceful_shutdown_check.sh",
+        "harness/cluster/checklist.py",
+        "harness/coverage_e2e_server.py",
+        "harness/profile_bulk.sh",
+        "tests/one_id_mutants.sh",
+        "tests/test_engine_strata.cc",
+        "tests/test_engine_replay.cc",
+        "tests/test_quarantine.cc",
+        "tests/test_coverage_database.cc"
       ],
       "history": [
         {
@@ -15644,7 +15668,7 @@
         }
       },
       "title": "Every shard a group at rf = 1; chunked commands, volumes in checkpoints, RESTORE; the WAL deleted",
-      "updated": "2026-11-23T07:31:10",
+      "updated": "2026-11-23T08:15:15",
       "worktree": "../Xapiand-wt/xapiand/journal-replaces-wal"
     },
     "journal-seal-repeat": {
