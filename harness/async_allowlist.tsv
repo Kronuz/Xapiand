@@ -19,7 +19,7 @@ src/database/pool.cc	sync_wait	run_detached|std::move\(t\)	allow	1	a detached ta
 src/database/wide_search.cc	mutex	mutex_	allow	3	Pins' count and room event: O(1) sections that test or change the free count or swap the room pointer, none with I/O; they run on the loops (take, and give from a batch's end) and the event is set outside the lock (wide-search-loop D3)
 src/database/pool.h	mutex	.	allow	1	the entry's O(1) state lock, for the uuid (D5)
 src/database/pool.h	pool	storage_commit	allow	1	the declaration: the blob fsync runs as a flush chore (D7)
-src/database/schema.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
+src/database/schema/index.cc	pool	lock_shard	allow	2	Schema::index awaits the shard it counts; a lock_shard pins the index (x-pool D3) and takes no turn (D5)
 src/database/schemas_lru.cc	mutex	.	allow	25	LRU map lookup, insert and trim under the lock; compare_schema is bounded by one schema (D11); the flights' loads publish into it and their probes read it, O(1) sections with no I/O, taken and released before any await
 src/database/shard.cc	mutex	mtx\)|turn\.(try_)?lock	allow	6	the entry: O(1) state sections under its mutex, and the turn, an async mutex a task awaits without blocking; the catalog's commit chore tries it with no pin held (D5, x-pool D7)
 src/database/shard.cc	pool	co_await storage_commit	allow	1	the blob commit runs in a flush chore, first in the commit chore (D7)
@@ -67,7 +67,7 @@ src/manager.cc	sync_wait	shutdown_checks	allow	1	the shutdown checks after the c
 src/control_plane.h	mutex	.	allow	11	the control tasks' state (a wake pointer, cleared by a scope guard, a key's target, one map entry): O(1) sections, never held across a wait or a call (D13)
 src/shutdown_wait.h	mutex	.	allow	2	the state shared with the thread that runs a blocking stop: a flag under a lock, on the main thread at shutdown; check_may_block guards the entry (D14)
 src/shutdown_wait.h	wait	.	allow	1	the shutdown's bounded wait for a blocking stop (C14), on the main thread; check_may_block guards it (D14)
-src/single_flight.h	mutex	.	allow	2	the flights map: one lookup or erase under the lock, never held across the load or a wait (D11)
+src/single_flight.h	mutex	.	allow	3	the flights map and a flight's joiner list: the leader's end, a join, and a cancelled joiner's leave, each one O(1) map step or list erase under the lock, never held across the load or a wait (D11)
 src/database/handler.cc	mutex	lock_guard<std::mutex> lk\(mtx\)	allow	4	AgreeingIndexes: O(1) set lookups and inserts of index paths, no I/O, bounded at 65,536 (D137)
 src/database/schema.cc	mutex	it->second\.lock\(\) == schema	allow	1	weak_ptr::lock, not a mutex: VerifiedSchemas compares a cached schema pointer
 src/database/schema.cc	mutex	adopted_mtx	allow	1	the adopted-list log set: one O(1) insert per upgraded index and language, no I/O (the log line is queued, not written)

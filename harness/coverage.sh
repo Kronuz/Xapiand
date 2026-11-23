@@ -24,7 +24,7 @@
 # Builds with clang -fprofile-instr-generate -fcoverage-mapping into $BUILD (default build-cov), then runs the workloads:
 #   ctest      every unit test
 #   corpora    harness/restore_corpora.sh check, on the instrumented node
-#   e2e        harness/engine_e2e.sh, the docs E2E on the instrumented node (needs newman 6 first on PATH; skipped without it)
+#   e2e        harness/engine_e2e.sh, the docs E2E on the instrumented node (runs the newman pinned in harness/package.json; skipped when it cannot be installed)
 #   <name>     harness/coverage_e2e_<name>.* (any extension), run as `DRIVER BINARY OUTDIR/<name>`; every such driver is discovered
 #              and run by default (main: the node's flags, start-up refusals, signals, shutdowns, dump and restore)
 # WORKLOADS picks them (default "ctest corpora e2e" and every discovered driver). The profiles are merged and llvm-cov exports one summary per source file
@@ -66,7 +66,7 @@ build() {
 		ld="-L$LLVM/lib/c++ -Wl,-rpath,$LLVM/lib/c++"
 		extra+=(-DLIBCPP_LIBRARIES="$LLVM/lib/c++/libc++.dylib" -DLIBCPPABI_LIBRARIES="$LLVM/lib/c++/libc++abi.dylib")
 	fi
-	cmake -S "$ROOT" -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
+	cmake -G Ninja -S "$ROOT" -B "$BUILD" -DFETCHCONTENT_BASE_DIR="$ROOT/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTS=ON -DLTO=OFF \
 		-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" "-DCMAKE_C_FLAGS=$flags" "-DCMAKE_CXX_FLAGS=$flags" \
 		"-DCMAKE_EXE_LINKER_FLAGS=$flags $ld" "${extra[@]}" || return 1
 	cmake --build "$BUILD" -j"$JOBS" && cmake --build "$BUILD" -j"$JOBS" --target strata_check && one_runtime
@@ -96,10 +96,10 @@ workloads() {
 			tail -3 "$OUT/ctest.log" ;;
 		corpora) "$HERE/restore_corpora.sh" check "$BUILD/bin/xapiand" >"$OUT/corpora.log" 2>&1 || { echo "FAIL: corpora (see $OUT/corpora.log)"; rc=1; }
 			tail -2 "$OUT/corpora.log" ;;
-		e2e) if command -v newman >/dev/null; then
+		e2e) if . "$HERE/newman_env.sh"; then
 				"$HERE/engine_e2e.sh" "$BUILD/bin/xapiand" "$OUT/e2e" >"$OUT/e2e.log" 2>&1 || { echo "FAIL: e2e (see $OUT/e2e.log)"; rc=1; }
 				tail -2 "$OUT/e2e.log"
-			else echo "skip: e2e (no newman on PATH)"; fi ;;
+			else echo "skip: e2e (cannot install the pinned newman)"; fi ;;
 		*) local drv; drv=$(ls "$HERE"/coverage_e2e_"$w".* 2>/dev/null | head -1)
 			if [ -n "$drv" ]; then
 				"$drv" "$BUILD/bin/xapiand" "$OUT/$w" >"$OUT/$w.log" 2>&1 || { echo "FAIL: $w (see $OUT/$w.log)"; rc=1; }

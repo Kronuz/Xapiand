@@ -510,15 +510,36 @@ void test_open_files_limit() {
 		std::exit(1);
 	}), static_cast<int>(EX_OSFILE));
 
-	// An explicit limit that the default pool and clients do not fit in is refused too, though the pool would shrink
-	// to (300 - 57) / 7 = 34 databases: the computed minimum is 1471 descriptors (the log says "at least 1471"). The
-	// max_clients -2 that (300 - 304) / 2 suggests is never reached: the start ends first with EX_OSFILE.
+	// An explicit limit that the configured pool and clients do not fit in starts with what it holds: (300 - 68) / 7 = 33
+	// databases leave room for (300 - 297) / 2 = 1 client.
 	CHECK_EQ(in_child([] {
 		main_opts.max_files = 300;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
 		main_opts.concurrent_search_indexes = 100;
-		expect_refusal(300);
+		adjust_or_report();
+		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(300));
+		CHECK_EQ(main_opts.database_pool_size, static_cast<ssize_t>(33));
+		CHECK_EQ(main_opts.max_clients, static_cast<ssize_t>(1));
+		CHECK_EQ(main_opts.concurrent_search_indexes, static_cast<ssize_t>(33));
+	}), 0);
+
+	// The minimum is what holds one database and one client on top of the descriptors the process has open: one
+	// descriptor less is refused, and the log names that minimum.
+	CHECK_EQ(in_child([] {
+		const ssize_t minimum = static_cast<ssize_t>(get_open_files_per_proc()) + 75;
+		main_opts.max_files = minimum;
+		main_opts.database_pool_size = 200;
+		main_opts.max_clients = 1000;
+		adjust_or_report();
+		// 3 open descriptors give 78: one database, which leaves (78 - 73) / 2 = 2 clients.
+		const ssize_t pool = (minimum - 68) / 7;
+		CHECK_EQ(main_opts.database_pool_size, pool);
+		CHECK_EQ(main_opts.max_clients, (minimum - (57 + (pool + 1) * 7 + 2)) / 2);
+		main_opts.max_files = minimum - 1;
+		main_opts.database_pool_size = 200;
+		main_opts.max_clients = 1000;
+		expect_refusal(minimum - 1);
 	}), 0);
 
 	// A roomy explicit limit changes nothing the pool and the clients asked for.
@@ -534,19 +555,22 @@ void test_open_files_limit() {
 		CHECK_EQ(main_opts.max_files, static_cast<ssize_t>(4096));
 	}), 0);
 
-	// With no explicit limit and a hard limit of 1024 the default pool and clients are refused for the same minimum,
+	// With no explicit limit and a hard limit of 1024 the default pool and clients are cut to what the limit holds,
 	// unless the process may raise its hard limit (root): then the raise to the system's per-process maximum succeeds.
 	CHECK_EQ(in_child([] {
 		lower_limit(1024);
-		const bool can_raise = can_raise_to(1500);  // above the minimum of 1471
+		const bool can_raise = can_raise_to(1500);  // above the 1471 the whole pool and clients ask for
 		main_opts.max_files = 0;
 		main_opts.database_pool_size = 200;
 		main_opts.max_clients = 1000;
+		adjust_or_report();
 		if (can_raise) {
-			adjust_or_report();
 			CHECK_GE(static_cast<ssize_t>(get_max_files_per_proc()), static_cast<ssize_t>(1471));
 		} else {
-			expect_refusal(1024, 16);
+			CHECK_LE(main_opts.max_files, static_cast<ssize_t>(1024));
+			CHECK_GE(main_opts.database_pool_size, static_cast<ssize_t>(1));
+			CHECK_LT(main_opts.database_pool_size, static_cast<ssize_t>(200));
+			CHECK_GE(main_opts.max_clients, static_cast<ssize_t>(1));
 		}
 	}), 0);
 

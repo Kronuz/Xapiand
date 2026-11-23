@@ -56,4 +56,6 @@ Other agents and benchmarks run on this machine; a compile during a measurement 
 - `docs/discussions/` is a vendored copy of the Kronuz Discussions package, byte-identical with
   `~/code/KronuzBlog/Kronuz.github.io/discussions` and `~/code/KronuzBlog/gmendezb-pages/discussions`.
   Change one source tree, sync the whole directory, verify all three copies.
+- The docs site's reading controls (text size, search, image zoom, editor links) are described in
+  [docs/dev/agent-docs-site.md](docs/dev/agent-docs-site.md).
 - The changelog is `docs/src/content/docs/changelog.md` (`CHANGELOG` links to it), curated and user-facing.

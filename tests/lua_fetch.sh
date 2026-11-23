@@ -19,7 +19,7 @@ FetchContent_Declare(lua
 FetchContent_MakeAvailable(lua)
 message(STATUS "LUA_SRC=\${lua_SOURCE_DIR}")
 CMAKE
-cfg() { cmake -S "$work/p" -B "$1" -DFETCHCONTENT_BASE_DIR="$work/deps" > "$work/cfg.log" 2>&1 || { cat "$work/cfg.log"; exit 1; }; cat "$work/cfg.log"; }
+cfg() { cmake -G Ninja -S "$work/p" -B "$1" -DFETCHCONTENT_BASE_DIR="$work/deps" > "$work/cfg.log" 2>&1 || { cat "$work/cfg.log"; exit 1; }; cat "$work/cfg.log"; }
 cfg "$work/b"
 echo "lua fetch: second configure over the same deps (the patch is already applied)"
 cfg "$work/b2"

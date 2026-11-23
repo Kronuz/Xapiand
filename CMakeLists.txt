@@ -26,6 +26,11 @@ message(STATUS "CMake v${CMAKE_VERSION}")
 cmake_minimum_required(VERSION 3.12)
 project(xapiand C CXX)
 
+# Ninja is the only supported generator (the top-level project only).
+if (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR AND NOT CMAKE_GENERATOR MATCHES "^Ninja")
+	message(FATAL_ERROR "Ninja only: configure with -G Ninja (not ${CMAKE_GENERATOR})")
+endif ()
+
 cmake_policy(SET CMP0074 NEW)
 
 # Make sure we can import out CMake functions
@@ -630,7 +635,7 @@ add_compile_definitions(FS_TRACE_HEADER="xapiand_fs_trace.h")
 # are compiled into XAPIAND_OBJ below (io/strings deps already on the path, so its own CMake
 # is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
 # Xapiand's real logger (+ error::name/description).
-FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG a5dc407fc7c095d2d5f6b8e1e25a72e16115fbde)
+FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG b2a874fb22da70f7a96448a3f68e3d9305559983)
 FetchContent_MakeAvailable(system)
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="xapiand_system_trace.h")
@@ -725,13 +730,15 @@ include_directories(
 )
 
 # analysis: text analysis (words, case folding, Z-prefixed stems, stop words,
-# CJK n-grams, wdf, positions) behind GenerateTerms::text, with the snowball stemmers and
-# the unicode tables it builds on. Header-only analysis; snowball is a small static C
-# library. Pinned on the commits analysis itself pins. The library owns the name snowball.
+# CJK n-grams, CJK words, wdf, positions) behind GenerateTerms::text, with the snowball
+# stemmers, the unicode tables and the fst under the CJK dictionary it builds on. Header-only
+# analysis; snowball is a small static C library. Pinned on the commits analysis itself pins.
+# The library owns the name snowball.
 FetchContent_Declare(unicode  GIT_REPOSITORY https://github.com/Kronuz/unicode.git  GIT_TAG 297413c889fd99a182f1e9b8c1bc97bb2f2ded29)
 FetchContent_Declare(snowball GIT_REPOSITORY https://github.com/Kronuz/snowball.git GIT_TAG 3efcd0faa97997acf361cf8edff97cb083e14bc8)
-FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG 158c81b56a7976682672bfe1e491ffa6f219ad10)
-FetchContent_MakeAvailable(unicode snowball analysis)
+FetchContent_Declare(fst      GIT_REPOSITORY https://github.com/Kronuz/fst.git      GIT_TAG 7338f564f7c1c6c67e9f0cc8040d68e466592fb3)
+FetchContent_Declare(analysis GIT_REPOSITORY https://github.com/Kronuz/analysis.git GIT_TAG d72eb656163572c0c3bb0f1deb7c745b81d00a26)
+FetchContent_MakeAvailable(unicode snowball fst analysis)
 
 # queryparser: the query-string parser for the text of every field (src/engine/text.cc), on the
 # host, whatever engine runs the query.
@@ -772,7 +779,7 @@ FetchContent_Declare(varint GIT_REPOSITORY https://github.com/Kronuz/varint.git 
 # prospect: the search layout on the strata segment core, behind the strata engine
 # (src/engine/strata, docs/mechanisms/strata-engine.md). Header-only; pinned by commit. It pins
 # strata and the libraries strata links.
-FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG 397c02d578cc495813426757d5022e14d88d506a)  # strata main: an open's inherited sync waits for its first commit (sync-at-first-commit)
+FetchContent_Declare(strata GIT_REPOSITORY https://github.com/Kronuz/strata.git GIT_TAG e3edb4266f6c2f7d48cb7fe24c58de503e7bb41f)  # strata main: catalog delivery waits through a posting post
 FetchContent_Declare(prospect GIT_REPOSITORY https://github.com/Kronuz/prospect.git GIT_TAG eef601dce70260cc5a58e2089168d1cf1c7a8982)  # prospect main: completion's read-only opens, damaged segments at first map
 FetchContent_MakeAvailable(prospect)
 
@@ -1123,6 +1130,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/lua/*.c*" "${PROJECT_SOURCE_DIR}/src/lua/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/database/schema/*.c*" "${PROJECT_SOURCE_DIR}/src/database/schema/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/engine/strata/*.c*" "${PROJECT_SOURCE_DIR}/src/engine/strata/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
@@ -1240,6 +1248,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	allocators::allocators
 	cartesian::cartesian
 	analysis::analysis
+	analysis::cjk
 	queryparser::queryparser
 	prospect::prospect
 	task::asio
@@ -1917,6 +1926,9 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}.cc"
 				"${PROJECT_SOURCE_DIR}/tests/test_stubs.cc"
 			)
+			# A large test keeps its pieces in tests/test_NAME/.
+			file(GLOB TEST_PIECES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/tests/test_${VAR_TEST}/*.cc")
+			target_sources(${PROJECT_TEST} PRIVATE ${TEST_PIECES})
 			target_link_libraries(${PROJECT_TEST} PRIVATE
 				XAPIAND_PACKAGE_OBJ
 				XAPIAND_OBJ

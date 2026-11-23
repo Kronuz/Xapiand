@@ -28,7 +28,7 @@ H="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$H")"
 OUT=${JOB_OUT:-$REPO/.scratch/lua_mem}; mkdir -p "$OUT"
 SRC=${LUA_MEM_SRC:-$REPO}   # the source to build: another checkout (a job's --ref) measures it with these probes
 probe=$1; shift
-cmake -S "$SRC" -B "$SRC/build" -DFETCHCONTENT_BASE_DIR="$SRC/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+cmake -G Ninja -S "$SRC" -B "$SRC/build" -DFETCHCONTENT_BASE_DIR="$SRC/.deps" -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 	-DBUILD_TESTS=ON -DASSERTS=ON -DLTO=OFF >"$OUT/configure.log" 2>&1 || { tail -30 "$OUT/configure.log"; exit 3; }
 cmake --build "$SRC/build" -j4 --target xapiand xapiand_test_lua >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log"; exit 3; }
 echo "harness $(git -C "$REPO" rev-parse --short HEAD), source $(git -C "$SRC" rev-parse --short HEAD)"

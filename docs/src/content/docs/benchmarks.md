@@ -87,7 +87,7 @@ work, not to quote a production multiplier.
 Build Xapiand Release with LTO, start a node, and run the driver:
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLTO=ON && cmake --build build --target xapiand -j
+cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DLTO=ON && cmake --build build --target xapiand -j
 build/bin/xapiand --port 8880 --name benchnode -D /tmp/xap_bench &
 python3 harness/loadtest.py \
     --target localhost:8880 --dataset docs/assets/accounts.ndjson \

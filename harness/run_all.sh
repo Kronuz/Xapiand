@@ -30,8 +30,8 @@
 # Layers (run in this order; select a subset by naming them as arguments):
 #   smoke    single-node index + search sanity (no prerequisites)          [always]
 #   unit     C++ unit tests via ctest (needs a -DBUILD_TESTS=ON build)
-#   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, needs newman)
-#   tls      the e2e suite over HTTPS (needs newman 6) and the TLS refusals (tls_check.sh)
+#   e2e      doc-driven functional E2E: the docs' own assertions (e2e_assert.py, with the newman pinned in harness/package.json)
+#   tls      the e2e suite over HTTPS (pinned newman) and the TLS refusals (tls_check.sh)
 #   recovery WAL crash recovery: kill -9 after uncommitted writes -> restart replays (wal_recovery_check.sh)
 #   load     quick functional bulk load (index_fortune)
 #   stress   short concurrent soak with read-back verification (stress_fortune)
@@ -65,7 +65,7 @@ skip() {
 
 if [ ! -x "$BIN" ]; then
 	echo "missing binary: $BIN"
-	echo "build it: (cd build && cmake .. && make xapiand -j4)   or set BIN=..."
+	echo "build it: cmake -G Ninja -S . -B build && cmake --build build --target xapiand -j4   or set BIN=..."
 	exit 1
 fi
 echo "== run_all: binary $BIN =="
@@ -117,6 +117,8 @@ run_smoke() {
 	rm -rf "$dir"
 }
 
+use_newman() { . "$HARNESS_DIR/newman_env.sh"; }
+
 run_unit() {
 	echo "== [unit] ctest =="
 	if [ ! -f "$REPO/build/CTestTestfile.cmake" ] && [ ! -d "$REPO/build/Testing" ]; then
@@ -139,6 +141,7 @@ run_e2e() {
 	# this runs anywhere (incl. CI) straight from the docs.
 	# A fresh report per run: grading a file an earlier run left would pass without testing anything.
 	local dir out cap rep rc=0
+	use_newman || { skip "e2e" "cannot install the pinned newman (npm ci --prefix harness)"; return; }
 	dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_e2e.XXXXXX")"; out="$dir/ours.json"
 	cap="$("$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" 2>&1)" || rc=$?
 	if [ "$rc" -ne 0 ] || [ ! -s "$out" ]; then
@@ -168,11 +171,7 @@ run_tls() {
 		skip "tls" "built without TLS -- reconfigure with -DTLS=ON (needs OpenSSL 3)"
 		return
 	fi
-	local nv; nv="$(newman --version 2>/dev/null | cut -d. -f1)"
-	if [ "${nv:-0}" -lt 6 ]; then
-		skip "tls" "needs newman 6 or later (--ssl-extra-ca-certs)"
-		return
-	fi
+	use_newman || { skip "tls" "cannot install the pinned newman (npm ci --prefix harness)"; return; }
 	local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/xa_tls.XXXXXX")"
 	"$HARNESS_DIR/tls_certs.sh" "$dir/certs" > /dev/null
 	local out="$dir/e2e.json" rep

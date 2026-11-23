@@ -25,6 +25,7 @@
 
 #include <algorithm>                              // for std::max
 #include <cassert>                                // for assert
+#include <cmath>                                  // for std::isnan
 #include <strings.h>                              // for strncasecmp
 #include <utility>
 #include <vector>
@@ -82,6 +83,7 @@ inline std::string readable_query_parser_flags(int flags) {
 	if ((flags & engine::text::WILDCARD) == engine::text::WILDCARD) values.push_back("FLAG_WILDCARD");
 	if ((flags & engine::text::PARTIAL) == engine::text::PARTIAL) values.push_back("FLAG_PARTIAL");
 	if ((flags & engine::text::CJK_NGRAM) == engine::text::CJK_NGRAM) values.push_back("FLAG_CJK_NGRAM");
+	if ((flags & engine::text::CJK_WORDS) == engine::text::CJK_WORDS) values.push_back("FLAG_CJK_WORDS");
 	if ((flags & engine::text::WILDCARD_MULTI) == engine::text::WILDCARD_MULTI) values.push_back("FLAG_WILDCARD_MULTI");
 	if ((flags & engine::text::WILDCARD_SINGLE) == engine::text::WILDCARD_SINGLE) values.push_back("FLAG_WILDCARD_SINGLE");
 	if ((flags & engine::text::FUZZY) == engine::text::FUZZY) values.push_back("FLAG_FUZZY");
@@ -863,6 +865,9 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			if (field_spc.flags.cjk_ngram) {
 				flags |= engine::text::CJK_NGRAM;
 			}
+			if (field_spc.flags.cjk_words) {
+				flags |= engine::text::CJK_WORDS;
+			}
 			flags |= engine::text::PHRASE;
 			flags |= engine::text::LOVEHATE;
 			flags |= engine::text::FUZZY;
@@ -899,6 +904,10 @@ exact_range(std::string_view path, FieldType type, const MsgPack& obj)
 	for (const auto* bound : { RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO }) {
 		const auto b = range.find(bound);
 		if (b != range.end()) {
+			// NaN has no place in any field's order: refused alike on every type, as range aggregations do.
+			if (b.value().get_type() == MsgPack::Type::FLOAT && std::isnan(b.value().f64())) {
+				THROW(QueryDslError, "Field {} range bound '{}' cannot be NaN", repr(path), bound);
+			}
 			range[bound] = Serialize::exact(path, type, b.value());
 		}
 	}
